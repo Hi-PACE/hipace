@@ -11,6 +11,7 @@ int main (int argc, char* argv[])
     {
         Hipace hipace;
         hipace.InitData();
+        hipace.Evolve();
     }
     amrex::Finalize();
 }

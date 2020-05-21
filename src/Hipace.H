@@ -20,10 +20,10 @@ public:
 
     void ClearLevel (int lev) override {};
     void InitData ();
+    void Evolve ();
+    void WriteDiagnostics (int step);
     Fields m_fields;
-
-    //MultiBeamContainer beam_containers;
-    //MultiPlasmaContainer plasma_containers;
+    int m_max_step;
 };
 
 #endif
