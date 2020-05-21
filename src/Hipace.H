@@ -1,7 +1,7 @@
 #ifndef HIPACE_H_
 #define HIPACE_H_
 
-#include "Fields/Fields.H"
+#include "fields/Fields.H"
 
 class Hipace
 {

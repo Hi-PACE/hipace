@@ -1,6 +1,7 @@
 target_sources(HiPACE
   PRIVATE
-    BeamParticleContainer.H
-    PlasmaParticleContainer.H
     main.cpp
 )
+
+add_subdirectory(fields)
+add_subdirectory(particles)
