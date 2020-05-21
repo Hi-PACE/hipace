@@ -1,5 +1,5 @@
 target_sources(HiPACE
   PRIVATE
-    Fields.H
+    Fields.cpp
 )
 

@@ -18,7 +18,7 @@ class BeamParticleContainer
     : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
 {
 public:    
-    BeamParticleContainer (amrex::AmrCore* amr_core);
+    BeamParticleContainer (amrex::AmrCore* amr_core) {};
 };
 
 #endif

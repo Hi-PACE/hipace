@@ -24,7 +24,7 @@ class PlasmaParticleContainer
     : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs>
 {
 public:
-    PlasmaParticleContainer (amrex::AmrCore* amr_core);
+    PlasmaParticleContainer (amrex::AmrCore* amr_core) {};
 };
 
 #endif
