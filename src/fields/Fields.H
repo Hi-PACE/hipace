@@ -2,14 +2,21 @@
 #define FIELDS_H_
 
 #include <AMReX_MultiFab.H>
+#include <AMReX_Vector.H>
+
+enum struct FieldComps : int
+{
+    Ex = 0, Ey, Ez, nfields
+};
 
 class Fields
 {
 public:
-    Fields () = default;
-    void InitData () {};
+    Fields (int max_level) : m_F(max_level) {};
+    void AllocData (int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm) {};
 private:
-    amrex::MultiFab m_F;
+    amrex::Vector<amrex::MultiFab> m_F;
+    amrex::IntVect m_nguards {2, 2, 2};
 };
 
 #endif

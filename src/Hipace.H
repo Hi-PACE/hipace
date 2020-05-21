@@ -8,7 +8,7 @@
 class Hipace final : public amrex::AmrCore
 {
 public:
-    Hipace () = default;
+    Hipace ();
 
     // Virtual functions need to be defined for pure virtual class AmrCore
     void MakeNewLevelFromScratch (int lev, amrex::Real time, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm) override;
