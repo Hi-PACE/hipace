@@ -104,9 +104,9 @@ add_executable(HiPACE::HiPACE ALIAS HiPACE)
 
 # own headers
 target_include_directories(HiPACE PUBLIC
-    $<BUILD_INTERFACE:${HiPACE_SOURCE_DIR}/Source>
-#    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/Source>
-#    $<INSTALL_INTERFACE:Source>
+    $<BUILD_INTERFACE:${HiPACE_SOURCE_DIR}/src>
+#    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/src>
+#    $<INSTALL_INTERFACE:src>
 )
 
 # if we include <AMReX_buildInfo.H>
