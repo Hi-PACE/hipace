@@ -4,4 +4,6 @@ target_sources(HiPACE
     PlasmaParticleContainer.H
     MultiBeamParticleContainer.H
     MultiBeamParticleContainer.cpp
+    MultiPlasmaParticleContainer.H
+    MultiPlasmaParticleContainer.cpp
 )
