@@ -3,3 +3,6 @@ target_sources(HiPACE
     main.cpp
     Hipace.cpp
 )
+
+add_subdirectory(fields)
+add_subdirectory(particles)

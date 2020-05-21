@@ -9,6 +9,7 @@ macOS/Linux:
 ```
 brew update
 brew install cmake
+brew install open-mpi
 ```
 
 or macOS/Linux:
@@ -19,7 +20,7 @@ spack add cmake
 spack add mpi
 spack install
 ```
-(re-activate the environment with
+(in new terminals, re-activate the environment with `spack env activate hipace-dev` again)
 
 Now, `cmake --version` should be at version 3.14.0 or newer.
 

@@ -1,0 +1,11 @@
+target_sources(HiPACE
+  PRIVATE
+    BeamParticleContainer.H
+    BeamParticleContainer.cpp
+    PlasmaParticleContainer.H
+    PlasmaParticleContainer.cpp
+    MultiBeamParticleContainer.H
+    MultiBeamParticleContainer.cpp
+    MultiPlasmaParticleContainer.H
+    MultiPlasmaParticleContainer.cpp
+)

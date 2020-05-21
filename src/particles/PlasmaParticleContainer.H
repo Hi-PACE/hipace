@@ -1,7 +1,9 @@
 #ifndef HIPACE_PlasmaParticleContainer_H_
 #define HIPACE_PlasmaParticleContainer_H_
 
+#include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
+#include <AMReX_AmrCore.H>
 
 struct PlasmaIdx
 {
@@ -20,6 +22,9 @@ struct PlasmaIdx
 
 class PlasmaParticleContainer
     : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs>
-{};
+{
+public:
+    PlasmaParticleContainer (amrex::AmrCore* amr_core);
+};
 
 #endif
