@@ -11,7 +11,7 @@ struct FieldComps{
 class Fields
 {
 public:
-    Fields (int max_level) : m_F(max_level) {};
+    Fields (int max_level) : m_F(max_level+1) {};
     void AllocData (int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
     amrex::Vector<amrex::MultiFab>& getF () { return m_F; };
     amrex::MultiFab& getF (int lev) { return m_F[lev]; };
