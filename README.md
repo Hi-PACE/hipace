@@ -13,11 +13,23 @@ brew install cmake
 
 or macOS/Linux:
 ```
-spack install cmake
-spack load cmake
+spack env create hipace-dev
+spack env activate hipace-dev
+spack add cmake
+spack add mpi
+spack install
 ```
+(re-activate the environment with
 
 Now, `cmake --version` should be at version 3.14.0 or newer.
+
+### Configure your compiler
+
+For example, using a GCC on macOS:
+```
+export CC=$(which gcc)
+export CXX=$(which g++)
+```
 
 ### Build & Test
 

@@ -70,7 +70,7 @@ if(HiPACE_USE_INTERNAL_AMReX)
     set(ENABLE_TINY_PROFILE ON CACHE INTERNAL "")
     set(AMReX_DIM 3 CACHE INTERNAL "")
     # we'll need this for Python bindings
-    #set(AMReX_ENABLE_PIC ON CACHE INTERNAL "")
+    #set(ENABLE_PIC ON CACHE INTERNAL "")
     #set(ENABLE_FORTRAN ON CACHE INTERNAL "")
 
     FetchContent_Declare(fetchedamrex
