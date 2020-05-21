@@ -52,7 +52,7 @@ function(HiPACE_option name description default)
 endfunction()
 
 option(HiPACE_USE_INTERNAL_AMReX  "Download & build AMReX"  ON)
-option(HiPACE_USE_INTERNAL_PICSAR "Download & build PICSAR" OFF)
+# option(HiPACE_USE_INTERNAL_PICSAR "Download & build PICSAR" OFF)
 
 
 # Dependencies ################################################################
@@ -60,22 +60,24 @@ option(HiPACE_USE_INTERNAL_PICSAR "Download & build PICSAR" OFF)
 if(HiPACE_USE_INTERNAL_AMReX)
     include(FetchContent)
     set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+
     #set(BUILD_TESTING OFF)
     #set(BUILD_EXAMPLES OFF)
+    set(ENABLE_FORTRAN OFF CACHE INTERNAL "")
+    set(ENABLE_FORTRAN_INTERFACES OFF CACHE INTERNAL "")
     set(ENABLE_TUTORIALS OFF CACHE INTERNAL "")
     set(ENABLE_PARTICLES ON CACHE INTERNAL "")
     set(ENABLE_TINY_PROFILE ON CACHE INTERNAL "")
     set(AMReX_DIM 3 CACHE INTERNAL "")
+    # we'll need this for Python bindings
     #set(AMReX_ENABLE_PIC ON CACHE INTERNAL "")
-    # TEMPORARY until fixed upstream
-    set(ENABLE_FORTRAN_INTERFACES OFF CACHE INTERNAL "")
     #set(ENABLE_FORTRAN ON CACHE INTERNAL "")
+
     FetchContent_Declare(fetchedamrex
       GIT_REPOSITORY "https://github.com/AMReX-Codes/amrex.git"
       GIT_TAG        "development"
       BUILD_IN_SOURCE 0
     )
-    #FetchContent_MakeAvailable(fetchedamrex)
     FetchContent_GetProperties(fetchedamrex)
     if(NOT fetchedamrex_POPULATED)
       FetchContent_Populate(fetchedamrex)
@@ -115,22 +117,12 @@ target_include_directories(HiPACE PUBLIC
 add_subdirectory(src)
 
 # properties
-#target_compile_features(HiPACE
-#    PUBLIC cxx_std_14
-#)
-#set_target_properties(HiPACE PROPERTIES
-#    CXX_EXTENSIONS OFF
-#    CXX_STANDARD_REQUIRED ON
-#)
-
-#if(ENABLE_CUDA)
-#    set_cpp_sources_to_cuda_language( HiPACE )
-#endif()
-
-
-# FIXME hackity-hack path to PICSAR
-target_include_directories(HiPACE PRIVATE
-    /home/axel/src/picsar/src/multi_physics/QED/src
+target_compile_features(HiPACE
+    PUBLIC cxx_std_14
+)
+set_target_properties(HiPACE PROPERTIES
+    CXX_EXTENSIONS OFF
+    CXX_STANDARD_REQUIRED ON
 )
 
 target_link_libraries(HiPACE PUBLIC AMReX::amrex)
@@ -141,21 +133,7 @@ endif()
 
 # Defines #####################################################################
 #
-target_compile_definitions(HiPACE PRIVATE -DHiPACE_DIM_3D)
-target_compile_definitions(HiPACE PRIVATE -DDHiPACE_DIM_XZ)
-
-# DEFINES += -DHiPACE_USE_PY
-# DEFINES += -DHiPACE_DIM_3D
-# DEFINES += -DHiPACE_DIM_RZ
-# DEFINES += -DHiPACE_DIM_XZ
-# CXXFLAGS += -DHiPACE_QED
-# CXXFLAGS += -DHiPACE_QED_TABLE_GEN
-# DEFINES += -DHiPACE_GIT_VERSION=\"$(HiPACE_GIT_VERSION)\"
-# DEFINES += -DHiPACE_USE_OPENPMD
-# DEFINES += -DHiPACE_USE_PSATD
-# DEFINES += -DHiPACE_USE_PSATD_HYBRID
-# DEFINES += -DHiPACE_DO_ELECTROSTATIC
-# DEFINES += -DHiPACE_USE_HDF5
+# target_compile_definitions(HiPACE PRIVATE -DHiPACE_DIM_3D)
 
 
 # Warnings ####################################################################
@@ -192,53 +170,6 @@ endif ()
 
 # Generate Files with Configuration Options ###################################
 #
-# TODO configure a version.hpp
-#configure_file(
-#    ${HiPACE_SOURCE_DIR}/include/HiPACE/config.hpp.in
-#    ${HiPACE_BINARY_DIR}/include/HiPACE/config.hpp
-#    @ONLY
-#)
-
-#configure_file(
-#    ${HiPACE_SOURCE_DIR}/HiPACEConfig.cmake.in
-#    ${HiPACE_BINARY_DIR}/HiPACEConfig.cmake
-#    @ONLY
-#)
-
-# get absolute paths to linked libraries
-function(HiPACEreclibs tgtname outname)
-    get_target_property(PC_PRIVATE_LIBS_TGT ${tgtname} INTERFACE_LINK_LIBRARIES)
-    foreach(PC_LIB IN LISTS PC_PRIVATE_LIBS_TGT)
-       if(TARGET ${PC_LIB})
-           HiPACEreclibs(${PC_LIB} ${outname})
-       else()
-           if(PC_LIB)
-               string(APPEND ${outname} " ${PC_LIB}")
-           endif()
-       endif()
-    endforeach()
-    set(${outname} ${${outname}} PARENT_SCOPE)
-endfunction()
-
-if(HiPACE_HAVE_PKGCONFIG)
-    HiPACEreclibs(HiPACE HiPACE_PC_PRIVATE_LIBS)
-    if(BUILD_SHARED_LIBS)
-        set(HiPACE_PC_STATIC false)
-    else()
-        set(HiPACE_PC_STATIC true)
-    endif()
-    configure_file(
-        ${HiPACE_SOURCE_DIR}/HiPACE.pc.in
-        ${HiPACE_BINARY_DIR}/HiPACE.pc
-        @ONLY
-    )
-endif()
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file("HiPACEConfigVersion.cmake"
-    VERSION ${HiPACE_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
 
 
 # Installs ####################################################################
@@ -253,57 +184,17 @@ install(TARGETS ${HiPACE_INSTALL_TARGET_NAMES}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-#if(HiPACE_HAVE_PYTHON)
-#    install(TARGETS HiPACE.py
-#        DESTINATION ${CMAKE_INSTALL_PYTHONDIR}
-#    )
-#endif()
-#install(DIRECTORY "${HiPACE_SOURCE_DIR}/include/HiPACE"
-#    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#    FILES_MATCHING PATTERN "*.hpp"
-#)
-#install(
-#    FILES ${HiPACE_BINARY_DIR}/include/HiPACE/config.hpp
-#    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/HiPACE
-#)
-
-# CMake package file for find_package(HiPACE::HiPACE) in depending projects
-#install(EXPORT HiPACETargets
-#    FILE HiPACETargets.cmake
-#    NAMESPACE HiPACE::
-#    DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-#)
-#install(
-#    FILES
-#        ${HiPACE_BINARY_DIR}/HiPACEConfig.cmake
-#        ${HiPACE_BINARY_DIR}/HiPACEConfigVersion.cmake
-#    DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-#)
-# pkg-config .pc file for depending legacy projects
-#   This is for projects that do not use a build file generator, e.g.
-#   because they compile manually on the command line or write their
-#   Makefiles by hand.
-if(HiPACE_HAVE_PKGCONFIG)
-    install(
-        FILES       ${HiPACE_BINARY_DIR}/HiPACE.pc
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-    )
-endif()
 
 
 # Tests #######################################################################
 #
-#if(BUILD_TESTING)
-#    enable_testing()
-#
-#    add_test(...)
-#endif()
+if(BUILD_TESTING)
+    enable_testing()
 
-
-# Examples ####################################################################
-#
-if(BUILD_EXAMPLES)
-    # ...
+    add_test(NAME Main.NoInput
+             COMMAND $<TARGET_FILE:HiPACE>
+             WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    )
 endif()
 
 
@@ -333,8 +224,6 @@ message("  Build Type: ${CMAKE_BUILD_TYPE}")
 #    message("  Library: static")
 #endif()
 message("  Testing: ${BUILD_TESTING}")
-#message("  Invasive Tests: ${HiPACE_USE_INVASIVE_TESTS}")
-#message("  Internal VERIFY: ${HiPACE_USE_VERIFY}")
 message("  Build Options:")
 
 foreach(opt IN LISTS HiPACE_CONFIG_OPTIONS)
@@ -344,5 +233,4 @@ foreach(opt IN LISTS HiPACE_CONFIG_OPTIONS)
     message("    ${opt}: OFF")
   endif()
 endforeach()
-message("    DIM: ${HiPACE_DIM}")
 message("")
