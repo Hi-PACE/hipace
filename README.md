@@ -9,6 +9,7 @@ macOS/Linux:
 ```
 brew update
 brew install cmake
+brew install open-mpi
 ```
 
 or macOS/Linux:
