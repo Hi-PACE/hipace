@@ -31,5 +31,8 @@
 *.out
 *.app
 
+# Temporaries from editors 
+*~
+
 # CMake
 build/

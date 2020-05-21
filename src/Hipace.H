@@ -3,12 +3,25 @@
 
 #include "fields/Fields.H"
 
-class Hipace
+#include <AMReX_AmrCore.H>
+
+class Hipace final : public amrex::AmrCore
 {
 public:
-    Hipace () {};
-    void InitData () {};
+    Hipace () = default;
+
+    // Virtual functions need to be defined for pure virtual class AmrCore
+    void MakeNewLevelFromScratch (int lev, amrex::Real time, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm) override;
+    void ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real time, int ngrow) override {};
+    void MakeNewLevelFromCoarse (int lev, amrex::Real time, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm) override {};
+    void RemakeLevel (int lev, amrex::Real time, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm) override {};
+
+
+
+    void ClearLevel (int lev) override {};
+    void InitData ();
     Fields m_fields;
+
     //MultiBeamContainer beam_containers;
     //MultiPlasmaContainer plasma_containers;
 };
