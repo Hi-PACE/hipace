@@ -39,12 +39,14 @@ From the HiPACE root directory, execute:
 mkdir -p build
 cd build
 
-# build
+# find dependencies & configure
 cmake ..
+
+# build
 make -j 4
 
-# test
-ctest
+# run tests
+ctest --output-on-failure
 ```
 
-Extensive documentation of options: https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
+Extensive documentation of `cmake .. -D<OPTION>=<VALUE>` settings: https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
