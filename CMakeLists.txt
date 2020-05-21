@@ -1,7 +1,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.14.0)
-project(HiPACE VERSION 0.20.2)
+project(HiPACE VERSION 0.20.5)
 
 # list(APPEND CMAKE_MODULE_PATH "${HiPACE_SOURCE_DIR}/cmake")
 
@@ -71,7 +71,6 @@ if(HiPACE_USE_INTERNAL_AMReX)
     set(AMReX_DIM 3 CACHE INTERNAL "")
     # we'll need this for Python bindings
     #set(ENABLE_PIC ON CACHE INTERNAL "")
-    #set(ENABLE_FORTRAN ON CACHE INTERNAL "")
 
     FetchContent_Declare(fetchedamrex
       GIT_REPOSITORY "https://github.com/AMReX-Codes/amrex.git"
@@ -95,6 +94,13 @@ else()
     message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
 endif()
 
+# suppress warnings in AMReX headers
+add_library(HiPACE::thirdparty::AMReX INTERFACE IMPORTED)
+target_link_libraries(HiPACE::thirdparty::AMReX INTERFACE AMReX::amrex)
+get_target_property(AMReX_ALL_INCLUDES AMReX::amrex INCLUDE_DIRECTORIES)
+set_target_properties(HiPACE::thirdparty::AMReX PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+target_include_directories(HiPACE::thirdparty::AMReX SYSTEM INTERFACE ${AMReX_ALL_INCLUDES})
+
 
 # Targets #####################################################################
 #
@@ -116,7 +122,7 @@ target_include_directories(HiPACE PUBLIC
 # add sources
 add_subdirectory(src)
 
-# properties
+# C++ properties: at least a C++14 capable compiler is needed
 target_compile_features(HiPACE
     PUBLIC cxx_std_14
 )
@@ -125,7 +131,7 @@ set_target_properties(HiPACE PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(HiPACE PUBLIC AMReX::amrex)
+target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
 if(ENABLE_CUDA)
     setup_target_for_cuda_compilation( HiPACE )
 endif()
@@ -188,11 +194,28 @@ install(TARGETS ${HiPACE_INSTALL_TARGET_NAMES}
 
 # Tests #######################################################################
 #
+include(CTest)
 if(BUILD_TESTING)
     enable_testing()
 
-    add_test(NAME Main.NoInput
-             COMMAND $<TARGET_FILE:HiPACE>
+    # OpenMPI root guard: https://github.com/open-mpi/ompi/issues/4451
+    if("$ENV{USER}" STREQUAL "root")
+        # calling even --help as root will abort and warn on stderr
+        execute_process(COMMAND ${MPIEXEC_EXECUTABLE} --help
+            ERROR_VARIABLE MPIEXEC_HELP_TEXT
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+            if(${MPIEXEC_HELP_TEXT} MATCHES "^.*allow-run-as-root.*$")
+                set(MPI_ALLOW_ROOT --allow-run-as-root)
+            endif()
+    endif()
+    set(MPI_TEST_EXE
+        ${MPIEXEC_EXECUTABLE}
+        ${MPI_ALLOW_ROOT}
+        ${MPIEXEC_NUMPROC_FLAG} 1
+    )
+
+    add_test(NAME Main.Examples.Inputs
+             COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
              WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     )
 endif()
