@@ -1,6 +1,6 @@
 #include "MultiBeamParticleContainer.H"
 
-MultiParticleContainer::MultiParticleContainer (AmrCore* amr_core)
+MultiBeamParticleContainer::MultiBeamParticleContainer (AmrCore* amr_core)
 {
     constexpr int nbeams = 1;
     allcontainers.resize(nbeams);
