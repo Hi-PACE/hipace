@@ -34,5 +34,14 @@
 # Temporaries from editors 
 *~
 
-# CMake
+# IDEs
+/*.cbp
+/*.layout
+.idea/
+.kdev?/
+*.kdev?
+/nbproject/
+.vimrc
+cmake-build-*/
+spack-build*
 build/
