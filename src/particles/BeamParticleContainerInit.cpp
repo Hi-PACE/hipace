@@ -117,7 +117,9 @@ InitParticles(const IntVect& a_num_particles_per_cell,
         auto arrdata = particle_tile.GetStructOfArrays().realarray();
 
         int procID = ParallelDescriptor::MyProc();
-
+        int pid = ParticleType::NextID();
+        ParticleType::NextID(pid + num_to_add);;
+        
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -162,7 +164,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
                     z >= a_bounds.hi(2) || z < a_bounds.lo(2) ) continue;
 
                 ParticleType& p = pstruct[pidx];
-                p.id()   = 0;
+                p.id()   = pid + pidx;
                 p.cpu()  = procID;
                 p.pos(0) = x;
                 p.pos(1) = y;
