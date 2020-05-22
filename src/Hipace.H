@@ -16,24 +16,30 @@ public:
     void MakeNewLevelFromScratch (
         int lev, amrex::Real time, const amrex::BoxArray& ba,
         const amrex::DistributionMapping& dm) override;
+
     void ErrorEst (
-                   int /*lev*/, amrex::TagBoxArray& /*tags*/, amrex::Real /*time*/, int /*ngrow*/) override {};
+                   int /*lev*/, amrex::TagBoxArray& /*tags*/, amrex::Real /*time*/, int /*ngrow*/) override {}
+
     void MakeNewLevelFromCoarse (
                                  int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
-                                 const amrex::DistributionMapping& /*dm*/) override {};
+                                 const amrex::DistributionMapping& /*dm*/) override {}
+
     void RemakeLevel (
                       int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
-                      const amrex::DistributionMapping& /*dm*/) override {};
-    void ClearLevel (int /*lev*/) override {};
+                      const amrex::DistributionMapping& /*dm*/) override {}
+
+    void ClearLevel (int /*lev*/) override {}
     
     void InitData ();
+
     void Evolve ();
+
     void WriteDiagnostics (int step);
 
     Fields m_fields;
     BeamParticleContainer m_beam_container;
     PlasmaParticleContainer m_plasma_container;
-    int m_max_step;
+    int m_max_step = 0;
 };
 
 #endif
