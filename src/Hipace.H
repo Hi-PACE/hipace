@@ -17,14 +17,14 @@ public:
         int lev, amrex::Real time, const amrex::BoxArray& ba,
         const amrex::DistributionMapping& dm) override;
     void ErrorEst (
-        int lev, amrex::TagBoxArray& tags, amrex::Real time, int ngrow) override {};
+                   int /*lev*/, amrex::TagBoxArray& /*tags*/, amrex::Real /*time*/, int /*ngrow*/) override {};
     void MakeNewLevelFromCoarse (
-        int lev, amrex::Real time, const amrex::BoxArray& ba,
-        const amrex::DistributionMapping& dm) override {};
+                                 int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
+                                 const amrex::DistributionMapping& /*dm*/) override {};
     void RemakeLevel (
-        int lev, amrex::Real time, const amrex::BoxArray& ba,
-        const amrex::DistributionMapping& dm) override {};
-    void ClearLevel (int lev) override {};
+                      int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
+                      const amrex::DistributionMapping& /*dm*/) override {};
+    void ClearLevel (int /*lev*/) override {};
     
     void InitData ();
     void Evolve ();

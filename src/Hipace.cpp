@@ -22,7 +22,7 @@ Hipace::InitData ()
 
 void
 Hipace::MakeNewLevelFromScratch (
-    int lev, amrex::Real time, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
+    int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
 {
     AMREX_ALWAYS_ASSERT(lev == 0);
     m_fields.AllocData(lev, ba, dm);
@@ -32,7 +32,7 @@ void
 Hipace::Evolve ()
 {
     WriteDiagnostics (0);
-    for (int step; step < m_max_step; ++step)
+    for (int step = 0; step < m_max_step; ++step)
     {
         amrex::Print()<<"step "<< step <<"\n";
     }
@@ -46,12 +46,12 @@ Hipace::WriteDiagnostics (int step)
     const int nlev = 1;
     const amrex::Vector< std::string > varnames {"Ex", "Ey", "Ez"};
     const int time = 0.;
-    const amrex::IntVect ref_ratio {1, 1, 1};
+    const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
     amrex::WriteMultiLevelPlotfile(filename, nlev,
                                    amrex::GetVecOfConstPtrs(m_fields.getF()),
                                    varnames, Geom(),
-                                   time, {step}, {ref_ratio},
+                                   time, {step}, {local_ref_ratio},
                                    "HyperCLaw-V1.1",
                                    "Level_",
                                    "Cell",
