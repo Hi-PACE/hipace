@@ -4,7 +4,9 @@
 #include <AMReX_ParmParse.H>
 
 Hipace::Hipace () :
-    m_fields(amrex::AmrCore::maxLevel())
+    m_fields(amrex::AmrCore::maxLevel()),
+    m_beam_containers(this),
+    m_plasma_containers(this)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
@@ -14,6 +16,8 @@ void
 Hipace::InitData ()
 {
     AmrCore::InitFromScratch(0.0); // function argument is time
+    m_beam_containers.InitData(geom[0]);
+    // m_plasma_containers.InitData();
 }
 
 void
@@ -53,4 +57,5 @@ Hipace::WriteDiagnostics (int step)
                                    "Cell",
                                    rfs
                                    );
+    m_beam_containers.WritePlotFile(filename);
 }
