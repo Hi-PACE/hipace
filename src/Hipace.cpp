@@ -17,7 +17,7 @@ Hipace::InitData ()
 {
     AmrCore::InitFromScratch(0.0); // function argument is time
     m_beam_container.InitData(geom[0]);
-    // m_plasma_container.InitData(geom[0]);
+    m_plasma_container.InitData(geom[0]);
 }
 
 void
@@ -42,6 +42,7 @@ Hipace::Evolve ()
 void
 Hipace::WriteDiagnostics (int step)
 {
+    // Write fields
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
     const amrex::Vector< std::string > varnames {"Ex", "Ey", "Ez"};
@@ -56,15 +57,38 @@ Hipace::WriteDiagnostics (int step)
                                    "Level_",
                                    "Cell",
                                    rfs
-                                   );
+        );
 
-    amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
-    amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
-    amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
-    AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
-    amrex::Vector<std::string> int_names {};        
-    m_beam_container.WritePlotFile(
-        filename, "beam",
-        plot_flags, int_flags,
-        real_names, int_names);
+    // Write beam particles
+    {
+        amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
+        amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
+        amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
+        AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
+        amrex::Vector<std::string> int_names {};        
+        m_beam_container.WritePlotFile(
+            filename, "beam",
+            plot_flags, int_flags,
+            real_names, int_names);
+    }
+    
+    // Write plasma particles
+    {
+        amrex::Vector<int> plot_flags(PlasmaIdx::nattribs, 1);
+        amrex::Vector<int> int_flags(PlasmaIdx::nattribs, 1);
+        amrex::Vector<std::string> real_names {
+            "w","ux","uy", "phi",
+            "Fx1", "Fx2", "Fx3", "Fx4", "Fx5",
+            "Fy1", "Fy2", "Fy3", "Fy4", "Fy5",
+            "Fux1", "Fux2", "Fux3", "Fux4", "Fux5",
+            "Fuy1", "Fuy2", "Fuy3", "Fuy4", "Fuy5",
+            "Fphi1", "Fphi2", "Fphi3", "Fphi4", "Fphi5",
+        };
+        AMREX_ALWAYS_ASSERT(real_names.size() == PlasmaIdx::nattribs);
+        amrex::Vector<std::string> int_names {};        
+        m_plasma_container.WritePlotFile(
+            filename, "plasma",
+            plot_flags, int_flags,
+            real_names, int_names);
+    }
 }

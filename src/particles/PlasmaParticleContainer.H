@@ -25,6 +25,16 @@ class PlasmaParticleContainer
 {
 public:
     PlasmaParticleContainer (amrex::AmrCore* amr_core);
+
+    void InitData (const amrex::Geometry& geom);
+
+    void InitParticles(
+        const amrex::IntVect& a_num_particles_per_cell,
+        const amrex::Real     a_thermal_momentum_std,
+        const amrex::Real     a_thermal_momentum_mean,
+        const amrex::Real     a_density,
+        const amrex::Geometry& geom,
+        const int             a_problem);
 };
 
 #endif
