@@ -5,8 +5,8 @@
 
 Hipace::Hipace () :
     m_fields(amrex::AmrCore::maxLevel()),
-    m_beam_containers(this),
-    m_plasma_containers(this)
+    m_beam_container(this),
+    m_plasma_container(this)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
@@ -16,8 +16,8 @@ void
 Hipace::InitData ()
 {
     AmrCore::InitFromScratch(0.0); // function argument is time
-    m_beam_containers.InitData(geom[0]);
-    // m_plasma_containers.InitData();
+    m_beam_container.InitData(geom[0]);
+    // m_plasma_container.InitData(geom[0]);
 }
 
 void
@@ -57,5 +57,14 @@ Hipace::WriteDiagnostics (int step)
                                    "Cell",
                                    rfs
                                    );
-    m_beam_containers.WritePlotFile(filename);
+
+    amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
+    amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
+    amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
+    AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
+    amrex::Vector<std::string> int_names {};        
+    m_beam_container.WritePlotFile(
+        filename, "beam",
+        plot_flags, int_flags,
+        real_names, int_names);
 }

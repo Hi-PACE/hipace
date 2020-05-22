@@ -2,8 +2,8 @@
 #define HIPACE_H_
 
 #include "fields/Fields.H"
-#include "particles/MultiPlasmaParticleContainer.H"
-#include "particles/MultiBeamParticleContainer.H"
+#include "particles/PlasmaParticleContainer.H"
+#include "particles/BeamParticleContainer.H"
 
 #include <AMReX_AmrCore.H>
 
@@ -31,8 +31,8 @@ public:
     void WriteDiagnostics (int step);
 
     Fields m_fields;
-    MultiBeamParticleContainer m_beam_containers;
-    MultiPlasmaParticleContainer m_plasma_containers;
+    BeamParticleContainer m_beam_container;
+    PlasmaParticleContainer m_plasma_container;
     int m_max_step;
 };
 
