@@ -50,3 +50,12 @@ ctest --output-on-failure
 ```
 
 Extensive documentation of `cmake .. -D<OPTION>=<VALUE>` settings: https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
+
+### Run a simulation and look at the results
+
+After compiling HiPACE (see above), from the HiPACE root directory, execute
+```
+cd examples
+../build/bin/HiPACE inputs # Run the simulation with fields and plasma and beam particles
+./show.py # Plot results with yt, and save in img.png
+```
