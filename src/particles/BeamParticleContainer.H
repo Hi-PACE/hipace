@@ -20,8 +20,10 @@ class BeamParticleContainer
 public:    
     BeamParticleContainer (amrex::AmrCore* amr_core) :
         amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB())
-    {};
+    {}
+
     void InitData (const amrex::Geometry& geom);
+
     void InitParticles(
         const amrex::IntVect& a_num_particles_per_cell,
         const amrex::Real     a_thermal_momentum_std,
