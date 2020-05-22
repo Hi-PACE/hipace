@@ -3,27 +3,37 @@
 cmake_minimum_required(VERSION 3.14.0)
 project(HiPACE VERSION 0.20.5)
 
-# list(APPEND CMAKE_MODULE_PATH "${HiPACE_SOURCE_DIR}/cmake")
+include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
+# list(INSERT CMAKE_MODULE_PATH 0 "${HiPACE_SOURCE_DIR}/cmake")
 
 
-# Project structure ###########################################################
+# Output Directories ##########################################################
 #
 # temporary build directories
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    CACHE PATH "Build directory for archives")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    CACHE PATH "Build directory for libraries")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    CACHE PATH "Build directory for binaries")
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        CACHE PATH "Build directory for archives")
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        CACHE PATH "Build directory for libraries")
+endif()
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        CACHE PATH "Build directory for binaries")
+endif()
 
 # install directories
 include(GNUInstallDirs)
-set(CMAKE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/HiPACE"
-    CACHE PATH "CMake config package location for installed targets")
-if(WIN32)
-    set(CMAKE_INSTALL_LIBDIR Lib
-        CACHE PATH "Object code libraries")
-    set_property(CACHE CMAKE_INSTALL_CMAKEDIR PROPERTY VALUE "cmake")
+if(NOT CMAKE_INSTALL_CMAKEDIR)
+    set(CMAKE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/HiPACE"
+        CACHE PATH "CMake config package location for installed targets")
+    if(WIN32)
+        set(CMAKE_INSTALL_LIBDIR Lib
+            CACHE PATH "Object code libraries")
+        set_property(CACHE CMAKE_INSTALL_CMAKEDIR PROPERTY VALUE "cmake")
+    endif()
+    mark_as_advanced(CMAKE_INSTALL_CMAKEDIR)
 endif()
 
 
@@ -95,11 +105,7 @@ else()
 endif()
 
 # suppress warnings in AMReX headers
-add_library(HiPACE::thirdparty::AMReX INTERFACE IMPORTED)
-target_link_libraries(HiPACE::thirdparty::AMReX INTERFACE AMReX::amrex)
-get_target_property(AMReX_ALL_INCLUDES AMReX::amrex INCLUDE_DIRECTORIES)
-set_target_properties(HiPACE::thirdparty::AMReX PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
-target_include_directories(HiPACE::thirdparty::AMReX SYSTEM INTERFACE ${AMReX_ALL_INCLUDES})
+make_third_party_includes_system(AMReX::amrex AMReX)
 
 
 # Targets #####################################################################
@@ -111,8 +117,8 @@ add_executable(HiPACE::HiPACE ALIAS HiPACE)
 # own headers
 target_include_directories(HiPACE PUBLIC
     $<BUILD_INTERFACE:${HiPACE_SOURCE_DIR}/src>
-#    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/src>
-#    $<INSTALL_INTERFACE:src>
+    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/src>
+    $<INSTALL_INTERFACE:src>
 )
 
 # if we include <AMReX_buildInfo.H>
@@ -131,15 +137,19 @@ set_target_properties(HiPACE PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
+# link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
+
+# AMReX helper function: propagate CUDA specific target & source properties
 if(ENABLE_CUDA)
-    setup_target_for_cuda_compilation( HiPACE )
+    setup_target_for_cuda_compilation(HiPACE)
 endif()
 
 
 # Defines #####################################################################
 #
-# target_compile_definitions(HiPACE PRIVATE -DHiPACE_DIM_3D)
+# Let's use them as sparsely as possible to avoid MxNxOxP... binary variants.
+#target_compile_definitions(HiPACE PRIVATE -DHiPACE_DIM_3D)
 
 
 # Warnings ####################################################################
@@ -174,16 +184,16 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 endif ()
 
 
-# Generate Files with Configuration Options ###################################
+# Generate Configuration and .pc Files ########################################
 #
+# these files are used if HiPACE is installed and picked up by a downstream
+# project (not needed yet)
 
 
 # Installs ####################################################################
 #
-# headers, libraries and executables
-set(HiPACE_INSTALL_TARGET_NAMES HiPACE)
-
-install(TARGETS ${HiPACE_INSTALL_TARGET_NAMES}
+# public headers, libraries and executables
+install(TARGETS HiPACE
     EXPORT HiPACETargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -194,66 +204,26 @@ install(TARGETS ${HiPACE_INSTALL_TARGET_NAMES}
 
 # Tests #######################################################################
 #
+# this defined the variable BUILD_TESTING which is ON by default
 include(CTest)
+
 if(BUILD_TESTING)
     enable_testing()
 
-    # OpenMPI root guard: https://github.com/open-mpi/ompi/issues/4451
-    if("$ENV{USER}" STREQUAL "root")
-        # calling even --help as root will abort and warn on stderr
-        execute_process(COMMAND ${MPIEXEC_EXECUTABLE} --help
-            ERROR_VARIABLE MPIEXEC_HELP_TEXT
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-            if(${MPIEXEC_HELP_TEXT} MATCHES "^.*allow-run-as-root.*$")
-                set(MPI_ALLOW_ROOT --allow-run-as-root)
-            endif()
-    endif()
-    set(MPI_TEST_EXE
-        ${MPIEXEC_EXECUTABLE}
-        ${MPI_ALLOW_ROOT}
-        ${MPIEXEC_NUMPROC_FLAG} 1
+    configure_mpiexec(1)  # one rank in MPI_TEST_EXE
+    add_test(NAME Main.Examples.1Rank.Inputs
+             COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
+             WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     )
 
-    add_test(NAME Main.Examples.Inputs
+    configure_mpiexec(2)  # two ranks in MPI_TEST_EXE
+    add_test(NAME Main.Examples.2Ranks.Inputs
              COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
              WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     )
 endif()
 
 
-# Status Message for Build Options ############################################
+# Status Summary for Build Options ############################################
 #
-message("")
-message("HiPACE build configuration:")
-message("  Version: ${HiPACE_VERSION}")
-message("  C++ Compiler: ${CMAKE_CXX_COMPILER_ID} "
-                        "${CMAKE_CXX_COMPILER_VERSION} "
-                        "${CMAKE_CXX_COMPILER_WRAPPER}")
-message("    ${CMAKE_CXX_COMPILER}")
-message("")
-message("  Installation prefix: ${CMAKE_INSTALL_PREFIX}")
-message("        bin: ${CMAKE_INSTALL_BINDIR}")
-message("        lib: ${CMAKE_INSTALL_LIBDIR}")
-message("    include: ${CMAKE_INSTALL_INCLUDEDIR}")
-message("      cmake: ${CMAKE_INSTALL_CMAKEDIR}")
-if(HiPACE_HAVE_PYTHON)
-    message("     python: ${CMAKE_INSTALL_PYTHONDIR}")
-endif()
-message("")
-message("  Build Type: ${CMAKE_BUILD_TYPE}")
-#if(BUILD_SHARED_LIBS)
-#    message("  Library: shared")
-#else()
-#    message("  Library: static")
-#endif()
-message("  Testing: ${BUILD_TESTING}")
-message("  Build Options:")
-
-foreach(opt IN LISTS HiPACE_CONFIG_OPTIONS)
-  if(${HiPACE_HAVE_${opt}})
-    message("    ${opt}: ON")
-  else()
-    message("    ${opt}: OFF")
-  endif()
-endforeach()
-message("")
+hipace_print_summary()
