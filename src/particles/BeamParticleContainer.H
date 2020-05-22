@@ -18,7 +18,7 @@ class BeamParticleContainer
     : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
 {
 public:    
-    BeamParticleContainer (amrex::AmrCore* amr_core) :
+    explicit BeamParticleContainer (amrex::AmrCore* amr_core) :
         amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB())
     {}
 

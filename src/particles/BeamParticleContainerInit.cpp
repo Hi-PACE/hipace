@@ -118,7 +118,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
 
         int procID = ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
-        ParticleType::NextID(pid + num_to_add);;
+        ParticleType::NextID(pid + num_to_add);
         
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -134,7 +134,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
             unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
             unsigned int cellid = (uix * ny + uiy) * nz + uiz;
 
-            int pidx = poffset[cellid] - poffset[0];
+            int pidx = int(poffset[cellid] - poffset[0]);
 
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
