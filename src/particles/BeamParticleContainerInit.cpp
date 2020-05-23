@@ -1,11 +1,10 @@
 #include "BeamParticleContainer.H"
+#include "Constant.H"
 
 using namespace amrex;
 
 namespace
 {
-    Real c = 299792458.;
-
     AMREX_GPU_HOST_DEVICE void get_position_unit_cell(Real* r, const IntVect& nppc, int i_part)
     {
         int nx = nppc[0];
@@ -170,9 +169,9 @@ InitParticles(const IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                arrdata[BeamIdx::ux  ][pidx] = u[0] * c;
-                arrdata[BeamIdx::uy  ][pidx] = u[1] * c;
-                arrdata[BeamIdx::uz  ][pidx] = u[2] * c;
+                arrdata[BeamIdx::ux  ][pidx] = u[0] * PhysConst::c;
+                arrdata[BeamIdx::uy  ][pidx] = u[1] * PhysConst::c;
+                arrdata[BeamIdx::uz  ][pidx] = u[2] * PhysConst::c;
                 arrdata[BeamIdx::w   ][pidx] = a_density * scale_fac;
                 ++pidx;
             }
