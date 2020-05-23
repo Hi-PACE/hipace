@@ -19,13 +19,8 @@ set_default_install_dirs()
 #
 option(HiPACE_amrex_internal "Download & build AMReX" ON)
 
-# change the default build type to Release instead of Debug
-set(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release"
-        CACHE STRING
-        "Choose the build type, e.g. Release, Debug, or RelWithDebInfo." FORCE)
-endif()
+# change the default build type to RelWithDebInfo (or Release) instead of Debug
+set_default_build_type("RelWithDebInfo")
 
 
 # Dependencies ################################################################

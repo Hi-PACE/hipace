@@ -36,6 +36,19 @@ macro(set_default_install_dirs)
     endif()
 endmacro()
 
+
+# change the default CMAKE_BUILD_TYPE
+# the default in CMake is Debug for historic reasons
+#
+macro(set_default_build_type default_build_type)
+    set(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE ${default_build_type}
+                CACHE STRING
+                "Choose the build type, e.g. Release, Debug, or RelWithDebInfo." FORCE)
+    endif()
+endmacro()
+
 # Set CXX
 # Note: this is a bit legacy and one should use CMake TOOLCHAINS instead.
 #
