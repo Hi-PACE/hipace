@@ -1,4 +1,4 @@
-function(find_amrex)
+macro(find_amrex)
     if(HiPACE_amrex_internal    )
         include(FetchContent)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
@@ -47,6 +47,6 @@ function(find_amrex)
         find_package(AMReX 20.05 CONFIG REQUIRED COMPONENTS 3D PARTICLES DPARTICLES DP TINYP)
         message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
     endif()
-endfunction()
+endmacro()
 
 find_amrex()
