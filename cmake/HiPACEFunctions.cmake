@@ -1,5 +1,77 @@
+# set names and paths of temporary build directories
+# the defaults in CMake are sub-ideal for historic reasons, lets make them more
+# Unix-ish and portable.
+#
+macro(set_default_build_dirs)
+    if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+                CACHE PATH "Build directory for archives")
+    endif()
+    if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+                CACHE PATH "Build directory for libraries")
+    endif()
+    if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+                CACHE PATH "Build directory for binaries")
+    endif()
+endmacro()
 
-# ...
+
+# set names and paths of install directories
+# the defaults in CMake are sub-ideal for historic reasons, lets make them more
+# Unix-ish and portable.
+#
+macro(set_default_install_dirs)
+    include(GNUInstallDirs)
+    if(NOT CMAKE_INSTALL_CMAKEDIR)
+        set(CMAKE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/HiPACE"
+                CACHE PATH "CMake config package location for installed targets")
+        if(WIN32)
+            set(CMAKE_INSTALL_LIBDIR Lib
+                    CACHE PATH "Object code libraries")
+            set_property(CACHE CMAKE_INSTALL_CMAKEDIR PROPERTY VALUE "cmake")
+        endif()
+        mark_as_advanced(CMAKE_INSTALL_CMAKEDIR)
+    endif()
+endmacro()
+
+# Set CXX
+# Note: this is a bit legacy and one should use CMake TOOLCHAINS instead.
+#
+macro(set_cxx_warnings)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        # list(APPEND CMAKE_CXX_FLAGS "-fsanitize=address") # address, memory, undefined
+        # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        # set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+        # set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=address")
+
+        # note: might still need a
+        #   export LD_PRELOAD=libclang_rt.asan.so
+        # or on Debian 9 with Clang 6.0
+        #   export LD_PRELOAD=/usr/lib/llvm-6.0/lib/clang/6.0.0/lib/linux/libclang_rt.asan-x86_64.so:
+        #                     /usr/lib/llvm-6.0/lib/clang/6.0.0/lib/linux/libclang_rt.ubsan_minimal-x86_64.so
+        # at runtime when used with symbol-hidden code (e.g. pybind11 module)
+
+        #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Wshadow -Woverloaded-virtual -Wextra-semi -Wunreachable-code")
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Wshadow -Woverloaded-virtual -Wunreachable-code")
+    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+        # Warning C4503: "decorated name length exceeded, name was truncated"
+        # Symbols longer than 4096 chars are truncated (and hashed instead)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4503")
+        # Yes, you should build against the same C++ runtime and with same
+        # configuration (Debug/Release). MSVC does inconvenient choices for their
+        # developers, so be it. (Our Windows-users use conda-forge builds, which
+        # are consistent.)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4251")
+    endif ()
+endmacro()
+
+# Take an <imported_target> and expose it as INTERFACE target with
+# HiPACE::thirdparty::<propagated_name> naming and SYSTEM includes.
+#
 function(make_third_party_includes_system imported_target propagated_name)
     add_library(HiPACE::thirdparty::${propagated_name} INTERFACE IMPORTED)
     target_link_libraries(HiPACE::thirdparty::${propagated_name} INTERFACE AMReX::amrex)
@@ -9,7 +81,11 @@ function(make_third_party_includes_system imported_target propagated_name)
 endfunction()
 
 
-# ... set MPI_TEST_EXE variable ...
+# Set an MPI_TEST_EXE variable for test runs which runs num_ranks
+# ranks. On some systems, you might need to use the a specific
+# mpiexec wrapper, e.g. on Summit (ORNL) pass the hint
+# -DMPIEXEC_EXECUTABLE=$(which jsrun) to run ctest.
+#
 function(configure_mpiexec num_ranks)
     # OpenMPI root guard: https://github.com/open-mpi/ompi/issues/4451
     if("$ENV{USER}" STREQUAL "root")
@@ -25,11 +101,13 @@ function(configure_mpiexec num_ranks)
         ${MPIEXEC_EXECUTABLE}
         ${MPI_ALLOW_ROOT}
         ${MPIEXEC_NUMPROC_FLAG} ${num_ranks}
+        PARENT_SCOPE
     )
 endfunction()
 
 
-# ...
+# Prints a summary of HiPACE options at the end of the CMake configuration
+#
 function(hipace_print_summary)
     message("")
     message("HiPACE build configuration:")
@@ -55,7 +133,7 @@ function(hipace_print_summary)
     #    message("  Library: static")
     #endif()
     message("  Testing: ${BUILD_TESTING}")
-    message("  Build Options:")
+    # message("  Build Options:")
 
     foreach(opt IN LISTS HiPACE_CONFIG_OPTIONS)
       if(${HiPACE_HAVE_${opt}})
