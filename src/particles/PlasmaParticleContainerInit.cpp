@@ -1,11 +1,10 @@
 #include "PlasmaParticleContainer.H"
+#include "Constant.H"
 
 using namespace amrex;
 
 namespace
 {
-    Real c = 299792458.;
-
     AMREX_GPU_HOST_DEVICE void get_position_unit_cell(Real* r, const IntVect& nppc, int i_part)
     {
         int nx = nppc[0];
@@ -171,8 +170,8 @@ InitParticles(const IntVect& a_num_particles_per_cell,
                 p.pos(2) = z;
 
                 arrdata[PlasmaIdx::w    ][pidx] = a_density * scale_fac;
-                arrdata[PlasmaIdx::ux   ][pidx] = u[0] * c;
-                arrdata[PlasmaIdx::uy   ][pidx] = u[1] * c;
+                arrdata[PlasmaIdx::ux   ][pidx] = u[0] * PhysConst::c;
+                arrdata[PlasmaIdx::uy   ][pidx] = u[1] * PhysConst::c;
                 arrdata[PlasmaIdx::phi  ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx1  ][pidx] = 1.;
                 arrdata[PlasmaIdx::Fx2  ][pidx] = 2.;
