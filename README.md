@@ -1,6 +1,7 @@
 # hipace
 
 ![linux](https://github.com/Hi-PACE/hipace/workflows/linux/badge.svg?branch=master&event=push)
+![macOS](https://github.com/Hi-PACE/hipace/workflows/macos/badge.svg?branch=master&event=push)
 
 Highly efficient Plasma Accelerator Emulation, quasistatic particle-in-cell code
 
@@ -12,7 +13,7 @@ macOS/Linux:
 ```bash
 brew update
 brew install cmake
-brew install open-mpi
+brew install openmpi
 ```
 
 or macOS/Linux:
