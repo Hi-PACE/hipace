@@ -67,6 +67,12 @@ or by providing arguments to the CMake call: `cmake .. -D<OPTION_A>=<VALUE_A> -D
 | `HiPACE_amrex_internal`      | **ON**/OFF                                 | Needs a pre-build AMReX library if set to `OFF` |
 
 HiPACE benefits from further standardized options in AMReX, which are [documented in detail in the AMReX manual](https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options).
+Commonly used options are:
+
+| CMake Option                 | Default & Values                           | Description              |
+|------------------------------|--------------------------------------------|--------------------------|
+| `ENABLE_MPI`                 | **ON**/OFF                                 | Multi-node (MPI) support |
+| `ENABLE_CUDA`                | ON/**OFF**                                 | Nvidia GPU support       |
 
 
 ### Run a simulation and look at the results
