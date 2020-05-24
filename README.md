@@ -1,4 +1,7 @@
 # hipace
+
+![linux](https://github.com/Hi-PACE/hipace/workflows/linux/badge.svg?branch=master&event=push)
+
 Highly efficient Plasma Accelerator Emulation, quasistatic particle-in-cell code
 
 ## Developers
