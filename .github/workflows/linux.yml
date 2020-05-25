@@ -1,0 +1,90 @@
+name: linux
+
+on: [push, pull_request]
+
+jobs:
+  linux_gcc_cxx14_ompi:
+    name: GNU@7.5 C++14 OMPI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu_ompi.sh
+    - name: Build & Install
+      run: |
+        mkdir build
+        cd build
+        cmake ..                                   \
+            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace
+        make -j 2 VERBOSE=ON
+        ctest --output-on-failure
+        make install
+
+  linux_gcc_cxx17_ompi:
+    name: GNU@7.5 C++17 OMPI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu_ompi.sh
+    - name: Build & Install
+      run: |
+        mkdir build
+        cd build
+        cmake ..                                   \
+            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
+            -DCMAKE_CXX_STANDARD=17
+        make -j 2 VERBOSE=ON
+        ctest --output-on-failure
+
+  linux_gcc_cxx14:
+    name: GNU@7.5 C++14 Serial
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu.sh
+    - name: Build & Install
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DENABLE_MPI=OFF
+        make -j 2 VERBOSE=ON
+        ctest --output-on-failure
+
+  linux_clang_cxx14:
+    name: Clang@4.0.1 C++14 OMPI
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu_clang.sh
+    - name: Build & Install
+      run: |
+        mkdir build
+        cd build
+        cmake ..                                             \
+            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
+            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)
+        make -j 2 VERBOSE=ON
+        ctest --output-on-failure
+
+#  linux_clang_cxx14_ompi_cuda:
+#    name: CUDA@9.1.85 Clang@4.0.1 C++14
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Dependencies
+#      run: .github/workflows/setup/ubuntu_ompi_cuda.sh
+#    - name: Build & Install
+#      run: |
+#        mkdir build
+#        cd build
+#        cmake ..                                             \
+#            -DENABLE_CUDA=ON                                 \
+#            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
+#            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)        \
+#            -DCMAKE_CUDA_HOST_COMPILER=$(which clang++-4.0)  \
+#            -DCUDA_ARCH=6.0
+#        make -j 2 VERBOSE=ON
+#        ctest --output-on-failure
