@@ -3,22 +3,24 @@ name: linux
 on: [push, pull_request]
 
 jobs:
-  linux_gcc_cxx14_ompi:
-    name: GNU@7.5 C++14 OMPI
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Dependencies
-      run: .github/workflows/setup/ubuntu_ompi.sh
-    - name: Build & Install
-      run: |
-        mkdir build
-        cd build
-        cmake ..                                   \
-            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace
-        make -j 2 VERBOSE=ON
-        ctest --output-on-failure
-        make install
+# enable again when we open-source (free core-hours for GH Actions)
+#
+#  linux_gcc_cxx14_ompi:
+#    name: GNU@7.5 C++14 OMPI
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Dependencies
+#      run: .github/workflows/setup/ubuntu_ompi.sh
+#    - name: Build & Install
+#      run: |
+#        mkdir build
+#        cd build
+#        cmake ..                                   \
+#            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace
+#        make -j 2 VERBOSE=ON
+#        ctest --output-on-failure
+#        make install
 
   linux_gcc_cxx17_omp_ompi:
     name: GNU@7.5 C++17 OMP OMPI
@@ -53,23 +55,27 @@ jobs:
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
 
-  linux_clang_cxx14:
-    name: Clang@4.0.1 C++14 OMPI
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Dependencies
-      run: .github/workflows/setup/ubuntu_clang.sh
-    - name: Build & Install
-      run: |
-        mkdir build
-        cd build
-        cmake ..                                             \
-            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
-            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)
-        make -j 2 VERBOSE=ON
-        ctest --output-on-failure
+# enable again when we open-source (free core-hours for GH Actions)
+#
+#  linux_clang_cxx14:
+#    name: Clang@4.0.1 C++14 OMPI
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Dependencies
+#      run: .github/workflows/setup/ubuntu_clang.sh
+#    - name: Build & Install
+#      run: |
+#        mkdir build
+#        cd build
+#        cmake ..                                             \
+#            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
+#            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)
+#        make -j 2 VERBOSE=ON
+#        ctest --output-on-failure
 
+# tricky: newer Ubuntu would be better (or download & ship GCC avx patches)
+#
 #  linux_clang_cxx14_ompi_cuda:
 #    name: CUDA@9.1.85 Clang@4.0.1 C++14
 #    runs-on: ubuntu-latest
