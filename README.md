@@ -13,7 +13,8 @@ macOS/Linux:
 ```bash
 brew update
 brew install cmake
-brew install openmpi
+brew install libomp
+brew install open-mpi
 ```
 
 or macOS/Linux:
@@ -72,6 +73,7 @@ Commonly used options are:
 | CMake Option                 | Default & Values                           | Description              |
 |------------------------------|--------------------------------------------|--------------------------|
 | `ENABLE_MPI`                 | **ON**/OFF                                 | Multi-node (MPI) support |
+| `ENABLE_OMP`                 | ON/**OFF**                                 | OpenMP threads support   |
 | `ENABLE_CUDA`                | ON/**OFF**                                 | Nvidia GPU support       |
 
 

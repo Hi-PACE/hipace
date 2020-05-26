@@ -20,8 +20,8 @@ jobs:
         ctest --output-on-failure
         make install
 
-  linux_gcc_cxx17_ompi:
-    name: GNU@7.5 C++17 OMPI
+  linux_gcc_cxx17_omp_ompi:
+    name: GNU@7.5 C++17 OMP OMPI
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -33,7 +33,8 @@ jobs:
         cd build
         cmake ..                                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DCMAKE_CXX_STANDARD=17
+            -DCMAKE_CXX_STANDARD=17                \
+            -DENABLE_OMP=ON
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
 
