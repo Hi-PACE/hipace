@@ -9,4 +9,5 @@ set -eu -o pipefail
 
 brew update
 brew install cmake
+brew install libomp
 brew install open-mpi
