@@ -31,6 +31,15 @@ public:
         const amrex::Real      a_density,
         const amrex::Geometry& a_geom,
         const amrex::RealBox&  a_bounds);
+
+};
+
+
+class BeamParticleIterator : public amrex::ParIter<0,0,BeamIdx::nattribs>
+{
+public:
+    using amrex::ParIter<0,0,PIdx::nattribs>::ParIter;
+    BeamParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {};
 };
 
 #endif
