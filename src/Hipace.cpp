@@ -25,7 +25,7 @@ Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
 {
     AMREX_ALWAYS_ASSERT(lev == 0);
-    m_fields.AllocData(lev, ba, dm);
+    m_fields.AllocData(lev, ba, dm, geom[lev]);
 }
 
 void
