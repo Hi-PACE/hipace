@@ -1,5 +1,5 @@
 macro(find_amrex)
-    if(HiPACE_amrex_internal    )
+    if(HiPACE_amrex_internal)
         include(FetchContent)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
@@ -49,5 +49,12 @@ macro(find_amrex)
         message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
     endif()
 endmacro()
+
+set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
+    CACHE STRING
+    "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
+set(HiPACE_amrex_branch "development"
+    CACHE STRING
+    "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 
 find_amrex()

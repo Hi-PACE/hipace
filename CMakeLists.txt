@@ -3,7 +3,16 @@
 cmake_minimum_required(VERSION 3.14.0)
 project(HiPACE VERSION 0.20.5)
 
+# helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
+
+# In-source tree builds are messy and can screw up the build system.
+# Avoid building at least in the same dir as the root dir:
+if(CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    message(FATAL_ERROR "Building in-source is not supported! "
+            "Create a build directory and remove "
+            "${CMAKE_SOURCE_DIR}/CMakeCache.txt ${CMAKE_SOURCE_DIR}/CMakeFiles/")
+endif()
 
 
 # Output Directories ##########################################################
@@ -31,12 +40,6 @@ include(CTest)
 
 # AMReX
 #   builds AMReX from source (default) or finds an existing install of AMReX
-set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
-    CACHE STRING
-    "Repository URI to pull and build AMReX from if(HiPACE_USE_INTERNAL_AMReX)")
-set(HiPACE_amrex_branch "development"
-    CACHE STRING
-    "Repository branch for HiPACE_amrex_repo if(HiPACE_USE_INTERNAL_AMReX)")
 include(${HiPACE_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 #   suppress warnings in AMReX headers (use -isystem instead of -I)
 make_third_party_includes_system(AMReX::amrex AMReX)
@@ -64,9 +67,7 @@ target_include_directories(HiPACE PRIVATE
 add_subdirectory(src)
 
 # C++ properties: at least a C++14 capable compiler is needed
-target_compile_features(HiPACE
-    PUBLIC cxx_std_14
-)
+target_compile_features(HiPACE PUBLIC cxx_std_14)
 set_target_properties(HiPACE PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON
