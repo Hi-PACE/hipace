@@ -1,29 +1,30 @@
 #ifndef HIPACE_CURRENTDEPOSITION_H_
 #define HIPACE_CURRENTDEPOSITION_H_
 
-#include "source/particles/ShapeFactors.H"
-#include "source/PhysConst.H"
+#include "particles/ShapeFactors.H"
+#include "PhysConst.H"
 
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 
 template <int depos_order>
 void doDepositionShapeN(const BeamParticleIterator& pti,
-                        amrex::FArrayBox& fields,
-                        const long np_to_depose,
-                        const std::array<amrex::Real,3>& dx,
-                        const std::array<amrex::Real,3>& xyzmin,
-                        const amrex::Dim3 lo,
-                        const amrex::Real q=-PhysConst::q_e)
+                        amrex::FArrayBox& jx_fab,
+                        amrex::FArrayBox& jy_fab,
+                        amrex::FArrayBox& jz_fab,
+                        amrex::Real const* dx,
+                        amrex::Real const* xyzmin,
+                        amrex::Dim3 const lo,
+                        amrex::Real const q)
 {
 
     // Extract particle properties
-    aos = pti.GetArrayOfStructs(); // For positions
-    soa = pti.GetStructOfArrays(); // For momenta and weights
-    auto&  wp = attribs[PIdx::w];
-    auto& uxp = attribs[PIdx::ux];
-    auto& uyp = attribs[PIdx::uy];
-    auto& uzp = attribs[PIdx::uz];
+    auto& aos = pti.GetArrayOfStructs(); // For positions
+    auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+    auto&  wp = soa.GetRealData(BeamIdx::w);
+    auto& uxp = soa.GetRealData(BeamIdx::ux);
+    auto& uyp = soa.GetRealData(BeamIdx::uy);
+    auto& uzp = soa.GetRealData(BeamIdx::uz);
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
@@ -49,7 +50,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
 
     // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
     amrex::ParallelFor(
-        np_to_depose,
+        pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0/std::sqrt(1.0 + uxp[ip]*uxp[ip]*clightsq
@@ -67,7 +68,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
 
             // --- Compute shape factors
             // x direction
-            const amrex::Real xmid = (pti[ip].pos(0) - xmin)*dxi;
+            const amrex::Real xmid = (aos[ip].pos(0) - xmin)*dxi;
             // j_j[xyz] leftmost grid point in x that the particle touches for the centering of each current
             // sx_j[xyz] shape factor along x for the centering of each current
             // There are only two possible centerings, node or cell centered, so at most only two shape factor
@@ -90,7 +91,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             int const j_jz = ((jz_type[0] == NODE) ? j_node : j_cell);
 
             // y direction
-            const amrex::Real ymid = (pti[ip].pos(1) - ymin)*dyi;
+            const amrex::Real ymid = (aos[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_node[depos_order + 1];
             amrex::Real sy_cell[depos_order + 1];
             int k_node;
@@ -109,7 +110,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             int const k_jz = ((jz_type[1] == NODE) ? k_node : k_cell);
 
             // z direction
-            const amrex::Real zmid = (pti[ip].pos(2) - zmin)*dzi - dts2dz*vz;
+            const amrex::Real zmid = (aos[ip].pos(2) - zmin)*dzi;
             amrex::Real sz_node[depos_order + 1];
             amrex::Real sz_cell[depos_order + 1];
             int l_node;

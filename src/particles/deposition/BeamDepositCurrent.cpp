@@ -1,5 +1,7 @@
 #include "particles/BeamParticleContainer.H"
+#include "particles/deposition/CurrentDeposition.H"
 #include "fields/Fields.H"
+#include "PhysConst.H"
 
 void
 DepositCurrent (BeamParticleContainer& beam, Fields & fields,
@@ -27,8 +29,11 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::FArrayBox& jy_fab = jy[pti];
         amrex::FArrayBox& jz_fab = jz[pti];
 
+        // For now: fix the value of the charge
+        amrex::Real q = - PhysConst::q_e;
+
         // Call deposition function in each box
-        //doChargeDepositionShapeN<2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo );
+        doDepositionShapeN<2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
     }
 
 }
