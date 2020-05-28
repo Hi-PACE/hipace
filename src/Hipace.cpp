@@ -15,6 +15,14 @@ Hipace::Hipace () :
 void
 Hipace::InitData ()
 {
+    amrex::Vector<amrex::IntVect> new_max_grid_size;
+    for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
+        amrex::IntVect mgs = maxGridSize(ilev);
+        mgs[0] = mgs[1] = 1024000000; // disable domain decomposition in x and y directions
+        new_max_grid_size.push_back(mgs);
+    }
+    SetMaxGridSize(new_max_grid_size);
+
     AmrCore::InitFromScratch(0.0); // function argument is time
     m_beam_container.InitData(geom[0]);
     m_plasma_container.InitData(geom[0]);
