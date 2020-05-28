@@ -42,7 +42,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
               const int      a_problem)
 {
     RealBox a_bounds = geom.ProbDomain();
-    
+
     BL_PROFILE("BeamParticleContainer::InitParticles");
 
     const int lev = 0;
@@ -53,7 +53,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
     const Real scale_fac = dx[0]*dx[1]*dx[2]/num_ppc;
-    
+
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
         const Box& tile_box  = mfi.tilebox();
@@ -118,7 +118,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
         int procID = ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
-        
+
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
