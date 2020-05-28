@@ -9,6 +9,7 @@ macro(find_amrex)
         set(ENABLE_TUTORIALS OFF CACHE INTERNAL "")
         set(ENABLE_PARTICLES ON CACHE INTERNAL "")
         set(ENABLE_TINY_PROFILE ON CACHE INTERNAL "")
+        set(ENABLE_LINEAR_SOLVERS OFF CACHE INTERNAL "")
         set(AMReX_DIM 3 CACHE INTERNAL "")
         # we'll need this for Python bindings
         #set(ENABLE_PIC ON CACHE INTERNAL "")
