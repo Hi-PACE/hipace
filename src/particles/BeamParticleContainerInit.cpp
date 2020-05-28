@@ -1,53 +1,23 @@
 #include "BeamParticleContainer.H"
 #include "Constant.H"
+#include "ParticleUtil.H"
 
 using namespace amrex;
 
-namespace
-{
-    AMREX_GPU_HOST_DEVICE void get_position_unit_cell(Real* r, const IntVect& nppc, int i_part)
-    {
-        int nx = nppc[0];
-        int ny = nppc[1];
-        int nz = nppc[2];
-
-        int ix_part = i_part/(ny * nz);
-        int iy_part = (i_part % (ny * nz)) % ny;
-        int iz_part = (i_part % (ny * nz)) / ny;
-
-        r[0] = (0.5+ix_part)/nx;
-        r[1] = (0.5+iy_part)/ny;
-        r[2] = (0.5+iz_part)/nz;
-    }
-
-    AMREX_GPU_HOST_DEVICE void get_gaussian_random_momentum(Real* u, Real u_mean, Real u_std) {
-        Real ux_th = amrex::RandomNormal(0.0, u_std);
-        Real uy_th = amrex::RandomNormal(0.0, u_std);
-        Real uz_th = amrex::RandomNormal(0.0, u_std);
-
-        u[0] = u_mean + ux_th;
-        u[1] = u_mean + uy_th;
-        u[2] = u_mean + uz_th;
-    }
-}
-
 void
 BeamParticleContainer::
-InitParticles(const IntVect& a_num_particles_per_cell,
-              const Real     a_thermal_momentum_std,
-              const Real     a_thermal_momentum_mean,
-              const Real     a_density,
-              const Geometry& geom,
-              /*const RealBox& a_bounds,*/
-              const int      a_problem)
+InitParticles (const IntVect&  a_num_particles_per_cell,
+               const Real      a_thermal_momentum_std,
+               const Real      a_thermal_momentum_mean,
+               const Real      a_density,
+               const Geometry& a_geom,
+               const RealBox&  a_bounds)
 {
-    RealBox a_bounds = geom.ProbDomain();
-
     BL_PROFILE("BeamParticleContainer::InitParticles");
 
     const int lev = 0;
-    const auto dx = geom.CellSizeArray();
-    const auto plo = geom.ProbLoArray();
+    const auto dx = a_geom.CellSizeArray();
+    const auto plo = a_geom.ProbLoArray();
 
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
@@ -74,7 +44,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
             {
                 Real r[3];
 
-                get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
                 Real x = plo[0] + (i + r[0])*dx[0];
                 Real y = plo[1] + (j + r[1])*dx[1];
@@ -140,23 +110,14 @@ InitParticles(const IntVect& a_num_particles_per_cell,
                 Real r[3] = {0.,0.,0.};
                 Real u[3] = {0.,0.,0.};
 
-                get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
                 Real x = plo[0] + (i + r[0])*dx[0];
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                if (a_problem == 0) {
-                    get_gaussian_random_momentum(u, a_thermal_momentum_mean,
-                                                 a_thermal_momentum_std);
-                }
-                else if (a_problem == 1 ) {
-                    u[0] = 0.01;
-                    u[1] = 0.0;
-                    u[2] = 0.0;
-                } else {
-                    amrex::Abort("problem type not valid");
-                }
+                ParticleUtil::get_gaussian_random_momentum(u, a_thermal_momentum_mean,
+                                                           a_thermal_momentum_std);
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
