@@ -10,10 +10,9 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                const Real      a_thermal_momentum_std,
                const Real      a_thermal_momentum_mean,
                const Real      a_density,
-               const Geometry& a_geom)
+               const Geometry& a_geom,
+               const RealBox&  a_bounds)
 {
-    RealBox a_bounds = a_geom.ProbDomain();
-
     BL_PROFILE("BeamParticleContainer::InitParticles");
 
     const int lev = 0;
