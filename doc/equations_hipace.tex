@@ -20,45 +20,45 @@
 
 \subsection*{Field equation}
 
-In the beginning of the plasma routine, the plasma particles are pushed and the current and charge densities are deposited. All fields are calculated from there. 
+In the beginning of the plasma routine, the plasma particles are pushed and the current and charge densities are deposited. All fields are calculated from there.
 The transverse focusing field will be calculated from $-\Psi$, which can be calculated from the plasma charge density $\rho_p$ and the longitudinal current density $J_z$:
 \begin{equation}
-\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0}} (\rho_p - J_z ).
+\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0} c} (\rho_p \blue{c} - J_z ).
 \label{eq:psi}
 \end{equation}
 Note: the beam contribution is not needed in this equation. In the ultra-relativistic limit, neglecting the transverse currents within the beam, the charge density of the beam $\rho_b$ equals $J_{z,b}$ and cancels out. The contribution of the beam to $J_z$ is added after $-\Psi$ is calculated.
-In 3D, equation \ref{eq:psi} is solved with Poisson solvers, in RZ it is solved with a tridiagonal matrix solver. 
+In 3D, equation \ref{eq:psi} is solved with Poisson solvers, in RZ it is solved with a tridiagonal matrix solver.
 The focusing field is then calculated by
 \begin{subequations}
 \begin{align}
     E_x - \blue{c}B_y &= \frac{\partial}{\partial x} (-\Psi) \\
-    E_y + \blue{c}B_x &= \frac{\partial}{\partial y} (-\Psi) 
+    E_y + \blue{c}B_x &= \frac{\partial}{\partial y} (-\Psi)
 \end{align}
 \end{subequations}
-    
 
-The longitudinal accelerating field $E_z$ will be calculated from 
+
+The longitudinal accelerating field $E_z$ will be calculated from
 \begin{equation} \label{eq:ez}
 \nabla^2_{\perp} E_z = \blue{\frac{1}{\epsilon_0 c}} \nabla_{\perp} \cdot  J_{\perp} .
 \end{equation}
-In full 3D, this is realized by 
+In full 3D, this is realized by
 \begin{equation}
     \nabla_{\perp} \cdot J_{\perp} = \frac{\partial J_x}{\partial x} +  \frac{\partial J_y}{\partial y}
 \end{equation}
 In the radial solver, it is calculated in cylindrical coordinates:
 \begin{equation}
-    \nabla \cdot J_r = \frac{\partial J_r}{\partial r} + \frac{J_r}{r}.
+    \nabla_{\perp} \cdot J_{\perp} = \frac{\partial J_r}{\partial r} + \frac{J_r}{r}.
 \end{equation}
 Equation \ref{eq:ez} is then again solved via Poisson solvers in 3D and with a tridiagonal matrix solver in RZ.
 
 The magnetic fields are calculated with:
 \begin{equation} \label{eq:b_trans}
-\nabla^2 B = - \blue{\mu_0} \nabla \times J .
+\nabla_{\perp}^2 B = - \blue{\mu_0} \nabla \times J .
 \end{equation}
 
-In full 3D this can be written as 
-\begin{subequations} 
-\begin{align} 
+In full 3D this can be written as
+\begin{subequations}
+\begin{align}
 \nabla_{\perp}^2 B_x  &= \blue{\mu_0}(- \partial_y J_z + \partial_{\zeta} J_y) \,  \\
 \nabla_{\perp}^2  B_y  &=   \blue{\mu_0}(\partial_x J_z - \partial_{\zeta} J_x)   \, \\
  \nabla^2_{\perp} B_z &= \blue{\mu_0}(\partial_y J_x - \partial_x J_y).
@@ -80,7 +80,7 @@ In general, the charge deposition is the operation
 \end{equation}
 where $q$ is the charge of 1 physical particle of the species, $N$ is the number of physical particles in current macro-particle, $S(x)$ is the value of the shape factor at the grid point $ijk$ and $\Delta V$ is the volume of 1 cell.
 
-In Hipace, this is interpreted as 
+In Hipace, this is interpreted as
 \begin{equation}
 \begin{split}
 \rho_{ijk} &+= \frac{q N S(x_{ijk})}{\Delta V_{cell}} \\
@@ -97,7 +97,7 @@ w &= \blue{\frac{q N}{\Delta V_{cell}}}\frac{1}{ppc} \\
 \end{equation}
 where $ppc$ is the number of particles per cell. In this case, a particle is interpreted as a small amount of the charge density.
 
-In WarpX, this is interpreted as 
+In WarpX, this is interpreted as
 \begin{equation}
 \begin{split}
 \rho_{ijk} &+= \frac{q w S(x_{ijk})}{\Delta V_{cell}} \\
@@ -122,23 +122,23 @@ Equations (3.9) to (3.12) in Timon Mehrling's manuscript read, respectively,
 \left[
 \frac{\gamma_p}{1+\blue{\frac{e}{m_ec^2}}\psi_p}
 \left(
-\begin{array}{l} 
+\begin{array}{l}
    E_x - \blue{c}B_y \\
    E_y + \blue{c}B_x
 \end{array}
-\right) 
+\right)
 +
 \left(
-\begin{array}{l} 
+\begin{array}{l}
    +\blue{c}B_y \\
    -\blue{c}B_x
 \end{array}
-\right) 
+\right)
 +
 \blue{\frac{1}{Mc}}
-\frac{\blue{c}B_z}{1+\blue{\frac{e}{m_ec^2}}\psi_p} 
+\frac{\blue{c}B_z}{1+\blue{\frac{e}{m_ec^2}}\psi_p}
 \left(
-\begin{array}{l} 
+\begin{array}{l}
    +U_y \\
    -U_x
 \end{array}
@@ -147,15 +147,15 @@ Equations (3.9) to (3.12) in Timon Mehrling's manuscript read, respectively,
 \end{equation}
 
 \begin{equation}
-\partial_{\zeta}\psi_p = 
+\partial_{\zeta}\psi_p =
 \blue{\frac{1}{Mc}}
 \frac{U_p}{1+\blue{\frac{e}{m_ec^2}}\psi_p}
 \left(
-\begin{array}{l} 
+\begin{array}{l}
    E_x - \blue{c}B_y \\
    E_y + \blue{c}B_x
 \end{array}
-\right) 
+\right)
 -
 E_z
 \end{equation}
