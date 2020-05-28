@@ -10,9 +10,7 @@ InitParticles(const IntVect& a_num_particles_per_cell,
               const Real     a_thermal_momentum_std,
               const Real     a_thermal_momentum_mean,
               const Real     a_density,
-              const Geometry& geom,
-              /*const RealBox& a_bounds,*/
-              const int      a_problem)
+              const Geometry& geom)
 {
     RealBox a_bounds = geom.ProbDomain();
 
@@ -119,17 +117,8 @@ InitParticles(const IntVect& a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                if (a_problem == 0) {
-                    ParticleUtil::get_gaussian_random_momentum(u, a_thermal_momentum_mean,
-                                                               a_thermal_momentum_std);
-                }
-                else if (a_problem == 1 ) {
-                    u[0] = 0.01;
-                    u[1] = 0.0;
-                    u[2] = 0.0;
-                } else {
-                    amrex::Abort("problem type not valid");
-                }
+                ParticleUtil::get_gaussian_random_momentum(u, a_thermal_momentum_mean,
+                                                           a_thermal_momentum_std);
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||

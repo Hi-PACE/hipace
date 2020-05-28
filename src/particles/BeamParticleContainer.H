@@ -17,7 +17,7 @@ struct BeamIdx
 class BeamParticleContainer
     : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
 {
-public:    
+public:
     explicit BeamParticleContainer (amrex::AmrCore* amr_core) :
         amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB())
     {}
@@ -29,8 +29,7 @@ public:
         const amrex::Real     a_thermal_momentum_std,
         const amrex::Real     a_thermal_momentum_mean,
         const amrex::Real     a_density,
-        const amrex::Geometry& geom,
-        const int             a_problem);
+        const amrex::Geometry& geom);
 };
 
 #endif

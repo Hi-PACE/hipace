@@ -33,8 +33,7 @@ public:
         const amrex::Real     a_thermal_momentum_std,
         const amrex::Real     a_thermal_momentum_mean,
         const amrex::Real     a_density,
-        const amrex::Geometry& geom,
-        const int             a_problem);
+        const amrex::Geometry& geom);
 };
 
 #endif
