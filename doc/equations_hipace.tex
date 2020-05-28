@@ -1,0 +1,168 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{Contemporary field equations in HiPACE}
+
+\usepackage{xcolor}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\begin{document}
+
+
+\section*{Contemporary field solving routine in HiPACE}
+\label{se:pic_rad_field_solver}
+
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+\blue{In what follows, blue symbols are used for SI symbols. Discard them to have the normalized equations.}\red{Red factors are required for normalized units only. Discard them to have SI equations.}
+
+\subsection*{Field equation}
+
+In the beginning of the plasma routine, the plasma particles are pushed and the current and charge densities are deposited. All fields are calculated from there. 
+The transverse focusing field will be calculated from $-\Psi$, which can be calculated from the plasma charge density $\rho_p$ and the longitudinal current density $J_z$:
+\begin{equation}
+\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0}} (\rho_p - J_z ).
+\label{eq:psi}
+\end{equation}
+Note: the beam contribution is not needed in this equation. In the ultra-relativistic limit, neglecting the transverse currents within the beam, the charge density of the beam $\rho_b$ equals $J_{z,b}$ and cancels out. The contribution of the beam to $J_z$ is added after $-\Psi$ is calculated.
+In 3D, equation \ref{eq:psi} is solved with Poisson solvers, in RZ it is solved with a tridiagonal matrix solver. 
+The focusing field is then calculated by
+\begin{subequations}
+\begin{align}
+    E_x - \blue{c}B_y &= \frac{\partial}{\partial x} (-\Psi) \\
+    E_y + \blue{c}B_x &= \frac{\partial}{\partial y} (-\Psi) 
+\end{align}
+\end{subequations}
+    
+
+The longitudinal accelerating field $E_z$ will be calculated from 
+\begin{equation} \label{eq:ez}
+\nabla^2_{\perp} E_z = \blue{\frac{1}{\epsilon_0 c}} \nabla_{\perp} \cdot  J_{\perp} .
+\end{equation}
+In full 3D, this is realized by 
+\begin{equation}
+    \nabla_{\perp} \cdot J_{\perp} = \frac{\partial J_x}{\partial x} +  \frac{\partial J_y}{\partial y}
+\end{equation}
+In the radial solver, it is calculated in cylindrical coordinates:
+\begin{equation}
+    \nabla \cdot J_r = \frac{\partial J_r}{\partial r} + \frac{J_r}{r}.
+\end{equation}
+Equation \ref{eq:ez} is then again solved via Poisson solvers in 3D and with a tridiagonal matrix solver in RZ.
+
+The magnetic fields are calculated with:
+\begin{equation} \label{eq:b_trans}
+\nabla^2 B = - \blue{\mu_0} \nabla \times J .
+\end{equation}
+
+In full 3D this can be written as 
+\begin{subequations} 
+\begin{align} 
+\nabla_{\perp}^2 B_x  &= \blue{\mu_0}(- \partial_y J_z + \partial_{\zeta} J_y) \,  \\
+\nabla_{\perp}^2  B_y  &=   \blue{\mu_0}(\partial_x J_z - \partial_{\zeta} J_x)   \, \\
+ \nabla^2_{\perp} B_z &= \blue{\mu_0}(\partial_y J_x - \partial_x J_y).
+\end{align}
+\end{subequations}
+The longitudinal magnetic field $B_z$ is only non-trivial in a full 3D simulation and vanishes in RZ. Whereas the longitudinal field $B_z$ can be calculated directly, the transverse $B$-fields require a predictor-corrector loop, as described below.
+In cylindrical coordinates, equation \ref{eq:b_trans} transforms to
+\begin{equation}
+\frac{\partial^2 B_{\phi}}{\partial r^2} + \frac{1}{2} \frac{\partial B_{\phi}}{\partial r} - \frac{B_{\phi}}{r^2} = \frac{\partial J_z}{\partial r} - \frac{\partial J_r}{\partial \zeta}.
+\end{equation}
+
+Since the longitudinal derivative $\partial / \partial \zeta$ is not directly obtainable, a initial guess for the transverse $B$-fields is generated from the $B$-field from the previous slice and the $B$-field from the current slice from the previous time step (if there are earlier time steps). Then, the particles are pushed to the next slice with the guessed $B$-field and the currents are deposited. Having the current at the next slice, the derivative $\partial / \partial \zeta$ can be calculated, enabling the calculation of the $B$-field. The $B$-fields are re-calculated this way until a certain convergence criteria for the updated $B$-field and the previous iteration is matched.
+
+\subsection*{Charge (and current) deposition}
+
+In general, the charge deposition is the operation
+\begin{equation}
+\rho_{ijk} += \frac{q N S(x_{ijk})}{\Delta V_{cell}}
+\end{equation}
+where $q$ is the charge of 1 physical particle of the species, $N$ is the number of physical particles in current macro-particle, $S(x)$ is the value of the shape factor at the grid point $ijk$ and $\Delta V$ is the volume of 1 cell.
+
+In Hipace, this is interpreted as 
+\begin{equation}
+\begin{split}
+\rho_{ijk} &+= \frac{q N S(x_{ijk})}{\Delta V_{cell}} \\
+           &+= \frac{q N}{\Delta V_{cell}} S(x_{ijk}) \\
+           &+= \rho_{particle} S(x_{ijk}) \\
+           &+= wS(x_{ijk})
+\end{split}
+\end{equation}
+where $w$ is the weight of the particle given by
+\begin{equation}
+\begin{split}
+w &= \blue{\frac{q N}{\Delta V_{cell}}}\frac{1}{ppc} \\
+\end{split}
+\end{equation}
+where $ppc$ is the number of particles per cell. In this case, a particle is interpreted as a small amount of the charge density.
+
+In WarpX, this is interpreted as 
+\begin{equation}
+\begin{split}
+\rho_{ijk} &+= \frac{q w S(x_{ijk})}{\Delta V_{cell}} \\
+w &= N \text{ in S.I.} \\
+\end{split}
+\end{equation}
+Note that this interpretation is very handy in SI (because the weight has a straightforward definition) but may not be that well adapted for normalized units because $\rho$ is normalized by $n_0$ while the cell size, used for the volume, is normalized by $k_p$, so we end up with inelegant $n_0k_p^3$ (I think, from Maxence). We could probably have an if statement there, to change between normalized and S.I.
+
+\subsection*{Plasma particle pushers}
+
+Equations (3.9) to (3.12) in Timon Mehrling's manuscript read, respectively,
+% \frac{e\psi_p}{m_ec^2}
+
+\begin{equation}
+\partial_{\zeta}X_p = -\blue{\frac{1}{Mc}}\frac{U_p} {1+\blue{\frac{e}{m_e c^2}}\psi_p }
+\end{equation}
+
+\begin{equation}
+\partial_{\zeta}U_p =
+\red {\frac{M}{m_e}}
+\blue{\frac{e}{c}}
+\left[
+\frac{\gamma_p}{1+\blue{\frac{e}{m_ec^2}}\psi_p}
+\left(
+\begin{array}{l} 
+   E_x - \blue{c}B_y \\
+   E_y + \blue{c}B_x
+\end{array}
+\right) 
++
+\left(
+\begin{array}{l} 
+   +\blue{c}B_y \\
+   -\blue{c}B_x
+\end{array}
+\right) 
++
+\blue{\frac{1}{Mc}}
+\frac{\blue{c}B_z}{1+\blue{\frac{e}{m_ec^2}}\psi_p} 
+\left(
+\begin{array}{l} 
+   +U_y \\
+   -U_x
+\end{array}
+\right)
+\right]
+\end{equation}
+
+\begin{equation}
+\partial_{\zeta}\psi_p = 
+\blue{\frac{1}{Mc}}
+\frac{U_p}{1+\blue{\frac{e}{m_ec^2}}\psi_p}
+\left(
+\begin{array}{l} 
+   E_x - \blue{c}B_y \\
+   E_y + \blue{c}B_x
+\end{array}
+\right) 
+-
+E_z
+\end{equation}
+
+\begin{equation}
+\gamma_p = \frac{1 + \blue{\frac{1}{M^2c^2}}U_p^2 + \left( 1+\blue{\frac{e}{m_ec^2}} \psi_p \right)^2}
+                {2\left(1+\blue{\frac{e}{m_ec^2}}\psi_p\right)}
+\end{equation}
+
+\end{document}
