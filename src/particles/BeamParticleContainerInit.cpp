@@ -6,19 +6,19 @@ using namespace amrex;
 
 void
 BeamParticleContainer::
-InitParticles(const IntVect& a_num_particles_per_cell,
-              const Real     a_thermal_momentum_std,
-              const Real     a_thermal_momentum_mean,
-              const Real     a_density,
-              const Geometry& geom)
+InitParticles (const IntVect&  a_num_particles_per_cell,
+               const Real      a_thermal_momentum_std,
+               const Real      a_thermal_momentum_mean,
+               const Real      a_density,
+               const Geometry& a_geom)
 {
-    RealBox a_bounds = geom.ProbDomain();
+    RealBox a_bounds = a_geom.ProbDomain();
 
     BL_PROFILE("BeamParticleContainer::InitParticles");
 
     const int lev = 0;
-    const auto dx = geom.CellSizeArray();
-    const auto plo = geom.ProbLoArray();
+    const auto dx = a_geom.CellSizeArray();
+    const auto plo = a_geom.ProbLoArray();
 
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
