@@ -2,6 +2,7 @@
 #define HIPACE_CURRENTDEPOSITION_H_
 
 #include "source/particles/ShapeFactors.H"
+#include "source/PhysConst.H"
 
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
@@ -13,7 +14,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
                         const std::array<amrex::Real,3>& dx,
                         const std::array<amrex::Real,3>& xyzmin,
                         const amrex::Dim3 lo,
-                        const amrex::Real q)
+                        const amrex::Real q=-PhysConst::q_e)
 {
 
     // Extract particle properties

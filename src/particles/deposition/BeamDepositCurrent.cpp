@@ -13,7 +13,11 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
-        // Extract the currents
+        // Extract properties associated with the extent of the current box
+        amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
+        const amrex::Dim3 lo = amrex::lbound(tilebox);
+
+        // Extract the fields currents
         amrex::MultiFab& F = fields.getF()[lev];
         amrex::MultiFab jx(F, amrex::make_alias, FieldComps::jx, F.nGrow());
         amrex::MultiFab jy(F, amrex::make_alias, FieldComps::jy, F.nGrow());
@@ -24,7 +28,7 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::FArrayBox& jz_fab = jz[pti];
 
         // Call deposition function in each box
-        //doChargeDepositionShapeN<2>( pti, jx_fab, jy_fab, jz_fab );
+        //doChargeDepositionShapeN<2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo );
     }
 
 }
