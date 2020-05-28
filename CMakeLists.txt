@@ -22,6 +22,9 @@ option(HiPACE_amrex_internal "Download & build AMReX" ON)
 # change the default build type to RelWithDebInfo (or Release) instead of Debug
 set_default_build_type("RelWithDebInfo")
 
+# this defined the variable BUILD_TESTING which is ON by default
+include(CTest)
+
 
 # Dependencies ################################################################
 #
@@ -49,10 +52,8 @@ add_executable(HiPACE)
 add_executable(HiPACE::HiPACE ALIAS HiPACE)
 
 # own headers
-target_include_directories(HiPACE PUBLIC
+target_include_directories(HiPACE PRIVATE
     $<BUILD_INTERFACE:${HiPACE_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/src>
-    $<INSTALL_INTERFACE:src>
 )
 
 # if we include <AMReX_buildInfo.H> we will need to call:
@@ -83,7 +84,7 @@ endif()
 # Defines #####################################################################
 #
 # Let's use them as sparsely as possible to avoid MxNxOxP... binary variants.
-#target_compile_definitions(HiPACE PRIVATE -DHiPACE_GPU)
+#target_compile_definitions(HiPACE PRIVATE -DHiPACE_FFTW)
 
 
 # Warnings ####################################################################
@@ -111,9 +112,6 @@ install(TARGETS HiPACE
 
 # Tests #######################################################################
 #
-# this defined the variable BUILD_TESTING which is ON by default
-include(CTest)
-
 if(BUILD_TESTING)
     enable_testing()
 
