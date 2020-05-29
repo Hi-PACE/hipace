@@ -35,8 +35,9 @@ For example, using a GCC on macOS:
 ```bash
 export CC=$(which gcc)
 export CXX=$(which g++)
+```
 
-If you also want to select a CUDA compiler
+If you also want to select a CUDA compiler:
 ```bash
 export CUDACXX=$(which nvcc)
 export CUDAHOSTCXX=$(which g++)
