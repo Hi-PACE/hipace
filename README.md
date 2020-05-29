@@ -35,6 +35,7 @@ For example, using a GCC on macOS:
 ```bash
 export CC=$(which gcc)
 export CXX=$(which g++)
+export CUDAHOSTCXX=$(which g++)
 ```
 
 ### Build & Test
