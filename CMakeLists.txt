@@ -15,6 +15,20 @@ if(CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 
+# CCache Support ##############################################################
+#
+# this is an optional tool that stores compiled object files; allows fast
+# re-builds even with "make clean" in between. Mainly used to store AMReX
+# objects
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    if(ENABLE_CUDA)
+        set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    endif()
+endif()
+
+
 # Output Directories ##########################################################
 #
 # temporary build directories
