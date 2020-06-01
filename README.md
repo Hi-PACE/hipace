@@ -12,6 +12,7 @@ Highly efficient Plasma Accelerator Emulation, quasistatic particle-in-cell code
 macOS/Linux:
 ```bash
 brew update
+brew install ccache
 brew install cmake
 brew install libomp
 brew install open-mpi
@@ -21,6 +22,7 @@ or macOS/Linux:
 ```bash
 spack env create hipace-dev
 spack env activate hipace-dev
+spack add ccache
 spack add cmake
 spack add mpi
 spack install
