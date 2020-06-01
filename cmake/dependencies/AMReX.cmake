@@ -10,9 +10,9 @@ macro(find_amrex)
         set(ENABLE_PARTICLES ON CACHE INTERNAL "")
         set(ENABLE_TINY_PROFILE ON CACHE INTERNAL "")
         set(ENABLE_LINEAR_SOLVERS OFF CACHE INTERNAL "")
-        set(AMReX_DIM 3 CACHE INTERNAL "")
         # we'll need this for Python bindings
         #set(ENABLE_PIC ON CACHE INTERNAL "")
+        set(DIM 3 CACHE INTERNAL "")
 
         FetchContent_Declare(fetchedamrex
                 GIT_REPOSITORY ${HiPACE_amrex_repo}
@@ -42,6 +42,7 @@ macro(find_amrex)
         # AMReX options not relevant to HiPACE users
         mark_as_advanced(DIM)
         mark_as_advanced(USE_XSDK_DEFAULTS)
+        mark_as_advanced(AMREX_BUILD_DATETIME)
 
         message(STATUS "AMReX: Using INTERNAL version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})")
     else()
