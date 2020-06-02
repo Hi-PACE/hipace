@@ -35,7 +35,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
     const amrex::Real ymin = xyzmin[1];
     const amrex::Real zmin = xyzmin[2];
 
-    const amrex::Real clightsq = 1.0/PhysConst::c/PhysConst::c;
+    const amrex::Real clightsq = 1.0_rt/(PhysConst::c*PhysConst::c);
 
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
@@ -53,7 +53,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
         pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
             // --- Get particle quantities
-            const amrex::Real gaminv = 1.0/std::sqrt(1.0 + uxp[ip]*uxp[ip]*clightsq
+            const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
                                                          + uzp[ip]*uzp[ip]*clightsq);
             amrex::Real wq  = q*wp[ip];
@@ -81,7 +81,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
                 j_node = compute_shape_factor<depos_order>(sx_node, xmid);
             }
             if (jx_type[0] == CELL || jy_type[0] == CELL || jz_type[0] == CELL) {
-                j_cell = compute_shape_factor<depos_order>(sx_cell, xmid - 0.5);
+                j_cell = compute_shape_factor<depos_order>(sx_cell, xmid - 0.5_rt);
             }
             const amrex::Real (&sx_jx)[depos_order + 1] = ((jx_type[0] == NODE) ? sx_node : sx_cell);
             const amrex::Real (&sx_jy)[depos_order + 1] = ((jy_type[0] == NODE) ? sx_node : sx_cell);
