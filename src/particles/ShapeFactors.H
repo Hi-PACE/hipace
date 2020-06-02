@@ -164,7 +164,7 @@ int compute_shifted_shape_factor <3> (amrex::Real* const sx,
 
     const auto i = static_cast<int>(x_old);
     const int i_shift = i - (i_new + 1);
-    const amrex::Real xint = x_old - i;
+    const amrex::Real xint = x_old - static_cast<amrex::Real>(i);
     sx[1+i_shift] = 1.0_rt/6.0_rt*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);
     sx[2+i_shift] = 2.0_rt/3.0_rt-xint*xint*(1.0_rt-xint/2.0_rt);
     sx[3+i_shift] = 2.0_rt/3.0_rt-(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-0.5_rt*(1.0_rt-xint));
