@@ -1,4 +1,5 @@
 #include "Hipace.H"
+#include "particles/deposition/BeamDepositCurrent.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -39,10 +40,12 @@ Hipace::MakeNewLevelFromScratch (
 void
 Hipace::Evolve ()
 {
+    int const lev = 0;
     WriteDiagnostics (0);
     for (int step = 0; step < m_max_step; ++step)
     {
         amrex::Print()<<"step "<< step <<"\n";
+        DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
     }
     WriteDiagnostics (1);
 }
@@ -53,7 +56,7 @@ Hipace::WriteDiagnostics (int step)
     // Write fields
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
-    const amrex::Vector< std::string > varnames {"Ex", "Ey", "Ez"};
+    const amrex::Vector< std::string > varnames {"Ex", "Ey", "Ez", "jx", "jy", "jz"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;

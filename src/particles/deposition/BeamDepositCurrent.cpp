@@ -1,3 +1,5 @@
+#include "BeamDepositCurrent.H"
+
 #include "particles/BeamParticleContainer.H"
 #include "particles/deposition/CurrentDeposition.H"
 #include "fields/Fields.H"
@@ -5,7 +7,7 @@
 
 void
 DepositCurrent (BeamParticleContainer& beam, Fields & fields,
-                amrex::Geometry const& gm, int const lev=0)
+                amrex::Geometry const& gm, int const lev)
 {
 
     // Extract properties associated with physical size of the box

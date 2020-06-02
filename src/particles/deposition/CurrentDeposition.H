@@ -17,6 +17,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
                         amrex::Dim3 const lo,
                         amrex::Real const q)
 {
+    using namespace amrex::literals;
 
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
