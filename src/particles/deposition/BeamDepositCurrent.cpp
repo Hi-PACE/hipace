@@ -1,7 +1,7 @@
 #include "particles/BeamParticleContainer.H"
 #include "particles/deposition/CurrentDeposition.H"
 #include "fields/Fields.H"
-#include "PhysConst.H"
+#include "Constant.H"
 
 void
 DepositCurrent (BeamParticleContainer& beam, Fields & fields,
@@ -9,8 +9,8 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
 {
 
     // Extract properties associated with physical size of the box
-    amrex::Real const * dx = gm.CellSize();
-    amrex::Real const * xyzmin = gm.ProbLo();
+    amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
+    amrex::Real const * AMREX_RESTRICT xyzmin = gm.ProbLo();
 
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)

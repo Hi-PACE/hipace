@@ -30,7 +30,7 @@ int compute_shape_factor <0> (amrex::Real* const sx, amrex::Real xmid){
 
     using namespace amrex;
 
-    const auto j = static_cast<int>(xmid+0.5_rt);
+    const auto j = static_cast<int>(floor(xmid+0.5_rt));
     sx[0] = 1.0_rt;
     return j;
 }
@@ -46,7 +46,7 @@ int compute_shape_factor <1> (amrex::Real* const sx, amrex::Real xmid){
 
     using namespace amrex;
 
-    const auto j = static_cast<int>(xmid);
+    const auto j = static_cast<int>(floor(xmid));
     const amrex::Real xint = xmid-j;
     sx[0] = 1.0_rt - xint;
     sx[1] = xint;
@@ -64,7 +64,7 @@ int compute_shape_factor <2> (amrex::Real* const sx, amrex::Real xmid){
 
     using namespace amrex;
 
-    const auto j = static_cast<int>(xmid+0.5_rt);
+    const auto j = static_cast<int>(floor(xmid+0.5_rt));
     const amrex::Real xint = xmid-j;
     sx[0] = 0.5_rt*(0.5_rt-xint)*(0.5_rt-xint);
     sx[1] = 0.75_rt-xint*xint;
@@ -84,7 +84,7 @@ int compute_shape_factor <3> (amrex::Real* const sx, amrex::Real xmid){
 
     using namespace amrex;
 
-    const auto j = static_cast<int>(xmid);
+    const auto j = static_cast<int>(floor(xmid));
     const amrex::Real xint = xmid-j;
     sx[0] = 1.0_rt/6.0_rt*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);
     sx[1] = 2.0_rt/3.0_rt-xint*xint*(1.0_rt-xint/2.0_rt);
@@ -118,7 +118,7 @@ int compute_shifted_shape_factor <1> (amrex::Real* const sx,
 
     using namespace amrex;
 
-    const auto i = static_cast<int>(x_old);
+    const auto i = static_cast<int>(floor(x_old));
     const int i_shift = i - i_new;
     const amrex::Real xint = x_old - i;
     sx[1+i_shift] = 1.0_rt - xint;
@@ -139,7 +139,7 @@ int compute_shifted_shape_factor <2> (amrex::Real* const sx,
 
     using namespace amrex;
 
-    const auto i = static_cast<int>(x_old+0.5_rt);
+    const auto i = static_cast<int>(floor(x_old+0.5_rt));
     const int i_shift = i - (i_new + 1);
     const amrex::Real xint = x_old - i;
     sx[1+i_shift] = 0.5_rt*(0.5_rt-xint)*(0.5_rt-xint);
@@ -162,7 +162,7 @@ int compute_shifted_shape_factor <3> (amrex::Real* const sx,
 
     using namespace amrex;
 
-    const auto i = static_cast<int>(x_old);
+    const auto i = static_cast<int>(floor(x_old));
     const int i_shift = i - (i_new + 1);
     const amrex::Real xint = x_old - i;
     sx[1+i_shift] = 1.0_rt/6.0_rt*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);

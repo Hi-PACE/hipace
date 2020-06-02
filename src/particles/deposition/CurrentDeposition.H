@@ -2,7 +2,7 @@
 #define HIPACE_CURRENTDEPOSITION_H_
 
 #include "particles/ShapeFactors.H"
-#include "PhysConst.H"
+#include "Constant.H"
 
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
@@ -12,8 +12,8 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
                         amrex::FArrayBox& jx_fab,
                         amrex::FArrayBox& jy_fab,
                         amrex::FArrayBox& jz_fab,
-                        amrex::Real const* dx,
-                        amrex::Real const* xyzmin,
+                        amrex::Real const * AMREX_RESTRICT dx,
+                        amrex::Real const * AMREX_RESTRICT xyzmin,
                         amrex::Dim3 const lo,
                         amrex::Real const q)
 {
