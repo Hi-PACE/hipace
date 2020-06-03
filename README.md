@@ -73,7 +73,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 
 | CMake Option                 | Default & Values                           | Description                                         |
 |------------------------------|--------------------------------------------|-----------------------------------------------------|
-| `CMAKE_BUILD_TYPE`           | `RelWithDebInfo`/Release/Debug             | Type of build, symbols & optimizations              |
+| `CMAKE_BUILD_TYPE`           | **RelWithDebInfo**/Release/Debug           | Type of build, symbols & optimizations              |
 | `HiPACE_amrex_repo`          | `https://github.com/AMReX-Codes/amrex.git` | Repository URI to pull and build AMReX from         |
 | `HiPACE_amrex_branch`        | `development`                              | Repository branch for `HiPACE_amrex_repo`           |
 | `HiPACE_amrex_internal`      | **ON**/OFF                                 | Needs a pre-installed AMReX library if set to `OFF` |
