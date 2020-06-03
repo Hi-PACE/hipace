@@ -39,7 +39,7 @@ class BeamParticleIterator : public amrex::ParIter<0,0,BeamIdx::nattribs>
 {
 public:
     using amrex::ParIter<0,0,BeamIdx::nattribs>::ParIter;
-    BeamParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {};
+    BeamParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
 };
 
 #endif
