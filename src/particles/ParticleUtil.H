@@ -30,8 +30,8 @@ namespace ParticleUtil
         amrex::Real uy_th = amrex::RandomNormal(0.0, u_std);
         amrex::Real uz_th = amrex::RandomNormal(0.0, u_std);
 
-        u[0] = u_mean + ux_th;
-        u[1] = u_mean + uy_th;
+        u[0] = ux_th;
+        u[1] = uy_th;
         u[2] = u_mean + uz_th;
     }
 }
