@@ -69,8 +69,6 @@ ccmake .
 
 or by providing arguments to the CMake call: `cmake .. -D<OPTION_A>=<VALUE_A> -D<OPTION_B>=<VALUE_B>`
 
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-
 | CMake Option                 | Default & Values                           | Description                                         |
 |------------------------------|--------------------------------------------|-----------------------------------------------------|
 | `CMAKE_BUILD_TYPE`           | **RelWithDebInfo**/Release/Debug           | Type of build, symbols & optimizations              |
