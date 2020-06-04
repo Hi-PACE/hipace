@@ -8,6 +8,10 @@ struct FieldComps{
     enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, nfields};
 };
 
+struct Direction{
+    enum dir{x=0, y};
+};
+
 class Fields
 {
 public:
