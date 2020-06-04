@@ -24,9 +24,9 @@ public:
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
                               const amrex::Real dx, const int scomp=0, const int dcomp=0);
+private:
     /** Vector over levels, all fields */
     amrex::Vector<amrex::MultiFab> m_F;
-private:
     /** Number of slices in temporary object */
     static constexpr int m_nslices = 4;
     /** Vector over levels, array of 4 slices required to compute current slice */
