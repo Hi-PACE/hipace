@@ -17,8 +17,8 @@ public:
 
     FFTPoissonSolver () = default;
 
-    void SolvePoissonEquation ( amrex::MultiFab const& input_mf,
-                                amrex::MultiFab& output_mf );
+    void SolvePoissonEquation ( amrex::MultiFab const& rhs_mf,
+                                amrex::MultiFab& lhs_mf );
 private:
     amrex::BoxArray m_spectralspace_ba;
     SpectralField m_tmpSpectralField; // contains (complex) field in Fourier space
