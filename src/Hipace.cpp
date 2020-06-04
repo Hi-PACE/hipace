@@ -35,6 +35,7 @@ Hipace::MakeNewLevelFromScratch (
 {
     AMREX_ALWAYS_ASSERT(lev == 0);
     m_fields.AllocData(lev, ba, dm, geom[lev]);
+    m_poisson_solver = FFTPoissonSolver(ba, dm, geom[lev]);
 }
 
 void
@@ -83,13 +84,13 @@ Hipace::WriteDiagnostics (int step)
         amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
         amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
         AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
-        amrex::Vector<std::string> int_names {};        
+        amrex::Vector<std::string> int_names {};
         m_beam_container.WritePlotFile(
             filename, "beam",
             plot_flags, int_flags,
             real_names, int_names);
     }
-    
+
     // Write plasma particles
     {
         amrex::Vector<int> plot_flags(PlasmaIdx::nattribs, 1);
@@ -103,7 +104,7 @@ Hipace::WriteDiagnostics (int step)
             "Fphi1", "Fphi2", "Fphi3", "Fphi4", "Fphi5",
         };
         AMREX_ALWAYS_ASSERT(real_names.size() == PlasmaIdx::nattribs);
-        amrex::Vector<std::string> int_names {};        
+        amrex::Vector<std::string> int_names {};
         m_plasma_container.WritePlotFile(
             filename, "plasma",
             plot_flags, int_flags,

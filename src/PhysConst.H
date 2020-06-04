@@ -3,6 +3,11 @@
 
 #include <AMReX_REAL.H>
 
+namespace MathConst
+{
+    static constexpr amrex::Real pi = 3.14159265358979323846;
+}
+
 // Physical constants. Values are the 2018 CODATA recommended values
 // https://physics.nist.gov/cuu/Constants/index.html
 namespace PhysConst

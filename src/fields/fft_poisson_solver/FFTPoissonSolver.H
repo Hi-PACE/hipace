@@ -12,7 +12,10 @@ class FFTPoissonSolver
 {
 public:
     FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
-                       amrex::DistributionMapping const& dm );
+                       amrex::DistributionMapping const& dm,
+                       amrex::Geometry const& gm);
+
+    FFTPoissonSolver () = default;
 
     void SolvePoissonEquation ( amrex::MultiFab const& input_mf,
                                 amrex::MultiFab& output_mf );

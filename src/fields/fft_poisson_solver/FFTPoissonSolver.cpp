@@ -1,7 +1,9 @@
 #include "FFTPoissonSolver.H"
+#include "PhysConst.H"
 
 FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
-                                     amrex::DistributionMapping const& dm )
+                                     amrex::DistributionMapping const& dm,
+                                     amrex::Geometry const& gm )
 {
     // Create the box array that corresponds to spectral space
     amrex::BoxList spectral_bl; // Create empty box list
@@ -30,6 +32,37 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
     // These arrays will store the data just before/after the FFT
     m_tmpRealField = amrex::MultiFab(realspace_ba, dm, 1, 0);
     m_tmpSpectralField = SpectralField(m_spectralspace_ba, dm, 1, 0);
+
+    // Calculate the array of inv_k2
+    amrex::Real dkx = 2*MathConst::pi/gm.ProbLength(0);
+    amrex::Real dky = 2*MathConst::pi/gm.ProbLength(1);
+    m_inv_k2 = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
+    // Loop over boxes and calculate inv_k2 in each box
+    for (amrex::MFIter mfi(m_spectralspace_ba, dm); mfi.isValid(); ++mfi ){
+        auto inv_k2_arr = m_inv_k2.array(mfi);
+        int const Nx = m_spectralspace_ba[mfi].length(0);
+        int const Ny = m_spectralspace_ba[mfi].length(1);
+        int const mid_point_y = (Ny+1)/2;
+        amrex::Real kx, ky;
+        for ( int i=0; i<Nx; i++ ) {
+            // kx is always positive (first axis of the real-to-complex FFT)
+            kx = dkx*i;
+            for ( int j=0; j<Ny; j++ ) {
+                // The first half of ky is positive ; the other is negative
+                if (j<mid_point_y) {
+                    ky = dky*j;
+                } else {
+                    ky = dky*(j-Ny);
+                }
+                if ((i!=0) && (j!=0)) {
+                    inv_k2_arr(i,j,0) = 1./(kx*kx + ky*ky);
+                } else {
+                    // Avoid division by 0
+                    inv_k2_arr(i,j,0) = 0;
+                }
+            }
+        }
+    }
 
     // Allocate and initialize the FFT plans
     m_forward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
@@ -61,7 +94,7 @@ FFTPoissonSolver::SolvePoissonEquation ( amrex::MultiFab const& input_mf,
 {
     // Copy to temporary
     // Perform FFT
-    // Divide by k2
+    // Multiply by inv_k2
     // Perform inverse FFT
     // Copy from temporary to output array
 }
