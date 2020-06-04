@@ -39,27 +39,29 @@ Optional dependencies include:
 
 macOS/Linux:
 ```bash
-brew update
-brew install ccache
-brew install cmake
-brew install fftw
-brew install libomp
-brew install open-mpi
-```
-
-or macOS/Linux:
-```bash
 spack env create hipace-dev
 spack env activate hipace-dev
 spack add ccache
 spack add cmake
 spack add fftw
 spack add mpi
+spack add pkgconfig  # for fftw
 # optional:
 # spack add cuda
 spack install
 ```
 (in new terminals, re-activate the environment with `spack env activate hipace-dev` again)
+
+or macOS/Linux:
+```bash
+brew update
+brew install ccache
+brew install cmake
+brew install fftw
+brew install libomp
+brew install pkg-config  # for fftw
+brew install open-mpi
+```
 
 Now, `cmake --version` should be at version 3.14.0 or newer.
 
