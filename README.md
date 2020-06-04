@@ -14,6 +14,7 @@ macOS/Linux:
 brew update
 brew install ccache
 brew install cmake
+brew install fftw
 brew install libomp
 brew install open-mpi
 ```
@@ -24,6 +25,7 @@ spack env create hipace-dev
 spack env activate hipace-dev
 spack add ccache
 spack add cmake
+spack add fftw
 spack add mpi
 spack install
 ```
