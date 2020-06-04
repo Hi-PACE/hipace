@@ -26,11 +26,12 @@ Please see installation instructions below in the *Developers* section.
 
 - a mature [C++14](https://en.wikipedia.org/wiki/C%2B%2B14) compiler: e.g. GCC 5, Clang 3.6 or newer
 - [CMake 3.14.0+](https://cmake.org/)
-- [FFTW3](http://www.fftw.org/) (only used serially)
+- [AMReX *development*](https://amrex-codes.github.io): we automatically download and compile a copy of AMReX
+- [FFTW3](http://www.fftw.org/) (only used serially; *only required* if not using CUDA)
 
 Optional dependencies include:
 - [MPI 3.0+](https://www.mpi-forum.org/docs/): for multi-node and/or multi-GPU execution
-- [CUDA 9.0+](https://developer.nvidia.com/cuda-downloads): for Nvidia GPU support (see [matching host-compilers](https://gist.github.com/ax3l/9489132))
+- [CUDA Toolkit 9.0+](https://developer.nvidia.com/cuda-downloads): for Nvidia GPU support (see [matching host-compilers](https://gist.github.com/ax3l/9489132))
 - [OpenMP 3.1+](https://www.openmp.org): for threaded CPU execution (currently not fully accelerated)
 - [CCache](https://ccache.dev): to speed up rebuilds (needs 3.7.9+ for CUDA)
 
@@ -54,6 +55,8 @@ spack add ccache
 spack add cmake
 spack add fftw
 spack add mpi
+# optional:
+# spack add cuda
 spack install
 ```
 (in new terminals, re-activate the environment with `spack env activate hipace-dev` again)
