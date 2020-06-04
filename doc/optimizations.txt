@@ -1,0 +1,24 @@
+In order to kick-start Hipace, things were done in the simplest way possible, leaving obvious optimizations for later.
+This file lists these easy optimizations, to avoid missing low-hanging fruits.
+
+1. AMReX particle Redistribute
+   All plasma particles have the same z positions, and once a domain has finished computing all of its slices, it sends all of its particles to the downstream rank, and receives all particles from the upstream one.
+   If redistribution is taking time, we could use this assumption to make Redistribute faster.
+
+2. Keep the main MultiFab on the host
+   Currently, all MultiFabs are allocated in managed memory, and the data should live on the device for most of the simulation.
+   To save device memory, the main multifab could be on the host, and slices would be copied at each iteration to the device.
+   This would require:
+   - Host-Device copies, if possible with something like prefetches to overlap these copies with computation.
+   - Sort beam particles per slice, otherwise their deposition requires that the whole J array must be on the device.
+
+3. Reduce the data in slices
+   The individual slices Fields::m_slices, which should be on the device, has 4 slices (0->3, where 1 is the slice being computed), each of which has all components in the main multifab.
+   This is overkill since, as Severin explained: Slice 0 only has the currents, slice 1 has everything, slice 2 has the currents and the b fields, slice 3 only has the b fields.
+
+4. Avoid tmp copies for the Poisson solver
+   When calling SolvePoissonEquation(rhs_mf, lhs_mf), lhs_mf is copied to a temporary buffer FFTPoissonSolver::m_tmpRealField.
+   Most of the times, rhs_mf is a temporary array, so we could reduce the number of copies.
+   For instance:
+      currently: Jz -[TransverseDerivate]-> rhs_mf -[copy]-> FFTPoissonSolver::m_tmpRealField
+      could be:  Jz -[TransverseDerivate]-> FFTPoissonSolver::m_tmpRealField
