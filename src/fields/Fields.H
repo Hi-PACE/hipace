@@ -5,7 +5,7 @@
 #include <AMReX_Vector.H>
 
 struct FieldComps{
-    enum Comps{Ex = 0, Ey, Ez, jx, jy, jz, nfields};
+    enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, nfields};
 };
 
 class Fields
