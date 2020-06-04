@@ -10,6 +10,8 @@ struct FieldComps{
     enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, nfields};
 };
 
+enum struct FieldCopyType { FtoS, StoF };
+
 class Fields
 {
 public:
@@ -22,7 +24,9 @@ public:
 
     amrex::MultiFab& getF (int lev) { return m_F[lev]; }
 
-    void CopySliceFtoS (int i_slice);
+    void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
+               int ncomp);
+
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
                               const amrex::Real dx, const int scomp=0, const int dcomp=0);

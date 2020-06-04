@@ -83,3 +83,12 @@ Fields::TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, c
             );
     }
 }
+
+void
+Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
+              int ncomp)
+{
+    auto& full = m_F[lev];
+    auto& slice = m_slices[lev][1];
+}
+
