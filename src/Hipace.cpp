@@ -5,7 +5,7 @@
 #include <AMReX_ParmParse.H>
 
 Hipace::Hipace () :
-    m_fields(amrex::AmrCore::maxLevel()),
+    m_fields(this),
     m_beam_container(this),
     m_plasma_container(this)
 {
@@ -34,7 +34,7 @@ Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
 {
     AMREX_ALWAYS_ASSERT(lev == 0);
-    m_fields.AllocData(lev, ba, dm, geom[lev]);
+    m_fields.AllocData(lev, ba, dm);
 }
 
 void
