@@ -7,7 +7,7 @@
 class Hipace;
 
 struct FieldComps{
-    enum Comps{Ex = 0, Ey, Ez, jx, jy, jz, nfields};
+    enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, nfields};
 };
 
 class Fields
@@ -23,16 +23,20 @@ public:
     amrex::MultiFab& getF (int lev) { return m_F[lev]; }
 
     void CopySliceFtoS (int i_slice);
+    /** Compute transverse derivative of 1 slice*/
+    void TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
+                              const amrex::Real dx, const int scomp=0, const int dcomp=0);
 private:
     Hipace const* m_hipace;
-    // Vector over levels, all fields
+    /** Vector over levels, all fields */
     amrex::Vector<amrex::MultiFab> m_F;
-    // Number of slices in temporary object
+    /** Number of slices in temporary object */
     static constexpr int m_nslices = 4;
-    // Vector over levels, array of 4 slices required to compute current slice
+    /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
-
+    /** Number of guard cells for main MultiFab */
     amrex::IntVect m_nguards {2, 2, 2};
+    /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards {2, 2, 0};
 };
 

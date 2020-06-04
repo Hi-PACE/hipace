@@ -5,29 +5,63 @@
 
 Highly efficient Plasma Accelerator Emulation, quasistatic particle-in-cell code
 
+
+## Users
+
+### Install
+
+To do: users can install HiPACE with the following one-liners...
+
+### Usage
+
+Usage docs.
+
+
 ## Developers
+
+### Dependencies
+
+HiPACE depends on the following popular third party software.
+Please see installation instructions below in the *Developers* section.
+
+- a mature [C++14](https://en.wikipedia.org/wiki/C%2B%2B14) compiler: e.g. GCC 5, Clang 3.6 or newer
+- [CMake 3.14.0+](https://cmake.org/)
+- [AMReX *development*](https://amrex-codes.github.io): we automatically download and compile a copy of AMReX
+- [FFTW3](http://www.fftw.org/) (only used serially; *only required* if not using CUDA)
+
+Optional dependencies include:
+- [MPI 3.0+](https://www.mpi-forum.org/docs/): for multi-node and/or multi-GPU execution
+- [CUDA Toolkit 9.0+](https://developer.nvidia.com/cuda-downloads): for Nvidia GPU support (see [matching host-compilers](https://gist.github.com/ax3l/9489132))
+- [OpenMP 3.1+](https://www.openmp.org): for threaded CPU execution (currently not fully accelerated)
+- [CCache](https://ccache.dev): to speed up rebuilds (needs 3.7.9+ for CUDA)
 
 ### Install Dependencies
 
 macOS/Linux:
 ```bash
-brew update
-brew install ccache
-brew install cmake
-brew install libomp
-brew install open-mpi
-```
-
-or macOS/Linux:
-```bash
 spack env create hipace-dev
 spack env activate hipace-dev
 spack add ccache
 spack add cmake
+spack add fftw
 spack add mpi
+spack add pkgconfig  # for fftw
+# optional:
+# spack add cuda
 spack install
 ```
 (in new terminals, re-activate the environment with `spack env activate hipace-dev` again)
+
+or macOS/Linux:
+```bash
+brew update
+brew install ccache
+brew install cmake
+brew install fftw
+brew install libomp
+brew install pkg-config  # for fftw
+brew install open-mpi
+```
 
 Now, `cmake --version` should be at version 3.14.0 or newer.
 
@@ -89,7 +123,7 @@ Commonly used options are:
 | `ENABLE_CUDA`                | ON/**OFF**                                 | Nvidia GPU support       |
 
 
-### Run a simulation and look at the results
+## Run a first simulation and look at the results
 
 After compiling HiPACE (see above), from the HiPACE root directory, execute
 ```bash

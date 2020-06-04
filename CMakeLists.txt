@@ -58,7 +58,12 @@ include(${HiPACE_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 #   suppress warnings in AMReX headers (use -isystem instead of -I)
 make_third_party_includes_system(AMReX::amrex AMReX)
 
-# FFTW (non-GPU) and cuFFT (GPU) - or both wrapped via AMReX?
+# FFTW (non-GPU) and cuFFT (GPU)
+if(NOT ENABLE_CUDA)
+    find_package(PkgConfig REQUIRED QUIET)
+    pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET fftw3)
+endif()
+
 # openPMD-api
 
 
@@ -89,6 +94,9 @@ set_target_properties(HiPACE PROPERTIES
 
 # link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
+if(NOT ENABLE_CUDA)
+    target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3)
+endif()
 
 # AMReX helper function: propagate CUDA specific target & source properties
 if(ENABLE_CUDA)

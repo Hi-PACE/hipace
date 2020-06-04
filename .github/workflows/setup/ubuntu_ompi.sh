@@ -10,7 +10,8 @@ set -eu -o pipefail
 sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
-    build-essential \
-    g++             \
-    libopenmpi-dev  \
+    build-essential  \
+    g++              \
+    libfftw3-dev     \
+    libopenmpi-dev   \
     openmpi-bin

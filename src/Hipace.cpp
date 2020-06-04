@@ -46,6 +46,12 @@ Hipace::Evolve ()
     {
         amrex::Print()<<"step "<< step <<"\n";
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
+        // Compute x-derivative of jz, store in jx
+        m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), 0, geom[0].CellSize(0),
+                                      FieldComps::jz, FieldComps::jx);
+        // Compute y-derivative of jz, store in jy
+        m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), 1, geom[0].CellSize(0),
+                                      FieldComps::jz, FieldComps::jy);
     }
     WriteDiagnostics (1);
 }
@@ -56,7 +62,8 @@ Hipace::WriteDiagnostics (int step)
     // Write fields
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
-    const amrex::Vector< std::string > varnames {"Ex", "Ey", "Ez", "jx", "jy", "jz"};
+    const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
+                                                 "jx", "jy", "jz"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
