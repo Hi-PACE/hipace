@@ -9,7 +9,7 @@ struct FieldComps{
 };
 
 struct Direction{
-    enum dir{x=0, y};
+    enum dir{x=0, y, z};
 };
 
 class Fields
