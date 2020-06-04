@@ -56,7 +56,8 @@ Hipace::WriteDiagnostics (int step)
     // Write fields
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
-    const amrex::Vector< std::string > varnames {"Ex", "Ey", "Ez", "jx", "jy", "jz"};
+    const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
+                                                 "jx", "jy", "jz"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
