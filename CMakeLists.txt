@@ -59,6 +59,15 @@ include(${HiPACE_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 make_third_party_includes_system(AMReX::amrex AMReX)
 
 # FFTW (non-GPU) and cuFFT (GPU) - or both wrapped via AMReX?
+# external library: FFTW (optional)
+
+find_package(PkgConfig REQUIRED QUIET)
+pkg_check_modules(fftw3 IMPORTED_TARGET fftw3)
+add_library(fftw3 INTERFACE)
+target_link_libraries(fftw3 INTERFACE PkgConfig::fftw3)
+
+# target_link_libraries(<your target> <PUBLIC|PRIVATE|INTERFACE> fftw3)
+
 # openPMD-api
 
 

@@ -3,3 +3,4 @@ target_sources(HiPACE
     Fields.cpp
 )
 
+add_subdirectory(fft)
