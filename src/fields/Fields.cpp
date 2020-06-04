@@ -17,3 +17,30 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
         m_slices[lev][islice] = new amrex::MultiFab(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards);
     }
 }
+
+void
+Fields::TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
+                             const amrex::Real dx, const int scomp, const int dcomp)
+{
+    AMREX_ALWAYS_ASSERT((direction == 0) || (direction == 1));
+    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+        amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
+        amrex::Array4<amrex::Real> const & dst_array = dst.array(mfi);
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                if (direction == 0){
+                    /* finite difference along x */
+                    dst_array(i,j,k,dcomp) =
+                        (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2*dx);
+                } else {
+                    /* finite difference along y */
+                    dst_array(i,j,k,dcomp) =
+                        (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
+                }
+            }
+            );
+    }
+}
