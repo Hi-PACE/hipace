@@ -15,39 +15,24 @@ namespace AnyFFT
 #endif
 
     FFTplan CreatePlan(const amrex::IntVect& real_size, amrex::Real * const real_array,
-                       Complex * const complex_array, const direction dir, const int dim)
+                       Complex * const complex_array, const direction dir)
     {
         FFTplan fft_plan;
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
         // Swap dimensions: AMReX FAB are Fortran-order but FFTW is C-order
         if (dir == direction::R2C){
-            if (dim == 3) {
-                fft_plan.m_plan = VendorCreatePlanR2C3D(
-                    real_size[2], real_size[1], real_size[0], real_array, complex_array, FFTW_ESTIMATE);
-            } else if (dim == 2) {
-                fft_plan.m_plan = VendorCreatePlanR2C2D(
+            fft_plan.m_plan = VendorCreatePlanR2C2D(
                     real_size[1], real_size[0], real_array, complex_array, FFTW_ESTIMATE);
-            } else {
-                amrex::Abort("only dim=2 and dim=3 have been implemented");
-            }
         } else if (dir == direction::C2R){
-            if (dim == 3) {
-                fft_plan.m_plan = VendorCreatePlanC2R3D(
-                    real_size[2], real_size[1], real_size[0], complex_array, real_array, FFTW_ESTIMATE);
-            } else if (dim == 2) {
-                fft_plan.m_plan = VendorCreatePlanC2R2D(
+            fft_plan.m_plan = VendorCreatePlanC2R2D(
                     real_size[1], real_size[0], complex_array, real_array, FFTW_ESTIMATE);
-            } else {
-                amrex::Abort("only dim=2 and dim=3 have been implemented. Should be easy to add dim=1.");
-            }
         }
 
         // Store meta-data in fft_plan
         fft_plan.m_real_array = real_array;
         fft_plan.m_complex_array = complex_array;
         fft_plan.m_dir = dir;
-        fft_plan.m_dim = dim;
 
         return fft_plan;
     }
