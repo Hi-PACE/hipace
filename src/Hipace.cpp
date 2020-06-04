@@ -47,11 +47,13 @@ Hipace::Evolve ()
         amrex::Print()<<"step "<< step <<"\n";
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
         // Compute x-derivative of jz, store in jx
-        m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::x,
-                                      geom[0].CellSize(0), FieldComps::jz, FieldComps::jx);
+        // m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::x,
+        //                               geom[0].CellSize(Direction::x), FieldComps::jz,
+        //                               FieldComps::jx);
         // Compute y-derivative of jz, store in jy
-        m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::y,
-                                      geom[0].CellSize(0), FieldComps::jz, FieldComps::jy);
+        // m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::y,
+        //                               geom[0].CellSize(Direction::y), FieldComps::jz,
+        //                               FieldComps::jy);
     }
     WriteDiagnostics (1);
 }
