@@ -19,10 +19,17 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
         boxes[dm[i]].push_back(ba[i]);
     }
 
+    // We assume each process may have multiple Boxes longitude direction, but only one Box in the
+    // transverse direction.  The union of all Boxes on a process is rectangular.  The slice
+    // BoxArray therefore has one Box per process.  The Boxes in the slice BoxArray have one cell in
+    // the longitude direction.  We will use the lowest longitude index in each process to construct
+    // the Boxes.  These Boxes do not have any overlaps. Transversely, there are no gaps between
+    // them.
+
     amrex::BoxList bl;
     amrex::Vector<int> procmap;
     for (int iproc = 0; iproc < boxes.size(); ++iproc) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes[iproc].size()  >0,
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes[iproc].size() > 0,
                                          "We assume each process has at least one Box");
         amrex::Box bx = boxes[iproc][0];
         for (int j = 1; j < boxes[iproc].size(); ++j) {
