@@ -39,7 +39,7 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
     m_inv_k2 = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     // Loop over boxes and calculate inv_k2 in each box
     for (amrex::MFIter mfi(m_spectralspace_ba, dm); mfi.isValid(); ++mfi ){
-        auto inv_k2_arr = m_inv_k2.array(mfi);
+        amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
         int const Nx = m_spectralspace_ba[mfi].length(0);
         int const Ny = m_spectralspace_ba[mfi].length(1);
         int const mid_point_y = (Ny+1)/2;
@@ -89,12 +89,44 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
 
 
 void
-FFTPoissonSolver::SolvePoissonEquation ( amrex::MultiFab const& input_mf,
-                                         amrex::MultiFab& output_mf )
+FFTPoissonSolver::SolvePoissonEquation ( amrex::MultiFab const& rhs_mf,
+                                         amrex::MultiFab& lhs_mf )
 {
-    // Copy to temporary
-    // Perform FFT
-    // Multiply by inv_k2
-    // Perform inverse FFT
-    // Copy from temporary to output array
+
+    // Loop over boxes
+    for ( amrex::MFIter mfi(rhs_mf); mfi.isValid(); ++mfi ){
+
+        // Copy from input_array to `tmpRealField`
+        amrex::Array4<const amrex::Real> rhs_arr = rhs_mf.array(mfi);
+        amrex::Array4<amrex::Real> tmp_real_arr = m_tmpRealField.array(mfi);
+        amrex::ParallelFor( mfi.validbox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                tmp_real_arr(i,j,k) = rhs_arr(i,j,k);
+            });
+
+        // Perform Fourier transform from `tmpRealField` to `tmpSpectralField`
+        AnyFFT::Execute(m_forward_plan[mfi]);
+
+        // Solve Poisson equation in Fourier space:
+        // Multiply by `tmpSpectralField` by inv_k2
+        amrex::Array4<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
+        amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
+        amrex::ParallelFor( m_spectralspace_ba[mfi],
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                tmp_cmplx_arr(i,j,k) *= inv_k2_arr(i,j,k);
+            });
+
+        // Perform Fourier transform from `tmpSpectralField` to `tmpRealField`
+        AnyFFT::Execute(m_backward_plan[mfi]);
+
+        // Copy from `tmpRealField` to output array (and normalize)
+        amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        const amrex::Real inv_N = 1./mfi.validbox().numPts();
+        amrex::ParallelFor( mfi.validbox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                // Copy and normalize field
+                lhs_arr(i,j,k) = inv_N*tmp_real_arr(i,j,k);
+            });
+
+    }
 }
