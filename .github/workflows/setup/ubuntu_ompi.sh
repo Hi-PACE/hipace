@@ -12,6 +12,6 @@ sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
     build-essential  \
     g++              \
-    libfftw3-mpi-dev \
+    libfftw3-dev     \
     libopenmpi-dev   \
     openmpi-bin
