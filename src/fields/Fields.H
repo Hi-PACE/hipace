@@ -24,8 +24,11 @@ public:
 
     amrex::MultiFab& getF (int lev) { return m_F[lev]; }
 
+    /** Copy between the full MultiFab and slice MultiFab */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
                int ncomp);
+
+    void ShiftSlices (int lev);
 
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
