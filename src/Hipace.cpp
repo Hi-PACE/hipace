@@ -5,7 +5,7 @@
 #include <AMReX_ParmParse.H>
 
 Hipace::Hipace () :
-    m_fields(amrex::AmrCore::maxLevel()),
+    m_fields(this),
     m_beam_container(this),
     m_plasma_container(this)
 {
@@ -34,7 +34,7 @@ Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
 {
     AMREX_ALWAYS_ASSERT(lev == 0);
-    m_fields.AllocData(lev, ba, dm, geom[lev]);
+    m_fields.AllocData(lev, ba, dm);
     m_poisson_solver = FFTPoissonSolver(ba, dm, geom[lev]);
 }
 
@@ -48,11 +48,13 @@ Hipace::Evolve ()
         amrex::Print()<<"step "<< step <<"\n";
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
         // Compute x-derivative of jz, store in jx
-        m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), 0, geom[0].CellSize(0),
-                                      FieldComps::jz, FieldComps::jx);
+        // m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::x,
+        //                               geom[0].CellSize(Direction::x), FieldComps::jz,
+        //                               FieldComps::jx);
         // Compute y-derivative of jz, store in jy
-        m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), 1, geom[0].CellSize(0),
-                                      FieldComps::jz, FieldComps::jy);
+        // m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::y,
+        //                               geom[0].CellSize(Direction::y), FieldComps::jz,
+        //                               FieldComps::jy);
     }
     WriteDiagnostics (1);
 }
