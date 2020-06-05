@@ -65,6 +65,7 @@ Hipace::Evolve ()
                 // and store in tmp MultiFab rhs
                 m_fields.TransverseDerivative(m_fields.getSlices(lev, 1), rhs, Direction::x,
                                               geom[0].CellSize(Direction::x), FieldComps::jz);
+                rhs.mult(PhysConst::mu0);
                 // Solve Poisson equation, the result (lhs) is in the slice MultiFab m_slices
                 m_poisson_solver.SolvePoissonEquation(rhs, lhs);
                 // Copy back from the slice MultiFab m_slices to the main field m_F
