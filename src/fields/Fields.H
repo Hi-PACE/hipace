@@ -12,6 +12,10 @@ struct FieldComps{
 
 enum struct FieldCopyType { FtoS, StoF };
 
+struct Direction{
+    enum dir{x=0, y, z};
+};
+
 class Fields
 {
 public:

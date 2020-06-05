@@ -65,7 +65,7 @@ void
 Fields::TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
                              const amrex::Real dx, const int scomp, const int dcomp)
 {
-    AMREX_ALWAYS_ASSERT((direction == 0) || (direction == 1));
+    AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
@@ -74,11 +74,11 @@ Fields::TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, c
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                if (direction == 0){
+                if (direction == Direction::x){
                     /* finite difference along x */
                     dst_array(i,j,k,dcomp) =
                         (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2*dx);
-                } else {
+                } else /* Direction::y */ {
                     /* finite difference along y */
                     dst_array(i,j,k,dcomp) =
                         (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
