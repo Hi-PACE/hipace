@@ -3,4 +3,4 @@ target_sources(HiPACE
     Fields.cpp
 )
 
-add_subdirectory(fft)
+add_subdirectory(fft_poisson_solver)

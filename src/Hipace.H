@@ -2,6 +2,7 @@
 #define HIPACE_H_
 
 #include "fields/Fields.H"
+#include "fields/fft_poisson_solver/FFTPoissonSolver.H"
 #include "particles/PlasmaParticleContainer.H"
 #include "particles/BeamParticleContainer.H"
 
@@ -29,7 +30,7 @@ public:
                       const amrex::DistributionMapping& /*dm*/) override {}
 
     void ClearLevel (int /*lev*/) override {}
-    
+
     void InitData ();
 
     void Evolve ();
@@ -37,6 +38,7 @@ public:
     void WriteDiagnostics (int step);
 
     Fields m_fields;
+    FFTPoissonSolver m_poisson_solver;
     BeamParticleContainer m_beam_container;
     PlasmaParticleContainer m_plasma_container;
     int m_max_step = 0;
