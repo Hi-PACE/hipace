@@ -108,7 +108,7 @@ FFTPoissonSolver::SolvePoissonEquation ( amrex::MultiFab const& rhs_mf,
         AnyFFT::Execute(m_forward_plan[mfi]);
 
         // Solve Poisson equation in Fourier space:
-        // Multiply by `tmpSpectralField` by inv_k2
+        // Multiply `tmpSpectralField` by inv_k2
         amrex::Array4<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
         amrex::ParallelFor( m_spectralspace_ba[mfi],
