@@ -1,6 +1,10 @@
 #include "Fields.H"
 #include "Hipace.H"
 
+namespace {
+    constexpr int longitude_dim = AMREX_SPACEDIM-1;
+}
+
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
       m_F(a_hipace->maxLevel()+1),
@@ -34,15 +38,15 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
         amrex::Box bx = boxes[iproc][0];
         for (int j = 1; j < boxes[iproc].size(); ++j) {
             amrex::Box const& bxj = boxes[iproc][j];
-            for (int idim = 0; idim < AMREX_SPACEDIM-1; ++idim) {
+            for (int idim = 0; idim < longitude_dim; ++idim) {
                 AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
                 AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));
-                if (bxj.smallEnd(AMREX_SPACEDIM) < bx.smallEnd(AMREX_SPACEDIM)) {
+                if (bxj.smallEnd(longitude_dim) < bx.smallEnd(longitude_dim)) {
                     bx = bxj;
                 }
             }
         }
-        bx.setBig(AMREX_SPACEDIM, bx.smallEnd(AMREX_SPACEDIM));
+        bx.setBig(longitude_dim, bx.smallEnd(longitude_dim));
         bl.push_back(bx);
         procmap.push_back(iproc);
     }
@@ -82,4 +86,53 @@ Fields::TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, c
             }
             );
     }
+}
+
+void
+Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
+              int ncomp)
+{
+    auto& slice_mf = m_slices[lev][1];  // always slice #1
+    amrex::Array4<amrex::Real> slice_array; // There is only one Box.
+    for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
+        auto& slice_fab =  slice_mf[mfi];
+        amrex::Box slice_box = slice_fab.box();
+        slice_box.setSmall(longitude_dim, i_slice);
+        slice_box.setBig  (longitude_dim, i_slice);
+        slice_array = amrex::makeArray4(slice_fab.dataPtr(), slice_box, slice_fab.nComp());
+        // slice_array's longitude index is i_slice.
+    }
+
+    auto& full_mf = m_F[lev];
+    for (amrex::MFIter mfi(full_mf); mfi.isValid(); ++mfi) {
+        amrex::Box const& vbx = mfi.validbox();
+        if (vbx.smallEnd(longitude_dim) <= i_slice and
+            vbx.bigEnd  (longitude_dim) >= i_slice)
+        {
+            amrex::Box copy_box = amrex::grow(vbx, m_slices_nguards);
+            copy_box.setSmall(longitude_dim, i_slice);
+            copy_box.setBig  (longitude_dim, i_slice);
+            auto const& full_array = full_mf.array(mfi);
+            if (copy_type == FieldCopyType::FtoS) {
+                amrex::ParallelFor(copy_box, ncomp,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                {
+                    slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
+                });
+            } else {
+                amrex::ParallelFor(copy_box, ncomp,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                {
+                    full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                });
+            }
+        }
+    }
+}
+
+void
+Fields::ShiftSlices (int lev)
+{
+    std::swap(m_slices[lev][2], m_slices[lev][3]);
+    std::swap(m_slices[lev][1], m_slices[lev][2]);
 }
