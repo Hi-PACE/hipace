@@ -1,10 +1,6 @@
 #include "Fields.H"
 #include "Hipace.H"
 
-namespace {
-    constexpr int longitude_dim = AMREX_SPACEDIM-1;
-}
-
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
       m_F(a_hipace->maxLevel()+1),
@@ -38,15 +34,15 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
         amrex::Box bx = boxes[iproc][0];
         for (int j = 1; j < boxes[iproc].size(); ++j) {
             amrex::Box const& bxj = boxes[iproc][j];
-            for (int idim = 0; idim < longitude_dim; ++idim) {
+            for (int idim = 0; idim < Direction::z; ++idim) {
                 AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
                 AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));
-                if (bxj.smallEnd(longitude_dim) < bx.smallEnd(longitude_dim)) {
+                if (bxj.smallEnd(Direction::z) < bx.smallEnd(Direction::z)) {
                     bx = bxj;
                 }
             }
         }
-        bx.setBig(longitude_dim, bx.smallEnd(longitude_dim));
+        bx.setBig(Direction::z, bx.smallEnd(Direction::z));
         bl.push_back(bx);
         procmap.push_back(iproc);
     }
@@ -97,8 +93,8 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab =  slice_mf[mfi];
         amrex::Box slice_box = slice_fab.box();
-        slice_box.setSmall(longitude_dim, i_slice);
-        slice_box.setBig  (longitude_dim, i_slice);
+        slice_box.setSmall(Direction::z, i_slice);
+        slice_box.setBig  (Direction::z, i_slice);
         slice_array = amrex::makeArray4(slice_fab.dataPtr(), slice_box, slice_fab.nComp());
         // slice_array's longitude index is i_slice.
     }
@@ -106,12 +102,12 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
     auto& full_mf = m_F[lev];
     for (amrex::MFIter mfi(full_mf); mfi.isValid(); ++mfi) {
         amrex::Box const& vbx = mfi.validbox();
-        if (vbx.smallEnd(longitude_dim) <= i_slice and
-            vbx.bigEnd  (longitude_dim) >= i_slice)
+        if (vbx.smallEnd(Direction::z) <= i_slice and
+            vbx.bigEnd  (Direction::z) >= i_slice)
         {
             amrex::Box copy_box = amrex::grow(vbx, m_slices_nguards);
-            copy_box.setSmall(longitude_dim, i_slice);
-            copy_box.setBig  (longitude_dim, i_slice);
+            copy_box.setSmall(Direction::z, i_slice);
+            copy_box.setBig  (Direction::z, i_slice);
             auto const& full_array = full_mf.array(mfi);
             if (copy_type == FieldCopyType::FtoS) {
                 amrex::ParallelFor(copy_box, ncomp,

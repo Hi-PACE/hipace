@@ -1,5 +1,5 @@
 #include "FFTPoissonSolver.H"
-#include "PhysConst.H"
+#include "Constants.H"
 
 FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
                                      amrex::DistributionMapping const& dm,

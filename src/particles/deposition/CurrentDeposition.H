@@ -2,7 +2,7 @@
 #define HIPACE_CURRENTDEPOSITION_H_
 
 #include "particles/ShapeFactors.H"
-#include "Constant.H"
+#include "Constants.H"
 
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>

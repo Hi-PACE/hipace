@@ -1,5 +1,5 @@
 #include "BeamParticleContainer.H"
-#include "Constant.H"
+#include "Constants.H"
 #include "ParticleUtil.H"
 
 using namespace amrex;

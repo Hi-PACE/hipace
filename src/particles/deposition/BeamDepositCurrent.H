@@ -3,7 +3,7 @@
 
 #include "particles/BeamParticleContainer.H"
 #include "fields/Fields.H"
-#include "Constant.H"
+#include "Constants.H"
 
 void
 DepositCurrent (BeamParticleContainer& beam, Fields & fields,
