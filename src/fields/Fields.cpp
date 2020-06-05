@@ -58,8 +58,8 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
 }
 
 void
-Fields::TransverseDerivative(const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
-                             const amrex::Real dx, const int scomp, const int dcomp)
+Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
+                              const amrex::Real dx, const int scomp, const int dcomp)
 {
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
@@ -91,7 +91,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
     auto& slice_mf = m_slices[lev][1];  // always slice #1
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
-        auto& slice_fab =  slice_mf[mfi];
+        auto& slice_fab = slice_mf[mfi];
         amrex::Box slice_box = slice_fab.box();
         slice_box.setSmall(Direction::z, i_slice);
         slice_box.setBig  (Direction::z, i_slice);

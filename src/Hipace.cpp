@@ -47,14 +47,30 @@ Hipace::Evolve ()
     {
         amrex::Print()<<"step "<< step <<"\n";
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
-        // Compute x-derivative of jz, store in jx
-        // m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::x,
-        //                               geom[0].CellSize(Direction::x), FieldComps::jz,
-        //                               FieldComps::jx);
-        // Compute y-derivative of jz, store in jy
-        // m_fields.TransverseDerivative(m_fields.getF(lev), m_fields.getF(lev), Direction::y,
-        //                               geom[0].CellSize(Direction::y), FieldComps::jz,
-        //                               FieldComps::jy);
+        for ( amrex::MFIter mfi(m_fields.getF()[lev], false); mfi.isValid(); ++mfi ){
+            const amrex::Box& bx = mfi.tilebox();
+            const int nslices = bx.hiVect()[Direction::z]+1;
+            for (int islice=nslices-1; islice>=0; islice--){
+                amrex::Print()<<islice<<'\n';
+                // Copy slice islice from m_F to m_slices
+                m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
+                // Left-Hand Side for Poisson equation is By in the slice MF
+                amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                                    FieldComps::By, 1);
+                // Left-Hand Side for Poisson equation: allocate a tmp MultiFab
+                amrex::MultiFab rhs = amrex::MultiFab(m_fields.getSlices(lev, 1).boxArray(),
+                                                      m_fields.getSlices(lev, 1).distributionMap,
+                                                      1, 0);
+                // Left-Hand Side for Poisson equation: compute d_x(jz) from the slice MF,
+                // and store in tmp MultiFab rhs
+                m_fields.TransverseDerivative(m_fields.getSlices(lev, 1), rhs, Direction::x,
+                                              geom[0].CellSize(Direction::x), FieldComps::jz);
+                // Solve Poisson equation, the result (lhs) is in the slice MultiFab m_slices
+                m_poisson_solver.SolvePoissonEquation(rhs, lhs);
+                // Copy back from the slice MultiFab m_slices to the main field m_F
+                m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
+            }
+        }
     }
     WriteDiagnostics (1);
 }
