@@ -94,7 +94,10 @@ set_target_properties(HiPACE PROPERTIES
 
 # link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
-if(NOT ENABLE_CUDA)
+if(ENABLE_CUDA)
+    # CUDA_ADD_CUFFT_TO_TARGET(HiPACE)
+    target_link_libraries(HiPACE PUBLIC cufft)
+else()
     target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3)
 endif()
 
