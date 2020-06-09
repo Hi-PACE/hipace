@@ -21,6 +21,7 @@ Hipace::Hipace () :
     amrex::ParmParse pph("hipace");
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
+    pph.query("grid_size_z", m_grid_size_z);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -61,11 +62,80 @@ Hipace::InitData ()
 
 void
 Hipace::MakeNewLevelFromScratch (
-    int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
+    int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
     AMREX_ALWAYS_ASSERT(lev == 0);
+
+    // We are going to ignore the DistributionMapping argument and build our own.
+    amrex::DistributionMapping dm;
+    {
+        const amrex::IntVect ncells_global = Geom(0).Domain().length();
+        const amrex::IntVect box_size = ba[0].length();  // Uniform box size
+        const int nboxes_x = m_numprocs_x;
+        const int nboxes_y = m_numprocs_y;
+        const int nboxes_z = ncells_global[2] / box_size[2];
+        AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
+                            static_cast<long>(nboxes_y) *
+                            static_cast<long>(nboxes_z) == ba.size());
+        amrex::Vector<int> procmap;
+        // Warning! If we need to do load balancing, we need to update this!
+        const int nboxes_x_local = 1;
+        const int nboxes_y_local = 1;
+        const int nboxes_z_local = nboxes_z / m_numprocs_z;
+        for (int k = 0; k < nboxes_z; ++k) {
+            int rz = k/nboxes_z_local;
+            for (int j = 0; j < nboxes_y; ++j) {
+                int ry = j / nboxes_y_local;
+                for (int i = 0; i < nboxes_x; ++i) {
+                    int rx = i / nboxes_x_local;
+                    procmap.push_back(rx+ry*m_numprocs_x+rz*(m_numprocs_x*m_numprocs_y));
+                }
+            }
+        }
+        dm.define(std::move(procmap));
+    }
+    SetDistributionMap(lev, dm); // Let AmrCore know
+
     m_fields.AllocData(lev, ba, dm);
     m_poisson_solver = FFTPoissonSolver(ba, dm, geom[lev]);
+}
+
+void
+Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
+{
+    // This is called by AmrCore::InitFromScratch.
+    // The BoxArray made by AmrCore is not what we want.  We will replace it with our own.
+    const amrex::IntVect ncells_global = Geom(0).Domain().length();
+    amrex::IntVect box_size{ncells_global[0] / m_numprocs_x,
+                            ncells_global[1] / m_numprocs_y,
+                            m_grid_size_z};
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[0]*m_numprocs_x == ncells_global[0],
+                                     "# of cells in x-direction is not divisible by hipace.numprocs_x");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[1]*m_numprocs_y == ncells_global[1],
+                                     "# of cells in y-direction is not divisible by hipace.numprocs_y");
+
+    if (box_size[2] == 0) {
+        box_size[2] = ncells_global[2] / m_numprocs_z;
+    }
+
+    const int nboxes_x = m_numprocs_x;
+    const int nboxes_y = m_numprocs_y;
+    const int nboxes_z = ncells_global[2] / box_size[2];
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[2]*nboxes_z == ncells_global[2],
+                                     "# of cells in z-direction is not divisible by # of boxes");
+
+    amrex::BoxList bl;
+    for (int k = 0; k < nboxes_z; ++k) {
+        for (int j = 0; j < nboxes_y; ++j) {
+            for (int i = 0; i < nboxes_x; ++i) {
+                amrex::IntVect lo = amrex::IntVect(i,j,k)*box_size;
+                amrex::IntVect hi = amrex::IntVect(i+1,j+1,k+1)*box_size - 1;
+                bl.push_back(amrex::Box(lo,hi));
+            }
+        }
+    }
+
+    ba0 = amrex::BoxArray(std::move(bl));
 }
 
 void

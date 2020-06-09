@@ -33,6 +33,8 @@ public:
 
     void ClearLevel (int /*lev*/) override {}
 
+    void PostProcessBaseGrids (amrex::BoxArray& ba0) const override;
+
     void InitData ();
 
     void Evolve ();
