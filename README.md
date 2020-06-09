@@ -30,7 +30,7 @@ Please see installation instructions below in the *Developers* section.
 - Nvidia GPU support:
   - [CUDA Toolkit 9.0+](https://developer.nvidia.com/cuda-downloads) (see [matching host-compilers](https://gist.github.com/ax3l/9489132))
 - CPU-only:
-  - [FFTW3](http://www.fftw.org/) (only used serially)
+  - [FFTW3](http://www.fftw.org/) (only used serially; *not* needed for Nvidia GPUs)
 
 Optional dependencies include:
 - [MPI 3.0+](https://www.mpi-forum.org/docs/): for multi-node and/or multi-GPU execution
