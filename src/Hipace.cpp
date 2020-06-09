@@ -11,6 +11,29 @@ Hipace::Hipace () :
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
+
+    amrex::ParmParse pph("hipace");
+    pph.query("numprocs_x", m_numprocs_x);
+    pph.query("numprocs_y", m_numprocs_y);
+    m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
+                                     == amrex::ParallelDescriptor::NProcs(),
+                                     "Check hipace.numprocs_x and hipace.numprocs_y");
+#ifdef AMREX_USE_MPI
+    int myproc = amrex::ParallelDescriptor::MyProc();
+    m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
+    MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_z, myproc, &m_comm_xy);
+    MPI_Comm_rank(m_comm_xy, &m_rank_xy);
+    MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
+#endif
+}
+
+Hipace::~Hipace ()
+{
+#ifdef AMREX_USE_MPI
+    MPI_Comm_free(&m_comm_xy);
+    MPI_Comm_free(&m_comm_z);
+#endif
 }
 
 void

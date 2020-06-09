@@ -4,6 +4,9 @@ amr.max_level = 0
 
 max_step = 5
 
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -20.e-6   -20.e-6   -20.e-6    # physical domain

@@ -13,6 +13,8 @@ class Hipace final : public amrex::AmrCore
 public:
     Hipace ();
 
+    ~Hipace ();
+
     // Virtual functions need to be defined for pure virtual class AmrCore
     void MakeNewLevelFromScratch (
         int lev, amrex::Real time, const amrex::BoxArray& ba,
@@ -36,6 +38,15 @@ public:
     void Evolve ();
 
     void WriteDiagnostics (int step);
+
+    MPI_Comm m_comm_xy = MPI_COMM_NULL;
+    MPI_Comm m_comm_z = MPI_COMM_NULL;
+    int m_numprocs_x = 1;
+    int m_numprocs_y = 1;
+    int m_numprocs_z = 0;
+    int m_rank_xy = 0;
+    int m_rank_z = 0;
+    int m_grid_size_z = 0;
 
     Fields m_fields;
     FFTPoissonSolver m_poisson_solver;
