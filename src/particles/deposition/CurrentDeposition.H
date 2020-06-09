@@ -21,11 +21,12 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
 
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
+    const auto& pos_structs = aos.begin();
     auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-    auto&  wp = soa.GetRealData(BeamIdx::w);
-    auto& uxp = soa.GetRealData(BeamIdx::ux);
-    auto& uyp = soa.GetRealData(BeamIdx::uy);
-    auto& uzp = soa.GetRealData(BeamIdx::uz);
+    auto  wp = soa.GetRealData(BeamIdx::w).data();
+    auto uxp = soa.GetRealData(BeamIdx::ux).data();
+    auto uyp = soa.GetRealData(BeamIdx::uy).data();
+    auto uzp = soa.GetRealData(BeamIdx::uz).data();
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
@@ -69,7 +70,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
 
             // --- Compute shape factors
             // x direction
-            const amrex::Real xmid = (aos[ip].pos(0) - xmin)*dxi;
+            const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
             // j_j[xyz] leftmost grid point in x that the particle touches for the centering of each current
             // sx_j[xyz] shape factor along x for the centering of each current
             // There are only two possible centerings, node or cell centered, so at most only two shape factor
@@ -92,7 +93,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             int const j_jz = ((jz_type[0] == NODE) ? j_node : j_cell);
 
             // y direction
-            const amrex::Real ymid = (aos[ip].pos(1) - ymin)*dyi;
+            const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_node[depos_order + 1];
             amrex::Real sy_cell[depos_order + 1];
             int k_node;
@@ -111,7 +112,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             int const k_jz = ((jz_type[1] == NODE) ? k_node : k_cell);
 
             // z direction
-            const amrex::Real zmid = (aos[ip].pos(2) - zmin)*dzi;
+            const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
             amrex::Real sz_node[depos_order + 1];
             amrex::Real sz_cell[depos_order + 1];
             int l_node;
