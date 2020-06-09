@@ -4,6 +4,12 @@
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
 
+#ifdef AMREX_USE_MPI
+namespace {
+    constexpr int comm_z_tag = 1000;
+}
+#endif
+
 Hipace::Hipace () :
     m_fields(this),
     m_beam_container(this),
@@ -31,6 +37,7 @@ Hipace::Hipace () :
 Hipace::~Hipace ()
 {
 #ifdef AMREX_USE_MPI
+    NotifyFinish();
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
@@ -68,6 +75,8 @@ Hipace::Evolve ()
     WriteDiagnostics (0);
     for (int step = 0; step < m_max_step; ++step)
     {
+        Wait();
+
         amrex::Print()<<"step "<< step <<"\n";
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
         for ( amrex::MFIter mfi(m_fields.getF()[lev], false); mfi.isValid(); ++mfi ){
@@ -95,8 +104,58 @@ Hipace::Evolve ()
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
             }
         }
+
+        Notify();
     }
+
     WriteDiagnostics (1);
+}
+
+void
+Hipace::Wait ()
+{
+#ifdef AMREX_USE_MPI
+    if (m_rank_z != m_numprocs_z-1) {
+        MPI_Status status;
+        // We will eventually use amrex's arena
+        m_recv_buffer = (amrex::Real*)std::malloc(sizeof(amrex::Real));
+        // send/recv zero size message for now
+        MPI_Recv(m_recv_buffer, 0,
+                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 m_rank_z+1, comm_z_tag, m_comm_z, &status);
+        std::free(m_recv_buffer);
+    }
+#endif
+}
+
+void
+Hipace::Notify ()
+{
+#ifdef AMREX_USE_MPI
+    if (m_rank_z != 0) {
+        NotifyFinish(); // finish the previous send
+        // We will eventually use amrex's arena
+        m_send_buffer = (amrex::Real*)std::malloc(sizeof(amrex::Real));
+        // send/recv zero size message for now
+        MPI_Isend(m_send_buffer, 0, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                  m_rank_z-1, comm_z_tag, m_comm_z, &m_send_request);
+    }
+#endif
+}
+
+void
+Hipace::NotifyFinish ()
+{
+#ifdef AMREX_USE_MPI
+    if (m_rank_z != 0) {
+        if (m_send_buffer) {
+            MPI_Status status;
+            MPI_Wait(&m_send_request, &status);
+            std::free(m_send_buffer);
+            m_send_buffer = nullptr;
+        }
+    }
+#endif
 }
 
 void
