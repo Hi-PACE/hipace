@@ -150,18 +150,30 @@ Hipace::Evolve ()
         amrex::Print()<<"step "<< step <<"\n";
         /* ---------- Depose current from beam particles ---------- */
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
-        for ( amrex::MFIter mfi(m_fields.getF()[lev], false); mfi.isValid(); ++mfi ){
-            const amrex::Box& bx = mfi.tilebox();
-            const int nslices = bx.hiVect()[Direction::z]+1;
-            for (int islice=nslices-1; islice>=0; islice--){
-                
+
+        amrex::MultiFab& fields = m_fields.getF()[lev];
+        const amrex::Vector<int> index_array = fields.IndexArray();
+        for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
+        {
+            const amrex::Box& bx = fields.box(*it);
+            const int islice_hi = bx.bigEnd(Direction::z);
+            const int islice_lo = bx.smallEnd(Direction::z);
+            for (int islice = islice_hi; islice >= islice_lo; --islice)
+            {
                 /* ---------- Copy slice islice from m_F to m_slices ---------- */
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
+
+                amrex::MultiFab j_slice(m_fields.getSlices(lev, 1), amrex::make_alias,
+                                        FieldComps::jx, 3);
 
                 /* xxxxxxxxxx Gather Push Plasma particles transversally xxxxxxxxxx */
                 /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
                 /* xxxxxxxxxx Deposit current of plasma particles xxxxxxxxxx */
+
                 /* xxxxxxxxxx Transverse FillBoundary current xxxxxxxxxx */
+                amrex::ParallelContext::push(m_comm_xy);
+                j_slice.FillBoundary(Geom(lev).periodicity());
+                amrex::ParallelContext::pop();
 
                 /* ---------- Solve Poisson equation with RHS ---------- */
                 // Left-Hand Side for Poisson equation is By in the slice MF
@@ -180,6 +192,9 @@ Hipace::Evolve ()
                 m_poisson_solver.SolvePoissonEquation(rhs, lhs);
 
                 /* xxxxxxxxxx Transverse FillBoundary By xxxxxxxxxx */
+                amrex::ParallelContext::push(m_comm_xy);
+                lhs.FillBoundary(Geom(lev).periodicity());
+                amrex::ParallelContext::pop();
 
                 /* ---------- Copy back from the slice MultiFab m_slices to the main field m_F ---------- */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
