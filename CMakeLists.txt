@@ -20,13 +20,7 @@ endif()
 # this is an optional tool that stores compiled object files; allows fast
 # re-builds even with "make clean" in between. Mainly used to store AMReX
 # objects
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    if(ENABLE_CUDA)
-        set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    endif()
-endif()
+set_ccache()
 
 
 # Output Directories ##########################################################
@@ -41,6 +35,20 @@ set_default_install_dirs()
 # Options and Variants ########################################################
 #
 option(HiPACE_amrex_internal "Download & build AMReX" ON)
+
+set(HiPACE_PRECISION_VALUES double single)
+set(HiPACE_PRECISION double CACHE STRING "Floating point precision (single/double)")
+set_property(CACHE HiPACE_PRECISION PROPERTY STRINGS ${HiPACE_PRECISION_VALUES})
+if(NOT HiPACE_PRECISION IN_LIST HiPACE_PRECISION_VALUES)
+    message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_PRECISION}) must be one of ${HiPACE_PRECISION_VALUES}")
+endif()
+
+set(HiPACE_COMPUTE_VALUES NONE CUDA OMP) # HIP DPCPP
+set(HiPACE_COMPUTE NONE CACHE STRING "Parallel, on-node computing backend (NONE/CUDA/OMP)")
+set_property(CACHE HiPACE_COMPUTE PROPERTY STRINGS ${HiPACE_COMPUTE_VALUES})
+if(NOT HiPACE_COMPUTE IN_LIST HiPACE_COMPUTE_VALUES)
+    message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_COMPUTE}) must be one of ${HiPACE_COMPUTE_VALUES}")
+endif()
 
 # change the default build type to RelWithDebInfo (or Release) instead of Debug
 set_default_build_type("RelWithDebInfo")
@@ -61,7 +69,11 @@ make_third_party_includes_system(AMReX::amrex AMReX)
 # FFTW (non-GPU) and cuFFT (GPU)
 if(NOT ENABLE_CUDA)
     find_package(PkgConfig REQUIRED QUIET)
-    pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET fftw3)
+    if(HiPACE_PRECISION STREQUAL "double")
+        pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET fftw3)
+    else()
+        pkg_check_modules(fftw3f REQUIRED IMPORTED_TARGET fftw3f)
+    endif()
 endif()
 
 # openPMD-api
@@ -94,11 +106,16 @@ set_target_properties(HiPACE PROPERTIES
 
 # link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
+
 if(ENABLE_CUDA)
     # CUDA_ADD_CUFFT_TO_TARGET(HiPACE)
     target_link_libraries(HiPACE PUBLIC cufft)
 else()
-    target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3)
+    if(HiPACE_PRECISION STREQUAL "double")
+        target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3)
+    else()
+        target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3f)
+    endif()
 endif()
 
 # AMReX helper function: propagate CUDA specific target & source properties

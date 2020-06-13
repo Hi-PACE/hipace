@@ -4,14 +4,44 @@ macro(find_amrex)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
+        if(HiPACE_COMPUTE STREQUAL CUDA)
+            set(ENABLE_ACC   OFF CACHE INTERNAL "")
+            set(ENABLE_CUDA  ON  CACHE INTERNAL "")
+            #set(ENABLE_DPCPP OFF CACHE INTERNAL "")
+            set(ENABLE_OMP   OFF CACHE INTERNAL "")
+        elseif(WarpX_COMPUTE STREQUAL OMP)
+            set(ENABLE_ACC   OFF CACHE INTERNAL "")
+            set(ENABLE_CUDA  OFF CACHE INTERNAL "")
+            #set(ENABLE_DPCPP OFF CACHE INTERNAL "")
+            set(ENABLE_OMP   ON  CACHE INTERNAL "")
+        else()
+            set(ENABLE_ACC   OFF CACHE INTERNAL "")
+            set(ENABLE_CUDA  OFF CACHE INTERNAL "")
+            #set(ENABLE_DPCPP OFF CACHE INTERNAL "")
+            set(ENABLE_OMP   OFF CACHE INTERNAL "")
+        endif()
+
+        if(HiPACE_PRECISION STREQUAL "double")
+            set(ENABLE_DP ON CACHE INTERNAL "")
+            set(ENABLE_DP_PARTICLES ON CACHE INTERNAL "")
+        else()
+            set(ENABLE_DP OFF CACHE INTERNAL "")
+            set(ENABLE_DP_PARTICLES OFF CACHE INTERNAL "")
+        endif()
+
         set(ENABLE_FORTRAN OFF CACHE INTERNAL "")
         set(ENABLE_FORTRAN_INTERFACES OFF CACHE INTERNAL "")
         set(ENABLE_TUTORIALS OFF CACHE INTERNAL "")
         set(ENABLE_PARTICLES ON CACHE INTERNAL "")
         set(ENABLE_TINY_PROFILE ON CACHE INTERNAL "")
         set(ENABLE_LINEAR_SOLVERS OFF CACHE INTERNAL "")
+
+        # ENABLE_ASCENT
+        # ENABLE_CONDUIT
+        # ENABLE_SENSEI_IN_SITU
         # we'll need this for Python bindings
         #set(ENABLE_PIC ON CACHE INTERNAL "")
+
         set(DIM 3 CACHE INTERNAL "")
 
         FetchContent_Declare(fetchedamrex
@@ -40,9 +70,19 @@ macro(find_amrex)
         mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDAMREX)
 
         # AMReX options not relevant to HiPACE users
-        mark_as_advanced(DIM)
-        mark_as_advanced(USE_XSDK_DEFAULTS)
         mark_as_advanced(AMREX_BUILD_DATETIME)
+        mark_as_advanced(DIM)
+        mark_as_advanced(ENABLE_DP)
+        mark_as_advanced(ENABLE_DP_PARTICLES)
+        mark_as_advanced(ENABLE_FORTRAN)
+        mark_as_advanced(ENABLE_FORTRAN_INTERFACES)
+        mark_as_advanced(ENABLE_LINEAR_SOLVERS)
+        mark_as_advanced(ENABLE_PIC)
+        mark_as_advanced(USE_XSDK_DEFAULTS)
+        # ENABLE_ACC
+        # ENABLE_CUDA
+        # ENABLE_DPCPP
+        # ENABLE_OMP
 
         message(STATUS "AMReX: Using INTERNAL version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})")
     else()

@@ -108,6 +108,8 @@ or by providing arguments to the CMake call: `cmake .. -D<OPTION_A>=<VALUE_A> -D
 | CMake Option                 | Default & Values                           | Description                                         |
 |------------------------------|--------------------------------------------|-----------------------------------------------------|
 | `CMAKE_BUILD_TYPE`           | **RelWithDebInfo**/Release/Debug           | Type of build, symbols & optimizations              |
+| `HiPACE_COMPUTE`             | **NONE**/CUDA/OMP                          | Parallel, on-node computing backend                 |
+| `HiPACE_PRECISION`           | **double**/single                          | Floating point precision (single/double)            |
 | `HiPACE_amrex_repo`          | `https://github.com/AMReX-Codes/amrex.git` | Repository URI to pull and build AMReX from         |
 | `HiPACE_amrex_branch`        | `development`                              | Repository branch for `HiPACE_amrex_repo`           |
 | `HiPACE_amrex_internal`      | **ON**/OFF                                 | Needs a pre-installed AMReX library if set to `OFF` |
@@ -116,15 +118,11 @@ For example, one can also build against a local AMReX git repo.
 Assuming AMReX' source is located in `$HOME/src/amrex` and changes are committed into a branch such as `my-amrex-branch` then pass to `cmake` the arguments `-DHiPACE_amrex_repo=file://$HOME/src/amrex -DHiPACE_amrex_branch=my-amrex-branch`.
 
 HiPACE benefits from further standardized options in AMReX, which are [documented in detail in the AMReX manual](https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options).
-Commonly used options are:
+A commonly needed option is:
 
 | CMake Option                 | Default & Values                           | Description              |
 |------------------------------|--------------------------------------------|--------------------------|
 | `ENABLE_MPI`                 | **ON**/OFF                                 | Multi-node (MPI) support |
-| `ENABLE_OMP`                 | ON/**OFF**                                 | OpenMP threads support   |
-| `ENABLE_CUDA`                | ON/**OFF**                                 | Nvidia GPU support       |
-
-OpenMP support and CUDA support are currently mutually exclusive.
 
 
 ## Run a first simulation and look at the results
