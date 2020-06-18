@@ -1,7 +1,7 @@
 # hipace
 
-![linux](https://github.com/Hi-PACE/hipace/workflows/linux/badge.svg?branch=master&event=push)
-![macOS](https://github.com/Hi-PACE/hipace/workflows/macos/badge.svg?branch=master&event=push)
+![linux](https://github.com/Hi-PACE/hipace/workflows/linux/badge.svg?branch=development&event=push)
+![macOS](https://github.com/Hi-PACE/hipace/workflows/macos/badge.svg?branch=development&event=push)
 
 Highly efficient Plasma Accelerator Emulation, quasistatic particle-in-cell code
 
