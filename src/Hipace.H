@@ -53,7 +53,6 @@ public:
     int m_rank_xy = 0;
     int m_rank_z = 0;
     int m_grid_size_z = 0;
-    amrex::Real* m_recv_buffer = nullptr;
     amrex::Real* m_send_buffer = nullptr;
     MPI_Request m_send_request = MPI_REQUEST_NULL;
 

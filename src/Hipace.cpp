@@ -198,9 +198,14 @@ Hipace::Evolve ()
 
                 /* ---------- Copy back from the slice MultiFab m_slices to the main field m_F ---------- */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
+
+                /* ---------- Shift slices ---------- */
+                m_fields.ShiftSlices(lev);
             }
         }
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
+        // Slices have already been shifted, so send
+        // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
     }
 
@@ -212,14 +217,37 @@ Hipace::Wait ()
 {
 #ifdef AMREX_USE_MPI
     if (m_rank_z != m_numprocs_z-1) {
+        const int lev = 0;
+        amrex::MultiFab& slice2 = m_fields.getSlices(lev, 2);
+        amrex::MultiFab& slice3 = m_fields.getSlices(lev, 3);
+        // Note that there is only one local Box in slice multifab's boxarray.
+        const int box_index = slice2.IndexArray()[0];
+        amrex::Array4<amrex::Real> const& slice_fab2 = slice2.array(box_index);
+        amrex::Array4<amrex::Real> const& slice_fab3 = slice3.array(box_index);
+        const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
+        const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
+        const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
+        const std::size_t nreals_total = nreals_valid_slice2 + nreals_valid_slice3;
+        auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            (sizeof(amrex::Real)*nreals_total);
+        auto const buf2 = amrex::makeArray4(recv_buffer,
+                                            bx, slice_fab2.nComp());
+        auto const buf3 = amrex::makeArray4(recv_buffer+nreals_valid_slice2,
+                                            bx, slice_fab3.nComp());
         MPI_Status status;
-        // We will eventually use amrex's arena
-        m_recv_buffer = (amrex::Real*)std::malloc(sizeof(amrex::Real));
-        // send/recv zero size message for now
-        MPI_Recv(m_recv_buffer, 0,
+        MPI_Recv(recv_buffer, nreals_total,
                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                  m_rank_z+1, comm_z_tag, m_comm_z, &status);
-        std::free(m_recv_buffer);
+        amrex::ParallelFor
+            (bx, slice_fab2.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+             {
+                 slice_fab2(i,j,k,n) = buf2(i,j,k,n);
+             },
+             bx, slice_fab3.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+             {
+                 slice_fab3(i,j,k,n) = buf3(i,j,k,n);
+             });
+        amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 #endif
 }
@@ -227,13 +255,40 @@ Hipace::Wait ()
 void
 Hipace::Notify ()
 {
+    // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
+    // and 3.
 #ifdef AMREX_USE_MPI
     if (m_rank_z != 0) {
         NotifyFinish(); // finish the previous send
-        // We will eventually use amrex's arena
-        m_send_buffer = (amrex::Real*)std::malloc(sizeof(amrex::Real));
-        // send/recv zero size message for now
-        MPI_Isend(m_send_buffer, 0, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+
+        const int lev = 0;
+        const amrex::MultiFab& slice2 = m_fields.getSlices(lev, 2);
+        const amrex::MultiFab& slice3 = m_fields.getSlices(lev, 3);
+        // Note that there is only one local Box in slice multifab's boxarray.
+        const int box_index = slice2.IndexArray()[0];
+        amrex::Array4<amrex::Real const> const& slice_fab2 = slice2.array(box_index);
+        amrex::Array4<amrex::Real const> const& slice_fab3 = slice3.array(box_index);
+        const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
+        const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
+        const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
+        const std::size_t nreals_total = nreals_valid_slice2 + nreals_valid_slice3;
+        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            (sizeof(amrex::Real)*nreals_total);
+        auto const buf2 = amrex::makeArray4(m_send_buffer,
+                                            bx, slice_fab2.nComp());
+        auto const buf3 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2,
+                                            bx, slice_fab3.nComp());
+        amrex::ParallelFor
+            (bx, slice_fab2.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+             {
+                 buf2(i,j,k,n) = slice_fab2(i,j,k,n);
+             },
+             bx, slice_fab3.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+             {
+                 buf3(i,j,k,n) = slice_fab3(i,j,k,n);
+             });
+        MPI_Isend(m_send_buffer, nreals_total,
+                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   m_rank_z-1, comm_z_tag, m_comm_z, &m_send_request);
     }
 #endif
@@ -247,7 +302,7 @@ Hipace::NotifyFinish ()
         if (m_send_buffer) {
             MPI_Status status;
             MPI_Wait(&m_send_request, &status);
-            std::free(m_send_buffer);
+            amrex::The_Pinned_Arena()->free(m_send_buffer);
             m_send_buffer = nullptr;
         }
     }
