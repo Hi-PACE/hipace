@@ -6,8 +6,10 @@ macro(find_amrex)
         # see https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
         if("${CMAKE_BUILD_TYPE}" MATCHES "Debug")
             set(ENABLE_ASSERTIONS ON CACHE INTERNAL "")
+            set(ENABLE_FPE ON CACHE INTERNAL "")
         else()
             set(ENABLE_ASSERTIONS OFF CACHE INTERNAL "")
+            set(ENABLE_FPE OFF CACHE INTERNAL "")
         endif()
 
         if(HiPACE_COMPUTE STREQUAL CUDA)
