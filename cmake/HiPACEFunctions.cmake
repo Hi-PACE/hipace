@@ -106,7 +106,7 @@ endmacro()
 #
 function(make_third_party_includes_system imported_target propagated_name)
     add_library(HiPACE::thirdparty::${propagated_name} INTERFACE IMPORTED)
-    target_link_libraries(HiPACE::thirdparty::${propagated_name} INTERFACE AMReX::amrex)
+    target_link_libraries(HiPACE::thirdparty::${propagated_name} INTERFACE ${imported_target})
     get_target_property(ALL_INCLUDES ${imported_target} INCLUDE_DIRECTORIES)
     set_target_properties(HiPACE::thirdparty::${propagated_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
     target_include_directories(HiPACE::thirdparty::${propagated_name} SYSTEM INTERFACE ${ALL_INCLUDES})
