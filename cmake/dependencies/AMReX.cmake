@@ -4,6 +4,12 @@ macro(find_amrex)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
+        if("${CMAKE_BUILD_TYPE}" MATCHES "Debug")
+            set(ENABLE_ASSERTIONS ON CACHE INTERNAL "")
+        else()
+            set(ENABLE_ASSERTIONS OFF CACHE INTERNAL "")
+        endif()
+
         if(HiPACE_COMPUTE STREQUAL CUDA)
             set(ENABLE_ACC   OFF CACHE INTERNAL "")
             set(ENABLE_CUDA  ON  CACHE INTERNAL "")
