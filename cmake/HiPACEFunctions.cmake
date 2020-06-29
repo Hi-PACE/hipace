@@ -61,8 +61,10 @@ macro(set_default_build_type default_build_type)
     set(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE ${default_build_type}
-                CACHE STRING
-                "Choose the build type, e.g. Release, Debug, or RelWithDebInfo." FORCE)
+            CACHE STRING
+            "Choose the build type, e.g. Release, Debug, or RelWithDebInfo." FORCE)
+        set_property(CACHE CMAKE_BUILD_TYPE
+            PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
     endif()
 endmacro()
 
@@ -104,7 +106,7 @@ endmacro()
 #
 function(make_third_party_includes_system imported_target propagated_name)
     add_library(HiPACE::thirdparty::${propagated_name} INTERFACE IMPORTED)
-    target_link_libraries(HiPACE::thirdparty::${propagated_name} INTERFACE AMReX::amrex)
+    target_link_libraries(HiPACE::thirdparty::${propagated_name} INTERFACE ${imported_target})
     get_target_property(ALL_INCLUDES ${imported_target} INCLUDE_DIRECTORIES)
     set_target_properties(HiPACE::thirdparty::${propagated_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
     target_include_directories(HiPACE::thirdparty::${propagated_name} SYSTEM INTERFACE ${ALL_INCLUDES})
@@ -165,6 +167,7 @@ function(hipace_print_summary)
     message("  Testing: ${BUILD_TESTING}")
     message("  Build options:")
     message("    COMPUTE: ${HiPACE_COMPUTE}")
+    message("    MPI: ${HiPACE_MPI}")
     message("    PRECISION: ${HiPACE_PRECISION}")
     message("")
 endfunction()

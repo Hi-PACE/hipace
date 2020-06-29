@@ -34,7 +34,7 @@ set_default_install_dirs()
 
 # Options and Variants ########################################################
 #
-option(HiPACE_amrex_internal "Download & build AMReX" ON)
+option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
 
 set(HiPACE_PRECISION_VALUES double single)
 set(HiPACE_PRECISION double CACHE STRING "Floating point precision (single/double)")
@@ -49,6 +49,8 @@ set_property(CACHE HiPACE_COMPUTE PROPERTY STRINGS ${HiPACE_COMPUTE_VALUES})
 if(NOT HiPACE_COMPUTE IN_LIST HiPACE_COMPUTE_VALUES)
     message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_COMPUTE}) must be one of ${HiPACE_COMPUTE_VALUES}")
 endif()
+
+option(HiPACE_amrex_internal "Download & build AMReX" ON)
 
 # change the default build type to RelWithDebInfo (or Release) instead of Debug
 set_default_build_type("RelWithDebInfo")
@@ -165,7 +167,7 @@ install(TARGETS HiPACE
 if(BUILD_TESTING)
     enable_testing()
 
-    if(NOT ENABLE_MPI)
+    if(NOT HiPACE_MPI)
         add_test(NAME Main.Examples.Serial.Inputs
                  COMMAND $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
