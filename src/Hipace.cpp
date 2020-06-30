@@ -143,16 +143,34 @@ Hipace::Evolve ()
 {
     int const lev = 0;
     WriteDiagnostics (0);
+    m_fields.getSlices(lev,0).setVal( 0 );
+    m_fields.getSlices(lev,1).setVal( 0 );
+    m_fields.getSlices(lev,2).setVal( 0 );
+    m_fields.getSlices(lev,3).setVal( 0 );
+
     for (int step = 0; step < m_max_step; ++step)
     {
         Wait();
 
-        amrex::Print()<<"step "<< step <<"\n";
+        //amrex::Print()<<"step "<< step <<"\n";
         /* ---------- Depose current from beam particles ---------- */
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
 
         amrex::MultiFab& fields = m_fields.getF()[lev];
         const amrex::Vector<int> index_array = fields.IndexArray();
+
+        std::cout<<amrex::ParallelDescriptor::MyProc()<<' '<<step<<'\n';
+        amrex::Real t1, t2;
+        t1 = MPI_Wtime();
+        t2 = MPI_Wtime();
+        if (amrex::ParallelDescriptor::MyProc() == 1){
+            std::cout<<amrex::ParallelDescriptor::MyProc()<< " starts waiting\n";
+            while (t2 < t1 + 3){
+                t2 = MPI_Wtime();
+            }
+            std::cout<<amrex::ParallelDescriptor::MyProc()<< " stops  waiting\n";
+        }
+        
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
             const amrex::Box& bx = fields.box(*it);
@@ -191,8 +209,10 @@ Hipace::Evolve ()
                 // Solve Poisson equation, the result (lhs) is in the slice MultiFab m_slices
                 m_poisson_solver.SolvePoissonEquation(rhs, lhs);
 
-                /* xxxxxxxxxx Transverse FillBoundary By xxxxxxxxxx */
+                /* ---------- Transverse FillBoundary By ---------- */
                 amrex::ParallelContext::push(m_comm_xy);
+                m_fields.getSlices(lev,1).setVal( m_fields.getSlices(lev,2).max(FieldComps::Ez)+1 );
+                
                 lhs.FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
