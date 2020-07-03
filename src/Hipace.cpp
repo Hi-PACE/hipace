@@ -97,7 +97,13 @@ Hipace::MakeNewLevelFromScratch (
     SetDistributionMap(lev, dm); // Let AmrCore know
 
     m_fields.AllocData(lev, ba, dm);
-    m_poisson_solver = FFTPoissonSolver(ba, dm, geom[lev]);
+    // The Poisson solver operates on transverse slices only.
+    // The constructor takes the BoxArray and the DistributionMap of a slice,
+    // so the FFTPlans are built on a slice.
+    m_poisson_solver = FFTPoissonSolver(
+        m_fields.getSlices(lev, 1).boxArray(),
+        m_fields.getSlices(lev, 1).DistributionMap(),
+        geom[lev]);
 }
 
 void
