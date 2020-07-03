@@ -30,7 +30,7 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
-    m_tmpRealField = amrex::MultiFab(realspace_ba, dm, 1, 0);
+    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
     m_tmpSpectralField = SpectralField(m_spectralspace_ba, dm, 1, 0);
 
     // Calculate the array of inv_k2
@@ -74,14 +74,13 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
         // differ when using real-to-complex FFT. When initializing
         // the FFT plan, the valid dimensions are those of the real-space box.
         amrex::IntVect fft_size = realspace_ba[mfi].length();
-
         m_forward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_tmpRealField[mfi].dataPtr(),
+            fft_size, m_stagingArea[mfi].dataPtr(),
             reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
             AnyFFT::direction::R2C);
 
         m_backward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_tmpRealField[mfi].dataPtr(),
+            fft_size, m_stagingArea[mfi].dataPtr(),
             reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
             AnyFFT::direction::C2R);
     }
@@ -89,22 +88,13 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
 
 
 void
-FFTPoissonSolver::SolvePoissonEquation ( amrex::MultiFab const& rhs_mf,
-                                         amrex::MultiFab& lhs_mf )
+FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
 
     // Loop over boxes
-    for ( amrex::MFIter mfi(rhs_mf); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
 
-        // Copy from input_array to `tmpRealField`
-        amrex::Array4<const amrex::Real> rhs_arr = rhs_mf.array(mfi);
-        amrex::Array4<amrex::Real> tmp_real_arr = m_tmpRealField.array(mfi);
-        amrex::ParallelFor( mfi.validbox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                tmp_real_arr(i,j,k) = rhs_arr(i,j,k);
-            });
-
-        // Perform Fourier transform from `tmpRealField` to `tmpSpectralField`
+        // Perform Fourier transform from the staging area to `tmpSpectralField`
         AnyFFT::Execute(m_forward_plan[mfi]);
 
         // Solve Poisson equation in Fourier space:
@@ -116,10 +106,11 @@ FFTPoissonSolver::SolvePoissonEquation ( amrex::MultiFab const& rhs_mf,
                 tmp_cmplx_arr(i,j,k) *= inv_k2_arr(i,j,k);
             });
 
-        // Perform Fourier transform from `tmpSpectralField` to `tmpRealField`
+        // Perform Fourier transform from `tmpSpectralField` to the staging area
         AnyFFT::Execute(m_backward_plan[mfi]);
 
-        // Copy from `tmpRealField` to output array (and normalize)
+        // Copy from the staging area to output array (and normalize)
+        amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         const amrex::Real inv_N = 1./mfi.validbox().numPts();
         amrex::ParallelFor( mfi.validbox(),
