@@ -15,7 +15,8 @@ jobs:
         mkdir build
         cd build
         cmake ..                                   \
-            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace
+            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
+            -DHiPACE_COMPUTE=NOACC
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
         make install
@@ -32,8 +33,7 @@ jobs:
         mkdir build
         cd build
         cmake ..                                   \
-            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DENABLE_OMP=ON
+            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
         make install

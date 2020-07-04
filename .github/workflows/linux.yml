@@ -35,8 +35,7 @@ jobs:
         cd build
         cmake ..                                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DCMAKE_CXX_STANDARD=17                \
-            -DENABLE_OMP=ON
+            -DCMAKE_CXX_STANDARD=17
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
 
@@ -88,7 +87,7 @@ jobs:
 #        mkdir build
 #        cd build
 #        cmake ..                                             \
-#            -DENABLE_CUDA=ON                                 \
+#            -DHiPACE_COMPUTE=CUDA                            \
 #            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
 #            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)        \
 #            -DCMAKE_CUDA_HOST_COMPILER=$(which clang++-4.0)  \
