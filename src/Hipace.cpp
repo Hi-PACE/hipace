@@ -97,7 +97,13 @@ Hipace::MakeNewLevelFromScratch (
     SetDistributionMap(lev, dm); // Let AmrCore know
 
     m_fields.AllocData(lev, ba, dm);
-    m_poisson_solver = FFTPoissonSolver(ba, dm, geom[lev]);
+    // The Poisson solver operates on transverse slices only.
+    // The constructor takes the BoxArray and the DistributionMap of a slice,
+    // so the FFTPlans are built on a slice.
+    m_poisson_solver = FFTPoissonSolver(
+        m_fields.getSlices(lev, 1).boxArray(),
+        m_fields.getSlices(lev, 1).DistributionMap(),
+        geom[lev]);
 }
 
 void
@@ -175,23 +181,25 @@ Hipace::Evolve ()
                 j_slice.FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
-                /* ---------- Solve Poisson equation with RHS ---------- */
+                /* ---------- Solve Poisson equation ---------- */
                 // Left-Hand Side for Poisson equation is By in the slice MF
                 amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                                     FieldComps::By, 1);
-                // Left-Hand Side for Poisson equation: allocate a tmp MultiFab
-                amrex::MultiFab rhs = amrex::MultiFab(m_fields.getSlices(lev, 1).boxArray(),
-                                                      m_fields.getSlices(lev, 1).distributionMap,
-                                                      1, 0);
-                // Left-Hand Side for Poisson equation: compute d_x(jz) from the slice MF,
-                // and store in tmp MultiFab rhs
-                m_fields.TransverseDerivative(m_fields.getSlices(lev, 1), rhs, Direction::x,
-                                              geom[0].CellSize(Direction::x), FieldComps::jz);
-                rhs.mult(PhysConst::mu0);
-                // Solve Poisson equation, the result (lhs) is in the slice MultiFab m_slices
-                m_poisson_solver.SolvePoissonEquation(rhs, lhs);
+                // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
+                // and store in the staging area of m_poisson_solver
+                m_fields.TransverseDerivative(
+                    m_fields.getSlices(lev, 1),
+                    m_poisson_solver.StagingArea(),
+                    Direction::x,
+                    geom[0].CellSize(Direction::x),
+                    FieldComps::jz);
+                m_poisson_solver.StagingArea().mult(PhysConst::mu0);
+                // Solve Poisson equation.
+                // The RHS is in the staging area of m_poisson_solver.
+                // The LHS will be returned as lhs.
+                m_poisson_solver.SolvePoissonEquation(lhs);
 
-                /* xxxxxxxxxx Transverse FillBoundary By xxxxxxxxxx */
+                /* ---------- Transverse FillBoundary By ---------- */
                 amrex::ParallelContext::push(m_comm_xy);
                 lhs.FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
@@ -204,6 +212,7 @@ Hipace::Evolve ()
             }
         }
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
+
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
