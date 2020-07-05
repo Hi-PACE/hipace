@@ -148,7 +148,7 @@ void
 Hipace::Evolve ()
 {
     int const lev = 0;
-    WriteDiagnostics (0);
+    WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
         Wait();
