@@ -43,6 +43,9 @@ public:
     void Notify ();
     void NotifyFinish ();
 
+    // Is rank in the same transverse communicator w/ me?
+    bool InSameTransverseCommunicator (int rank) const;
+
     void WriteDiagnostics (int step);
 
     MPI_Comm m_comm_xy = MPI_COMM_NULL;

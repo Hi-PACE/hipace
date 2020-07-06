@@ -44,6 +44,12 @@ Hipace::~Hipace ()
 #endif
 }
 
+bool
+Hipace::InSameTransverseCommunicator (int rank) const
+{
+    return rank/(m_numprocs_x*m_numprocs_y) == m_rank_z;
+}
+
 void
 Hipace::InitData ()
 {
