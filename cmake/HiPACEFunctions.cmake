@@ -101,6 +101,7 @@ macro(set_cxx_warnings)
     endif ()
 endmacro()
 
+
 # Take an <imported_target> and expose it as INTERFACE target with
 # HiPACE::thirdparty::<propagated_name> naming and SYSTEM includes.
 #
@@ -110,6 +111,48 @@ function(make_third_party_includes_system imported_target propagated_name)
     get_target_property(ALL_INCLUDES ${imported_target} INCLUDE_DIRECTORIES)
     set_target_properties(HiPACE::thirdparty::${propagated_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
     target_include_directories(HiPACE::thirdparty::${propagated_name} SYSTEM INTERFACE ${ALL_INCLUDES})
+endfunction()
+
+
+
+# Set a feature-based binary name for the HiPACE executable and create a generic
+# hipace symlink to it. Only sets options relevant for users (see summary).
+#
+function(set_hipace_binary_name)
+    set_target_properties(HiPACE PROPERTIES OUTPUT_NAME "hipace")
+
+    if(HiPACE_MPI)
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".MPI")
+    else()
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".NOMPI")
+    endif()
+
+    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".${HiPACE_COMPUTE}")
+
+    if(HiPACE_PRECISION STREQUAL "double")
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".DP")
+    else()
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".SP")
+    endif()
+
+    #if(HiPACE_ASCENT)
+    #    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".ASCENT")
+    #endif()
+
+    #if(HiPACE_OPENPMD)
+    #    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".OMP")
+    #endif()
+
+    if(CMAKE_BUILD_TYPE MATCHES "Debug")
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".DEBUG")
+    endif()
+
+    # alias to the latest build, because using the full name is often confusing
+    add_custom_command(TARGET HiPACE POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            $<TARGET_FILE:HiPACE>
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/hipace
+    )
 endfunction()
 
 
