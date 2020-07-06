@@ -46,13 +46,16 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
     amrex::Real dkx = 2*MathConst::pi/gm.ProbLength(0);
     amrex::Real dky = 2*MathConst::pi/gm.ProbLength(1);
     m_inv_k2 = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
-    // Loop over boxes and calculate inv_k2 in each box
-    for (amrex::MFIter mfi(m_inv_k2); mfi.isValid(); ++mfi ){
-        amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
-        amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
-        int const Ny = bx.length(1);
-        int const mid_point_y = (Ny+1)/2;
-        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
+    // Get the index of the local box in the slice BA.
+    int box_id = m_inv_k2.IndexArray()[0];
+    // Calculate inv_k2 in the current slice (currently, there is only 1 box per slice)
+    amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(box_id);
+    amrex::Box const& bx = m_inv_k2.boxArray()[box_id];  // The lower corner of the "2D" slice Box is zero.
+    int const Ny = bx.length(1);
+    int const mid_point_y = (Ny+1)/2;
+    amrex::ParallelFor(
+        bx,
+        [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
         {
             // kx is always positive (first axis of the real-to-complex FFT)
             amrex::Real kx = dkx*i;
@@ -65,62 +68,59 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
                 inv_k2_arr(i,j,0) = 0;
             }
         });
-    }
-
+    
     // Allocate and initialize the FFT plans
     m_forward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
     m_backward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
-    // Loop over boxes and allocate the corresponding plan
-    // for each box owned by the local MPI proc
-    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
-        // Note: the size of the real-space box and spectral-space box
-        // differ when using real-to-complex FFT. When initializing
-        // the FFT plan, the valid dimensions are those of the real-space box.
-        amrex::IntVect fft_size = mfi.validbox().length();
-        m_forward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(),
-            reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
-            AnyFFT::direction::R2C);
-
-        m_backward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(),
-            reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
-            AnyFFT::direction::C2R);
-    }
+    // Allocate the plan for the box owned by the local MPI proc.
+    // There can be only one on each rank, this is a fundamental assumption
+    // that is NOT expected to change.
+    box_id = m_stagingArea.IndexArray()[0];
+    // Note: the size of the real-space box and spectral-space box
+    // differ when using real-to-complex FFT. When initializing
+    // the FFT plan, the valid dimensions are those of the real-space box.
+    amrex::IntVect fft_size = m_stagingArea.boxArray()[box_id].length();
+    m_forward_plan[box_id] = AnyFFT::CreatePlan(
+        fft_size, m_stagingArea[box_id].dataPtr(),
+        reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[box_id].dataPtr()),
+        AnyFFT::direction::R2C);
+    
+    m_backward_plan[box_id] = AnyFFT::CreatePlan(
+        fft_size, m_stagingArea[box_id].dataPtr(),
+        reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[box_id].dataPtr()),
+        AnyFFT::direction::C2R);
 }
 
 
 void
 FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
+    // Get index of local box in the slice BA.
+    int const box_id = m_stagingArea.IndexArray()[0];
 
-    // Loop over boxes
-    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
+    // Perform Fourier transform from the staging area to `tmpSpectralField`
+    AnyFFT::Execute(m_forward_plan[box_id]);
 
-        // Perform Fourier transform from the staging area to `tmpSpectralField`
-        AnyFFT::Execute(m_forward_plan[mfi]);
+    // Solve Poisson equation in Fourier space:
+    // Multiply `tmpSpectralField` by inv_k2
+    amrex::Array4<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(box_id);
+    amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(box_id);
+    amrex::ParallelFor( m_spectralspace_ba[box_id],
+                        [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                            tmp_cmplx_arr(i,j,k) *= inv_k2_arr(i,j,k);
+                        });
 
-        // Solve Poisson equation in Fourier space:
-        // Multiply `tmpSpectralField` by inv_k2
-        amrex::Array4<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
-        amrex::ParallelFor( m_spectralspace_ba[mfi],
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                tmp_cmplx_arr(i,j,k) *= inv_k2_arr(i,j,k);
-            });
+    // Perform Fourier transform from `tmpSpectralField` to the staging area
+    AnyFFT::Execute(m_backward_plan[box_id]);
 
-        // Perform Fourier transform from `tmpSpectralField` to the staging area
-        AnyFFT::Execute(m_backward_plan[mfi]);
-
-        // Copy from the staging area to output array (and normalize)
-        amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
-        amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
-        const amrex::Real inv_N = 1./mfi.validbox().numPts();
-        amrex::ParallelFor( mfi.validbox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                // Copy and normalize field
-                lhs_arr(i,j,k) = inv_N*tmp_real_arr(i,j,k);
-            });
-
-    }
+    // Copy from the staging area to output array (and normalize)
+    amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(box_id);
+    amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(box_id);
+    amrex::Box const valid_box = m_stagingArea.boxArray()[m_stagingArea.IndexArray()[0]];
+    const amrex::Real inv_N = 1./valid_box.numPts();
+    amrex::ParallelFor( valid_box,
+                        [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                            // Copy and normalize field
+                            lhs_arr(i,j,k) = inv_N*tmp_real_arr(i,j,k);
+                        });
 }
