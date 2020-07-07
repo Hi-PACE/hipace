@@ -5,6 +5,14 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
                                      amrex::DistributionMapping const& dm,
                                      amrex::Geometry const& gm )
 {
+    define(realspace_ba, dm, gm);
+}
+
+
+void FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
+                                amrex::DistributionMapping const& dm,
+                                amrex::Geometry const& gm )
+{
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(realspace_ba.size() == 1, "Parallel FFT not supported yet");
 

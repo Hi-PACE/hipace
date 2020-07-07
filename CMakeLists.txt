@@ -43,8 +43,9 @@ if(NOT HiPACE_PRECISION IN_LIST HiPACE_PRECISION_VALUES)
     message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_PRECISION}) must be one of ${HiPACE_PRECISION_VALUES}")
 endif()
 
-set(HiPACE_COMPUTE_VALUES NONE CUDA OMP) # HIP DPCPP
-set(HiPACE_COMPUTE NONE CACHE STRING "Parallel, on-node computing backend (NONE/CUDA/OMP)")
+set(HiPACE_COMPUTE_VALUES NOACC CUDA OMP DPCPP) # HIP
+set(HiPACE_COMPUTE OMP CACHE STRING
+    "On-node, accelerated computing backend (NOACC/OMP/CUDA/DPCPP)")
 set_property(CACHE HiPACE_COMPUTE PROPERTY STRINGS ${HiPACE_COMPUTE_VALUES})
 if(NOT HiPACE_COMPUTE IN_LIST HiPACE_COMPUTE_VALUES)
     message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_COMPUTE}) must be one of ${HiPACE_COMPUTE_VALUES}")
@@ -131,6 +132,9 @@ if(ENABLE_CUDA)
         )
     endif()
 endif()
+
+# fancy binary name for build variants
+set_hipace_binary_name()
 
 
 # Defines #####################################################################
