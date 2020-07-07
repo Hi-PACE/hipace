@@ -1,7 +1,7 @@
 #ifndef ANYFFT_H_
 #define ANYFFT_H_
 
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_CUDA
 #  include <cufft.h>
 #else
 #  include <fftw3.h>
@@ -20,7 +20,7 @@ namespace AnyFFT
     // First, define library-dependent types (complex, FFT plan)
 
     /** Complex type for FFT, depends on FFT library */
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_CUDA
 #  ifdef AMREX_USE_FLOAT
     using Complex = cuComplex;
 #  else
@@ -37,7 +37,7 @@ namespace AnyFFT
     /** Library-dependent FFT plans type, which holds one fft plan per box
      * (plans are only initialized for the boxes that are owned by the local MPI rank).
      */
-#ifdef AMREX_USE_GPU
+#ifdef AMREX_USE_CUDA
     using VendorFFTPlan = cufftHandle;
 #else
 #  ifdef AMREX_USE_FLOAT
