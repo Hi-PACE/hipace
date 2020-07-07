@@ -14,9 +14,12 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
                     amrex::MFInfo().SetArena(amrex::The_Arena())); // The Arena uses managed memory.
 
-    amrex::Vector<amrex::Vector<amrex::Box> > boxes(amrex::ParallelDescriptor::NProcs());
+    std::map<int,amrex::Vector<amrex::Box> > boxes;
     for (int i = 0; i < ba.size(); ++i) {
-        boxes[dm[i]].push_back(ba[i]);
+        int rank = dm[i];
+        if (m_hipace->InSameTransverseCommunicator(rank)) {
+            boxes[rank].push_back(ba[i]);
+        }
     }
 
     // We assume each process may have multiple Boxes longitude direction, but only one Box in the
@@ -28,12 +31,14 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
 
     amrex::BoxList bl;
     amrex::Vector<int> procmap;
-    for (int iproc = 0; iproc < boxes.size(); ++iproc) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes[iproc].size() > 0,
+    for (auto const& kv : boxes) {
+        int const iproc = kv.first;
+        auto const& boxes_i = kv.second;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes_i.size() > 0,
                                          "We assume each process has at least one Box");
-        amrex::Box bx = boxes[iproc][0];
-        for (int j = 1; j < boxes[iproc].size(); ++j) {
-            amrex::Box const& bxj = boxes[iproc][j];
+        amrex::Box bx = boxes_i[0];
+        for (int j = 1; j < boxes_i.size(); ++j) {
+            amrex::Box const& bxj = boxes_i[j];
             for (int idim = 0; idim < Direction::z; ++idim) {
                 AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
                 AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));

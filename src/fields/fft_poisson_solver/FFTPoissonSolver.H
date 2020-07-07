@@ -26,6 +26,10 @@ public:
 
     FFTPoissonSolver () = default;
 
+    void define  (amrex::BoxArray const& realspace_ba,
+                  amrex::DistributionMapping const& dm,
+                  amrex::Geometry const& gm);
+
     void SolvePoissonEquation (amrex::MultiFab& lhs_mf);
 
     amrex::MultiFab& StagingArea() {return m_stagingArea;};
