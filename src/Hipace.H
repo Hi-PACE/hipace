@@ -43,6 +43,8 @@ public:
     void Notify ();
     void NotifyFinish ();
 
+    void ReadParameters ();
+
     // Is rank in the same transverse communicator w/ me?
     bool InSameTransverseCommunicator (int rank) const;
 
@@ -64,6 +66,7 @@ public:
     BeamParticleContainer m_beam_container;
     PlasmaParticleContainer m_plasma_container;
     int m_max_step = 0;
+    static bool m_normalized_units;
 };
 
 #endif

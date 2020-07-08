@@ -10,18 +10,15 @@ namespace {
 }
 #endif
 
+bool Hipace::m_normalized_units = false;
+
 Hipace::Hipace () :
     m_fields(this),
     m_beam_container(this),
     m_plasma_container(this)
 {
-    amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
-    pp.query("max_step", m_max_step);
+    ReadParameters();
 
-    amrex::ParmParse pph("hipace");
-    pph.query("numprocs_x", m_numprocs_x);
-    pph.query("numprocs_y", m_numprocs_y);
-    pph.query("grid_size_z", m_grid_size_z);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -42,6 +39,19 @@ Hipace::~Hipace ()
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
+}
+
+void
+Hipace::ReadParameters ()
+{
+    amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
+    pp.query("max_step", m_max_step);
+
+    amrex::ParmParse pph("hipace");
+    pph.query("numprocs_x", m_numprocs_x);
+    pph.query("numprocs_y", m_numprocs_y);
+    pph.query("grid_size_z", m_grid_size_z);
+    pph.query("normalized_units", m_normalized_units);
 }
 
 bool

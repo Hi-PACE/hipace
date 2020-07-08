@@ -1,6 +1,9 @@
 #include "BeamParticleContainer.H"
 #include "Constants.H"
 #include "ParticleUtil.H"
+#include "Hipace.H"
+
+#include "AMReX_REAL.H"
 
 using namespace amrex;
 
@@ -133,7 +136,11 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
                 arrdata[BeamIdx::ux  ][pidx] = u[0] * PhysConst::c;
                 arrdata[BeamIdx::uy  ][pidx] = u[1] * PhysConst::c;
                 arrdata[BeamIdx::uz  ][pidx] = u[2] * PhysConst::c;
-                arrdata[BeamIdx::w   ][pidx] = a_density * scale_fac;
+                if (Hipace::m_normalized_units){
+                    arrdata[BeamIdx::w   ][pidx] = a_density * scale_fac;
+                } else {
+                    arrdata[BeamIdx::w   ][pidx] = 1._rt/num_ppc;
+                }
                 ++pidx;
             }
         });
