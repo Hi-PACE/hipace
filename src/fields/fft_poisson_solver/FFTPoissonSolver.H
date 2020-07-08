@@ -32,7 +32,7 @@ public:
 
     void SolvePoissonEquation (amrex::MultiFab& lhs_mf);
 
-    amrex::MultiFab& StagingArea() {return m_stagingArea;};
+    amrex::MultiFab& StagingArea() {return m_stagingArea;}
 private:
     amrex::BoxArray m_spectralspace_ba;
     SpectralField m_tmpSpectralField; // contains (complex) field in Fourier space
