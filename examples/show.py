@@ -10,14 +10,15 @@ from yt.frontends.boxlib.data_structures import AMReXDataset
 
 ds = AMReXDataset('plt00001')
 
-plot_yt = False
+plot_yt = True
 plot_plt = True
 
 if plot_yt:
     # Plot 1 field with yt.sliceplot
-    sl = yt.SlicePlot(ds, 1, 'jz', aspect=1)
+    sl = yt.SlicePlot(ds, 2, 'jz', aspect=1)
     sl.annotate_particles(width=(1., 'm'), p_size=2, ptype='plasma', col='black')
     sl.annotate_particles(width=(1., 'm'), p_size=2, ptype='beam', col='red')
+    sl.annotate_grids()
     sl.save('./yt_img.png')
 
 if plot_plt:

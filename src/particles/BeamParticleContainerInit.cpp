@@ -6,12 +6,14 @@ using namespace amrex;
 
 void
 BeamParticleContainer::
-InitParticles (const IntVect&  a_num_particles_per_cell,
-               const Real      a_thermal_momentum_std,
-               const Real      a_thermal_momentum_mean,
-               const Real      a_density,
-               const Geometry& a_geom,
-               const RealBox&  a_bounds)
+InitCanBeam (const IntVect&  a_num_particles_per_cell,
+             const Real      a_u_std,
+             const Real      a_uz_mean,
+             const Real      a_density,
+             const Geometry& a_geom,
+             const amrex::Real a_zmin,
+             const amrex::Real a_zmax,
+             const amrex::Real a_radius)
 {
     BL_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -50,9 +52,8 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
-                    y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    z >= a_bounds.hi(2) || z < a_bounds.lo(2) ) continue;
+                if (z >= a_zmax || z < a_zmin ||
+                    (x*x+y*y) > a_radius*a_radius) continue;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -116,12 +117,11 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, a_thermal_momentum_mean,
-                                                           a_thermal_momentum_std);
+                ParticleUtil::get_gaussian_random_momentum(u, a_uz_mean,
+                                                           a_u_std);
 
-                if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
-                    y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    z >= a_bounds.hi(2) || z < a_bounds.lo(2) ) continue;
+                if (z >= a_zmax || z < a_zmin ||
+                    (x*x+y*y) > a_radius*a_radius) continue;
 
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;
