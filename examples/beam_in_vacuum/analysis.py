@@ -48,6 +48,7 @@ plt.legend()
 plt.xlim(-50., 50.)
 plt.xlabel('x (um)')
 plt.ylabel('By (A/m)')
+plt.savefig("beam_in_vacuum.png", bbox_inches="tight")
 
 # Assert small error
 error = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
