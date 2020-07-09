@@ -37,7 +37,7 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::Real q = - PhysConst::q_e;
 
         // Call deposition function in each box
-        doDepositionShapeN<2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+        doDepositionShapeN<0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
     }
 
 }
