@@ -32,7 +32,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
     const amrex::Real dxi = 1.0/dx[0];
     const amrex::Real dyi = 1.0/dx[1];
     const amrex::Real dzi = 1.0/dx[2];
-    const amrex::Real invvol = dxi*dyi*dzi;
+    const amrex::Real invvol = Hipace::normalized_units? 1. : dxi*dyi*dzi;
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
     const amrex::Real zmin = xyzmin[2];
