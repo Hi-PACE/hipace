@@ -2,7 +2,7 @@
 #define HIPACE_Constants_H_
 
 #include "Hipace.H"
-#include "AMReX_REAL.H"
+#include <AMReX_REAL.H>
 #include <cmath>
 
 // Math constants
