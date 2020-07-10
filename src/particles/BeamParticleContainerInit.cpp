@@ -48,8 +48,8 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                Real x = plo[0] + (i + r[0] + .5)*dx[0];
-                Real y = plo[1] + (j + r[1] + .5)*dx[1];
+                Real x = plo[0] + (i + r[0])*dx[0];
+                Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
@@ -113,8 +113,8 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                Real x = plo[0] + (i + r[0] + .5)*dx[0];
-                Real y = plo[1] + (j + r[1] + .5)*dx[1];
+                Real x = plo[0] + (i + r[0])*dx[0];
+                Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
                 ParticleUtil::get_gaussian_random_momentum(u, a_uz_mean,
