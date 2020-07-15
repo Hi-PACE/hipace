@@ -27,7 +27,8 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
-    const Real scale_fac = dx[0]*dx[1]*dx[2]/num_ppc;
+
+    const Real scale_fac = Hipace::m_normalized_units ? 1._rt/num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
@@ -138,11 +139,7 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
                 arrdata[BeamIdx::ux  ][pidx] = u[0] * phys_const.c;
                 arrdata[BeamIdx::uy  ][pidx] = u[1] * phys_const.c;
                 arrdata[BeamIdx::uz  ][pidx] = u[2] * phys_const.c;
-                if (Hipace::m_normalized_units){
-                     arrdata[BeamIdx::w][pidx] = 1._rt/num_ppc;
-                 } else {
-                     arrdata[BeamIdx::w][pidx] = a_density * scale_fac;
-                 }
+                arrdata[BeamIdx::w][pidx] = a_density * scale_fac;
                 ++pidx;
             }
         });
