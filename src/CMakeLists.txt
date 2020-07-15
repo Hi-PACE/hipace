@@ -2,6 +2,7 @@ target_sources(HiPACE
   PRIVATE
     main.cpp
     Hipace.cpp
+    Constants.cpp
 )
 
 add_subdirectory(fields)

@@ -13,6 +13,8 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
+    PhysConst phys_const = get_phys_const();
+
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
@@ -34,7 +36,7 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::FArrayBox& jz_fab = jz[pti];
 
         // For now: fix the value of the charge
-        amrex::Real q = - PhysConst::q_e;
+        amrex::Real q = - phys_const.q_e;
 
         // Call deposition function in each box
         doDepositionShapeN<0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );

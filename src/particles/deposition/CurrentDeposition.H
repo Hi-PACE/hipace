@@ -3,6 +3,7 @@
 
 #include "particles/ShapeFactors.H"
 #include "Constants.H"
+#include "Hipace.H"
 
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
@@ -19,6 +20,8 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
 {
     using namespace amrex::literals;
 
+    PhysConst phys_const = get_phys_const();
+
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
@@ -32,12 +35,12 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
     const amrex::Real dxi = 1.0/dx[0];
     const amrex::Real dyi = 1.0/dx[1];
     const amrex::Real dzi = 1.0/dx[2];
-    const amrex::Real invvol = dxi*dyi*dzi;
+    const amrex::Real invvol = Hipace::m_normalized_units? 1. : dxi*dyi*dzi;
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
     const amrex::Real zmin = xyzmin[2];
 
-    const amrex::Real clightsq = 1.0_rt/(PhysConst::c*PhysConst::c);
+    const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();

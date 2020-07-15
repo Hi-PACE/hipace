@@ -1,6 +1,9 @@
 #include "BeamParticleContainer.H"
 #include "Constants.H"
 #include "ParticleUtil.H"
+#include "Hipace.H"
+
+#include <AMReX_REAL.H>
 
 using namespace amrex;
 
@@ -90,6 +93,8 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
+        PhysConst phys_const = get_phys_const();
+
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -130,10 +135,14 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                arrdata[BeamIdx::ux  ][pidx] = u[0] * PhysConst::c;
-                arrdata[BeamIdx::uy  ][pidx] = u[1] * PhysConst::c;
-                arrdata[BeamIdx::uz  ][pidx] = u[2] * PhysConst::c;
-                arrdata[BeamIdx::w   ][pidx] = a_density * scale_fac;
+                arrdata[BeamIdx::ux  ][pidx] = u[0] * phys_const.c;
+                arrdata[BeamIdx::uy  ][pidx] = u[1] * phys_const.c;
+                arrdata[BeamIdx::uz  ][pidx] = u[2] * phys_const.c;
+                if (Hipace::m_normalized_units){
+                     arrdata[BeamIdx::w][pidx] = 1._rt/num_ppc;
+                 } else {
+                     arrdata[BeamIdx::w][pidx] = a_density * scale_fac;
+                 }
                 ++pidx;
             }
         });
