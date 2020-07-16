@@ -4,6 +4,7 @@
 #include "particles/deposition/CurrentDeposition.H"
 #include "fields/Fields.H"
 #include "Constants.H"
+#include "Hipace.H"
 
 void
 DepositCurrent (BeamParticleContainer& beam, Fields & fields,
@@ -39,7 +40,56 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::Real q = - phys_const.q_e;
 
         // Call deposition function in each box
-        doDepositionShapeN<0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+        if        (Hipace::m_depos_order_xy == 0){
+            if        (Hipace::m_depos_order_z == 0){
+                doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 1){
+                doDepositionShapeN<0, 1>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 2){
+                doDepositionShapeN<0, 2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 3){
+                doDepositionShapeN<0, 3>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else {
+                amrex::Abort("unknow deposition order");
+            }
+        } else if (Hipace::m_depos_order_xy == 1){
+            if        (Hipace::m_depos_order_z == 0){
+                doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 1){
+                doDepositionShapeN<1, 1>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 2){
+                doDepositionShapeN<1, 2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 3){
+                doDepositionShapeN<1, 3>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else {
+                amrex::Abort("unknow deposition order");
+            }
+        } else if (Hipace::m_depos_order_xy == 2){
+            if        (Hipace::m_depos_order_z == 0){
+                doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 1){
+                doDepositionShapeN<2, 1>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 2){
+                doDepositionShapeN<2, 2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 3){
+                doDepositionShapeN<2, 3>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else {
+                amrex::Abort("unknow deposition order");
+            }
+        } else if (Hipace::m_depos_order_xy == 3){
+            if        (Hipace::m_depos_order_z == 0){
+                doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 1){
+                doDepositionShapeN<3, 1>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 2){
+                doDepositionShapeN<3, 2>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else if (Hipace::m_depos_order_z == 3){
+                doDepositionShapeN<3, 3>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q );
+            } else {
+                amrex::Abort("unknow deposition order m_depos_order_z");
+            }
+        } else {
+            amrex::Abort("unknow deposition order m_depos_order_xy");
+        }
     }
-
 }

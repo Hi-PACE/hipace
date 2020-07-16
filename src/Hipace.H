@@ -72,6 +72,8 @@ public:
 
     static bool m_normalized_units;
     PhysConst m_phys_const;
+    static int m_depos_order_xy;
+    static int m_depos_order_z;
 
 private:
     static Hipace* m_instance;

@@ -8,7 +8,7 @@
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 
-template <int depos_order>
+template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN(const BeamParticleIterator& pti,
                         amrex::FArrayBox& jx_fab,
                         amrex::FArrayBox& jy_fab,
@@ -78,65 +78,65 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             // sx_j[xyz] shape factor along x for the centering of each current
             // There are only two possible centerings, node or cell centered, so at most only two shape factor
             // arrays will be needed.
-            amrex::Real sx_node[depos_order + 1];
-            amrex::Real sx_cell[depos_order + 1];
+            amrex::Real sx_node[depos_order_xy + 1];
+            amrex::Real sx_cell[depos_order_xy + 1];
             int j_node;
             int j_cell;
             if (jx_type[0] == NODE || jy_type[0] == NODE || jz_type[0] == NODE) {
-                j_node = compute_shape_factor<depos_order>(sx_node, xmid);
+                j_node = compute_shape_factor<depos_order_xy>(sx_node, xmid);
             }
             if (jx_type[0] == CELL || jy_type[0] == CELL || jz_type[0] == CELL) {
-                j_cell = compute_shape_factor<depos_order>(sx_cell, xmid - 0.5_rt);
+                j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
             }
-            const amrex::Real (&sx_jx)[depos_order + 1] = ((jx_type[0] == NODE) ? sx_node : sx_cell);
-            const amrex::Real (&sx_jy)[depos_order + 1] = ((jy_type[0] == NODE) ? sx_node : sx_cell);
-            const amrex::Real (&sx_jz)[depos_order + 1] = ((jz_type[0] == NODE) ? sx_node : sx_cell);
+            const amrex::Real (&sx_jx)[depos_order_xy + 1] = ((jx_type[0] == NODE) ? sx_node : sx_cell);
+            const amrex::Real (&sx_jy)[depos_order_xy + 1] = ((jy_type[0] == NODE) ? sx_node : sx_cell);
+            const amrex::Real (&sx_jz)[depos_order_xy + 1] = ((jz_type[0] == NODE) ? sx_node : sx_cell);
             int const j_jx = ((jx_type[0] == NODE) ? j_node : j_cell);
             int const j_jy = ((jy_type[0] == NODE) ? j_node : j_cell);
             int const j_jz = ((jz_type[0] == NODE) ? j_node : j_cell);
 
             // y direction
             const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
-            amrex::Real sy_node[depos_order + 1];
-            amrex::Real sy_cell[depos_order + 1];
+            amrex::Real sy_node[depos_order_xy + 1];
+            amrex::Real sy_cell[depos_order_xy + 1];
             int k_node;
             int k_cell;
             if (jx_type[1] == NODE || jy_type[1] == NODE || jz_type[1] == NODE) {
-                k_node = compute_shape_factor<depos_order>(sy_node, ymid);
+                k_node = compute_shape_factor<depos_order_xy>(sy_node, ymid);
             }
             if (jx_type[1] == CELL || jy_type[1] == CELL || jz_type[1] == CELL) {
-                k_cell = compute_shape_factor<depos_order>(sy_cell, ymid - 0.5);
+                k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5);
             }
-            const amrex::Real (&sy_jx)[depos_order + 1] = ((jx_type[1] == NODE) ? sy_node : sy_cell);
-            const amrex::Real (&sy_jy)[depos_order + 1] = ((jy_type[1] == NODE) ? sy_node : sy_cell);
-            const amrex::Real (&sy_jz)[depos_order + 1] = ((jz_type[1] == NODE) ? sy_node : sy_cell);
+            const amrex::Real (&sy_jx)[depos_order_xy + 1] = ((jx_type[1] == NODE) ? sy_node : sy_cell);
+            const amrex::Real (&sy_jy)[depos_order_xy + 1] = ((jy_type[1] == NODE) ? sy_node : sy_cell);
+            const amrex::Real (&sy_jz)[depos_order_xy + 1] = ((jz_type[1] == NODE) ? sy_node : sy_cell);
             int const k_jx = ((jx_type[1] == NODE) ? k_node : k_cell);
             int const k_jy = ((jy_type[1] == NODE) ? k_node : k_cell);
             int const k_jz = ((jz_type[1] == NODE) ? k_node : k_cell);
 
             // z direction
             const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
-            amrex::Real sz_node[depos_order + 1];
-            amrex::Real sz_cell[depos_order + 1];
+            amrex::Real sz_node[depos_order_z + 1];
+            amrex::Real sz_cell[depos_order_z + 1];
             int l_node;
             int l_cell;
             if (jx_type[zdir] == NODE || jy_type[zdir] == NODE || jz_type[zdir] == NODE) {
-                l_node = compute_shape_factor<depos_order>(sz_node, zmid);
+                l_node = compute_shape_factor<depos_order_z>(sz_node, zmid);
             }
             if (jx_type[zdir] == CELL || jy_type[zdir] == CELL || jz_type[zdir] == CELL) {
-                l_cell = compute_shape_factor<depos_order>(sz_cell, zmid - 0.5);
+                l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5);
             }
-            const amrex::Real (&sz_jx)[depos_order + 1] = ((jx_type[zdir] == NODE) ? sz_node : sz_cell);
-            const amrex::Real (&sz_jy)[depos_order + 1] = ((jy_type[zdir] == NODE) ? sz_node : sz_cell);
-            const amrex::Real (&sz_jz)[depos_order + 1] = ((jz_type[zdir] == NODE) ? sz_node : sz_cell);
+            const amrex::Real (&sz_jx)[depos_order_z + 1] = ((jx_type[zdir] == NODE) ? sz_node : sz_cell);
+            const amrex::Real (&sz_jy)[depos_order_z + 1] = ((jy_type[zdir] == NODE) ? sz_node : sz_cell);
+            const amrex::Real (&sz_jz)[depos_order_z + 1] = ((jz_type[zdir] == NODE) ? sz_node : sz_cell);
             int const l_jx = ((jx_type[zdir] == NODE) ? l_node : l_cell);
             int const l_jy = ((jy_type[zdir] == NODE) ? l_node : l_cell);
             int const l_jz = ((jz_type[zdir] == NODE) ? l_node : l_cell);
 
             // Deposit current into jx_arr, jy_arr and jz_arr
-            for (int iz=0; iz<=depos_order; iz++){
-                for (int iy=0; iy<=depos_order; iy++){
-                    for (int ix=0; ix<=depos_order; ix++){
+            for (int iz=0; iz<=depos_order_z; iz++){
+                for (int iy=0; iy<=depos_order_xy; iy++){
+                    for (int ix=0; ix<=depos_order_xy; ix++){
                         amrex::Gpu::Atomic::Add(
                             &jx_arr(lo.x+j_jx+ix, lo.y+k_jx+iy, lo.z+l_jx+iz),
                             sx_jx[ix]*sy_jx[iy]*sz_jx[iz]*wqx);

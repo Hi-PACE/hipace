@@ -55,9 +55,9 @@ private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
     /** Number of guard cells for main MultiFab */
-    amrex::IntVect m_nguards {2, 2, 2};
+    amrex::IntVect m_nguards {-1, -1, -1};
     /** Number of guard cells for slices MultiFab */
-    amrex::IntVect m_slices_nguards {2, 2, 0};
+    amrex::IntVect m_slices_nguards {-1, -1, -1};
 };
 
 #endif

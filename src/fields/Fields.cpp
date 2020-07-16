@@ -11,6 +11,8 @@ void
 Fields::AllocData (int lev, const amrex::BoxArray& ba,
                    const amrex::DistributionMapping& dm)
 {
+    m_nguards = {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, Hipace::m_depos_order_z};
+    m_slices_nguards = {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0};
     m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
                     amrex::MFInfo().SetArena(amrex::The_Arena())); // The Arena uses managed memory.
 
