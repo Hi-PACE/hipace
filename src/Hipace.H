@@ -64,6 +64,9 @@ public:
     BeamParticleContainer m_beam_container;
     PlasmaParticleContainer m_plasma_container;
     int m_max_step = 0;
+
+    static int m_depos_order_xy;
+    static int m_depos_order_z;
 };
 
 #endif

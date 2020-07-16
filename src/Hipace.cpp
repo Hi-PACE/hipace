@@ -10,6 +10,9 @@ namespace {
 }
 #endif
 
+int Hipace::m_depos_order_xy = 2;
+int Hipace::m_depos_order_z = 0;
+
 Hipace::Hipace () :
     m_fields(this),
     m_beam_container(this),
@@ -22,6 +25,8 @@ Hipace::Hipace () :
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
     pph.query("grid_size_z", m_grid_size_z);
+    pph.query("depos_order_xy", m_depos_order_xy);
+    pph.query("depos_order_z", m_depos_order_z);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
