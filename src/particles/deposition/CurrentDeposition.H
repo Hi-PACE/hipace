@@ -7,7 +7,6 @@
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 #include <AMReX_FArrayBox.H>
-#include <AMReX_MultiFAB.H>
 
 template <int depos_order_xy, int depos_order_z, int nattribs>
 void doDepositionShapeN(const amrex::ParIter<0, 0, nattribs, 0>& pti,
