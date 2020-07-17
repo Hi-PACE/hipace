@@ -20,13 +20,13 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
     using namespace amrex::literals;
 
     // Extract particle properties
-    auto& aos = pti.GetArrayOfStructs(); // For positions
+    const auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
-    auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-    auto  wp = soa.GetRealData(BeamIdx::w).data();
-    auto uxp = soa.GetRealData(BeamIdx::ux).data();
-    auto uyp = soa.GetRealData(BeamIdx::uy).data();
-    auto uzp = soa.GetRealData(BeamIdx::uz).data();
+    const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+    const auto  wp = soa.GetRealData(BeamIdx::w).data();
+    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
+    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
+    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
@@ -42,13 +42,15 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
-    amrex::IntVect const jx_type = jx_fab.box().type();
-    amrex::IntVect const jy_type = jy_fab.box().type();
-    amrex::IntVect const jz_type = jz_fab.box().type();
 
-    constexpr int zdir = (AMREX_SPACEDIM - 1);
-    constexpr int NODE = amrex::IndexType::NODE;
     constexpr int CELL = amrex::IndexType::CELL;
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        jx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
+        "jx, jy and jz must be nodal in all directions."
+        );
 
     // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
     amrex::ParallelFor(
@@ -58,7 +60,7 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
                                                          + uzp[ip]*uzp[ip]*clightsq);
-            amrex::Real wq  = q*wp[ip];
+            const amrex::Real wq = q*wp[ip];
 
             const amrex::Real vx  = uxp[ip]*gaminv;
             const amrex::Real vy  = uyp[ip]*gaminv;
@@ -71,78 +73,33 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
             // --- Compute shape factors
             // x direction
             const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
-            // j_j[xyz] leftmost grid point in x that the particle touches for the centering of each current
-            // sx_j[xyz] shape factor along x for the centering of each current
-            // There are only two possible centerings, node or cell centered, so at most only two shape factor
-            // arrays will be needed.
-            amrex::Real sx_node[depos_order_xy + 1];
+            // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
             amrex::Real sx_cell[depos_order_xy + 1];
-            int j_node;
-            int j_cell;
-            if (jx_type[0] == NODE || jy_type[0] == NODE || jz_type[0] == NODE) {
-                j_node = compute_shape_factor<depos_order_xy>(sx_node, xmid);
-            }
-            if (jx_type[0] == CELL || jy_type[0] == CELL || jz_type[0] == CELL) {
-                j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
-            }
-            const amrex::Real (&sx_jx)[depos_order_xy + 1] = ((jx_type[0] == NODE) ? sx_node : sx_cell);
-            const amrex::Real (&sx_jy)[depos_order_xy + 1] = ((jy_type[0] == NODE) ? sx_node : sx_cell);
-            const amrex::Real (&sx_jz)[depos_order_xy + 1] = ((jz_type[0] == NODE) ? sx_node : sx_cell);
-            int const j_jx = ((jx_type[0] == NODE) ? j_node : j_cell);
-            int const j_jy = ((jy_type[0] == NODE) ? j_node : j_cell);
-            int const j_jz = ((jz_type[0] == NODE) ? j_node : j_cell);
-
+            const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
+            
             // y direction
             const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
-            amrex::Real sy_node[depos_order_xy + 1];
             amrex::Real sy_cell[depos_order_xy + 1];
-            int k_node;
-            int k_cell;
-            if (jx_type[1] == NODE || jy_type[1] == NODE || jz_type[1] == NODE) {
-                k_node = compute_shape_factor<depos_order_xy>(sy_node, ymid);
-            }
-            if (jx_type[1] == CELL || jy_type[1] == CELL || jz_type[1] == CELL) {
-                k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5);
-            }
-            const amrex::Real (&sy_jx)[depos_order_xy + 1] = ((jx_type[1] == NODE) ? sy_node : sy_cell);
-            const amrex::Real (&sy_jy)[depos_order_xy + 1] = ((jy_type[1] == NODE) ? sy_node : sy_cell);
-            const amrex::Real (&sy_jz)[depos_order_xy + 1] = ((jz_type[1] == NODE) ? sy_node : sy_cell);
-            int const k_jx = ((jx_type[1] == NODE) ? k_node : k_cell);
-            int const k_jy = ((jy_type[1] == NODE) ? k_node : k_cell);
-            int const k_jz = ((jz_type[1] == NODE) ? k_node : k_cell);
+            const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
             // z direction
             const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
-            amrex::Real sz_node[depos_order_z + 1];
             amrex::Real sz_cell[depos_order_z + 1];
-            int l_node;
-            int l_cell;
-            if (jx_type[zdir] == NODE || jy_type[zdir] == NODE || jz_type[zdir] == NODE) {
-                l_node = compute_shape_factor<depos_order_z>(sz_node, zmid);
-            }
-            if (jx_type[zdir] == CELL || jy_type[zdir] == CELL || jz_type[zdir] == CELL) {
-                l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5);
-            }
-            const amrex::Real (&sz_jx)[depos_order_z + 1] = ((jx_type[zdir] == NODE) ? sz_node : sz_cell);
-            const amrex::Real (&sz_jy)[depos_order_z + 1] = ((jy_type[zdir] == NODE) ? sz_node : sz_cell);
-            const amrex::Real (&sz_jz)[depos_order_z + 1] = ((jz_type[zdir] == NODE) ? sz_node : sz_cell);
-            int const l_jx = ((jx_type[zdir] == NODE) ? l_node : l_cell);
-            int const l_jy = ((jy_type[zdir] == NODE) ? l_node : l_cell);
-            int const l_jz = ((jz_type[zdir] == NODE) ? l_node : l_cell);
+            const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
 
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){
                         amrex::Gpu::Atomic::Add(
-                            &jx_arr(lo.x+j_jx+ix, lo.y+k_jx+iy, lo.z+l_jx+iz),
-                            sx_jx[ix]*sy_jx[iy]*sz_jx[iz]*wqx);
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
                         amrex::Gpu::Atomic::Add(
-                            &jy_arr(lo.x+j_jy+ix, lo.y+k_jy+iy, lo.z+l_jy+iz),
-                            sx_jy[ix]*sy_jy[iy]*sz_jy[iz]*wqy);
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         amrex::Gpu::Atomic::Add(
-                            &jz_arr(lo.x+j_jz+ix, lo.y+k_jz+iy, lo.z+l_jz+iz),
-                            sx_jz[ix]*sy_jz[iy]*sz_jz[iz]*wqz);
+                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
                     }
                 }
             }
