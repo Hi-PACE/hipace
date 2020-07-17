@@ -5,5 +5,3 @@ target_sources(HiPACE
     PlasmaParticleContainer.cpp
     PlasmaParticleContainerInit.cpp
 )
-
-add_subdirectory(deposition)

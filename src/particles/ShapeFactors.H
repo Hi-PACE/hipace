@@ -7,6 +7,7 @@
 #ifndef SHAPEFACTORS_H_
 #define SHAPEFACTORS_H_
 
+#include <AMReX_REAL.H>
 #include <AMReX_Math.H>
 
 /**

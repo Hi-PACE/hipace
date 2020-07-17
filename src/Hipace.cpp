@@ -1,5 +1,5 @@
 #include "Hipace.H"
-#include "particles/deposition/BeamDepositCurrent.H"
+#include "particles/deposition/DepositCurrent.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -168,8 +168,8 @@ Hipace::Evolve ()
 
         /* ---------- Depose current from beam particles ---------- */
         m_fields.getF()[lev].setVal(0.);
-        /// DepositCurrent<BeamIdx::nattribs>(static_cast<amrex::ParticleContainer<0, 0, BeamIdx::nattribs, 0>&>(m_beam_container), m_fields, geom[lev], lev);
-        DepositCurrent<BeamIdx::nattribs>(static_cast<amrex::ParticleContainer&>(m_beam_container), m_fields, geom[lev], lev);
+        DepositCurrent<BeamIdx::nattribs>(m_beam_container, m_fields, geom[lev],
+                                          BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::uz, lev);
 
         amrex::MultiFab& fields = m_fields.getF()[lev];
         const amrex::Vector<int> index_array = fields.IndexArray();

@@ -1,6 +1,6 @@
-#include "BeamDepositCurrent.H"
+#ifndef DEPOSITCURRENT_H_
+#define DEPOSITCURRENT_H_
 
-// #include "particles/BeamParticleContainer.H"
 #include "particles/deposition/CurrentDeposition.H"
 #include "fields/Fields.H"
 #include "Constants.H"
@@ -11,7 +11,7 @@
 template <int nattribs>
 void
 DepositCurrent (amrex::ParticleContainer<0, 0, nattribs, 0>& species, Fields & fields,
-                amrex::Geometry const& gm, int const lev)
+                amrex::Geometry const& gm, int idx_w, int idx_ux, int idx_uy, int idx_uz, int const lev=0)
 {
 
     // Extract properties associated with physical size of the box
@@ -43,49 +43,49 @@ DepositCurrent (amrex::ParticleContainer<0, 0, nattribs, 0>& species, Fields & f
         // Call deposition function in each box
         if        (Hipace::m_depos_order_xy == 0){
             if        (Hipace::m_depos_order_z == 0){
-                doDepositionShapeN<0, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<0, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 1){
-                doDepositionShapeN<0, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<0, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 2){
-                doDepositionShapeN<0, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<0, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 3){
-                doDepositionShapeN<0, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<0, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else {
                 amrex::Abort("unknow deposition order");
             }
         } else if (Hipace::m_depos_order_xy == 1){
             if        (Hipace::m_depos_order_z == 0){
-                doDepositionShapeN<1, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<1, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 1){
-                doDepositionShapeN<1, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<1, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 2){
-                doDepositionShapeN<1, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<1, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 3){
-                doDepositionShapeN<1, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<1, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else {
                 amrex::Abort("unknow deposition order");
             }
         } else if (Hipace::m_depos_order_xy == 2){
             if        (Hipace::m_depos_order_z == 0){
-                doDepositionShapeN<2, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<2, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 1){
-                doDepositionShapeN<2, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<2, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 2){
-                doDepositionShapeN<2, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<2, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 3){
-                doDepositionShapeN<2, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<2, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else {
                 amrex::Abort("unknow deposition order");
             }
         } else if (Hipace::m_depos_order_xy == 3){
             if        (Hipace::m_depos_order_z == 0){
-                doDepositionShapeN<3, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<3, 0, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 1){
-                doDepositionShapeN<3, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<3, 1, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 2){
-                doDepositionShapeN<3, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<3, 2, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else if (Hipace::m_depos_order_z == 3){
-                doDepositionShapeN<3, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, BeamIdx::w, BeamIdx::ux, BeamIdx::uy, BeamIdx::ux);
+                doDepositionShapeN<3, 3, BeamIdx::nattribs>( pti, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, idx_w, idx_ux, idx_uy, idx_uz);
             } else {
                 amrex::Abort("unknow deposition order m_depos_order_z");
             }
@@ -94,3 +94,5 @@ DepositCurrent (amrex::ParticleContainer<0, 0, nattribs, 0>& species, Fields & f
         }
     }
 }
+
+#endif // DEPOSITCURRENT_H_
