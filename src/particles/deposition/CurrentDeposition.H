@@ -7,15 +7,16 @@
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 
-template <int depos_order_xy, int depos_order_z>
-void doDepositionShapeN(const BeamParticleIterator& pti,
+template <int depos_order_xy, int depos_order_z, int nattribs>
+void doDepositionShapeN(const amrex::ParIter<0, 0, nattribs>& pti,
                         amrex::FArrayBox& jx_fab,
                         amrex::FArrayBox& jy_fab,
                         amrex::FArrayBox& jz_fab,
                         amrex::Real const * AMREX_RESTRICT dx,
                         amrex::Real const * AMREX_RESTRICT xyzmin,
                         amrex::Dim3 const lo,
-                        amrex::Real const q)
+                        amrex::Real const q,
+                        int idx_w, int idx_ux, int idx_uy, int idx_uz)
 {
     using namespace amrex::literals;
 
@@ -23,10 +24,10 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
     auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
     auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-    auto  wp = soa.GetRealData(BeamIdx::w).data();
-    auto uxp = soa.GetRealData(BeamIdx::ux).data();
-    auto uyp = soa.GetRealData(BeamIdx::uy).data();
-    auto uzp = soa.GetRealData(BeamIdx::uz).data();
+    auto  wp = soa.GetRealData(idx_w).data();
+    auto uxp = soa.GetRealData(idx_ux).data();
+    auto uyp = soa.GetRealData(idx_uy).data();
+    auto uzp = soa.GetRealData(idx_uz).data();
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];

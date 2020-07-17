@@ -1,13 +1,13 @@
-#ifndef BEAMDEPOSITCURRENT_H_
-#define BEAMDEPOSITCURRENT_H_
+#ifndef DEPOSITCURRENT_H_
+#define DEPOSITCURRENT_H_
 
-#include "particles/BeamParticleContainer.H"
+#include <AMReX_Particles.H>
 #include "fields/Fields.H"
 #include "Constants.H"
 
+template <int nattribs>
 void
-DepositCurrent (BeamParticleContainer& beam, Fields & fields,
+DepositCurrent (amrex::ParticleContainer<0, 0, nattribs, 0>& species, Fields & fields,
                 amrex::Geometry const& gm, int const lev=0);
 
-
-#endif //  BEAMDEPOSITCURRENT_H_
+#endif // DEPOSITCURRENT_H_
