@@ -5,6 +5,7 @@
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
 #include "particles/PlasmaParticleContainer.H"
 #include "particles/BeamParticleContainer.H"
+#include "Constants.H"
 
 #include <AMReX_AmrCore.H>
 
@@ -14,6 +15,8 @@ public:
     Hipace ();
 
     ~Hipace ();
+
+    static Hipace& GetInstance ();
 
     // Virtual functions need to be defined for pure virtual class AmrCore
     void MakeNewLevelFromScratch (
@@ -48,6 +51,8 @@ public:
 
     void WriteDiagnostics (int step);
 
+    PhysConst get_phys_const () {return m_phys_const;};
+
     MPI_Comm m_comm_xy = MPI_COMM_NULL;
     MPI_Comm m_comm_z = MPI_COMM_NULL;
     int m_numprocs_x = 1;
@@ -65,8 +70,13 @@ public:
     PlasmaParticleContainer m_plasma_container;
     int m_max_step = 0;
 
+    static bool m_normalized_units;
+    PhysConst m_phys_const;
     static int m_depos_order_xy;
     static int m_depos_order_z;
+
+private:
+    static Hipace* m_instance;
 };
 
 #endif

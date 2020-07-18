@@ -89,6 +89,8 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
+        PhysConst phys_const = get_phys_const();
+        
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -131,8 +133,8 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 p.pos(2) = z;
 
                 arrdata[PlasmaIdx::w    ][pidx] = a_density * scale_fac;
-                arrdata[PlasmaIdx::ux   ][pidx] = u[0] * PhysConst::c;
-                arrdata[PlasmaIdx::uy   ][pidx] = u[1] * PhysConst::c;
+                arrdata[PlasmaIdx::ux   ][pidx] = u[0] * phys_const.c;
+                arrdata[PlasmaIdx::uy   ][pidx] = u[1] * phys_const.c;
                 arrdata[PlasmaIdx::phi  ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx1  ][pidx] = 1.;
                 arrdata[PlasmaIdx::Fx2  ][pidx] = 2.;
