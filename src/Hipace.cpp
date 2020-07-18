@@ -10,18 +10,38 @@ namespace {
 }
 #endif
 
+Hipace* Hipace::m_instance = nullptr;
+
+bool Hipace::m_normalized_units = false;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
+
+Hipace&
+Hipace::GetInstance ()
+{
+    if (!m_instance) {
+        m_instance = new Hipace();
+    }
+    return *m_instance;
+}
 
 Hipace::Hipace () :
     m_fields(this),
     m_beam_container(this),
     m_plasma_container(this)
 {
+    m_instance = this;
+
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
 
     amrex::ParmParse pph("hipace");
+    pph.query("normalized_units", m_normalized_units);
+    if (m_normalized_units){
+        m_phys_const = make_constants_normalized();
+    } else {
+        m_phys_const = make_constants_SI();
+    }
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
     pph.query("grid_size_z", m_grid_size_z);
@@ -206,7 +226,7 @@ Hipace::Evolve ()
                     Direction::x,
                     geom[0].CellSize(Direction::x),
                     FieldComps::jz);
-                m_poisson_solver.StagingArea().mult(PhysConst::mu0);
+                m_poisson_solver.StagingArea().mult(m_phys_const.mu0);
                 // Solve Poisson equation.
                 // The RHS is in the staging area of m_poisson_solver.
                 // The LHS will be returned as lhs.
