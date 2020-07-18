@@ -214,28 +214,53 @@ Hipace::Evolve ()
                 j_slice.FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
-                /* ---------- Solve Poisson equation ---------- */
-                // Left-Hand Side for Poisson equation is By in the slice MF
-                amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
-                                    FieldComps::By, 1);
-                // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
-                // and store in the staging area of m_poisson_solver
-                m_fields.TransverseDerivative(
-                    m_fields.getSlices(lev, 1),
-                    m_poisson_solver.StagingArea(),
-                    Direction::x,
-                    geom[0].CellSize(Direction::x),
-                    FieldComps::jz);
-                m_poisson_solver.StagingArea().mult(m_phys_const.mu0);
-                // Solve Poisson equation.
-                // The RHS is in the staging area of m_poisson_solver.
-                // The LHS will be returned as lhs.
-                m_poisson_solver.SolvePoissonEquation(lhs);
+                /* ---------- Solve Poisson equation for Bx ---------- */
+                {
+                    // Left-Hand Side for Poisson equation is By in the slice MF
+                    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                                        FieldComps::Bx, 1);
+                    // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
+                    // and store in the staging area of m_poisson_solver
+                    m_fields.TransverseDerivative(
+                        m_fields.getSlices(lev, 1),
+                        m_poisson_solver.StagingArea(),
+                        Direction::y,
+                        geom[0].CellSize(Direction::y),
+                        FieldComps::jz);
+                    m_poisson_solver.StagingArea().mult(-m_phys_const.mu0);
+                    // Solve Poisson equation.
+                    // The RHS is in the staging area of m_poisson_solver.
+                    // The LHS will be returned as lhs.
+                    m_poisson_solver.SolvePoissonEquation(lhs);                    
+                    /* ---------- Transverse FillBoundary Bx ---------- */
+                    amrex::ParallelContext::push(m_comm_xy);
+                    lhs.FillBoundary(Geom(lev).periodicity());
+                    amrex::ParallelContext::pop();
+                }
 
-                /* ---------- Transverse FillBoundary By ---------- */
-                amrex::ParallelContext::push(m_comm_xy);
-                lhs.FillBoundary(Geom(lev).periodicity());
-                amrex::ParallelContext::pop();
+                /* ---------- Solve Poisson equation for By ---------- */
+                {
+                    // Left-Hand Side for Poisson equation is By in the slice MF
+                    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                                        FieldComps::By, 1);
+                    // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
+                    // and store in the staging area of m_poisson_solver
+                    m_fields.TransverseDerivative(
+                        m_fields.getSlices(lev, 1),
+                        m_poisson_solver.StagingArea(),
+                        Direction::x,
+                        geom[0].CellSize(Direction::x),
+                        FieldComps::jz);
+                    m_poisson_solver.StagingArea().mult(m_phys_const.mu0);
+                    // Solve Poisson equation.
+                    // The RHS is in the staging area of m_poisson_solver.
+                    // The LHS will be returned as lhs.
+                    m_poisson_solver.SolvePoissonEquation(lhs);
+                    /* ---------- Transverse FillBoundary By ---------- */
+                    amrex::ParallelContext::push(m_comm_xy);
+                    lhs.FillBoundary(Geom(lev).periodicity());
+                    amrex::ParallelContext::pop();
+                }
 
                 /* ---------- Copy back from the slice MultiFab m_slices to the main field m_F ---------- */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
