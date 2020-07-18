@@ -1,5 +1,5 @@
-#ifndef HIPACE_CURRENTDEPOSITION_H_
-#define HIPACE_CURRENTDEPOSITION_H_
+#ifndef HIPACE_BEAMDEPOSITCURRENTINNER_H_
+#define HIPACE_BEAMDEPOSITCURRENTINNER_H_
 
 #include "particles/ShapeFactors.H"
 #include "Constants.H"
@@ -110,4 +110,4 @@ void doDepositionShapeN(const BeamParticleIterator& pti,
         );
 }
 
-#endif // CURRENTDEPOSITION_H_
+#endif // BEAMDEPOSITCURRENTINNER_H_

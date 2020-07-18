@@ -37,4 +37,11 @@ public:
         const amrex::RealBox&  a_bounds);
 };
 
+class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs>
+{
+public:
+    using amrex::ParIter<0,0,PlasmaIdx::nattribs>::ParIter;
+    PlasmaParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
+};
+
 #endif

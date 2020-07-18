@@ -1,7 +1,7 @@
 #include "BeamDepositCurrent.H"
 
 #include "particles/BeamParticleContainer.H"
-#include "particles/deposition/CurrentDeposition.H"
+#include "particles/deposition/BeamDepositCurrentInner.H"
 #include "fields/Fields.H"
 #include "Constants.H"
 #include "Hipace.H"
@@ -27,7 +27,7 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::Dim3 const lo = amrex::lbound(tilebox);
 
         // Extract the fields currents
-        amrex::MultiFab& F = fields.getF()[lev];
+        amrex::MultiFab& F = fields.getF(lev);
         amrex::MultiFab jx(F, amrex::make_alias, FieldComps::jx, F.nGrow());
         amrex::MultiFab jy(F, amrex::make_alias, FieldComps::jy, F.nGrow());
         amrex::MultiFab jz(F, amrex::make_alias, FieldComps::jz, F.nGrow());

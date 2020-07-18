@@ -1,5 +1,6 @@
 #include "Hipace.H"
 #include "particles/deposition/BeamDepositCurrent.H"
+#include "particles/deposition/PlasmaDepositCurrent.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -204,6 +205,8 @@ Hipace::Evolve ()
 
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, 1), amrex::make_alias,
                                         FieldComps::jx, 3);
+                
+                DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
 
                 /* xxxxxxxxxx Gather Push Plasma particles transversally xxxxxxxxxx */
                 /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
