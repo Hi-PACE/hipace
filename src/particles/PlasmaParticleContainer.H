@@ -28,7 +28,7 @@ public:
 
     void InitData (const amrex::Geometry& geom);
 
-    void InitParticles(
+    void InitParticles (
         const amrex::IntVect&  a_num_particles_per_cell,
         const amrex::Real      a_thermal_momentum_std,
         const amrex::Real      a_thermal_momentum_mean,
