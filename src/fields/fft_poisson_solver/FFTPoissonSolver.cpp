@@ -1,6 +1,8 @@
 #include "FFTPoissonSolver.H"
 #include "Constants.H"
 
+#include <AMReX_BLProfiler.H>
+
 FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
                                      amrex::DistributionMapping const& dm,
                                      amrex::Geometry const& gm )
@@ -9,10 +11,12 @@ FFTPoissonSolver::FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
 }
 
 
-void FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
-                                amrex::DistributionMapping const& dm,
-                                amrex::Geometry const& gm )
+void
+FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
+                           amrex::DistributionMapping const& dm,
+                           amrex::Geometry const& gm )
 {
+    BL_PROFILE("FFTPoissonSolver::define()");
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
@@ -101,6 +105,7 @@ void FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
 void
 FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
+    BL_PROFILE("FFTPoissonSolver::SolvePoissonEquation()");
 
     // Loop over boxes
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){

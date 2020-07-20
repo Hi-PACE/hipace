@@ -77,6 +77,9 @@ public:
 
 private:
     static Hipace* m_instance;
+
+    void SolvePoissonBx (const int lev);
+    void SolvePoissonBy (const int lev);
 };
 
 #endif
