@@ -2,16 +2,27 @@
 
 PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
     : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
-{}
+{
+    amrex::ParmParse pp("plasma");
+    pp.get("density", m_density);
+    amrex::Vector<amrex::Real> tmp_vector;
+    if (pp.queryarr("ppc", tmp_vector)){
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
+            "ppc is only specified in transverse directions for plasma particles, it is 1 in the longitudinal direction z. Hence, in 3D, plasma.ppc should only contain 2 values");
+        for (int i=0; i<AMREX_SPACEDIM-1; i++) m_ppc[i] = tmp_vector[i];
+        m_ppc[2] = 1;
+    }
+    pp.query("uz_mean", m_uz_mean);
+    pp.query("u_std", m_u_std);
+}
 
 void
 PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
 {
     reserveData();
     resizeData();
-    const amrex::IntVect ppc {1,1,1};
 
-    const int dir = 2;
+    const int dir = AMREX_SPACEDIM-1;
     const amrex::Real dx = geom.CellSize(dir);
     const amrex::Real hi = geom.ProbHi(dir);
     const amrex::Real lo = hi - dx;
@@ -20,5 +31,5 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     particleBox.setHi(dir, hi);
     particleBox.setLo(dir, lo);
 
-    InitParticles(ppc,1.e-3,1.e-3,1.,geom,particleBox);
+    InitParticles(m_ppc,m_u_std, m_uz_mean, m_density, geom, particleBox);
 }
