@@ -7,8 +7,8 @@ using namespace amrex;
 void
 PlasmaParticleContainer::
 InitParticles (const IntVect&  a_num_particles_per_cell,
-               const Real      a_thermal_momentum_std,
-               const Real      a_thermal_momentum_mean,
+               const Real      a_u_std,
+               const Real      a_uz_mean,
                const Real      a_density,
                const Geometry& a_geom,
                const RealBox&  a_bounds)
@@ -118,8 +118,8 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, a_thermal_momentum_mean,
-                                                           a_thermal_momentum_std);
+                ParticleUtil::get_gaussian_random_momentum(u, a_uz_mean,
+                                                           a_u_std);
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
