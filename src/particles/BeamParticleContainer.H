@@ -25,11 +25,11 @@ public:
     }
 
     /** Read parameters in the input file */
-    void ReadParameters();
+    void ReadParameters ();
 
     void InitData (const amrex::Geometry& geom);
 
-    void InitCanBeam(
+    void InitCanBeam (
         const amrex::IntVect&  a_num_particles_per_cell,
         const amrex::Real      a_thermal_momentum_std,
         const amrex::Real      a_thermal_momentum_mean,

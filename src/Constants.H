@@ -25,7 +25,7 @@ struct PhysConst
 // Physical constants. Values are the 2018 CODATA recommended values
 // https://physics.nist.gov/cuu/Constants/index.html
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-PhysConst make_constants_SI()
+PhysConst make_constants_SI ()
 {
     PhysConst const constants = {
         /* c   */ 299'792'458.,
@@ -39,7 +39,7 @@ PhysConst make_constants_SI()
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-PhysConst make_constants_normalized()
+PhysConst make_constants_normalized ()
 {
     PhysConst const constants = {
         /* c   */ 1.,

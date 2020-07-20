@@ -1,7 +1,7 @@
 #include "BeamParticleContainer.H"
 
 void
-BeamParticleContainer::ReadParameters()
+BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp("beam");
     pp.get("zmin", m_zmin);
