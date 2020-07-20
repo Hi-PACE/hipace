@@ -36,7 +36,7 @@ public:
         const amrex::Geometry& a_geom,
         const amrex::RealBox&  a_bounds);
 
-    amrex::Real m_density; /**< Density of the can beam */
+    amrex::Real m_density; /**< Density of the plasma */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
     amrex::Real m_uz_mean = 0.; /**< Avg momentum along z, normalized by m*c */
     amrex::Real m_u_std = 0.; /**< Thermal momentum, normalized by m*c. Same in all directions */
