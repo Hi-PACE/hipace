@@ -47,6 +47,7 @@ namespace AnyFFT
     }
 
     void Execute(FFTplan& fft_plan){
+        BL_PROFILE("Execute_FFTplan()");
 #  ifdef AMREX_USE_FLOAT
         fftwf_execute( fft_plan.m_plan );
 #  else
