@@ -204,7 +204,7 @@ Hipace::Evolve ()
             for (int islice = islice_hi; islice >= islice_lo; --islice)
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
-                
+
                 /* xxxxxxxxxx Gather Push Plasma particles transversally xxxxxxxxxx */
                 /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
@@ -252,7 +252,7 @@ void Hipace::SolvePoissonBx (const int lev)
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver.SolvePoissonEquation(lhs);                    
+    m_poisson_solver.SolvePoissonEquation(lhs);
     /* ---------- Transverse FillBoundary Bx ---------- */
     amrex::ParallelContext::push(m_comm_xy);
     lhs.FillBoundary(Geom(lev).periodicity());
