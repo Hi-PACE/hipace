@@ -69,6 +69,7 @@ public:
     BeamParticleContainer m_beam_container;
     PlasmaParticleContainer m_plasma_container;
     int m_max_step = 0;
+    bool m_do_plot = false;
 
     static bool m_normalized_units;
     PhysConst m_phys_const;

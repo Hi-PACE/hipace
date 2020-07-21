@@ -49,6 +49,7 @@ Hipace::Hipace () :
     pph.query("grid_size_z", m_grid_size_z);
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
+    pph.query("do_plot", m_do_plot);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -183,7 +184,7 @@ Hipace::Evolve ()
 {
     BL_PROFILE("Hipace::Evolve()");
     int const lev = 0;
-    WriteDiagnostics(0);
+    if (m_do_plot) WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
         Wait();
@@ -231,7 +232,7 @@ Hipace::Evolve ()
         Notify();
     }
 
-    WriteDiagnostics (1);
+    if (m_do_plot) WriteDiagnostics(1);
 }
 
 void Hipace::SolvePoissonBx (const int lev)
