@@ -173,19 +173,19 @@ if(BUILD_TESTING)
 
     if(NOT HiPACE_MPI)
         add_test(NAME Main.Examples.Serial.Inputs
-                 COMMAND $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
+                 COMMAND $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
     else()
         configure_mpiexec(1)  # one rank in MPI_TEST_EXE
         add_test(NAME Main.Examples.1Rank.Inputs
-                 COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
+                 COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         configure_mpiexec(2)  # two ranks in MPI_TEST_EXE
         add_test(NAME Main.Examples.2Ranks.Inputs
-                 COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/inputs
+                 COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
     endif()
