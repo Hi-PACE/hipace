@@ -128,7 +128,7 @@ Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`_ n
 
 After compiling HiPACE (see above), from the HiPACE root directory, execute
 ```bash
-cd examples
-../build/bin/HiPACE inputs # Run the simulation with fields and plasma and beam particles
+cd examples/can_beam/
+../../build/bin/hipace inputs # Run the simulation with fields and plasma and beam particles
 ./show.py # Plot results with yt, and save in img.png
 ```
