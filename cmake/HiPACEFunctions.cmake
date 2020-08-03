@@ -151,7 +151,7 @@ function(set_hipace_binary_name)
     #endif()
 
     #if(HiPACE_OPENPMD)
-    #    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".OMP")
+    #    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".OPMD")
     #endif()
 
     if(CMAKE_BUILD_TYPE MATCHES "Debug")

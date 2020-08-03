@@ -135,8 +135,7 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 arrdata[PlasmaIdx::w    ][pidx] = a_density * scale_fac;
                 arrdata[PlasmaIdx::ux   ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy   ][pidx] = u[1] * phys_const.c;
-                arrdata[PlasmaIdx::phi  ][pidx] = 1.; // this is in fact Psi + 1, 
-                //therefore it has to be initialized as 1.0
+                arrdata[PlasmaIdx::psi  ][pidx] = 1.;
                 arrdata[PlasmaIdx::Fx1  ][pidx] = 1.;
                 arrdata[PlasmaIdx::Fx2  ][pidx] = 2.;
                 arrdata[PlasmaIdx::Fx3  ][pidx] = 3.;
@@ -157,11 +156,11 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 arrdata[PlasmaIdx::Fuy3 ][pidx] = 33.;
                 arrdata[PlasmaIdx::Fuy4 ][pidx] = 34.;
                 arrdata[PlasmaIdx::Fuy5 ][pidx] = 35.;
-                arrdata[PlasmaIdx::Fphi1][pidx] = 41.;
-                arrdata[PlasmaIdx::Fphi2][pidx] = 42.;
-                arrdata[PlasmaIdx::Fphi3][pidx] = 43.;
-                arrdata[PlasmaIdx::Fphi4][pidx] = 44.;
-                arrdata[PlasmaIdx::Fphi5][pidx] = 45.;
+                arrdata[PlasmaIdx::Fpsi1][pidx] = 41.;
+                arrdata[PlasmaIdx::Fpsi2][pidx] = 42.;
+                arrdata[PlasmaIdx::Fpsi3][pidx] = 43.;
+                arrdata[PlasmaIdx::Fpsi4][pidx] = 44.;
+                arrdata[PlasmaIdx::Fpsi5][pidx] = 45.;
                 ++pidx;
             }
         });

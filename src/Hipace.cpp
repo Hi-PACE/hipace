@@ -425,12 +425,12 @@ Hipace::WriteDiagnostics (int step)
         amrex::Vector<int> plot_flags(PlasmaIdx::nattribs, 1);
         amrex::Vector<int> int_flags(PlasmaIdx::nattribs, 1);
         amrex::Vector<std::string> real_names {
-            "w","ux","uy", "phi",
+            "w","ux","uy", "psi",
             "Fx1", "Fx2", "Fx3", "Fx4", "Fx5",
             "Fy1", "Fy2", "Fy3", "Fy4", "Fy5",
             "Fux1", "Fux2", "Fux3", "Fux4", "Fux5",
             "Fuy1", "Fuy2", "Fuy3", "Fuy4", "Fuy5",
-            "Fphi1", "Fphi2", "Fphi3", "Fphi4", "Fphi5",
+            "Fpsi1", "Fpsi2", "Fpsi3", "Fpsi4", "Fpsi5",
         };
         AMREX_ALWAYS_ASSERT(real_names.size() == PlasmaIdx::nattribs);
         amrex::Vector<std::string> int_names {};
