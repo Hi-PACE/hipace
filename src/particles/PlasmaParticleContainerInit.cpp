@@ -90,7 +90,7 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
         ParticleType::NextID(pid + num_to_add);
 
         PhysConst phys_const = get_phys_const();
-        
+
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -135,7 +135,8 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 arrdata[PlasmaIdx::w    ][pidx] = a_density * scale_fac;
                 arrdata[PlasmaIdx::ux   ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy   ][pidx] = u[1] * phys_const.c;
-                arrdata[PlasmaIdx::phi  ][pidx] = 0.;
+                arrdata[PlasmaIdx::phi  ][pidx] = 1.; // this is in fact Psi + 1, 
+                //therefore it has to be initialized as 1.0
                 arrdata[PlasmaIdx::Fx1  ][pidx] = 1.;
                 arrdata[PlasmaIdx::Fx2  ][pidx] = 2.;
                 arrdata[PlasmaIdx::Fx3  ][pidx] = 3.;
