@@ -20,3 +20,6 @@ beam.density = 1.e3
 beam.uz_mean = 1.e3
 beam.u_std = 0.
 beam.ppc = 8 8 1
+
+plasma.density = 0
+plasma.ppc = 0 0
