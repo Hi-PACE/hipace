@@ -22,29 +22,29 @@ jobs:
 #        ctest --output-on-failure
 #        make install
 
-  linux_gcc_cxx17_omp_ompi:
-    name: GNU@7.5 C++17 OMP OMPI
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Dependencies
-      run: .github/workflows/setup/ubuntu_ompi.sh
-    - name: Build & Install
-      run: |
-        mkdir build
-        cd build
-        cmake ..                                   \
-            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DCMAKE_CXX_STANDARD=17
-        make -j 2 VERBOSE=ON
-        ctest --output-on-failure
+#  linux_gcc_cxx17_omp_ompi:
+#    name: GNU@7.5 C++17 OMP OMPI
+#    runs-on: ubuntu-latest
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Dependencies
+#      run: .github/workflows/setup/ubuntu_ompi.sh
+#    - name: Build & Install
+#      run: |
+#        mkdir build
+#        cd build
+#        cmake ..                                   \
+#            -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
+#            -DCMAKE_CXX_STANDARD=17
+#        make -j 2 VERBOSE=ON
+#        ctest --output-on-failure
 
   linux_gcc_cxx14:
     name: GNU@7.5 C++14 Serial
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
     - uses: actions/checkout@v2
