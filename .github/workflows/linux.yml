@@ -25,6 +25,10 @@ jobs:
   linux_gcc_cxx17_omp_ompi:
     name: GNU@7.5 C++17 OMP OMPI
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
     steps:
     - uses: actions/checkout@v2
     - name: Dependencies
