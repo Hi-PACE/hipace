@@ -15,4 +15,4 @@ sudo apt-get install -y --no-install-recommends \
     g++
 
 python -m pip install --upgrade pip
-python -m pip install --upgrade cmake matplotlib==3.2.2 numpy scipy yt
+python -m pip install --upgrade matplotlib==3.2.2 numpy scipy yt
