@@ -42,6 +42,10 @@ jobs:
   linux_gcc_cxx14:
     name: GNU@7.5 C++14 Serial
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+
     steps:
     - uses: actions/checkout@v2
     - name: Dependencies
