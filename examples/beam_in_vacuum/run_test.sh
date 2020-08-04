@@ -9,7 +9,7 @@ HIPACE_EXECUTABLE=$1
 HIPACE_EXAMPLE_DIR=$2
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs hipace.depos_order_xy=1
+$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs hipace.depos_order_xy=1
 
 # Analyse the results
 python $HIPACE_EXAMPLE_DIR/analysis.py
