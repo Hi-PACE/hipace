@@ -14,7 +14,8 @@ sudo apt-get install -y --no-install-recommends \
     libfftw3-dev    \
     g++ \
     python3 \
-    python3-pip
+    python3-pip \
+    python3-setuptools
 
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
 sudo update-alternatives --set python /usr/bin/python3
