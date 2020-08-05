@@ -176,8 +176,9 @@ if(BUILD_TESTING)
                  COMMAND $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
-        add_test(NAME beam_in_vacuum.SI.Serial
-                 COMMAND ${HiPACE_SOURCE_DIR}/examples/beam_in_vacuum/run_test.sh $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/beam_in_vacuum
+        add_test(NAME beam_in_vacuum.SI.Serial        
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.SI.Serial.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
     else()
