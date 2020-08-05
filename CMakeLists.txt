@@ -172,26 +172,31 @@ if(BUILD_TESTING)
     enable_testing()
 
     if(NOT HiPACE_MPI)
+
         add_test(NAME can_beam.Serial
-                 COMMAND $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/can_beam.Serial.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
-        add_test(NAME beam_in_vacuum.SI.Serial        
+        add_test(NAME beam_in_vacuum.SI.Serial
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.SI.Serial.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
-    else()
-        configure_mpiexec(1)  # one rank in MPI_TEST_EXE
 
+    else()
+
+        configure_mpiexec(1)  # one rank in MPI_TEST_EXE
         add_test(NAME can_beam.1Rank
-                 COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/can_beam.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         configure_mpiexec(2)  # two ranks in MPI_TEST_EXE
         add_test(NAME can_beam.2Rank
-                 COMMAND ${MPI_TEST_EXE} $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}/examples/can_beam/inputs
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/can_beam.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
