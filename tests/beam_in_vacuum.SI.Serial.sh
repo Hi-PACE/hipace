@@ -6,10 +6,19 @@
 
 # Read input parameters
 HIPACE_EXECUTABLE=$1
-HIPACE_EXAMPLE_DIR=$2
+HIPACE_SOURCE_DIR=$2
+
+HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
+HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs hipace.depos_order_xy=1
 
-# Analyse the results
+# Compare the result with theory
 python $HIPACE_EXAMPLE_DIR/analysis.py
+
+# Compare the results with checksum benchmark
+$HIPACE_TEST_DIR/checksum/checksumAPI.py \
+    --evaluate \
+    --plotfile plt00001 \
+    --test-name beam_in_vacuum.SI.Serial
