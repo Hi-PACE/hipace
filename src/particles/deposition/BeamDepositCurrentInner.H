@@ -79,7 +79,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
             amrex::Real sx_cell[depos_order_xy + 1];
             const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
-            
+
             // y direction
             const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];

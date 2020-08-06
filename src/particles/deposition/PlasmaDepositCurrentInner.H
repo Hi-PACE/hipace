@@ -25,13 +25,13 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     // Extract particle properties
     const auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
-    
+
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
     const amrex::Real dyi = 1.0/dx[1];
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
-    
+
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
@@ -57,7 +57,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
             amrex::Real sx_cell[depos_order_xy + 1];
             const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
-            
+
             // y direction
             const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
