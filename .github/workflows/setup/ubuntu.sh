@@ -12,9 +12,9 @@ sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
     build-essential \
     libfftw3-dev    \
-    g++ \
-    python3 \
-    python3-pip \
+    g++             \
+    python3         \
+    python3-pip     \
     python3-setuptools
 
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
