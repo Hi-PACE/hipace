@@ -6,7 +6,7 @@ set -eu -o pipefail
 
 ok=0
 
-for file in $(find Examples -type f)
+for file in $(find examples -type f)
 do
     # Name of file without path
     filename=$(basename $file)
