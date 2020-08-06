@@ -29,5 +29,5 @@ jobs:
       run: .github/workflows/style/hasEOLwhiteSpace
     - name: Proper file names in Examples
       run: .github/workflows/style/wrongFileNameInExamples
-    - name: Examples are tested
-      run: .github/workflows/style/inputsNotTested
+#     - name: Examples are tested
+#       run: .github/workflows/style/inputsNotTested
