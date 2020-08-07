@@ -10,7 +10,7 @@
 #
 # License: BSD-3-Clause-LBNL
 
-name: source
+name: style
 
 on: [push, pull_request]
 
