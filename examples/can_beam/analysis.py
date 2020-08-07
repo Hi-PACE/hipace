@@ -2,7 +2,7 @@
 
 # Plots Ex field and particles at the end of the run,
 # and save image to img.png
-# usage: ./show.py
+# usage: ./analysis.py
 
 import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
