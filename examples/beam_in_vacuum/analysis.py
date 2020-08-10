@@ -21,43 +21,82 @@ from yt.frontends.boxlib.data_structures import AMReXDataset
 
 ds = AMReXDataset('plt00001')
 
+do_plot = False
 
+# Radius of the can beam
+R = 10.e-6
 # Density of the can beam
 dens = 2.8239587008591567e23 # at this density, 1/kp = 10um, allowing for an easy comparison with normalized units
 # Radius of the can beam
 R = 10.e-6 # = 1 in normalized units
 
 
-# Define array for transverse coordinate and theory for By
+# Define array for transverse coordinate and theory for By and Bx
+jz0 = scc.e * scc.c * dens
+
 x = np.linspace(ds.domain_left_edge[0].v, ds.domain_right_edge[0].v, ds.domain_dimensions[0])
-jz = scc.e * scc.c * dens # = 1 in normalized units
-By_th = scc.mu_0 * jz * x / 2. # = x / 2. in normalizeed units
-By_th[abs(x)>=R] = scc.mu_0 * jz * R**2/(2*x[abs(x)>R]) # remove scc.mu_0 for normalized units
+By_th = scc.mu_0 * jz0 * x / 2.
+By_th[abs(x)>=R] = scc.mu_0 * jz0 * R**2/(2*x[abs(x)>R])
+
+y = np.linspace(ds.domain_left_edge[1].v, ds.domain_right_edge[1].v, ds.domain_dimensions[1])
+Bx_th = -scc.mu_0 * jz0 * y / 2.
+Bx_th[abs(y)>=R] = -scc.mu_0 * jz0 * R**2/(2*y[abs(y)>R])
+
+jz_th = - np.ones_like(x) * jz0
+jz_th[abs(x)>=R] = 0.
 
 # Load Hipace data for By in SI units
 all_data_level_0 = ds.covering_grid(level=0, left_edge=ds.domain_left_edge,
     dims=ds.domain_dimensions)
-By_sim = all_data_level_0['By'].v.squeeze()[:,ds.domain_dimensions[1]//2,
-    ds.domain_dimensions[2]//2]
+Bx_sim = all_data_level_0['Bx'].v.squeeze()[ds.domain_dimensions[1]//2,:,ds.domain_dimensions[2]//2]
+By_sim = all_data_level_0['By'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
+jz_sim = all_data_level_0['jz'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
 
 # Plot simulation result and theory
-matplotlib.rcParams.update({'font.size': 18})
-plt.figure(figsize=(8,8))
-plt.plot(1.e6*x, By_sim, '+-', label='hipace++') # remove *1e6 for normalized units
-plt.plot(1.e6*x, By_th, 'k--', label='theory') # remove *1e6 for normalized units
-plt.grid()
-plt.legend()
-plt.xlim(-50., 50.)
-plt.xlabel('x (um)')
-plt.ylabel('By (A/m)')
-# for normalized units use
-#plt.xlabel('kp x')
-#plt.ylabel('c By / E0')
-#plt.xlim(-5., 5.)
+if do_plot:
+    matplotlib.rcParams.update({'font.size': 14})
+    plt.figure(figsize=(12,4))
 
-plt.savefig("beam_in_vacuum.png", bbox_inches="tight")
+    plt.subplot(131)
+    plt.plot(1.e6*y, Bx_sim, '+-', label='hipace++')
+    plt.plot(1.e6*y, Bx_th, 'k--', label='theory')
+    plt.grid()
+    plt.legend()
+    plt.xlim(-50., 50.)
+    plt.xlabel('y (um)')
+    plt.ylabel('Bx (T)')
 
-# Assert small error
-error = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
-print("total relative error: " + str(error))
-assert(error < 2./100)
+    plt.subplot(132)
+    plt.plot(1.e6*x, By_sim, '+-', label='hipace++')
+    plt.plot(1.e6*x, By_th, 'k--', label='theory')
+    plt.grid()
+    plt.legend()
+    plt.xlim(-50., 50.)
+    plt.xlabel('x (um)')
+    plt.ylabel('By (T)')
+
+    plt.subplot(133)
+    plt.plot(1.e6*x, jz_sim, '+-', label='hipace++')
+    plt.plot(1.e6*x, jz_th, 'k--', label='theory')
+    plt.grid()
+    plt.legend()
+    plt.xlim(-50., 50.)
+    plt.xlabel('x (um)')
+    plt.ylabel('jz (A/m2)')
+
+    plt.tight_layout()
+
+    plt.savefig("beam_in_vacuum.png", bbox_inches="tight")
+
+# Assert that the simulation result is close enough to theory
+error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
+print("total relative error jz: " + str(error_jz) + " (tolerance = 0.15)")
+assert(error_jz < .15)
+
+error_Bx = np.sum((Bx_sim-Bx_th)**2) / np.sum((Bx_th)**2)
+print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.03)")
+assert(error_Bx < .03)
+
+error_By = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
+print("total relative error By: " + str(error_By) + " (tolerance = 0.03)")
+assert(error_By < .03)
