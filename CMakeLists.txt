@@ -183,6 +183,11 @@ if(BUILD_TESTING)
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
+        add_test(NAME beam_in_vacuum.normalized.Serial
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.Serial.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
 
     else()
 
