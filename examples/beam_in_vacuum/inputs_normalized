@@ -1,4 +1,4 @@
-amr.n_cell = 2048 2048 2
+amr.n_cell = 1024 1024 2
 
 hipace.normalized_units=1
 
@@ -9,7 +9,6 @@ max_step = 5
 
 hipace.numprocs_x = 1
 hipace.numprocs_y = 1
-hipace.do_plot = 1
 
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
