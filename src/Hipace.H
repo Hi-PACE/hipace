@@ -83,4 +83,6 @@ private:
     void SolvePoissonBy (const int lev);
 };
 
+enum struct CurrentDepoType { DepositCurrentSlice, DepositNextSlice };
+
 #endif

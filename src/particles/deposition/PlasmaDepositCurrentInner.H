@@ -16,7 +16,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const * AMREX_RESTRICT dx,
                          amrex::Real const * AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
-                         amrex::Real const q)
+                         amrex::Real const q,
+                         const CurrentDepoType CurrentDepoType)
 {
     using namespace amrex::literals;
 
@@ -26,11 +27,13 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-    const auto  wp = soa.GetRealData(PlasmaIdx::w).data();
-    const auto uxp = soa.GetRealData(PlasmaIdx::ux).data();
-    const auto uyp = soa.GetRealData(PlasmaIdx::uy).data();
-    const auto psip = soa.GetRealData(PlasmaIdx::phi).data();
 
+    const amrex::Real* wp = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? soa.GetRealData(PlasmaIdx::w).data() : soa.GetRealData(PlasmaIdx::w_temp).data();;
+    const amrex::Real* uxp = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
+    const amrex::Real* uyp = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? soa.GetRealData(PlasmaIdx::uy).data() : soa.GetRealData(PlasmaIdx::uy_temp).data();
+    const amrex::Real* psip = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? soa.GetRealData(PlasmaIdx::psi).data() :soa.GetRealData(PlasmaIdx::psi_temp).data();
+    const amrex::Real* x_temp = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? nullptr :  soa.GetRealData(PlasmaIdx::x_temp).data();
+    const amrex::Real* y_temp = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? nullptr :  soa.GetRealData(PlasmaIdx::y_temp).data();
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
@@ -60,32 +63,44 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
 
-            // calculate 1/gamma for plasma particles
-            const amrex::Real gaminv = (2.0_rt * psip[ip] ) /(1.0_rt + uxp[ip]*uxp[ip]*clightsq
+           // calculate 1/gamma for plasma particles
+           const amrex::Real gaminv = (2.0_rt * psip[ip] ) /(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
                                                          + psip[ip]*psip[ip]);
+           std::cout<<"gamma "<<1./gaminv<<'\n';
 
            // calculate plasma particle velocities
            const amrex::Real vx  = uxp[ip]*gaminv;
-
            const amrex::Real vy  = uyp[ip]*gaminv;
            const amrex::Real vz  = (1-psip[ip])*gaminv;
+           std::cout<<"vx "<<vx<<'\n';
+           std::cout<<"vy "<<vy<<'\n';
+           std::cout<<"vz "<<vz<<'\n';
            // calculate charge of the plasma particles
+           std::cout<<"gamma / psip[ip] "<<1./gaminv/psip[ip]<<'\n';
            const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip]);
+           std::cout<<"wq "<<wq<<'\n';
+           std::cout<<"q "<<q<<'\n';
+           std::cout<<"wp[ip] "<<wp[ip]<<'\n';
+           std::cout<<"psip[ip] "<<psip[ip]<<'\n';
+           std::cout<<"invvol "<<invvol<<'\n';
            // wqx, wqy wqz are particle current in each direction
            const amrex::Real wqx = wq*invvol*vx;
            const amrex::Real wqy = wq*invvol*vy;
            const amrex::Real wqz = wq*invvol*vz;
+           std::cout<<"wqx "<<wqx<<'\n';
+           std::cout<<"wqy "<<wqy<<'\n';
+           std::cout<<"wqz "<<wqz<<'\n';
 
             // --- Compute shape factors
             // x direction
-            const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
+            const amrex::Real xmid = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? (pos_structs[ip].pos(0) - xmin)*dxi : (x_temp[ip] - xmin)*dxi;
             amrex::Real sx_cell[depos_order_xy + 1];
             const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
 
             // y direction
-            const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
+            const amrex::Real ymid = (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)? (pos_structs[ip].pos(1) - ymin)*dyi : (y_temp[ip] - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
@@ -99,9 +114,12 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     amrex::Gpu::Atomic::Add(
                         &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                         sx_cell[ix]*sy_cell[iy]*wqy);
-                    amrex::Gpu::Atomic::Add(
-                        &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                        sx_cell[ix]*sy_cell[iy]*wqz);
+                    if (CurrentDepoType == CurrentDepoType::DepositCurrentSlice)
+                    {
+                      amrex::Gpu::Atomic::Add(
+                          &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                          sx_cell[ix]*sy_cell[iy]*wqz);
+                    }
                 }
             }
         }

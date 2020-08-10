@@ -10,8 +10,8 @@ using namespace amrex;
 void
 BeamParticleContainer::
 InitCanBeam (const IntVect&  a_num_particles_per_cell,
-             const Real      a_u_std,
-             const Real      a_uz_mean,
+             const amrex::Vector< amrex::Real>&      a_u_std,
+             const amrex::Vector< amrex::Real>&      a_u_mean,
              const Real      a_density,
              const Geometry& a_geom,
              const amrex::Real a_zmin,
@@ -123,7 +123,7 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, a_uz_mean,
+                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
                                                            a_u_std);
 
                 if (z >= a_zmax || z < a_zmin ||

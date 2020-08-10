@@ -24,15 +24,15 @@ namespace ParticleUtil
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void get_gaussian_random_momentum (amrex::Real* u, amrex::Real uz_mean, amrex::Real u_std)
+    void get_gaussian_random_momentum (amrex::Real* u, const amrex::Vector< amrex::Real>& u_mean, const amrex::Vector< amrex::Real>& u_std)
     {
-        amrex::Real ux_th = amrex::RandomNormal(0.0, u_std);
-        amrex::Real uy_th = amrex::RandomNormal(0.0, u_std);
-        amrex::Real uz_th = amrex::RandomNormal(0.0, u_std);
+        amrex::Real ux_th = amrex::RandomNormal(0.0, u_std[0]);
+        amrex::Real uy_th = amrex::RandomNormal(0.0, u_std[1]);
+        amrex::Real uz_th = amrex::RandomNormal(0.0, u_std[2]);
 
-        u[0] = ux_th;
-        u[1] = uy_th;
-        u[2] = uz_mean + uz_th;
+        u[0] = u_mean[0] + ux_th;
+        u[1] = u_mean[1] + uy_th;
+        u[2] = u_mean[2] + uz_th;
     }
 }
 
