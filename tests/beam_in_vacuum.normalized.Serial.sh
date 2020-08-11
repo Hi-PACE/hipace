@@ -15,7 +15,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized hipace.depos_order_xy=1
 
 # Compare the result with theory
-python $HIPACE_EXAMPLE_DIR/analysis_normalized.py
+python $HIPACE_EXAMPLE_DIR/analysis.py --normalized_units
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
