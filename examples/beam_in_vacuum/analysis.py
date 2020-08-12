@@ -23,14 +23,14 @@ import argparse
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized_units',
                     dest='norm_units',
-                    action = 'store_true',
+                    action='store_true',
                     default=False,
-                    help='use normalized units (default: use SI units)')
+                    help='Run the analysis in normalized units')
 parser.add_argument('--do_plot',
                     dest='do_plot',
-                    action = 'store_true',
+                    action='store_true',
                     default=False,
-                    help='dump plots (default: false)')
+                    help='Plot figures and save them to file')
 
 args = parser.parse_args()
 
