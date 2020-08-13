@@ -8,6 +8,7 @@ max_step = 5
 hipace.numprocs_x = 1
 hipace.numprocs_y = 1
 
+
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -2000.e-6   -2000.e-6   -20.e-6    # physical domain
@@ -16,7 +17,7 @@ geometry.prob_hi     =  2000.e-6    2000.e-6    20.e-6
 beam.zmin = -100.e-6
 beam.zmax = 100.e-6
 beam.radius = 10.e-6
-beam.density = 1.e3
+beam.density = 2.8239587008591567e23 # at this density, 1/kp = 10um
 beam.uz_mean = 1.e3
 beam.u_std = 0.
 beam.ppc = 4 4 1

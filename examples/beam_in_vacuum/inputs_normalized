@@ -12,13 +12,16 @@ hipace.numprocs_y = 1
 
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
-geometry.prob_lo     = -200.   -200.   -20.    # physical domain
-geometry.prob_hi     =  200.    200.    20.
+geometry.prob_lo     = -200.   -200.   -2.    # physical domain
+geometry.prob_hi     =  200.    200.    2.
 
-beam.zmin = -100.
-beam.zmax = 100.
-beam.radius = 10.
-beam.density = 1.e3
+beam.zmin = -10.
+beam.zmax = 10.
+beam.radius = 1.
+beam.density = 1.0
 beam.uz_mean = 1.e3
 beam.u_std = 0.
-beam.ppc = 8 8 1
+beam.ppc = 4 4 1
+
+plasma.density = 0 # added to prevent possible crash by the parser
+plasma.ppc = 0 0
