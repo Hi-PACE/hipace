@@ -67,30 +67,30 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
            const amrex::Real gaminv = (2.0_rt * psip[ip] ) /(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
                                                          + psip[ip]*psip[ip]);
-           std::cout<<"gamma "<<1./gaminv<<'\n';
+           // std::cout<<"gamma "<<1./gaminv<<'\n';
 
            // calculate plasma particle velocities
            const amrex::Real vx  = uxp[ip]*gaminv;
            const amrex::Real vy  = uyp[ip]*gaminv;
            const amrex::Real vz  = (1-psip[ip])*gaminv;
-           std::cout<<"vx "<<vx<<'\n';
-           std::cout<<"vy "<<vy<<'\n';
-           std::cout<<"vz "<<vz<<'\n';
+           // std::cout<<"vx "<<vx<<'\n';
+           // std::cout<<"vy "<<vy<<'\n';
+           // std::cout<<"vz "<<vz<<'\n';
            // calculate charge of the plasma particles
-           std::cout<<"gamma / psip[ip] "<<1./gaminv/psip[ip]<<'\n';
+           // std::cout<<"gamma / psip[ip] "<<1./gaminv/psip[ip]<<'\n';
            const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip]);
-           std::cout<<"wq "<<wq<<'\n';
-           std::cout<<"q "<<q<<'\n';
-           std::cout<<"wp[ip] "<<wp[ip]<<'\n';
-           std::cout<<"psip[ip] "<<psip[ip]<<'\n';
-           std::cout<<"invvol "<<invvol<<'\n';
+           // std::cout<<"wq "<<wq<<'\n';
+           // std::cout<<"q "<<q<<'\n';
+           // std::cout<<"wp[ip] "<<wp[ip]<<'\n';
+           // std::cout<<"psip[ip] "<<psip[ip]<<'\n';
+           // std::cout<<"invvol "<<invvol<<'\n';
            // wqx, wqy wqz are particle current in each direction
            const amrex::Real wqx = wq*invvol*vx;
            const amrex::Real wqy = wq*invvol*vy;
            const amrex::Real wqz = wq*invvol*vz;
-           std::cout<<"wqx "<<wqx<<'\n';
-           std::cout<<"wqy "<<wqy<<'\n';
-           std::cout<<"wqz "<<wqz<<'\n';
+           // std::cout<<"wqx "<<wqx<<'\n';
+           // std::cout<<"wqy "<<wqy<<'\n';
+           // std::cout<<"wqz "<<wqz<<'\n';
 
             // --- Compute shape factors
             // x direction
