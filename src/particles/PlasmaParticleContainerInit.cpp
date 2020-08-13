@@ -38,6 +38,12 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
         Gpu::ManagedVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
 
+        Gpu::DeviceVector<Real> va_u_std = a_u_std;
+        auto pa_u_std = va_u_std.data();
+
+        Gpu::DeviceVector<Real> va_u_mean = a_u_mean;
+        auto pa_u_mean = va_u_mean.data();
+
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -119,8 +125,8 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
-                                                           a_u_std);
+                ParticleUtil::get_gaussian_random_momentum(u, pa_u_mean,
+                                                           pa_u_std);
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
