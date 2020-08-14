@@ -7,3 +7,4 @@ target_sources(HiPACE
 )
 
 add_subdirectory(deposition)
+add_subdirectory(pusher)
