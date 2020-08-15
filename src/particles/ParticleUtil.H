@@ -8,6 +8,8 @@
 /** Basic helper functions that can be used for both plasma and beam species */
 namespace ParticleUtil
 {
+    using namespace amrex::literals;
+    
     /** During particles initialization, we loop over nppc particles in 1 cell.
      * This function returns the position, in cell size unit, of particle number i_part
      * so that particles are distributed uniformly within the cell.
