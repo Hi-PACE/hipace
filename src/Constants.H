@@ -3,15 +3,18 @@
 
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
-// #include <AMReX_FArrayBox.H>
 #include <cmath>
 
-// Math constants
+/** Namespace containing math constants */
 namespace MathConst
 {
     static constexpr amrex::Real pi = 3.14159265358979323846;
 }
 
+/** Struct containing physical constants, our main strategy to handle both SI and normalized units.
+ * Cannot be a namespace with "static constexpr"s because these values depend on the unit system
+ * (SI or normalized), which is defined at runtime.
+ */
 struct PhysConst
 {
     amrex::Real c;
@@ -22,8 +25,9 @@ struct PhysConst
     amrex::Real m_p;
 };
 
-// Physical constants. Values are the 2018 CODATA recommended values
-// https://physics.nist.gov/cuu/Constants/index.html
+/** SI Physical constants. Values are the 2018 CODATA recommended values
+ * https://physics.nist.gov/cuu/Constants/index.html
+ */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 PhysConst make_constants_SI ()
 {
@@ -38,6 +42,7 @@ PhysConst make_constants_SI ()
     return constants;
 }
 
+/** Physical constants in normalized units */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 PhysConst make_constants_normalized ()
 {
@@ -51,6 +56,6 @@ PhysConst make_constants_normalized ()
     };
     return constants;
 }
-
+/** Return the PhysConst object, which is a member of class Hipace */
 PhysConst get_phys_const ();
 #endif
