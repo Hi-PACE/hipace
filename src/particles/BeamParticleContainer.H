@@ -5,6 +5,7 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
+/** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
     enum {
@@ -14,6 +15,7 @@ struct BeamIdx
     };
 };
 
+/** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
     : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
 {
@@ -27,8 +29,11 @@ public:
     /** Read parameters in the input file */
     void ReadParameters ();
 
+    /** Allocate data for the beam particles and initialize particles with requested beam profile
+     */
     void InitData (const amrex::Geometry& geom);
 
+    /** Initialize a can beam */
     void InitCanBeam (
         const amrex::IntVect&  a_num_particles_per_cell,
         const amrex::Real      a_thermal_momentum_std,
@@ -49,7 +54,7 @@ private:
     amrex::Real m_u_std = 0.; /**< Thermal momentum, normalized by m*c. Same in all directions */
 };
 
-
+/** \brief Iterator over boxes in a particle container */
 class BeamParticleIterator : public amrex::ParIter<0,0,BeamIdx::nattribs>
 {
 public:

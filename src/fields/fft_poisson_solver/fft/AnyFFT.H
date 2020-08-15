@@ -10,7 +10,9 @@
 #include <AMReX_LayoutData.H>
 
 /**
- * Wrapper around FFT libraries. The header file defines the API and the base types
+ * \brief Wrapper around multiple FFT libraries.
+ *
+ * The header file defines the API and the base types
  * (Complex and VendorFFTPlan), and the implementation for different FFT libraries is
  * done in different cpp files. This wrapper only depends on the underlying FFT library
  * AND on AMReX (There is no dependence on WarpX).
@@ -52,7 +54,7 @@ namespace AnyFFT
     /** Direction in which the FFT is performed. */
     enum struct direction {R2C, C2R};
 
-    /** This struct contains the vendor FFT plan and additional metadata
+    /** \brief This struct contains the vendor FFT plan and additional metadata
      */
     struct FFTplan
     {
