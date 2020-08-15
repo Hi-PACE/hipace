@@ -67,30 +67,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
            const amrex::Real gaminv = (2.0_rt * psip[ip] ) /(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
                                                          + psip[ip]*psip[ip]);
-           // std::cout<<"gamma "<<1./gaminv<<'\n';
 
            // calculate plasma particle velocities
            const amrex::Real vx  = uxp[ip]*gaminv;
            const amrex::Real vy  = uyp[ip]*gaminv;
            const amrex::Real vz  = (1-psip[ip])*gaminv;
-           // std::cout<<"vx "<<vx<<'\n';
-           // std::cout<<"vy "<<vy<<'\n';
-           // std::cout<<"vz "<<vz<<'\n';
+
            // calculate charge of the plasma particles
-           // std::cout<<"gamma / psip[ip] "<<1./gaminv/psip[ip]<<'\n';
            const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip]);
-           // std::cout<<"wq "<<wq<<'\n';
-           // std::cout<<"q "<<q<<'\n';
-           // std::cout<<"wp[ip] "<<wp[ip]<<'\n';
-           // std::cout<<"psip[ip] "<<psip[ip]<<'\n';
-           // std::cout<<"invvol "<<invvol<<'\n';
+
            // wqx, wqy wqz are particle current in each direction
            const amrex::Real wqx = wq*invvol*vx;
            const amrex::Real wqy = wq*invvol*vy;
            const amrex::Real wqz = wq*invvol*vz;
-           // std::cout<<"wqx "<<wqx<<'\n';
-           // std::cout<<"wqy "<<wqy<<'\n';
-           // std::cout<<"wqz "<<wqz<<'\n';
 
             // --- Compute shape factors
             // x direction
@@ -107,7 +96,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){
-//                    std::cout<<"lo.z "<<lo.z<<'\n';
                     amrex::Gpu::Atomic::Add(
                         &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                         sx_cell[ix]*sy_cell[iy]*wqx);

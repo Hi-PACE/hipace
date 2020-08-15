@@ -43,11 +43,8 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
         Gpu::ManagedVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
 
-        Gpu::DeviceVector<Real> va_u_std = a_u_std;
-        auto pa_u_std = va_u_std.data();
-
-        Gpu::DeviceVector<Real> va_u_mean = a_u_mean;
-        auto pa_u_mean = va_u_mean.data();
+        amrex::Real const * const pa_u_std = a_u_std.data();
+        amrex::Real const * const pa_u_mean = a_u_mean.data();
 
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
