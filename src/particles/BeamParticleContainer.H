@@ -15,7 +15,7 @@ struct BeamIdx
     };
 };
 
-/** Container for particles of 1 beam species. */
+/** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
     : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
 {

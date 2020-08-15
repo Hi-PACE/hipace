@@ -21,7 +21,7 @@ struct PlasmaIdx
     };
 };
 
-/** Container for particles of 1 plasma species. */
+/** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
     : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs>
 {

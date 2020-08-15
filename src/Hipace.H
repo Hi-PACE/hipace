@@ -9,6 +9,7 @@
 
 #include <AMReX_AmrCore.H>
 
+/** \brief Singleton class, that intialize, runs and finalizes the simulation */
 class Hipace final : public amrex::AmrCore
 {
 public:
