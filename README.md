@@ -132,3 +132,13 @@ cd examples/can_beam/
 ../../build/bin/hipace inputs # Run the simulation with fields and plasma and beam particles
 ./analysis.py # Plot results with yt, and save in img.png
 ```
+
+## Documentation
+
+Hipace has a full (all functions and classes and their members, albeit sometimes basic) Doxygen-readable documentation. You can compile it with
+```bash
+cd docs
+doxygen
+open doxyhtml/index.html
+```
+The last line would work on MacOS. On another platform, open the html file with your favorite browser.
