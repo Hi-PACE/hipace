@@ -10,8 +10,8 @@ using namespace amrex;
 void
 BeamParticleContainer::
 InitCanBeam (const IntVect&  a_num_particles_per_cell,
-             const amrex::Vector< amrex::Real>      a_u_std,
-             const amrex::Vector< amrex::Real>      a_u_mean,
+             const amrex::RealVect     a_u_std,
+             const amrex::RealVect     a_u_mean,
              const Real      a_density,
              const Geometry& a_geom,
              const amrex::Real a_zmin,
@@ -42,13 +42,6 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
 
         Gpu::ManagedVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
-
-        // amrex::Gpu::ManagedVector<amrex::Real> loc_u_std = ConvertToManaged(a_u_std);
-        // amrex::Real const * const p_u_std = loc_u_std.dataPtr();
-        // amrex::Gpu::ManagedVector<amrex::Real> loc_u_mean = ConvertToManaged(a_u_mean);
-        // amrex::Real const * const pa_u_mean = loc_u_mean.dataPtr();
-        amrex::Real const * const pa_u_std = a_u_std.dataPtr();
-        amrex::Real const * const pa_u_mean = a_u_mean.dataPtr();
 
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -130,8 +123,8 @@ InitCanBeam (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, pa_u_mean,
-                                                           pa_u_std);
+                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
+                                                           a_u_std);
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;

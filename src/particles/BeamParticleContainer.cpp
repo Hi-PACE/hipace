@@ -13,8 +13,17 @@ BeamParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
         for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
     }
-    pp.queryarr("u_mean", m_u_mean);
-    pp.queryarr("u_std", m_u_std);
+    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+    if (pp.query("u_mean", loc_array)) {
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_mean[idim] = loc_array[idim];
+        }
+    }
+    if (pp.query("u_std", loc_array)) {
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_std[idim] = loc_array[idim];
+        }
+    }
 }
 
 void
