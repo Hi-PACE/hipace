@@ -142,3 +142,12 @@ doxygen
 open doxyhtml/index.html
 ```
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
+
+## Style and code conventions
+
+- All new element (class, member of a class, struct, function) declared in a .H file must have a Doxygen-readable documentation
+- Indent four spaces
+- No tabs allowed
+- No end-of-line whitespaces allowed
+- Classes use CamelCase
+- Objects use snake_case
