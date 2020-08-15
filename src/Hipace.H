@@ -66,7 +66,6 @@ public:
     /** return whether rank is in the same transverse communicator w/ me
      *
      * \param[in] rank MPI rank to test
-     * \param[out] same_comm whether rank is in the same transverse communicator w/ me
      */
     bool InSameTransverseCommunicator (int rank) const;
 

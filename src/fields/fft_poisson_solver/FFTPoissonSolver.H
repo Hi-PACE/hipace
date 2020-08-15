@@ -12,7 +12,7 @@ using SpectralField = amrex::FabArray< amrex::BaseFab <amrex::GpuComplex<amrex::
 /**
  * \brief This class handles functions and data to perform transverse Fourier-based Poisson solves.
  *
- * For a given source S, it solves equation \Delta F = S and returns F.
+ * For a given source S, it solves equation Laplacian(F) = S and returns F.
  * Once an instance is created, a typical use consists in:
  * 1. Compute S directly in FFTPoissonSolver::m_stagingArea
  * 2. Call FFTPoissonSolver::SolvePoissonEquation(mf), which will solve Poisson equation with RHS

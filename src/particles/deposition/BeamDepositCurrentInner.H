@@ -13,7 +13,7 @@
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
- * \brief[in] pti particle iterator, contains data of all particles in a box
+ * \param[in] pti particle iterator, contains data of all particles in a box
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to pti
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
