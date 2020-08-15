@@ -5,7 +5,7 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
-/** Map names and indices for plasma particles attributes (SoA data) */
+/** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
 {
     enum {
@@ -47,7 +47,7 @@ public:
     amrex::Real m_u_std = 0.; /**< Thermal momentum, normalized by m*c. Same in all directions */
 };
 
-/** Iterator over boxes in a particle container */
+/** \brief Iterator over boxes in a particle container */
 class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs>
 {
 public:

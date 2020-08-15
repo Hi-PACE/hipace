@@ -6,16 +6,16 @@
 
 class Hipace;
 
-/** Map names and indices of each fields in the field Multifabs (both 3D and 2D)
+/** \brief Map names and indices of each fields in the field Multifabs (both 3D and 2D)
  */
 struct FieldComps{
     enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, nfields};
 };
 
-/** Direction of field copies: from 3D F to 2D slice S or the other way round */
+/** \brief Direction of field copies: from 3D F to 2D slice S or the other way round */
 enum struct FieldCopyType { FtoS, StoF };
 
-/** Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
+/** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
     enum dir{x=0, y, z};
 };

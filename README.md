@@ -151,3 +151,4 @@ The last line would work on MacOS. On another platform, open the html file with 
 - No end-of-line whitespaces allowed
 - Classes use CamelCase
 - Objects use snake_case
+- Lines should not have >100 characters
