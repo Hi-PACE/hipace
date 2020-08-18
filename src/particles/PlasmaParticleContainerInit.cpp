@@ -8,8 +8,8 @@ using namespace amrex;
 void
 PlasmaParticleContainer::
 InitParticles (const IntVect& a_num_particles_per_cell,
-               const amrex::RealVect a_u_std,
-               const amrex::RealVect a_u_mean,
+               const amrex::RealVect& a_u_std,
+               const amrex::RealVect& a_u_mean,
                const Real a_density,
                const Geometry& a_geom,
                const RealBox& a_bounds)

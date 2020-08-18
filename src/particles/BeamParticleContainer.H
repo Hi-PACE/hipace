@@ -36,8 +36,8 @@ public:
     /** Initialize a can beam */
     void InitCanBeam (
         const amrex::IntVect&  a_num_particles_per_cell,
-        const amrex::RealVect a_thermal_momentum_std,
-        const amrex::RealVect a_thermal_momentum_mean,
+        const amrex::RealVect& a_thermal_momentum_std,
+        const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real      a_density,
         const amrex::Geometry& a_geom,
         const amrex::Real     a_zmin,
