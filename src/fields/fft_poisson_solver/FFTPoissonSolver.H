@@ -1,4 +1,4 @@
-#ifndef FFT_POISSON_SOLVER_H_A
+#ifndef FFT_POISSON_SOLVER_H_
 #define FFT_POISSON_SOLVER_H_
 
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
