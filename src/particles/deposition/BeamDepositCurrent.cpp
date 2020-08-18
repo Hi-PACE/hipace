@@ -30,9 +30,9 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
 
         // Extract the fields currents
         amrex::MultiFab& F = fields.getF(lev);
-        amrex::MultiFab jx(F, amrex::make_alias, FieldComps::jx, F.nGrow());
-        amrex::MultiFab jy(F, amrex::make_alias, FieldComps::jy, F.nGrow());
-        amrex::MultiFab jz(F, amrex::make_alias, FieldComps::jz, F.nGrow());
+        amrex::MultiFab jx(F, amrex::make_alias, FieldComps::jx, 1);
+        amrex::MultiFab jy(F, amrex::make_alias, FieldComps::jy, 1);
+        amrex::MultiFab jz(F, amrex::make_alias, FieldComps::jz, 1);
         // Extract FabArray for this box
         amrex::FArrayBox& jx_fab = jx[pti];
         amrex::FArrayBox& jy_fab = jy[pti];
