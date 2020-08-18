@@ -36,8 +36,8 @@ public:
     /** Initialize a can beam */
     void InitCanBeam (
         const amrex::IntVect&  a_num_particles_per_cell,
-        const amrex::Real      a_thermal_momentum_std,
-        const amrex::Real      a_thermal_momentum_mean,
+        const amrex::RealVect& a_thermal_momentum_std,
+        const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real      a_density,
         const amrex::Geometry& a_geom,
         const amrex::Real     a_zmin,
@@ -50,8 +50,8 @@ private:
     amrex::Real m_radius; /**< Radius of the can beam */
     amrex::Real m_density; /**< Density of the can beam */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
-    amrex::Real m_uz_mean = 0.; /**< Avg momentum along z, normalized by m*c */
-    amrex::Real m_u_std = 0.; /**< Thermal momentum, normalized by m*c. Same in all directions */
+    amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
+    amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
 };
 
 /** \brief Iterator over boxes in a particle container */

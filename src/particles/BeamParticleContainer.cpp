@@ -13,8 +13,17 @@ BeamParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
         for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
     }
-    pp.query("uz_mean", m_uz_mean);
-    pp.query("u_std", m_u_std);
+    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+    if (pp.query("u_mean", loc_array)) {
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_mean[idim] = loc_array[idim];
+        }
+    }
+    if (pp.query("u_std", loc_array)) {
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_std[idim] = loc_array[idim];
+        }
+    }
 }
 
 void
@@ -22,5 +31,5 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     reserveData();
     resizeData();
-    InitCanBeam(m_ppc, m_u_std, m_uz_mean, m_density, geom, m_zmin, m_zmax, m_radius);
+    InitCanBeam(m_ppc, m_u_std, m_u_mean, m_density, geom, m_zmin, m_zmax, m_radius);
 }

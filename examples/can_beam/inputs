@@ -15,8 +15,8 @@ beam.zmin = -10.e-6
 beam.zmax = 10.e-6
 beam.radius = 10.e-6
 beam.density = 1.e3
-beam.uz_mean = 1.e3
-beam.u_std = 0.
+beam.u_mean = 0. 0. 1.e3
+beam.u_std = 0. 0. 0.
 beam.ppc = 2 2 2
 
 plasma.density = 1.

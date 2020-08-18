@@ -1,17 +1,18 @@
 #include "PlasmaParticleContainer.H"
 #include "Constants.H"
 #include "ParticleUtil.H"
+#include "Hipace.H"
 
 using namespace amrex;
 
 void
 PlasmaParticleContainer::
-InitParticles (const IntVect&  a_num_particles_per_cell,
-               const Real      a_u_std,
-               const Real      a_uz_mean,
-               const Real      a_density,
+InitParticles (const IntVect& a_num_particles_per_cell,
+               const amrex::RealVect& a_u_std,
+               const amrex::RealVect& a_u_mean,
+               const Real a_density,
                const Geometry& a_geom,
-               const RealBox&  a_bounds)
+               const RealBox& a_bounds)
 {
     BL_PROFILE("PlasmaParticleContainer::InitParticles");
 
@@ -22,7 +23,7 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
-    const Real scale_fac = dx[0]*dx[1]*dx[2]/num_ppc;
+    const Real scale_fac = Hipace::m_normalized_units? 1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
@@ -118,7 +119,7 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, a_uz_mean,
+                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
                                                            a_u_std);
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
@@ -132,35 +133,41 @@ InitParticles (const IntVect&  a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                arrdata[PlasmaIdx::w    ][pidx] = a_density * scale_fac;
-                arrdata[PlasmaIdx::ux   ][pidx] = u[0] * phys_const.c;
-                arrdata[PlasmaIdx::uy   ][pidx] = u[1] * phys_const.c;
-                arrdata[PlasmaIdx::psi  ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fx1  ][pidx] = 1.;
-                arrdata[PlasmaIdx::Fx2  ][pidx] = 2.;
-                arrdata[PlasmaIdx::Fx3  ][pidx] = 3.;
-                arrdata[PlasmaIdx::Fx4  ][pidx] = 4.;
-                arrdata[PlasmaIdx::Fx5  ][pidx] = 5.;
-                arrdata[PlasmaIdx::Fy1  ][pidx] = 11.;
-                arrdata[PlasmaIdx::Fy2  ][pidx] = 12.;
-                arrdata[PlasmaIdx::Fy3  ][pidx] = 13.;
-                arrdata[PlasmaIdx::Fy4  ][pidx] = 14.;
-                arrdata[PlasmaIdx::Fy5  ][pidx] = 15.;
-                arrdata[PlasmaIdx::Fux1 ][pidx] = 21.;
-                arrdata[PlasmaIdx::Fux2 ][pidx] = 22.;
-                arrdata[PlasmaIdx::Fux3 ][pidx] = 23.;
-                arrdata[PlasmaIdx::Fux4 ][pidx] = 24.;
-                arrdata[PlasmaIdx::Fux5 ][pidx] = 25.;
-                arrdata[PlasmaIdx::Fuy1 ][pidx] = 31.;
-                arrdata[PlasmaIdx::Fuy2 ][pidx] = 32.;
-                arrdata[PlasmaIdx::Fuy3 ][pidx] = 33.;
-                arrdata[PlasmaIdx::Fuy4 ][pidx] = 34.;
-                arrdata[PlasmaIdx::Fuy5 ][pidx] = 35.;
-                arrdata[PlasmaIdx::Fpsi1][pidx] = 41.;
-                arrdata[PlasmaIdx::Fpsi2][pidx] = 42.;
-                arrdata[PlasmaIdx::Fpsi3][pidx] = 43.;
-                arrdata[PlasmaIdx::Fpsi4][pidx] = 44.;
-                arrdata[PlasmaIdx::Fpsi5][pidx] = 45.;
+                arrdata[PlasmaIdx::w        ][pidx] = a_density * scale_fac;
+                arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
+                arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
+                arrdata[PlasmaIdx::psi      ][pidx] = 1.;
+                arrdata[PlasmaIdx::x_temp   ][pidx] = 0.0;
+                arrdata[PlasmaIdx::y_temp   ][pidx] = 0.0;
+                arrdata[PlasmaIdx::w_temp   ][pidx] = a_density * scale_fac;
+                arrdata[PlasmaIdx::ux_temp  ][pidx] = u[0] * phys_const.c;
+                arrdata[PlasmaIdx::uy_temp  ][pidx] = u[1] * phys_const.c;
+                arrdata[PlasmaIdx::psi_temp ][pidx] = 1.;
+                arrdata[PlasmaIdx::Fx1      ][pidx] = 1.;
+                arrdata[PlasmaIdx::Fx2      ][pidx] = 2.;
+                arrdata[PlasmaIdx::Fx3      ][pidx] = 3.;
+                arrdata[PlasmaIdx::Fx4      ][pidx] = 4.;
+                arrdata[PlasmaIdx::Fx5      ][pidx] = 5.;
+                arrdata[PlasmaIdx::Fy1      ][pidx] = 11.;
+                arrdata[PlasmaIdx::Fy2      ][pidx] = 12.;
+                arrdata[PlasmaIdx::Fy3      ][pidx] = 13.;
+                arrdata[PlasmaIdx::Fy4      ][pidx] = 14.;
+                arrdata[PlasmaIdx::Fy5      ][pidx] = 15.;
+                arrdata[PlasmaIdx::Fux1     ][pidx] = 21.;
+                arrdata[PlasmaIdx::Fux2     ][pidx] = 22.;
+                arrdata[PlasmaIdx::Fux3     ][pidx] = 23.;
+                arrdata[PlasmaIdx::Fux4     ][pidx] = 24.;
+                arrdata[PlasmaIdx::Fux5     ][pidx] = 25.;
+                arrdata[PlasmaIdx::Fuy1     ][pidx] = 31.;
+                arrdata[PlasmaIdx::Fuy2     ][pidx] = 32.;
+                arrdata[PlasmaIdx::Fuy3     ][pidx] = 33.;
+                arrdata[PlasmaIdx::Fuy4     ][pidx] = 34.;
+                arrdata[PlasmaIdx::Fuy5     ][pidx] = 35.;
+                arrdata[PlasmaIdx::Fpsi1    ][pidx] = 41.;
+                arrdata[PlasmaIdx::Fpsi2    ][pidx] = 42.;
+                arrdata[PlasmaIdx::Fpsi3    ][pidx] = 43.;
+                arrdata[PlasmaIdx::Fpsi4    ][pidx] = 44.;
+                arrdata[PlasmaIdx::Fpsi5    ][pidx] = 45.;
                 ++pidx;
             }
         });
