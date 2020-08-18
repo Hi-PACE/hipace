@@ -5,6 +5,7 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
+/** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
 {
     enum {
@@ -24,14 +25,18 @@ struct PlasmaIdx
     };
 };
 
+/** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
     : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs>
 {
 public:
     explicit PlasmaParticleContainer (amrex::AmrCore* amr_core);
 
+    /** Allocate data for the beam particles and initialize particles with requested beam profile
+     */
     void InitData (const amrex::Geometry& geom);
 
+    /** Initialize 1 xy slice of particles, with fixed number of particles per cell */
     void InitParticles (
         const amrex::IntVect&  a_num_particles_per_cell,
         const amrex::RealVect      a_thermal_momentum_std,
@@ -46,6 +51,7 @@ public:
     amrex::RealVect m_u_std {0,0,0};  /**< Thermal momentum, normalized by m*c. Same in all directions */
   };
 
+/** \brief Iterator over boxes in a particle container */
 class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs>
 {
 public:

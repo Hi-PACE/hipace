@@ -1,6 +1,6 @@
 name: macos
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   macos_appleclang_cxx14_ompi:

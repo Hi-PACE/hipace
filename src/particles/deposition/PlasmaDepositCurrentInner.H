@@ -8,13 +8,27 @@
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 
+/** Loop over plasma particles in iterator (=box) pti and deposit their current
+ * into jx_fab, jy_fab and jz_fab.
+ *
+ * \tparam depos_order_xy Order of the transverse shape factor for the deposition
+ * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
+ * \param[in] pti particle iterator, contains data of all particles in a box
+ * \param[in,out] jx_fab array of current density jx, on the box corresponding to pti
+ * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
+ * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
+ * \param[in] dx cell size in each dimension
+ * \param[in] xyzmin lower corner of the box, in physical space
+ * \param[in] lo lower corner of the box, in index space
+ * \param[in] q elementary charge
+ */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jx_fab,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
-                         amrex::Real const * AMREX_RESTRICT dx,
-                         amrex::Real const * AMREX_RESTRICT xyzmin,
+                         amrex::Real const * const AMREX_RESTRICT dx,
+                         amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          const CurrentDepoType CurrentDepoType)
