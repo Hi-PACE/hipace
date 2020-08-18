@@ -36,7 +36,7 @@ namespace ParticleUtil
 
     /** Return momentum of 1 particle from a Gaussian random draw.
      * \param[in,out] u 3D momentum of 1 particle, modified by this function
-     * \param[in] uz_mean Mean value of the random distribution
+     * \param[in] u_mean Mean value of the random distribution
      * \param[in] u_std standard deviation of the random distribution
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
