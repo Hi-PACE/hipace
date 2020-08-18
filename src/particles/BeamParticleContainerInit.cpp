@@ -9,10 +9,10 @@ using namespace amrex;
 
 void
 BeamParticleContainer::
-InitCanBeam (const IntVect&  a_num_particles_per_cell,
-             const amrex::RealVect     a_u_std,
-             const amrex::RealVect     a_u_mean,
-             const Real      a_density,
+InitCanBeam (const IntVect& a_num_particles_per_cell,
+             const amrex::RealVect a_u_std,
+             const amrex::RealVect a_u_mean,
+             const Real a_density,
              const Geometry& a_geom,
              const amrex::Real a_zmin,
              const amrex::Real a_zmax,
