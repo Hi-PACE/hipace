@@ -38,17 +38,17 @@ public:
 
     /** Initialize 1 xy slice of particles, with fixed number of particles per cell */
     void InitParticles (
-        const amrex::IntVect&  a_num_particles_per_cell,
-        const amrex::RealVect      a_thermal_momentum_std,
-        const amrex::RealVect     a_thermal_momentum_mean,
-        const amrex::Real      a_density,
+        const amrex::IntVect& a_num_particles_per_cell,
+        const amrex::RealVect a_thermal_momentum_std,
+        const amrex::RealVect a_thermal_momentum_mean,
+        const amrex::Real a_density,
         const amrex::Geometry& a_geom,
-        const amrex::RealBox&  a_bounds);
+        const amrex::RealBox& a_bounds);
 
     amrex::Real m_density; /**< Density of the plasma */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
-    amrex::RealVect m_u_mean {0,0,0};  /**< Avg momentum along x,y,z, normalized by m*c */
-    amrex::RealVect m_u_std {0,0,0};  /**< Thermal momentum, normalized by m*c. Same in all directions */
+    amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
+    amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
   };
 
 /** \brief Iterator over boxes in a particle container */
