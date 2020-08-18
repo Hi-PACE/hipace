@@ -14,8 +14,10 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
                    const amrex::DistributionMapping& dm)
 {
     BL_PROFILE("Fields::AllocData()");
-    m_nguards = {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, Hipace::m_depos_order_z};
-    m_slices_nguards = {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0};
+    // Need at least 1 guard cell transversally for transverse derivative
+    int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+    m_nguards = {nguards_xy, nguards_xy, Hipace::m_depos_order_z};
+    m_slices_nguards = {nguards_xy, nguards_xy, 0};
     m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
                     amrex::MFInfo().SetArena(amrex::The_Arena())); // The Arena uses managed memory.
 

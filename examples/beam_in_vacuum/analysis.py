@@ -134,13 +134,13 @@ if args.do_plot:
 
 # Assert that the simulation result is close enough to theory
 error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
-print("total relative error jz: " + str(error_jz) + " (tolerance = 0.15)")
-assert(error_jz < .15)
+print("total relative error jz: " + str(error_jz) + " (tolerance = 0.1)")
+assert(error_jz < .1)
 
 error_Bx = np.sum((Bx_sim-Bx_th)**2) / np.sum((Bx_th)**2)
-print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.03)")
-assert(error_Bx < .03)
+print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.02)")
+assert(error_Bx < .02)
 
 error_By = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
-print("total relative error By: " + str(error_By) + " (tolerance = 0.03)")
-assert(error_By < .03)
+print("total relative error By: " + str(error_By) + " (tolerance = 0.02)")
+assert(error_By < .02)
