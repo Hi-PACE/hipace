@@ -12,7 +12,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
-$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs hipace.depos_order_xy=1
+$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs hipace.depos_order_xy=0
 
 # Compare the result with theory
 python $HIPACE_EXAMPLE_DIR/analysis.py
