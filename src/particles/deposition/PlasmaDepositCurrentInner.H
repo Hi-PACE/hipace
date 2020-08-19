@@ -36,7 +36,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 {
     using namespace amrex::literals;
 
-    PhysConst phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
 
     // Extract particle properties
     const auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -91,9 +91,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                                                          + psip[ip]*psip[ip]);
 
            // calculate plasma particle velocities
-           const amrex::Real vx = uxp[ip]*gaminv/phys_const.c;
-           const amrex::Real vy = uyp[ip]*gaminv/phys_const.c;
-           const amrex::Real vz = (1-psip[ip])*gaminv;
+           const amrex::Real vx = uxp[ip]*gaminv;
+           const amrex::Real vy = uyp[ip]*gaminv;
+           const amrex::Real vz = (1._rt - psip[ip]*gaminv) * phys_const.c;
 
            // calculate charge of the plasma particles
            const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip]);
