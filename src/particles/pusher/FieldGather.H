@@ -59,9 +59,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 {
     using namespace amrex;
 
-    const amrex::Real dxi = 1.0/dx[0];
-    const amrex::Real dyi = 1.0/dx[1];
-    const amrex::Real dzi = 1.0/dx[2];
+    const amrex::Real dxi = 1.0_rt/dx[0];
+    const amrex::Real dyi = 1.0_rt/dx[1];
+    const amrex::Real dzi = 1.0_rt/dx[2];
 
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];

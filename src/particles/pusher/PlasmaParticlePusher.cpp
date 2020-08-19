@@ -62,27 +62,24 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
         const int depos_order_xy = Hipace::m_depos_order_xy;
 
-        amrex::ParallelFor(
-            pti.numParticles(),
+        amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
-              // define field at particle position reals
-              amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-              amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                // define field at particle position reals
+                amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+                amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
-              // field gather for a single particle
-              doGatherShapeN(pos_structs[ip].pos(0), pos_structs[ip].pos(1), xyzmin[2],
-                              ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                              exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                              dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                // field gather for a single particle
+                doGatherShapeN(pos_structs[ip].pos(0), pos_structs[ip].pos(1), xyzmin[2],
+                    ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                    exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                    dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-              // insert update force terms for a single particle
+                // insert update force terms for a single particle
 
-              //insert push a single particle
+                //insert push a single particle
 
           }
           );
-
-
       }
 }
