@@ -1,6 +1,7 @@
 #include "Hipace.H"
 #include "particles/deposition/BeamDepositCurrent.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
+#include "particles/pusher/PlasmaParticlePusher.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -206,7 +207,7 @@ Hipace::Evolve ()
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
-                /* xxxxxxxxxx Gather Push Plasma particles transversally xxxxxxxxxx */
+                UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev], lev);
                 /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
 
