@@ -7,12 +7,15 @@
 #include "FieldGather.H"
 
 void
-UpdateForceTerms (PlasmaParticleContainer& plasma, Fields & fields,
-                amrex::Geometry const& gm, int const lev=0);
-
-void
-PlasmaParticlePusher (PlasmaParticleContainer& plasma, //Fields & fields,
-                amrex::Geometry const& gm, int const lev=0);
+UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
+                          amrex::Geometry const& gm, int const lev=0);
+// void
+// UpdateForceTerms (PlasmaParticleContainer& plasma, Fields & fields,
+//                 amrex::Geometry const& gm, int const lev=0);
+//
+// void
+// PlasmaParticlePusher (PlasmaParticleContainer& plasma, //Fields & fields,
+//                 amrex::Geometry const& gm, int const lev=0);
 
 
 
