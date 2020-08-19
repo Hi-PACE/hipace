@@ -62,6 +62,8 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const auto& pos_structs = aos.begin();
         // const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
+        const int depos_order_xy = Hipace::m_depos_order_xy;
+
         amrex::ParallelFor(
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
@@ -74,7 +76,7 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
               doGatherShapeN(pos_structs[ip].pos(0), pos_structs[ip].pos(1), xyzmin[2],
                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                               exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                              dx_arr, xyzmin_arr, lo, Hipace::m_depos_order_xy, 0);
+                              dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
               // insert update force terms for a single particle
 
