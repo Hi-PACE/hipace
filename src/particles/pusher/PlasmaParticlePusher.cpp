@@ -17,6 +17,7 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
+    const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
@@ -58,9 +59,21 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
         const auto& aos = pti.GetArrayOfStructs(); // For positions
         const auto& pos_structs = aos.begin();
-        // const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+
+        // loading the data
+        amrex::Real * uxp = soa.GetRealData(PlasmaIdx::ux).data();
+        amrex::Real * uyp = soa.GetRealData(PlasmaIdx::uy).data();
+        amrex::Real * psip = soa.GetRealData(PlasmaIdx::psi).data();
+
+        amrex::Real * Fx1 = soa.GetRealData(PlasmaIdx::Fx1).data();
+        amrex::Real * Fy1 = soa.GetRealData(PlasmaIdx::Fy1).data();
+        amrex::Real * Fux1 = soa.GetRealData(PlasmaIdx::Fux1).data();
+        amrex::Real * Fuy1 = soa.GetRealData(PlasmaIdx::Fuy1).data();
+        amrex::Real * Fpsi1 = soa.GetRealData(PlasmaIdx::Fpsi1).data();
 
         const int depos_order_xy = Hipace::m_depos_order_xy;
+        const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
@@ -76,6 +89,22 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
                 // insert update force terms for a single particle
+                const amrex::Real gammap = (1.0_rt + uxp[ip]*uxp[ip]*clightsq
+                                                   + uyp[ip]*uyp[ip]*clightsq
+                                                   + psip[ip]*psip[ip])/(2.0_rt * psip[ip] );
+
+                const amrex::Real charge_mass_ratio = -1.0_rt;
+
+                // /* Change for x-position along zeta */
+                // Fx1[ip] = uxp[ip] / psip[ip];
+                // /* Change for y-position along zeta */
+                // Fy1[ip] = -uyp[ip] / psip[ip];
+                // /* Change for ux along zeta */
+                // Fux1[ip] = -charge_mass_ratio * ( gammap * ExmByp / psip[ip] + Byp + ( uyp[ip] * Bzp ) / psip[ip] );
+                // /* Change for uy along zeta */
+                // Fuy1[ip] = -charge_mass_ratio * ( gammap * EypBxp / psip[ip] - Bxp - ( uxp[ip] * Bzp ) / psip[ip] );
+                // /* Change for psi along zeta */
+                // Fpsi1[ip] = -charge_mass_ratio * (( uxp[ip] * ExmByp + uyp[ip] * EypBxp ) / psip[ip] - Ezp );
 
                 //insert push a single particle
 
