@@ -148,18 +148,27 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 /**
  * \brief Field gather for a single particle
  *
- * \param xp, yp, zp                : Particle position coordinates
- * \param ExmByp, EypBxp, Ezp             : Electric field on particles.
- * \param Bxp, Byp, Bzp             : Magnetic field on particles.
- * \param exmby_arr, eypbx_arr, ez_arr      : Array4 of the electric field, either full array or tile.
- * \param bx_arr, by_arr, bz_arr      : Array4 of the magnetic field, either full array or tile.
- * \param dx                        : 3D cell spacing
- * \param xyzmin                    : Physical lower bounds of domain in x, y, z.
- * \param lo                        : Index lower bounds of domain.
- * \param depos_order_xy            : Order of the transverse shape factor for the deposition
- * \param depos_order_z             : Order of the longitudinal shape factor for the deposition
-
-
+ * \param[in] xp Particle position x
+ * \param[in] yp Particle position y
+ * \param[in] zp Particle position z
+ * \param[in,out] ExmByp Field on particle: Ex - c*By
+ * \param[in,out] EypBxp Field on particle: Ey + c*Bx
+ * \param[in,out] Ezp Field on particle: Ez
+ * \param[in,out] Bxp Magnetic field on particles: Bx
+ * \param[in,out] Byp Magnetic field on particles: By
+ * \param[in,out] Bzp Magnetic field on particles: Bz
+ * \param[in] exmby_arr field array for field Ex - c*By
+ * \param[in] eypbx_arr field array for field  Ey + c*Bx
+ * \param[in] ez_arr field array for field  Ez
+ * \param[in] bx_arr field array for field  Bx
+ * \param[in] by_arr field array for field  By
+ * \param[in] bz_arr field array for field  Bz
+ * \param[in] dx 3D cell spacing
+ * \param[in] xyzmin Physical lower bounds of domain in x, y, z
+ * \param[in] lo Index lower bounds of domain
+ * \param[in] depos_order_xy Order of the transverse shape factor for the field gather
+ * \param[in] depos_order_z Order of the longitudinal shape factor for the field gather
+ 
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doGatherShapeN (const amrex::ParticleReal xp,
