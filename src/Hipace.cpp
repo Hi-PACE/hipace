@@ -208,8 +208,8 @@ Hipace::Evolve ()
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
                 /* xxxxxxxxxx Gather Push Plasma particles transversally xxxxxxxxxx */
-                UpdateForcePushParticles (m_plasma_container, m_fields,
-                                          geom[lev], lev);
+                // UpdateForcePushParticles (m_plasma_container, m_fields,
+                //                           geom[lev], lev);
                 /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
 
@@ -222,6 +222,9 @@ Hipace::Evolve ()
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
 
+                /* xxxxxxxxxx Gather Push Plasma particles transversally xxxxxxxxxx */
+                UpdateForcePushParticles (m_plasma_container, m_fields,
+                                          geom[lev], lev);
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 

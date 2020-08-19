@@ -18,9 +18,9 @@
  * \brief Field gather for a single particle
  *
  * \param xp, yp, zp                : Particle position coordinates
- * \param Exp, Eyp, Ezp             : Electric field on particles.
+ * \param ExmByp, EypBxp, Ezp             : Electric field on particles.
  * \param Bxp, Byp, Bzp             : Magnetic field on particles.
- * \param ex_arr ey_arr ez_arr      : Array4 of the electric field, either full array or tile.
+ * \param exmby_arr eypbx_arr ez_arr      : Array4 of the electric field, either full array or tile.
  * \param bx_arr by_arr bz_arr      : Array4 of the magnetic field, either full array or tile.
  * \param ex_type, ey_type, ez_type : IndexType of the electric field
  * \param bx_type, by_type, bz_type : IndexType of the magnetic field
@@ -33,14 +33,14 @@ template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::ParticleReal yp,
-                     amrex::ParticleReal& Exp,
-                     amrex::ParticleReal& Eyp,
+                     amrex::ParticleReal& ExmByp,
+                     amrex::ParticleReal& EypBxp,
                      amrex::ParticleReal& Ezp,
                      amrex::ParticleReal& Bxp,
                      amrex::ParticleReal& Byp,
                      amrex::ParticleReal& Bzp,
-                     amrex::Array4<amrex::Real const> const& ex_arr,
-                     amrex::Array4<amrex::Real const> const& ey_arr,
+                     amrex::Array4<amrex::Real const> const& exmby_arr,
+                     amrex::Array4<amrex::Real const> const& eypbx_arr,
                      amrex::Array4<amrex::Real const> const& ez_arr,
                      amrex::Array4<amrex::Real const> const& bx_arr,
                      amrex::Array4<amrex::Real const> const& by_arr,
@@ -138,21 +138,21 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 
 
     // (AMREX_SPACEDIM == 3)
-    // Gather field on particle Exp from field on grid ex_arr
+    // Gather field on particle ExmByp from field on grid exmby_arr
     // for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                Exp += sx_cell[ix]*sy_cell[iy]*//sz_ex[iz]*
-                    ex_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0); //, lo.z+l_cell+iz);
+                ExmByp += sx_cell[ix]*sy_cell[iy]*//sz_ex[iz]*
+                    exmby_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0); //, lo.z+l_cell+iz);
             }
         }
     // }
-    // Gather field on particle Eyp from field on grid ey_arr
+    // Gather field on particle EypBxp from field on grid eypbx_arr
     // for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                Eyp += sx_cell[ix]*sy_cell[iy]*//sz_ey[iz]*
-                    ey_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0); //, lo.z+l_cell+iz);
+                EypBxp += sx_cell[ix]*sy_cell[iy]*//sz_ey[iz]*
+                    eypbx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0); //, lo.z+l_cell+iz);
             }
         }
     // }
@@ -200,7 +200,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * /param getPosition          : A functor for returning the particle position.
  * /param getExternalEField    : A functor for assigning the external E field.
  * /param getExternalBField    : A functor for assigning the external B field.
- * \param Exp, Eyp, Ezp        : Pointer to array of electric field on particles.
+ * \param ExmByp, EypBxp, Ezp        : Pointer to array of electric field on particles.
  * \param Bxp, Byp, Bzp        : Pointer to array of magnetic field on particles.
  * \param exfab eyfab ezfab    : Array4 of the electric field, either full array or tile.
  * \param ezfab bxfab bzfab    : Array4 of the magnetic field, either full array or tile.
@@ -213,7 +213,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 // template <int depos_order_xy, int depos_order_z>
 // void doGatherShapeN(const GetParticlePosition& getPosition,
 //                     const GetExternalEField& getExternalE, const GetExternalBField& getExternalB,
-//                     amrex::ParticleReal * const Exp, amrex::ParticleReal * const Eyp,
+//                     amrex::ParticleReal * const ExmByp, amrex::ParticleReal * const EypBxp,
 //                     amrex::ParticleReal * const Ezp, amrex::ParticleReal * const Bxp,
 //                     amrex::ParticleReal * const Byp, amrex::ParticleReal * const Bzp,
 //                     amrex::FArrayBox const * const exfab,
@@ -232,8 +232,8 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 //     amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 //     amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 //
-//     amrex::Array4<const amrex::Real> const& ex_arr = exfab->array();
-//     amrex::Array4<const amrex::Real> const& ey_arr = eyfab->array();
+//     amrex::Array4<const amrex::Real> const& exmby_arr = exfab->array();
+//     amrex::Array4<const amrex::Real> const& eypbx_arr = eyfab->array();
 //     amrex::Array4<const amrex::Real> const& ez_arr = ezfab->array();
 //     amrex::Array4<const amrex::Real> const& bx_arr = bxfab->array();
 //     amrex::Array4<const amrex::Real> const& by_arr = byfab->array();
@@ -248,12 +248,12 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 //
 //             amrex::ParticleReal xp, yp, zp;
 //             getPosition(ip, xp, yp, zp);
-//             getExternalE(ip, Exp[ip], Eyp[ip], Ezp[ip]);
+//             getExternalE(ip, ExmByp[ip], EypBxp[ip], Ezp[ip]);
 //             getExternalB(ip, Bxp[ip], Byp[ip], Bzp[ip]);
 //
 //             doGatherShapeN<depos_order_xy, depos_order_z>(
-//                 xp, yp, zp, Exp[ip], Eyp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
-//                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+//                 xp, yp, zp, ExmByp[ip], EypBxp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
+//                 exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
 //                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
 //                 dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
 //         }
@@ -264,9 +264,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \brief Field gather for a single particle
  *
  * /param xp, yp, zp                : Particle position coordinates
- * \param Exp, Eyp, Ezp             : Electric field on particles.
+ * \param ExmByp, EypBxp, Ezp             : Electric field on particles.
  * \param Bxp, Byp, Bzp             : Magnetic field on particles.
- * \param ex_arr ey_arr ez_arr      : Array4 of the electric field, either full array or tile.
+ * \param exmby_arr eypbx_arr ez_arr      : Array4 of the electric field, either full array or tile.
  * \param bx_arr by_arr bz_arr      : Array4 of the magnetic field, either full array or tile.
  * \param ex_type, ey_type, ez_type : IndexType of the electric field
  * \param bx_type, by_type, bz_type : IndexType of the magnetic field
@@ -279,14 +279,14 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::ParticleReal yp,
-                     amrex::ParticleReal& Exp,
-                     amrex::ParticleReal& Eyp,
+                     amrex::ParticleReal& ExmByp,
+                     amrex::ParticleReal& EypBxp,
                      amrex::ParticleReal& Ezp,
                      amrex::ParticleReal& Bxp,
                      amrex::ParticleReal& Byp,
                      amrex::ParticleReal& Bzp,
-                     amrex::Array4<amrex::Real const> const& ex_arr,
-                     amrex::Array4<amrex::Real const> const& ey_arr,
+                     amrex::Array4<amrex::Real const> const& exmby_arr,
+                     amrex::Array4<amrex::Real const> const& eypbx_arr,
                      amrex::Array4<amrex::Real const> const& ez_arr,
                      amrex::Array4<amrex::Real const> const& bx_arr,
                      amrex::Array4<amrex::Real const> const& by_arr,
@@ -297,16 +297,16 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const int nox)
 {
     if (nox == 1) {
-        doGatherShapeN<1,0>(xp, yp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+        doGatherShapeN<1,0>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                             dx_arr, xyzmin_arr, lo);
     } else if (nox == 2) {
-        doGatherShapeN<2,0>(xp, yp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+        doGatherShapeN<2,0>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                             dx_arr, xyzmin_arr, lo);
     } else if (nox == 3) {
-        doGatherShapeN<3,0>(xp, yp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+        doGatherShapeN<3,0>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                             dx_arr, xyzmin_arr, lo);
     }
 }
