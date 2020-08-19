@@ -147,3 +147,10 @@ Fields::ShiftSlices (int lev)
     std::swap(m_slices[lev][2], m_slices[lev][3]);
     std::swap(m_slices[lev][1], m_slices[lev][2]);
 }
+
+amrex::MultiFab
+Fields::getF (int lev, int icomp )
+{
+    amrex::MultiFab F_comp(m_F[lev], amrex::make_alias, icomp, 1);
+    return F_comp;
+}
