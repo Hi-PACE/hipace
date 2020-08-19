@@ -17,17 +17,16 @@
 /**
  * \brief Field gather for a single particle
  *
+ * \tparam depos_order_xy Order of the transverse shape factor for the deposition
+ * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
  * \param xp, yp, zp                : Particle position coordinates
  * \param ExmByp, EypBxp, Ezp             : Electric field on particles.
  * \param Bxp, Byp, Bzp             : Magnetic field on particles.
- * \param exmby_arr eypbx_arr ez_arr      : Array4 of the electric field, either full array or tile.
- * \param bx_arr by_arr bz_arr      : Array4 of the magnetic field, either full array or tile.
- * \param ex_type, ey_type, ez_type : IndexType of the electric field
- * \param bx_type, by_type, bz_type : IndexType of the magnetic field
+ * \param exmby_arr, eypbx_arr, ez_arr      : Array4 of the electric field, either full array or tile.
+ * \param bx_arr, by_arr, bz_arr      : Array4 of the magnetic field, either full array or tile.
  * \param dx                        : 3D cell spacing
  * \param xyzmin                    : Physical lower bounds of domain in x, y, z.
  * \param lo                        : Index lower bounds of domain.
- * \param n_rz_azimuthal_modes      : Number of azimuthal modes when using RZ geometry
  */
 template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -80,21 +79,12 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     amrex::Real sz_cell[depos_order_z + 1];
     const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
 
-    // std::cout << "l_cell " << l_cell << "\n";
-    // std::cout << "lo.z " << lo.z << "\n";
-    // std::cout << "lo.x " << lo.x << "\n";
-    // std::cout << "lo.y " << lo.y << "\n";
-    // std::cout << "depos_order_z " << depos_order_z << "\n";
-    // std::cout << "depos_order_xy " << depos_order_xy << "\n";
-
     // Gather field on particle ExmByp from field on grid exmby_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 ExmByp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
                     exmby_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
-                    // std::cout << "lo.z+l_cell+iz " << lo.z+l_cell+iz << "\n";
-
             }
         }
     }
@@ -153,14 +143,14 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \param xp, yp, zp                : Particle position coordinates
  * \param ExmByp, EypBxp, Ezp             : Electric field on particles.
  * \param Bxp, Byp, Bzp             : Magnetic field on particles.
- * \param exmby_arr eypbx_arr ez_arr      : Array4 of the electric field, either full array or tile.
- * \param bx_arr by_arr bz_arr      : Array4 of the magnetic field, either full array or tile.
- * \param ex_type, ey_type, ez_type : IndexType of the electric field
- * \param bx_type, by_type, bz_type : IndexType of the magnetic field
+ * \param exmby_arr, eypbx_arr, ez_arr      : Array4 of the electric field, either full array or tile.
+ * \param bx_arr, by_arr, bz_arr      : Array4 of the magnetic field, either full array or tile.
  * \param dx                        : 3D cell spacing
  * \param xyzmin                    : Physical lower bounds of domain in x, y, z.
  * \param lo                        : Index lower bounds of domain.
- * \param nox                       : order of the particle shape function
+ * \param depos_order_xy            : Order of the transverse shape factor for the deposition
+ * \param depos_order_z             : Order of the longitudinal shape factor for the deposition
+
 
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -179,8 +169,8 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      amrex::Array4<amrex::Real const> const& bx_arr,
                      amrex::Array4<amrex::Real const> const& by_arr,
                      amrex::Array4<amrex::Real const> const& bz_arr,
-                     const amrex::GpuArray<amrex::Real, 3>& dx_arr,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin_arr,
+                     const amrex::GpuArray<amrex::Real, 3>& dx,
+                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
                      const amrex::Dim3& lo,
                      const int depos_order_xy,
                      const int depos_order_z)
@@ -188,15 +178,19 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     if (depos_order_xy == 2 && depos_order_z == 0) {
         doGatherShapeN<2,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx_arr, xyzmin_arr, lo);
+                            dx, xyzmin, lo);
     } else if (depos_order_xy == 1 && depos_order_z == 0)  {
         doGatherShapeN<1,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx_arr, xyzmin_arr, lo);
+                            dx, xyzmin, lo);
+    } else if (depos_order_xy == 0 && depos_order_z == 0)  {
+        doGatherShapeN<0,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                            dx, xyzmin, lo);
     } else if (depos_order_xy == 3 && depos_order_z == 0)  {
         doGatherShapeN<3,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx_arr, xyzmin_arr, lo);
+                            dx, xyzmin, lo);
     }
 }
 

@@ -24,7 +24,9 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
         // Extract properties associated with the extent of the current box
-        amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
+        // Grow to capture the extent of the particle shape
+        amrex::Box tilebox = pti.tilebox().grow(
+            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
@@ -73,11 +75,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                               exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                               dx_arr, xyzmin_arr, lo, Hipace::m_depos_order_xy, 0);
-
-              if (abs(pos_structs[ip].pos(0)) < 0.63 &&  abs(pos_structs[ip].pos(1)) < 5 )
-              {
-                std::cout <<"x pos " << pos_structs[ip].pos(0) <<  " y pos " << pos_structs[ip].pos(1) <<  " Bx: " << Bxp << " By: " << Byp  <<"\n";
-              }
 
               // insert update force terms for a single particle
 
