@@ -11,8 +11,17 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
                                          "ppc is only specified in transverse directions for plasma particles, it is 1 in the longitudinal direction z. Hence, in 3D, plasma.ppc should only contain 2 values");
         for (int i=0; i<AMREX_SPACEDIM-1; i++) m_ppc[i] = tmp_vector[i];
     }
-    pp.query("uz_mean", m_uz_mean);
-    pp.query("u_std", m_u_std);
+    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+    if (pp.query("u_mean", loc_array)) {
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_mean[idim] = loc_array[idim];
+        }
+    }
+    if (pp.query("u_std", loc_array)) {
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_std[idim] = loc_array[idim];
+        }
+    }
 }
 
 void
@@ -30,5 +39,5 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     particleBox.setHi(dir, hi);
     particleBox.setLo(dir, lo);
 
-    InitParticles(m_ppc,m_u_std, m_uz_mean, m_density, geom, particleBox);
+    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, geom, particleBox);
 }

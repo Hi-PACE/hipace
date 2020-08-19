@@ -429,6 +429,7 @@ Hipace::WriteDiagnostics (int step)
         amrex::Vector<int> int_flags(PlasmaIdx::nattribs, 1);
         amrex::Vector<std::string> real_names {
             "w","ux","uy", "psi",
+            "x_temp", "y_temp", "w_temp", "ux_temp", "uy_temp", "psi_temp",
             "Fx1", "Fx2", "Fx3", "Fx4", "Fx5",
             "Fy1", "Fy2", "Fy3", "Fy4", "Fy5",
             "Fux1", "Fux2", "Fux3", "Fux4", "Fux5",

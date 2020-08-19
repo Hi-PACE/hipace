@@ -1,6 +1,6 @@
 name: linux
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
 # enable again when we open-source (free core-hours for GH Actions)
