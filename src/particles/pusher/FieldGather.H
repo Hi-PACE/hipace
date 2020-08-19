@@ -8,25 +8,33 @@
 #ifndef FIELDGATHER_H_
 #define FIELDGATHER_H_
 
-// #include "Particles/Pusher/GetAndSetPosition.H"
-#include "../ShapeFactors.H"
-// #include "Utils/WarpX_Complex.H"
+#include "src/particles/ShapeFactors.H"
 
 #include <AMReX.H>
 
 /**
  * \brief Field gather for a single particle
  *
- * \tparam depos_order_xy Order of the transverse shape factor for the deposition
- * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
- * \param xp, yp, zp                : Particle position coordinates
- * \param ExmByp, EypBxp, Ezp             : Electric field on particles.
- * \param Bxp, Byp, Bzp             : Magnetic field on particles.
- * \param exmby_arr, eypbx_arr, ez_arr      : Array4 of the electric field, either full array or tile.
- * \param bx_arr, by_arr, bz_arr      : Array4 of the magnetic field, either full array or tile.
- * \param dx                        : 3D cell spacing
- * \param xyzmin                    : Physical lower bounds of domain in x, y, z.
- * \param lo                        : Index lower bounds of domain.
+ * \tparam depos_order_xy Order of the transverse shape factor for the field gather
+ * \tparam depos_order_z Order of the longitudinal shape factor for the field gather
+ * \param[in] xp Particle position x
+ * \param[in] yp Particle position y
+ * \param[in] zp Particle position z
+ * \param[in,out] ExmByp Field on particle: Ex - c*By
+ * \param[in,out] EypBxp Field on particle: Ey + c*Bx
+ * \param[in,out] Ezp Field on particle: Ez
+ * \param[in,out] Bxp Magnetic field on particles: Bx
+ * \param[in,out] Byp Magnetic field on particles: By
+ * \param[in,out] Bzp Magnetic field on particles: Bz
+ * \param[in] exmby_arr field array for field Ex - c*By
+ * \param[in] eypbx_arr field array for field  Ey + c*Bx
+ * \param[in] ez_arr field array for field  Ez
+ * \param[in] bx_arr field array for field  Bx
+ * \param[in] by_arr field array for field  By
+ * \param[in] bz_arr field array for field  Bz
+ * \param[in] dx 3D cell spacing
+ * \param[in] xyzmin Physical lower bounds of domain in x, y, z
+ * \param[in] lo Index lower bounds of domain
  */
 template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -106,12 +114,12 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             }
         }
     }
-    // Gather field on particle Bzp from field on grid bz_arr
+    // Gather field on particle Bxp from field on grid bx_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                Bzp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    bz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                Bxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
+                    bx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
             }
         }
     }
@@ -124,12 +132,12 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             }
         }
     }
-    // Gather field on particle Bxp from field on grid bx_arr
+    // Gather field on particle Bzp from field on grid bz_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                Bxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    bx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                Bzp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
+                    bz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
             }
         }
     }
@@ -175,16 +183,16 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const int depos_order_xy,
                      const int depos_order_z)
 {
-    if (depos_order_xy == 2 && depos_order_z == 0) {
-        doGatherShapeN<2,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+    if (depos_order_xy == 0 && depos_order_z == 0) {
+        doGatherShapeN<0,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                             dx, xyzmin, lo);
     } else if (depos_order_xy == 1 && depos_order_z == 0)  {
         doGatherShapeN<1,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                             dx, xyzmin, lo);
-    } else if (depos_order_xy == 0 && depos_order_z == 0)  {
-        doGatherShapeN<0,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+    } else if (depos_order_xy == 2 && depos_order_z == 0)  {
+        doGatherShapeN<2,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                             dx, xyzmin, lo);
     } else if (depos_order_xy == 3 && depos_order_z == 0)  {

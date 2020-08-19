@@ -18,8 +18,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
-    // const PhysConst phys_const = get_phys_const();
-
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
@@ -33,20 +31,20 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Dim3 const lo = amrex::lbound(tilebox);
 
         // Extract the fields
-        amrex::MultiFab& S = fields.getSlices(lev, 1);
-        amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
-        amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
-        amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);
-        amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, 1);
-        amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
-        amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
+        const amrex::MultiFab& S = fields.getSlices(lev, 1);
+        const amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
+        const amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
+        const amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);
+        const amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, 1);
+        const amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
+        const amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
         // Extract FabArray for this box
-        amrex::FArrayBox& exmby_fab = exmby[pti];
-        amrex::FArrayBox& eypbx_fab = eypbx[pti];
-        amrex::FArrayBox& ez_fab = ez[pti];
-        amrex::FArrayBox& bx_fab = bx[pti];
-        amrex::FArrayBox& by_fab = by[pti];
-        amrex::FArrayBox& bz_fab = bz[pti];
+        const amrex::FArrayBox& exmby_fab = exmby[pti];
+        const amrex::FArrayBox& eypbx_fab = eypbx[pti];
+        const amrex::FArrayBox& ez_fab = ez[pti];
+        const amrex::FArrayBox& bx_fab = bx[pti];
+        const amrex::FArrayBox& by_fab = by[pti];
+        const amrex::FArrayBox& bz_fab = bz[pti];
         // Extract field array from FabArray
         amrex::Array4<const amrex::Real> const& exmby_arr = exmby_fab.array();
         amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx_fab.array();
@@ -55,8 +53,8 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
 
-        amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-        amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+        const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+        const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 
         const auto& aos = pti.GetArrayOfStructs(); // For positions
         const auto& pos_structs = aos.begin();
