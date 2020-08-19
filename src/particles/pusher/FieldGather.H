@@ -168,7 +168,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] lo Index lower bounds of domain
  * \param[in] depos_order_xy Order of the transverse shape factor for the field gather
  * \param[in] depos_order_z Order of the longitudinal shape factor for the field gather
- 
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doGatherShapeN (const amrex::ParticleReal xp,
