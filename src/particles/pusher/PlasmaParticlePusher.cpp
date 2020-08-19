@@ -18,7 +18,7 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
-    // PhysConst phys_const = get_phys_const();
+    // const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
@@ -32,12 +32,12 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
         // Extract the fields
         amrex::MultiFab& S = fields.getSlices(lev, 1);
-        amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, S.nGrow());
-        amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, S.nGrow());
-        amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, S.nGrow());
-        amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, S.nGrow());
-        amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, S.nGrow());
-        amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, S.nGrow());
+        amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
+        amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
+        amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);
+        amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, 1);
+        amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
+        amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
         // Extract FabArray for this box
         amrex::FArrayBox& exmby_fab = exmby[pti];
         amrex::FArrayBox& eypbx_fab = eypbx[pti];
@@ -69,14 +69,14 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
               amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
               // field gather for a single particle
-              doGatherShapeN (pos_structs[ip].pos(0), pos_structs[ip].pos(1),
+              doGatherShapeN(pos_structs[ip].pos(0), pos_structs[ip].pos(1), xyzmin[2],
                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                               exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                              dx_arr, xyzmin_arr, lo, 1);
+                              dx_arr, xyzmin_arr, lo, Hipace::m_depos_order_xy, 0);
 
-              if (abs(pos_structs[ip].pos(0)) < 0.63 )
+              if (abs(pos_structs[ip].pos(0)) < 0.63 &&  abs(pos_structs[ip].pos(1)) < 5 )
               {
-                std::cout <<"x pos " << pos_structs[ip].pos(0) <<  " y pos " << pos_structs[ip].pos(1) <<  " Bx: " << Bxp << " By: " << Byp << "\n";
+                std::cout <<"x pos " << pos_structs[ip].pos(0) <<  " y pos " << pos_structs[ip].pos(1) <<  " Bx: " << Bxp << " By: " << Byp  <<"\n";
               }
 
               // insert update force terms for a single particle
@@ -89,68 +89,3 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
       }
 }
-
-// void
-// UpdateForceTerms (PlasmaParticleContainer& plasma, Fields & fields,
-//                 amrex::Geometry const& gm, int const lev)
-// {
-//     BL_PROFILE("DepositCurrent_PlasmaParticleContainer()");
-//     // Extract properties associated with physical size of the box
-//     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
-//
-//     PhysConst phys_const = get_phys_const();
-//
-//     // Loop over particle boxes
-//     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
-//     {
-//         // Extract properties associated with the extent of the current box
-//         amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
-//
-//         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
-//         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-//         amrex::Dim3 const lo = amrex::lbound(tilebox);
-//
-//         // Extract the fields currents
-//         // amrex::MultiFab& S = fields.getSlices(lev, 1);
-//         // amrex::MultiFab jx(S, amrex::make_alias, FieldComps::jx, S.nGrow());
-//         // amrex::MultiFab jy(S, amrex::make_alias, FieldComps::jy, S.nGrow());
-//         // amrex::MultiFab jz(S, amrex::make_alias, FieldComps::jz, S.nGrow());
-//         // // Extract FabArray for this box
-//         // amrex::FArrayBox& jx_fab = jx[pti];
-//         // amrex::FArrayBox& jy_fab = jy[pti];
-//         // amrex::FArrayBox& jz_fab = jz[pti];
-//       }
-// }
-
-
-// void
-// PlasmaParticlePusher (PlasmaParticleContainer& plasma, //Fields & fields,
-//                 amrex::Geometry const& gm, int const lev)
-// {
-//     BL_PROFILE("DepositCurrent_PlasmaParticleContainer()");
-//     // Extract properties associated with physical size of the box
-//     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
-//
-//     PhysConst phys_const = get_phys_const();
-//
-//     // Loop over particle boxes
-//     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
-//     {
-//         // Extract properties associated with the extent of the current box
-//         amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
-//
-//         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
-//         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-//         amrex::Dim3 const lo = amrex::lbound(tilebox);
-//
-//         // // Extract the fields currents
-//         // amrex::MultiFab& S = fields.getSlices(lev, 1);
-//         // amrex::MultiFab jx(S, amrex::make_alias, FieldComps::jx, S.nGrow());
-//         // amrex::MultiFab jy(S, amrex::make_alias, FieldComps::jy, S.nGrow());
-//         // amrex::MultiFab jz(S, amrex::make_alias, FieldComps::jz, S.nGrow());
-//         // // Extract FabArray for this box
-//         // amrex::FArrayBox& jx_fab = jx[pti];
-//         // amrex::FArrayBox& jy_fab = jy[pti];
-//         // amrex::FArrayBox& jz_fab = jz[pti];
-//       }
-// }
