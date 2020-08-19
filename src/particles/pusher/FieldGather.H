@@ -8,7 +8,7 @@
 #ifndef FIELDGATHER_H_
 #define FIELDGATHER_H_
 
-#include "src/particles/ShapeFactors.H"
+#include "particles/ShapeFactors.H"
 
 #include <AMReX.H>
 
