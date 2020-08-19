@@ -192,7 +192,7 @@ Hipace::Evolve ()
         amrex::Print()<<"step "<< step <<"\n";
 
         /* ---------- Depose current from beam particles ---------- */
-        m_fields.getF()[lev].setVal(0.);
+        m_fields.getF(lev).setVal(0.);
         DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
 
         amrex::MultiFab& fields = m_fields.getF()[lev];
