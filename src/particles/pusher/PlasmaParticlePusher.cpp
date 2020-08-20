@@ -95,16 +95,16 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
                 const amrex::Real charge_mass_ratio = -1.0_rt;
 
-                // /* Change for x-position along zeta */
-                // Fx1[ip] = uxp[ip] / psip[ip];
-                // /* Change for y-position along zeta */
-                // Fy1[ip] = -uyp[ip] / psip[ip];
-                // /* Change for ux along zeta */
-                // Fux1[ip] = -charge_mass_ratio * ( gammap * ExmByp / psip[ip] + Byp + ( uyp[ip] * Bzp ) / psip[ip] );
-                // /* Change for uy along zeta */
-                // Fuy1[ip] = -charge_mass_ratio * ( gammap * EypBxp / psip[ip] - Bxp - ( uxp[ip] * Bzp ) / psip[ip] );
-                // /* Change for psi along zeta */
-                // Fpsi1[ip] = -charge_mass_ratio * (( uxp[ip] * ExmByp + uyp[ip] * EypBxp ) / psip[ip] - Ezp );
+                /* Change for x-position along zeta */
+                Fx1[ip] = uxp[ip] / psip[ip];
+                /* Change for y-position along zeta */
+                Fy1[ip] = -uyp[ip] / psip[ip];
+                /* Change for ux along zeta */
+                Fux1[ip] = -charge_mass_ratio * ( gammap * ExmByp / psip[ip] + Byp + ( uyp[ip] * Bzp ) / psip[ip] );
+                /* Change for uy along zeta */
+                Fuy1[ip] = -charge_mass_ratio * ( gammap * EypBxp / psip[ip] - Bxp - ( uxp[ip] * Bzp ) / psip[ip] );
+                /* Change for psi along zeta */
+                Fpsi1[ip] = -charge_mass_ratio * (( uxp[ip] * ExmByp + uyp[ip] * EypBxp ) / psip[ip] - Ezp );
 
                 //insert push a single particle
 
