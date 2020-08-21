@@ -73,18 +73,18 @@ namespace AnyFFT
      * \param[out] complex_array Complex array to/from where R2C/C2R FFT is performed
      * \param[in] dir direction, either R2C or C2R
      */
-    FFTplan CreatePlan(const amrex::IntVect& real_size, amrex::Real * const real_array,
-                       Complex * const complex_array, const direction dir);
+    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
+                        Complex * const complex_array, const direction dir);
 
     /** \brief Destroy library FFT plan.
      * \param[out] fft_plan plan to destroy
      */
-    void DestroyPlan(FFTplan& fft_plan);
+    void DestroyPlan (FFTplan& fft_plan);
 
     /** \brief Perform FFT with backend library.
      * \param[out] fft_plan plan for which the FFT is performed
      */
-    void Execute(FFTplan& fft_plan);
+    void Execute (FFTplan& fft_plan);
 }
 
 #endif // ANYFFT_H_

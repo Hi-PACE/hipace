@@ -13,8 +13,8 @@ namespace AnyFFT
 
     std::string cufftErrorToString (const cufftResult& err);
 
-    FFTplan CreatePlan(const amrex::IntVect& real_size, amrex::Real * const real_array,
-                       Complex * const complex_array, const direction dir)
+    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
+                        Complex * const complex_array, const direction dir)
     {
         FFTplan fft_plan;
 
@@ -41,12 +41,12 @@ namespace AnyFFT
         return fft_plan;
     }
 
-    void DestroyPlan(FFTplan& fft_plan)
+    void DestroyPlan (FFTplan& fft_plan)
     {
         cufftDestroy( fft_plan.m_plan );
     }
 
-    void Execute(FFTplan& fft_plan){
+    void Execute (FFTplan& fft_plan){
         BL_PROFILE("Execute_FFTplan()");
         // make sure that this is done on the same GPU stream as the above copy
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();

@@ -1,4 +1,15 @@
 {
+  "beam": {
+    "particle_cpu": 0.0,
+    "particle_id": 220780.0,
+    "particle_position_x": 283.984375,
+    "particle_position_y": 283.984375,
+    "particle_position_z": 664.0,
+    "particle_ux": 0.0,
+    "particle_uy": 0.0,
+    "particle_uz": 664000.0,
+    "particle_w": 41.5
+  },
   "lev=0": {
     "Bx": 3348.970522932977,
     "By": 3348.9705229329807,
