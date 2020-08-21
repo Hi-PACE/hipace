@@ -2,7 +2,25 @@
 #define UPDATEFORCETERMS_H_
 
 
-/* TO DO: INLINE FUNCTION TO UPDATE THE FORCE TERMS OF A SINGLE PARTICLE */
+
+/** \brief updating the force terms on a single plasma particle
+ *
+ * \param[in] uxp momentum in x direction
+ * \param[in] uyp momentum in y direction
+ * \param[in] psip plasma pseudo-potential
+ * \param[in] ExmByp ExmBy field at particle position
+ * \param[in] EypBxp EypBx field at particle position
+ * \param[in] Ezp Ez field at particle position
+ * \param[in] Bxp Bx field at particle position
+ * \param[in] Byp By field at particle position
+ * \param[in] Bzp Bz field at particle position
+ * \param[in,out] Fx1 force term acting on x position of the particle
+ * \param[in,out] Fy1 force term acting on y position of the particle
+ * \param[in,out] Fux1 force term acting on x momentum of the particle
+ * \param[in,out] Fuy1 force term acting on y momentum of the particle
+ * \param[in,out] Fpsi1 force term acting on the plasma pseudo-potential of the particle
+ * \param[in] clightsq 1/c0^2
+ */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void UpdateForceTerms(const amrex::ParticleReal& uxp,
                       const amrex::ParticleReal& uyp,
