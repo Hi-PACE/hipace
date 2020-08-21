@@ -30,6 +30,7 @@ class PlasmaParticleContainer
     : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs>
 {
 public:
+    /** Constructor */
     explicit PlasmaParticleContainer (amrex::AmrCore* amr_core);
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
@@ -56,6 +57,7 @@ class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs>
 {
 public:
     using amrex::ParIter<0,0,PlasmaIdx::nattribs>::ParIter;
+    /** Constructor */
     PlasmaParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
 };
 

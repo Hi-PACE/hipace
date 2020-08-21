@@ -17,8 +17,10 @@ public:
      * and initialize longitudinal and transverse MPI communicators */
     Hipace ();
 
+    /** Destructor */
     ~Hipace ();
 
+    /** Get singleton instance */
     static Hipace& GetInstance ();
 
     /** Virtual functions need to be defined for pure virtual class AmrCore */
@@ -26,19 +28,32 @@ public:
         int lev, amrex::Real time, const amrex::BoxArray& ba,
         const amrex::DistributionMapping& dm) override;
 
+    /** Tag cells for refinement */
     void ErrorEst (
-                   int /*lev*/, amrex::TagBoxArray& /*tags*/, amrex::Real /*time*/, int /*ngrow*/) override {}
+                   int /*lev*/, amrex::TagBoxArray& /*tags*/,
+                   amrex::Real /*time*/, int /*ngrow*/) override {}
 
+    /** Make a new level using provided BoxArray and DistributionMapping and
+     * fill with interpolated coarse level data */
     void MakeNewLevelFromCoarse (
                                  int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
                                  const amrex::DistributionMapping& /*dm*/) override {}
 
+    /** Remake an existing level using provided BoxArray and DistributionMapping and fill
+     * with existing fine and coarse data */
     void RemakeLevel (
                       int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
                       const amrex::DistributionMapping& /*dm*/) override {}
 
+    /** Delete level data */
     void ClearLevel (int /*lev*/) override {}
 
+    /**\brief Apply some user-defined changes the to base grids.
+     *
+     * This function is only called by MakeNewGrids after computing a box array for
+     * the coarsest level and before calling MakeNewLevelFromScratch.
+     * For example, use this function if you want to remove covered grids on
+     * the coarsest refinement level. */
     void PostProcessBaseGrids (amrex::BoxArray& ba0) const override;
 
     /** Init AmrCore and allocate beam and plasma containers */
