@@ -83,7 +83,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         "jx, jy, jz, and rho must be nodal in all directions."
         );
 
-    // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho
+    // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
         pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
