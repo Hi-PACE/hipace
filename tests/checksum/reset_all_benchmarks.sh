@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 # This file is part of the Hipace test suite.
 # It resets all checksum benchmarks one by one,
 # based on the current version of the code.
@@ -28,7 +30,8 @@ make -j 4
 
 # can_beam.Serial
 cd $build_dir
-ctest --output-on-failure -R can_beam.Serial
+ctest --output-on-failure -R can_beam.Serial \
+    || echo "ctest command failed, maybe just because checksums are different. Keep going"
 cd $checksum_dir
 ./checksumAPI.py --reset-benchmark \
                  --plotfile ${build_dir}/bin/plt00001 \
@@ -36,7 +39,8 @@ cd $checksum_dir
 
 # beam_in_vacuum.SI.Serial
 cd $build_dir
-ctest --output-on-failure -R beam_in_vacuum.SI.Serial
+ctest --output-on-failure -R beam_in_vacuum.SI.Serial \
+    || echo "ctest command failed, maybe just because checksums are different. Keep going"
 cd $checksum_dir
 ./checksumAPI.py --reset-benchmark \
                  --plotfile ${build_dir}/bin/plt00001 \
@@ -44,7 +48,8 @@ cd $checksum_dir
 
 # beam_in_vacuum.normalized.Serial
 cd $build_dir
-ctest --output-on-failure -R beam_in_vacuum.normalized.Serial
+ctest --output-on-failure -R beam_in_vacuum.normalized.Serial \
+    || echo "ctest command failed, maybe just because checksums are different. Keep going"
 cd $checksum_dir
 ./checksumAPI.py --reset-benchmark \
                  --plotfile ${build_dir}/bin/plt00001 \
@@ -61,7 +66,8 @@ make -j 4
 
 # can_beam.1Rank
 cd $build_dir
-ctest --output-on-failure -R can_beam.1Rank
+ctest --output-on-failure -R can_beam.1Rank \
+    || echo "ctest command failed, maybe just because checksums are different. Keep going"
 cd $checksum_dir
 ./checksumAPI.py --reset-benchmark \
                  --plotfile ${build_dir}/bin/plt00001 \
@@ -69,7 +75,8 @@ cd $checksum_dir
 
 # can_beam.2Rank
 cd $build_dir
-ctest --output-on-failure -R can_beam.2Rank
+ctest --output-on-failure -R can_beam.2Rank \
+    || echo "ctest command failed, maybe just because checksums are different. Keep going"
 cd $checksum_dir
 ./checksumAPI.py --reset-benchmark \
                  --plotfile ${build_dir}/bin/plt00001 \
