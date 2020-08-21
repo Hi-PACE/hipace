@@ -9,7 +9,7 @@
 #include <AMReX_REAL.H>
 
 /** \brief Loop over plasma particles in iterator (=box) pti and deposit their current
- * into jx_fab, jy_fab and jz_fab.
+ * into jx_fab, jy_fab and jz_fab and their density to rho_fab
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
