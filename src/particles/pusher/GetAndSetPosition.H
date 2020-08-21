@@ -17,7 +17,7 @@
 
 /** \brief Functor that can be used to extract the positions of the macroparticles
  *         inside a ParallelFor kernel
-*/
+ */
 struct GetParticlePosition
 {
     using PType = PlasmaParticleContainer::ParticleType;
@@ -52,7 +52,7 @@ struct GetParticlePosition
 
 /** \brief Functor that can be used to modify the positions of the macroparticles
  *         inside a ParallelFor kernel
-*/
+ */
 struct SetParticlePosition
 {
     using PType = PlasmaParticleContainer::ParticleType;
