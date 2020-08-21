@@ -9,7 +9,7 @@
 #include <AMReX_REAL.H>
 
 /** Loop over beam particles in iterator (=box) pti and deposit their current
- * into jx_fab, jy_fab and jz_fab.
+ * into jx_fab, jy_fab and jz_fab and their charge density to rho_fab
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
@@ -73,7 +73,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         "jx, jy and jz must be nodal in all directions."
         );
 
-    // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
+    // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
         pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
@@ -108,7 +108,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             amrex::Real sz_cell[depos_order_z + 1];
             const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
 
-            // Deposit current into jx_arr, jy_arr and jz_arr
+            // Deposit current into jx_arr, jy_arr, jz_arr, and rho_arr
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){

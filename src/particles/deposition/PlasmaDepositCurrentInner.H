@@ -17,7 +17,7 @@
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to pti
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
- * \param[in,out] rho_fab array of current density rho, on the box corresponding to pti
+ * \param[in,out] rho_fab array of charge density rho, on the box corresponding to pti
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
