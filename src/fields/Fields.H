@@ -50,7 +50,7 @@ public:
     amrex::MultiFab& getF (int lev) { return m_F[lev]; }
     /** get function for the main 3D array F
      * \param lev MR level
-     * \param lev icomp component of the field */
+     * \param icomp component of the field */
     amrex::MultiFab getF (int lev, int icomp );
 
     /** get function for the 2D slices */
