@@ -17,9 +17,6 @@
 
 /** \brief Functor that can be used to extract the positions of the macroparticles
  *         inside a ParallelFor kernel
- *
- * \param a_pti iterator to the tile containing the macroparticles
- * \param a_offset offset to apply to the particle indices
 */
 struct GetParticlePosition
 {
@@ -28,8 +25,13 @@ struct GetParticlePosition
 
     const PType* AMREX_RESTRICT m_structs;
 
+    /** Default constructor */
     GetParticlePosition () = default;
 
+    /** Constructor.
+     * \param a_pti iterator to the tile containing the macroparticles
+     * \param a_offset offset to apply to the particle indices
+     */
     GetParticlePosition (const PlasmaParticleIterator& a_pti, int a_offset = 0) noexcept
     {
         const auto& aos = a_pti.GetArrayOfStructs();
