@@ -152,3 +152,5 @@ The last line would work on MacOS. On another platform, open the html file with 
 - Classes use CamelCase
 - Objects use snake_case
 - Lines should not have >100 characters
+- The declaration and definition of a function should have a space between the function name and the first bracket (`my_function (...)`), function calls should not (`my_function(...)`).
+  This is a convention introduce in AMReX so `git grep "my_function ("` returns only the declaration and definition, not the many function calls.

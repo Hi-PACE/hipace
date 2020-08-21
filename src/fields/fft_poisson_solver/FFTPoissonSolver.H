@@ -36,7 +36,7 @@ public:
      * \param[in] dm DistributionMapping for the BoxArray.
      * \param[in] gm Geometry, contains the box dimensions.
      */
-    void define  (amrex::BoxArray const& realspace_ba,
+    void define ( amrex::BoxArray const& realspace_ba,
                   amrex::DistributionMapping const& dm,
                   amrex::Geometry const& gm);
 
@@ -48,7 +48,7 @@ public:
     void SolvePoissonEquation (amrex::MultiFab& lhs_mf);
 
     /** Get reference to the taging area */
-    amrex::MultiFab& StagingArea() {return m_stagingArea;}
+    amrex::MultiFab& StagingArea () {return m_stagingArea;}
 private:
     /** BoxArray for the spectral fields */
     amrex::BoxArray m_spectralspace_ba;

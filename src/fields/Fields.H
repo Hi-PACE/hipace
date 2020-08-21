@@ -32,6 +32,7 @@ private:
     static constexpr int m_nslices = 4;
 
 public:
+    /** Constructor */
     explicit Fields (Hipace const* a_hipace);
 
     /** Allocate MultiFabs for the 3D array and the 2D slices

@@ -20,6 +20,7 @@ class BeamParticleContainer
     : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
 {
 public:
+    /** Constructor */
     explicit BeamParticleContainer (amrex::AmrCore* amr_core) :
         amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB())
     {
@@ -59,6 +60,7 @@ class BeamParticleIterator : public amrex::ParIter<0,0,BeamIdx::nattribs>
 {
 public:
     using amrex::ParIter<0,0,BeamIdx::nattribs>::ParIter;
+    /** Constructor */
     BeamParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
 };
 

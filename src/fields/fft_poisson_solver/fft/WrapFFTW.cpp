@@ -14,8 +14,8 @@ namespace AnyFFT
     const auto VendorCreatePlanC2R2D = fftw_plan_dft_c2r_2d;
 #endif
 
-    FFTplan CreatePlan(const amrex::IntVect& real_size, amrex::Real * const real_array,
-                       Complex * const complex_array, const direction dir)
+    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
+                        Complex * const complex_array, const direction dir)
     {
         FFTplan fft_plan;
 
@@ -37,7 +37,7 @@ namespace AnyFFT
         return fft_plan;
     }
 
-    void DestroyPlan(FFTplan& fft_plan)
+    void DestroyPlan (FFTplan& fft_plan)
     {
 #  ifdef AMREX_USE_FLOAT
         fftwf_destroy_plan( fft_plan.m_plan );
@@ -46,7 +46,7 @@ namespace AnyFFT
 #  endif
     }
 
-    void Execute(FFTplan& fft_plan){
+    void Execute (FFTplan& fft_plan){
         BL_PROFILE("Execute_FFTplan()");
 #  ifdef AMREX_USE_FLOAT
         fftwf_execute( fft_plan.m_plan );
