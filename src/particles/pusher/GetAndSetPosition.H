@@ -38,9 +38,12 @@ struct GetParticlePosition
         m_structs = aos().dataPtr() + a_offset;
     }
 
-    /** \brief Extract the cartesian position coordinates of the particle
-     *         located at index `i + a_offset` and store them in the variables
-     *         `x`, `y`, `z` */
+    /** \brief Get the position of the particle at index `i + a_offset`
+     * \param i index of the particle
+     * \param x x position of the particle
+     * \param y y position of the particlev
+     * \param z z position of the particle
+     */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (const int i, RType& x, RType& y, RType& z) const noexcept
     {
@@ -71,7 +74,11 @@ struct SetParticlePosition
     }
 
     /** \brief Set the position of the particle at index `i + a_offset`
-     *         to `x`, `y`, `z` */
+     * \param i index of the particle
+     * \param x x position of the particle
+     * \param y y position of the particlev
+     * \param z z position of the particle
+     */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (const int i, RType x, RType y, RType z) const noexcept
     {
