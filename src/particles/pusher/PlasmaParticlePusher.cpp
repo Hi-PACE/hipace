@@ -60,21 +60,21 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
         // loading the data
-        amrex::Real * uxp = soa.GetRealData(PlasmaIdx::ux).data();
-        amrex::Real * uyp = soa.GetRealData(PlasmaIdx::uy).data();
-        amrex::Real * psip = soa.GetRealData(PlasmaIdx::psi).data();
+        amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
+        amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
+        amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
 
-        amrex::Real * Fx1 = soa.GetRealData(PlasmaIdx::Fx1).data();
-        amrex::Real * Fy1 = soa.GetRealData(PlasmaIdx::Fy1).data();
-        amrex::Real * Fux1 = soa.GetRealData(PlasmaIdx::Fux1).data();
-        amrex::Real * Fuy1 = soa.GetRealData(PlasmaIdx::Fuy1).data();
-        amrex::Real * Fpsi1 = soa.GetRealData(PlasmaIdx::Fpsi1).data();
+        amrex::Real * const Fx1 = soa.GetRealData(PlasmaIdx::Fx1).data();
+        amrex::Real * const Fy1 = soa.GetRealData(PlasmaIdx::Fy1).data();
+        amrex::Real * const Fux1 = soa.GetRealData(PlasmaIdx::Fux1).data();
+        amrex::Real * const Fuy1 = soa.GetRealData(PlasmaIdx::Fuy1).data();
+        amrex::Real * const Fpsi1 = soa.GetRealData(PlasmaIdx::Fpsi1).data();
 
         const int depos_order_xy = Hipace::m_depos_order_xy;
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
         const auto getPosition = GetParticlePosition(pti);
-        amrex::Real zmin = xyzmin[2];
+        const amrex::Real zmin = xyzmin[2];
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {

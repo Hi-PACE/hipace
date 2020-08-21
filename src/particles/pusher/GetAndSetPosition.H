@@ -38,11 +38,11 @@ struct GetParticlePosition
         m_structs = aos().dataPtr() + a_offset;
     }
 
-    /** \brief Get the position of the particle at index `i + a_offset`
-     * \param i index of the particle
-     * \param x x position of the particle
-     * \param y y position of the particlev
-     * \param z z position of the particle
+    /** \brief Get the position of the particle at index `i + a_offset`, and put it in x, y and z
+     * \param[in] i index of the particle
+     * \param[in,out] x x position of particle i, modified by this function
+     * \param[in,out] y y position of particle i, modified by this function
+     * \param[in,out] z z position of particle i, modified by this function
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (const int i, RType& x, RType& y, RType& z) const noexcept
@@ -73,11 +73,11 @@ struct SetParticlePosition
         m_structs = aos().dataPtr() + a_offset;
     }
 
-    /** \brief Set the position of the particle at index `i + a_offset`
-     * \param i index of the particle
-     * \param x x position of the particle
-     * \param y y position of the particlev
-     * \param z z position of the particle
+    /** \brief Set the position of the particle at index `i + a_offset` from values in x, y and z
+     * \param[in] i index of the particle
+     * \param[in] x new x position of particle i
+     * \param[in] y new x position of particle i
+     * \param[in] z new x position of particle i
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (const int i, RType x, RType y, RType z) const noexcept
