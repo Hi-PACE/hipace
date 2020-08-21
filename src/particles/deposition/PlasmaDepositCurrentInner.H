@@ -100,12 +100,12 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
            const amrex::Real vz = (1._rt - psip[ip]*gaminv) * phys_const.c;
 
            // calculate charge of the plasma particles
-           const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip]);
+           const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip])*invvol;
 
            // wqx, wqy wqz are particle current in each direction
-           const amrex::Real wqx = wq*invvol*vx;
-           const amrex::Real wqy = wq*invvol*vy;
-           const amrex::Real wqz = wq*invvol*vz;
+           const amrex::Real wqx = wq*vx;
+           const amrex::Real wqy = wq*vy;
+           const amrex::Real wqz = wq*vz;
 
             // --- Compute shape factors
             // x direction
