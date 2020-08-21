@@ -18,7 +18,7 @@ set -e
 if [ "$#" -ne 1 ]
 then
     all_tests=true
-    one_test_name="none"
+    one_test_name="no"
 else
     all_tests=false
     one_test_name=$1
@@ -27,14 +27,19 @@ fi
 # Depending on the user input, recompile serial and/or parallel
 compile_serial=false
 compile_parallel=false
-if [[ $one_test_name == *"Serial"* ]] || [[ all_tests = true ]]
+if [[ $one_test_name == *"Serial" ]] || [[ $all_tests = true ]]
 then
     compile_serial=true
 fi
-if [[ $one_test_name == *"Rank"* ]] || [[ all_tests = true ]]
+if [[ $one_test_name == *"Rank" ]] || [[ $all_tests = true ]]
 then
     compile_parallel=true
 fi
+
+echo "Run all tests   : $all_tests"
+echo "Run single test : $one_test_name"
+echo "Compile serial  : $compile_serial"
+echo "Compile parallel: $compile_parallel"
 
 hipace_dir=$(echo $(cd ../.. && pwd))
 build_dir=${hipace_dir}/build
