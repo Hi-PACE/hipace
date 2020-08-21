@@ -50,11 +50,8 @@ struct GetParticlePosition
     }
 };
 
-/** \brief Functor that can be used to modify the positions of the macroparticles,
- *         inside a ParallelFor kernel.
- *
- * \param a_pti iterator to the tile being modified
- * \param a_offset offset to apply to the particle indices
+/** \brief Functor that can be used to modify the positions of the macroparticles
+ *         inside a ParallelFor kernel
 */
 struct SetParticlePosition
 {
@@ -63,11 +60,14 @@ struct SetParticlePosition
 
     PType* AMREX_RESTRICT m_structs;
 
+    /** Constructor.
+     * \param a_pti iterator to the tile containing the macroparticles
+     * \param a_offset offset to apply to the particle indices
+     */
     SetParticlePosition (PlasmaParticleIterator& a_pti, int a_offset = 0) noexcept
     {
         auto& aos = a_pti.GetArrayOfStructs();
         m_structs = aos().dataPtr() + a_offset;
-
     }
 
     /** \brief Set the position of the particle at index `i + a_offset`
