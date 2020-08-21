@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 set -e
 
@@ -10,7 +10,7 @@ hipace_dir=$(echo $(cd ../.. && pwd))
 build_dir=${hipace_dir}/build
 checksum_dir=${hipace_dir}/tests/checksum
 
-read -p "This will run \"rm -rf ${build_dir}\" and re-build. If unsure, check the script. proceed? y/n " -n 1 -r
+read -p "This will run \"rm -rf ${build_dir}\" and re-build. If unsure, check the script. proceed? y/n: " -n 1 -r
 echo
 if [[ $REPLY != "y" ]]
 then
