@@ -207,9 +207,6 @@ Hipace::Evolve ()
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
-                m_fields.getF(lev, FieldComps::ExmBy).setVal(1.);
-                m_fields.getF(lev, FieldComps::EypBx).setVal(2.);
-
                 UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev], lev);
                 /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);

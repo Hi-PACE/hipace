@@ -8,14 +8,6 @@
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
 
-
-
-#include "Constants.H"
-#include "particles/ParticleUtil.H"
-#include "Hipace.H"
-
-using namespace amrex;
-
 void
 UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, int const lev)
@@ -65,8 +57,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 
-        // const auto& aos = pti.GetArrayOfStructs(); // For positions
-        // const auto& pos_structs = aos.begin();
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
         // loading the data
@@ -86,10 +76,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const auto getPosition = GetParticlePosition(pti);
         amrex::Real zmin = xyzmin[2];
 
-        auto& particles = plasma.GetParticles(lev);
-        auto& particle_tile = particles[std::make_pair(pti.index(), pti.LocalTileIndex())];
-        auto arrdata = particle_tile.GetStructOfArrays().realarray();
-
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
@@ -107,30 +93,10 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                     dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-                // insert update force terms for a single particle
-                // UpdateForceTerms( uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
-                //                   Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                //                   Fpsi1[ip], clightsq);
-
-                // std::cout << "Fx1 " << Fx1[ip] << " Fy1 " << Fy1[ip] << " Fux1 " << Fux1[ip] << " Fuy1 " << Fuy1[ip] << " Fpsi1 " << Fpsi1[ip] << "\n";
-                //
-                // const amrex::ParticleReal gammap = (1.0_rt + arrdata[PlasmaIdx::ux][ip]uxp[ip]*uxp[ip]*clightsq
-                //                                    + uyp[ip]*uyp[ip]*clightsq
-                //                                    + psip[ip]*psip[ip])/(2.0_rt * psip[ip] );
-                //
-                // const amrex::ParticleReal charge_mass_ratio = -1.0_rt;
-
-                /* Change for x-position along zeta */
-                // arrdata[PlasmaIdx::Fx1      ][ip] = -uxp[ip] / psip[ip];
-                // Fx1[ip] = -uxp[ip] / psip[ip];
-                // // /* Change for y-position along zeta */
-                // Fy1[ip] = -uyp[ip] / psip[ip];
-                // // /* Change for ux along zeta */
-                // Fux1[ip] = -charge_mass_ratio * ( gammap * ExmByp / psip[ip] + Byp + ( uyp[ip] * Bzp ) / psip[ip] );
-                // /* Change for uy along zeta */
-                // Fuy1[ip] = -charge_mass_ratio * ( gammap * EypBxp / psip[ip] - Bxp - ( uxp[ip] * Bzp ) / psip[ip] );
-                // /* Change for psi along zeta */
-                // Fpsi1[ip] = -charge_mass_ratio * (( uxp[ip] * ExmByp + uyp[ip] * EypBxp ) / psip[ip] - Ezp );
+                // update force terms for a single particle
+                UpdateForceTerms( uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
+                                  Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
+                                  Fpsi1[ip], clightsq);
 
                 //insert push a single particle
 
