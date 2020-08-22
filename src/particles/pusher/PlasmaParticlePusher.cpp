@@ -19,20 +19,19 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
 
-    // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    const amrex::MultiFab& S = fields.getSlices(lev, 1);
+    
+    for ( amrex::MFIter mfi(S); mfi.isValid(); ++mfi )
     {
         // Extract properties associated with the extent of the current box
         // Grow to capture the extent of the particle shape
-        amrex::Box tilebox = pti.tilebox().grow(
+        amrex::Box tilebox = mfi.tilebox().grow(
             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
         amrex::Dim3 const lo = amrex::lbound(tilebox);
-
         // Extract the fields
-        const amrex::MultiFab& S = fields.getSlices(lev, 1);
         const amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
         const amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
         const amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);
@@ -40,12 +39,12 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
         const amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
         // Extract FabArray for this box
-        const amrex::FArrayBox& exmby_fab = exmby[pti];
-        const amrex::FArrayBox& eypbx_fab = eypbx[pti];
-        const amrex::FArrayBox& ez_fab = ez[pti];
-        const amrex::FArrayBox& bx_fab = bx[pti];
-        const amrex::FArrayBox& by_fab = by[pti];
-        const amrex::FArrayBox& bz_fab = bz[pti];
+        const amrex::FArrayBox& exmby_fab = exmby[mfi];
+        const amrex::FArrayBox& eypbx_fab = eypbx[mfi];
+        const amrex::FArrayBox& ez_fab = ez[mfi];
+        const amrex::FArrayBox& bx_fab = bx[mfi];
+        const amrex::FArrayBox& by_fab = by[mfi];
+        const amrex::FArrayBox& bz_fab = bz[mfi];
         // Extract field array from FabArray
         amrex::Array4<const amrex::Real> const& exmby_arr = exmby_fab.array();
         amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx_fab.array();
@@ -56,8 +55,9 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
-
-        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        auto& particles = plasma.GetParticles(lev);
+        auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+        auto& soa = particle_tile.GetStructOfArrays();
 
         // loading the data
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
@@ -73,19 +73,17 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const int depos_order_xy = Hipace::m_depos_order_xy;
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
-        const auto getPosition = GetParticlePosition(pti);
         const amrex::Real zmin = xyzmin[2];
 
-        amrex::ParallelFor(pti.numParticles(),
+        PlasmaParticleContainer::ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+        
+        amrex::ParallelFor(particle_tile.GetArrayOfStructs().size(),
             [=] AMREX_GPU_DEVICE (long ip) {
-
-                amrex::ParticleReal xp, yp, zp;
-                getPosition(ip, xp, yp, zp);
-                // define field at particle position reals
+                PlasmaParticleContainer::ParticleType& p = pstruct[ip];
+                amrex::ParticleReal xp = p.pos(0);
+                amrex::ParticleReal yp = p.pos(1);
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
-
-
 
                 // field gather for a single particle
                 doGatherShapeN(xp, yp, zmin,
@@ -99,7 +97,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                   Fpsi1[ip], clightsq);
 
                 //insert push a single particle
-
           }
           );
       }
