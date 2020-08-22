@@ -20,7 +20,7 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
     const PhysConst phys_const = get_phys_const();
 
     const amrex::MultiFab& S = fields.getSlices(lev, 1);
-    
+
     for ( amrex::MFIter mfi(S); mfi.isValid(); ++mfi )
     {
         // Extract properties associated with the extent of the current box
@@ -76,7 +76,7 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real zmin = xyzmin[2];
 
         PlasmaParticleContainer::ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-        
+
         amrex::ParallelFor(particle_tile.GetArrayOfStructs().size(),
             [=] AMREX_GPU_DEVICE (long ip) {
                 PlasmaParticleContainer::ParticleType& p = pstruct[ip];
