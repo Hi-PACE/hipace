@@ -7,12 +7,13 @@
 #include "Constants.H"
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
+#include "HipaceProfilerWrapper.H"
 
 void
 UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, int const lev)
 {
-    BL_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
+    HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
 
     // Extract properties associated with physical size of the box

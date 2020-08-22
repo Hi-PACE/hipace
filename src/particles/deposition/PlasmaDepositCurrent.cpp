@@ -5,12 +5,13 @@
 #include "fields/Fields.H"
 #include "Constants.H"
 #include "Hipace.H"
+#include "HipaceProfilerWrapper.H"
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::Geometry const& gm, int const lev)
 {
-    BL_PROFILE("DepositCurrent_PlasmaParticleContainer()");
+    HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 

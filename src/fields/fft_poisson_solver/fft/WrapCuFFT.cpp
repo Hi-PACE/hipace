@@ -1,4 +1,5 @@
 #include "AnyFFT.H"
+#include "HipaceProfilerWrapper.H"
 
 namespace AnyFFT
 {
@@ -47,7 +48,7 @@ namespace AnyFFT
     }
 
     void Execute (FFTplan& fft_plan){
-        BL_PROFILE("Execute_FFTplan()");
+        HIPACE_PROFILE("Execute_FFTplan()");
         // make sure that this is done on the same GPU stream as the above copy
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
         cufftSetStream ( fft_plan.m_plan, stream);

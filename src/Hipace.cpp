@@ -2,10 +2,10 @@
 #include "particles/deposition/BeamDepositCurrent.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/pusher/PlasmaParticlePusher.H"
+#include "HipaceProfilerWrapper.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
-#include <AMReX_BLProfiler.H>
 
 #ifdef AMREX_USE_MPI
 namespace {
@@ -82,7 +82,7 @@ Hipace::InSameTransverseCommunicator (int rank) const
 void
 Hipace::InitData ()
 {
-    BL_PROFILE("Hipace::InitData()");
+    HIPACE_PROFILE("Hipace::InitData()");
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
@@ -183,7 +183,7 @@ Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
 void
 Hipace::Evolve ()
 {
-    BL_PROFILE("Hipace::Evolve()");
+    HIPACE_PROFILE("Hipace::Evolve()");
     int const lev = 0;
     if (m_do_plot) WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
@@ -238,7 +238,7 @@ Hipace::Evolve ()
 
 void Hipace::SolvePoissonBx (const int lev)
 {
-     BL_PROFILE("Hipace::SolvePoissonBx()");
+     HIPACE_PROFILE("Hipace::SolvePoissonBx()");
     // Left-Hand Side for Poisson equation is By in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Bx, 1);
@@ -263,7 +263,7 @@ void Hipace::SolvePoissonBx (const int lev)
 
 void Hipace::SolvePoissonBy (const int lev)
 {
-     BL_PROFILE("Hipace::SolvePoissonBy()");
+     HIPACE_PROFILE("Hipace::SolvePoissonBy()");
     // Left-Hand Side for Poisson equation is By in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::By, 1);
@@ -290,7 +290,7 @@ void Hipace::SolvePoissonBy (const int lev)
 void
 Hipace::Wait ()
 {
-    BL_PROFILE("Hipace::Wait()");
+    HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
     if (m_rank_z != m_numprocs_z-1) {
         const int lev = 0;
@@ -331,7 +331,7 @@ Hipace::Wait ()
 void
 Hipace::Notify ()
 {
-    BL_PROFILE("Hipace::Notify()");
+    HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
 #ifdef AMREX_USE_MPI
@@ -389,7 +389,7 @@ Hipace::NotifyFinish ()
 void
 Hipace::WriteDiagnostics (int step)
 {
-    BL_PROFILE("Hipace::WriteDiagnostics()");
+    HIPACE_PROFILE("Hipace::WriteDiagnostics()");
     // Write fields
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;

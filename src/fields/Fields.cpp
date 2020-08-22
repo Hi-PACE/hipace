@@ -1,7 +1,6 @@
 #include "Fields.H"
 #include "Hipace.H"
-
-#include <AMReX_BLProfiler.H>
+#include "HipaceProfilerWrapper.H"
 
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
@@ -13,7 +12,7 @@ void
 Fields::AllocData (int lev, const amrex::BoxArray& ba,
                    const amrex::DistributionMapping& dm)
 {
-    BL_PROFILE("Fields::AllocData()");
+    HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_nguards = {nguards_xy, nguards_xy, Hipace::m_depos_order_z};
@@ -73,7 +72,7 @@ void
 Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
                               const amrex::Real dx, const int scomp, const int dcomp)
 {
-    BL_PROFILE("Fields::TransverseDerivative()");
+    HIPACE_PROFILE("Fields::TransverseDerivative()");
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -101,7 +100,7 @@ void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
               int ncomp)
 {
-    BL_PROFILE("Fields::Copy()");
+    HIPACE_PROFILE("Fields::Copy()");
     auto& slice_mf = m_slices[lev][1];  // always slice #1
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
@@ -143,7 +142,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 void
 Fields::ShiftSlices (int lev)
 {
-    BL_PROFILE("Fields::ShiftSlices()");
+    HIPACE_PROFILE("Fields::ShiftSlices()");
     std::swap(m_slices[lev][2], m_slices[lev][3]);
     std::swap(m_slices[lev][1], m_slices[lev][2]);
 }

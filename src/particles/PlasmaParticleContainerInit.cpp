@@ -2,6 +2,7 @@
 #include "Constants.H"
 #include "ParticleUtil.H"
 #include "Hipace.H"
+#include "HipaceProfilerWrapper.H"
 
 using namespace amrex;
 
@@ -14,7 +15,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
                const Geometry& a_geom,
                const RealBox& a_bounds)
 {
-    BL_PROFILE("PlasmaParticleContainer::InitParticles");
+    HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
 
     const int lev = 0;
     const auto dx = a_geom.CellSizeArray();
