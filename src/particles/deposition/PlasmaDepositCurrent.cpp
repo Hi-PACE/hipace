@@ -22,11 +22,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     for ( amrex::MFIter mfi(S); mfi.isValid(); ++mfi )
     {
         // Extract properties associated with the extent of the current box
-        // amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
         // Grow to capture the extent of the particle shape
-        //amrex::Box tilebox = mfi.tilebox().grow(
-        //    {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-        amrex::Box tilebox = mfi.tilebox().grow(2);
+        amrex::Box tilebox = mfi.tilebox().grow(
+            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();

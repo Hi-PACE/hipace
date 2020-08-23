@@ -43,17 +43,8 @@ void doDepositionShapeN (PlasmaParticleContainer& plasma,
     auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
     // Extract particle properties
     auto& soa = particle_tile.GetStructOfArrays();
-    // auto& aos = particle_tile.GetArrayOfStructs(); // For positions
     PlasmaParticleContainer::ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
 
-    // auto& pos_structs = aos.begin();
-    // const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-
-
-
-
-
-    
     const amrex::Real * const wp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
         soa.GetRealData(PlasmaIdx::w).data() : soa.GetRealData(PlasmaIdx::w_temp).data();
     const amrex::Real * const uxp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
