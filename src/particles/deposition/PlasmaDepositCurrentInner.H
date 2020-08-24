@@ -9,7 +9,14 @@
 #include <AMReX_REAL.H>
 
 /** \brief Loop over plasma particles in iterator (=box) pti and deposit their current
- * into jx_fab, jy_fab and jz_fab.
+ * into jx_fab, jy_fab and jz_fab and their density to rho_fab
+ *
+ * current_depo_type affects the general behavior of this function:
+ * - If current_depo_type == CurrentDepoType::DepositThisSlice, deposit jx, jy, jz and rho
+ *   with current values of transverse position, wp, uxp, uyp and psip.
+ * - If current_depo_type == CurrentDepoType::DepositNextSlice, deposit jx  and jy only,
+ *   with projected values of transverse position, wp, uxp, uyp and psip stored in temp arrays.
+ *
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
@@ -17,6 +24,7 @@
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to pti
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
+ * \param[in,out] rho_fab array of charge density rho, on the box corresponding to pti
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
@@ -28,6 +36,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jx_fab,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
+                         amrex::FArrayBox& rho_fab,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
@@ -69,17 +78,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
+    amrex::Array4<amrex::Real> const& rho_arr = rho_fab.array();
 
     constexpr int CELL = amrex::IndexType::CELL;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         jx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
-        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
-        "jx, jy and jz must be nodal in all directions."
+        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
+        "jx, jy, jz, and rho must be nodal in all directions."
         );
 
-    // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
+    // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
         pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
@@ -96,12 +107,12 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
            const amrex::Real vz = (1._rt - psip[ip]*gaminv) * phys_const.c;
 
            // calculate charge of the plasma particles
-           const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip]);
+           const amrex::Real wq = q*wp[ip]/(gaminv * psip[ip])*invvol;
 
            // wqx, wqy wqz are particle current in each direction
-           const amrex::Real wqx = wq*invvol*vx;
-           const amrex::Real wqy = wq*invvol*vy;
-           const amrex::Real wqz = wq*invvol*vz;
+           const amrex::Real wqx = wq*vx;
+           const amrex::Real wqy = wq*vy;
+           const amrex::Real wqz = wq*vz;
 
             // --- Compute shape factors
             // x direction
@@ -131,6 +142,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                             sx_cell[ix]*sy_cell[iy]*wqz);
+                        amrex::Gpu::Atomic::Add(
+                            &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wq);
                     }
                 }
             }
