@@ -16,7 +16,7 @@
  *   with current values of transverse position, wp, uxp, uyp and psip.
  * - If current_depo_type == CurrentDepoType::DepositNextSlice, deposit jx  and jy only,
  *   with projected values of transverse position, wp, uxp, uyp and psip stored in temp arrays.
- * 
+ *
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
