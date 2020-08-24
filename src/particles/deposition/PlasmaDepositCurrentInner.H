@@ -11,13 +11,20 @@
 /** \brief Loop over plasma particles in iterator (=box) pti and deposit their current
  * into jx_fab, jy_fab and jz_fab and their density to rho_fab
  *
+ * current_depo_type affects the general behavior of this function:
+ * - If current_depo_type == CurrentDepoType::DepositThisSlice, deposit jx, jy, jz and rho
+ *   with current values of transverse position, wp, uxp, uyp and psip.
+ * - If current_depo_type == CurrentDepoType::DepositNextSlice, deposit jx  and jy only,
+ *   with projected values of transverse position, wp, uxp, uyp and psip stored in temp arrays.
+ * 
+ *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
  * \param[in] pti particle iterator, contains data of all particles in a box
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to pti
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
- * \param[in,out] rho_fab array of current density rho, on the box corresponding to pti
+ * \param[in,out] rho_fab array of charge density rho, on the box corresponding to pti
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
