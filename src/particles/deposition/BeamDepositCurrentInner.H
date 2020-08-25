@@ -1,3 +1,10 @@
+/* Copyright 2019 Axel Huebl, David Grote, Maxence Thevenet
+ * Remi Lehe, Weiqun Zhang, Michael Rowan
+ *
+ * This file is part of WarpX.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_BEAMDEPOSITCURRENTINNER_H_
 #define HIPACE_BEAMDEPOSITCURRENTINNER_H_
 

@@ -1,3 +1,10 @@
+"""
+Copyright 2020
+
+This file is part of WarpX.
+
+License: BSD-3-Clause-LBNL
+"""
 from benchmark import Benchmark
 import yt
 yt.funcs.mylog.setLevel(50)
