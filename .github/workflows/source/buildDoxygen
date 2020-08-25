@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+# Copyright 2020 Axel Huebl
+#
+# This file is part of Hipace
+#
+# License: BSD-3-Clause-LBNL
+
+# search recursive inside a folder if a file contains tabs
+#
+# @result 0 if no files are found, else 1
+#
+
+set -eu -o pipefail
+
+cd doc
+
+# treat all warnings as errors
+echo "WARN_AS_ERROR = YES" >> Doxyfile
+
+doxygen
