@@ -165,4 +165,9 @@ private:
  */
 enum struct CurrentDepoType { DepositThisSlice, DepositNextSlice };
 
+/** \brief Type of plasma pusher call, either only update the force terms, only push
+ * the particles or both
+ */
+enum struct PlasmaPusherType { OnlyUpdateForceTerms, OnlyPushParticles, UpdateForceAndPush };
+
 #endif
