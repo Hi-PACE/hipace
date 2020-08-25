@@ -108,7 +108,7 @@ or by providing arguments to the CMake call: `cmake .. -D<OPTION_A>=<VALUE_A> -D
 | CMake Option                 | Default & Values                           | Description                                         |
 |------------------------------|--------------------------------------------|-----------------------------------------------------|
 | `CMAKE_BUILD_TYPE`           | **RelWithDebInfo**/Release/Debug           | Type of build, symbols & optimizations              |
-| `HiPACE_COMPUTE`             | NOACC/**OMP**/CUDA/DPCPP                   | On-node, accelerated computing backend              |
+| `HiPACE_COMPUTE`             | **NOACC**/OMP/CUDA/DPCPP                   | On-node, accelerated computing backend              |
 | `HiPACE_MPI`                 | **ON**/OFF                                 | Multi-node support (message-passing)                |
 | `HiPACE_PRECISION`           | **double**/single                          | Floating point precision (single/double)            |
 | `HiPACE_amrex_repo`          | `https://github.com/AMReX-Codes/amrex.git` | Repository URI to pull and build AMReX from         |

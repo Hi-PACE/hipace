@@ -1,3 +1,10 @@
+/* Copyright 2019 Axel Huebl, David Grote, Maxence Thevenet
+ * Remi Lehe, Weiqun Zhang, Michael Rowan
+ *
+ * This file is part of WarpX.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_PLASMADEPOSITCURRENTINNER_H_
 #define HIPACE_PLASMADEPOSITCURRENTINNER_H_
 
@@ -10,6 +17,13 @@
 
 /** \brief Loop over plasma particles in iterator (=box) pti and deposit their current
  * into jx_fab, jy_fab and jz_fab and their density to rho_fab
+ *
+ * current_depo_type affects the general behavior of this function:
+ * - If current_depo_type == CurrentDepoType::DepositThisSlice, deposit jx, jy, jz and rho
+ *   with current values of transverse position, wp, uxp, uyp and psip.
+ * - If current_depo_type == CurrentDepoType::DepositNextSlice, deposit jx  and jy only,
+ *   with projected values of transverse position, wp, uxp, uyp and psip stored in temp arrays.
+ *
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
