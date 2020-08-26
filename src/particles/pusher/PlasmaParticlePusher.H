@@ -12,6 +12,9 @@
  * \param[in,out] plasma plasma species to push
  * \param[in,out] fields the general field class, modified by this function
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
+ * \param[in] current_depo_type defines if this or the next slice is handled
+ * \param[in] plasma_pusher_type defines if only the force terms are updated,
+    particles are pushed, or both
  * \param[in] lev MR level
  */
 void
@@ -28,6 +31,11 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
  * \param[in,out] uxp momentum in x direction
  * \param[in,out] uyp momentum in y direction
  * \param[in,out] psip plasma pseudo-potential
+ * \param[in,out] x_temp temporary position in x direction
+ * \param[in,out] y_temp temporary position in y direction
+ * \param[in,out] ux_temp temporary momentum in x direction
+ * \param[in,out] uy_temp temporary momentum in y direction
+ * \param[in,out] psi_temp temporary plasma pseudo-potential
  * \param[in] Fx1 force term acting on x position of the particle
  * \param[in] Fy1 force term acting on y position of the particle
  * \param[in] Fux1 force term acting on x momentum of the particle
@@ -53,7 +61,11 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
  * \param[in] Fux5 force term acting on x momentum of the particle
  * \param[in] Fuy5 force term acting on y momentum of the particle
  * \param[in] Fpsi5 force term acting on the plasma pseudo-potential of the particle
-  */
+ * \param[in] dz longitudinal size of the cell
+ * \param[in] current_depo_type defines if this or the next slice is handled
+ * \param[in] ip index of the plasma particle
+ * \param[in] SetPosition Functor for setting the particle position
+ */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doPlasmaParticlePush(amrex::ParticleReal& xp,
                           amrex::ParticleReal& yp,
