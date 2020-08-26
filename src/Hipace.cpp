@@ -210,18 +210,11 @@ Hipace::Evolve ()
                 UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev],
                                           CurrentDepoType::DepositThisSlice,
                                           PlasmaPusherType::OnlyPushParticles, lev);
-                                          
-                std::cout << "before redistrb \n";
+
                 amrex::ParallelContext::push(m_comm_xy);
                 m_plasma_container.Redistribute();
                 amrex::ParallelContext::pop();
-                std::cout << "after redistr \n";
 
-                /* here it works fine, if the following 4 lines are moved behind the Deposit current call, it will crash */
-
-
-                std::cout << "before deposit current \n";
-                /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
                                         amrex::make_alias, FieldComps::jx, 3);
@@ -229,10 +222,8 @@ Hipace::Evolve ()
                 j_slice.FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
-                std::cout << "before poisson solve \n";
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
-                std::cout << "before update force terms \n";
 
                 UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev],
                                           CurrentDepoType::DepositThisSlice,

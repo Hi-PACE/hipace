@@ -22,10 +22,12 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
 /** \brief Pushing the plasma particles (currently only with a 5th order Adams Bashforth Pusher)
  *
+ * \param[in,out] xp position in x direction
+ * \param[in,out] yp position in y direction
+ * \param[in,out] zp position in z direction
  * \param[in,out] uxp momentum in x direction
  * \param[in,out] uyp momentum in y direction
  * \param[in,out] psip plasma pseudo-potential
-
  * \param[in] Fx1 force term acting on x position of the particle
  * \param[in] Fy1 force term acting on y position of the particle
  * \param[in] Fux1 force term acting on x momentum of the particle
