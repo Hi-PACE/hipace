@@ -20,7 +20,6 @@ enum struct FieldCopyType { FtoS, StoF };
  */
 enum struct SliceOperatorType { Assign, Add };
 
-
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
     enum dir{x=0, y, z};

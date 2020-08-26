@@ -104,7 +104,7 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
                       dst_array(i,j,k,dcomp) = mult_coeff *
                           (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
                     }
-                    else /* SliceOperatorType::Subtract */
+                    else /* SliceOperatorType::Add */
                     {
                       dst_array(i,j,k,dcomp) += mult_coeff *
                           (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
