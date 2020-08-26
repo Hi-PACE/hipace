@@ -77,7 +77,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
-        "jx, jy and jz must be nodal in all directions."
+        "jx, jy, jz and rho must be nodal in all directions."
         );
 
     // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
