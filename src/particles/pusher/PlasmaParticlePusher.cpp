@@ -11,7 +11,7 @@
 void
 UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
-                          const PlasmaPusherType plasma_pusher_type, int const lev)
+                          const AdvanceType advance_type, int const lev)
 {
     BL_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -105,6 +105,12 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
+        bool do_push = (advance_type == AdvanceType::Push);
+        bool do_update = (advance_type == AdvanceType::ShiftUpdateForceTerms)
+                              + (advance_type == AdvanceType::UpdateForceTerms);
+        bool do_shift = (advance_type == AdvanceType::ShiftUpdateForceTerms);
+
+
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
@@ -114,8 +120,16 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
+                if (do_shift)
+                {
+                    ShiftForceTerms( Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
+                    Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
+                    Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
+                    Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
+                    Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
+                }
 
-                if ( plasma_pusher_type !=  PlasmaPusherType::OnlyPushParticles )
+                if (do_update)
                 {
                   // field gather for a single particle
                   doGatherShapeN(xp, yp, zmin,
@@ -129,7 +143,7 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                     Fpsi1[ip], clightsq);
                 }
 
-                if ( plasma_pusher_type !=  PlasmaPusherType::OnlyUpdateForceTerms )
+                if (do_push)
                 {
                   //insert push a single particle
                   doPlasmaParticlePush( xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_temp[ip],
@@ -140,15 +154,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                         Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
                                         Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
                                         dz, current_depo_type, ip, SetPosition );
-
-                  if (current_depo_type == CurrentDepoType::DepositThisSlice)
-                  {
-                    ShiftForceTerms( Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                    Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                    Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                    Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                    Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
-                  }
                 }
           }
           );
