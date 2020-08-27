@@ -251,8 +251,6 @@ Hipace::Evolve ()
 void Hipace::SolveExmByAndEypBx (const int lev)
 {
      BL_PROFILE("Hipace::SolveExmByAndEypBx()");
-    amrex::MultiFab ExmBy(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::ExmBy, 1);
-    amrex::MultiFab EypBx(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::EypBx, 1);
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Psi, 1);
@@ -271,30 +269,27 @@ void Hipace::SolveExmByAndEypBx (const int lev)
     /* Compute ExmBy and Eypbx from grad(-psi) */
     m_fields.TransverseDerivative(
         m_fields.getSlices(lev, 1),
-        ExmBy,
+        m_fields.getSlices(lev, 1),
         Direction::x,
         geom[0].CellSize(Direction::x),
         1.,
         SliceOperatorType::Assign,
-        FieldComps::Psi);
-
-    /* ---------- Transverse FillBoundary ExmBy ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    ExmBy.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
+        FieldComps::Psi,
+        FieldComps::ExmBy);
 
     m_fields.TransverseDerivative(
         m_fields.getSlices(lev, 1),
-        EypBx,
+        m_fields.getSlices(lev, 1),
         Direction::y,
         geom[0].CellSize(Direction::y),
         1.,
         SliceOperatorType::Assign,
-        FieldComps::Psi);
+        FieldComps::Psi,
+        FieldComps::EypBx);
 
     /* ---------- Transverse FillBoundary ExmBy ---------- */
     amrex::ParallelContext::push(m_comm_xy);
-    EypBx.FillBoundary(Geom(lev).periodicity());
+    m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
     amrex::ParallelContext::pop();
 
 }
