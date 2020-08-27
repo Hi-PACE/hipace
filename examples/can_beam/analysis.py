@@ -41,7 +41,7 @@ if plot_plt:
         plt.subplot(nx,ny,count+1)
         plt.title(field[1])
         F = all_data_level_0[field].v.squeeze()[:,ds.domain_dimensions[1]//2,:]
-        plt.imshow(F, extent=extent, aspect='auto')
+        plt.imshow(F, extent=extent, aspect='auto', origin='lower')
         plt.colorbar()
         plt.xlabel('z')
         plt.ylabel('x')
