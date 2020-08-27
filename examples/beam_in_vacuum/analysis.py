@@ -45,7 +45,7 @@ else:
     # Density of the can beam
     dens = 2.8239587008591567e23 # at this density, 1/kp = 10um, allowing for an easy comparison with normalized units
     # Define array for transverse coordinate and theory for By and Bx
-    jz0 = scc.e * scc.c * dens
+    jz0 = - scc.e * scc.c * dens
     mu_0 = scc.mu_0
     # Radius of the can beam
     R = 10.e-6
@@ -58,7 +58,7 @@ y = np.linspace(ds.domain_left_edge[1].v, ds.domain_right_edge[1].v, ds.domain_d
 Bx_th = -mu_0 * jz0 * y / 2.
 Bx_th[abs(y)>=R] = -mu_0 * jz0 * R**2/(2*y[abs(y)>R])
 
-jz_th = - np.ones_like(x) * jz0
+jz_th = np.ones_like(x) * jz0
 jz_th[abs(x)>=R] = 0.
 
 # Load Hipace data for By in SI units

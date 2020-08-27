@@ -23,7 +23,7 @@ if plot_yt:
 
 if plot_plt:
     # Plot all fields and particles in 1 figure
-    nx = 3
+    nx = 4
     ny = 3
     # Get field quantities
     all_data_level_0 = ds.covering_grid(level=0,left_edge=ds.domain_left_edge, dims=ds.domain_dimensions)
@@ -41,7 +41,7 @@ if plot_plt:
         plt.subplot(nx,ny,count+1)
         plt.title(field[1])
         F = all_data_level_0[field].v.squeeze()[:,ds.domain_dimensions[1]//2,:]
-        plt.imshow(F, extent=extent, aspect='auto')
+        plt.imshow(F, extent=extent, aspect='auto', origin='lower')
         plt.colorbar()
         plt.xlabel('z')
         plt.ylabel('x')

@@ -41,6 +41,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         // For now: fix the value of the charge
         amrex::Real q = - phys_const.q_e;
 
+        rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
+
         // Call deposition function in each box
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin, lo, q,
