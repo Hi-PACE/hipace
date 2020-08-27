@@ -1,5 +1,5 @@
-#ifndef PLASMAPARTICLEPUSHER_H_
-#define PLASMAPARTICLEPUSHER_H_
+#ifndef PLASMAPARTICLEADVANCE_H_
+#define PLASMAPARTICLEADVANCE_H_
 
 #include "particles/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
@@ -21,4 +21,4 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         const bool do_push, const bool do_update, const bool do_shift,
                         int const lev=0);
 
-#endif //  PLASMAPARTICLEPUSHER_H_
+#endif //  PLASMAPARTICLEADVANCE_H_

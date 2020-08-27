@@ -1,7 +1,7 @@
 #include "Hipace.H"
 #include "particles/deposition/BeamDepositCurrent.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
-#include "particles/pusher/PlasmaParticlePusher.H"
+#include "particles/pusher/PlasmaParticleAdvance.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
