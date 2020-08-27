@@ -110,53 +110,43 @@ void doPlasmaParticlePush(amrex::ParticleReal& xp,
                           )
 
 {
+    using namespace amrex::literals;
+    /* Fifth order adams bashforth coefficients */
+    const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dz;
+    const amrex::Real a2_times_dz = ( -1387._rt / 360._rt ) * dz;
+    const amrex::Real a3_times_dz = ( 109._rt / 30._rt ) * dz;
+    const amrex::Real a4_times_dz = ( -637._rt / 360._rt ) * dz;
+    const amrex::Real a5_times_dz = ( 251._rt / 720._rt ) * dz;
 
-  /* Fifth order adams bashforth coefficients */
-  const amrex::Real a1_times_dz = ( 1901. / 720 ) * dz;
-  const amrex::Real a2_times_dz = ( -1387. / 360 ) * dz;
-  const amrex::Real a3_times_dz = ( 109. / 30 ) * dz;
-  const amrex::Real a4_times_dz = ( -637. / 360 ) * dz;
-  const amrex::Real a5_times_dz = ( 251. / 720 ) * dz;
+    if (current_depo_type == CurrentDepoType::DepositThisSlice)
+    {
+        xp -= a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
+            + a4_times_dz * Fx4 + a5_times_dz * Fx5;
+        yp -= a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
+            + a4_times_dz * Fy4 + a5_times_dz * Fy5;
 
-  if (current_depo_type == CurrentDepoType::DepositThisSlice)
-  {
-    xp -= a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
-          + a4_times_dz * Fx4 + a5_times_dz * Fx5;
-    yp -= a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
-          + a4_times_dz * Fy4 + a5_times_dz * Fy5;
+        SetPosition(ip, xp, yp, zp);
 
-    SetPosition(ip, xp, yp, zp);
-
-    uxp -= a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
-          + a4_times_dz * Fux4 + a5_times_dz * Fux5;
-    uyp -= a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
-          + a4_times_dz * Fuy4 + a5_times_dz * Fuy5;
-    psip -= a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
+        uxp -= a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
+            + a4_times_dz * Fux4 + a5_times_dz * Fux5;
+        uyp -= a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
+            + a4_times_dz * Fuy4 + a5_times_dz * Fuy5;
+        psip -= a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
             + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5;
-  }
-  else
-  {
-    x_temp = xp - ( a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
-             + a4_times_dz * Fx4 + a5_times_dz * Fx5 );
-    y_temp = yp - ( a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
-             + a4_times_dz * Fy4 + a5_times_dz * Fy5 );
-    ux_temp = uxp - ( a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
-              + a4_times_dz * Fux4 + a5_times_dz * Fux5 );
-    uy_temp = uyp - ( a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
-              + a4_times_dz * Fuy4 + a5_times_dz * Fuy5 );
-    psi_temp = psip - ( a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
-              + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5 );
-
-  }
-
-
-
-
-
-
-
-
-
+    }
+    else
+    {
+        x_temp = xp - ( a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
+                 + a4_times_dz * Fx4 + a5_times_dz * Fx5 );
+        y_temp = yp - ( a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
+                 + a4_times_dz * Fy4 + a5_times_dz * Fy5 );
+        ux_temp = uxp - ( a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
+                  + a4_times_dz * Fux4 + a5_times_dz * Fux5 );
+        uy_temp = uyp - ( a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
+                  + a4_times_dz * Fuy4 + a5_times_dz * Fuy5 );
+        psi_temp = psip - ( a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
+                  + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5 );
+    }
 }
 
 #endif //  PLASMAPARTICLEPUSHER_H_
