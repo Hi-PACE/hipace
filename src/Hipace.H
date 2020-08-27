@@ -148,6 +148,11 @@ private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
 
+    /** \brief Compute Ez on the slice container from J by solving a Poisson equation
+     *
+     * \param[in] lev current level
+     */
+    void SolvePoissonEz (const int lev);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in] lev current level
