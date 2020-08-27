@@ -3,6 +3,8 @@
 
 #include <AMReX_BLProfiler.H>
 
+using namespace amrex::literals;
+
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
       m_F(a_hipace->maxLevel()+1),
@@ -90,24 +92,24 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
                     if (slice_operator==SliceOperatorType::Assign)
                     {
                       dst_array(i,j,k,dcomp) = mult_coeff *
-                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2*dx);
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2.0_rt*dx);
                     }
                     else /* SliceOperatorType::Add */
                     {
                       dst_array(i,j,k,dcomp) += mult_coeff *
-                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2*dx);
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2.0_rt*dx);
                     }
                 } else /* Direction::y */ {
                     /* finite difference along y */
                     if (slice_operator==SliceOperatorType::Assign)
                     {
                       dst_array(i,j,k,dcomp) = mult_coeff *
-                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2.0_rt*dx);
                     }
                     else /* SliceOperatorType::Add */
                     {
                       dst_array(i,j,k,dcomp) += mult_coeff *
-                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2.0_rt*dx);
                     }
                 }
             }
