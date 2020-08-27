@@ -224,32 +224,26 @@ Hipace::Evolve ()
 
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
-                // std::cout << "before Bz\n";
                 SolvePoissonBz(lev);
-                // std::cout << "after Bz\n";
 
-                // std::cout << "before update fields\n";
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        CurrentDepoType::DepositThisSlice,
                                        false, true, true, lev);
-               // std::cout << "After update fields\n";
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
-// std::cout << "checkpoint 1\n";
+
                 m_fields.ShiftSlices(lev);
-                // std::cout << "checkpoint 2\n";
             }
         }
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
-// std::cout << "checkpoint 3\n";
+
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
     }
-// std::cout << "checkpoint 4\n";
+
     if (m_do_plot) WriteDiagnostics(1);
-    // std::cout << "checkpoint 5\n";
 }
 
 void Hipace::SolvePoissonBx (const int lev)
