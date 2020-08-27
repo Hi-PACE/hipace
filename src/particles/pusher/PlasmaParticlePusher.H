@@ -21,7 +21,8 @@
 void
 UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
-                          const bool do_push, const bool do_update, const bool do_shift, int const lev=0);
+                          const bool do_push, const bool do_update, const bool do_shift,
+                          int const lev=0);
 
 
 /** \brief Pushing the plasma particles (currently only with a 5th order Adams Bashforth Pusher)

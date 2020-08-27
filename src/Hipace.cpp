@@ -207,9 +207,9 @@ Hipace::Evolve ()
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
-                UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev],
-                                          CurrentDepoType::DepositThisSlice,
-                                          true, false, false, lev);
+                UpdateForcePushParticles(m_plasma_container, m_fields, geom[lev],
+                                         CurrentDepoType::DepositThisSlice,
+                                         true, false, false, lev);
 
                 amrex::ParallelContext::push(m_comm_xy);
                 m_plasma_container.Redistribute();
@@ -225,9 +225,9 @@ Hipace::Evolve ()
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
 
-                UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev],
-                                          CurrentDepoType::DepositThisSlice,
-                                          false, true, true, lev);
+                UpdateForcePushParticles(m_plasma_container, m_fields, geom[lev],
+                                         CurrentDepoType::DepositThisSlice,
+                                         false, true, true, lev);
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);

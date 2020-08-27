@@ -142,6 +142,4 @@ void ShiftForceTerms(const amrex::ParticleReal& Fx1,
 
 }
 
-
-
 #endif //  UPDATEFORCETERMS_H_
