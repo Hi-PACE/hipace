@@ -118,38 +118,38 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
                 if (do_shift)
                 {
-                    ShiftForceTerms( Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                    Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                    Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                    Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                    Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
+                    ShiftForceTerms(Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
+                                    Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
+                                    Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
+                                    Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
+                                    Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
                 }
 
                 if (do_update)
                 {
                   // field gather for a single particle
                   doGatherShapeN(xp, yp, zmin,
-                      ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                      exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                      dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                                 ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                                 exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                                 dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
                   // update force terms for a single particle
-                  UpdateForceTerms( uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
-                                    Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                    Fpsi1[ip], clightsq);
+                  UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
+                                   Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
+                                   Fpsi1[ip], clightsq);
                 }
 
                 if (do_push)
                 {
                   // push a single particle
-                  PlasmaParticlePush( xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_temp[ip],
-                                        y_temp[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
-                                        Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                                        Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                                        Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                                        dz, current_depo_type, ip, SetPosition );
+                  PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_temp[ip],
+                                     y_temp[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
+                                     Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
+                                     Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
+                                     Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
+                                     Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
+                                     Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
+                                     dz, current_depo_type, ip, SetPosition );
                 }
           }
           );

@@ -3,10 +3,7 @@
 
 #include "particles/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
-// #include "Constants.H"
-// #include "FieldGather.H"
 #include "Hipace.H"
-// #include "GetAndSetPosition.H"
 
 /** \brief Gather field values for particles, update the force terms, and push the particles
  * \param[in,out] plasma plasma species to push
@@ -20,8 +17,8 @@
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
-                          amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
-                          const bool do_push, const bool do_update, const bool do_shift,
-                          int const lev=0);
+                        amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
+                        const bool do_push, const bool do_update, const bool do_shift,
+                        int const lev=0);
 
 #endif //  PLASMAPARTICLEPUSHER_H_
