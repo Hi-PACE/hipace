@@ -127,16 +127,16 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
                 if (do_update)
                 {
-                  // field gather for a single particle
-                  doGatherShapeN(xp, yp, zmin,
-                                 ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                                 exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                                 dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                    // field gather for a single particle
+                    doGatherShapeN(xp, yp, zmin,
+                                   ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                                   exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                                   dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-                  // update force terms for a single particle
-                  UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
-                                   Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                   Fpsi1[ip], clightsq);
+                    // update force terms for a single particle
+                    UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
+                                     Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
+                                     Fpsi1[ip], clightsq);
                 }
 
                 if (do_push)
