@@ -121,7 +121,7 @@ FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
         amrex::ParallelFor( m_spectralspace_ba[mfi],
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                tmp_cmplx_arr(i,j,k) *= inv_k2_arr(i,j,k);
+                tmp_cmplx_arr(i,j,k) *= -inv_k2_arr(i,j,k);
             });
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area
