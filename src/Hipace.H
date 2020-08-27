@@ -158,6 +158,11 @@ private:
      * \param[in] lev current level
      */
     void SolvePoissonBy (const int lev);
+    /** \brief Compute Bz on the slice container from J by solving a Poisson equation
+     *
+     * \param[in] lev current level
+     */
+    void SolvePoissonBz (const int lev);
 };
 
 /** \brief Type of current deposition, either in the current slice or in the next one
