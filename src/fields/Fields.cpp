@@ -90,25 +90,25 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
                     /* finite difference along x */
                     if (slice_operator==SliceOperatorType::Assign)
                     {
-                      dst_array(i,j,k,dcomp) = mult_coeff *
-                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2.0_rt*dx);
+                        dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp));
                     }
                     else /* SliceOperatorType::Add */
                     {
-                      dst_array(i,j,k,dcomp) += mult_coeff *
-                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2.0_rt*dx);
+                        dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp));
                     }
                 } else /* Direction::y */ {
                     /* finite difference along y */
                     if (slice_operator==SliceOperatorType::Assign)
                     {
-                      dst_array(i,j,k,dcomp) = mult_coeff *
-                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2.0_rt*dx);
+                        dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp));
                     }
                     else /* SliceOperatorType::Add */
                     {
-                      dst_array(i,j,k,dcomp) += mult_coeff *
-                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2.0_rt*dx);
+                        dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp));
                     }
                 }
             }
