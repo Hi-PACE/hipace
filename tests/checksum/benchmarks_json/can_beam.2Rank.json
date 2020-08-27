@@ -1,10 +1,10 @@
 {
   "beam": {
-    "particle_cpu": 25984.0,
-    "particle_id": 675194240.0,
+    "particle_cpu": 0.0,
+    "particle_id": 1350362496.0,
     "particle_position_x": 0.22168000000000002,
-    "particle_position_y": 0.22168,
-    "particle_position_z": 0.25984,
+    "particle_position_y": 0.22168000000000004,
+    "particle_position_z": 0.25984000000000007,
     "particle_ux": 0.0,
     "particle_uy": 0.0,
     "particle_uz": 1.5579614457344e+16,
@@ -20,7 +20,7 @@
     "jx": 0.0,
     "jy": 0.0,
     "jz": 0.00031201602212059217,
-    "rho": 2.901892360312692e-15
+    "rho": 1.0510698889862249e-12
   },
   "plasma": {
     "particle_Fpsi1": 0.0,
@@ -48,8 +48,8 @@
     "particle_Fy3": 53248.0,
     "particle_Fy4": 57344.0,
     "particle_Fy5": 61440.0,
-    "particle_cpu": 4096.0,
-    "particle_id": 114821120.0,
+    "particle_cpu": 0.0,
+    "particle_id": 221251584.0,
     "particle_position_x": 0.04096,
     "particle_position_y": 0.04096000000000001,
     "particle_position_z": 0.08064000000000002,

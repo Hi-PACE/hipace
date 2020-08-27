@@ -1,7 +1,7 @@
 #include "Hipace.H"
 #include "particles/deposition/BeamDepositCurrent.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
-#include "particles/pusher/PlasmaParticlePusher.H"
+#include "particles/pusher/PlasmaParticleAdvance.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -207,10 +207,15 @@ Hipace::Evolve ()
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
-                UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev], lev);
-                /* xxxxxxxxxx Redistribute Plasma Particles transversally xxxxxxxxxx */
-                DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
+                AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
+                                       CurrentDepoType::DepositThisSlice,
+                                       true, false, false, lev);
 
+                amrex::ParallelContext::push(m_comm_xy);
+                m_plasma_container.Redistribute();
+                amrex::ParallelContext::pop();
+
+                DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
                                         amrex::make_alias, FieldComps::jx, 3);
                 amrex::ParallelContext::push(m_comm_xy);
@@ -219,6 +224,10 @@ Hipace::Evolve ()
 
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
+
+                AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
+                                       CurrentDepoType::DepositThisSlice,
+                                       false, true, true, lev);
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
