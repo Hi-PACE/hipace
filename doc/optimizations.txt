@@ -22,3 +22,7 @@ This file lists these easy optimizations, to avoid missing low-hanging fruits.
    For instance:
       currently: Jz -[TransverseDerivate]-> rhs_mf -[copy]-> FFTPoissonSolver::m_tmpRealField
       could be:  Jz -[TransverseDerivate]-> FFTPoissonSolver::m_tmpRealField
+
+5. Removing unnecessary deposition of rho of the Beam
+
+6. have Psi only as a temporary array

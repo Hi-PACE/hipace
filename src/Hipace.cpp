@@ -223,6 +223,7 @@ Hipace::Evolve ()
                 amrex::ParallelContext::pop();
 
                 SolvePoissonEz(lev);
+                SolveExmByAndEypBx(lev);
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
                 SolvePoissonBz(lev);
@@ -245,6 +246,81 @@ Hipace::Evolve ()
     }
 
     if (m_do_plot) WriteDiagnostics(1);
+}
+
+void Hipace::SolveExmByAndEypBx (const int lev)
+{
+     BL_PROFILE("Hipace::SolveExmByAndEypBx()");
+    // Left-Hand Side for Poisson equation is Bz in the slice MF
+    // amrex::MultiFab rho(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::rho, 1);
+    // amrex::MultiFab jz(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::jz, 1);
+    amrex::MultiFab ExmBy(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::ExmBy, 1);
+    amrex::MultiFab EypBx(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::EypBx, 1);
+    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                        FieldComps::Psi, 1);
+    // cleaning the previous staging area
+    m_poisson_solver.StagingArea().setVal(0.);
+
+    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1), FieldComps::rho, 0, 1, 0); //m_fields.getSlices(lev, 1).nGrow());
+    amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1), FieldComps::jz, 0, 1, 0); // m_fields.getSlices(lev, 1).nGrow());
+    // Copy(m_poisson_solver.StagingArea(), rho, 0, 0, 1, 0);
+    // std::cout << "last call\n";
+    // Subtract(m_poisson_solver.StagingArea(), jz, 0, 0, 1, 0);
+    // std::cout << "dead call\n";
+    // m_poisson_solver.StagingArea().minus(jz, , 1, m_fields.getSlices(lev, 1).nGrow());
+    // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
+    // from the slice MF, and store in the staging area of m_poisson_solver
+
+    m_poisson_solver.SolvePoissonEquation(lhs);
+    /* ---------- Transverse FillBoundary Psi ---------- */
+    amrex::ParallelContext::push(m_comm_xy);
+    lhs.FillBoundary(Geom(lev).periodicity());
+    amrex::ParallelContext::pop();
+
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        ExmBy,
+        Direction::x,
+        geom[0].CellSize(Direction::x),
+        1.,
+        SliceOperatorType::Assign,
+        FieldComps::Psi);
+    // m_fields.TransverseDerivative(
+    //     m_fields.getSlices(lev, 1),
+    //     m_fields.getSlices(lev, 1),
+    //     Direction::x,
+    //     geom[0].CellSize(Direction::x),
+    //     1.,
+    //     SliceOperatorType::Assign,
+    //     FieldComps::Psi,
+    //     FieldComps::ExmBy);
+        /* ---------- Transverse FillBoundary Psi ---------- */
+        amrex::ParallelContext::push(m_comm_xy);
+        ExmBy.FillBoundary(Geom(lev).periodicity());
+        amrex::ParallelContext::pop();
+
+        m_fields.TransverseDerivative(
+            m_fields.getSlices(lev, 1),
+            EypBx,
+            Direction::y,
+            geom[0].CellSize(Direction::y),
+            1.,
+            SliceOperatorType::Assign,
+            FieldComps::Psi);
+    // m_fields.TransverseDerivative(
+    //     m_fields.getSlices(lev, 1),
+    //     m_fields.getSlices(lev, 1),
+    //     Direction::y,
+    //     geom[0].CellSize(Direction::y),
+    //     1.,
+    //     SliceOperatorType::Assign,
+    //     FieldComps::Psi,
+    //     FieldComps::EypBx);
+
+    amrex::ParallelContext::push(m_comm_xy);
+    EypBx.FillBoundary(Geom(lev).periodicity());
+    amrex::ParallelContext::pop();
+
 }
 
 void Hipace::SolvePoissonEz (const int lev)
@@ -480,7 +556,7 @@ Hipace::WriteDiagnostics (int step)
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
     const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
-                                                 "jx", "jy", "jz", "rho"};
+                                                 "jx", "jy", "jz", "rho", "Psi"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
