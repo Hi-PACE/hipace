@@ -2,6 +2,7 @@
 
 #include "particles/PlasmaParticleContainer.H"
 #include "FieldGather.H"
+#include "PushPlasmaParticles.H"
 #include "UpdateForceTerms.H"
 #include "fields/Fields.H"
 #include "Constants.H"
@@ -9,7 +10,7 @@
 #include "GetAndSetPosition.H"
 
 void
-UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
+AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
                           const bool do_push, const bool do_update, const bool do_shift,
                           int const lev)
@@ -140,8 +141,8 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
                 if (do_push)
                 {
-                  //insert push a single particle
-                  doPlasmaParticlePush( xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_temp[ip],
+                  // push a single particle
+                  PlasmaParticlePush( xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_temp[ip],
                                         y_temp[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
                                         Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
                                         Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
