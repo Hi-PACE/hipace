@@ -251,25 +251,16 @@ Hipace::Evolve ()
 void Hipace::SolveExmByAndEypBx (const int lev)
 {
      BL_PROFILE("Hipace::SolveExmByAndEypBx()");
-    // Left-Hand Side for Poisson equation is Bz in the slice MF
-    // amrex::MultiFab rho(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::rho, 1);
-    // amrex::MultiFab jz(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::jz, 1);
     amrex::MultiFab ExmBy(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::ExmBy, 1);
     amrex::MultiFab EypBx(m_fields.getSlices(lev, 1), amrex::make_alias, FieldComps::EypBx, 1);
+    // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Psi, 1);
     // cleaning the previous staging area
     m_poisson_solver.StagingArea().setVal(0.);
-
-    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1), FieldComps::rho, 0, 1, 0); //m_fields.getSlices(lev, 1).nGrow());
-    amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1), FieldComps::jz, 0, 1, 0); // m_fields.getSlices(lev, 1).nGrow());
-    // Copy(m_poisson_solver.StagingArea(), rho, 0, 0, 1, 0);
-    // std::cout << "last call\n";
-    // Subtract(m_poisson_solver.StagingArea(), jz, 0, 0, 1, 0);
-    // std::cout << "dead call\n";
-    // m_poisson_solver.StagingArea().minus(jz, , 1, m_fields.getSlices(lev, 1).nGrow());
-    // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
-    // from the slice MF, and store in the staging area of m_poisson_solver
+    // calculating the right-hand side rho-Jz
+    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1), FieldComps::rho, 0, 1, 0);
+    amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1), FieldComps::jz, 0, 1, 0);
 
     m_poisson_solver.SolvePoissonEquation(lhs);
     /* ---------- Transverse FillBoundary Psi ---------- */
@@ -277,6 +268,7 @@ void Hipace::SolveExmByAndEypBx (const int lev)
     lhs.FillBoundary(Geom(lev).periodicity());
     amrex::ParallelContext::pop();
 
+    /* Compute ExmBy and Eypbx from grad(-psi) */
     m_fields.TransverseDerivative(
         m_fields.getSlices(lev, 1),
         ExmBy,
@@ -285,38 +277,22 @@ void Hipace::SolveExmByAndEypBx (const int lev)
         1.,
         SliceOperatorType::Assign,
         FieldComps::Psi);
-    // m_fields.TransverseDerivative(
-    //     m_fields.getSlices(lev, 1),
-    //     m_fields.getSlices(lev, 1),
-    //     Direction::x,
-    //     geom[0].CellSize(Direction::x),
-    //     1.,
-    //     SliceOperatorType::Assign,
-    //     FieldComps::Psi,
-    //     FieldComps::ExmBy);
-        /* ---------- Transverse FillBoundary Psi ---------- */
-        amrex::ParallelContext::push(m_comm_xy);
-        ExmBy.FillBoundary(Geom(lev).periodicity());
-        amrex::ParallelContext::pop();
 
-        m_fields.TransverseDerivative(
-            m_fields.getSlices(lev, 1),
-            EypBx,
-            Direction::y,
-            geom[0].CellSize(Direction::y),
-            1.,
-            SliceOperatorType::Assign,
-            FieldComps::Psi);
-    // m_fields.TransverseDerivative(
-    //     m_fields.getSlices(lev, 1),
-    //     m_fields.getSlices(lev, 1),
-    //     Direction::y,
-    //     geom[0].CellSize(Direction::y),
-    //     1.,
-    //     SliceOperatorType::Assign,
-    //     FieldComps::Psi,
-    //     FieldComps::EypBx);
+    /* ---------- Transverse FillBoundary ExmBy ---------- */
+    amrex::ParallelContext::push(m_comm_xy);
+    ExmBy.FillBoundary(Geom(lev).periodicity());
+    amrex::ParallelContext::pop();
 
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        EypBx,
+        Direction::y,
+        geom[0].CellSize(Direction::y),
+        1.,
+        SliceOperatorType::Assign,
+        FieldComps::Psi);
+
+    /* ---------- Transverse FillBoundary ExmBy ---------- */
     amrex::ParallelContext::push(m_comm_xy);
     EypBx.FillBoundary(Geom(lev).periodicity());
     amrex::ParallelContext::pop();
