@@ -16,6 +16,8 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
                            amrex::DistributionMapping const& dm,
                            amrex::Geometry const& gm )
 {
+    using namespace amrex::literals;
+
     BL_PROFILE("FFTPoissonSolver::define()");
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(realspace_ba.size() == 1, "Parallel FFT not supported yet");
@@ -71,10 +73,10 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
             // The first half of ky is positive ; the other is negative
             amrex::Real ky = (j<mid_point_y) ? dky*j : dky*(j-Ny);
             if ((i!=0) && (j!=0)) {
-                inv_k2_arr(i,j,0) = 1./(kx*kx + ky*ky);
+                inv_k2_arr(i,j,0) = 1._rt/(kx*kx + ky*ky);
             } else {
                 // Avoid division by 0
-                inv_k2_arr(i,j,0) = 0;
+                inv_k2_arr(i,j,0) = 0._rt;
             }
         });
     }

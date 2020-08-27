@@ -127,13 +127,14 @@ then
 fi
 
 # can_beam.2Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "can_beam.2Rank" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R can_beam.2Rank \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name can_beam.2Rank
-fi
+### This test is inactive as Hipace doesn't support parallelization yet.
+#if [[ $all_tests = true ]] || [[ $one_test_name = "can_beam.2Rank" ]]
+#then
+#    cd $build_dir
+#    ctest --output-on-failure -R can_beam.2Rank \
+#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+#    cd $checksum_dir
+#    ./checksumAPI.py --reset-benchmark \
+#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --test-name can_beam.2Rank
+#fi
