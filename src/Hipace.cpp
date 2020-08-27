@@ -301,13 +301,13 @@ void Hipace::SolvePoissonBy (const int lev)
 void Hipace::SolvePoissonBz (const int lev)
 {
      BL_PROFILE("Hipace::SolvePoissonBz()");
-    // Left-Hand Side for Poisson equation is By in the slice MF
+    // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Bz, 1);
     // cleaning the previous staging area
     m_poisson_solver.StagingArea().setVal(0.);
-    // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
-    // and store in the staging area of m_poisson_solver
+    // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
+    // from the slice MF, and store in the staging area of m_poisson_solver
     m_fields.TransverseDerivative(
         m_fields.getSlices(lev, 1),
         m_poisson_solver.StagingArea(),
@@ -329,7 +329,7 @@ void Hipace::SolvePoissonBz (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary By ---------- */
+    /* ---------- Transverse FillBoundary Bz ---------- */
     amrex::ParallelContext::push(m_comm_xy);
     lhs.FillBoundary(Geom(lev).periodicity());
     amrex::ParallelContext::pop();
