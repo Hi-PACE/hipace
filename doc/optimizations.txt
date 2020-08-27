@@ -23,6 +23,9 @@ This file lists these easy optimizations, to avoid missing low-hanging fruits.
       currently: Jz -[TransverseDerivate]-> rhs_mf -[copy]-> FFTPoissonSolver::m_tmpRealField
       could be:  Jz -[TransverseDerivate]-> FFTPoissonSolver::m_tmpRealField
 
-5. Removing unnecessary deposition of rho of the Beam
+5. Removing unnecessary deposition of rho of the beam
+   To calculate Psi, one needs to calculate rho - Jz. The contribution of the beam cancels out. At the moment, the beam deposits to both rho and Jz. It would require the beam to
+   deposit its current to the slice and add its current to rho, AFTER Psi was calculated to skip this unnecessary and numerically not stable calculation.
 
 6. have Psi only as a temporary array
+   At the moment, Psi is a full field component. However, it is only needed for one slice during the field calculation, so a temporary array should suffice.
