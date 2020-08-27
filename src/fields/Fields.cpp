@@ -3,8 +3,6 @@
 
 #include <AMReX_BLProfiler.H>
 
-using namespace amrex::literals;
-
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
       m_F(a_hipace->maxLevel()+1),
@@ -78,6 +76,7 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
                               const int scomp, const int dcomp)
 {
     BL_PROFILE("Fields::TransverseDerivative()");
+    using namespace amrex::literals;
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
