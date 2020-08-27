@@ -13,14 +13,15 @@
  * \param[in,out] fields the general field class, modified by this function
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] current_depo_type defines if this or the next slice is handled
- * \param[in] advance_type defines if the force terms are updated and shifted
- *  or if particles are pushed
+ * \param[in] do_push boolean to define if plasma particles are pushed
+ * \param[in] do_update boolean to define if the force terms are updated
+ * \param[in] do_shift boolean to define if the force terms are shifted
  * \param[in] lev MR level
  */
 void
 UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
-                          const AdvanceType advance_type, int const lev=0);
+                          const bool do_push, const bool do_update, const bool do_shift, int const lev=0);
 
 
 /** \brief Pushing the plasma particles (currently only with a 5th order Adams Bashforth Pusher)

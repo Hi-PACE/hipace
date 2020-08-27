@@ -209,7 +209,7 @@ Hipace::Evolve ()
 
                 UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev],
                                           CurrentDepoType::DepositThisSlice,
-                                          AdvanceType::Push, lev);
+                                          true, false, false, lev);
 
                 amrex::ParallelContext::push(m_comm_xy);
                 m_plasma_container.Redistribute();
@@ -227,7 +227,7 @@ Hipace::Evolve ()
 
                 UpdateForcePushParticles (m_plasma_container, m_fields, geom[lev],
                                           CurrentDepoType::DepositThisSlice,
-                                          AdvanceType::ShiftUpdateForceTerms, lev);
+                                          false, true, true, lev);
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);

@@ -11,7 +11,8 @@
 void
 UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
                           amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
-                          const AdvanceType advance_type, int const lev)
+                          const bool do_push, const bool do_update, const bool do_shift,
+                          int const lev)
 {
     BL_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -104,12 +105,6 @@ UpdateForcePushParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const auto SetPosition = SetParticlePosition(pti);
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
-
-        bool do_push = (advance_type == AdvanceType::Push);
-        bool do_update = (advance_type == AdvanceType::ShiftUpdateForceTerms)
-                              + (advance_type == AdvanceType::UpdateForceTerms);
-        bool do_shift = (advance_type == AdvanceType::ShiftUpdateForceTerms);
-
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
