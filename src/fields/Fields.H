@@ -15,6 +15,11 @@ struct FieldComps{
 /** \brief Direction of field copies: from 3D F to 2D slice S or the other way round */
 enum struct FieldCopyType { FtoS, StoF };
 
+/** \brief Operation performed in the TransverseDerivative function:
+ * either assign or add to the destination array
+ */
+enum struct SliceOperatorType { Assign, Add };
+
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
     enum dir{x=0, y, z};
@@ -82,7 +87,9 @@ public:
 
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
-                               const amrex::Real dx, const int scomp=0, const int dcomp=0);
+                               const amrex::Real dx, const amrex::Real mult_coeff=1.,
+                               const SliceOperatorType slice_operator=SliceOperatorType::Assign,
+                               const int scomp=0, const int dcomp=0);
 
 private:
     /** Pointer to const singleton of class Hipace */

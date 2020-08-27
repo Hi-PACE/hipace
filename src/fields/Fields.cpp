@@ -71,9 +71,12 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
 
 void
 Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
-                              const amrex::Real dx, const int scomp, const int dcomp)
+                              const amrex::Real dx, const amrex::Real mult_coeff,
+                              const SliceOperatorType slice_operator,
+                              const int scomp, const int dcomp)
 {
     BL_PROFILE("Fields::TransverseDerivative()");
+    using namespace amrex::literals;
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -85,12 +88,28 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
             {
                 if (direction == Direction::x){
                     /* finite difference along x */
-                    dst_array(i,j,k,dcomp) =
-                        (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2*dx);
+                    if (slice_operator==SliceOperatorType::Assign)
+                    {
+                        dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp));
+                    }
+                    else /* SliceOperatorType::Add */
+                    {
+                        dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp));
+                    }
                 } else /* Direction::y */ {
                     /* finite difference along y */
-                    dst_array(i,j,k,dcomp) =
-                        (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
+                    if (slice_operator==SliceOperatorType::Assign)
+                    {
+                        dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp));
+                    }
+                    else /* SliceOperatorType::Add */
+                    {
+                        dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp));
+                    }
                 }
             }
             );

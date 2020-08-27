@@ -249,8 +249,9 @@ void Hipace::SolvePoissonBx (const int lev)
         m_poisson_solver.StagingArea(),
         Direction::y,
         geom[0].CellSize(Direction::y),
+        -m_phys_const.mu0,
+        SliceOperatorType::Assign,
         FieldComps::jz);
-    m_poisson_solver.StagingArea().mult(-m_phys_const.mu0);
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
@@ -274,8 +275,9 @@ void Hipace::SolvePoissonBy (const int lev)
         m_poisson_solver.StagingArea(),
         Direction::x,
         geom[0].CellSize(Direction::x),
+        m_phys_const.mu0,
+        SliceOperatorType::Assign,
         FieldComps::jz);
-    m_poisson_solver.StagingArea().mult(m_phys_const.mu0);
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
