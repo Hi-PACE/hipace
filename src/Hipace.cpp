@@ -217,7 +217,8 @@ Hipace::Evolve ()
 
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
                 amrex::ParallelContext::push(m_comm_xy);
-                m_fields.getSlices(lev, 1).FillBoundary(); // need to exchange jx jy jz rho
+                // need to exchange jx jy jz rho
+                m_fields.getSlices(lev, 1).SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
                 SolvePoissonEz(lev);
@@ -226,7 +227,8 @@ Hipace::Evolve ()
                 SolvePoissonBy(lev);
                 SolvePoissonBz(lev);
                 amrex::ParallelContext::push(m_comm_xy);
-                m_fields.getSlices(lev, 1).FillBoundary(); // exchange ExmBy EypBx Ez Bx By Bz
+                 // exchange ExmBy EypBx Ez Bx By Bz
+                m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
