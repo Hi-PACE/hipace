@@ -42,6 +42,9 @@
 *.kdev?
 /nbproject/
 .vimrc
+.vscode/
 cmake-build-*/
 spack-build*
 build/
+debug/
+__pycache__
