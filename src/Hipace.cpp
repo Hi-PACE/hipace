@@ -216,17 +216,14 @@ Hipace::Evolve ()
                 amrex::ParallelContext::pop();
 
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
-                amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
-                                        amrex::make_alias, FieldComps::jx, 3);
-                amrex::ParallelContext::push(m_comm_xy);
-                j_slice.FillBoundary(Geom(lev).periodicity());
-                amrex::ParallelContext::pop();
+                m_fields.getSlices(lev, 1).FillBoundary(); // need to exchange jx jy jz rho
 
                 SolvePoissonEz(lev);
-                SolveExmByAndEypBx(lev);
+                SolvePoissonExmByAndEypBx(lev);
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
                 SolvePoissonBz(lev);
+                m_fields.getSlices(lev, 1).FillBoundary(); // exchange ExmBy EypBx Ez Bx By Bz
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        CurrentDepoType::DepositThisSlice,
@@ -248,15 +245,14 @@ Hipace::Evolve ()
     if (m_do_plot) WriteDiagnostics(1);
 }
 
-void Hipace::SolveExmByAndEypBx (const int lev)
+void Hipace::SolvePoissonExmByAndEypBx (const int lev)
 {
     BL_PROFILE("Hipace::SolveExmByAndEypBx()");
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Psi, 1);
-    // cleaning the previous staging area
-    m_poisson_solver.StagingArea().setVal(0.);
-    // calculating the right-hand side rho-Jz
+
+    // calculating the right-hand side 1/episilon0 * (rho-Jz)
     amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
                           FieldComps::rho, 0, 1, 0);
     amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
@@ -341,10 +337,6 @@ void Hipace::SolvePoissonBx (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary Bx ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
 }
 
 void Hipace::SolvePoissonBy (const int lev)
@@ -367,10 +359,6 @@ void Hipace::SolvePoissonBy (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary By ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
 }
 
 void Hipace::SolvePoissonBz (const int lev)
@@ -402,10 +390,6 @@ void Hipace::SolvePoissonBz (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary Bz ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
 }
 
 void
