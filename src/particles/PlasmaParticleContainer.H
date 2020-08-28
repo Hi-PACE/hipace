@@ -47,7 +47,7 @@ public:
         const amrex::RealBox& a_bounds);
 
     amrex::Real m_density {0}; /**< Density of the plasma */
-    amrex::IntVect m_ppc {0, 0, 0}; /**< Number of particles per cell in each direction */
+    amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
   };
