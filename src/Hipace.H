@@ -148,6 +148,17 @@ private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
 
+    /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
+     * ExmBy and EypBx are solved in the same function because both rely on Psi.
+     *
+     * \param[in] lev current level
+     */
+    void SolvePoissonExmByAndEypBx (const int lev);
+    /** \brief Compute Ez on the slice container from J by solving a Poisson equation
+     *
+     * \param[in] lev current level
+     */
+    void SolvePoissonEz (const int lev);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in] lev current level
@@ -158,6 +169,11 @@ private:
      * \param[in] lev current level
      */
     void SolvePoissonBy (const int lev);
+    /** \brief Compute Bz on the slice container from J by solving a Poisson equation
+     *
+     * \param[in] lev current level
+     */
+    void SolvePoissonBz (const int lev);
 };
 
 /** \brief Type of current deposition, either in the current slice or in the next one

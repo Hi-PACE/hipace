@@ -216,14 +216,22 @@ Hipace::Evolve ()
                 amrex::ParallelContext::pop();
 
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
-                amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
-                                        amrex::make_alias, FieldComps::jx, 3);
                 amrex::ParallelContext::push(m_comm_xy);
-                j_slice.FillBoundary(Geom(lev).periodicity());
+                // need to exchange jx jy jz rho
+                amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
+                                         amrex::make_alias, FieldComps::jx, 4);
+                 j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
+                SolvePoissonEz(lev);
+                SolvePoissonExmByAndEypBx(lev);
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
+                SolvePoissonBz(lev);
+                amrex::ParallelContext::push(m_comm_xy);
+                 // exchange ExmBy EypBx Ez Bx By Bz
+                m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
+                amrex::ParallelContext::pop();
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        CurrentDepoType::DepositThisSlice,
@@ -245,9 +253,88 @@ Hipace::Evolve ()
     if (m_do_plot) WriteDiagnostics(1);
 }
 
+void Hipace::SolvePoissonExmByAndEypBx (const int lev)
+{
+    /* Solves Laplacian(-Psi) =  1/episilon0 * (rho-Jz/c) and
+     * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
+     */
+    BL_PROFILE("Hipace::SolveExmByAndEypBx()");
+    // Left-Hand Side for Poisson equation is Psi in the slice MF
+    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                        FieldComps::Psi, 1);
+
+    // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
+    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
+                              FieldComps::jz, 0, 1, 0);
+    m_poisson_solver.StagingArea().mult(-1./m_phys_const.c);
+    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
+                          FieldComps::rho, 0, 1, 0);
+
+
+    m_poisson_solver.SolvePoissonEquation(lhs);
+    /* ---------- Transverse FillBoundary Psi ---------- */
+    amrex::ParallelContext::push(m_comm_xy);
+    lhs.FillBoundary(Geom(lev).periodicity());
+    amrex::ParallelContext::pop();
+
+    /* Compute ExmBy and Eypbx from grad(-psi) */
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        m_fields.getSlices(lev, 1),
+        Direction::x,
+        geom[0].CellSize(Direction::x),
+        1.,
+        SliceOperatorType::Assign,
+        FieldComps::Psi,
+        FieldComps::ExmBy);
+
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        m_fields.getSlices(lev, 1),
+        Direction::y,
+        geom[0].CellSize(Direction::y),
+        1.,
+        SliceOperatorType::Assign,
+        FieldComps::Psi,
+        FieldComps::EypBx);
+}
+
+void Hipace::SolvePoissonEz (const int lev)
+{
+    /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
+    BL_PROFILE("Hipace::SolvePoissonEz()");
+    // Left-Hand Side for Poisson equation is Bz in the slice MF
+    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                        FieldComps::Ez, 1);
+    // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
+    // from the slice MF, and store in the staging area of m_poisson_solver
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        m_poisson_solver.StagingArea(),
+        Direction::x,
+        geom[0].CellSize(Direction::x),
+        1./(m_phys_const.ep0*m_phys_const.c),
+        SliceOperatorType::Assign,
+        FieldComps::jx);
+
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        m_poisson_solver.StagingArea(),
+        Direction::y,
+        geom[0].CellSize(Direction::y),
+        1./(m_phys_const.ep0*m_phys_const.c),
+        SliceOperatorType::Add,
+        FieldComps::jy);
+    // Solve Poisson equation.
+    // The RHS is in the staging area of m_poisson_solver.
+    // The LHS will be returned as lhs.
+    m_poisson_solver.SolvePoissonEquation(lhs);
+}
+
 void Hipace::SolvePoissonBx (const int lev)
 {
-     BL_PROFILE("Hipace::SolvePoissonBx()");
+    /* Solves Laplacian(Bx) = -mu_0*d_y(jz) */
+    BL_PROFILE("Hipace::SolvePoissonBx()");
     // Left-Hand Side for Poisson equation is By in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Bx, 1);
@@ -265,15 +352,12 @@ void Hipace::SolvePoissonBx (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary Bx ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
 }
 
 void Hipace::SolvePoissonBy (const int lev)
 {
-     BL_PROFILE("Hipace::SolvePoissonBy()");
+    /* Solves Laplacian(By) = mu_0*d_x(jz) */
+    BL_PROFILE("Hipace::SolvePoissonBy()");
     // Left-Hand Side for Poisson equation is By in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::By, 1);
@@ -291,12 +375,39 @@ void Hipace::SolvePoissonBy (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary By ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
 }
 
+void Hipace::SolvePoissonBz (const int lev)
+{
+    /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
+    BL_PROFILE("Hipace::SolvePoissonBz()");
+    // Left-Hand Side for Poisson equation is Bz in the slice MF
+    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+                        FieldComps::Bz, 1);
+    // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
+    // from the slice MF, and store in the staging area of m_poisson_solver
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        m_poisson_solver.StagingArea(),
+        Direction::y,
+        geom[0].CellSize(Direction::y),
+        m_phys_const.mu0,
+        SliceOperatorType::Assign,
+        FieldComps::jx);
+
+    m_fields.TransverseDerivative(
+        m_fields.getSlices(lev, 1),
+        m_poisson_solver.StagingArea(),
+        Direction::x,
+        geom[0].CellSize(Direction::x),
+        -m_phys_const.mu0,
+        SliceOperatorType::Add,
+        FieldComps::jy);
+    // Solve Poisson equation.
+    // The RHS is in the staging area of m_poisson_solver.
+    // The LHS will be returned as lhs.
+    m_poisson_solver.SolvePoissonEquation(lhs);
+}
 
 void
 Hipace::Wait ()
@@ -405,7 +516,7 @@ Hipace::WriteDiagnostics (int step)
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
     const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
-                                                 "jx", "jy", "jz", "rho"};
+                                                 "jx", "jy", "jz", "rho", "Psi"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
