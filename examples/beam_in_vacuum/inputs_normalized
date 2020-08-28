@@ -22,6 +22,3 @@ beam.density = 1.0
 beam.u_mean = 0. 0. 1.e3
 beam.u_std = 0. 0. 0.
 beam.ppc = 4 4 1
-
-plasma.density = 0 # added to prevent possible crash by the parser
-plasma.ppc = 0 0
