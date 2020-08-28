@@ -218,7 +218,9 @@ Hipace::Evolve ()
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
                 amrex::ParallelContext::push(m_comm_xy);
                 // need to exchange jx jy jz rho
-                m_fields.getSlices(lev, 1).SumBoundary(Geom(lev).periodicity());
+                amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
+                                         amrex::make_alias, FieldComps::jx, 4);
+                 j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
                 SolvePoissonEz(lev);
