@@ -253,16 +253,21 @@ Hipace::Evolve ()
 
 void Hipace::SolvePoissonExmByAndEypBx (const int lev)
 {
+    /* Solves Laplacian(-Psi) =  1/episilon0 * (rho-Jz/c) and
+     * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
+     */
     BL_PROFILE("Hipace::SolveExmByAndEypBx()");
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Psi, 1);
 
-    // calculating the right-hand side 1/episilon0 * (rho-Jz)
+    // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
     amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
-                          FieldComps::rho, 0, 1, 0);
-    amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
                               FieldComps::jz, 0, 1, 0);
+    m_poisson_solver.StagingArea().mult(-1./m_phys_const.c);
+    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
+                          FieldComps::rho, 0, 1, 0);
+
 
     m_poisson_solver.SolvePoissonEquation(lhs);
     /* ---------- Transverse FillBoundary Psi ---------- */
@@ -294,6 +299,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
 
 void Hipace::SolvePoissonEz (const int lev)
 {
+    /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     BL_PROFILE("Hipace::SolvePoissonEz()");
     // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
@@ -325,6 +331,7 @@ void Hipace::SolvePoissonEz (const int lev)
 
 void Hipace::SolvePoissonBx (const int lev)
 {
+    /* Solves Laplacian(Bx) = -mu_0*d_y(jz) */
     BL_PROFILE("Hipace::SolvePoissonBx()");
     // Left-Hand Side for Poisson equation is By in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
@@ -347,6 +354,7 @@ void Hipace::SolvePoissonBx (const int lev)
 
 void Hipace::SolvePoissonBy (const int lev)
 {
+    /* Solves Laplacian(By) = mu_0*d_x(jz) */
     BL_PROFILE("Hipace::SolvePoissonBy()");
     // Left-Hand Side for Poisson equation is By in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
@@ -369,6 +377,7 @@ void Hipace::SolvePoissonBy (const int lev)
 
 void Hipace::SolvePoissonBz (const int lev)
 {
+    /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
     BL_PROFILE("Hipace::SolvePoissonBz()");
     // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
