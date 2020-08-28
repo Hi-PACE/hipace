@@ -4,7 +4,7 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
     : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
 {
     amrex::ParmParse pp("plasma");
-    pp.get("density", m_density);
+    pp.query("density", m_density);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
