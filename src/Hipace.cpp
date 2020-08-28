@@ -216,14 +216,18 @@ Hipace::Evolve ()
                 amrex::ParallelContext::pop();
 
                 DepositCurrent(m_plasma_container, m_fields, geom[lev], lev);
+                amrex::ParallelContext::push(m_comm_xy);
                 m_fields.getSlices(lev, 1).FillBoundary(); // need to exchange jx jy jz rho
+                amrex::ParallelContext::pop();
 
                 SolvePoissonEz(lev);
                 SolvePoissonExmByAndEypBx(lev);
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
                 SolvePoissonBz(lev);
+                amrex::ParallelContext::push(m_comm_xy);
                 m_fields.getSlices(lev, 1).FillBoundary(); // exchange ExmBy EypBx Ez Bx By Bz
+                amrex::ParallelContext::pop();
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        CurrentDepoType::DepositThisSlice,
