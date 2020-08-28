@@ -288,12 +288,6 @@ void Hipace::SolveExmByAndEypBx (const int lev)
         SliceOperatorType::Assign,
         FieldComps::Psi,
         FieldComps::EypBx);
-
-    /* ---------- Transverse FillBoundary ExmBy ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
-
 }
 
 void Hipace::SolvePoissonEz (const int lev)
@@ -302,8 +296,6 @@ void Hipace::SolvePoissonEz (const int lev)
     // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Ez, 1);
-    // cleaning the previous staging area
-    m_poisson_solver.StagingArea().setVal(0.);
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
     m_fields.TransverseDerivative(
@@ -312,7 +304,7 @@ void Hipace::SolvePoissonEz (const int lev)
         Direction::x,
         geom[0].CellSize(Direction::x),
         1./(m_phys_const.ep0*m_phys_const.c),
-        SliceOperatorType::Add,
+        SliceOperatorType::Assign,
         FieldComps::jx);
 
     m_fields.TransverseDerivative(
@@ -327,10 +319,6 @@ void Hipace::SolvePoissonEz (const int lev)
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver.SolvePoissonEquation(lhs);
-    /* ---------- Transverse FillBoundary Ez ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(Geom(lev).periodicity());
-    amrex::ParallelContext::pop();
 }
 
 void Hipace::SolvePoissonBx (const int lev)
@@ -391,8 +379,6 @@ void Hipace::SolvePoissonBz (const int lev)
     // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Bz, 1);
-    // cleaning the previous staging area
-    m_poisson_solver.StagingArea().setVal(0.);
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
     m_fields.TransverseDerivative(
@@ -401,7 +387,7 @@ void Hipace::SolvePoissonBz (const int lev)
         Direction::y,
         geom[0].CellSize(Direction::y),
         m_phys_const.mu0,
-        SliceOperatorType::Add,
+        SliceOperatorType::Assign,
         FieldComps::jx);
 
     m_fields.TransverseDerivative(

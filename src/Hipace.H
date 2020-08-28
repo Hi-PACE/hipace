@@ -149,10 +149,11 @@ private:
     static Hipace* m_instance;
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
+     * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
      * \param[in] lev current level
      */
-    void SolveExmByAndEypBx (const int lev);
+    void SolvePoissonExmByAndEypBx (const int lev);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] lev current level
