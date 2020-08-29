@@ -119,12 +119,12 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){
-                        amrex::Gpu::Atomic::Add(
-                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
-                        amrex::Gpu::Atomic::Add(
-                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
+                        // amrex::Gpu::Atomic::Add(
+                        //     &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                        //     sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
+                        // amrex::Gpu::Atomic::Add(
+                        //     &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                        //     sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);

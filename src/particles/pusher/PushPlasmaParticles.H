@@ -118,6 +118,7 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
             + a4_times_dz * Fuy4 + a5_times_dz * Fuy5;
         psip -= a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
             + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5;
+        // std::cout << " xp " << xp << " uxp " << uxp << " psi " << psip << "\n";
     }
     else
     {
@@ -131,6 +132,8 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
                   + a4_times_dz * Fuy4 + a5_times_dz * Fuy5 );
         psi_temp = psip - ( a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
                   + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5 );
+
+        // std::cout << " xp " << xp << " xtemp " << x_temp << " uxp " << uxp << " uxtemp " << ux_temp << " psi " << psip << " psi_temp " << psi_temp << "\n";
     }
 }
 

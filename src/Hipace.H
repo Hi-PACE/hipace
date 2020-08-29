@@ -174,6 +174,12 @@ private:
      * \param[in] lev current level
      */
     void SolvePoissonBz (const int lev);
+
+    /** \brief Sets the initial guess of the B field from the two previous slices
+     *
+     * \param[in] lev current level
+     */
+    void InitialBfieldGuess (const int lev);
 };
 
 /** \brief Type of current deposition, either in the current slice or in the next one

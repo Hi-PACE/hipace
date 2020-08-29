@@ -59,8 +59,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const auto& pos_structs = aos.begin();
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
-    const amrex::Real * const wp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
-        soa.GetRealData(PlasmaIdx::w).data() : soa.GetRealData(PlasmaIdx::w_temp).data();
+    const amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
+    // (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+    //     soa.GetRealData(PlasmaIdx::w).data() : soa.GetRealData(PlasmaIdx::w_temp).data();
     const amrex::Real * const uxp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
     const amrex::Real * const uyp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
@@ -121,6 +122,10 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
            const amrex::Real wqy = wq*vy;
            const amrex::Real wqz = wq*vz;
 
+           // std::cout << "partid " << ip <<  " ux " << uxp[ip] << " uy " << uyp[ip] << " psi " << psip[ip] << "gamma " << (1.0_rt
+                                                         // + uxp[ip]*uxp[ip]*clightsq
+                                                         // + uyp[ip]*uyp[ip]*clightsq
+                                                         // + psip[ip]*psip[ip])/ (2.0_rt * psip[ip] ) << "\n";
             // --- Compute shape factors
             // x direction
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
@@ -144,6 +149,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     amrex::Gpu::Atomic::Add(
                         &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                         sx_cell[ix]*sy_cell[iy]*wqy);
+
+                   // std::cout << " partid " << ip <<  " jx array " << jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0) << " jy array " << jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0) << " wqx " << wqx << " wqy " << wqy << "\n";
+
                     if (current_depo_type == CurrentDepoType::DepositThisSlice)
                     {
                         amrex::Gpu::Atomic::Add(

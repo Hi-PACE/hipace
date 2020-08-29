@@ -4,6 +4,7 @@
 #include "particles/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include "Constants.H"
+#include "Hipace.H"
 
 /** Depose current of particles in species plasma into the current 2D slice in fields
  * \param[in] plasma species of which the current is deposited
@@ -13,6 +14,7 @@
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
+                const CurrentDepoType current_depo_type,
                 amrex::Geometry const& gm, int const lev=0);
 
 

@@ -132,7 +132,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                    ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                    exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                    dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
-
+                    // std::cout << " ip " << ip << " uxp[ip] " << uxp[ip]  << " uyp[ip] " << uyp[ip]  << " psi[ip] " << psip[ip] << " ExmByp " << ExmByp << " EypBx " << EypBxp << " Ez " << Ezp << " Bx " << Bxp << " By " << Byp << " Bz " << Bzp << "\n";
                     // update force terms for a single particle
                     UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
                                      Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
