@@ -465,10 +465,7 @@ void Hipace::SolvePoissonBy (amrex::MultiFab& By_iter, const int lev)
 {
     /* Solves Laplacian(By) = mu_0*d_x(jz) */
     BL_PROFILE("Hipace::SolvePoissonBy()");
-    // Left-Hand Side for Poisson equation is By in the slice MF
-    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
-                        FieldComps::By, 1);
-    lhs.setVal(0.);
+    
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of m_poisson_solver
     m_fields.TransverseDerivative(
