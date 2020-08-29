@@ -163,12 +163,12 @@ private:
      *
      * \param[in] lev current level
      */
-    void SolvePoissonBx (const int lev);
+    void SolvePoissonBx (amrex::MultiFab& Bx_iter, const int lev);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
      * \param[in] lev current level
      */
-    void SolvePoissonBy (const int lev);
+    void SolvePoissonBy (amrex::MultiFab& By_iter, const int lev);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
      * \param[in] lev current level
@@ -180,6 +180,10 @@ private:
      * \param[in] lev current level
      */
     void InitialBfieldGuess (const int lev);
+
+    void MixAndShiftBfields (amrex::MultiFab& Bx_iter,
+                             amrex::MultiFab& By_iter, amrex::MultiFab& Bx_iter_m_1,
+                             amrex::MultiFab& By_iter_m_1, const int lev);
 };
 
 /** \brief Type of current deposition, either in the current slice or in the next one

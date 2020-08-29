@@ -247,6 +247,31 @@ Hipace::Evolve ()
                 SolvePoissonBz(lev);
                 /* Guess Bx and By */
                 InitialBfieldGuess(lev);
+
+                amrex::MultiFab Bx_iter_m_1(
+                    m_fields.getSlices(lev, 1).boxArray(),
+                    m_fields.getSlices(lev, 1).DistributionMap(), 1,
+                    m_fields.getSlices(lev, 1).nGrowVect());
+                amrex::MultiFab::Copy(Bx_iter_m_1, m_fields.getSlices(lev, 1),
+                                          FieldComps::Bx, 0, 1, 0);
+
+                amrex::MultiFab By_iter_m_1(
+                    m_fields.getSlices(lev, 1).boxArray(),
+                    m_fields.getSlices(lev, 1).DistributionMap(), 1,
+                    m_fields.getSlices(lev, 1).nGrowVect());
+                amrex::MultiFab::Copy(By_iter_m_1, m_fields.getSlices(lev, 1),
+                                          FieldComps::By, 0, 1, 0);
+
+                amrex::MultiFab Bx_iter(
+                    m_fields.getSlices(lev, 1).boxArray(),
+                    m_fields.getSlices(lev, 1).DistributionMap(), 1,
+                    m_fields.getSlices(lev, 1).nGrowVect());
+
+                amrex::MultiFab By_iter(
+                    m_fields.getSlices(lev, 1).boxArray(),
+                    m_fields.getSlices(lev, 1).DistributionMap(), 1,
+                    m_fields.getSlices(lev, 1).nGrowVect());
+
                 // std::cout << "after b field guess \n";
                 amrex::ParallelContext::push(m_comm_xy);
                  // exchange ExmBy EypBx Ez Bx By Bz
@@ -258,45 +283,50 @@ Hipace::Evolve ()
                                        false, true, true, lev);
 
                 /* Begin of predictor corrector loop (not yet) */
-                // std::cout << "before second push \n";
-                /* Push particles to the next slice */
-                AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                                       CurrentDepoType::DepositNextSlice,
-                                       true, false, false, lev);
-                // std::cout << "after second push \n";
-                //
-                //
-                //
-// std::cout << " before dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
-                /* deposit current to next slice */
-                DepositCurrent(m_plasma_container, m_fields, CurrentDepoType::DepositNextSlice,
-                               geom[lev], lev);
-                amrex::ParallelContext::push(m_comm_xy);
-                // need to exchange jx jy jz rho
-                amrex::MultiFab j_slice_next(m_fields.getSlices(lev, 0),
-                                             amrex::make_alias, FieldComps::jx, 4);
-                j_slice_next.SumBoundary(Geom(lev).periodicity());
-                amrex::ParallelContext::pop();
-        // std::cout << " after dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
-        //         std::cout << "before bx and by \n";
-                /* Calculate Bx and By */
-                SolvePoissonBx(lev);
-                SolvePoissonBy(lev);
+                for (int pred_number=0; pred_number<10; pred_number++)
+                {
+                    // std::cout << "before second push \n";
+                    /* Push particles to the next slice */
+                    AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
+                                           CurrentDepoType::DepositNextSlice,
+                                           true, false, false, lev);
+                    // std::cout << "after second push \n";
+                    //
+                    //
+                    //
+    // std::cout << " before dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
+                    /* deposit current to next slice */
+                    DepositCurrent(m_plasma_container, m_fields, CurrentDepoType::DepositNextSlice,
+                                   geom[lev], lev);
+                    amrex::ParallelContext::push(m_comm_xy);
+                    // need to exchange jx jy jz rho
+                    amrex::MultiFab j_slice_next(m_fields.getSlices(lev, 0),
+                                                 amrex::make_alias, FieldComps::jx, 4);
+                    j_slice_next.SumBoundary(Geom(lev).periodicity());
+                    amrex::ParallelContext::pop();
+            // std::cout << " after dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
+            //         std::cout << "before bx and by \n";
+                    /* Calculate Bx and By */
+                    SolvePoissonBx(Bx_iter, lev);
+                    SolvePoissonBy(Bx_iter, lev);
 
+                    MixAndShiftBfields( Bx_iter, By_iter, Bx_iter_m_1, By_iter_m_1, lev);
 
-                jx_next.setVal(0.);
-                jy_next.setVal(0.);
+                    jx_next.setVal(0.);
+                    jy_next.setVal(0.);
 
-                // std::cout << "after bx and by \n";
-                amrex::ParallelContext::push(m_comm_xy);
-                 // exchange Bx By
-                m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
-                amrex::ParallelContext::pop();
-                // std::cout << "before last update \n";
-                /* Update force terms using the calculated Bx and By */
-                AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                                       CurrentDepoType::DepositNextSlice,
-                                       false, true, false, lev);
+                    // std::cout << "after bx and by \n";
+                    amrex::ParallelContext::push(m_comm_xy);
+                     // exchange Bx By
+                    m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
+                    amrex::ParallelContext::pop();
+                    // std::cout << "before last update \n";
+                    /* Update force terms using the calculated Bx and By */
+                    AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
+                                           CurrentDepoType::DepositNextSlice,
+                                           false, true, false, lev);
+                }
+
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
@@ -392,18 +422,18 @@ void Hipace::SolvePoissonEz (const int lev)
     m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
-void Hipace::SolvePoissonBx (const int lev)
+void Hipace::SolvePoissonBx (amrex::MultiFab& Bx_iter, const int lev)
 {
     /* Solves Laplacian(Bx) = -mu_0*d_y(jz) */
     BL_PROFILE("Hipace::SolvePoissonBx()");
     // Left-Hand Side for Poisson equation is By in the slice MF
-    amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
-                        FieldComps::Bx, 1);
-    // amrex::MultiFab jx_next(m_fields.getSlices(lev, 0), amrex::make_alias,
-    //                     FieldComps::jx, 1);
-    // amrex::MultiFab jy_next(m_fields.getSlices(lev, 0), amrex::make_alias,
-    //                     FieldComps::jy, 1);
-    lhs.setVal(0.);
+    // amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
+    //                     FieldComps::Bx, 1);
+    // // amrex::MultiFab jx_next(m_fields.getSlices(lev, 0), amrex::make_alias,
+    // //                     FieldComps::jx, 1);
+    // // amrex::MultiFab jy_next(m_fields.getSlices(lev, 0), amrex::make_alias,
+    // //                     FieldComps::jy, 1);
+    // lhs.setVal(0.);
 
     // std::cout << " norm0 jx " << jx_next.norm0() << " norm0 jy " << jy_next.norm0() << "\n";
     // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
@@ -428,10 +458,10 @@ void Hipace::SolvePoissonBx (const int lev)
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver.SolvePoissonEquation(lhs);
+    m_poisson_solver.SolvePoissonEquation(Bx_iter);
 }
 
-void Hipace::SolvePoissonBy (const int lev)
+void Hipace::SolvePoissonBy (amrex::MultiFab& By_iter, const int lev)
 {
     /* Solves Laplacian(By) = mu_0*d_x(jz) */
     BL_PROFILE("Hipace::SolvePoissonBy()");
@@ -461,7 +491,7 @@ void Hipace::SolvePoissonBy (const int lev)
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver.SolvePoissonEquation(lhs);
+    m_poisson_solver.SolvePoissonEquation(By_iter);
 }
 
 void Hipace::SolvePoissonBz (const int lev)
@@ -502,7 +532,7 @@ void Hipace::InitialBfieldGuess (const int lev)
      */
     BL_PROFILE("Hipace::InitialBfieldGuess()");
 
-    const double factor = 0.5;
+    const double factor = 1.;
     //later, the factor should be: exp(-0.5 * pow(rel_avg_Bdiff / ( 2.5 * fld_predcorr_tol_b ), 2));
 
     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
@@ -526,6 +556,95 @@ void Hipace::InitialBfieldGuess (const int lev)
                              FieldComps::By,
                              1,
                              0);
+
+}
+
+void Hipace::MixAndShiftBfields (amrex::MultiFab& Bx_iter,
+                                 amrex::MultiFab& By_iter, amrex::MultiFab& Bx_iter_m_1,
+                                 amrex::MultiFab& By_iter_m_1, const int lev)
+{
+    /* Sets the initial guess of the B field from the two previous slices
+     */
+    BL_PROFILE("Hipace::MixAndShiftBfields()");
+
+    const double mixing_factor = 0.01;
+    //later, the factor should be defined in the input deck (goal, have this one flexible)
+
+    const double c_B_iter = 0.5;
+    const double c_B_iter_m_1 = 0.5;
+    /* later, this should be
+     *   c_B_iter = rel_avg_Bdiff_iter_m_1 / ( rel_avg_Bdiff + rel_avg_Bdiff_iter_m_1 );
+     *   c_B_iter_m_1 = rel_avg_Bdiff / ( rel_avg_Bdiff + rel_avg_Bdiff_iter_m_1 );
+     */
+
+     /* this array is probably unnecessary. To be checked */
+     amrex::MultiFab mixed_Bx_iter(
+         m_fields.getSlices(lev, 1).boxArray(),
+         m_fields.getSlices(lev, 1).DistributionMap(), 1,
+         m_fields.getSlices(lev, 1).nGrowVect());
+     amrex::MultiFab mixed_By_iter(
+         m_fields.getSlices(lev, 1).boxArray(),
+         m_fields.getSlices(lev, 1).DistributionMap(), 1,
+         m_fields.getSlices(lev, 1).nGrowVect());
+
+
+    amrex::MultiFab::LinComb(mixed_Bx_iter,
+                			 c_B_iter,
+                			 Bx_iter,
+                			 0,
+                			 c_B_iter_m_1,
+                			 Bx_iter_m_1,
+                			 0,
+                			 0,
+                			 1,
+                			 0);
+
+     amrex::MultiFab::LinComb(mixed_By_iter,
+                 			 c_B_iter,
+                 			 By_iter,
+                 			 0,
+                 			 c_B_iter_m_1,
+                 			 By_iter_m_1,
+                 			 0,
+                 			 0,
+                 			 1,
+                 			 0);
+
+     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
+                             1-mixing_factor,
+                             m_fields.getSlices(lev, 1),
+                             FieldComps::Bx,
+                             mixing_factor,
+                             mixed_Bx_iter,
+                             0,
+                             FieldComps::Bx,
+                             1,
+                             0);
+
+     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
+                             1-mixing_factor,
+                             m_fields.getSlices(lev, 1),
+                             FieldComps::By,
+                             mixing_factor,
+                             mixed_By_iter,
+                             0,
+                             FieldComps::By,
+                             1,
+                             0);
+
+     amrex::MultiFab::Copy(Bx_iter_m_1,
+                      Bx_iter,
+                      0,
+                      0,
+                      1,
+                      0);
+
+      amrex::MultiFab::Copy(By_iter_m_1,
+                       By_iter,
+                       0,
+                       0,
+                       1,
+                       0);
 
 }
 
