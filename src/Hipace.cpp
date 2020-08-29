@@ -205,7 +205,7 @@ Hipace::Evolve ()
             const int islice_lo = bx.smallEnd(Direction::z);
             for (int islice = islice_hi; islice >= islice_lo; --islice)
             {
-                std::cout << " NEXT SLICE! \n \n ";
+                std::cout << "Slice: "<< islice << "\n ";
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
@@ -229,11 +229,11 @@ Hipace::Evolve ()
                 amrex::MultiFab jy(m_fields.getSlices(lev, 1), amrex::make_alias,
                                     FieldComps::jy, 1);
 
-std::cout << " before depsoition in this slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
+// std::cout << " before depsoition in this slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
 
                 DepositCurrent(m_plasma_container, m_fields, CurrentDepoType::DepositThisSlice,
                                geom[lev], lev);
-std::cout << " after depsoition in this slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
+// std::cout << " after depsoition in this slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
 
                 amrex::ParallelContext::push(m_comm_xy);
                 // need to exchange jx jy jz rho
@@ -283,7 +283,7 @@ std::cout << " after depsoition in this slice norm0 jx_next " << jx_next.norm0()
                                        false, true, true, lev);
 
                 /* Begin of predictor corrector loop (not yet) */
-                for (int pred_number=0; pred_number<1; pred_number++)
+                for (int pred_number=0; pred_number<20; pred_number++)
                 {
                     // std::cout << "before second push \n";
                     /* Push particles to the next slice */
@@ -294,7 +294,7 @@ std::cout << " after depsoition in this slice norm0 jx_next " << jx_next.norm0()
                     //
                     //
                     //
-    std::cout << " before dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
+    // std::cout << " before dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
                     /* deposit current to next slice */
                     DepositCurrent(m_plasma_container, m_fields, CurrentDepoType::DepositNextSlice,
                                    geom[lev], lev);
@@ -304,8 +304,8 @@ std::cout << " after depsoition in this slice norm0 jx_next " << jx_next.norm0()
                                                  amrex::make_alias, FieldComps::jx, 4);
                     j_slice_next.SumBoundary(Geom(lev).periodicity());
                     amrex::ParallelContext::pop();
-            std::cout << " after dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
-                    std::cout << "before bx and by \n";
+            // std::cout << " after dep in next slice norm0 jx_next " << jx_next.norm0() << " norm0 jy_next " << jy_next.norm0() << " norm0 jx " << jx.norm0() << " norm0 jy " << jy.norm0() << " norm0 jx prev " << jx_prev.norm0() << " norm0 jy prev" << jy_prev.norm0() << "\n";
+            //         std::cout << "before bx and by \n";
                     /* Calculate Bx and By */
                     SolvePoissonBx(Bx_iter, lev);
                     SolvePoissonBy(By_iter, lev);
@@ -465,7 +465,7 @@ void Hipace::SolvePoissonBy (amrex::MultiFab& By_iter, const int lev)
 {
     /* Solves Laplacian(By) = mu_0*d_x(jz) */
     BL_PROFILE("Hipace::SolvePoissonBy()");
-    
+
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of m_poisson_solver
     m_fields.TransverseDerivative(
@@ -564,7 +564,7 @@ void Hipace::MixAndShiftBfields (amrex::MultiFab& Bx_iter,
      */
     BL_PROFILE("Hipace::MixAndShiftBfields()");
 
-    const double mixing_factor = 0.5;
+    const double mixing_factor = 0.1;
     //later, the factor should be defined in the input deck (goal, have this one flexible)
 
     const double c_B_iter = 0.5;
