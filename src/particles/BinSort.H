@@ -5,20 +5,19 @@
 
 #include <AMReX_MultiFab.H>
 
-using ParticleType = BeamParticleContainer::ParticleType;
-using ParticleTileType = BeamParticleContainer::ParticleTileType;
-using ParticleBins = amrex::DenseBins<ParticleType>;
-using index_type = ParticleBins::index_type;
-
-/** \brief Find the particles and count the particles that are in each cell.
+/** \brief Find particles that are in each slice, and return collections of indices per slice.
+ *
  * Note that this does *not* rearrange particle arrays
  *
+ * \param[in] lev MR level
+ * \param[in] ibox index of the box
  * \param[in] bx 3d box in which particles are sorted per slice
- * \param[in] ptile particle data for particles in bx
+ * \param[in] beam Beam particle container
  * \param[in] geom Geometry
  */
-ParticleBins
-findParticlesInEachCell (amrex::Box bx, BeamParticleContainer::ParticleTileType const& ptile,
-                         amrex::Geometry geom);
+amrex::DenseBins<BeamParticleContainer::ParticleType>
+findParticlesInEachSlice (
+    int lev, int ibox, amrex::Box bx,
+    BeamParticleContainer& beam, amrex::Geometry geom);
 
 #endif // HIPACE_BinSort_H_

@@ -204,13 +204,11 @@ Hipace::Evolve ()
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
-            // Assume only 1 tile per grid
-            BeamParticleContainer::ParticleTileType& ptile =
-                m_beam_container.ParticlesAt(lev, *it, 0);
-
             const amrex::Box& bx = fields.box(*it);
-            ParticleBins bins;
-            if (m_slice_deposition) bins = findParticlesInEachCell(bx, ptile, geom[lev]);
+            amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
+            if (m_slice_deposition) bins = findParticlesInEachSlice(
+                lev, *it, bx, m_beam_container, geom[lev]);
+
             const int islice_hi = bx.bigEnd(Direction::z);
             const int islice_lo = bx.smallEnd(Direction::z);
             for (int islice = islice_hi; islice >= islice_lo; --islice)
