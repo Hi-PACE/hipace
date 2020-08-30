@@ -18,4 +18,4 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs hipace.slice_depositi
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --plotfile plt00001 \
-    --test-name can_beam.1Rank
+    --test-name slice_deposition.1Rank
