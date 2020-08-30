@@ -20,7 +20,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
         // Extract properties associated with the extent of the current box
-        amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
+        amrex::Box tilebox = pti.tilebox().grow(
+            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
@@ -41,6 +42,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         // For now: fix the value of the charge
         amrex::Real q = - phys_const.q_e;
 
+        // Deposit ion charge density, assumed uniform
         rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
 
         // Call deposition function in each box

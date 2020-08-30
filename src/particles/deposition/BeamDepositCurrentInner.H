@@ -39,7 +39,10 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
-                         amrex::Real const q)
+                         amrex::Real const q,
+                         int islice,
+                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                         bool slice_deposition)
 {
     using namespace amrex::literals;
 
@@ -80,10 +83,26 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         "jx, jy, jz and rho must be nodal in all directions."
         );
 
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type *indices;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start, cell_stop;
+    if (slice_deposition){
+        indices = bins.permutationPtr();
+        offsets = bins.offsetsPtr();
+        // The particles that are in slice islice are
+        // given by the indices[cell_start:cell_stop]
+        cell_start = offsets[islice];
+        cell_stop  = offsets[islice+1];
+    }
+    int num_particles = slice_deposition ? cell_stop-cell_start : pti.numParticles();
+    // amrex::Print()<<cell_start<<' '<<cell_stop<<' '<<cell_stop-cell_start<<' '<<pti.numParticles()<<'\n';
+
     // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
-        pti.numParticles(),
-        [=] AMREX_GPU_DEVICE (long ip) {
+        num_particles,
+        [=] AMREX_GPU_DEVICE (long idx) {
+            // std::cout<<"idx "<<idx<<'\n';
+            const int ip = slice_deposition ? indices[cell_start+idx] : idx;
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
@@ -113,7 +132,8 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             // z direction
             const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
             amrex::Real sz_cell[depos_order_z + 1];
-            const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
+            int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
+            if (slice_deposition) { l_cell = 0; }
 
             // Deposit current into jx_arr, jy_arr, jz_arr, and rho_arr
             for (int iz=0; iz<=depos_order_z; iz++){
