@@ -108,7 +108,6 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
-            // std::cout<<"idx "<<idx<<'\n';
             const int ip = slice_deposition ? indices[cell_start+idx] : idx;
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq

@@ -1,8 +1,8 @@
 #! /usr/bin/env sh
 
 # This file is part of the Hipace test suite.
-# It runs a Hipace simulation for a can beam, and compares the result
-# of the simulation to a benchmark.
+# It runs a Hipace simulation for a can beam with per-slice beam deposition,
+# and compares the result of the simulation to a benchmark.
 
 # Read input parameters
 HIPACE_EXECUTABLE=$1

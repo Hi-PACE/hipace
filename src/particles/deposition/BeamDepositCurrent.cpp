@@ -24,9 +24,6 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
     {
         // Extract properties associated with the extent of the current box
         amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
-        // amrex::Box tilebox = pti.tilebox().grow(
-        //     {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy,
-        //      Hipace::m_depos_order_z});
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
@@ -112,6 +109,9 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     BL_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
+        "Only order 0 deposition is allowed for beam per-slice deposition");
 
     PhysConst phys_const = get_phys_const();
 
