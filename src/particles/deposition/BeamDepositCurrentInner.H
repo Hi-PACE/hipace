@@ -90,9 +90,10 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         "jx, jy, jz and rho must be nodal in all directions."
         );
 
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type *indices;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start, cell_stop;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+        indices = nullptr;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
     if (slice_deposition){
         indices = bins.permutationPtr();
         offsets = bins.offsetsPtr();
@@ -102,7 +103,6 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         cell_stop  = offsets[islice+1];
     }
     int num_particles = slice_deposition ? cell_stop-cell_start : pti.numParticles();
-    // amrex::Print()<<cell_start<<' '<<cell_stop<<' '<<cell_stop-cell_start<<' '<<pti.numParticles()<<'\n';
 
     // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
