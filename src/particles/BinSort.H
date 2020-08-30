@@ -13,7 +13,6 @@ using index_type = ParticleBins::index_type;
 /** \brief Find the particles and count the particles that are in each cell.
  * Note that this does *not* rearrange particle arrays
  *
- * \param[in] lev MR level
  * \param[in] bx 3d box in which particles are sorted per slice
  * \param[in] ptile particle data for particles in bx
  * \param[in] geom Geometry
