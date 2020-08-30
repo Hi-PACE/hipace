@@ -3,7 +3,7 @@
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
     int lev, int ibox, amrex::Box bx,
-    BeamParticleContainer& beam, amrex::Geometry geom)
+    BeamParticleContainer& beam, amrex::Geometry& geom)
 {
     // Assume only 1 tile per grid (no tiling).
     BeamParticleContainer::ParticleTileType& ptile =

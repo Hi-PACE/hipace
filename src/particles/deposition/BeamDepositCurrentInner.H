@@ -53,7 +53,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
 {
     using namespace amrex::literals;
 
-    PhysConst phys_const = get_phys_const();
+    PhysConst const phys_const = get_phys_const();
 
     // Extract particle properties
     const auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -102,7 +102,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         cell_start = offsets[islice];
         cell_stop  = offsets[islice+1];
     }
-    int num_particles = slice_deposition ? cell_stop-cell_start : pti.numParticles();
+    int const num_particles = slice_deposition ? cell_stop-cell_start : pti.numParticles();
 
     // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(

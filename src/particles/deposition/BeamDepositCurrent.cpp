@@ -17,13 +17,16 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
-    PhysConst phys_const = get_phys_const();
+    PhysConst const phys_const = get_phys_const();
 
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
         // Extract properties associated with the extent of the current box
-        amrex::Box tilebox = pti.tilebox().grow(2); // Grow to capture the extent of the particle shape
+        const amrex::Box tilebox = pti.tilebox().grow(
+            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy,
+             Hipace::m_depos_order_z});
+
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
@@ -42,7 +45,7 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         amrex::FArrayBox& rho_fab = rho[pti];
 
         // For now: fix the value of the charge
-        amrex::Real q = - phys_const.q_e;
+        const amrex::Real q = - phys_const.q_e;
         // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
         amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
 
@@ -113,13 +116,13 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
         "Only order 0 deposition is allowed for beam per-slice deposition");
 
-    PhysConst phys_const = get_phys_const();
+    PhysConst const phys_const = get_phys_const();
 
     // Loop over particle boxes, transversally. MUST be exactly 1.
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
         // Extract properties associated with the extent of the current box
-        amrex::Box tilebox = pti.tilebox().grow(
+        const amrex::Box tilebox = pti.tilebox().grow(
             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy,
              Hipace::m_depos_order_z});
 
@@ -140,7 +143,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
         amrex::FArrayBox& rho_fab = rho[pti];
 
         // For now: fix the value of the charge
-        amrex::Real q = - phys_const.q_e;
+        const amrex::Real q = - phys_const.q_e;
 
         // Call deposition function in each box
         if        (Hipace::m_depos_order_xy == 0){
