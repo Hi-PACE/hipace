@@ -143,7 +143,7 @@ public:
     /** Order of the field gather and current deposition shape factorin the longitudinal direction
      */
     static int m_depos_order_z;
-    /** whether to deposit the beam per slice, into the slice multifab.
+    /** whether to deposit the beam density per slice, into the slice multifab.
      * If not, when running on GPU, the 3D arrays must be on the GPU. */
     static bool m_slice_deposition;
 

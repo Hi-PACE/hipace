@@ -27,7 +27,7 @@ DepositCurrent (BeamParticleContainer& beam, Fields & fields,
         // amrex::Box tilebox = pti.tilebox().grow(
         //     {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy,
         //      Hipace::m_depos_order_z});
-    
+
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
         amrex::Dim3 const lo = amrex::lbound(tilebox);

@@ -210,9 +210,7 @@ Hipace::Evolve ()
 
             const amrex::Box& bx = fields.box(*it);
             ParticleBins bins;
-            if (m_slice_deposition) bins = findParticlesInEachCell(lev, bx, ptile, geom[lev]);
-            // std::cout<<bins.numBins()<<'\n';
-
+            if (m_slice_deposition) bins = findParticlesInEachCell(bx, ptile, geom[lev]);
             const int islice_hi = bx.bigEnd(Direction::z);
             const int islice_lo = bx.smallEnd(Direction::z);
             for (int islice = islice_hi; islice >= islice_lo; --islice)

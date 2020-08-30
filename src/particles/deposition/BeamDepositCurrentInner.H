@@ -15,8 +15,12 @@
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 
-/** Loop over beam particles in iterator (=box) pti and deposit their current
+/** \brief Loop over beam particles in iterator (=box) pti and deposit their current
  * into jx_fab, jy_fab and jz_fab and their charge density to rho_fab
+ *
+ * If slice_deposition is true, only deposit charge and current for beam particles in islice.
+ * Note that particles are not sorted in memory, argument bins only contains indices of particles
+ * sorted per slice.
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam depos_order_z Order of the longitudinal shape factor for the deposition
@@ -29,6 +33,9 @@
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
  * \param[in] q elementary charge
+ * \param[in] islice If slice_deposition true, particles in slice islice will deposit
+ * \param[in] bins Indices of particles arranged per slices. Used if slice_deposition is true.
+ * \param[in] slice_deposition Whether to deposit in 3D array or in slice islice only.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleIterator& pti,

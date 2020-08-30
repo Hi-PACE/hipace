@@ -10,10 +10,16 @@ using ParticleTileType = BeamParticleContainer::ParticleTileType;
 using ParticleBins = amrex::DenseBins<ParticleType>;
 using index_type = ParticleBins::index_type;
 
-/** Find the particles and count the particles that are in each cell.
- * Note that this does *not* rearrange particle arrays */
+/** \brief Find the particles and count the particles that are in each cell.
+ * Note that this does *not* rearrange particle arrays
+ *
+ * \param[in] lev MR level
+ * \param[in] bx 3d box in which particles are sorted per slice
+ * \param[in] ptile particle data for particles in bx
+ * \param[in] geom Geometry
+ */
 ParticleBins
-findParticlesInEachCell( int const lev, amrex::Box bx,
-                         ParticleTileType const& ptile, amrex::Geometry geom);
+findParticlesInEachCell (amrex::Box bx, BeamParticleContainer::ParticleTileType const& ptile,
+                         amrex::Geometry geom);
 
 #endif // HIPACE_BinSort_H_
