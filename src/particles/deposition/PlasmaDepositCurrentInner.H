@@ -122,10 +122,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
            const amrex::Real wqy = wq*vy;
            const amrex::Real wqz = wq*vz;
 
-           // std::cout << "partid " << ip <<  " ux " << uxp[ip] << " uy " << uyp[ip] << " psi " << psip[ip] << "gamma " << (1.0_rt
-           //                                               + uxp[ip]*uxp[ip]*clightsq
-           //                                               + uyp[ip]*uyp[ip]*clightsq
-           //                                               + psip[ip]*psip[ip])/ (2.0_rt * psip[ip] ) << "\n";
             // --- Compute shape factors
             // x direction
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x

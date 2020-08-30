@@ -141,12 +141,8 @@ void Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::M
                 }
                 else /* SliceOperatorType::Add */
                 {
-                    // std::cout << " dest before " << dst_array(i,j,k,dcomp) << "\n";
                     dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dz) *
                       (src1_array(i, j, k, s1comp) - src2_array(i, j, k, s2comp));
-                      // std::cout << " src1 " << src1_array(i, j, k, s1comp) << " src2 " << src2_array(i, j, k, s1comp) << " adding " << mult_coeff / (2.0_rt*dz) *
-                      //   (src1_array(i, j, k, s1comp) - src2_array(i, j, k, s2comp)) << " 2*dz " << (2.0_rt*dz) << "\n";
-                      //   std::cout << " dest after " << dst_array(i,j,k,dcomp) << "\n";
                 }
 
             }
