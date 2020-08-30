@@ -154,9 +154,11 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
-                        amrex::Gpu::Atomic::Add(
-                            &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wq);
+                        if (!slice_deposition){
+                            amrex::Gpu::Atomic::Add(
+                                &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                                sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wq);
+                        }
                     }
                 }
             }

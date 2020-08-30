@@ -215,10 +215,6 @@ Hipace::Evolve ()
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
-                if (m_slice_deposition){
-                    DepositCurrentSlice(m_beam_container, m_fields, geom[lev], lev, islice, bins);
-                }
-
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        CurrentDepoType::DepositThisSlice,
                                        true, false, false, lev);
@@ -232,16 +228,24 @@ Hipace::Evolve ()
                 // need to exchange jx jy jz rho
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, 1),
                                          amrex::make_alias, FieldComps::jx, 4);
-                 j_slice.SumBoundary(Geom(lev).periodicity());
+                j_slice.SumBoundary(Geom(lev).periodicity());
+                amrex::ParallelContext::pop();
+
+                SolvePoissonExmByAndEypBx(lev);
+
+                if (m_slice_deposition) DepositCurrentSlice(
+                    m_beam_container, m_fields, geom[lev], lev, islice, bins);
+
+                amrex::ParallelContext::push(m_comm_xy);
+                j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
                 SolvePoissonEz(lev);
-                SolvePoissonExmByAndEypBx(lev);
                 SolvePoissonBx(lev);
                 SolvePoissonBy(lev);
                 SolvePoissonBz(lev);
                 amrex::ParallelContext::push(m_comm_xy);
-                 // exchange ExmBy EypBx Ez Bx By Bz
+                // exchange ExmBy EypBx Ez Bx By Bz
                 m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
