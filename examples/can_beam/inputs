@@ -1,7 +1,7 @@
 amr.n_cell = 32 32 64
 amr.max_level = 0
 
-max_step = 5
+max_step = 200
 
 hipace.numprocs_x = 1
 hipace.numprocs_y = 1
