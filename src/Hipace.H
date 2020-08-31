@@ -192,7 +192,7 @@ private:
      * \param[in] lev current level
      */
      void MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
-                                      const int field_comp, const int lev);
+                              const int field_comp, const int lev);
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
