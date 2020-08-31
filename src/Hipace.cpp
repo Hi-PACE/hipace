@@ -519,7 +519,7 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
                            false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
-    for (int pred_number=0; pred_number<20; pred_number++)
+    for (int pred_number=0; pred_number<5; pred_number++)
     {
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
