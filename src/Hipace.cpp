@@ -435,7 +435,7 @@ void Hipace::InitialBfieldGuess (const int lev)
                              FieldComps::Bx, FieldComps::Bx, 1, 0);
 
     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+factor, m_fields.getSlices(lev, 2),
-                             FieldComps::By, -factor, fields.getSlices(lev, 3),
+                             FieldComps::By, -factor, m_fields.getSlices(lev, 3),
                              FieldComps::By, FieldComps::By, 1, 0);
 
 }
