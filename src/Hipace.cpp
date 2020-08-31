@@ -229,6 +229,9 @@ Hipace::Evolve ()
                 SolvePoissonExmByAndEypBx(lev);
                 SolvePoissonBz(lev);
 
+                /* Modifies Bx and By in the current slice
+                 * and the force terms of the plasma particles
+                 */
                 PredictorCorrectorLoopToSolveBxBy(lev);
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
@@ -423,35 +426,21 @@ void Hipace::InitialBfieldGuess (const int lev)
      */
     BL_PROFILE("Hipace::InitialBfieldGuess()");
 
-    const double factor = 1.;
+    const amrex::Real factor = 1.;
     /* later, the factor should be:
      * exp(-0.5 * pow(rel_avg_Bdiff / ( 2.5 * fld_predcorr_tol_b ), 2));
      */
-    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
-                             1+factor,
-                             m_fields.getSlices(lev, 2),
-                             FieldComps::Bx,
-                             -factor,
-                             m_fields.getSlices(lev, 3),
-                             FieldComps::Bx,
-                             FieldComps::Bx,
-                             1,
-                             0);
+    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+factor, m_fields.getSlices(lev, 2),
+                             FieldComps::Bx, -factor, m_fields.getSlices(lev, 3),
+                             FieldComps::Bx, FieldComps::Bx, 1, 0);
 
-     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
-                             1+factor,
-                             m_fields.getSlices(lev, 2),
-                             FieldComps::By,
-                             -factor,
-                             m_fields.getSlices(lev, 3),
-                             FieldComps::By,
-                             FieldComps::By,
-                             1,
-                             0);
+    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+factor, m_fields.getSlices(lev, 2),
+                             FieldComps::By, -factor, fields.getSlices(lev, 3),
+                             FieldComps::By, FieldComps::By, 1, 0);
 
 }
 
-void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
+void Hipace::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
                                  const int field_comp, const int lev)
 {
     /* Mixes the B field according to B = a*B + (1-a)*( c*B_iter + d*B_prev_iter),
@@ -460,12 +449,12 @@ void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_pre
     BL_PROFILE("Hipace::MixAndShiftBfields()");
 
     /* mixing factor between Bx and the mixed iterated B field */
-    const double mixing_factor = 0.1;
+    const amrex::Real mixing_factor = 0.1;
     //later, the factor should be defined in the input deck (goal, have this one flexible)
 
     /* Mixing factors to mix the current and previous iteration of the B field */
-    const double c_B_iter = 0.5;
-    const double c_B_prev_iter = 0.5;
+    const amrex::Real c_B_iter = 0.5;
+    const amrex::Real c_B_prev_iter = 0.5;
     /* later, this should be
      *   c_B_iter = rel_avg_Bdiff_iter_m_1 / ( rel_avg_Bdiff + rel_avg_Bdiff_iter_m_1 );
      *   c_B_prev_iter = rel_avg_Bdiff / ( rel_avg_Bdiff + rel_avg_Bdiff_iter_m_1 );
@@ -490,6 +479,7 @@ void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_pre
 
 void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
 {
+    BL_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
     /* Guess Bx and By */
     InitialBfieldGuess(lev);
     amrex::ParallelContext::push(m_comm_xy);

@@ -179,19 +179,22 @@ private:
 
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
+     * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
+     *
      * \param[in] lev current level
      */
     void InitialBfieldGuess (const int lev);
 
     /** \brief Mixes the B field with the calculated current and previous iteration
-     * of it and shifts the current to the previous iteration afterwards
+     * of it and shifts the current to the previous iteration afterwards.
+     * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
      *
      * \param[in] B_iter B field during current iteration of the predictor-corrector loop
      * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
      * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
      * \param[in] lev current level
      */
-     void MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
+     void MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
                               const int field_comp, const int lev);
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
@@ -201,6 +204,9 @@ private:
      * 3. With that current, Bx and By can be calculated.
      * 4. Mixing the calculated Bx and By with the previous guess a new Bx and By is calculated
      * 5. 2.-4. are repeated for a fixed number of iterations
+     *
+     * This modifies component FieldComps::Bx and By, as well as the
+     * plasma particle force terms.
      *
      * \param[in] lev current level
      */
