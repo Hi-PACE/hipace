@@ -186,7 +186,7 @@ private:
     /** \brief Mixes the B field with the calculated current and previous iteration
      * of it and shifts the current to the previous iteration afterwards
      *
-     * \param[in,out] B_iter B field during current iteration of the predictor-corrector loop
+     * \param[in] B_iter B field during current iteration of the predictor-corrector loop
      * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
      * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
      * \param[in] lev current level

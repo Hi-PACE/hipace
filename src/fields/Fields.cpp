@@ -133,7 +133,6 @@ void Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::M
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-
                 if (slice_operator==SliceOperatorType::Assign)
                 {
                     dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dz) *

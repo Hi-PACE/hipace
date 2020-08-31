@@ -60,8 +60,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
     const amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
-    // (current_depo_type == ToSlice::This) ?
-    //     soa.GetRealData(PlasmaIdx::w).data() : soa.GetRealData(PlasmaIdx::w_temp).data();
     const amrex::Real * const uxp = (current_depo_type == ToSlice::This) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
     const amrex::Real * const uyp = (current_depo_type == ToSlice::This) ?

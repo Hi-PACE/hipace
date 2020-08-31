@@ -451,7 +451,7 @@ void Hipace::InitialBfieldGuess (const int lev)
 
 }
 
-void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_tmp,
+void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
                                  const int field_comp, const int lev)
 {
     /* Mixes the B field according to B = a*B + (1-a)*( c*B_iter + d*B_prev_iter),
@@ -471,17 +471,19 @@ void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_tmp
      *   c_B_prev_iter = rel_avg_Bdiff / ( rel_avg_Bdiff + rel_avg_Bdiff_iter_m_1 );
      */
 
-    /* calculating the mixed temporary B field  B_tmp = c*B_iter + d*B_prev_iter*/
-    amrex::MultiFab::LinComb(B_tmp, c_B_iter, B_iter, 0, c_B_prev_iter,
-                             B_tmp, 0, 0, 1, 0);
+    /* calculating the mixed temporary B field  B_prev_iter = c*B_iter + d*B_prev_iter.
+     * This is temporarily stored in B_prev_iter just to avoid additional memory allocation.
+     * B_prev_iter is overwritten at the end of this function */
+    amrex::MultiFab::LinComb(B_prev_iter, c_B_iter, B_iter, 0, c_B_prev_iter,
+                             B_prev_iter, 0, 0, 1, 0);
 
-    /* calculating the mixed B field  B = a*B + (1-a)*B_tmp */
+    /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1-mixing_factor,
                              m_fields.getSlices(lev, 1), field_comp,
-                             mixing_factor, B_tmp, 0, field_comp, 1, 0);
+                             mixing_factor, B_prev_iter, 0, field_comp, 1, 0);
 
     /* Shifting the B field from the current iteration to the previous iteration */
-    amrex::MultiFab::Copy(B_tmp, B_iter, 0, 0, 1, 0);
+    amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, 0);
 
 
 }
