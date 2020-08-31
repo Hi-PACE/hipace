@@ -70,9 +70,13 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
 
 void
 Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
-                              const amrex::Real dx, const int scomp, const int dcomp)
+                              const amrex::Real dx, const amrex::Real mult_coeff,
+                              const SliceOperatorType slice_operator,
+                              const int scomp, const int dcomp)
 {
     HIPACE_PROFILE("Fields::TransverseDerivative()");
+    using namespace amrex::literals;
+
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -84,17 +88,67 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
             {
                 if (direction == Direction::x){
                     /* finite difference along x */
-                    dst_array(i,j,k,dcomp) =
-                        (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp)) / (2*dx);
+                    if (slice_operator==SliceOperatorType::Assign)
+                    {
+                        dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp));
+                    }
+                    else /* SliceOperatorType::Add */
+                    {
+                        dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
+                          (src_array(i+1, j, k, scomp) - src_array(i-1, j, k, scomp));
+                    }
                 } else /* Direction::y */ {
                     /* finite difference along y */
-                    dst_array(i,j,k,dcomp) =
-                        (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp)) / (2*dx);
+                    if (slice_operator==SliceOperatorType::Assign)
+                    {
+                        dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp));
+                    }
+                    else /* SliceOperatorType::Add */
+                    {
+                        dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
+                          (src_array(i, j+1, k, scomp) - src_array(i, j-1, k, scomp));
+                    }
                 }
             }
             );
     }
 }
+
+void Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiFab& src2,
+                             amrex::MultiFab& dst, const amrex::Real dz,
+                             const amrex::Real mult_coeff,
+                             const SliceOperatorType slice_operator,
+                             const int s1comp, const int s2comp, const int dcomp)
+{
+    HIPACE_PROFILE("Fields::LongitudinalDerivative()");
+    using namespace amrex::literals;
+    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+        amrex::Array4<amrex::Real const> const & src1_array = src1.array(mfi);
+        amrex::Array4<amrex::Real const> const & src2_array = src2.array(mfi);
+        amrex::Array4<amrex::Real> const & dst_array = dst.array(mfi);
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                if (slice_operator==SliceOperatorType::Assign)
+                {
+                    dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dz) *
+                      (src1_array(i, j, k, s1comp) - src2_array(i, j, k, s2comp));
+                }
+                else /* SliceOperatorType::Add */
+                {
+                    dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dz) *
+                      (src1_array(i, j, k, s1comp) - src2_array(i, j, k, s2comp));
+                }
+
+            }
+            );
+    }
+}
+
 
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,

@@ -3,7 +3,6 @@
 - [ ] **Runs on GPU** (basic: the code compiles and run well with the new module)
 - [ ] **Contains an automated test** (checksum and/or comparison with theory)
 - [ ] **Documented**: all elements (classes and their members, functions, namespaces, etc.) are documented
-- [ ] **Doxygen compiles without warning**, and produced the desired output
 - [ ] **Constified** (All that can be `const` is `const`)
 - [ ] **Code is clean** (no unwanted comments, )
 - [ ] **Style and code conventions** are respected at the bottom of https://github.com/Hi-PACE/hipace
