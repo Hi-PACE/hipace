@@ -428,15 +428,15 @@ void Hipace::InitialBfieldGuess (const int lev)
      * exp(-0.5 * pow(rel_avg_Bdiff / ( 2.5 * fld_predcorr_tol_b ), 2));
      */
     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
-                			 1+factor,
-                			 m_fields.getSlices(lev, 2),
-                			 FieldComps::Bx,
-                			 -factor,
-                			 m_fields.getSlices(lev, 3),
-                			 FieldComps::Bx,
-                			 FieldComps::Bx,
-                			 1,
-                			 0);
+                             1+factor,
+                             m_fields.getSlices(lev, 2),
+                             FieldComps::Bx,
+                             -factor,
+                             m_fields.getSlices(lev, 3),
+                             FieldComps::Bx,
+                             FieldComps::Bx,
+                             1,
+                             0);
 
      amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1),
                              1+factor,
@@ -473,7 +473,7 @@ void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_tmp
 
     /* calculating the mixed temporary B field  B_tmp = c*B_iter + d*B_prev_iter*/
     amrex::MultiFab::LinComb(B_tmp, c_B_iter, B_iter, 0, c_B_prev_iter,
-                			 B_tmp, 0, 0, 1, 0);
+                             B_tmp, 0, 0, 1, 0);
 
     /* calculating the mixed B field  B = a*B + (1-a)*B_tmp */
     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1-mixing_factor,
