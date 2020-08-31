@@ -8,7 +8,7 @@
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
-                const CurrentDepoType current_depo_type,
+                const ToSlice current_depo_type,
                 amrex::Geometry const& gm, int const lev)
 {
     BL_PROFILE("DepositCurrent_PlasmaParticleContainer()");
@@ -50,42 +50,42 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
 
         // Call deposition function in each box
-        if (current_depo_type == CurrentDepoType::DepositThisSlice)
+        if (current_depo_type == ToSlice::This)
         {
             if        (Hipace::m_depos_order_xy == 0){
                     doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, CurrentDepoType::DepositThisSlice );
+                                              lo, q, ToSlice::This );
             } else if (Hipace::m_depos_order_xy == 1){
                     doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, CurrentDepoType::DepositThisSlice );
+                                              lo, q, ToSlice::This );
             } else if (Hipace::m_depos_order_xy == 2){
                     doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, CurrentDepoType::DepositThisSlice );
+                                              lo, q, ToSlice::This );
             } else if (Hipace::m_depos_order_xy == 3){
                     doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, CurrentDepoType::DepositThisSlice );
+                                              lo, q, ToSlice::This );
             } else {
                 amrex::Abort("unknow deposition order");
             }
         }
-        else /* (current_depo_type == CurrentDepoType::DepositNextSlice)*/
+        else /* (current_depo_type == ToSlice::Next)*/
         {
             if        (Hipace::m_depos_order_xy == 0){
                     doDepositionShapeN<0, 0>( pti, jx_next_fab, jy_next_fab, jz_fab,
                                               rho_fab, dx, xyzmin, lo, q,
-                                              CurrentDepoType::DepositNextSlice );
+                                              ToSlice::Next );
             } else if (Hipace::m_depos_order_xy == 1){
                     doDepositionShapeN<1, 0>( pti, jx_next_fab, jy_next_fab, jz_fab,
                                               rho_fab, dx, xyzmin, lo, q,
-                                              CurrentDepoType::DepositNextSlice );
+                                              ToSlice::Next );
             } else if (Hipace::m_depos_order_xy == 2){
                     doDepositionShapeN<2, 0>( pti, jx_next_fab, jy_next_fab, jz_fab,
                                               rho_fab, dx, xyzmin, lo, q,
-                                              CurrentDepoType::DepositNextSlice );
+                                              ToSlice::Next );
             } else if (Hipace::m_depos_order_xy == 3){
                     doDepositionShapeN<3, 0>( pti, jx_next_fab, jy_next_fab, jz_fab,
                                               rho_fab, dx, xyzmin, lo, q,
-                                              CurrentDepoType::DepositNextSlice );
+                                              ToSlice::Next );
             } else {
                 amrex::Abort("unknow deposition order");
             }

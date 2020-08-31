@@ -15,7 +15,7 @@
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
-                const CurrentDepoType current_depo_type,
+                const ToSlice current_depo_type,
                 amrex::Geometry const& gm, int const lev=0);
 
 

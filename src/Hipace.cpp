@@ -208,14 +208,14 @@ Hipace::Evolve ()
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                                       CurrentDepoType::DepositThisSlice,
+                                       ToSlice::This,
                                        true, false, false, lev);
 
                 amrex::ParallelContext::push(m_comm_xy);
                 m_plasma_container.Redistribute();
                 amrex::ParallelContext::pop();
 
-                DepositCurrent(m_plasma_container, m_fields, CurrentDepoType::DepositThisSlice,
+                DepositCurrent(m_plasma_container, m_fields, ToSlice::This,
                                geom[lev], lev);
 
                 amrex::ParallelContext::push(m_comm_xy);
@@ -523,7 +523,7 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
 
     /* shift force terms, update force terms using guessed Bx and By */
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           CurrentDepoType::DepositThisSlice,
+                           ToSlice::This,
                            false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
@@ -531,11 +531,11 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
     {
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               CurrentDepoType::DepositNextSlice,
+                               ToSlice::Next,
                                true, false, false, lev);
 
         /* deposit current to next slice */
-        DepositCurrent(m_plasma_container, m_fields, CurrentDepoType::DepositNextSlice,
+        DepositCurrent(m_plasma_container, m_fields, ToSlice::Next,
                        geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
@@ -563,7 +563,7 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
 
         /* Update force terms using the calculated Bx and By */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               CurrentDepoType::DepositNextSlice,
+                               ToSlice::Next,
                                false, true, false, lev);
     } /* end of predictor corrector loop */
 }
