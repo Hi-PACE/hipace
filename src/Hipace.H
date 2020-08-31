@@ -143,6 +143,15 @@ public:
     /** Order of the field gather and current deposition shape factorin the longitudinal direction
      */
     static int m_depos_order_z;
+    /** Relative transverse B field error tolerance in the predictor corrector loop
+     */
+    static amrex::Real m_fld_predcorr_tol_b;
+    /** Maximum number of iterations in the predictor corrector loop
+     */
+    static int m_fld_predcorr_n_max_iter;
+    /** Mixing factor between the transverse B field iterations in the predictor corrector loop
+     */
+    static amrex::Real m_B_field_mixing_factor;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -181,9 +190,11 @@ private:
      *
      * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
      *
+     * \param[in] rel_avg_Bdiff relative B field error used to determine the mixing factor
      * \param[in] lev current level
      */
-    void InitialBfieldGuess (const int lev);
+    void InitialBfieldGuess (const amrex::Real rel_avg_Bdiff,
+                             const int lev);
 
     /** \brief Mixes the B field with the calculated current and previous iteration
      * of it and shifts the current to the previous iteration afterwards.
@@ -192,10 +203,13 @@ private:
      * \param[in] B_iter B field during current iteration of the predictor-corrector loop
      * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
      * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
+     * \param[in] rel_avg_Bdiff relative B field error used to determine the mixing factor
+     * \param[in] rel_avg_Bdiff_prev_iter relative B field error of the previous iteration
      * \param[in] lev current level
      */
      void MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
-                              const int field_comp, const int lev);
+                              const int field_comp, const amrex::Real rel_avg_Bdiff,
+                              const amrex::Real rel_avg_Bdiff_prev_iter, const int lev);
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
@@ -208,9 +222,35 @@ private:
      * This modifies component FieldComps::Bx and By, of slice 1 in m_fields.m_slices
      * as well as the plasma particle force terms.
      *
+     * \param[in] bx current Box
      * \param[in] lev current level
      */
-    void PredictorCorrectorLoopToSolveBxBy (const int lev);
+    void PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int lev);
+
+    /** \brief Function to calculate the relative B field error
+     * used in the predictor corrector loop
+     *
+     * \param[in] Bx Bx field (input as MutliFab)
+     * \param[in] By By field (input as MutliFab)
+     * \param[in] Bx_iter Bx field from the previous iteration (input as MutliFab)
+     * \param[in] By_iter By field from the previous iteration (input as MutliFab)
+     * \param[in] Bx_comp component of the Bx field in the MultiFab
+     * (usually either FieldComps::Bx or 0)
+     * \param[in] By_comp component of the By field in the MultiFab
+     * (usually either FieldComps::By or 0)
+     * \param[in] Bx_iter_comp component of the Bx field of the previous iteration in the MultiFab
+     * (usually either FieldComps::Bx or 0)
+     * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
+     * (usually either FieldComps::By or 0)
+     * \param[in] bx current Box
+     * \param[in] lev current level
+     */
+    amrex::Real ComputeRelBFieldError (const amrex::MultiFab& Bx, const amrex::MultiFab& By,
+                                       const amrex::MultiFab& Bx_iter,
+                                       const amrex::MultiFab& By_iter, const int Bx_comp,
+                                       const int By_comp, const int Bx_iter_comp,
+                                       const int By_iter_comp, const amrex::Box& bx,
+                                       const int lev);
 };
 
 /** \brief Type of current deposition, either in the current slice or in the next one
