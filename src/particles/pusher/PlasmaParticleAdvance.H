@@ -17,7 +17,7 @@
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
-                        amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
+                        amrex::Geometry const& gm, const ToSlice current_depo_type,
                         const bool do_push, const bool do_update, const bool do_shift,
                         int const lev=0);
 

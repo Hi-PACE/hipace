@@ -19,9 +19,9 @@
  * into jx_fab, jy_fab and jz_fab and their density to rho_fab
  *
  * current_depo_type affects the general behavior of this function:
- * - If current_depo_type == CurrentDepoType::DepositThisSlice, deposit jx, jy, jz and rho
+ * - If current_depo_type == ToSlice::This, deposit jx, jy, jz and rho
  *   with current values of transverse position, wp, uxp, uyp and psip.
- * - If current_depo_type == CurrentDepoType::DepositNextSlice, deposit jx  and jy only,
+ * - If current_depo_type == ToSlice::Next, deposit jx  and jy only,
  *   with projected values of transverse position, wp, uxp, uyp and psip stored in temp arrays.
  *
  *
@@ -36,7 +36,7 @@
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
  * \param[in] q elementary charge
- * \param[in] current_depo_type type of deposition: DepositThisSlice or DepositNextSlice
+ * \param[in] current_depo_type type of deposition: This or Next
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
@@ -48,7 +48,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
-                         const CurrentDepoType current_depo_type)
+                         const ToSlice current_depo_type)
 {
     using namespace amrex::literals;
 
@@ -59,17 +59,16 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const auto& pos_structs = aos.begin();
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
-    const amrex::Real * const wp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
-        soa.GetRealData(PlasmaIdx::w).data() : soa.GetRealData(PlasmaIdx::w_temp).data();
-    const amrex::Real * const uxp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+    const amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
+    const amrex::Real * const uxp = (current_depo_type == ToSlice::This) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
-    const amrex::Real * const uyp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+    const amrex::Real * const uyp = (current_depo_type == ToSlice::This) ?
         soa.GetRealData(PlasmaIdx::uy).data() : soa.GetRealData(PlasmaIdx::uy_temp).data();
-    const amrex::Real * const psip = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+    const amrex::Real * const psip = (current_depo_type == ToSlice::This) ?
         soa.GetRealData(PlasmaIdx::psi).data() : soa.GetRealData(PlasmaIdx::psi_temp).data();
-    const amrex::Real * const x_temp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+    const amrex::Real * const x_temp = (current_depo_type == ToSlice::This) ?
         nullptr : soa.GetRealData(PlasmaIdx::x_temp).data();
-    const amrex::Real * const y_temp = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+    const amrex::Real * const y_temp = (current_depo_type == ToSlice::This) ?
         nullptr : soa.GetRealData(PlasmaIdx::y_temp).data();
 
     // Extract box properties
@@ -124,13 +123,13 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             // --- Compute shape factors
             // x direction
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-            const amrex::Real xmid = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+            const amrex::Real xmid = (current_depo_type == ToSlice::This) ?
                 (pos_structs[ip].pos(0) - xmin)*dxi : (x_temp[ip] - xmin)*dxi;
             amrex::Real sx_cell[depos_order_xy + 1];
             const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
 
             // y direction
-            const amrex::Real ymid = (current_depo_type == CurrentDepoType::DepositThisSlice) ?
+            const amrex::Real ymid = (current_depo_type == ToSlice::This) ?
                 (pos_structs[ip].pos(1) - ymin)*dyi : (y_temp[ip] - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
@@ -144,7 +143,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     amrex::Gpu::Atomic::Add(
                         &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                         sx_cell[ix]*sy_cell[iy]*wqy);
-                    if (current_depo_type == CurrentDepoType::DepositThisSlice)
+
+                    if (current_depo_type == ToSlice::This)
                     {
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
