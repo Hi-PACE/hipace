@@ -594,6 +594,12 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
         /* Shift rel_avg_Bdiff values */
         rel_avg_Bdiff_prev_iter = rel_avg_Bdiff;
     } /* end of predictor corrector loop */
+    if (rel_avg_Bdiff > 10.)
+    {
+        amrex::Abort("Predictor corrector loop diverged!\n"
+                     "Re-try with a lower hipace.m_B_field_mixing_factor in the input script\n"
+                     "Default: 0.1");
+    }
 }
 
 amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
