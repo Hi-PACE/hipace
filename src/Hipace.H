@@ -161,11 +161,13 @@ private:
     void SolvePoissonEz (const int lev);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
+     * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
      * \param[in] lev current level
      */
     void SolvePoissonBx (amrex::MultiFab& Bx_iter, const int lev);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
+     * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
      * \param[in] lev current level
      */
     void SolvePoissonBy (amrex::MultiFab& By_iter, const int lev);
@@ -181,9 +183,30 @@ private:
      */
     void InitialBfieldGuess (const int lev);
 
+    /** \brief Mixes Bx and By with the calculated current and previous iteration
+     * of Bx and By and shifts the current to the previous iteration afterwards
+     *
+     * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
+     * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
+     * \param[in,out] Bx_prev_iter Bx field during previous iteration of the pred.-cor. loop
+     * \param[in,out] By_prev_iter By field during previous iteration of the pred.-cor. loop
+     * \param[in] lev current level
+     */
     void MixAndShiftBfields (amrex::MultiFab& Bx_iter,
-                             amrex::MultiFab& By_iter, amrex::MultiFab& Bx_iter_m_1,
-                             amrex::MultiFab& By_iter_m_1, const int lev);
+                             amrex::MultiFab& By_iter, amrex::MultiFab& Bx_prev_iter,
+                             amrex::MultiFab& By_prev_iter, const int lev);
+
+    /** \brief Predictor-corrector loop to calculate Bx and By.
+     * 1. an initial Bx and By value is guessed.
+     * 2. Using this Bx and By values, the plasma particles are advanced to the next slice,
+     *  and deposit their current there.
+     * 3. With that current, Bx and By can be calculated.
+     * 4. Mixing the calculated Bx and By with the previous guess a new Bx and By is calculated
+     * 5. 2.-4. are repeated for a fixed number of iterations
+     *
+     * \param[in] lev current level
+     */
+    void PredictorCorrectorLoopToSolveBxBy (const int lev);
 };
 
 /** \brief Type of current deposition, either in the current slice or in the next one
