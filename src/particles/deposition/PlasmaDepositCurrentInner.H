@@ -146,8 +146,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                         &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                         sx_cell[ix]*sy_cell[iy]*wqy);
 
-                   // std::cout << " partid " << ip <<  " jx array " << jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0) << " jy array " << jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0) << " wqx " << wqx << " wqy " << wqy << "\n";
-
                     if (current_depo_type == CurrentDepoType::DepositThisSlice)
                     {
                         amrex::Gpu::Atomic::Add(

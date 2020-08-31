@@ -556,7 +556,6 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
         jx_next.setVal(0.);
         jy_next.setVal(0.);
 
-        // std::cout << "after bx and by \n";
         amrex::ParallelContext::push(m_comm_xy);
          // exchange Bx By
         m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());

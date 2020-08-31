@@ -89,7 +89,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             } else {
                 amrex::Abort("unknow deposition order");
             }
-                // std::cout << " right in current depo norm jx " << jx_next.norm0() << " norm jy " << jy_next.norm0() << "\n";
         }
 
     }
