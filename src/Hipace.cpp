@@ -452,9 +452,8 @@ void Hipace::InitialBfieldGuess (const int lev)
 
 }
 
-void Hipace::MixAndShiftBfields (amrex::MultiFab& Bx_iter,
-                                 amrex::MultiFab& By_iter, amrex::MultiFab& Bx_temp,
-                                 amrex::MultiFab& By_prev_iter, const int lev)
+void Hipace::MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
+                                 const int field_comp, const int lev)
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
@@ -472,34 +471,15 @@ void Hipace::MixAndShiftBfields (amrex::MultiFab& Bx_iter,
      *   c_B_prev_iter = rel_avg_Bdiff / ( rel_avg_Bdiff + rel_avg_Bdiff_iter_m_1 );
      */
 
-     /* this array is probably unnecessary. To be checked */
-     amrex::MultiFab mixed_Bx_iter(
-         m_fields.getSlices(lev, 1).boxArray(),
-         m_fields.getSlices(lev, 1).DistributionMap(), 1,
-         m_fields.getSlices(lev, 1).nGrowVect());
-     amrex::MultiFab mixed_By_iter(
-         m_fields.getSlices(lev, 1).boxArray(),
-         m_fields.getSlices(lev, 1).DistributionMap(), 1,
-         m_fields.getSlices(lev, 1).nGrowVect());
-
-
-    amrex::MultiFab::LinComb(mixed_Bx_iter, c_B_iter, Bx_iter, 0, c_B_prev_iter,
-                			 Bx_prev_iter, 0, 0, 1, 0);
-
-    amrex::MultiFab::LinComb(mixed_By_iter, c_B_iter, By_iter, 0, c_B_prev_iter,
-                 			 By_prev_iter, 0, 0, 1, 0);
+    amrex::MultiFab::LinComb(B_prev_iter, c_B_iter, B_iter, 0, c_B_prev_iter,
+                			 B_prev_iter, 0, 0, 1, 0);
 
     amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1-mixing_factor,
-                             m_fields.getSlices(lev, 1), FieldComps::Bx,
-                             mixing_factor, mixed_Bx_iter, 0, FieldComps::Bx, 1, 0);
+                             m_fields.getSlices(lev, 1), field_comp,
+                             mixing_factor, B_prev_iter, 0, field_comp, 1, 0);
 
-    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1-mixing_factor,
-                             m_fields.getSlices(lev, 1), FieldComps::By,
-                             mixing_factor, mixed_By_iter, 0, FieldComps::By, 1, 0);
+    amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, 0);
 
-    amrex::MultiFab::Copy(Bx_prev_iter, Bx_iter, 0, 0, 1, 0);
-
-    amrex::MultiFab::Copy(By_prev_iter, By_iter, 0, 0, 1, 0);
 
 }
 
@@ -568,7 +548,9 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const int lev)
         SolvePoissonBx(Bx_iter, lev);
         SolvePoissonBy(By_iter, lev);
 
-        MixAndShiftBfields( Bx_iter, By_iter, Bx_prev_iter, By_prev_iter, lev);
+
+        MixAndShiftBfields(Bx_iter, Bx_prev_iter, FieldComps::Bx, lev);
+        MixAndShiftBfields(By_iter, By_prev_iter, FieldComps::By, lev);
 
         jx_next.setVal(0.);
         jy_next.setVal(0.);

@@ -183,18 +183,16 @@ private:
      */
     void InitialBfieldGuess (const int lev);
 
-    /** \brief Mixes Bx and By with the calculated current and previous iteration
-     * of Bx and By and shifts the current to the previous iteration afterwards
+    /** \brief Mixes the B field with the calculated current and previous iteration
+     * of it and shifts the current to the previous iteration afterwards
      *
-     * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
-     * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
-     * \param[in,out] Bx_prev_iter Bx field during previous iteration of the pred.-cor. loop
-     * \param[in,out] By_prev_iter By field during previous iteration of the pred.-cor. loop
+     * \param[in,out] B_iter B field during current iteration of the predictor-corrector loop
+     * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
+     * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
      * \param[in] lev current level
      */
-    void MixAndShiftBfields (amrex::MultiFab& Bx_iter,
-                             amrex::MultiFab& By_iter, amrex::MultiFab& Bx_prev_iter,
-                             amrex::MultiFab& By_prev_iter, const int lev);
+     void MixAndShiftBfields (amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
+                                      const int field_comp, const int lev);
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
