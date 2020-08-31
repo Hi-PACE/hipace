@@ -426,8 +426,7 @@ void Hipace::SolvePoissonBz (const int lev)
     m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
-void Hipace::InitialBfieldGuess (const amrex::Real rel_avg_Bdiff,
-                                 const int lev)
+void Hipace::InitialBfieldGuess (const amrex::Real rel_avg_Bdiff, const int lev)
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
@@ -603,8 +602,7 @@ amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
                                            const amrex::MultiFab& By_iter,
                                            const int Bx_comp, const int By_comp,
                                            const int Bx_iter_comp, const int By_iter_comp,
-                                           const amrex::Box& bx,
-                                           const int lev)
+                                           const amrex::Box& bx, const int lev)
 {
     /* calculates the relative B field error between two B fields
      * for both Bx and By simultaneously */

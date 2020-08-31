@@ -193,8 +193,7 @@ private:
      * \param[in] rel_avg_Bdiff relative B field error used to determine the mixing factor
      * \param[in] lev current level
      */
-    void InitialBfieldGuess (const amrex::Real rel_avg_Bdiff,
-                             const int lev);
+    void InitialBfieldGuess (const amrex::Real rel_avg_Bdiff, const int lev);
 
     /** \brief Mixes the B field with the calculated current and previous iteration
      * of it and shifts the current to the previous iteration afterwards.
