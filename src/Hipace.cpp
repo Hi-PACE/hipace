@@ -597,8 +597,13 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
     if (rel_avg_Bdiff > 10.)
     {
         amrex::Abort("Predictor corrector loop diverged!\n"
-                     "Re-try with a lower hipace.m_B_field_mixing_factor in the input script\n"
-                     "Default: 0.1");
+                     "Re-try by adjusting the following paramters in the input script:\n"
+                     "- lower mixing factor: hipace.B_field_mixing_factor (hidden default: 0.1) \n"
+                     "- lower B field error tolerance: hipace.fld_predcorr_tol_b"
+                     " (hidden default: 0.04)\n"
+                     "- higher number of iterations in the pred. cor. loop:"
+                     "hipace.fld_predcorr_n_max_iter (hidden default: 5)\n"
+                     "- higher longitudinal resolution");
     }
 }
 
