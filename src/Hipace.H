@@ -205,8 +205,8 @@ private:
      * 4. Mixing the calculated Bx and By with the previous guess a new Bx and By is calculated
      * 5. 2.-4. are repeated for a fixed number of iterations
      *
-     * This modifies component FieldComps::Bx and By, as well as the
-     * plasma particle force terms.
+     * This modifies component FieldComps::Bx and By, of slice 1 in m_fields.m_slices
+     * as well as the plasma particle force terms.
      *
      * \param[in] lev current level
      */
