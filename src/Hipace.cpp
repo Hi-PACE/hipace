@@ -258,7 +258,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
     BL_PROFILE("Hipace::SolveExmByAndEypBx()");
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
-                        FieldComps::Psi, 1);
+                        FieldComps::mPsi, 1);
 
     // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
     amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
@@ -282,7 +282,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
         geom[0].CellSize(Direction::x),
         1.,
         SliceOperatorType::Assign,
-        FieldComps::Psi,
+        FieldComps::mPsi,
         FieldComps::ExmBy);
 
     m_fields.TransverseDerivative(
@@ -292,7 +292,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
         geom[0].CellSize(Direction::y),
         1.,
         SliceOperatorType::Assign,
-        FieldComps::Psi,
+        FieldComps::mPsi,
         FieldComps::EypBx);
 }
 
@@ -667,7 +667,7 @@ Hipace::WriteDiagnostics (int step)
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
     const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
-                                                 "jx", "jy", "jz", "rho", "Psi"};
+                                                 "jx", "jy", "jz", "rho", "mPsi"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;

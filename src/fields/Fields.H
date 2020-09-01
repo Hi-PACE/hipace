@@ -9,7 +9,7 @@ class Hipace;
 /** \brief Map names and indices of each fields in the field Multifabs (both 3D and 2D)
  */
 struct FieldComps{
-    enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, rho, Psi, nfields};
+    enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, rho, mPsi, nfields};
 };
 
 /** \brief Direction of field copies: from 3D F to 2D slice S or the other way round */
