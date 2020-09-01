@@ -11,7 +11,7 @@
 
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
-                        amrex::Geometry const& gm, const CurrentDepoType current_depo_type,
+                        amrex::Geometry const& gm, const ToSlice current_depo_type,
                         const bool do_push, const bool do_update, const bool do_shift,
                         int const lev)
 {
@@ -132,7 +132,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                    ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                    exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                    dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
-
                     // update force terms for a single particle
                     UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp,
                                      Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],

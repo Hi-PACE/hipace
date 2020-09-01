@@ -116,6 +116,40 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
     }
 }
 
+void Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiFab& src2,
+                             amrex::MultiFab& dst, const amrex::Real dz,
+                             const amrex::Real mult_coeff,
+                             const SliceOperatorType slice_operator,
+                             const int s1comp, const int s2comp, const int dcomp)
+{
+    BL_PROFILE("Fields::LongitudinalDerivative()");
+    using namespace amrex::literals;
+    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+        amrex::Array4<amrex::Real const> const & src1_array = src1.array(mfi);
+        amrex::Array4<amrex::Real const> const & src2_array = src2.array(mfi);
+        amrex::Array4<amrex::Real> const & dst_array = dst.array(mfi);
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                if (slice_operator==SliceOperatorType::Assign)
+                {
+                    dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dz) *
+                      (src1_array(i, j, k, s1comp) - src2_array(i, j, k, s2comp));
+                }
+                else /* SliceOperatorType::Add */
+                {
+                    dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dz) *
+                      (src1_array(i, j, k, s1comp) - src2_array(i, j, k, s2comp));
+                }
+
+            }
+            );
+    }
+}
+
+
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
               int ncomp)
