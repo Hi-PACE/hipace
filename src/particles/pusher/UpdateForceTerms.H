@@ -43,20 +43,22 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
 
     const amrex::Real gammap = (1.0_rt + uxp*uxp*clightsq
                                        + uyp*uyp*clightsq
-                                       + psip*psip)/(2.0_rt * psip );
+                                       + (psip+1.0_rt)*(psip+1.0_rt))/(2.0_rt * (psip + 1.0_rt) );
 
     const amrex::Real charge_mass_ratio = -1.0_rt;
 
     /* Change for x-position along zeta */
-    Fx1 = -uxp / psip;
+    Fx1 = -uxp / (psip + 1.0_rt);
     /* Change for y-position along zeta */
-    Fy1 = -uyp / psip;
+    Fy1 = -uyp / (psip + 1.0_rt);
     /* Change for ux along zeta */
-    Fux1 = -charge_mass_ratio * ( gammap * ExmByp / psip + Byp + ( uyp * Bzp ) / psip );
+    Fux1 = -charge_mass_ratio * ( gammap * ExmByp / (psip + 1.0_rt) + Byp + ( uyp * Bzp )
+            / (psip + 1.0_rt) );
     /* Change for uy along zeta */
-    Fuy1 = -charge_mass_ratio * ( gammap * EypBxp / psip - Bxp - ( uxp * Bzp ) / psip );
+    Fuy1 = -charge_mass_ratio * ( gammap * EypBxp / (psip + 1.0_rt) - Bxp - ( uxp * Bzp )
+            / (psip + 1.0_rt) );
     /* Change for psi along zeta */
-    Fpsi1 = -charge_mass_ratio * (( uxp * ExmByp + uyp * EypBxp ) / psip - Ezp );
+    Fpsi1 = -charge_mass_ratio * (( uxp * ExmByp + uyp * EypBxp ) / (psip + 1.0_rt) - Ezp );
 }
 
 /** \brief Shifting the force term coefficients
