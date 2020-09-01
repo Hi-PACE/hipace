@@ -242,6 +242,7 @@ Hipace::Evolve ()
                 j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
+                SolvePoissonEz(lev);
                 SolvePoissonBz(lev);
 
                 /* Modifies Bx and By in the current slice
