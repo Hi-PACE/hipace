@@ -154,6 +154,9 @@ public:
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_mixing_factor;
+    /** whether to deposit the beam density per slice, into the slice multifab.
+     * If not, when running on GPU, the 3D arrays must be on the GPU. */
+    static bool m_slice_deposition;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
