@@ -241,13 +241,13 @@ private:
      * \param[in] Bx_iter Bx field from the previous iteration (input as MutliFab)
      * \param[in] By_iter By field from the previous iteration (input as MutliFab)
      * \param[in] Bx_comp component of the Bx field in the MultiFab
-     * (usually either FieldComps::Bx or 0)
+     *            (usually either FieldComps::Bx or 0)
      * \param[in] By_comp component of the By field in the MultiFab
-     * (usually either FieldComps::By or 0)
+     *            (usually either FieldComps::By or 0)
      * \param[in] Bx_iter_comp component of the Bx field of the previous iteration in the MultiFab
-     * (usually either FieldComps::Bx or 0)
+     *            (usually either FieldComps::Bx or 0)
      * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
-     * (usually either FieldComps::By or 0)
+     *            (usually either FieldComps::By or 0)
      * \param[in] bx current Box
      * \param[in] lev current level
      */

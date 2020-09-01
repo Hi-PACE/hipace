@@ -57,7 +57,7 @@ Hipace::Hipace () :
     pph.query("grid_size_z", m_grid_size_z);
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
-    pph.query("m_predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
+    pph.query("predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("do_plot", m_do_plot);
@@ -642,23 +642,19 @@ amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
     /* calculates the relative B field error between two B fields
      * for both Bx and By simultaneously */
 
-    amrex::Real relative_Bfield_error = 0.;
-    amrex::Real norm_Bdiff = 0.;
-    amrex::Real norm_B = 0.;
-
     /* one temporary array is needed to store the difference of B fields
      * between previous and current iteration */
     amrex::MultiFab temp(m_fields.getSlices(lev, 1).boxArray(),
                          m_fields.getSlices(lev, 1).DistributionMap(), 1,
                          m_fields.getSlices(lev, 1).nGrowVect());
     /* calculating sqrt( |Bx|^2 + |By|^2 ) */
-    norm_B = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
-             + amrex::MultiFab::Dot(By, By_comp, 1, 0));
+    amrex::Real const norm_B = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
+                               + amrex::MultiFab::Dot(By, By_comp, 1, 0));
 
     /* calculating sqrt( |Bx - Bx_prev_iter|^2 + |By - By_prev_iter|^2 ) */
     amrex::MultiFab::Copy(temp, Bx, Bx_comp, 0, 1, 0);
     amrex::MultiFab::Subtract(temp, Bx_iter, Bx_iter_comp, 0, 1, 0);
-    norm_Bdiff = amrex::MultiFab::Dot(temp, 0, 1, 0);
+    amrex::Real norm_Bdiff = amrex::MultiFab::Dot(temp, 0, 1, 0);
     amrex::MultiFab::Copy(temp, By, By_comp, 0, 1, 0);
     amrex::MultiFab::Subtract(temp, By_iter, By_iter_comp, 0, 1, 0);
     norm_Bdiff += amrex::MultiFab::Dot(temp, 0, 1, 0);
@@ -666,14 +662,8 @@ amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
 
     /* calculating the relative error
      * Warning: this test might be not working in SI units! */
-    if ( norm_B / bx.numPts() > 1e-10)
-    {
-        relative_Bfield_error = norm_Bdiff / norm_B;
-    }
-    else
-    {
-        relative_Bfield_error = 0.0;
-    }
+     const amrex::Real relative_Bfield_error = (norm_B/bx.numPts() > 1e-10)
+                                                ? norm_Bdiff/norm_B : 0.;
 
     return relative_Bfield_error;
 }
