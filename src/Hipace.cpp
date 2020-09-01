@@ -16,6 +16,7 @@ namespace {
 Hipace* Hipace::m_instance = nullptr;
 
 bool Hipace::m_normalized_units = false;
+int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
 amrex::Real Hipace::m_fld_predcorr_tol_b = 4e-2;
@@ -48,6 +49,7 @@ Hipace::Hipace () :
     } else {
         m_phys_const = make_constants_SI();
     }
+    pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
     pph.query("grid_size_z", m_grid_size_z);
@@ -238,7 +240,7 @@ Hipace::Evolve ()
                 /* Modifies Bx and By in the current slice
                  * and the force terms of the plasma particles
                  */
-                PredictorCorrectorLoopToSolveBxBy(bx, lev);
+                PredictorCorrectorLoopToSolveBxBy(bx, islice, lev);
 
                 /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
@@ -484,7 +486,8 @@ void Hipace::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab&
 
 }
 
-void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int lev)
+void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice,
+                                                const int lev)
 {
     BL_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -605,6 +608,8 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
                      "hipace.fld_predcorr_n_max_iter (hidden default: 5)\n"
                      "- higher longitudinal resolution");
     }
+    if (m_verbose >= 1) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
+                                        " rel_avg_Bdiff: "<< rel_avg_Bdiff<< "\n";
 }
 
 amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,

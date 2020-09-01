@@ -132,6 +132,8 @@ public:
     /** Whether to dump output data or not */
     bool m_do_plot = true;
 
+    /** Level of verbosity */
+    static int m_verbose;
     /** Whether to use normalized units */
     static bool m_normalized_units;
     /** Struct containing physical constants (which values depends on the unit system, determined
@@ -224,7 +226,8 @@ private:
      * \param[in] bx current Box
      * \param[in] lev current level
      */
-    void PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int lev);
+    void PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice,
+                                            const int lev);
 
     /** \brief Function to calculate the relative B field error
      * used in the predictor corrector loop
