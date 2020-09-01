@@ -147,13 +147,13 @@ public:
     static int m_depos_order_z;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
-    static amrex::Real m_fld_predcorr_tol_b;
+    static amrex::Real m_predcorr_B_error_tolerance;
     /** Maximum number of iterations in the predictor corrector loop
      */
-    static int m_fld_predcorr_n_max_iter;
+    static int m_predcorr_max_iterations;
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
-    static amrex::Real m_B_field_mixing_factor;
+    static amrex::Real m_predcorr_B_mixing_factor;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -192,10 +192,10 @@ private:
      *
      * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
      *
-     * \param[in] rel_avg_Bdiff relative B field error used to determine the mixing factor
+     * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
      * \param[in] lev current level
      */
-    void InitialBfieldGuess (const amrex::Real rel_avg_Bdiff, const int lev);
+    void InitialBfieldGuess (const amrex::Real relative_Bfield_error, const int lev);
 
     /** \brief Mixes the B field with the calculated current and previous iteration
      * of it and shifts the current to the previous iteration afterwards.
@@ -204,13 +204,13 @@ private:
      * \param[in] B_iter B field during current iteration of the predictor-corrector loop
      * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
      * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
-     * \param[in] rel_avg_Bdiff relative B field error used to determine the mixing factor
-     * \param[in] rel_avg_Bdiff_prev_iter relative B field error of the previous iteration
+     * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
+     * \param[in] relative_Bfield_error_prev_iter relative B field error of the previous iteration
      * \param[in] lev current level
      */
      void MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
-                              const int field_comp, const amrex::Real rel_avg_Bdiff,
-                              const amrex::Real rel_avg_Bdiff_prev_iter, const int lev);
+                              const int field_comp, const amrex::Real relative_Bfield_error,
+                              const amrex::Real relative_Bfield_error_prev_iter, const int lev);
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

@@ -19,9 +19,9 @@ bool Hipace::m_normalized_units = false;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
-amrex::Real Hipace::m_fld_predcorr_tol_b = 4e-2;
-int Hipace::m_fld_predcorr_n_max_iter = 5;
-amrex::Real Hipace::m_B_field_mixing_factor = 0.1;
+amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
+int Hipace::m_predcorr_max_iterations = 5;
+amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.1;
 
 Hipace&
 Hipace::GetInstance ()
@@ -55,9 +55,9 @@ Hipace::Hipace () :
     pph.query("grid_size_z", m_grid_size_z);
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
-    pph.query("fld_predcorr_tol_b", m_fld_predcorr_tol_b);
-    pph.query("fld_predcorr_n_max_iter", m_fld_predcorr_n_max_iter);
-    pph.query("B_field_mixing_factor", m_B_field_mixing_factor);
+    pph.query("m_predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
+    pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
+    pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("do_plot", m_do_plot);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
@@ -428,27 +428,30 @@ void Hipace::SolvePoissonBz (const int lev)
     m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
-void Hipace::InitialBfieldGuess (const amrex::Real rel_avg_Bdiff, const int lev)
+void Hipace::InitialBfieldGuess (const amrex::Real relative_Bfield_error, const int lev)
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
     BL_PROFILE("Hipace::InitialBfieldGuess()");
 
-    const amrex::Real factor = exp(-0.5 * pow(rel_avg_Bdiff / ( 2.5 * m_fld_predcorr_tol_b ), 2));
+    const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
+                                              ( 2.5 * m_predcorr_B_error_tolerance ), 2));
 
-    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+factor, m_fields.getSlices(lev, 2),
-                             FieldComps::Bx, -factor, m_fields.getSlices(lev, 3),
+    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+mix_factor_init_guess,
+                             m_fields.getSlices(lev, 2), FieldComps::Bx,
+                             -mix_factor_init_guess, m_fields.getSlices(lev, 3),
                              FieldComps::Bx, FieldComps::Bx, 1, 0);
 
-    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+factor, m_fields.getSlices(lev, 2),
-                             FieldComps::By, -factor, m_fields.getSlices(lev, 3),
+    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1+mix_factor_init_guess,
+                             m_fields.getSlices(lev, 2), FieldComps::By,
+                             -mix_factor_init_guess, m_fields.getSlices(lev, 3),
                              FieldComps::By, FieldComps::By, 1, 0);
 
 }
 
 void Hipace::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
-                                 const int field_comp, const amrex::Real rel_avg_Bdiff,
-                                 const amrex::Real rel_avg_Bdiff_prev_iter, const int lev)
+                                 const int field_comp, const amrex::Real relative_Bfield_error,
+                                 const amrex::Real relative_Bfield_error_prev_iter, const int lev)
 {
     /* Mixes the B field according to B = a*B + (1-a)*( c*B_iter + d*B_prev_iter),
      * with a,c,d mixing coefficients.
@@ -456,29 +459,33 @@ void Hipace::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab&
     BL_PROFILE("Hipace::MixAndShiftBfields()");
 
     /* Mixing factors to mix the current and previous iteration of the B field */
-    amrex::Real c_B_iter;
-    amrex::Real c_B_prev_iter;
-    if (rel_avg_Bdiff != 0.0 || rel_avg_Bdiff_prev_iter != 0.0)
+    amrex::Real weight_B_iter;
+    amrex::Real weight_B_prev_iter;
+    /* calculating the weight for mixing the current and previous iteration based
+     * on their respective errors. Large errors will induce a small weight of and vice-versa  */
+    if (relative_Bfield_error != 0.0 || relative_Bfield_error_prev_iter != 0.0)
     {
-        c_B_iter = rel_avg_Bdiff_prev_iter / ( rel_avg_Bdiff + rel_avg_Bdiff_prev_iter );
-        c_B_prev_iter = rel_avg_Bdiff / ( rel_avg_Bdiff + rel_avg_Bdiff_prev_iter );
+        weight_B_iter = relative_Bfield_error_prev_iter /
+                        ( relative_Bfield_error + relative_Bfield_error_prev_iter );
+        weight_B_prev_iter = relative_Bfield_error /
+                             ( relative_Bfield_error + relative_Bfield_error_prev_iter );
     }
     else
     {
-        c_B_iter = 0.5;
-        c_B_prev_iter = 0.5;
+        weight_B_iter = 0.5;
+        weight_B_prev_iter = 0.5;
     }
 
     /* calculating the mixed temporary B field  B_prev_iter = c*B_iter + d*B_prev_iter.
      * This is temporarily stored in B_prev_iter just to avoid additional memory allocation.
      * B_prev_iter is overwritten at the end of this function */
-    amrex::MultiFab::LinComb(B_prev_iter, c_B_iter, B_iter, 0, c_B_prev_iter,
+    amrex::MultiFab::LinComb(B_prev_iter, weight_B_iter, B_iter, 0, weight_B_prev_iter,
                              B_prev_iter, 0, 0, 1, 0);
 
     /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
-    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1-m_B_field_mixing_factor,
+    amrex::MultiFab::LinComb(m_fields.getSlices(lev, 1), 1-m_predcorr_B_mixing_factor,
                              m_fields.getSlices(lev, 1), field_comp,
-                             m_B_field_mixing_factor, B_prev_iter, 0, field_comp, 1, 0);
+                             m_predcorr_B_mixing_factor, B_prev_iter, 0, field_comp, 1, 0);
 
     /* Shifting the B field from the current iteration to the previous iteration */
     amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, 0);
@@ -491,16 +498,17 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
 {
     BL_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
-    amrex::Real rel_avg_Bdiff_prev_iter = 1.0;
-    amrex::Real rel_avg_Bdiff = ComputeRelBFieldError(m_fields.getSlices(lev, 2),
-                                                      m_fields.getSlices(lev, 2),
-                                                      m_fields.getSlices(lev, 3),
-                                                      m_fields.getSlices(lev, 3),
-                                                      FieldComps::Bx, FieldComps::By,
-                                                      FieldComps::Bx, FieldComps::By, bx, lev);
+    amrex::Real relative_Bfield_error_prev_iter = 1.0;
+    amrex::Real relative_Bfield_error = ComputeRelBFieldError(m_fields.getSlices(lev, 2),
+                                                              m_fields.getSlices(lev, 2),
+                                                              m_fields.getSlices(lev, 3),
+                                                              m_fields.getSlices(lev, 3),
+                                                              FieldComps::Bx, FieldComps::By,
+                                                              FieldComps::Bx, FieldComps::By,
+                                                              bx, lev);
 
     /* Guess Bx and By */
-    InitialBfieldGuess(rel_avg_Bdiff, lev);
+    InitialBfieldGuess(relative_Bfield_error, lev);
     amrex::ParallelContext::push(m_comm_xy);
      // exchange ExmBy EypBx Ez Bx By Bz
     m_fields.getSlices(lev, 1).FillBoundary(Geom(lev).periodicity());
@@ -526,10 +534,8 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
 
     /* creating aliases to the current in the next slice.
      * This needs to be reset after each push to the next slice */
-    amrex::MultiFab jx_next(m_fields.getSlices(lev, 0), amrex::make_alias,
-                            FieldComps::jx, 1);
-    amrex::MultiFab jy_next(m_fields.getSlices(lev, 0), amrex::make_alias,
-                            FieldComps::jy, 1);
+    amrex::MultiFab jx_next(m_fields.getSlices(lev, 0), amrex::make_alias, FieldComps::jx, 1);
+    amrex::MultiFab jy_next(m_fields.getSlices(lev, 0), amrex::make_alias, FieldComps::jy, 1);
 
 
     /* shift force terms, update force terms using guessed Bx and By */
@@ -540,9 +546,9 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
     /* Begin of predictor corrector loop  */
     int i_iter = 0;
     /* resetting the initial B-field error for mixing between iterations */
-    rel_avg_Bdiff = 1.0;
-    while (( rel_avg_Bdiff > m_fld_predcorr_tol_b )
-           && ( i_iter < m_fld_predcorr_n_max_iter ))
+    relative_Bfield_error = 1.0;
+    while (( relative_Bfield_error > m_predcorr_B_error_tolerance )
+           && ( i_iter < m_predcorr_max_iterations ))
     {
         i_iter++;
         /* Push particles to the next slice */
@@ -551,8 +557,7 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
                                true, false, false, lev);
 
         /* deposit current to next slice */
-        DepositCurrent(m_plasma_container, m_fields, ToSlice::Next,
-                       geom[lev], lev);
+        DepositCurrent(m_plasma_container, m_fields, ToSlice::Next, geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, 0),
@@ -564,21 +569,18 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
         SolvePoissonBx(Bx_iter, lev);
         SolvePoissonBy(By_iter, lev);
 
-        rel_avg_Bdiff = ComputeRelBFieldError(m_fields.getSlices(lev, 1),
-                                              m_fields.getSlices(lev, 1),
-                                              Bx_iter, By_iter, FieldComps::Bx, FieldComps::By,
-                                              0, 0, bx, lev);
+        relative_Bfield_error = ComputeRelBFieldError(m_fields.getSlices(lev, 1),
+                                                      m_fields.getSlices(lev, 1),
+                                                      Bx_iter, By_iter, FieldComps::Bx,
+                                                      FieldComps::By, 0, 0, bx, lev);
 
-        if (i_iter == 1)
-        {
-            rel_avg_Bdiff_prev_iter = rel_avg_Bdiff;
-        }
+        if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 
         /* Mixing the calculated B fields to the actual B field and shifting iterated B fields */
-        MixAndShiftBfields(Bx_iter, Bx_prev_iter, FieldComps::Bx,
-                           rel_avg_Bdiff, rel_avg_Bdiff_prev_iter, lev);
-        MixAndShiftBfields(By_iter, By_prev_iter, FieldComps::By,
-                           rel_avg_Bdiff, rel_avg_Bdiff_prev_iter, lev);
+        MixAndShiftBfields(Bx_iter, Bx_prev_iter, FieldComps::Bx, relative_Bfield_error,
+                           relative_Bfield_error_prev_iter, lev);
+        MixAndShiftBfields(By_iter, By_prev_iter, FieldComps::By, relative_Bfield_error,
+                           relative_Bfield_error_prev_iter, lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
         jx_next.setVal(0.);
@@ -594,14 +596,15 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
                                ToSlice::Next,
                                false, true, false, lev);
 
-        /* Shift rel_avg_Bdiff values */
-        rel_avg_Bdiff_prev_iter = rel_avg_Bdiff;
+        /* Shift relative_Bfield_error values */
+        relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
-    if (rel_avg_Bdiff > 10.)
+    if (relative_Bfield_error > 10.)
     {
         amrex::Abort("Predictor corrector loop diverged!\n"
                      "Re-try by adjusting the following paramters in the input script:\n"
-                     "- lower mixing factor: hipace.B_field_mixing_factor (hidden default: 0.1) \n"
+                     "- lower mixing factor: hipace.predcorr_B_mixing_factor "
+                     "(hidden default: 0.1) \n"
                      "- lower B field error tolerance: hipace.fld_predcorr_tol_b"
                      " (hidden default: 0.04)\n"
                      "- higher number of iterations in the pred. cor. loop:"
@@ -609,7 +612,7 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
                      "- higher longitudinal resolution");
     }
     if (m_verbose >= 1) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
-                                        " rel_avg_Bdiff: "<< rel_avg_Bdiff<< "\n";
+                                        " relative B field error: "<<relative_Bfield_error<< "\n";
 }
 
 amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
@@ -623,38 +626,40 @@ amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
     /* calculates the relative B field error between two B fields
      * for both Bx and By simultaneously */
 
-    amrex::Real rel_avg_Bdiff = 0.;
-    amrex::Real cum_Bdiffmag = 0.;
-    amrex::Real cum_Bmag = 0.;
+    amrex::Real relative_Bfield_error = 0.;
+    amrex::Real norm_Bdiff = 0.;
+    amrex::Real norm_B = 0.;
 
-    /* one temporary array is needed */
+    /* one temporary array is needed to store the difference of B fields
+     * between previous and current iteration */
     amrex::MultiFab temp(m_fields.getSlices(lev, 1).boxArray(),
                          m_fields.getSlices(lev, 1).DistributionMap(), 1,
                          m_fields.getSlices(lev, 1).nGrowVect());
     /* calculating sqrt( |Bx|^2 + |By|^2 ) */
-    cum_Bmag = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
-               + amrex::MultiFab::Dot(By, By_comp, 1, 0));
+    norm_B = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
+             + amrex::MultiFab::Dot(By, By_comp, 1, 0));
 
     /* calculating sqrt( |Bx - Bx_prev_iter|^2 + |By - By_prev_iter|^2 ) */
     amrex::MultiFab::Copy(temp, Bx, Bx_comp, 0, 1, 0);
     amrex::MultiFab::Subtract(temp, Bx_iter, Bx_iter_comp, 0, 1, 0);
-    cum_Bdiffmag = amrex::MultiFab::Dot(temp, 0, 1, 0);
+    norm_Bdiff = amrex::MultiFab::Dot(temp, 0, 1, 0);
     amrex::MultiFab::Copy(temp, By, By_comp, 0, 1, 0);
     amrex::MultiFab::Subtract(temp, By_iter, By_iter_comp, 0, 1, 0);
-    cum_Bdiffmag += amrex::MultiFab::Dot(temp, 0, 1, 0);
-    cum_Bdiffmag = sqrt(cum_Bdiffmag);
+    norm_Bdiff += amrex::MultiFab::Dot(temp, 0, 1, 0);
+    norm_Bdiff = sqrt(norm_Bdiff);
 
-    /* calculating the relative error */
-    if ( cum_Bmag / bx.numPts() > 1e-10)
+    /* calculating the relative error
+     * Warning: this test might be not working in SI units! */
+    if ( norm_B / bx.numPts() > 1e-10)
     {
-        rel_avg_Bdiff = cum_Bdiffmag / cum_Bmag;
+        relative_Bfield_error = norm_Bdiff / norm_B;
     }
     else
     {
-        rel_avg_Bdiff = 0.0;
+        relative_Bfield_error = 0.0;
     }
 
-    return rel_avg_Bdiff;
+    return relative_Bfield_error;
 }
 
 void
