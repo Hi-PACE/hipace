@@ -3,6 +3,7 @@
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "HipaceProfilerWrapper.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
+#include "particles/BinSort.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -18,6 +19,7 @@ Hipace* Hipace::m_instance = nullptr;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
+bool Hipace::m_slice_deposition = false;
 
 Hipace&
 Hipace::GetInstance ()
@@ -51,6 +53,7 @@ Hipace::Hipace () :
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
     pph.query("do_plot", m_do_plot);
+    pph.query("slice_deposition", m_slice_deposition);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -194,13 +197,18 @@ Hipace::Evolve ()
 
         /* ---------- Depose current from beam particles ---------- */
         m_fields.getF(lev).setVal(0.);
-        DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
-
         amrex::MultiFab& fields = m_fields.getF()[lev];
+
+        if (!m_slice_deposition) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
+
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
             const amrex::Box& bx = fields.box(*it);
+            amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
+            if (m_slice_deposition) bins = findParticlesInEachSlice(
+                lev, *it, bx, m_beam_container, geom[lev]);
+
             const int islice_hi = bx.bigEnd(Direction::z);
             const int islice_lo = bx.smallEnd(Direction::z);
             for (int islice = islice_hi; islice >= islice_lo; --islice)
@@ -225,8 +233,16 @@ Hipace::Evolve ()
                 j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
-                SolvePoissonEz(lev);
                 SolvePoissonExmByAndEypBx(lev);
+
+                if (m_slice_deposition) DepositCurrentSlice(
+                    m_beam_container, m_fields, geom[lev], lev, islice, bins);
+
+                amrex::ParallelContext::push(m_comm_xy);
+                j_slice.SumBoundary(Geom(lev).periodicity());
+                amrex::ParallelContext::pop();
+
+                SolvePoissonEz(lev);
                 SolvePoissonBz(lev);
 
                 /* Modifies Bx and By in the current slice
