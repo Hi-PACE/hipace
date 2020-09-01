@@ -1,12 +1,12 @@
 #include "Hipace.H"
 #include "particles/deposition/BeamDepositCurrent.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
+#include "HipaceProfilerWrapper.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/BinSort.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
-#include <AMReX_BLProfiler.H>
 
 #ifdef AMREX_USE_MPI
 namespace {
@@ -93,7 +93,7 @@ Hipace::InSameTransverseCommunicator (int rank) const
 void
 Hipace::InitData ()
 {
-    BL_PROFILE("Hipace::InitData()");
+    HIPACE_PROFILE("Hipace::InitData()");
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
@@ -194,7 +194,7 @@ Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
 void
 Hipace::Evolve ()
 {
-    BL_PROFILE("Hipace::Evolve()");
+    HIPACE_PROFILE("Hipace::Evolve()");
     int const lev = 0;
     if (m_do_plot) WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
@@ -279,7 +279,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
     /* Solves Laplacian(-Psi) =  1/episilon0 * (rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
      */
-    BL_PROFILE("Hipace::SolveExmByAndEypBx()");
+    HIPACE_PROFILE("Hipace::SolveExmByAndEypBx()");
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Psi, 1);
@@ -323,7 +323,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
 void Hipace::SolvePoissonEz (const int lev)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
-    BL_PROFILE("Hipace::SolvePoissonEz()");
+    HIPACE_PROFILE("Hipace::SolvePoissonEz()");
     // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Ez, 1);
@@ -355,7 +355,7 @@ void Hipace::SolvePoissonEz (const int lev)
 void Hipace::SolvePoissonBx (amrex::MultiFab& Bx_iter, const int lev)
 {
     /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
-    BL_PROFILE("Hipace::SolvePoissonBx()");
+    HIPACE_PROFILE("Hipace::SolvePoissonBx()");
 
     // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
     // and store in the staging area of m_poisson_solver
@@ -385,7 +385,7 @@ void Hipace::SolvePoissonBx (amrex::MultiFab& Bx_iter, const int lev)
 void Hipace::SolvePoissonBy (amrex::MultiFab& By_iter, const int lev)
 {
     /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
-    BL_PROFILE("Hipace::SolvePoissonBy()");
+    HIPACE_PROFILE("Hipace::SolvePoissonBy()");
 
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of m_poisson_solver
@@ -415,7 +415,7 @@ void Hipace::SolvePoissonBy (amrex::MultiFab& By_iter, const int lev)
 void Hipace::SolvePoissonBz (const int lev)
 {
     /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
-    BL_PROFILE("Hipace::SolvePoissonBz()");
+    HIPACE_PROFILE("Hipace::SolvePoissonBz()");
     // Left-Hand Side for Poisson equation is Bz in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
                         FieldComps::Bz, 1);
@@ -448,7 +448,7 @@ void Hipace::InitialBfieldGuess (const amrex::Real relative_Bfield_error, const 
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
-    BL_PROFILE("Hipace::InitialBfieldGuess()");
+    HIPACE_PROFILE("Hipace::InitialBfieldGuess()");
 
     const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
                                               ( 2.5 * m_predcorr_B_error_tolerance ), 2));
@@ -472,7 +472,7 @@ void Hipace::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab&
     /* Mixes the B field according to B = a*B + (1-a)*( c*B_iter + d*B_prev_iter),
      * with a,c,d mixing coefficients.
      */
-    BL_PROFILE("Hipace::MixAndShiftBfields()");
+    HIPACE_PROFILE("Hipace::MixAndShiftBfields()");
 
     /* Mixing factors to mix the current and previous iteration of the B field */
     amrex::Real weight_B_iter;
@@ -512,7 +512,7 @@ void Hipace::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab&
 void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice,
                                                 const int lev)
 {
-    BL_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
+    HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
     amrex::Real relative_Bfield_error_prev_iter = 1.0;
     amrex::Real relative_Bfield_error = ComputeRelBFieldError(m_fields.getSlices(lev, 2),
@@ -671,7 +671,7 @@ amrex::Real Hipace::ComputeRelBFieldError (const amrex::MultiFab& Bx,
 void
 Hipace::Wait ()
 {
-    BL_PROFILE("Hipace::Wait()");
+    HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
     if (m_rank_z != m_numprocs_z-1) {
         const int lev = 0;
@@ -712,7 +712,7 @@ Hipace::Wait ()
 void
 Hipace::Notify ()
 {
-    BL_PROFILE("Hipace::Notify()");
+    HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
 #ifdef AMREX_USE_MPI
@@ -770,7 +770,7 @@ Hipace::NotifyFinish ()
 void
 Hipace::WriteDiagnostics (int step)
 {
-    BL_PROFILE("Hipace::WriteDiagnostics()");
+    HIPACE_PROFILE("Hipace::WriteDiagnostics()");
     // Write fields
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;

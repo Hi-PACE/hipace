@@ -5,15 +5,15 @@
 #include "fields/Fields.H"
 #include "Constants.H"
 #include "Hipace.H"
+#include "HipaceProfilerWrapper.H"
 
-#include <AMReX_BLProfiler.H>
 #include <AMReX_DenseBins.H>
 
 void
 DepositCurrent (BeamParticleContainer& beam, Fields & fields,
                 amrex::Geometry const& gm, int const lev)
 {
-    BL_PROFILE("DepositCurrent_BeamParticleContainer()");
+    HIPACE_PROFILE("DepositCurrent_BeamParticleContainer()");
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
@@ -109,7 +109,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Geometry const& gm, int const lev, const int islice,
                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
-    BL_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
+    HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
