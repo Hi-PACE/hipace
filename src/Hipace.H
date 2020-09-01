@@ -224,6 +224,7 @@ private:
      * as well as the plasma particle force terms.
      *
      * \param[in] bx current Box
+     * \param[in] islice index of calculated slice
      * \param[in] lev current level
      */
     void PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice,
