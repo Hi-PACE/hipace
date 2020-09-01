@@ -258,13 +258,13 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
     BL_PROFILE("Hipace::SolveExmByAndEypBx()");
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(m_fields.getSlices(lev, 1), amrex::make_alias,
-                        FieldComps::mPsi, 1);
+                        FieldComps::Psi, 1);
 
     // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
     amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
                               FieldComps::jz, 0, 1, 0);
-    m_poisson_solver.StagingArea().mult(-1./m_phys_const.c);
-    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
+    m_poisson_solver.StagingArea().mult(1./m_phys_const.c);
+    amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
                           FieldComps::rho, 0, 1, 0);
 
 
@@ -280,9 +280,9 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
         m_fields.getSlices(lev, 1),
         Direction::x,
         geom[0].CellSize(Direction::x),
-        1.,
+        -1.,
         SliceOperatorType::Assign,
-        FieldComps::mPsi,
+        FieldComps::Psi,
         FieldComps::ExmBy);
 
     m_fields.TransverseDerivative(
@@ -290,9 +290,9 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
         m_fields.getSlices(lev, 1),
         Direction::y,
         geom[0].CellSize(Direction::y),
-        1.,
+        -1.,
         SliceOperatorType::Assign,
-        FieldComps::mPsi,
+        FieldComps::Psi,
         FieldComps::EypBx);
 }
 
@@ -667,7 +667,7 @@ Hipace::WriteDiagnostics (int step)
     const std::string filename = amrex::Concatenate("plt", step);
     const int nlev = 1;
     const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
-                                                 "jx", "jy", "jz", "rho", "mPsi"};
+                                                 "jx", "jy", "jz", "rho", "Psi"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
