@@ -137,13 +137,13 @@ InitParticles (const IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::w        ][pidx] = a_density * scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
-                arrdata[PlasmaIdx::psi      ][pidx] = 1.;
+                arrdata[PlasmaIdx::psi      ][pidx] = 0.;
                 arrdata[PlasmaIdx::x_temp   ][pidx] = 0.;
                 arrdata[PlasmaIdx::y_temp   ][pidx] = 0.;
                 arrdata[PlasmaIdx::w_temp   ][pidx] = 0.;
                 arrdata[PlasmaIdx::ux_temp  ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy_temp  ][pidx] = u[1] * phys_const.c;
-                arrdata[PlasmaIdx::psi_temp ][pidx] = 1.;
+                arrdata[PlasmaIdx::psi_temp ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx1      ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx2      ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx3      ][pidx] = 0.;
