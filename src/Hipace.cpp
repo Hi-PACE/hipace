@@ -209,7 +209,7 @@ Hipace::Evolve ()
         /* ---------- Depose current from beam particles ---------- */
         amrex::MultiFab& fields = m_fields.getF(lev);
 
-	if (!m_3d_on_host) fields.setVal(0.);
+        if (!m_3d_on_host) fields.setVal(0.);
         if (!m_slice_deposition) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
 
         const amrex::Vector<int> index_array = fields.IndexArray();
@@ -225,7 +225,7 @@ Hipace::Evolve ()
             for (int islice = islice_hi; islice >= islice_lo; --islice)
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
-		if (m_3d_on_host) m_fields.getSlices(lev, 1).setVal(0.);
+                if (m_3d_on_host) m_fields.getSlices(lev, 1).setVal(0.);
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        ToSlice::This,
