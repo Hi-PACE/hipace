@@ -291,8 +291,8 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
     // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
     amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
                               FieldComps::jz, 0, 1, 0);
-    m_poisson_solver.StagingArea().mult(-1./m_phys_const.c);
-    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
+    m_poisson_solver.StagingArea().mult(1./m_phys_const.c);
+    amrex::MultiFab::Subtract(m_poisson_solver.StagingArea(), m_fields.getSlices(lev, 1),
                           FieldComps::rho, 0, 1, 0);
 
 
@@ -308,7 +308,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
         m_fields.getSlices(lev, 1),
         Direction::x,
         geom[0].CellSize(Direction::x),
-        1.,
+        -1.,
         SliceOperatorType::Assign,
         FieldComps::Psi,
         FieldComps::ExmBy);
@@ -318,7 +318,7 @@ void Hipace::SolvePoissonExmByAndEypBx (const int lev)
         m_fields.getSlices(lev, 1),
         Direction::y,
         geom[0].CellSize(Direction::y),
-        1.,
+        -1.,
         SliceOperatorType::Assign,
         FieldComps::Psi,
         FieldComps::EypBx);
