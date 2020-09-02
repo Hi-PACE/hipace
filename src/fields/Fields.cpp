@@ -18,13 +18,13 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     m_nguards = {nguards_xy, nguards_xy, Hipace::m_depos_order_z};
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     if (Hipace::m_3d_on_host){
-      // The Arena uses pinned memory.
-      m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
-                      amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+        // The Arena uses pinned memory.
+        m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
+                        amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
     } else {
-      // The Arena uses managed memory.
-      m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
-                      amrex::MFInfo().SetArena(amrex::The_Arena()));
+        // The Arena uses managed memory.
+        m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
+                        amrex::MFInfo().SetArena(amrex::The_Arena()));
     }
 
     std::map<int,amrex::Vector<amrex::Box> > boxes;
