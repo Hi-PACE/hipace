@@ -54,21 +54,12 @@
     "particle_position_x": 0.04096,
     "particle_position_y": 0.04096000000000001,
     "particle_position_z": 0.08064000000000002,
-<<<<<<< HEAD
-    "particle_psi": 7.791472461959705e-43,
-    "particle_psi_temp": 7.792689969957107e-43,
-    "particle_ux": 4.923136248376442e-19,
-    "particle_ux_temp": 4.923131236927801e-19,
-    "particle_uy": 4.923136248376443e-19,
-    "particle_uy_temp": 4.923131236927801e-19,
-=======
     "particle_psi": 4096.0,
     "particle_psi_temp": 4096.0,
     "particle_ux": 4.923016316286534e-19,
     "particle_ux_temp": 4.922597340845077e-19,
     "particle_uy": 4.923016316286536e-19,
     "particle_uy_temp": 4.922597340845079e-19,
->>>>>>> development
     "particle_w": 1.0000000000000003e-15,
     "particle_w_temp": 0.0,
     "particle_x_temp": 0.04096,
