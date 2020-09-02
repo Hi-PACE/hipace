@@ -121,8 +121,6 @@ public:
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
-    /** Class to handle transverse FFT Poisson solver on 1 slice */
-    FFTPoissonSolver m_poisson_solver;
     /** Particle container for a beam */
     BeamParticleContainer m_beam_container;
     /** Particle container for the plasma */

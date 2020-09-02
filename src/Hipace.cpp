@@ -146,14 +146,8 @@ Hipace::MakeNewLevelFromScratch (
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
 
-    m_fields.AllocData(lev, ba, dm);
-    // The Poisson solver operates on transverse slices only.
-    // The constructor takes the BoxArray and the DistributionMap of a slice,
-    // so the FFTPlans are built on a slice.
-    m_poisson_solver = FFTPoissonSolver(
-        m_fields.getSlices(lev, 1).boxArray(),
-        m_fields.getSlices(lev, 1).DistributionMap(),
-        geom[lev]);
+    m_fields.AllocData(lev, ba, dm, Geom(lev));
+
 }
 
 void
@@ -245,7 +239,7 @@ Hipace::Evolve ()
                 j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
-                m_fields.SolvePoissonExmByAndEypBx(m_poisson_solver, Geom(lev), m_comm_xy, lev);
+                m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(
                     m_beam_container, m_fields, geom[lev], lev, islice, bins);
@@ -254,8 +248,8 @@ Hipace::Evolve ()
                 j_slice.SumBoundary(Geom(lev).periodicity());
                 amrex::ParallelContext::pop();
 
-                m_fields.SolvePoissonEz(m_poisson_solver, geom[lev],lev);
-                m_fields.SolvePoissonBz(m_poisson_solver, geom[lev], lev);
+                m_fields.SolvePoissonEz(Geom(lev),lev);
+                m_fields.SolvePoissonBz(Geom(lev), lev);
 
                 /* Modifies Bx and By in the current slice
                  * and the force terms of the plasma particles
@@ -352,8 +346,8 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
-        m_fields.SolvePoissonBx(Bx_iter, m_poisson_solver, geom[lev], lev);
-        m_fields.SolvePoissonBy(By_iter, m_poisson_solver, geom[lev], lev);
+        m_fields.SolvePoissonBx(Bx_iter, Geom(lev), lev);
+        m_fields.SolvePoissonBy(By_iter, Geom(lev), lev);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(m_fields.getSlices(lev, 1),
                                                                m_fields.getSlices(lev, 1),
@@ -364,9 +358,11 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
 
         /* Mixing the calculated B fields to the actual B field and shifting iterated B fields */
         m_fields.MixAndShiftBfields(Bx_iter, Bx_prev_iter, FieldComps::Bx, relative_Bfield_error,
-                           relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
+                                    relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor,
+                                    lev);
         m_fields.MixAndShiftBfields(By_iter, By_prev_iter, FieldComps::By, relative_Bfield_error,
-                           relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
+                                    relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor,
+                                    lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
         jx_next.setVal(0.);

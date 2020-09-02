@@ -13,7 +13,7 @@ Fields::Fields (Hipace const* a_hipace)
 
 void
 Fields::AllocData (int lev, const amrex::BoxArray& ba,
-                   const amrex::DistributionMapping& dm)
+                   const amrex::DistributionMapping& dm, amrex::Geometry const& geom)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
@@ -76,6 +76,14 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
                                      amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
     }
+
+    // The Poisson solver operates on transverse slices only.
+    // The constructor takes the BoxArray and the DistributionMap of a slice,
+    // so the FFTPlans are built on a slice.
+    m_poisson_solver = FFTPoissonSolver(
+        getSlices(lev, 1).boxArray(),
+        getSlices(lev, 1).DistributionMap(),
+        geom);
 }
 
 void
@@ -218,7 +226,8 @@ Fields::getF (int lev, int icomp )
     return F_comp;
 }
 
-void Fields::SolvePoissonExmByAndEypBx (FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const MPI_Comm& m_comm_xy, const int lev)
+void Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
+                                        const int lev)
 {
     /* Solves Laplacian(-Psi) =  1/episilon0 * (rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -232,14 +241,14 @@ void Fields::SolvePoissonExmByAndEypBx (FFTPoissonSolver& poisson_solver, amrex:
                         FieldComps::Psi, 1);
 
     // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
-    amrex::MultiFab::Copy(poisson_solver.StagingArea(), getSlices(lev, 1),
+    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), getSlices(lev, 1),
                               FieldComps::jz, 0, 1, 0);
-    poisson_solver.StagingArea().mult(-1./phys_const.c);
-    amrex::MultiFab::Add(poisson_solver.StagingArea(), getSlices(lev, 1),
+    m_poisson_solver.StagingArea().mult(-1./phys_const.c);
+    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), getSlices(lev, 1),
                           FieldComps::rho, 0, 1, 0);
 
 
-    poisson_solver.SolvePoissonEquation(lhs);
+    m_poisson_solver.SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */
     amrex::ParallelContext::push(m_comm_xy);
@@ -269,7 +278,7 @@ void Fields::SolvePoissonExmByAndEypBx (FFTPoissonSolver& poisson_solver, amrex:
 }
 
 
-void Fields::SolvePoissonEz (FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev)
+void Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
@@ -282,7 +291,7 @@ void Fields::SolvePoissonEz (FFTPoissonSolver& poisson_solver, amrex::Geometry c
     // from the slice MF, and store in the staging area of poisson_solver
     TransverseDerivative(
         getSlices(lev, 1),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         1./(phys_const.ep0*phys_const.c),
@@ -291,7 +300,7 @@ void Fields::SolvePoissonEz (FFTPoissonSolver& poisson_solver, amrex::Geometry c
 
     TransverseDerivative(
         getSlices(lev, 1),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         1./(phys_const.ep0*phys_const.c),
@@ -300,10 +309,10 @@ void Fields::SolvePoissonEz (FFTPoissonSolver& poisson_solver, amrex::Geometry c
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    poisson_solver.SolvePoissonEquation(lhs);
+    m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
-void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev)
+void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBx()");
@@ -313,7 +322,7 @@ void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, FFTPoissonSolver& poisson
     // and store in the staging area of poisson_solver
     TransverseDerivative(
         getSlices(lev, 1),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         -phys_const.mu0,
@@ -323,7 +332,7 @@ void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, FFTPoissonSolver& poisson
     LongitudinalDerivative(
         getSlices(lev, 2),
         getSlices(lev, 0),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         geom.CellSize(Direction::z),
         phys_const.mu0,
         SliceOperatorType::Add,
@@ -331,10 +340,10 @@ void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, FFTPoissonSolver& poisson
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    poisson_solver.SolvePoissonEquation(Bx_iter);
+    m_poisson_solver.SolvePoissonEquation(Bx_iter);
 }
 
-void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev)
+void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBy()");
@@ -344,7 +353,7 @@ void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, FFTPoissonSolver& poisson
     // and store in the staging area of poisson_solver
     TransverseDerivative(
         getSlices(lev, 1),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         phys_const.mu0,
@@ -354,7 +363,7 @@ void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, FFTPoissonSolver& poisson
     LongitudinalDerivative(
         getSlices(lev, 2),
         getSlices(lev, 0),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         geom.CellSize(Direction::z),
         -phys_const.mu0,
         SliceOperatorType::Add,
@@ -362,10 +371,10 @@ void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, FFTPoissonSolver& poisson
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    poisson_solver.SolvePoissonEquation(By_iter);
+    m_poisson_solver.SolvePoissonEquation(By_iter);
 }
 
-void Fields::SolvePoissonBz (FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev)
+void Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonBz()");
@@ -378,7 +387,7 @@ void Fields::SolvePoissonBz (FFTPoissonSolver& poisson_solver, amrex::Geometry c
     // from the slice MF, and store in the staging area of m_poisson_solver
     TransverseDerivative(
         getSlices(lev, 1),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         phys_const.mu0,
@@ -387,7 +396,7 @@ void Fields::SolvePoissonBz (FFTPoissonSolver& poisson_solver, amrex::Geometry c
 
     TransverseDerivative(
         getSlices(lev, 1),
-        poisson_solver.StagingArea(),
+        m_poisson_solver.StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         -phys_const.mu0,
@@ -396,7 +405,7 @@ void Fields::SolvePoissonBz (FFTPoissonSolver& poisson_solver, amrex::Geometry c
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
-    poisson_solver.SolvePoissonEquation(lhs);
+    m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
 void Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,

@@ -47,10 +47,13 @@ public:
      * \param[in] lev MR level
      * \param[in] ba BoxArray for the simulation
      * \param[in] dm DistributionMapping for the whole simulation
+     * \param[in] geom Geometry
      */
     void AllocData (int lev, const amrex::BoxArray& ba,
-                    const amrex::DistributionMapping& dm);
+                    const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
 
+    /** Class to handle transverse FFT Poisson solver on 1 slice */
+    FFTPoissonSolver m_poisson_solver;
     /** get function for the main 3D array F */
     amrex::Vector<amrex::MultiFab>& getF () { return m_F; }
     /** get function for the main 3D array F
@@ -103,36 +106,44 @@ public:
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
+     * \param[in] geom Geometry
+     * \param[in] m_comm_xy transverse communicator on the slice
      * \param[in] lev current level
      */
-    void SolvePoissonExmByAndEypBx (FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const MPI_Comm& m_comm_xy, const int lev);
+    void SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
+                                    const int lev);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
+     * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonEz (FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev);
+    void SolvePoissonEz (amrex::Geometry const& geom, const int lev);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
+     * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonBx (amrex::MultiFab& Bx_iter, FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev);
+    void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, const int lev);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
+     * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonBy (amrex::MultiFab& By_iter, FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev);
+    void SolvePoissonBy (amrex::MultiFab& By_iter,amrex::Geometry const& geom, const int lev);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
+     * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonBz (FFTPoissonSolver& poisson_solver, amrex::Geometry const& geom, const int lev);
+    void SolvePoissonBz (amrex::Geometry const& geom, const int lev);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
      *
      * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
+     * \param[in] predcorr_B_error_tolerance relative B field error tolerance in the predcorr loop
      * \param[in] lev current level
      */
     void InitialBfieldGuess (const amrex::Real relative_Bfield_error,
@@ -146,6 +157,7 @@ public:
      * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
      * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
      * \param[in] relative_Bfield_error_prev_iter relative B field error of the previous iteration
+     * \param[in] predcorr_B_mixing_factor mixing factor for B fields in predcorr loop
      * \param[in] lev current level
      */
     void MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
@@ -172,11 +184,11 @@ public:
      * \param[in] lev current level
      */
     amrex::Real ComputeRelBFieldError (const amrex::MultiFab& Bx, const amrex::MultiFab& By,
-                                           const amrex::MultiFab& Bx_iter,
-                                           const amrex::MultiFab& By_iter, const int Bx_comp,
-                                           const int By_comp, const int Bx_iter_comp,
-                                           const int By_iter_comp, const amrex::Box& bx,
-                                           const int lev);
+                                       const amrex::MultiFab& Bx_iter,
+                                       const amrex::MultiFab& By_iter, const int Bx_comp,
+                                       const int By_comp, const int Bx_iter_comp,
+                                       const int By_iter_comp, const amrex::Box& bx,
+                                       const int lev);
 
 private:
     /** Pointer to const singleton of class Hipace */
