@@ -2,6 +2,7 @@
 #include "Constants.H"
 #include "ParticleUtil.H"
 #include "Hipace.H"
+#include "HipaceProfilerWrapper.H"
 
 #include <AMReX_REAL.H>
 
@@ -18,7 +19,7 @@ InitCanBeam (const IntVect& a_num_particles_per_cell,
              const amrex::Real a_zmax,
              const amrex::Real a_radius)
 {
-    BL_PROFILE("BeamParticleContainer::InitParticles");
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     const int lev = 0;
     const auto dx = a_geom.CellSizeArray();

@@ -8,6 +8,7 @@
 #include "Constants.H"
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
+#include "HipaceProfilerWrapper.H"
 
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
@@ -15,7 +16,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         const bool do_push, const bool do_update, const bool do_shift,
                         int const lev)
 {
-    BL_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
+    HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
 
     // Extract properties associated with physical size of the box
