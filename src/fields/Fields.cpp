@@ -1,9 +1,7 @@
 #include "Fields.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
-
 #include "Constants.H"
-
 
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
