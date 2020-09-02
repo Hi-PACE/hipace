@@ -24,6 +24,7 @@ amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 5;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.1;
 bool Hipace::m_slice_deposition = false;
+bool Hipace::m_3d_on_host = false;
 
 Hipace&
 Hipace::GetInstance ()
@@ -62,6 +63,8 @@ Hipace::Hipace () :
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("do_plot", m_do_plot);
     pph.query("slice_deposition", m_slice_deposition);
+    pph.query("3d_on_host", m_3d_on_host);
+    if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_deposition);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -204,9 +207,9 @@ Hipace::Evolve ()
         amrex::Print()<<"step "<< step <<"\n";
 
         /* ---------- Depose current from beam particles ---------- */
-        m_fields.getF(lev).setVal(0.);
-        amrex::MultiFab& fields = m_fields.getF()[lev];
+        amrex::MultiFab& fields = m_fields.getF(lev);
 
+        if (!m_3d_on_host) fields.setVal(0.);
         if (!m_slice_deposition) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
 
         const amrex::Vector<int> index_array = fields.IndexArray();
@@ -222,6 +225,7 @@ Hipace::Evolve ()
             for (int islice = islice_hi; islice >= islice_lo; --islice)
             {
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
+                if (m_3d_on_host) m_fields.getSlices(lev, 1).setVal(0.);
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        ToSlice::This,
