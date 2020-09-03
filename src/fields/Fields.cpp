@@ -69,7 +69,7 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     amrex::BoxArray slice_ba(std::move(bl));
     amrex::DistributionMapping slice_dm(std::move(procmap));
 
-    for (int islice=0; islice<m_nslices; islice++) {
+    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
                                      amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
@@ -171,7 +171,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
               int ncomp)
 {
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][1];  // always slice #1
+    auto& slice_mf = m_slices[lev][(int) WhichSlice::This];  // always slice #1
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
@@ -213,8 +213,10 @@ void
 Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    std::swap(m_slices[lev][2], m_slices[lev][3]);
-    std::swap(m_slices[lev][1], m_slices[lev][2]);
+    std::swap(m_slices[lev][( int) WhichSlice::Previous1],
+              m_slices[lev][(int) WhichSlice::Previous2]);
+    std::swap(m_slices[lev][(int) WhichSlice::This],
+              m_slices[lev][(int) WhichSlice::Previous1]);
 }
 
 amrex::MultiFab
