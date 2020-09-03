@@ -17,6 +17,9 @@ struct FieldComps{
 /** \brief Direction of field copies: from 3D F to 2D slice S or the other way round */
 enum struct FieldCopyType { FtoS, StoF };
 
+/** \brief describes which slice with respect to the currently calculated is used */
+enum struct WhichSlice { Next=0, This, Previous1, Previous2 };
+
 /** \brief Operation performed in the TransverseDerivative function:
  * either assign or add to the destination array
  */
@@ -74,7 +77,7 @@ public:
      * \param[in] lev MR level
      * \param[in] i slice index (currently from 0 to 3 )
      */
-    amrex::MultiFab& getSlices (int lev, int i) {return m_slices[lev][i]; }
+    amrex::MultiFab& getSlices (int lev, WhichSlice sl) {return m_slices[lev][(int) sl]; }
 
     /** Copy between the full MultiFab and slice MultiFab */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,

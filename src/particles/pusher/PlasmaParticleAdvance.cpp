@@ -36,7 +36,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Dim3 const lo = amrex::lbound(tilebox);
 
         // Extract the fields
-        const amrex::MultiFab& S = fields.getSlices(lev, 1);
+        const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
         const amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
         const amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
         const amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);

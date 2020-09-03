@@ -30,8 +30,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Dim3 const lo = amrex::lbound(tilebox);
 
         // Extract the fields currents
-        amrex::MultiFab& S = fields.getSlices(lev, 1);
-        amrex::MultiFab& next_slice = fields.getSlices(lev, 0);
+        amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
+        amrex::MultiFab& next_slice = fields.getSlices(lev, WhichSlice::Next);
         amrex::MultiFab jx(S, amrex::make_alias, FieldComps::jx, 1);
         amrex::MultiFab jy(S, amrex::make_alias, FieldComps::jy, 1);
         amrex::MultiFab jx_next(next_slice, amrex::make_alias, FieldComps::jx, 1);
