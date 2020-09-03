@@ -314,8 +314,10 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
 
     /* creating aliases to the current in the next slice.
      * This needs to be reset after each push to the next slice */
-    amrex::MultiFab jx_next(m_fields.getSlices(lev, WhichSlice::Next), amrex::make_alias, FieldComps::jx, 1);
-    amrex::MultiFab jy_next(m_fields.getSlices(lev, WhichSlice::Next), amrex::make_alias, FieldComps::jy, 1);
+    amrex::MultiFab jx_next(m_fields.getSlices(lev, WhichSlice::Next),
+                            amrex::make_alias, FieldComps::jx, 1);
+    amrex::MultiFab jy_next(m_fields.getSlices(lev, WhichSlice::Next),
+                            amrex::make_alias, FieldComps::jy, 1);
 
 
     /* shift force terms, update force terms using guessed Bx and By */
@@ -349,10 +351,11 @@ void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int 
         m_fields.SolvePoissonBx(Bx_iter, Geom(lev), lev);
         m_fields.SolvePoissonBy(By_iter, Geom(lev), lev);
 
-        relative_Bfield_error = m_fields.ComputeRelBFieldError(m_fields.getSlices(lev, WhichSlice::This),
-                                                               m_fields.getSlices(lev, WhichSlice::This),
-                                                               Bx_iter, By_iter, FieldComps::Bx,
-                                                               FieldComps::By, 0, 0, bx, lev);
+        relative_Bfield_error = m_fields.ComputeRelBFieldError(
+                                               m_fields.getSlices(lev, WhichSlice::This),
+                                               m_fields.getSlices(lev, WhichSlice::This),
+                                               Bx_iter, By_iter, FieldComps::Bx,
+                                               FieldComps::By, 0, 0, bx, lev);
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 

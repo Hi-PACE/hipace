@@ -75,7 +75,7 @@ public:
     std::array<amrex::MultiFab, m_nslices>& getSlices (int lev) {return m_slices[lev]; }
     /** get function for the 2D slices
      * \param[in] lev MR level
-     * \param[in] i slice index (currently from 0 to 3 )
+     * \param[in] sl slice index (WhichSlice::Next, This, Previous1, Previous2 )
      */
     amrex::MultiFab& getSlices (int lev, WhichSlice sl) {return m_slices[lev][(int) sl]; }
 
@@ -94,8 +94,9 @@ public:
     void ShiftSlices (int lev);
 
     /** Compute transverse derivative of 1 slice*/
-    void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
-                               const amrex::Real dx, const amrex::Real mult_coeff=1.,
+    void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
+                               const int direction, const amrex::Real dx,
+                               const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
                                const int scomp=0, const int dcomp=0);
 
