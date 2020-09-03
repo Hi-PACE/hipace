@@ -56,17 +56,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
 
             if        (Hipace::m_depos_order_xy == 0){
-                    doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, ToSlice::This );
+                    doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                              dx, xyzmin, lo, q, ToSlice::This );
             } else if (Hipace::m_depos_order_xy == 1){
-                    doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, ToSlice::This );
+                    doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                              dx, xyzmin, lo, q, ToSlice::This );
             } else if (Hipace::m_depos_order_xy == 2){
-                    doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, ToSlice::This );
+                    doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                              dx, xyzmin, lo, q, ToSlice::This );
             } else if (Hipace::m_depos_order_xy == 3){
-                    doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, dx, xyzmin,
-                                              lo, q, ToSlice::This );
+                    doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                              dx, xyzmin, lo, q, ToSlice::This );
             } else {
                 amrex::Abort("unknow deposition order");
             }
