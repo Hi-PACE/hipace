@@ -260,7 +260,7 @@ Hipace::Evolve ()
                 m_fields.ShiftSlices(lev);
 
                 // After this, the parallel context is the full 3D communicator again
-                amrex::ParallelContext::pop();               
+                amrex::ParallelContext::pop();
             }
         }
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
