@@ -69,7 +69,7 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     amrex::BoxArray slice_ba(std::move(bl));
     amrex::DistributionMapping slice_dm(std::move(procmap));
 
-    for (int islice=0; islice<m_nslices; islice++) {
+    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
                                      amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
@@ -79,8 +79,8 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
     m_poisson_solver = FFTPoissonSolver(
-        getSlices(lev, 1).boxArray(),
-        getSlices(lev, 1).DistributionMap(),
+        getSlices(lev, WhichSlice::This).boxArray(),
+        getSlices(lev, WhichSlice::This).DistributionMap(),
         geom);
 }
 
@@ -171,7 +171,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
               int ncomp)
 {
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][1];  // always slice #1
+    auto& slice_mf = m_slices[lev][(int) WhichSlice::This];  // always slice #1
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
@@ -213,8 +213,10 @@ void
 Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    std::swap(m_slices[lev][2], m_slices[lev][3]);
-    std::swap(m_slices[lev][1], m_slices[lev][2]);
+    std::swap(m_slices[lev][(int) WhichSlice::Previous1],
+              m_slices[lev][(int) WhichSlice::Previous2]);
+    std::swap(m_slices[lev][(int) WhichSlice::This],
+              m_slices[lev][(int) WhichSlice::Previous1]);
 }
 
 amrex::MultiFab
@@ -235,14 +237,14 @@ void Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_C
     PhysConst phys_const = get_phys_const();
 
     // Left-Hand Side for Poisson equation is Psi in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, 1), amrex::make_alias,
+    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::Psi, 1);
 
     // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
-    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), getSlices(lev, 1),
+    amrex::MultiFab::Copy(m_poisson_solver.StagingArea(), getSlices(lev, WhichSlice::This),
                               FieldComps::jz, 0, 1, 0);
     m_poisson_solver.StagingArea().mult(-1./phys_const.c);
-    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), getSlices(lev, 1),
+    amrex::MultiFab::Add(m_poisson_solver.StagingArea(), getSlices(lev, WhichSlice::This),
                           FieldComps::rho, 0, 1, 0);
 
 
@@ -255,8 +257,8 @@ void Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_C
 
     /* Compute ExmBy and Eypbx from grad(-psi) */
     TransverseDerivative(
-        getSlices(lev, 1),
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
+        getSlices(lev, WhichSlice::This),
         Direction::x,
         geom.CellSize(Direction::x),
         1.,
@@ -265,8 +267,8 @@ void Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_C
         FieldComps::ExmBy);
 
     TransverseDerivative(
-        getSlices(lev, 1),
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
+        getSlices(lev, WhichSlice::This),
         Direction::y,
         geom.CellSize(Direction::y),
         1.,
@@ -283,12 +285,12 @@ void Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
 
     PhysConst phys_const = get_phys_const();
     // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, 1), amrex::make_alias,
+    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::Ez, 1);
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
     TransverseDerivative(
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
         m_poisson_solver.StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
@@ -297,7 +299,7 @@ void Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
         FieldComps::jx);
 
     TransverseDerivative(
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
         m_poisson_solver.StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
@@ -319,7 +321,7 @@ void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& ge
     // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
     // and store in the staging area of poisson_solver
     TransverseDerivative(
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
         m_poisson_solver.StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
@@ -328,8 +330,8 @@ void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& ge
         FieldComps::jz);
 
     LongitudinalDerivative(
-        getSlices(lev, 2),
-        getSlices(lev, 0),
+        getSlices(lev, WhichSlice::Previous1),
+        getSlices(lev, WhichSlice::Next),
         m_poisson_solver.StagingArea(),
         geom.CellSize(Direction::z),
         phys_const.mu0,
@@ -350,7 +352,7 @@ void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& ge
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of poisson_solver
     TransverseDerivative(
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
         m_poisson_solver.StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
@@ -359,8 +361,8 @@ void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& ge
         FieldComps::jz);
 
     LongitudinalDerivative(
-        getSlices(lev, 2),
-        getSlices(lev, 0),
+        getSlices(lev, WhichSlice::Previous1),
+        getSlices(lev, WhichSlice::Next),
         m_poisson_solver.StagingArea(),
         geom.CellSize(Direction::z),
         -phys_const.mu0,
@@ -379,12 +381,12 @@ void Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
 
     PhysConst phys_const = get_phys_const();
     // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, 1), amrex::make_alias,
+    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::Bz, 1);
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
     TransverseDerivative(
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
         m_poisson_solver.StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
@@ -393,7 +395,7 @@ void Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
         FieldComps::jx);
 
     TransverseDerivative(
-        getSlices(lev, 1),
+        getSlices(lev, WhichSlice::This),
         m_poisson_solver.StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
@@ -416,14 +418,14 @@ void Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
     const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
                                               ( 2.5 * predcorr_B_error_tolerance ), 2));
 
-    amrex::MultiFab::LinComb(getSlices(lev, 1), 1+mix_factor_init_guess,
-                             getSlices(lev, 2), FieldComps::Bx,
-                             -mix_factor_init_guess, getSlices(lev, 3),
+    amrex::MultiFab::LinComb(getSlices(lev, WhichSlice::This), 1+mix_factor_init_guess,
+                             getSlices(lev, WhichSlice::Previous1), FieldComps::Bx,
+                             -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2),
                              FieldComps::Bx, FieldComps::Bx, 1, 0);
 
-    amrex::MultiFab::LinComb(getSlices(lev, 1), 1+mix_factor_init_guess,
-                             getSlices(lev, 2), FieldComps::By,
-                             -mix_factor_init_guess, getSlices(lev, 3),
+    amrex::MultiFab::LinComb(getSlices(lev, WhichSlice::This), 1+mix_factor_init_guess,
+                             getSlices(lev, WhichSlice::Previous1), FieldComps::By,
+                             -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2),
                              FieldComps::By, FieldComps::By, 1, 0);
 
 }
@@ -463,8 +465,8 @@ void Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab&
                              B_prev_iter, 0, 0, 1, 0);
 
     /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
-    amrex::MultiFab::LinComb(getSlices(lev, 1), 1-predcorr_B_mixing_factor,
-                             getSlices(lev, 1), field_comp,
+    amrex::MultiFab::LinComb(getSlices(lev, WhichSlice::This), 1-predcorr_B_mixing_factor,
+                             getSlices(lev, WhichSlice::This), field_comp,
                              predcorr_B_mixing_factor, B_prev_iter, 0, field_comp, 1, 0);
 
     /* Shifting the B field from the current iteration to the previous iteration */
@@ -486,9 +488,9 @@ amrex::Real Fields::ComputeRelBFieldError (const amrex::MultiFab& Bx,
 
     /* one temporary array is needed to store the difference of B fields
      * between previous and current iteration */
-    amrex::MultiFab temp(getSlices(lev, 1).boxArray(),
-                         getSlices(lev, 1).DistributionMap(), 1,
-                         getSlices(lev, 1).nGrowVect());
+    amrex::MultiFab temp(getSlices(lev, WhichSlice::This).boxArray(),
+                         getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                         getSlices(lev, WhichSlice::This).nGrowVect());
     /* calculating sqrt( |Bx|^2 + |By|^2 ) */
     amrex::Real const norm_B = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
                                + amrex::MultiFab::Dot(By, By_comp, 1, 0));
