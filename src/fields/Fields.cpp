@@ -213,7 +213,7 @@ void
 Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    std::swap(m_slices[lev][( int) WhichSlice::Previous1],
+    std::swap(m_slices[lev][(int) WhichSlice::Previous1],
               m_slices[lev][(int) WhichSlice::Previous2]);
     std::swap(m_slices[lev][(int) WhichSlice::This],
               m_slices[lev][(int) WhichSlice::Previous1]);
