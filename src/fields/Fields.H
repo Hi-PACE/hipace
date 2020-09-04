@@ -1,9 +1,10 @@
 #ifndef FIELDS_H_
 #define FIELDS_H_
 
+#include "fft_poisson_solver/FFTPoissonSolver.H"
+
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
-#include "fft_poisson_solver/FFTPoissonSolver.H"
 #include <AMReX_AmrCore.H>
 
 class Hipace;
@@ -75,7 +76,7 @@ public:
     std::array<amrex::MultiFab, m_nslices>& getSlices (int lev) {return m_slices[lev]; }
     /** get function for the 2D slices
      * \param[in] lev MR level
-     * \param[in] sl slice index (WhichSlice::Next, This, Previous1, Previous2 )
+     * \param[in] sl slice type (WhichSlice::Next, This, Previous1, Previous2 )
      */
     amrex::MultiFab& getSlices (int lev, WhichSlice sl) {return m_slices[lev][(int) sl]; }
 

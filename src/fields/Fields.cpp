@@ -132,11 +132,12 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
     }
 }
 
-void Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiFab& src2,
-                             amrex::MultiFab& dst, const amrex::Real dz,
-                             const amrex::Real mult_coeff,
-                             const SliceOperatorType slice_operator,
-                             const int s1comp, const int s2comp, const int dcomp)
+void
+Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiFab& src2,
+                                amrex::MultiFab& dst, const amrex::Real dz,
+                                const amrex::Real mult_coeff,
+                                const SliceOperatorType slice_operator,
+                                const int s1comp, const int s2comp, const int dcomp)
 {
     HIPACE_PROFILE("Fields::LongitudinalDerivative()");
     using namespace amrex::literals;
@@ -171,7 +172,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
               int ncomp)
 {
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][(int) WhichSlice::This];  // always slice #1
+    auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
@@ -226,8 +227,9 @@ Fields::getF (int lev, int icomp )
     return F_comp;
 }
 
-void Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
-                                        const int lev)
+void
+Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
+                                   const int lev)
 {
     /* Solves Laplacian(-Psi) =  1/episilon0 * (rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -278,7 +280,8 @@ void Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_C
 }
 
 
-void Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
+void
+Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
@@ -312,7 +315,8 @@ void Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
     m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
-void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, const int lev)
+void
+Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBx()");
@@ -343,7 +347,8 @@ void Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& ge
     m_poisson_solver.SolvePoissonEquation(Bx_iter);
 }
 
-void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, const int lev)
+void
+Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBy()");
@@ -374,7 +379,8 @@ void Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& ge
     m_poisson_solver.SolvePoissonEquation(By_iter);
 }
 
-void Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
+void
+Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
 {
     /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonBz()");
@@ -408,8 +414,9 @@ void Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
     m_poisson_solver.SolvePoissonEquation(lhs);
 }
 
-void Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
-                                 const amrex::Real predcorr_B_error_tolerance, const int lev)
+void
+Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
+                            const amrex::Real predcorr_B_error_tolerance, const int lev)
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
@@ -430,10 +437,11 @@ void Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
 
 }
 
-void Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
-                                 const int field_comp, const amrex::Real relative_Bfield_error,
-                                 const amrex::Real relative_Bfield_error_prev_iter,
-                                 const amrex::Real predcorr_B_mixing_factor, const int lev)
+void
+Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
+                            const int field_comp, const amrex::Real relative_Bfield_error,
+                            const amrex::Real relative_Bfield_error_prev_iter,
+                            const amrex::Real predcorr_B_mixing_factor, const int lev)
 {
     /* Mixes the B field according to B = a*B + (1-a)*( c*B_iter + d*B_prev_iter),
      * with a,c,d mixing coefficients.
@@ -474,13 +482,11 @@ void Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab&
 
 }
 
-amrex::Real Fields::ComputeRelBFieldError (const amrex::MultiFab& Bx,
-                                           const amrex::MultiFab& By,
-                                           const amrex::MultiFab& Bx_iter,
-                                           const amrex::MultiFab& By_iter,
-                                           const int Bx_comp, const int By_comp,
-                                           const int Bx_iter_comp, const int By_iter_comp,
-                                           const amrex::Box& bx, const int lev)
+amrex::Real
+Fields::ComputeRelBFieldError (
+    const amrex::MultiFab& Bx, const amrex::MultiFab& By, const amrex::MultiFab& Bx_iter,
+    const amrex::MultiFab& By_iter, const int Bx_comp, const int By_comp, const int Bx_iter_comp,
+    const int By_iter_comp, const amrex::Box& bx, const int lev)
 {
     /* calculates the relative B field error between two B fields
      * for both Bx and By simultaneously */
