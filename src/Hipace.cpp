@@ -218,6 +218,10 @@ Hipace::Evolve ()
             const int islice_lo = bx.smallEnd(Direction::z);
             for (int islice = islice_hi; islice >= islice_lo; --islice)
             {
+                // Between this push and the corresponding pop at the end of this
+                // for loop, the parallelcontext is the transverse communicator
+                amrex::ParallelContext::push(m_comm_xy);
+
                 m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
                 if (m_3d_on_host) m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
@@ -225,27 +229,22 @@ Hipace::Evolve ()
                                        ToSlice::This,
                                        true, false, false, lev);
 
-                amrex::ParallelContext::push(m_comm_xy);
                 m_plasma_container.Redistribute();
-                amrex::ParallelContext::pop();
 
                 DepositCurrent(m_plasma_container, m_fields, ToSlice::This,
                                geom[lev], lev);
 
-                amrex::ParallelContext::push(m_comm_xy);
+                // need to exchange jx jy jz rho
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());
-                amrex::ParallelContext::pop();
 
                 m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(
                     m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
-                amrex::ParallelContext::push(m_comm_xy);
                 j_slice.SumBoundary(Geom(lev).periodicity());
-                amrex::ParallelContext::pop();
 
                 m_fields.SolvePoissonEz(Geom(lev),lev);
                 m_fields.SolvePoissonBz(Geom(lev), lev);
@@ -258,6 +257,9 @@ Hipace::Evolve ()
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
                 m_fields.ShiftSlices(lev);
+
+                // After this, the parallel context is the full 3D communicator again
+                amrex::ParallelContext::pop();
             }
         }
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
