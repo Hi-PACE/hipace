@@ -172,7 +172,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
               int ncomp)
 {
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the curren slice
+    auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
