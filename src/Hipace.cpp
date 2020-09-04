@@ -254,7 +254,6 @@ Hipace::Evolve ()
                  */
                 PredictorCorrectorLoopToSolveBxBy(bx, islice, lev);
 
-                /* ------ Copy slice from m_slices to the main field m_F ------ */
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
                 m_fields.ShiftSlices(lev);
@@ -273,20 +272,18 @@ Hipace::Evolve ()
     if (m_do_plot) WriteDiagnostics(1);
 }
 
-void Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice,
-                                                const int lev)
+void
+Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice, const int lev)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
     amrex::Real relative_Bfield_error_prev_iter = 1.0;
     amrex::Real relative_Bfield_error = m_fields.ComputeRelBFieldError(
-                                                   m_fields.getSlices(lev, WhichSlice::Previous1),
-                                                   m_fields.getSlices(lev, WhichSlice::Previous1),
-                                                   m_fields.getSlices(lev, WhichSlice::Previous2),
-                                                   m_fields.getSlices(lev, WhichSlice::Previous2),
-                                                   FieldComps::Bx, FieldComps::By,
-                                                   FieldComps::Bx, FieldComps::By,
-                                                   bx, lev);
+        m_fields.getSlices(lev, WhichSlice::Previous1),
+        m_fields.getSlices(lev, WhichSlice::Previous1),
+        m_fields.getSlices(lev, WhichSlice::Previous2),
+        m_fields.getSlices(lev, WhichSlice::Previous2),
+        FieldComps::Bx, FieldComps::By,FieldComps::Bx, FieldComps::By, bx, lev);
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);

@@ -8,9 +8,10 @@
 #ifndef HIPACE_GETANDSETPOSITION_H_
 #define HIPACE_GETANDSETPOSITION_H_
 
+#include "particles/PlasmaParticleContainer.H"
+
 #include <AMReX.H>
 #include <AMReX_REAL.H>
-#include "particles/PlasmaParticleContainer.H"
 
 #include <limits>
 
