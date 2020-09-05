@@ -80,10 +80,10 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
             amrex::Real siney_sq = pow( sin(( j + 1 ) * sine_y_factor), 2);
 
             if ((sinex_sq!=0) && (siney_sq!=0)) {
-                dirichlet_eigenvalue_matrix(i,j,0) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                dirichlet_eigenvalue_matrix(j,i,0) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
             } else {
                 // Avoid division by 0
-                dirichlet_eigenvalue_matrix(i,j,0) = 0._rt;
+                dirichlet_eigenvalue_matrix(j,i,0) = 0._rt;
             }
             //std::cout << " i " << i << " j " << j << " dirichlet_eigenvalue_matrix(i,j,0) " << dirichlet_eigenvalue_matrix(i,j,0) << "\n";
         });
@@ -132,7 +132,7 @@ FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::Array4<amrex::Real> dirichlet_eigenvalue_matrix = m_dirichlet_eigenvalue_matrix.array(mfi);
         amrex::ParallelFor( m_spectralspace_ba[mfi],
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                tmp_cmplx_arr(i,j,k) *= -dirichlet_eigenvalue_matrix(i,j,k);
+                tmp_cmplx_arr(i,j,k) *= dirichlet_eigenvalue_matrix(i,j,k);
             });
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area
