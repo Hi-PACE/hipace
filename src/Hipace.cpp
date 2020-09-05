@@ -203,8 +203,10 @@ Hipace::Evolve ()
         /* ---------- Depose current from beam particles ---------- */
         amrex::MultiFab& fields = m_fields.getF(lev);
 
-        if (!m_3d_on_host) fields.setVal(0.);
-        if (!m_slice_deposition) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
+        if (!m_slice_deposition){
+            fields.setVal(0.);
+            DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
+        }
 
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
@@ -222,8 +224,11 @@ Hipace::Evolve ()
                 // for loop, the parallelcontext is the transverse communicator
                 amrex::ParallelContext::push(m_comm_xy);
 
-                if (m_3d_on_host) m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
-                else m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
+                if (m_slice_deposition){
+                    m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+                } else {
+                    m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
+                }
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        ToSlice::This,
