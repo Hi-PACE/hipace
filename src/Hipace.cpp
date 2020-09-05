@@ -222,7 +222,6 @@ Hipace::Evolve ()
                 // for loop, the parallelcontext is the transverse communicator
                 amrex::ParallelContext::push(m_comm_xy);
 
-                m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
                 if (m_3d_on_host) m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
