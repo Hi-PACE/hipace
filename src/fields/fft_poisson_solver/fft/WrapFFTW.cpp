@@ -14,26 +14,28 @@ namespace AnyFFT
     const auto VendorCreatePlanC2R3D = fftwf_plan_dft_c2r_3d;
     const auto VendorCreatePlanR2C2D = fftwf_plan_dft_r2c_2d;
     const auto VendorCreatePlanC2R2D = fftwf_plan_dft_c2r_2d;
+    // const auto VendorCreatePlanR2R2D = fftwf_plan_dft_r2r_2d;
 #else
     const auto VendorCreatePlanR2C3D = fftw_plan_dft_r2c_3d;
     const auto VendorCreatePlanC2R3D = fftw_plan_dft_c2r_3d;
     const auto VendorCreatePlanR2C2D = fftw_plan_dft_r2c_2d;
     const auto VendorCreatePlanC2R2D = fftw_plan_dft_c2r_2d;
+    // const auto VendorCreatePlanR2R2D = fftw_plan_dft_r2r_2d;
 #endif
 
-    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
-                        Complex * const complex_array, const direction dir)
+    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array, amrex::Real * const complex_array, const direction dir)
+                        // Complex * const complex_array,
     {
         FFTplan fft_plan;
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
         // Swap dimensions: AMReX FAB are Fortran-order but FFTW is C-order
         if (dir == direction::R2C){
-            fft_plan.m_plan = VendorCreatePlanR2C2D(
-                    real_size[1], real_size[0], real_array, complex_array, FFTW_ESTIMATE);
+            fft_plan.m_plan = fftw_plan_r2r_2d(
+                    real_size[1], real_size[0], real_array, complex_array, FFTW_RODFT00, FFTW_RODFT00, FFTW_ESTIMATE);
         } else if (dir == direction::C2R){
-            fft_plan.m_plan = VendorCreatePlanC2R2D(
-                    real_size[1], real_size[0], complex_array, real_array, FFTW_ESTIMATE);
+            fft_plan.m_plan = fftw_plan_r2r_2d(
+                    real_size[1], real_size[0], complex_array, real_array, FFTW_RODFT00, FFTW_RODFT00, FFTW_ESTIMATE);
         }
 
         // Store meta-data in fft_plan

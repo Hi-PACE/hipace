@@ -58,7 +58,7 @@ y = np.linspace(ds.domain_left_edge[1].v, ds.domain_right_edge[1].v, ds.domain_d
 Bx_th = -mu_0 * jz0 * y / 2.
 Bx_th[abs(y)>=R] = -mu_0 * jz0 * R**2/(2*y[abs(y)>R])
 
-jz_th = np.ones_like(x) * jz0
+jz_th = np.ones_like(x) * -jz0
 jz_th[abs(x)>=R] = 0.
 
 # Load Hipace data for By in SI units
@@ -106,7 +106,7 @@ if args.do_plot:
         plt.plot(y, Bx_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
-        plt.xlim(-5., 5.)
+        # plt.xlim(-5., 5.)
         plt.xlabel('kp y')
         plt.ylabel('c Bx / E0')
 
@@ -115,7 +115,7 @@ if args.do_plot:
         plt.plot(x, By_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
-        plt.xlim(-5., 5.)
+        # plt.xlim(-5., 5.)
         plt.xlabel('kp x')
         plt.ylabel('c By / E0')
 
@@ -124,7 +124,7 @@ if args.do_plot:
         plt.plot(x, jz_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
-        plt.xlim(-5., 5.)
+        # plt.xlim(-5., 5.)
         plt.xlabel('kp x')
         plt.ylabel('jz /IA')
 

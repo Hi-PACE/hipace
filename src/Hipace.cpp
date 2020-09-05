@@ -382,18 +382,18 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
-    if (relative_Bfield_error > 10.)
-    {
-        amrex::Abort("Predictor corrector loop diverged!\n"
-                     "Re-try by adjusting the following paramters in the input script:\n"
-                     "- lower mixing factor: hipace.predcorr_B_mixing_factor "
-                     "(hidden default: 0.1) \n"
-                     "- lower B field error tolerance: hipace.fld_predcorr_tol_b"
-                     " (hidden default: 0.04)\n"
-                     "- higher number of iterations in the pred. cor. loop:"
-                     "hipace.fld_predcorr_n_max_iter (hidden default: 5)\n"
-                     "- higher longitudinal resolution");
-    }
+    // if (relative_Bfield_error > 10.)
+    // {
+    //     amrex::Abort("Predictor corrector loop diverged!\n"
+    //                  "Re-try by adjusting the following paramters in the input script:\n"
+    //                  "- lower mixing factor: hipace.predcorr_B_mixing_factor "
+    //                  "(hidden default: 0.1) \n"
+    //                  "- lower B field error tolerance: hipace.fld_predcorr_tol_b"
+    //                  " (hidden default: 0.04)\n"
+    //                  "- higher number of iterations in the pred. cor. loop:"
+    //                  "hipace.fld_predcorr_n_max_iter (hidden default: 5)\n"
+    //                  "- higher longitudinal resolution");
+    // }
     if (m_verbose >= 1) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
                                         " relative B field error: "<<relative_Bfield_error<< "\n";
 }

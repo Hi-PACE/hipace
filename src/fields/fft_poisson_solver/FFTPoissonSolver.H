@@ -53,7 +53,8 @@ private:
     /** BoxArray for the spectral fields */
     amrex::BoxArray m_spectralspace_ba;
     /** Spectral fields, contains (complex) field in Fourier space */
-    SpectralField m_tmpSpectralField;
+    //SpectralField m_tmpSpectralField;
+    amrex::MultiFab m_tmpSpectralField;
     /** Staging area, contains (real) field in real space.
      * This is where the source term is stored before calling the Poisson solver */
     amrex::MultiFab m_stagingArea;

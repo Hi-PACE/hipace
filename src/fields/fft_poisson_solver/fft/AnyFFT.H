@@ -65,7 +65,8 @@ namespace AnyFFT
     struct FFTplan
     {
         amrex::Real* m_real_array; /**< pointer to real array */
-        Complex* m_complex_array; /**< pointer to complex array */
+        // before Complex* m_complex_array; /**< pointer to complex array */
+        amrex::Real* m_complex_array; /**< pointer to complex array */
         VendorFFTPlan m_plan; /**< Vendor FFT plan */
         direction m_dir;  /**< direction (C2R or R2C) */
     };
@@ -80,7 +81,8 @@ namespace AnyFFT
      * \param[in] dir direction, either R2C or C2R
      */
     FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
-                        Complex * const complex_array, const direction dir);
+                        amrex::Real * const complex_array, const direction dir);
+                        //Complex * const complex_array, const direction dir);
 
     /** \brief Destroy library FFT plan.
      * \param[out] fft_plan plan to destroy
