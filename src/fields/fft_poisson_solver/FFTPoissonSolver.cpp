@@ -58,10 +58,10 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
     // Calculate the array of inv_k2
     amrex::Real dkx = 2*MathConst::pi/gm.ProbLength(0);
     amrex::Real dky = 2*MathConst::pi/gm.ProbLength(1);
-    m_inv_k2 = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
+    m_dirichlet_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     // Loop over boxes and calculate inv_k2 in each box
-    for (amrex::MFIter mfi(m_inv_k2); mfi.isValid(); ++mfi ){
-        amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
+    for (amrex::MFIter mfi(m_dirichlet_eigenvalue_matrix); mfi.isValid(); ++mfi ){
+        amrex::Array4<amrex::Real> dirichlet_eigenvalue_matrix = m_dirichlet_eigenvalue_matrix.array(mfi);
         amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
         int const Ny = bx.length(1);
         int const mid_point_y = (Ny+1)/2;
@@ -72,10 +72,10 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
             // The first half of ky is positive ; the other is negative
             amrex::Real ky = (j<mid_point_y) ? dky*j : dky*(j-Ny);
             if ((i!=0) && (j!=0)) {
-                inv_k2_arr(i,j,0) = 1._rt/(kx*kx + ky*ky);
+                dirichlet_eigenvalue_matrix(i,j,0) = 1._rt/(kx*kx + ky*ky);
             } else {
                 // Avoid division by 0
-                inv_k2_arr(i,j,0) = 0._rt;
+                dirichlet_eigenvalue_matrix(i,j,0) = 0._rt;
             }
         });
     }
@@ -117,10 +117,10 @@ FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by inv_k2
         amrex::Array4<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        amrex::Array4<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
+        amrex::Array4<amrex::Real> dirichlet_eigenvalue_matrix = m_dirichlet_eigenvalue_matrix.array(mfi);
         amrex::ParallelFor( m_spectralspace_ba[mfi],
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                tmp_cmplx_arr(i,j,k) *= -inv_k2_arr(i,j,k);
+                tmp_cmplx_arr(i,j,k) *= -dirichlet_eigenvalue_matrix(i,j,k);
             });
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area

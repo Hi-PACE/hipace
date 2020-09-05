@@ -57,8 +57,8 @@ private:
     /** Staging area, contains (real) field in real space.
      * This is where the source term is stored before calling the Poisson solver */
     amrex::MultiFab m_stagingArea;
-    /** Multifab containing 1/(kx^2 + ky^2), to solve Poisson equation. */
-    amrex::MultiFab m_inv_k2;
+    /** Multifab containing the Dirichtlet eigenvalue matrix TO BE BETTER EXPLAINED 1/(kx^2 + ky^2), to solve Poisson equation. */
+    amrex::MultiFab m_dirichlet_eigenvalue_matrix;
     /** FFT plans */
     AnyFFT::FFTplans m_forward_plan, m_backward_plan;
 };
