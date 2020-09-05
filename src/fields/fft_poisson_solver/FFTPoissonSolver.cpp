@@ -36,7 +36,7 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
         // This effectively reduces the size of the spectral space by half
         // see e.g. the FFTW documentation for real-to-complex FFTs
         amrex::IntVect spectral_bx_size = fft_size;
-        spectral_bx_size[0] = fft_size[0]/2 + 1;
+        spectral_bx_size[0] = fft_size[0]; ///2 + 1;
         // Define the corresponding box
         amrex::Box spectral_bx = amrex::Box( amrex::IntVect::TheZeroVector(),
                           spectral_bx_size - amrex::IntVect::TheUnitVector() );
@@ -55,28 +55,37 @@ FFTPoissonSolver::define ( amrex::BoxArray const& realspace_ba,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_tmpSpectralField.local_size() == 1,
                                      "There should be only one box locally.");
 
-    // Calculate the array of inv_k2
-    amrex::Real dkx = 2*MathConst::pi/gm.ProbLength(0);
-    amrex::Real dky = 2*MathConst::pi/gm.ProbLength(1);
+    const auto dx = gm.CellSizeArray();
+    const amrex::Real dxsquared = dx[0]*dx[0];
+    const amrex::Real dysquared = dx[1]*dx[1];
+    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( gm.Domain().length(0) + 1 ));
+    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( gm.Domain().length(1) + 1 ));
+
+    /* Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00) */
+    const amrex::Real norm_fac = 0.5 / ( 2 * (( gm.Domain().length(0) + 1 ) * ( gm.Domain().length(1) + 1 )));
+
+//std::cout << " norm fac " << norm_fac << " sine_x_factor " << sine_x_factor << " sine_y_factor " << sine_y_factor << " dxsquared " << dxsquared << " dysquared " << dysquared << "\n";
+
     m_dirichlet_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     // Loop over boxes and calculate inv_k2 in each box
     for (amrex::MFIter mfi(m_dirichlet_eigenvalue_matrix); mfi.isValid(); ++mfi ){
         amrex::Array4<amrex::Real> dirichlet_eigenvalue_matrix = m_dirichlet_eigenvalue_matrix.array(mfi);
         amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
-        int const Ny = bx.length(1);
-        int const mid_point_y = (Ny+1)/2;
+
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
         {
-            // kx is always positive (first axis of the real-to-complex FFT)
-            amrex::Real kx = dkx*i;
-            // The first half of ky is positive ; the other is negative
-            amrex::Real ky = (j<mid_point_y) ? dky*j : dky*(j-Ny);
-            if ((i!=0) && (j!=0)) {
-                dirichlet_eigenvalue_matrix(i,j,0) = 1._rt/(kx*kx + ky*ky);
+            /* fast poisson solver diagonal x coeffs */
+            amrex::Real sinex_sq = pow( sin(( i + 1 ) * sine_x_factor), 2);
+            /* fast poisson solver diagonal y coeffs */
+            amrex::Real siney_sq = pow( sin(( j + 1 ) * sine_y_factor), 2);
+
+            if ((sinex_sq!=0) && (siney_sq!=0)) {
+                dirichlet_eigenvalue_matrix(i,j,0) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
             } else {
                 // Avoid division by 0
                 dirichlet_eigenvalue_matrix(i,j,0) = 0._rt;
             }
+            //std::cout << " i " << i << " j " << j << " dirichlet_eigenvalue_matrix(i,j,0) " << dirichlet_eigenvalue_matrix(i,j,0) << "\n";
         });
     }
 
@@ -133,7 +142,7 @@ FFTPoissonSolver::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::ParallelFor( mfi.validbox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field
-                lhs_arr(i,j,k) = inv_N*tmp_real_arr(i,j,k);
+                lhs_arr(i,j,k) = tmp_real_arr(i,j,k); // inv_N* normalization already done in the dirichlet eigenvalue matrix 
             });
 
     }
