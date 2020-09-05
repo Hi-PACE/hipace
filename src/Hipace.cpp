@@ -223,6 +223,7 @@ Hipace::Evolve ()
                 amrex::ParallelContext::push(m_comm_xy);
 
                 if (m_3d_on_host) m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+                else m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                        ToSlice::This,
