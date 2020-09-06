@@ -196,7 +196,12 @@ public:
                                        const int By_iter_comp, const amrex::Box& bx,
                                        const int lev);
 
-    void FilterCurrents (const WhichSlice which_slice, int lev);
+    /** \brief Function to filter the currents
+     *
+     * \param[in] which_slice determines if WhichSlice::This or WhichSlice::Next is filtered
+     * \param[in] lev current level
+     */
+    void FilterCurrents (const WhichSlice which_slice, const int lev);
 private:
     /** Pointer to const singleton of class Hipace */
     Hipace const* m_hipace;

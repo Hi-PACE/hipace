@@ -526,7 +526,7 @@ Fields::ComputeRelBFieldError (
 }
 
 void
-Fields::FilterCurrents (const WhichSlice which_slice, int lev)
+Fields::FilterCurrents (const WhichSlice which_slice, const int lev)
 {
     HIPACE_PROFILE("Fields::FilterCurrents()");
     /* one temporary array is needed for filtering */
