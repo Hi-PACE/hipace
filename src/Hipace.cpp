@@ -239,8 +239,8 @@ Hipace::Evolve ()
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());
 
-                m_fields.FilterCurrents(lev);
-                
+                m_fields.FilterCurrents(WhichSlice::This, lev);
+
                 m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(
@@ -346,6 +346,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
                                      amrex::make_alias, FieldComps::jx, 4);
         j_slice_next.SumBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
+
+        m_fields.FilterCurrents(WhichSlice::Next, lev);
 
         /* Calculate Bx and By */
         m_fields.SolvePoissonBx(Bx_iter, Geom(lev), lev);

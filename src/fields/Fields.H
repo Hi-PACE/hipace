@@ -196,7 +196,7 @@ public:
                                        const int By_iter_comp, const amrex::Box& bx,
                                        const int lev);
 
-    void FilterCurrents (int lev);
+    void FilterCurrents (const WhichSlice which_slice, int lev);
 private:
     /** Pointer to const singleton of class Hipace */
     Hipace const* m_hipace;

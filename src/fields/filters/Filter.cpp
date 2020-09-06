@@ -70,7 +70,7 @@ void
 Filter::ApplyStencil (FArrayBox& dstfab, const FArrayBox& srcfab,
                       const Box& tbx, int scomp, int dcomp, int ncomp)
 {
-    WARPX_PROFILE("BilinearFilter::ApplyStencil(FArrayBox)");
+    HIPACE_PROFILE("BilinearFilter::ApplyStencil(FArrayBox)");
     ncomp = std::min(ncomp, srcfab.nComp());
     const auto& src = srcfab.array();
     const auto& dst = dstfab.array();

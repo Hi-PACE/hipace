@@ -20,7 +20,7 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_nguards = {nguards_xy, nguards_xy, Hipace::m_depos_order_z};
-    
+
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     if (Hipace::m_3d_on_host){
         // The Arena uses pinned memory.
@@ -526,20 +526,27 @@ Fields::ComputeRelBFieldError (
 }
 
 void
-Fields::FilterCurrents (int lev)
+Fields::FilterCurrents (const WhichSlice which_slice, int lev)
 {
-    /* one temporary array is needed to store the difference of B fields
-     * between previous and current iteration */
-    amrex::MultiFab tmp(getSlices(lev, WhichSlice::This).boxArray(),
-                        getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        getSlices(lev, WhichSlice::This).nGrowVect());
-    
-    amrex::MultiFab::Copy(tmp, getSlices(lev, WhichSlice::This), FieldComps::jx, 0, 1, m_slices_nguards);
-    m_bilinear_filter.ApplyStencil(getSlices(lev, WhichSlice::This), tmp, 0, FieldComps::jx, 1);
+    HIPACE_PROFILE("Fields::FilterCurrents()");
+    /* one temporary array is needed for filtering */
+    amrex::MultiFab tmp(getSlices(lev, which_slice).boxArray(),
+                        getSlices(lev, which_slice).DistributionMap(), 1,
+                        getSlices(lev, which_slice).nGrowVect());
 
-    amrex::MultiFab::Copy(tmp, getSlices(lev, WhichSlice::This), FieldComps::jy, 0, 1, m_slices_nguards);
-    m_bilinear_filter.ApplyStencil(getSlices(lev, WhichSlice::This), tmp, 0, FieldComps::jy, 1);
+    amrex::MultiFab::Copy(tmp, getSlices(lev, which_slice), FieldComps::jx, 0, 1, m_slices_nguards);
+    m_bilinear_filter.ApplyStencil(getSlices(lev, which_slice), tmp, 0, FieldComps::jx, 1);
 
-    amrex::MultiFab::Copy(tmp, getSlices(lev, WhichSlice::This), FieldComps::jz, 0, 1, m_slices_nguards);
-    m_bilinear_filter.ApplyStencil(getSlices(lev, WhichSlice::This), tmp, 0, FieldComps::jz, 1);
+    amrex::MultiFab::Copy(tmp, getSlices(lev, which_slice), FieldComps::jy, 0, 1, m_slices_nguards);
+    m_bilinear_filter.ApplyStencil(getSlices(lev, which_slice), tmp, 0, FieldComps::jy, 1);
+
+    if (which_slice == WhichSlice::This)
+    {
+        amrex::MultiFab::Copy(tmp, getSlices(lev, which_slice), FieldComps::jz, 0, 1, m_slices_nguards);
+        m_bilinear_filter.ApplyStencil(getSlices(lev, which_slice), tmp, 0, FieldComps::jz, 1);
+
+        amrex::MultiFab::Copy(tmp, getSlices(lev, which_slice), FieldComps::rho, 0, 1, m_slices_nguards);
+        m_bilinear_filter.ApplyStencil(getSlices(lev, which_slice), tmp, 0, FieldComps::rho, 1);
+    }
+
 }
