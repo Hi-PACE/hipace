@@ -4,3 +4,4 @@ target_sources(HiPACE
 )
 
 add_subdirectory(fft_poisson_solver)
+add_subdirectory(filters)

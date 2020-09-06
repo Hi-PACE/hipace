@@ -2,6 +2,7 @@
 #define FIELDS_H_
 
 #include "fft_poisson_solver/FFTPoissonSolver.H"
+#include "filters/BilinearFilter.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -195,6 +196,7 @@ public:
                                        const int By_iter_comp, const amrex::Box& bx,
                                        const int lev);
 
+    void FilterCurrents (int lev);
 private:
     /** Pointer to const singleton of class Hipace */
     Hipace const* m_hipace;
@@ -206,6 +208,10 @@ private:
     amrex::IntVect m_nguards {-1, -1, -1};
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards {-1, -1, -1};
+    /** Number of passes of the bilinear filter in each direction */
+    int m_bilinear_filter_npass = 0;
+    /** Bilinear filter */
+    BilinearFilter m_bilinear_filter;
 };
 
 #endif

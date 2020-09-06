@@ -239,6 +239,8 @@ Hipace::Evolve ()
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());
 
+                m_fields.FilterCurrents(lev);
+                
                 m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(
