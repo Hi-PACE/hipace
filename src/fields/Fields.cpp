@@ -232,19 +232,8 @@ Fields::AddRhoIons (const int lev)
 {
     HIPACE_PROFILE("Fields::AddRhoIons()");
 
-    amrex::MultiFab rhoions(getSlices(lev, WhichSlice::RhoIons), amrex::make_alias,
-                        FieldComps::rho, 1);
-    amrex::MultiFab rho(getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        FieldComps::rho, 1);
-
-    amrex::Real normions = rhoions.norm2();
-    amrex::Real normrho = rho.norm2();
-    std::cout <<  " norm rho ions " << normions << " norm rho before " << normrho << "\n";
-
     amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
                          FieldComps::rho, FieldComps::rho, 1, 0);
-
-     std::cout << " norm rho after adding " << rho.norm2() << "\n";
 }
 
 void

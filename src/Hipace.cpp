@@ -209,12 +209,7 @@ Hipace::Evolve ()
         }
 
         /* Setting rho ions */
-        // m_plasma_container.Redistribute();
-        amrex::MultiFab rhoions(m_fields.getSlices(lev, WhichSlice::RhoIons), amrex::make_alias,
-                            FieldComps::rho, 1);
-                            std::cout << " norm rhoions before setting " << rhoions.norm2() << "\n";
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons, geom[lev], lev);
-std::cout << " norm rho ions after setting " << rhoions.norm2() << "\n";
 
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
@@ -242,15 +237,14 @@ std::cout << " norm rho ions after setting " << rhoions.norm2() << "\n";
                                        WhichSlice::This,
                                        true, false, false, lev);
 
-                // m_plasma_container.Redistribute();
+                m_plasma_container.Redistribute();
                 amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                                     FieldComps::rho, 1);
-             std::cout << " norm rho before deposition " << rho.norm2() << "\n";
+
                 DepositCurrent(m_plasma_container, m_fields, WhichSlice::This,
                                geom[lev], lev);
-
-                                    std::cout << " norm rho after deposition " << rho.norm2() << "\n";
                 m_fields.AddRhoIons(lev);
+
                 // need to exchange jx jy jz rho
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                 FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
@@ -258,14 +252,14 @@ std::cout << " norm rho ions after setting " << rhoions.norm2() << "\n";
                 "changed, because the 4 components starting from jx are grabbed at once");
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
-                j_slice.SumBoundary(Geom(lev).periodicity());
-std::cout << " norm rho after exchange " << rho.norm2() << "\n";
+                j_slice.FillBoundary(Geom(lev).periodicity());
+
                 m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(
                     m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
-                j_slice.SumBoundary(Geom(lev).periodicity());
+                j_slice.FillBoundary(Geom(lev).periodicity());
 
                 m_fields.SolvePoissonEz(Geom(lev),lev);
                 m_fields.SolvePoissonBz(Geom(lev), lev);
@@ -363,7 +357,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                      amrex::make_alias, FieldComps::jx, 4);
-        j_slice_next.SumBoundary(Geom(lev).periodicity());
+        j_slice_next.FillBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
