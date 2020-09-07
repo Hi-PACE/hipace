@@ -52,14 +52,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         // For now: fix the value of the charge
         amrex::Real q =(which_slice == WhichSlice::RhoIons ) ? phys_const.q_e : - phys_const.q_e;
 
-        // Call deposition function in each box
-        // Deposit ion charge density, assumed uniform
-        // if (which_slice == WhichSlice::This)
-        // {
-        //     // rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
-        // }
-
-
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, which_slice, temp_slice,
