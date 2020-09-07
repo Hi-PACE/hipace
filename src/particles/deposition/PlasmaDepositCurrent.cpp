@@ -9,7 +9,7 @@
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
-                const WhichSlice which_slice,
+                const WhichSlice which_slice, const bool temp_slice,
                 amrex::Geometry const& gm, int const lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
@@ -61,16 +61,16 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, which_slice, temp_slice );
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, which_slice, temp_slice );
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, which_slice, temp_slice );
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, which_slice, temp_slice );
         } else {
             amrex::Abort("unknow deposition order");
         }

@@ -10,12 +10,13 @@
  * \param[in] plasma species of which the current is deposited
  * \param[in,out] fields the general field class, modified by this function
  * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
-                const WhichSlice which_slice,
+                const WhichSlice which_slice, const bool temp_slice,
                 amrex::Geometry const& gm, int const lev=0);
 
 
