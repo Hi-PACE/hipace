@@ -208,6 +208,14 @@ Hipace::Evolve ()
             DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
         }
 
+        /* Setting rho ions */
+        // m_plasma_container.Redistribute();
+        amrex::MultiFab rhoions(m_fields.getSlices(lev, WhichSlice::RhoIons), amrex::make_alias,
+                            FieldComps::rho, 1);
+                            std::cout << " norm rhoions before setting " << rhoions.norm2() << "\n";
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons, geom[lev], lev);
+std::cout << " norm rho ions after setting " << rhoions.norm2() << "\n";
+
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
@@ -234,12 +242,20 @@ Hipace::Evolve ()
                                        WhichSlice::This,
                                        true, false, false, lev);
 
-                m_plasma_container.Redistribute();
-
+                // m_plasma_container.Redistribute();
+                amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
+                                    FieldComps::rho, 1);
+             std::cout << " norm rho before deposition " << rho.norm2() << "\n";
                 DepositCurrent(m_plasma_container, m_fields, WhichSlice::This,
                                geom[lev], lev);
 
+                                    std::cout << " norm rho after deposition " << rho.norm2() << "\n";
+                m_fields.AddRhoIons(lev);
                 // need to exchange jx jy jz rho
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
+                FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
+                "changed, because the 4 components starting from jx are grabbed at once");
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());

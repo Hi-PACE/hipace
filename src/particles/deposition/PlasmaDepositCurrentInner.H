@@ -114,7 +114,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
            // calculate charge of the plasma particles
            const amrex::Real wq = q*wp[ip]/(gaminv * (psip[ip] + 1.0_rt))*invvol;
-
+//std::cout << " wq " << wq << "\n";
            // wqx, wqy wqz are particle current in each direction
            const amrex::Real wqx = wq*vx;
            const amrex::Real wqy = wq*vy;
@@ -134,21 +134,26 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
+            bool deposit_jx_jy = ((which_slice == WhichSlice::This) || (which_slice == WhichSlice::Next)) ? 1 : 0;
+            bool deposit_jz = (which_slice == WhichSlice::This) ? 1 : 0;
+            bool deposit_rho = ((which_slice == WhichSlice::This) || (which_slice == WhichSlice::RhoIons)) ? 1 : 0;
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){
-                    amrex::Gpu::Atomic::Add(
-                        &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                        sx_cell[ix]*sy_cell[iy]*wqx);
-                    amrex::Gpu::Atomic::Add(
-                        &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                        sx_cell[ix]*sy_cell[iy]*wqy);
-
-                    if (which_slice == WhichSlice::This || which_slice == WhichSlice::RhoIons)
-                    {
+                    if (deposit_jx_jy) {
+                        amrex::Gpu::Atomic::Add(
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqx);
+                        amrex::Gpu::Atomic::Add(
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqy);
+                    }
+                    if (deposit_jz) {
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                             sx_cell[ix]*sy_cell[iy]*wqz);
+                    }
+                    if (deposit_rho) {
                         amrex::Gpu::Atomic::Add(
                             &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                             sx_cell[ix]*sy_cell[iy]*wq);

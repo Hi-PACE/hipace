@@ -94,6 +94,9 @@ public:
      */
     void ShiftSlices (int lev);
 
+    /** add rho of the ions to rho (this slice) */
+    void AddRhoIons (const int lev);
+
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
                                const int direction, const amrex::Real dx,
