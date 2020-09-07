@@ -19,7 +19,7 @@ struct FieldComps{
 enum struct FieldCopyType { FtoS, StoF };
 
 /** \brief describes which slice with respect to the currently calculated is used */
-enum struct WhichSlice { Next=0, This, Previous1, Previous2, RhoIon, N };
+enum struct WhichSlice { Next=0, This, Previous1, Previous2, RhoIons, N };
 
 /** \brief Operation performed in the TransverseDerivative function:
  * either assign or add to the destination array
