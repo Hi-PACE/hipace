@@ -240,6 +240,10 @@ Hipace::Evolve ()
                                geom[lev], lev);
 
                 // need to exchange jx jy jz rho
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
+                FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
+                "changed, because the 4 components starting from jx are grabbed at once");
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());
