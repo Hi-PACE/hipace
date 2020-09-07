@@ -259,7 +259,7 @@ std::cout << " norm rho ions after setting " << rhoions.norm2() << "\n";
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());
-
+std::cout << " norm rho after exchange " << rho.norm2() << "\n";
                 m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(

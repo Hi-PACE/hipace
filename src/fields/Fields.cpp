@@ -241,7 +241,7 @@ Fields::AddRhoIons (const int lev)
     amrex::Real normrho = rho.norm2();
     std::cout <<  " norm rho ions " << normions << " norm rho before " << normrho << "\n";
 
-    amrex::MultiFab::Subtract(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
+    amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
                          FieldComps::rho, FieldComps::rho, 1, 0);
 
      std::cout << " norm rho after adding " << rho.norm2() << "\n";

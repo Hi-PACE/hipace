@@ -53,7 +53,11 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         // Call deposition function in each box
         // Deposit ion charge density, assumed uniform
-        // rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
+        // if (which_slice == WhichSlice::This)
+        // {
+        //     // rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
+        // }
+
 
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
