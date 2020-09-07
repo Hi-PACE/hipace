@@ -36,7 +36,6 @@
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
  * \param[in] q elementary charge
- * \param[in] which_slice type of deposition: WhichSlice::This, Next, RhoIons
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
@@ -52,7 +51,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
-                         const WhichSlice which_slice, const bool temp_slice,
+                         const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho)
 {
     using namespace amrex::literals;
