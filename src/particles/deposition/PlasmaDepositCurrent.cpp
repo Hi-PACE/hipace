@@ -15,10 +15,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-    which_slice == WhichSlice::This || which_slice == WhichSlice::Next ||
-    which_slice == WhichSlice::RhoIons,
-    "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
-    " (WhichSlice::Next) or for the ion charge deposition (WhichSLice::RhoIons)");
+    which_slice == WhichSlice::This || which_slice == WhichSlice::Next,
+    "Current deposition can only be done in this slice (WhichSlice::This) or the next slice "
+    " (WhichSlice::Next)");
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
@@ -49,11 +48,11 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::FArrayBox& rho_fab = rho[pti];
 
         // For now: fix the value of the charge
-        amrex::Real q = (which_slice == WhichSlice::RhoIons ) ? phys_const.q_e : - phys_const.q_e;
+        amrex::Real q = - phys_const.q_e;
 
         // Call deposition function in each box
         // Deposit ion charge density, assumed uniform
-        rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
+        if (which_slice == WhichSlice::This) rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
 
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,

@@ -144,7 +144,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                         &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                         sx_cell[ix]*sy_cell[iy]*wqy);
 
-                    if (which_slice == WhichSlice::This || which_slice == WhichSlice::RhoIons)
+                    if (which_slice == WhichSlice::This)
                     {
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
