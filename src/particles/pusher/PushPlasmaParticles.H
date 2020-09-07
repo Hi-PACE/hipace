@@ -48,6 +48,7 @@
  * \param[in] Fpsi5 force term acting on the plasma pseudo-potential of the particle
  * \param[in] dz longitudinal size of the cell
  * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] ip index of the plasma particle
  * \param[in] SetPosition Functor for setting the particle position
  */
