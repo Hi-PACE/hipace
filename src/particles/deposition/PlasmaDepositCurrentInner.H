@@ -38,6 +38,9 @@
  * \param[in] q elementary charge
  * \param[in] which_slice type of deposition: WhichSlice::This, Next, RhoIons
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
+ * \param[in] deposit_jx_jy if true, deposit to jx and jy
+ * \param[in] deposit_jz if true, deposit to jz
+ * \param[in] deposit_rho if true, deposit to rho
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
@@ -49,7 +52,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
-                         const WhichSlice which_slice, const bool temp_slice)
+                         const WhichSlice which_slice, const bool temp_slice,
+                         const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho)
 {
     using namespace amrex::literals;
 
@@ -136,9 +140,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
-            bool deposit_jx_jy = ((which_slice == WhichSlice::This) || (which_slice == WhichSlice::Next)) ? 1 : 0;
-            bool deposit_jz = (which_slice == WhichSlice::This) ? 1 : 0;
-            bool deposit_rho = ((which_slice == WhichSlice::This) || (which_slice == WhichSlice::RhoIons)) ? 1 : 0;
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){

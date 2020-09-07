@@ -209,7 +209,8 @@ Hipace::Evolve ()
         }
 
         /* Setting rho ions */
-        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons, false, geom[lev], lev);
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
+                       false, false, false, true, geom[lev], lev);
 
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
@@ -241,8 +242,8 @@ Hipace::Evolve ()
                 amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                                     FieldComps::rho, 1);
 
-                DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false,
-                               geom[lev], lev);
+                DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
+                               true, true, geom[lev], lev);
                 m_fields.AddRhoIons(lev);
 
                 // need to exchange jx jy jz rho
@@ -352,7 +353,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
                                true, false, false, lev);
 
         /* deposit current to next slice */
-        DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true, geom[lev], lev);
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
+                       true, false, false, geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
