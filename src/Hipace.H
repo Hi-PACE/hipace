@@ -184,9 +184,4 @@ private:
 
 };
 
-/** \brief Type of current deposition, either in the current slice or in the next one
- * in the predictor-corrector loop
- */
-enum struct ToSlice { This, Next };
-
 #endif

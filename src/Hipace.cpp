@@ -231,15 +231,19 @@ Hipace::Evolve ()
                 }
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                                       ToSlice::This,
+                                       WhichSlice::This,
                                        true, false, false, lev);
 
                 m_plasma_container.Redistribute();
 
-                DepositCurrent(m_plasma_container, m_fields, ToSlice::This,
+                DepositCurrent(m_plasma_container, m_fields, WhichSlice::This,
                                geom[lev], lev);
 
                 // need to exchange jx jy jz rho
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
+                FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
+                "changed, because the 4 components starting from jx are grabbed at once");
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
                 j_slice.SumBoundary(Geom(lev).periodicity());
@@ -325,7 +329,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
 
     /* shift force terms, update force terms using guessed Bx and By */
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           ToSlice::This,
+                           WhichSlice::This,
                            false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
@@ -338,11 +342,11 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         i_iter++;
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               ToSlice::Next,
+                               WhichSlice::Next,
                                true, false, false, lev);
 
         /* deposit current to next slice */
-        DepositCurrent(m_plasma_container, m_fields, ToSlice::Next, geom[lev], lev);
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
@@ -381,7 +385,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
 
         /* Update force terms using the calculated Bx and By */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               ToSlice::Next,
+                               WhichSlice::Next,
                                false, true, false, lev);
 
         /* Shift relative_Bfield_error values */
