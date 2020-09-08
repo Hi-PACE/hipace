@@ -63,17 +63,16 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const auto& pos_structs = aos.begin();
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
-    bool this_slice = (temp_slice) ? 0 : 1;
     const amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
-    const amrex::Real * const uxp = (this_slice) ?
+    const amrex::Real * const uxp = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
-    const amrex::Real * const uyp = (this_slice) ?
+    const amrex::Real * const uyp = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::uy).data() : soa.GetRealData(PlasmaIdx::uy_temp).data();
-    const amrex::Real * const psip = (this_slice) ?
+    const amrex::Real * const psip = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::psi).data() : soa.GetRealData(PlasmaIdx::psi_temp).data();
-    const amrex::Real * const x_temp = (this_slice) ?
+    const amrex::Real * const x_temp = (!temp_slice) ?
         nullptr : soa.GetRealData(PlasmaIdx::x_temp).data();
-    const amrex::Real * const y_temp = (this_slice) ?
+    const amrex::Real * const y_temp = (!temp_slice) ?
         nullptr : soa.GetRealData(PlasmaIdx::y_temp).data();
 
     // Extract box properties
