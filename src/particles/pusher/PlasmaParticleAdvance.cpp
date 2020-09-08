@@ -160,3 +160,31 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
           );
       }
 }
+
+void
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
+{
+    HIPACE_PROFILE("ResetPlasmaParticles()");
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    {
+        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
+        amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
+
+        const auto GetPosition = GetParticlePosition(pti);
+        const auto SetPosition = SetParticlePosition(pti);
+
+        amrex::ParallelFor(pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (long ip) {
+
+                amrex::ParticleReal xp, yp, zp;
+                GetPosition(ip, xp, yp, zp);
+                xp = x_prev[ip];
+                yp = y_prev[ip];
+                SetPosition(ip, xp, yp, zp);
+
+        }
+        );
+    }
+}

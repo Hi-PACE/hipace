@@ -392,6 +392,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
+
+    /* resetting the particle position after they have been pushed to the next slice */
+    ResetPlasmaParticles (m_plasma_container, lev);
+
     if (relative_Bfield_error > 10.)
     {
         amrex::Abort("Predictor corrector loop diverged!\n"

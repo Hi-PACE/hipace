@@ -21,4 +21,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         const bool do_push, const bool do_update, const bool do_shift,
                         int const lev=0);
 
+void
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev=0);
+
 #endif //  PLASMAPARTICLEADVANCE_H_
