@@ -66,10 +66,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         soa.GetRealData(PlasmaIdx::uy).data() : soa.GetRealData(PlasmaIdx::uy_temp).data();
     const amrex::Real * const psip = (which_slice == WhichSlice::This) ?
         soa.GetRealData(PlasmaIdx::psi).data() : soa.GetRealData(PlasmaIdx::psi_temp).data();
-    const amrex::Real * const x_temp = (which_slice == WhichSlice::This) ?
-        nullptr : soa.GetRealData(PlasmaIdx::x_temp).data();
-    const amrex::Real * const y_temp = (which_slice == WhichSlice::This) ?
-        nullptr : soa.GetRealData(PlasmaIdx::y_temp).data();
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
@@ -123,14 +119,12 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             // --- Compute shape factors
             // x direction
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-            const amrex::Real xmid = (which_slice == WhichSlice::This) ?
-                (pos_structs[ip].pos(0) - xmin)*dxi : (x_temp[ip] - xmin)*dxi;
+            const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
             amrex::Real sx_cell[depos_order_xy + 1];
             const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
 
             // y direction
-            const amrex::Real ymid = (which_slice == WhichSlice::This) ?
-                (pos_structs[ip].pos(1) - ymin)*dyi : (y_temp[ip] - ymin)*dyi;
+            const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
