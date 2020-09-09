@@ -188,14 +188,14 @@ public:
      *            (usually either FieldComps::Bx or 0)
      * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
      *            (usually either FieldComps::By or 0)
-     * \param[in] bx current Box
+     * \param[in] geom Geometry of the problem
      * \param[in] lev current level
      */
     amrex::Real ComputeRelBFieldError (const amrex::MultiFab& Bx, const amrex::MultiFab& By,
                                        const amrex::MultiFab& Bx_iter,
                                        const amrex::MultiFab& By_iter, const int Bx_comp,
                                        const int By_comp, const int Bx_iter_comp,
-                                       const int By_iter_comp, const amrex::Box& bx,
+                                       const int By_iter_comp, const amrex::Geometry& geom,
                                        const int lev);
 
 private:

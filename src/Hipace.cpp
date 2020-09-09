@@ -268,7 +268,7 @@ Hipace::Evolve ()
                 /* Modifies Bx and By in the current slice
                  * and the force terms of the plasma particles
                  */
-                PredictorCorrectorLoopToSolveBxBy(bx, islice, lev);
+                PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
                 m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
@@ -289,7 +289,7 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice, const int lev)
+Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -299,7 +299,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         m_fields.getSlices(lev, WhichSlice::Previous1),
         m_fields.getSlices(lev, WhichSlice::Previous2),
         m_fields.getSlices(lev, WhichSlice::Previous2),
-        FieldComps::Bx, FieldComps::By,FieldComps::Bx, FieldComps::By, bx, lev);
+        FieldComps::Bx, FieldComps::By,FieldComps::Bx, FieldComps::By, Geom(lev), lev);
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
@@ -371,7 +371,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
                                                m_fields.getSlices(lev, WhichSlice::This),
                                                m_fields.getSlices(lev, WhichSlice::This),
                                                Bx_iter, By_iter, FieldComps::Bx,
-                                               FieldComps::By, 0, 0, bx, lev);
+                                               FieldComps::By, 0, 0, Geom(lev), lev);
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 
