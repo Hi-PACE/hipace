@@ -208,6 +208,10 @@ Hipace::Evolve ()
             DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
         }
 
+        /* Setting rho ions */
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
+                       false, false, false, true, geom[lev], lev);
+
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
@@ -231,13 +235,16 @@ Hipace::Evolve ()
                 }
 
                 AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                                       WhichSlice::This,
+                                       WhichSlice::This, false,
                                        true, false, false, lev);
 
                 m_plasma_container.Redistribute();
+                amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
+                                    FieldComps::rho, 1);
 
-                DepositCurrent(m_plasma_container, m_fields, WhichSlice::This,
-                               geom[lev], lev);
+                DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
+                               true, true, geom[lev], lev);
+                m_fields.AddRhoIons(lev);
 
                 // need to exchange jx jy jz rho
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -246,14 +253,14 @@ Hipace::Evolve ()
                 "changed, because the 4 components starting from jx are grabbed at once");
                 amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                          amrex::make_alias, FieldComps::jx, 4);
-                j_slice.SumBoundary(Geom(lev).periodicity());
+                j_slice.FillBoundary(Geom(lev).periodicity());
 
                 m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
                 if (m_slice_deposition) DepositCurrentSlice(
                     m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
-                j_slice.SumBoundary(Geom(lev).periodicity());
+                j_slice.FillBoundary(Geom(lev).periodicity());
 
                 m_fields.SolvePoissonEz(Geom(lev),lev);
                 m_fields.SolvePoissonBz(Geom(lev), lev);
@@ -329,7 +336,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
 
     /* shift force terms, update force terms using guessed Bx and By */
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           WhichSlice::This,
+                           WhichSlice::This, false,
                            false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
@@ -342,17 +349,18 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         i_iter++;
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               WhichSlice::Next,
+                               WhichSlice::Next, true,
                                true, false, false, lev);
         m_plasma_container.Redistribute();
 
         /* deposit current to next slice */
-        DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, geom[lev], lev);
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
+                       true, false, false, geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                      amrex::make_alias, FieldComps::jx, 4);
-        j_slice_next.SumBoundary(Geom(lev).periodicity());
+        j_slice_next.FillBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
@@ -386,7 +394,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
 
         /* Update force terms using the calculated Bx and By */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               WhichSlice::Next,
+                               WhichSlice::Next, false,
                                false, true, false, lev);
 
         /* Shift relative_Bfield_error values */

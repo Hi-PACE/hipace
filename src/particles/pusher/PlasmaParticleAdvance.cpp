@@ -13,8 +13,8 @@
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const WhichSlice which_slice,
-                        const bool do_push, const bool do_update, const bool do_shift,
-                        int const lev)
+                        const bool temp_slice, const bool do_push, const bool do_update,
+                        const bool do_shift, int const lev)
 {
     HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -154,7 +154,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
                                        Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                                       dz, which_slice, ip, SetPosition );
+                                       dz, temp_slice, ip, SetPosition );
                 }
           }
           );

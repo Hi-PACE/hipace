@@ -36,7 +36,10 @@
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
  * \param[in] q elementary charge
- * \param[in] which_slice type of deposition: This or Next
+ * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
+ * \param[in] deposit_jx_jy if true, deposit to jx and jy
+ * \param[in] deposit_jz if true, deposit to jz
+ * \param[in] deposit_rho if true, deposit to rho
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
@@ -48,7 +51,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
-                         const WhichSlice which_slice)
+                         const bool temp_slice,
+                         const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho)
 {
     using namespace amrex::literals;
 
@@ -60,11 +64,11 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
     const amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
-    const amrex::Real * const uxp = (which_slice == WhichSlice::This) ?
+    const amrex::Real * const uxp = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
-    const amrex::Real * const uyp = (which_slice == WhichSlice::This) ?
+    const amrex::Real * const uyp = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::uy).data() : soa.GetRealData(PlasmaIdx::uy_temp).data();
-    const amrex::Real * const psip = (which_slice == WhichSlice::This) ?
+    const amrex::Real * const psip = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::psi).data() : soa.GetRealData(PlasmaIdx::psi_temp).data();
 
     // Extract box properties
@@ -131,18 +135,20 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){
-                    amrex::Gpu::Atomic::Add(
-                        &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                        sx_cell[ix]*sy_cell[iy]*wqx);
-                    amrex::Gpu::Atomic::Add(
-                        &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                        sx_cell[ix]*sy_cell[iy]*wqy);
-
-                    if (which_slice == WhichSlice::This)
-                    {
+                    if (deposit_jx_jy) {
+                        amrex::Gpu::Atomic::Add(
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqx);
+                        amrex::Gpu::Atomic::Add(
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqy);
+                    }
+                    if (deposit_jz) {
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                             sx_cell[ix]*sy_cell[iy]*wqz);
+                    }
+                    if (deposit_rho) {
                         amrex::Gpu::Atomic::Add(
                             &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
                             sx_cell[ix]*sy_cell[iy]*wq);

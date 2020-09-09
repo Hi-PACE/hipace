@@ -9,15 +9,17 @@
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
-                const WhichSlice which_slice,
+                const WhichSlice which_slice, const bool temp_slice,
+                const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 amrex::Geometry const& gm, int const lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-    which_slice == WhichSlice::This || which_slice == WhichSlice::Next,
-    "Current deposition can only be done in this slice (WhichSlice::This) or the next slice "
-    " (WhichSlice::Next)");
+    which_slice == WhichSlice::This || which_slice == WhichSlice::Next ||
+    which_slice == WhichSlice::RhoIons,
+    "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
+    " (WhichSlice::Next) or for the ion charge deposition (WhichSLice::RhoIons)");
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
@@ -48,24 +50,24 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::FArrayBox& rho_fab = rho[pti];
 
         // For now: fix the value of the charge
-        amrex::Real q = - phys_const.q_e;
-
-        // Call deposition function in each box
-        // Deposit ion charge density, assumed uniform
-        if (which_slice == WhichSlice::This) rho.plus(phys_const.q_e * plasma.m_density, 0, 1);
+        amrex::Real q =(which_slice == WhichSlice::RhoIons ) ? phys_const.q_e : - phys_const.q_e;
 
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, temp_slice,
+                                          deposit_jx_jy, deposit_jz, deposit_rho);
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, temp_slice,
+                                          deposit_jx_jy, deposit_jz, deposit_rho);
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, temp_slice,
+                                          deposit_jx_jy, deposit_jz, deposit_rho);
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, which_slice );
+                                          dx, xyzmin, lo, q, temp_slice,
+                                          deposit_jx_jy, deposit_jz, deposit_rho);
         } else {
             amrex::Abort("unknow deposition order");
         }

@@ -47,7 +47,7 @@
  * \param[in] Fuy5 force term acting on y momentum of the particle
  * \param[in] Fpsi5 force term acting on the plasma pseudo-potential of the particle
  * \param[in] dz longitudinal size of the cell
- * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] ip index of the plasma particle
  * \param[in] SetPosition Functor for setting the particle position
  */
@@ -89,7 +89,7 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
                          const amrex::ParticleReal& Fuy5,
                          const amrex::ParticleReal& Fpsi5,
                          const amrex::Real dz,
-                         const WhichSlice which_slice,
+                         const bool temp_slice,
                          const long ip,
                          const SetParticlePosition& SetPosition
                          )
@@ -103,7 +103,7 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
     const amrex::Real a4_times_dz = ( -637._rt / 360._rt ) * dz;
     const amrex::Real a5_times_dz = ( 251._rt / 720._rt ) * dz;
 
-    if (which_slice == WhichSlice::This)
+    if (!temp_slice)
     {
         xp -= a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
             + a4_times_dz * Fx4 + a5_times_dz * Fx5;
