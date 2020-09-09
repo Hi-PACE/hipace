@@ -1,0 +1,55 @@
+/* Copyright 2019-2020
+ *
+ * This file is part of WarpX.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
+#ifndef ANYDST_H_
+#define ANYDST_H_
+
+#include "AnyFFT.H"
+
+/**
+ * \brief Wrapper around multiple FFT libraries.
+ *
+ * The header file defines the API and the base types
+ * (Complex and VendorFFTPlan), and the implementation for different FFT libraries is
+ * done in different cpp files. This wrapper only depends on the underlying FFT library
+ * AND on AMReX (There is no dependence on WarpX).
+ */
+namespace AnyDST
+{
+
+    /** \brief This struct contains the vendor FFT plan and additional metadata
+     */
+    struct DSTplan
+    {
+        amrex::Real* m_position_array; /**< pointer to array in position space */
+        amrex::Real* m_fourier_array; /**< pointer to array in Fourier space */
+        VendorFFTPlan m_plan; /**< Vendor FFT plan */
+    };
+
+    /** Collection of FFT plans, one FFTplan per box */
+    using DSTplans = amrex::LayoutData<DSTplan>;
+
+    /** \brief create FFT plan for the backend FFT library.
+     * \param[in] real_size Size of the real array, along each dimension.
+     * \param[out] real_array Real array from/to where R2C/C2R FFT is performed
+     * \param[out] complex_array Complex array to/from where R2C/C2R FFT is performed
+     * \param[in] dir direction, either R2C or C2R
+     */
+    DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const position_array,
+                        amrex::Real * const fourier_array, const direction dir);
+
+    /** \brief Destroy library FFT plan.
+     * \param[out] fft_plan plan to destroy
+     */
+    void DestroyPlan (DSTplan& fft_plan);
+
+    /** \brief Perform FFT with backend library.
+     * \param[out] fft_plan plan for which the FFT is performed
+     */
+    void Execute (DSTplan& fft_plan);
+}
+
+#endif // ANYDST_H_

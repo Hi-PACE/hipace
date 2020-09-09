@@ -1,14 +1,12 @@
-#ifndef FFT_POISSON_SOLVER_PERIODIC_H_
-#define FFT_POISSON_SOLVER_PERIODIC_H_
+#ifndef FFT_POISSON_SOLVER_DIRICHLET_H_
+#define FFT_POISSON_SOLVER_DIRICHLET_H_
 
+// #include "fields/fft_poisson_solver/fft/AnyDST.H"
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
 #include "FFTPoissonSolver.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_GpuComplex.H>
-
-/** Declare type for fields in spectral fields */
-using SpectralField = amrex::FabArray< amrex::BaseFab <amrex::GpuComplex<amrex::Real>> >;
 
 /**
  * \brief This class handles functions and data to perform transverse Fourier-based Poisson solves.
@@ -19,12 +17,12 @@ using SpectralField = amrex::FabArray< amrex::BaseFab <amrex::GpuComplex<amrex::
  * 2. Call FFTPoissonSolver::SolvePoissonEquation(mf), which will solve Poisson equation with RHS
  *    in the staging area and return the LHS in mf.
  */
-class FFTPoissonSolverPeriodic : public FFTPoissonSolver
+class FFTPoissonSolverDirichlet : public FFTPoissonSolver
 {
 public:
-    FFTPoissonSolverPeriodic ( amrex::BoxArray const& realspace_ba,
-                               amrex::DistributionMapping const& dm,
-                               amrex::Geometry const& gm);// :
+    FFTPoissonSolverDirichlet ( amrex::BoxArray const& realspace_ba,
+                                amrex::DistributionMapping const& dm,
+                                amrex::Geometry const& gm);// :
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, multiplier
@@ -47,11 +45,11 @@ public:
     virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
 
 private:
-    /** Spectral fields, contains (complex) field in Fourier space */
-    SpectralField m_tmpSpectralField;
-    /** Multifab containing 1/(kx^2 + ky^2), to solve Poisson equation. */
-    amrex::MultiFab m_inv_k2;
-    /** FFT plans */
+    /** Spectral fields, contains (real) field in Fourier space */
+    amrex::MultiFab m_tmpSpectralField;
+    /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
+    amrex::MultiFab m_eigenvalue_matrix;
+    /** DST plans */
     AnyFFT::FFTplans m_forward_plan, m_backward_plan;
 };
 

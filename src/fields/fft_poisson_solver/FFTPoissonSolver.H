@@ -18,9 +18,6 @@
 class FFTPoissonSolver
 {
 public:
-    //FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
-    //                   amrex::DistributionMapping const& dm,
-    //                  amrex::Geometry const& gm);
 
     FFTPoissonSolver () = default;
 
@@ -35,17 +32,17 @@ public:
      */
     virtual void define ( amrex::BoxArray const& realspace_ba,
                           amrex::DistributionMapping const& dm,
-                          amrex::Geometry const& gm);
+                          amrex::Geometry const& gm) = 0;
 
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
-    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf);
+    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) = 0;
 
     /** Get reference to the taging area */
-    amrex::MultiFab& StagingArea () {return m_stagingArea;}
+    amrex::MultiFab& StagingArea ();
 protected:
     /** BoxArray for the spectral fields */
     amrex::BoxArray m_spectralspace_ba;
