@@ -351,6 +351,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                WhichSlice::Next, true,
                                true, false, false, lev);
+        m_plasma_container.Redistribute();
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
@@ -399,6 +400,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islic
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
+
+    /* resetting the particle position after they have been pushed to the next slice */
+    ResetPlasmaParticles (m_plasma_container, lev);
+
     if (relative_Bfield_error > 10.)
     {
         amrex::Abort("Predictor corrector loop diverged!\n"
@@ -555,7 +560,7 @@ Hipace::WriteDiagnostics (int step)
         amrex::Vector<int> int_flags(PlasmaIdx::nattribs, 1);
         amrex::Vector<std::string> real_names {
             "w","ux","uy", "psi",
-            "x_temp", "y_temp", "w_temp", "ux_temp", "uy_temp", "psi_temp",
+            "x_prev", "y_prev", "w_temp", "ux_temp", "uy_temp", "psi_temp",
             "Fx1", "Fx2", "Fx3", "Fx4", "Fx5",
             "Fy1", "Fy2", "Fy3", "Fy4", "Fy5",
             "Fux1", "Fux2", "Fux3", "Fux4", "Fux5",
