@@ -16,8 +16,8 @@
  * \param[in,out] uxp momentum in x direction
  * \param[in,out] uyp momentum in y direction
  * \param[in,out] psip plasma pseudo-potential
- * \param[in,out] x_temp temporary position in x direction
- * \param[in,out] y_temp temporary position in y direction
+ * \param[in,out] x_prev previous position in x direction
+ * \param[in,out] y_prev previous position in y direction
  * \param[in,out] ux_temp temporary momentum in x direction
  * \param[in,out] uy_temp temporary momentum in y direction
  * \param[in,out] psi_temp temporary plasma pseudo-potential
@@ -58,8 +58,8 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
                          amrex::ParticleReal& uxp,
                          amrex::ParticleReal& uyp,
                          amrex::ParticleReal& psip,
-                         amrex::ParticleReal& x_temp,
-                         amrex::ParticleReal& y_temp,
+                         amrex::ParticleReal& x_prev,
+                         amrex::ParticleReal& y_prev,
                          amrex::ParticleReal& ux_temp,
                          amrex::ParticleReal& uy_temp,
                          amrex::ParticleReal& psi_temp,
@@ -112,6 +112,8 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
 
         SetPosition(ip, xp, yp, zp);
 
+        x_prev = xp;
+        y_prev = yp;
         uxp -= a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
             + a4_times_dz * Fux4 + a5_times_dz * Fux5;
         uyp -= a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
@@ -121,10 +123,13 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
     }
     else
     {
-        x_temp = xp - ( a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
+        xp = x_prev - ( a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
                  + a4_times_dz * Fx4 + a5_times_dz * Fx5 );
-        y_temp = yp - ( a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
+        yp = y_prev - ( a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
                  + a4_times_dz * Fy4 + a5_times_dz * Fy5 );
+
+        SetPosition(ip, xp, yp, zp);
+
         ux_temp = uxp - ( a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
                   + a4_times_dz * Fux4 + a5_times_dz * Fux5 );
         uy_temp = uyp - ( a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3

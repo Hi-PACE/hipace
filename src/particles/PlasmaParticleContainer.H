@@ -12,7 +12,7 @@ struct PlasmaIdx
         w = 0,                               // weight
         ux, uy,                              // momentum
         psi,                                 //
-        x_temp, y_temp,                      // temporary position
+        x_prev, y_prev,                      // temporary position
         w_temp,                              // weight
         ux_temp, uy_temp,                    // momentum
         psi_temp,                            //

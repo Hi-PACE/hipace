@@ -73,8 +73,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
 
-        amrex::Real * const x_temp = soa.GetRealData(PlasmaIdx::x_temp).data();
-        amrex::Real * const y_temp = soa.GetRealData(PlasmaIdx::y_temp).data();
+        amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
+        amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
         amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
         amrex::Real * const uy_temp = soa.GetRealData(PlasmaIdx::uy_temp).data();
         amrex::Real * const psi_temp = soa.GetRealData(PlasmaIdx::psi_temp).data();
@@ -147,8 +147,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                 if (do_push)
                 {
                     // push a single particle
-                    PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_temp[ip],
-                                       y_temp[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
+                    PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_prev[ip],
+                                       y_prev[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
                                        Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
                                        Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
@@ -159,4 +159,30 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
           }
           );
       }
+}
+
+void
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
+{
+    HIPACE_PROFILE("ResetPlasmaParticles()");
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    {
+        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
+        amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
+
+        const auto GetPosition = GetParticlePosition(pti);
+        const auto SetPosition = SetParticlePosition(pti);
+
+        amrex::ParallelFor(pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (long ip) {
+
+                amrex::ParticleReal xp, yp, zp;
+                GetPosition(ip, xp, yp, zp);
+                SetPosition(ip, x_prev[ip], y_prev[ip], zp);
+
+        }
+        );
+    }
 }
