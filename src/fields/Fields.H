@@ -1,7 +1,7 @@
 #ifndef FIELDS_H_
 #define FIELDS_H_
 
-#include "fft_poisson_solver/FFTPoissonSolver.H"
+#include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -57,7 +57,7 @@ public:
                     const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
-    FFTPoissonSolver m_poisson_solver;
+    std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
     /** get function for the main 3D array F */
     amrex::Vector<amrex::MultiFab>& getF () { return m_F; }
     /** get function for the main 3D array F

@@ -1,10 +1,14 @@
-#ifndef FFT_POISSON_SOLVER_H_
-#define FFT_POISSON_SOLVER_H_
+#ifndef FFT_POISSON_SOLVER_PERIODIC_H_
+#define FFT_POISSON_SOLVER_PERIODIC_H_
 
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
+#include "FFTPoissonSolver.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_GpuComplex.H>
+
+/** Declare type for fields in spectral fields */
+using SpectralField = amrex::FabArray< amrex::BaseFab <amrex::GpuComplex<amrex::Real>> >;
 
 /**
  * \brief This class handles functions and data to perform transverse Fourier-based Poisson solves.
@@ -15,14 +19,15 @@
  * 2. Call FFTPoissonSolver::SolvePoissonEquation(mf), which will solve Poisson equation with RHS
  *    in the staging area and return the LHS in mf.
  */
-class FFTPoissonSolver
+class FFTPoissonSolverPeriodic : public FFTPoissonSolver
 {
 public:
-    //FFTPoissonSolver ( amrex::BoxArray const& realspace_ba,
-    //                   amrex::DistributionMapping const& dm,
-    //                  amrex::Geometry const& gm);
+    FFTPoissonSolverPeriodic ( amrex::BoxArray const& realspace_ba,
+                               amrex::DistributionMapping const& dm,
+                               amrex::Geometry const& gm);// :
+//        FFTPoissonSolver(realspace_ba, dm, gm) {};
 
-    FFTPoissonSolver () = default;
+    // FFTPoissonSolver () = default;
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, multiplier
@@ -35,23 +40,22 @@ public:
      */
     virtual void define ( amrex::BoxArray const& realspace_ba,
                           amrex::DistributionMapping const& dm,
-                          amrex::Geometry const& gm);
+                          amrex::Geometry const& gm) override final;
 
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
-    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf);
+    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
 
-    /** Get reference to the taging area */
-    amrex::MultiFab& StagingArea () {return m_stagingArea;}
-protected:
-    /** BoxArray for the spectral fields */
-    amrex::BoxArray m_spectralspace_ba;
-    /** Staging area, contains (real) field in real space.
-     * This is where the source term is stored before calling the Poisson solver */
-    amrex::MultiFab m_stagingArea;
+private:
+    /** Spectral fields, contains (complex) field in Fourier space */
+    SpectralField m_tmpSpectralField;
+    /** Multifab containing 1/(kx^2 + ky^2), to solve Poisson equation. */
+    amrex::MultiFab m_inv_k2;
+    /** FFT plans */
+    AnyFFT::FFTplans m_forward_plan, m_backward_plan;
 };
 
 #endif
