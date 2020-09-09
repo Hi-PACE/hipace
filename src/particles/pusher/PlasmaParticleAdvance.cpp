@@ -180,9 +180,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
 
                 amrex::ParticleReal xp, yp, zp;
                 GetPosition(ip, xp, yp, zp);
-                xp = x_prev[ip];
-                yp = y_prev[ip];
-                SetPosition(ip, xp, yp, zp);
+                SetPosition(ip, x_prev[ip], y_prev[ip], zp);
 
         }
         );
