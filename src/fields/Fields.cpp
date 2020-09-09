@@ -486,7 +486,7 @@ amrex::Real
 Fields::ComputeRelBFieldError (
     const amrex::MultiFab& Bx, const amrex::MultiFab& By, const amrex::MultiFab& Bx_iter,
     const amrex::MultiFab& By_iter, const int Bx_comp, const int By_comp, const int Bx_iter_comp,
-    const int By_iter_comp, const amrex::Box& bx, const int lev)
+    const int By_iter_comp, const amrex::Geometry& geom, const int lev)
 {
     /* calculates the relative B field error between two B fields
      * for both Bx and By simultaneously */
@@ -510,9 +510,11 @@ Fields::ComputeRelBFieldError (
     norm_Bdiff += amrex::MultiFab::Dot(temp, 0, 1, 0);
     norm_Bdiff = sqrt(norm_Bdiff);
 
+    const int numPts_transverse = geom.Domain().length(0) * geom.Domain().length(1);
+
     /* calculating the relative error
      * Warning: this test might be not working in SI units! */
-     const amrex::Real relative_Bfield_error = (norm_B/bx.numPts() > 1e-10)
+     const amrex::Real relative_Bfield_error = (norm_B/numPts_transverse > 1e-10)
                                                 ? norm_Bdiff/norm_B : 0.;
 
     return relative_Bfield_error;

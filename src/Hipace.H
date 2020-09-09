@@ -175,12 +175,10 @@ private:
      * This modifies component FieldComps::Bx and By, of slice 1 in m_fields.m_slices
      * as well as the plasma particle force terms.
      *
-     * \param[in] bx current Box
      * \param[in] islice index of calculated slice
      * \param[in] lev current level
      */
-    void PredictorCorrectorLoopToSolveBxBy (const amrex::Box& bx, const int islice,
-                                            const int lev);
+    void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev);
 
 };
 
