@@ -16,7 +16,7 @@ namespace AnyDST
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
         // Swap dimensions: AMReX FAB are Fortran-order but FFTW is C-order
-        dst_plan.m_plan = fftw_plan_r2r_2d(
+        dst_plan.m_plan = VendorCreatePlanR2R2D(
             real_size[1], real_size[0], position_array, fourier_array,
             FFTW_RODFT00, FFTW_RODFT00, FFTW_ESTIMATE);
 
