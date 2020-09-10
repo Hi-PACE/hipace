@@ -26,5 +26,5 @@ namespace CuFFTUtils
             return std::to_string(err) +
                 " (unknown error code)";
         }
-    }   
+    }
 }
