@@ -8,7 +8,7 @@ namespace AnyDST
 #else
     const auto VendorCreatePlanR2R2D = fftw_plan_r2r_2d;
 #endif
-    
+
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const position_array,
                         amrex::Real * const fourier_array)
     {

@@ -54,7 +54,7 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     const amrex::Real dysquared = dx[1]*dx[1];
     const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( gm.Domain().length(0) + 1 ));
     const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( gm.Domain().length(1) + 1 ));
-    
+
     /* Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00) */
     const amrex::Real norm_fac = 0.5 / ( 2 * (( gm.Domain().length(0) + 1 ) * ( gm.Domain().length(1) + 1 )));
 
@@ -71,7 +71,7 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
                     amrex::Real sinex_sq = pow( sin(( i + 1 ) * sine_x_factor), 2);
                     /* fast poisson solver diagonal y coeffs */
                     amrex::Real siney_sq = pow( sin(( j + 1 ) * sine_y_factor), 2);
-                    
+
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j,0) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
                     } else {

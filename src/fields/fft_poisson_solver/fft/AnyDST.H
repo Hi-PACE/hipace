@@ -34,8 +34,8 @@ namespace AnyDST
 
     /** \brief create FFT plan for the backend FFT library.
      * \param[in] real_size Size of the real array, along each dimension.
-     * \param[out] real_array Real array from/to where R2C/C2R FFT is performed
-     * \param[out] complex_array Complex array to/from where R2C/C2R FFT is performed
+     * \param[out] position_array Real array from/to where R2R DST is performed
+     * \param[out] fourier_array Real array to/from where R2R DST is performed
      */
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const position_array,
                         amrex::Real * const fourier_array);
