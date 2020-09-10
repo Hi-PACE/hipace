@@ -64,5 +64,5 @@ namespace AnyDST
 #endif
 
         ShrinkC2R(dst_plan.m_position_array, dst_plan.m_fourier_array);
-    }    
+    }
 }

@@ -12,7 +12,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/can_beam
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs max_step=5
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
