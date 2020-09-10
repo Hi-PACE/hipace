@@ -39,10 +39,10 @@ ExpandDataForDST (const amrex::MultiFab& src, amrex::MultiFab& dst, amrex::Geome
 
 
 void
-ShrinkDataForDST (const SpectralField src, amrex::MultiFab& dst,
-                  const int scomp, const int dcomp)
+ExtractDataForDST (const SpectralField src, amrex::MultiFab& dst,
+                   const int scomp, const int dcomp)
 {
-    HIPACE_PROFILE("ShrinkDataForDST()");
+    HIPACE_PROFILE("ExtractDataForDST()");
     /* This function takes an (2nx+2)*(2ny+2) grid point multifab src as input and returns
      * an nx*ny multifab dst, where the data from the src is extracted assuming symmetry.
      * This is necessary after a 2D discrete fourtier transform to achieve the same result

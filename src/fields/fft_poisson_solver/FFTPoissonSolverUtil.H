@@ -26,7 +26,7 @@ ExpandDataForDST (const amrex::MultiFab& src, amrex::MultiFab& dst, amrex::Geome
 * \param[in] dcomp destination component
 */
 void
-ShrinkDataForDST (const SpectralField src, amrex::MultiFab& dst,
-                  const int scomp=0, const int dcomp=0);
+ExtractDataForDST (const SpectralField src, amrex::MultiFab& dst,
+                   const int scomp=0, const int dcomp=0);
 
 #endif
