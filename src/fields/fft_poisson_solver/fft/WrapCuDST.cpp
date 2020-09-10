@@ -3,29 +3,70 @@
 
 namespace AnyDST
 {
-    void ExpandR2R (amrex::Real * const dst, amrex::Real const * const src)
+    void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
-        // --- Expand src to dst
+        constexpr int scomp = 0;
+        constexpr int dcomp = 0;
+
+        const amrex::Box bx = src.box();
+        amrex::Print()<<bx<<"  -- expand \n";
+        const int nx = bx.length(0);
+        const int ny = bx.length(1);
+        amrex::Array4<amrex::Real const> const & src_array = src.array();
+        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                /* upper left quadrant */
+                dst_array(i+1,j+1,k,dcomp) = src_array(i, j, k, scomp);
+                /* lower left quadrant */
+                dst_array(i+1,j+ny+2,k,dcomp) = -src_array(i, ny-1-j, k, scomp);
+                /* upper right quadrant */
+                dst_array(i+nx+2,j+1,k,dcomp) = -src_array(nx-1-i, j, k, scomp);
+                /* lower right quadrant */
+                dst_array(i+nx+2,j+ny+2,k,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
+            }
+            );
     };
 
-    void ShrinkC2R (amrex::Real * const dst, AnyFFT::Complex const * const src)
+    void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
     {
-        // --- Shrink src to dst
+        constexpr int scomp = 0;
+        constexpr int dcomp = 0;
+
+        const amrex::Box bx = dst.box();
+        amrex::Print()<<bx<<"  -- shrink \n";
+        amrex::Array4<amrex::GpuComplex<amrex::Real> const> const & src_array = src.array();
+        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                /* upper left quadrant */
+                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, k, scomp).real();
+            }
+            );
     };
 
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
                         amrex::FArrayBox* fourier_array)
     {
         DSTplan dst_plan;
+        const int nx = real_size[0];
+        const int ny = real_size[1];
 
-        // --- Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
-        // --- Allocate expanded_fourier_array Complex of size (nx+1, 2*ny+2)
-        // NOTE: be careful, we want this memory allocated and persistent even after the
-        // end of this function. We may need a smart pointer here.
-        amrex::Real* expanded_position_array = position_array; // THIS IS NOT CORRECT
-        AnyFFT::Complex* expanded_fourier_array = fourier_array; // THIS IS NOT CORRECT
+        // Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
+        // Allocate expanded_fourier_array Complex of size (nx+1, 2*ny+2)
+        amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
+        amrex::Box expanded_fourier_box {{0, 0, 0}, {nx, 2*ny+1, 0}};
+        dst_plan.m_expanded_position_array =std::make_unique<
+            amrex::FArrayBox>(expanded_position_box, 1);
+        dst_plan.m_expanded_fourier_array = std::make_unique<
+            amrex::BaseFab<amrex::GpuComplex<amrex::Real>>>(expanded_fourier_box, 1);
 
-        const amrex::IntVect& expanded_size {2*real_size[1]+2, 2*real_size[0]+2, 1};
+        const amrex::IntVect& expanded_size = expanded_position_box.length();
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
         cufftResult result;
@@ -39,8 +80,6 @@ namespace AnyDST
 
         // Store meta-data in dst_plan
         dst_plan.m_position_array = position_array;
-        dst_plan.m_expanded_position_array = expanded_position_array;
-        dst_plan.m_expanded_fourier_array = expanded_fourier_array;
         dst_plan.m_fourier_array = fourier_array;
 
         return dst_plan;
