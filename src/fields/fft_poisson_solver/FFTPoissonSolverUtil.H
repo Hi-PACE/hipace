@@ -14,44 +14,19 @@
  * \param[in] dcomp destination component
  */
 void
-ExpandRealData (const amrex::MultiFab& src, amrex::MultiFab& dst, amrex::Geometry const& geom,
-                const int scomp=0, const int dcomp=0);
+ExpandDataForDST (const amrex::MultiFab& src, amrex::MultiFab& dst, amrex::Geometry const& geom,
+                  const int scomp=0, const int dcomp=0);
 
-/** \brief this function takes an nx*ny multifab src and returns an symmetrized
- * (nx+2)(2ny+2) array. This prepares the array as an input to a 2D DFT, which
- * yields the same result of the corrensponding 2D DST.
- * \param[in] src input multifab
- * \param[in,out] dst symmetrized output multifab
- * \param[in] geom Geometry
- * \param[in] scomp source component
- * \param[in] dcomp destination component
- */
-void
-ExpandComplexData (const SpectralField src, SpectralField dst, amrex::Geometry const& geom,
-                   const int scomp, const int dcomp);
 
 /** \brief this function takes an (2nx+2)(2ny+2) multifab src and extracts
 *  nx*ny array after a 2D DFT. The returned array is the result of a 2D DST.
-* \param[in] src input multifab
-* \param[in,out] dst symmetrized output multifab
-* \param[in] geom Geometry
+* \param[in] src input spectral multifab
+* \param[in,out] dst extracted output. This is the true result of the DST
 * \param[in] scomp source component
 * \param[in] dcomp destination component
 */
 void
-ShrinkRealData (const amrex::MultiFab& src, amrex::MultiFab& dst, amrex::Geometry const& geom,
-                const int scomp=0, const int dcomp=0);
-
-/** \brief this function takes an (nx+2)(2ny+2) multifab src and extracts
-*  nx*ny array after a 2D DFT. The returned array is the result of a 2D DST.
-* \param[in,out] src input multifab
-* \param[in,out] dst symmetrized output multifab
-* \param[in] geom Geometry
-* \param[in] scomp source component
-* \param[in] dcomp destination component
-*/
-void
-ShrinkComplexData (const SpectralField src, SpectralField dst, amrex::Geometry const& geom,
-                   const int scomp=0, const int dcomp=0);
+ShrinkDataForDST (const SpectralField src, amrex::MultiFab& dst,
+                  const int scomp=0, const int dcomp=0);
 
 #endif
