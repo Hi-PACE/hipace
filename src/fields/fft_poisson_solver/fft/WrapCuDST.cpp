@@ -3,12 +3,12 @@
 
 namespace AnyDST
 {
-    void ExpandR2R(amrex::Real * const dst, amrex::Real const * const src)
+    void ExpandR2R (amrex::Real * const dst, amrex::Real const * const src)
     {
         // --- Expand src to dst
     };
 
-    void ShrinkC2R(amrex::Real * const dst, AnyFFT::Complex const * const src)
+    void ShrinkC2R (amrex::Real * const dst, AnyFFT::Complex const * const src)
     {
         // --- Shrink src to dst
     };
@@ -20,6 +20,8 @@ namespace AnyDST
 
         // --- Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
         // --- Allocate expanded_fourier_array Complex of size (nx+1, 2*ny+2)
+        // NOTE: be careful, we want this memory allocated and persistent even after the
+        // end of this function. We may need a smart pointer here.
         amrex::Real* expanded_position_array = position_array; // THIS IS NOT CORRECT
         AnyFFT::Complex* expanded_fourier_array = fourier_array; // THIS IS NOT CORRECT
 

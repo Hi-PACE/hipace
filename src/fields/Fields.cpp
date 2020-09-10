@@ -84,15 +84,15 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
     if (m_do_dirichlet_poisson){
-        m_poisson_solver = std::unique_ptr<FFTPoissonSolverDirichlet>( new FFTPoissonSolverDirichlet(
-        getSlices(lev, WhichSlice::This).boxArray(),
-        getSlices(lev, WhichSlice::This).DistributionMap(),
-        geom));
+        m_poisson_solver = std::unique_ptr<FFTPoissonSolverDirichlet>(
+            new FFTPoissonSolverDirichlet(getSlices(lev, WhichSlice::This).boxArray(),
+                                          getSlices(lev, WhichSlice::This).DistributionMap(),
+                                          geom));
     } else {
-        m_poisson_solver = std::unique_ptr<FFTPoissonSolverPeriodic>( new FFTPoissonSolverPeriodic(
-        getSlices(lev, WhichSlice::This).boxArray(),
-        getSlices(lev, WhichSlice::This).DistributionMap(),
-        geom));
+        m_poisson_solver = std::unique_ptr<FFTPoissonSolverPeriodic>(
+            new FFTPoissonSolverPeriodic(getSlices(lev, WhichSlice::This).boxArray(),
+                                         getSlices(lev, WhichSlice::This).DistributionMap(),
+                                         geom));
     }
 }
 
