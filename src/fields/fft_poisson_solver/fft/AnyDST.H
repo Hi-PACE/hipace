@@ -25,6 +25,7 @@ namespace AnyDST
     struct DSTplan
     {
         amrex::Real* m_position_array; /**< pointer to array in position space */
+        amrex::Real* m_expanded_array = nullptr; /**< Expanded data, only for Cuda */
         amrex::Real* m_fourier_array; /**< pointer to array in Fourier space */
         AnyFFT::VendorFFTPlan m_plan; /**< Vendor FFT plan */
     };
