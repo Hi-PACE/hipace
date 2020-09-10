@@ -53,7 +53,7 @@ namespace AnyFFT
     }
 
     void Execute (FFTplan& fft_plan){
-        HIPACE_PROFILE("Execute_FFTplan()");
+        HIPACE_PROFILE("AnyFFT::Execute()");
         // make sure that this is done on the same GPU stream as the above copy
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
         cufftSetStream ( fft_plan.m_plan, stream);

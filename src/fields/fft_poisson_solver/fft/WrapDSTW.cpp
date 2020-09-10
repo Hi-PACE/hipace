@@ -48,7 +48,7 @@ namespace AnyDST
     }
 
     void Execute (DSTplan& dst_plan){
-        HIPACE_PROFILE("Execute_FFTplan()");
+        HIPACE_PROFILE("AnyDST::Execute()");
 #  ifdef AMREX_USE_FLOAT
         fftwf_execute( dst_plan.m_plan );
 #  else

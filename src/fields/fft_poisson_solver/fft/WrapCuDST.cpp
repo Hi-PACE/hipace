@@ -17,6 +17,7 @@ namespace AnyDST
      */
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
+        HIPACE_PROFILE("AnyDST::ExpandR2R()");
         constexpr int scomp = 0;
         constexpr int dcomp = 0;
 
@@ -49,6 +50,7 @@ namespace AnyDST
      */
     void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
     {
+        HIPACE_PROFILE("AnyDST::ShrinkC2R()");
         constexpr int scomp = 0;
         constexpr int dcomp = 0;
 
@@ -68,6 +70,7 @@ namespace AnyDST
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
                         amrex::FArrayBox* fourier_array)
     {
+        HIPACE_PROFILE("AnyDST::CreatePlan()");
         DSTplan dst_plan;
         const int nx = real_size[0];
         const int ny = real_size[1];
@@ -108,7 +111,7 @@ namespace AnyDST
     }
 
     void Execute (DSTplan& dst_plan){
-        HIPACE_PROFILE("Execute_DSTplan()");
+        HIPACE_PROFILE("AnyDST::Execute()");
 
         // Expand in position space m_position_array -> m_expanded_position_array
         ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
