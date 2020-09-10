@@ -28,7 +28,7 @@ namespace AnyDST
 
         // The block below is JUST FOR TEST PURPOSES
         amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
-        amrex::Box expanded_fourier_box {{0, 0, 0}, {nx, 2*ny+1, 0}};
+        amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
         dst_plan.m_expanded_position_array =std::make_unique<
             amrex::FArrayBox>(expanded_position_box, 1);
         dst_plan.m_expanded_fourier_array = std::make_unique<

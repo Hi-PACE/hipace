@@ -28,11 +28,9 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
         // For local FFTs, boxes in spectral space start at 0 in
         // each direction and have the same number of points as the
         // (cell-centered) real space box
-        amrex::Box realspace_bx = realspace_ba[i];
-        amrex::IntVect fft_size = realspace_bx.length();
         // Define the corresponding box
         amrex::Box spectral_bx = amrex::Box( amrex::IntVect::TheZeroVector(),
-                          fft_size - amrex::IntVect::TheUnitVector() );
+                          realspace_ba[i].length() - amrex::IntVect::TheUnitVector() );
         spectral_bl.push_back( spectral_bx );
     }
     m_spectralspace_ba.define( std::move(spectral_bl) );
@@ -55,7 +53,8 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( gm.Domain().length(0) + 1 ));
     const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( gm.Domain().length(1) + 1 ));
 
-    /* Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00) */
+    // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
+    // This normalization is used regardless of the sine transform library
     const amrex::Real norm_fac = 0.5 / ( 2 * (( gm.Domain().length(0) + 1 ) * ( gm.Domain().length(1) + 1 )));
 
     m_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);

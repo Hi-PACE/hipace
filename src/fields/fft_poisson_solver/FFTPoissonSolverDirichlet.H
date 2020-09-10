@@ -21,7 +21,7 @@ class FFTPoissonSolverDirichlet : public FFTPoissonSolver
 public:
     FFTPoissonSolverDirichlet ( amrex::BoxArray const& realspace_ba,
                                 amrex::DistributionMapping const& dm,
-                                amrex::Geometry const& gm);// :
+                                amrex::Geometry const& gm);
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, multiplier

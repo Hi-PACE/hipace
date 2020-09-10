@@ -10,6 +10,11 @@ namespace AnyDST
     cufftType VendorR2C = CUFFT_D2Z;
 #endif
 
+    /** \brief Extend src into a symmetrized larger array dst
+     *
+     * \param[in,out] dst destination array, symmetric in x and y
+     * \param[in] src destination array
+     */
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
         constexpr int scomp = 0;
@@ -37,6 +42,11 @@ namespace AnyDST
             );
     };
 
+    /** \brief Extract symmetrical src array into smaller array dst
+     *
+     * \param[in,out] dst destination array
+     * \param[in] src destination array, symmetric in x and y
+     */
     void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
     {
         constexpr int scomp = 0;
@@ -63,13 +73,15 @@ namespace AnyDST
         const int ny = real_size[1];
 
         // Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
-        // Allocate expanded_fourier_array Complex of size (nx+1, 2*ny+2)
+        // Allocate expanded_fourier_array Complex of size (nx+2, 2*ny+2)
         amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
         amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
-        dst_plan.m_expanded_position_array =std::make_unique<
-            amrex::FArrayBox>(expanded_position_box, 1);
-        dst_plan.m_expanded_fourier_array = std::make_unique<
-            amrex::BaseFab<amrex::GpuComplex<amrex::Real>>>(expanded_fourier_box, 1);
+        dst_plan.m_expanded_position_array =
+            std::make_unique<amrex::FArrayBox>(
+                expanded_position_box, 1);
+        dst_plan.m_expanded_fourier_array =
+            std::make_unique<amrex::BaseFab<amrex::GpuComplex<amrex::Real>>>(
+                expanded_fourier_box, 1);
 
         const amrex::IntVect& expanded_size = expanded_position_box.length();
 

@@ -41,14 +41,14 @@ namespace AnyDST
                         amrex::FArrayBox* fourier_array);
 
     /** \brief Destroy library FFT plan.
-     * \param[out] fft_plan plan to destroy
+     * \param[out] dst_plan plan to destroy
      */
-    void DestroyPlan (DSTplan& fft_plan);
+    void DestroyPlan (DSTplan& dst_plan);
 
     /** \brief Perform FFT with backend library.
-     * \param[out] fft_plan plan for which the FFT is performed
+     * \param[out] dst_plan plan for which the FFT is performed
      */
-    void Execute (DSTplan& fft_plan);
+    void Execute (DSTplan& dst_plan);
 }
 
 #endif // ANYDST_H_
