@@ -60,12 +60,6 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
 
     m_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
 
-
-
-
-
-
-
 // Loop over boxes and calculate inv_k2 in each box
     for (amrex::MFIter mfi(m_eigenvalue_matrix); mfi.isValid(); ++mfi ){
         amrex::Array4<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
@@ -88,8 +82,8 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    //m_forward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
-    //m_backward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
+    m_forward_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
+    m_backward_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
     // Loop over boxes and allocate the corresponding plan
     // for each box owned by the local MPI proc
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
@@ -97,15 +91,11 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
         // differ when using real-to-complex FFT. When initializing
         // the FFT plan, the valid dimensions are those of the real-space box.
         amrex::IntVect fft_size = mfi.validbox().length();
-        /*m_forward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(),
-            m_tmpSpectralField[mfi].dataPtr(),
-            AnyFFT::direction::R2C);
+        m_forward_plan[mfi] = AnyDST::CreatePlan(
+            fft_size, m_stagingArea[mfi].dataPtr(), m_tmpSpectralField[mfi].dataPtr());
 
-        m_backward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(),
-            m_tmpSpectralField[mfi].dataPtr(),
-            AnyFFT::direction::C2R);*/
+        m_backward_plan[mfi] = AnyDST::CreatePlan(
+            fft_size, m_tmpSpectralField[mfi].dataPtr(), m_stagingArea[mfi].dataPtr());
     }
 }
 
@@ -119,13 +109,12 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
 
         // Perform Fourier transform from the staging area to `tmpSpectralField`
-        //AnyFFT::Execute(m_forward_plan[mfi]);
+        AnyDST::Execute(m_forward_plan[mfi]);
 
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by eigenvalue_matrix
         amrex::Array4<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         amrex::Array4<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
-
 
         amrex::ParallelFor( m_spectralspace_ba[mfi],
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
@@ -133,7 +122,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area
-        //AnyFFT::Execute(m_backward_plan[mfi]);
+        AnyDST::Execute(m_backward_plan[mfi]);
 
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);

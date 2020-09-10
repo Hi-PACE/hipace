@@ -1,4 +1,6 @@
 #include "Fields.H"
+#include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
+#include "fft_poisson_solver/FFTPoissonSolverDirichlet.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
 #include "Constants.H"
@@ -7,7 +9,10 @@ Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),
       m_F(a_hipace->maxLevel()+1),
       m_slices(a_hipace->maxLevel()+1)
-{}
+{
+    amrex::ParmParse ppf("fields");
+    ppf.query("do_dirichlet_poisson", m_do_dirichlet_poisson);
+}
 
 void
 Fields::AllocData (int lev, const amrex::BoxArray& ba,
@@ -78,13 +83,16 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
-    if (true){
-        m_poisson_solver = std::unique_ptr<FFTPoissonSolverPeriodic>( new FFTPoissonSolverPeriodic(
+    if (m_do_dirichlet_poisson){
+        m_poisson_solver = std::unique_ptr<FFTPoissonSolverDirichlet>( new FFTPoissonSolverDirichlet(
         getSlices(lev, WhichSlice::This).boxArray(),
         getSlices(lev, WhichSlice::This).DistributionMap(),
         geom));
     } else {
-        amrex::Abort("unknown boundary conditions");
+        m_poisson_solver = std::unique_ptr<FFTPoissonSolverPeriodic>( new FFTPoissonSolverPeriodic(
+        getSlices(lev, WhichSlice::This).boxArray(),
+        getSlices(lev, WhichSlice::This).DistributionMap(),
+        geom));
     }
 }
 

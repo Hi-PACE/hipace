@@ -1,8 +1,7 @@
 #ifndef FFT_POISSON_SOLVER_DIRICHLET_H_
 #define FFT_POISSON_SOLVER_DIRICHLET_H_
 
-// #include "fields/fft_poisson_solver/fft/AnyDST.H"
-#include "fields/fft_poisson_solver/fft/AnyFFT.H"
+#include "fields/fft_poisson_solver/fft/AnyDST.H"
 #include "FFTPoissonSolver.H"
 
 #include <AMReX_MultiFab.H>
@@ -50,7 +49,7 @@ private:
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
     /** DST plans */
-    AnyFFT::FFTplans m_forward_plan, m_backward_plan;
+    AnyDST::DSTplans m_forward_plan, m_backward_plan;
 };
 
 #endif

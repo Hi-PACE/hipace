@@ -1,7 +1,7 @@
 #ifndef FIELDS_H_
 #define FIELDS_H_
 
-#include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
+#include "fft_poisson_solver/FFTPoissonSolver.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -209,6 +209,8 @@ private:
     amrex::IntVect m_nguards {-1, -1, -1};
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards {-1, -1, -1};
+    /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
+    bool m_do_dirichlet_poisson = false;
 };
 
 #endif
