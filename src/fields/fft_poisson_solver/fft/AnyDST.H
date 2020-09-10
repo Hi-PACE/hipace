@@ -9,7 +9,7 @@
 
 #include "AnyFFT.H"
 
-#include <AMREX_GpuComplex.H>
+#include <AMReX_GpuComplex.H>
 
 #include <memory>
 

@@ -3,6 +3,14 @@
 
 namespace AnyDST
 {
+#ifdef AMREX_USE_FLOAT
+    cufftType VendorR2C = CUFFT_R2C;
+#else
+    cufftType VendorR2C = CUFFT_D2Z;
+#endif
+
+    std::string cufftErrorToString (const cufftResult& err);
+
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
         constexpr int scomp = 0;
@@ -94,7 +102,7 @@ namespace AnyDST
         HIPACE_PROFILE("Execute_DSTplan()");
 
         // Expand in position space m_position_array -> m_expanded_position_array
-        ExpandR2R(dst_plan.m_expanded_position_array, dst_plan.m_position_array);
+        ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
 
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
         cufftSetStream ( dst_plan.m_plan, stream);
@@ -103,13 +111,48 @@ namespace AnyDST
         // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
 #ifdef AMREX_USE_FLOAT
         result = cufftExecR2C(
-            dst_plan.m_plan, dst_plan.m_expanded_position_array, dst_plan.m_expanded_fourier_array);
+            dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(), reinterpret_cast<cuComplex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #else
         result = cufftExecD2Z(
-            dst_plan.m_plan, dst_plan.m_expanded_position_array, dst_plan.m_expanded_fourier_array);
+            dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(), reinterpret_cast<cuDoubleComplex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #endif
 
         // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
-        ShrinkC2R(dst_plan.m_fourier_array, dst_plan.m_expanded_fourier_array);
+        ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
+
+        if ( result != CUFFT_SUCCESS ) {
+            amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
+                cufftErrorToString(result) << "\n";
+        }
+    }
+
+    /** \brief This method converts a cufftResult
+     * into the corresponding string
+     *
+     * @param[in] err a cufftResult
+     * @return an std::string
+     */
+    std::string cufftErrorToString (const cufftResult& err)
+    {
+        const auto res2string = std::map<cufftResult, std::string>{
+            {CUFFT_SUCCESS, "CUFFT_SUCCESS"},
+            {CUFFT_INVALID_PLAN,"CUFFT_INVALID_PLAN"},
+            {CUFFT_ALLOC_FAILED,"CUFFT_ALLOC_FAILED"},
+            {CUFFT_INVALID_TYPE,"CUFFT_INVALID_TYPE"},
+            {CUFFT_INVALID_VALUE,"CUFFT_INVALID_VALUE"},
+            {CUFFT_INTERNAL_ERROR,"CUFFT_INTERNAL_ERROR"},
+            {CUFFT_EXEC_FAILED,"CUFFT_EXEC_FAILED"},
+            {CUFFT_SETUP_FAILED,"CUFFT_SETUP_FAILED"},
+            {CUFFT_INVALID_SIZE,"CUFFT_INVALID_SIZE"},
+            {CUFFT_UNALIGNED_DATA,"CUFFT_UNALIGNED_DATA"}};
+
+        const auto it = res2string.find(err);
+        if(it != res2string.end()){
+            return it->second;
+        }
+        else{
+            return std::to_string(err) +
+                " (unknown error code)";
+        }
     }
 }
