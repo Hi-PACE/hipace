@@ -159,6 +159,8 @@ public:
      * to be in device memory (allocated in Managed memory).
      * If true, required m_slice_deposition = true. */
     static bool m_3d_on_host;
+    /** Whether to call amrex::Gpu::synchronize() around all profiler region */
+    static bool m_do_device_synchronize;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */

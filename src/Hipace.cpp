@@ -25,6 +25,7 @@ int Hipace::m_predcorr_max_iterations = 5;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.1;
 bool Hipace::m_slice_deposition = false;
 bool Hipace::m_3d_on_host = false;
+bool Hipace::m_do_device_synchronize = false;
 
 Hipace&
 Hipace::GetInstance ()
@@ -69,6 +70,8 @@ Hipace::Hipace () :
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
+    pph.query("do_device_synchronize", m_do_device_synchronize);
+
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
     m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
