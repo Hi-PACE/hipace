@@ -5,6 +5,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "AnyFFT.H"
+#include "CuFFTUtils.H"
 #include "HipaceProfilerWrapper.H"
 
 namespace AnyFFT
@@ -17,8 +18,6 @@ namespace AnyFFT
     cufftType VendorR2C = CUFFT_D2Z;
     cufftType VendorC2R = CUFFT_Z2D;
 #endif
-
-    std::string cufftErrorToString (const cufftResult& err);
 
     FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
                         Complex * const complex_array, const direction dir)
@@ -37,7 +36,7 @@ namespace AnyFFT
 
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " cufftplan failed! Error: " <<
-                cufftErrorToString(result) << "\n";
+                CuFFTUtils::cufftErrorToString(result) << "\n";
         }
 
         // Store meta-data in fft_plan
@@ -76,37 +75,7 @@ namespace AnyFFT
         }
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-                cufftErrorToString(result) << "\n";
-        }
-    }
-
-    /** \brief This method converts a cufftResult
-     * into the corresponding string
-     *
-     * @param[in] err a cufftResult
-     * @return an std::string
-     */
-    std::string cufftErrorToString (const cufftResult& err)
-    {
-        const auto res2string = std::map<cufftResult, std::string>{
-            {CUFFT_SUCCESS, "CUFFT_SUCCESS"},
-            {CUFFT_INVALID_PLAN,"CUFFT_INVALID_PLAN"},
-            {CUFFT_ALLOC_FAILED,"CUFFT_ALLOC_FAILED"},
-            {CUFFT_INVALID_TYPE,"CUFFT_INVALID_TYPE"},
-            {CUFFT_INVALID_VALUE,"CUFFT_INVALID_VALUE"},
-            {CUFFT_INTERNAL_ERROR,"CUFFT_INTERNAL_ERROR"},
-            {CUFFT_EXEC_FAILED,"CUFFT_EXEC_FAILED"},
-            {CUFFT_SETUP_FAILED,"CUFFT_SETUP_FAILED"},
-            {CUFFT_INVALID_SIZE,"CUFFT_INVALID_SIZE"},
-            {CUFFT_UNALIGNED_DATA,"CUFFT_UNALIGNED_DATA"}};
-
-        const auto it = res2string.find(err);
-        if(it != res2string.end()){
-            return it->second;
-        }
-        else{
-            return std::to_string(err) +
-                " (unknown error code)";
+                CuFFTUtils::cufftErrorToString(result) << "\n";
         }
     }
 }

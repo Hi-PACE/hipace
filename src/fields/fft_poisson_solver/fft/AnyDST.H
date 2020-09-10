@@ -1,9 +1,3 @@
-/* Copyright 2019-2020
- *
- * This file is part of WarpX.
- *
- * License: BSD-3-Clause-LBNL
- */
 #ifndef ANYDST_H_
 #define ANYDST_H_
 

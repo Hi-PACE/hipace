@@ -3,6 +3,7 @@ if (ENABLE_CUDA)
     PRIVATE
         WrapCuFFT.cpp
         WrapCuDST.cpp
+        CuFFTUtils.cpp
   )
 else()
   target_sources(HiPACE

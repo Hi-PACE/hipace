@@ -1,4 +1,5 @@
 #include "AnyDST.H"
+#include "CuFFTUtils.H"
 #include "HipaceProfilerWrapper.H"
 
 namespace AnyDST
@@ -9,15 +10,12 @@ namespace AnyDST
     cufftType VendorR2C = CUFFT_D2Z;
 #endif
 
-    std::string cufftErrorToString (const cufftResult& err);
-
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
         constexpr int scomp = 0;
         constexpr int dcomp = 0;
 
         const amrex::Box bx = src.box();
-        amrex::Print()<<bx<<"  -- expand \n";
         const int nx = bx.length(0);
         const int ny = bx.length(1);
         amrex::Array4<amrex::Real const> const & src_array = src.array();
@@ -45,7 +43,6 @@ namespace AnyDST
         constexpr int dcomp = 0;
 
         const amrex::Box bx = dst.box();
-        amrex::Print()<<bx<<"  -- shrink \n";
         amrex::Array4<amrex::GpuComplex<amrex::Real> const> const & src_array = src.array();
         amrex::Array4<amrex::Real> const & dst_array = dst.array();
         amrex::ParallelFor(
@@ -68,7 +65,7 @@ namespace AnyDST
         // Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
         // Allocate expanded_fourier_array Complex of size (nx+1, 2*ny+2)
         amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
-        amrex::Box expanded_fourier_box {{0, 0, 0}, {nx, 2*ny+1, 0}};
+        amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
         dst_plan.m_expanded_position_array =std::make_unique<
             amrex::FArrayBox>(expanded_position_box, 1);
         dst_plan.m_expanded_fourier_array = std::make_unique<
@@ -83,7 +80,7 @@ namespace AnyDST
 
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " cufftplan failed! Error: " <<
-                cufftErrorToString(result) << "\n";
+                CuFFTUtils::cufftErrorToString(result) << "\n";
         }
 
         // Store meta-data in dst_plan
@@ -111,48 +108,19 @@ namespace AnyDST
         // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
 #ifdef AMREX_USE_FLOAT
         result = cufftExecR2C(
-            dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(), reinterpret_cast<cuComplex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
+            dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(),
+            reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #else
         result = cufftExecD2Z(
-            dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(), reinterpret_cast<cuDoubleComplex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
+            dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(),
+            reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #endif
-
         // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
         ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
 
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-                cufftErrorToString(result) << "\n";
-        }
-    }
-
-    /** \brief This method converts a cufftResult
-     * into the corresponding string
-     *
-     * @param[in] err a cufftResult
-     * @return an std::string
-     */
-    std::string cufftErrorToString (const cufftResult& err)
-    {
-        const auto res2string = std::map<cufftResult, std::string>{
-            {CUFFT_SUCCESS, "CUFFT_SUCCESS"},
-            {CUFFT_INVALID_PLAN,"CUFFT_INVALID_PLAN"},
-            {CUFFT_ALLOC_FAILED,"CUFFT_ALLOC_FAILED"},
-            {CUFFT_INVALID_TYPE,"CUFFT_INVALID_TYPE"},
-            {CUFFT_INVALID_VALUE,"CUFFT_INVALID_VALUE"},
-            {CUFFT_INTERNAL_ERROR,"CUFFT_INTERNAL_ERROR"},
-            {CUFFT_EXEC_FAILED,"CUFFT_EXEC_FAILED"},
-            {CUFFT_SETUP_FAILED,"CUFFT_SETUP_FAILED"},
-            {CUFFT_INVALID_SIZE,"CUFFT_INVALID_SIZE"},
-            {CUFFT_UNALIGNED_DATA,"CUFFT_UNALIGNED_DATA"}};
-
-        const auto it = res2string.find(err);
-        if(it != res2string.end()){
-            return it->second;
-        }
-        else{
-            return std::to_string(err) +
-                " (unknown error code)";
+                CuFFTUtils::cufftErrorToString(result) << "\n";
         }
     }
 }

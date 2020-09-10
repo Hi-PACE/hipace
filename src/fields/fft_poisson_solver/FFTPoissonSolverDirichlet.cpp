@@ -96,7 +96,6 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
 
         m_backward_plan[mfi] = AnyDST::CreatePlan(
             fft_size, &m_tmpSpectralField[mfi], &m_stagingArea[mfi]);
-        // .dataPtr()
     }
 }
 
