@@ -18,8 +18,10 @@ namespace AnyDST
     {
         DSTplan dst_plan;
 
-        // --- Allocate expanded_array Real of size (2*nx+2, 2*ny+2)
-        amrex::Real* expanded_array = position_array; // THIS IS NOT CORRECT
+        // --- Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
+        // --- Allocate expanded_fourier_array Complex of size (nx+1, 2*ny+2)
+        amrex::Real* expanded_position_array = position_array; // THIS IS NOT CORRECT
+        AnyFFT::Complex* expanded_fourier_array = fourier_array; // THIS IS NOT CORRECT
 
         const amrex::IntVect& expanded_size {2*real_size[1]+2, 2*real_size[0]+2, 1};
 
@@ -35,7 +37,8 @@ namespace AnyDST
 
         // Store meta-data in dst_plan
         dst_plan.m_position_array = position_array;
-        dst_plan.m_expanded_array = expanded_array;
+        dst_plan.m_expanded_position_array = expanded_position_array;
+        dst_plan.m_expanded_fourier_array = expanded_fourier_array;
         dst_plan.m_fourier_array = fourier_array;
 
         return dst_plan;
@@ -49,20 +52,23 @@ namespace AnyDST
     void Execute (DSTplan& dst_plan){
         HIPACE_PROFILE("Execute_DSTplan()");
 
-        ExpandR2R(dst_plan.m_expanded_array, dst_plan.m_position_array);
+        // Expand in position space m_position_array -> m_expanded_position_array
+        ExpandR2R(dst_plan.m_expanded_position_array, dst_plan.m_position_array);
 
-        // make sure that this is done on the same GPU stream as the above copy
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
         cufftSetStream ( dst_plan.m_plan, stream);
         cufftResult result;
+
+        // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
 #ifdef AMREX_USE_FLOAT
         result = cufftExecR2C(
-            dst_plan.m_plan, dst_plan.m_expanded_array, dst_plan.m_complex_array);
+            dst_plan.m_plan, dst_plan.m_expanded_position_array, dst_plan.m_expanded_fourier_array);
 #else
         result = cufftExecD2Z(
-            dst_plan.m_plan, dst_plan.m_expanded_array, dst_plan.m_complex_array);
+            dst_plan.m_plan, dst_plan.m_expanded_position_array, dst_plan.m_expanded_fourier_array);
 #endif
 
-        ShrinkC2R(dst_plan.m_position_array, dst_plan.m_fourier_array);
+        // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
+        ShrinkC2R(dst_plan.m_fourier_array, dst_plan.m_expanded_fourier_array);
     }
 }
