@@ -92,10 +92,11 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
         // the FFT plan, the valid dimensions are those of the real-space box.
         amrex::IntVect fft_size = mfi.validbox().length();
         m_forward_plan[mfi] = AnyDST::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(), m_tmpSpectralField[mfi].dataPtr());
+            fft_size, &m_stagingArea[mfi], &m_tmpSpectralField[mfi]);
 
         m_backward_plan[mfi] = AnyDST::CreatePlan(
-            fft_size, m_tmpSpectralField[mfi].dataPtr(), m_stagingArea[mfi].dataPtr());
+            fft_size, &m_tmpSpectralField[mfi], &m_stagingArea[mfi]);
+        // .dataPtr()
     }
 }
 

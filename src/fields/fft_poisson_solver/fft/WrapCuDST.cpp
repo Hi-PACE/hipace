@@ -13,8 +13,8 @@ namespace AnyDST
         // --- Shrink src to dst
     };
 
-    DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const position_array,
-                        amrex::Real * const fourier_array)
+    DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
+                        amrex::FArrayBox* fourier_array)
     {
         DSTplan dst_plan;
 

@@ -9,6 +9,10 @@
 
 #include "AnyFFT.H"
 
+#include <AMREX_GpuComplex.H>
+
+#include <memory>
+
 /**
  * \brief Wrapper around multiple FFT libraries.
  *
@@ -24,10 +28,10 @@ namespace AnyDST
      */
     struct DSTplan
     {
-        amrex::Real* m_position_array; /**< pointer to array in position space */
-        amrex::Real* m_fourier_array; /**< pointer to array in Fourier space */
-        amrex::Real* m_expanded_position_array = nullptr; /**< Expanded data in position space, only for Cuda */
-        AnyFFT::Complex* m_expanded_fourier_array = nullptr; /**< Expanded data in Fourier, only for Cuda */
+        amrex::FArrayBox* m_position_array; /**< pointer to array in position space */
+        amrex::FArrayBox* m_fourier_array; /**< pointer to array in Fourier space */
+        std::unique_ptr<amrex::FArrayBox> m_expanded_position_array; /**< Expanded data in position space, only for Cuda */
+        std::unique_ptr<amrex::BaseFab<amrex::GpuComplex<amrex::Real>>> m_expanded_fourier_array; /**< Expanded data in Fourier, only for Cuda */
         AnyFFT::VendorFFTPlan m_plan; /**< Vendor FFT plan */
     };
 
@@ -39,8 +43,8 @@ namespace AnyDST
      * \param[out] position_array Real array from/to where R2R DST is performed
      * \param[out] fourier_array Real array to/from where R2R DST is performed
      */
-    DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const position_array,
-                        amrex::Real * const fourier_array);
+    DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
+                        amrex::FArrayBox* fourier_array);
 
     /** \brief Destroy library FFT plan.
      * \param[out] fft_plan plan to destroy
