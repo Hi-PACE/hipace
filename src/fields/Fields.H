@@ -210,7 +210,7 @@ private:
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
-    bool m_do_dirichlet_poisson = false;
+    bool m_do_dirichlet_poisson = true;
 };
 
 #endif

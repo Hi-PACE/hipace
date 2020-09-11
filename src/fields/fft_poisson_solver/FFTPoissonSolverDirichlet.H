@@ -24,8 +24,8 @@ public:
                                 amrex::Geometry const& gm);
 
     /**
-     * \brief Define real space and spectral space boxes and multifabs, multiplier
-     * coefficients inv_k2 to solve Poisson equation and FFT plans.
+     * \brief Define real space and spectral space boxes and multifabs, Dirichlet 
+     * eigenvalue matrix m_eigenvalue_matrix to solve Poisson equation and FFT plans.
      * Currently only works with a single box, i.e., serial FFT.
      *
      * \param[in] realspace_ba BoxArray on which the FFT is executed.

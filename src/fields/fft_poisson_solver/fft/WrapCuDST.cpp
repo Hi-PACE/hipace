@@ -12,8 +12,8 @@ namespace AnyDST
 
     /** \brief Extend src into a symmetrized larger array dst
      *
-     * \param[in,out] dst destination array, symmetric in x and y
-     * \param[in] src destination array
+     * \param[in,out] dst destination array, odd symmetry around 0 and the middle points in x and y
+     * \param[in] src source array
      */
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {

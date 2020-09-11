@@ -46,7 +46,6 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_tmpSpectralField.local_size() == 1,
                                      "There should be only one box locally.");
 
-    // Calculate the array of m_eigenvalue_matrix
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
@@ -59,7 +58,7 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
 
     m_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
 
-// Loop over boxes and calculate inv_k2 in each box
+    // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix); mfi.isValid(); ++mfi ){
         amrex::Array4<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
         amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
@@ -126,7 +125,6 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
-        // const amrex::Real inv_N = 1./mfi.validbox().numPts();
         amrex::ParallelFor( mfi.validbox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field

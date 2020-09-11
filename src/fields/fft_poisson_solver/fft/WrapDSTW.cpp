@@ -26,14 +26,12 @@ namespace AnyDST
         dst_plan.m_position_array = position_array;
         dst_plan.m_fourier_array = fourier_array;
 
-        // The block below is JUST FOR TEST PURPOSES
         amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
         amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
         dst_plan.m_expanded_position_array =std::make_unique<
             amrex::FArrayBox>(expanded_position_box, 1);
         dst_plan.m_expanded_fourier_array = std::make_unique<
             amrex::BaseFab<amrex::GpuComplex<amrex::Real>>>(expanded_fourier_box, 1);
-        // The block above is JUST FOR TEST PURPOSES
 
         return dst_plan;
     }
