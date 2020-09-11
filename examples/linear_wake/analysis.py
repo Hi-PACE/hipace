@@ -16,7 +16,6 @@ import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
-import scipy.constants as scc
 from yt.frontends.boxlib.data_structures import AMReXDataset
 import math
 
@@ -42,9 +41,6 @@ rho_along_z = all_data_level_0['rho'].v.squeeze()[ds.domain_dimensions[0]//2,
 
 jz_along_z = all_data_level_0['jz'].v.squeeze()[ds.domain_dimensions[0]//2,
     ds.domain_dimensions[1]//2, :]
-
-z = np.linspace(ds.domain_left_edge[2].v, ds.domain_right_edge[2].v, nz)
-
 
 zeta_array = np.linspace(ds.domain_left_edge[2].v, ds.domain_right_edge[2].v, nz) #np.linspace(-7.5,2.5, 401)
 dzeta = zeta_array[1]-zeta_array[0]
@@ -73,8 +69,8 @@ for i in np.arange(nz-1,-1,-1):
 
 if args.do_plot:
     fig, ax = plt.subplots()
-    ax.plot(z, rho_along_z)
-    ax.plot(z, n_th, linestyle='--')
+    ax.plot(zeta_array, rho_along_z)
+    ax.plot(zeta_array, n_th, linestyle='--')
     ax.set_xlabel('kp x')
     ax.set_ylabel('rho')
     plt.savefig('rho_z.png')
