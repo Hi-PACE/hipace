@@ -27,6 +27,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
  * \param[in] lev MR level
  */
 void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev=0);
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev=0, const bool initial=false);
 
 #endif //  PLASMAPARTICLEADVANCE_H_

@@ -169,6 +169,8 @@ InitParticles (const IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::Fpsi3    ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fpsi4    ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fpsi5    ][pidx] = 0.;
+                arrdata[PlasmaIdx::x0       ][pidx] = x;
+                arrdata[PlasmaIdx::y0       ][pidx] = y;
                 ++pidx;
             }
         });
