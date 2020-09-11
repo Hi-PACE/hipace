@@ -57,7 +57,7 @@ public:
                     const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
-    FFTPoissonSolver m_poisson_solver;
+    std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
     /** get function for the main 3D array F */
     amrex::Vector<amrex::MultiFab>& getF () { return m_F; }
     /** get function for the main 3D array F
@@ -209,6 +209,8 @@ private:
     amrex::IntVect m_nguards {-1, -1, -1};
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards {-1, -1, -1};
+    /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
+    bool m_do_dirichlet_poisson = true;
 };
 
 #endif

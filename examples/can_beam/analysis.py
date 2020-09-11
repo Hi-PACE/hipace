@@ -5,6 +5,8 @@
 # usage: ./analysis.py
 
 import yt ; yt.funcs.mylog.setLevel(50)
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from yt.frontends.boxlib.data_structures import AMReXDataset
 
