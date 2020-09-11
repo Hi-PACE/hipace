@@ -32,17 +32,14 @@ args = parser.parse_args()
 ds = AMReXDataset('plt00001')
 
 nz = ds.domain_dimensions[2]
-# Load Hipace data for By
+# Load Hipace data for rho
 all_data_level_0 = ds.covering_grid(level=0, left_edge=ds.domain_left_edge,
     dims=ds.domain_dimensions)
 
 rho_along_z = all_data_level_0['rho'].v.squeeze()[ds.domain_dimensions[0]//2,
     ds.domain_dimensions[1]//2, :]
 
-jz_along_z = all_data_level_0['jz'].v.squeeze()[ds.domain_dimensions[0]//2,
-    ds.domain_dimensions[1]//2, :]
-
-zeta_array = np.linspace(ds.domain_left_edge[2].v, ds.domain_right_edge[2].v, nz) #np.linspace(-7.5,2.5, 401)
+zeta_array = np.linspace(ds.domain_left_edge[2].v, ds.domain_right_edge[2].v, nz)
 dzeta = zeta_array[1]-zeta_array[0]
 
 # generating the array with the beam density
