@@ -24,7 +24,7 @@ public:
                                 amrex::Geometry const& gm);
 
     /**
-     * \brief Define real space and spectral space boxes and multifabs, Dirichlet 
+     * \brief Define real space and spectral space boxes and multifabs, Dirichlet
      * eigenvalue matrix m_eigenvalue_matrix to solve Poisson equation and FFT plans.
      * Currently only works with a single box, i.e., serial FFT.
      *
