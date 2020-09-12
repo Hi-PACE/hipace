@@ -269,6 +269,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
     m_poisson_solver->StagingArea().mult(-1./phys_const.c);
     amrex::MultiFab::Add(m_poisson_solver->StagingArea(), getSlices(lev, WhichSlice::This),
                           FieldComps::rho, 0, 1, 0);
+    m_poisson_solver->StagingArea().mult(1./phys_const.ep0);
 
 
     m_poisson_solver->SolvePoissonEquation(lhs);

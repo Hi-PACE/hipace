@@ -29,7 +29,7 @@ parser.add_argument('--normalized_units',
 parser.add_argument('--do_plot',
                     dest='do_plot',
                     action='store_true',
-                    default=False,
+                    default=True,
                     help='Plot figures and save them to file')
 
 args = parser.parse_args()
@@ -37,8 +37,10 @@ args = parser.parse_args()
 ds = AMReXDataset('plt00001')
 
 if args.norm_units:
+    c = 1.
     jz0 = 1.
     mu_0 = 1.
+    eps_0 = 1.
     R = 1.
 else:
 
@@ -46,27 +48,45 @@ else:
     dens = 2.8239587008591567e23 # at this density, 1/kp = 10um, allowing for an easy comparison with normalized units
     # Define array for transverse coordinate and theory for By and Bx
     jz0 = - scc.e * scc.c * dens
+    rho0 = - scc.e * dens
+    c = scc.c
     mu_0 = scc.mu_0
+    eps_0 = scc.epsilon_0
     # Radius of the can beam
     R = 10.e-6
 
 x = np.linspace(ds.domain_left_edge[0].v, ds.domain_right_edge[0].v, ds.domain_dimensions[0])
 By_th = mu_0 * jz0 * x / 2.
 By_th[abs(x)>=R] = mu_0 * jz0 * R**2/(2*x[abs(x)>R])
+Ex_th = rho0 / eps_0 * x / 2.
+Ex_th[abs(x)>=R] = rho0 / eps_0 * R**2/(2*x[abs(x)>R])
+Ex_th -= c*By_th
 
 y = np.linspace(ds.domain_left_edge[1].v, ds.domain_right_edge[1].v, ds.domain_dimensions[1])
 Bx_th = -mu_0 * jz0 * y / 2.
 Bx_th[abs(y)>=R] = -mu_0 * jz0 * R**2/(2*y[abs(y)>R])
+Ey_th = rho0 / eps_0 * y / 2.
+Ey_th[abs(y)>=R] = rho0 / eps_0 * R**2/(2*y[abs(y)>R])
+Ey_th += c*Bx_th
 
 jz_th = np.ones_like(x) * jz0
 jz_th[abs(x)>=R] = 0.
+rho_th = np.ones_like(x) * rho0
+rho_th[abs(x)>=R] = 0.
 
 # Load Hipace data for By in SI units
 all_data_level_0 = ds.covering_grid(level=0, left_edge=ds.domain_left_edge,
     dims=ds.domain_dimensions)
-Bx_sim = all_data_level_0['Bx'].v.squeeze()[ds.domain_dimensions[1]//2,:,ds.domain_dimensions[2]//2]
+Bx_sim = all_data_level_0['Bx'].v.squeeze()[ds.domain_dimensions[0]//2,:,ds.domain_dimensions[2]//2]
 By_sim = all_data_level_0['By'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
 jz_sim = all_data_level_0['jz'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
+rho_sim = all_data_level_0['rho'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
+
+Ex_sim = all_data_level_0['ExmBy'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
+Ey_sim = all_data_level_0['EypBx'].v.squeeze()[ds.domain_dimensions[0]//2,:,ds.domain_dimensions[2]//2]
+
+print(np.max(Ex_sim))
+print(np.max(Ex_th))
 
 # Plot simulation result and theory
 if args.do_plot:
@@ -75,8 +95,8 @@ if args.do_plot:
 
     if not args.norm_units:
         plt.subplot(131)
-        plt.plot(1.e6*y, Bx_sim, '+-', label='hipace++')
-        plt.plot(1.e6*y, Bx_th, 'k--', label='theory')
+        plt.plot(1.e6*x, Ex_sim, '+-', label='hipace++')
+        plt.plot(1.e6*x, Ex_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
         plt.xlim(-50., 50.)
@@ -84,8 +104,8 @@ if args.do_plot:
         plt.ylabel('Bx (T)')
 
         plt.subplot(132)
-        plt.plot(1.e6*x, By_sim, '+-', label='hipace++')
-        plt.plot(1.e6*x, By_th, 'k--', label='theory')
+        plt.plot(1.e6*y, Ey_sim, '+-', label='hipace++')
+        plt.plot(1.e6*y, Ey_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
         plt.xlim(-50., 50.)
@@ -137,6 +157,11 @@ error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
 print("total relative error jz: " + str(error_jz) + " (tolerance = 0.1)")
 assert(error_jz < .1)
 
+# Assert that the simulation result is close enough to theory
+error_rho = np.sum((rho_sim-rho_th)**2) / np.sum((rho_th)**2)
+print("total relative error rho: " + str(error_rho) + " (tolerance = 0.1)")
+assert(error_rho < .1)
+
 error_Bx = np.sum((Bx_sim-Bx_th)**2) / np.sum((Bx_th)**2)
 print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.02)")
 assert(error_Bx < .02)
@@ -144,3 +169,7 @@ assert(error_Bx < .02)
 error_By = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
 print("total relative error By: " + str(error_By) + " (tolerance = 0.02)")
 assert(error_By < .02)
+
+error_Ex = np.sum((Ex_sim-Ex_th)**2) / np.sum((Ex_th)**2)
+print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.02)")
+assert(error_Ex < .02)
