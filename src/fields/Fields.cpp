@@ -271,7 +271,6 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
                           FieldComps::rho, 0, 1, 0);
     m_poisson_solver->StagingArea().mult(1./phys_const.ep0);
 
-
     m_poisson_solver->SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */

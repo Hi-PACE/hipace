@@ -60,14 +60,12 @@ By_th = mu_0 * jz0 * x / 2.
 By_th[abs(x)>=R] = mu_0 * jz0 * R**2/(2*x[abs(x)>R])
 Ex_th = rho0 / eps_0 * x / 2.
 Ex_th[abs(x)>=R] = rho0 / eps_0 * R**2/(2*x[abs(x)>R])
-Ex_th -= c*By_th
 
 y = np.linspace(ds.domain_left_edge[1].v, ds.domain_right_edge[1].v, ds.domain_dimensions[1])
 Bx_th = -mu_0 * jz0 * y / 2.
 Bx_th[abs(y)>=R] = -mu_0 * jz0 * R**2/(2*y[abs(y)>R])
 Ey_th = rho0 / eps_0 * y / 2.
 Ey_th[abs(y)>=R] = rho0 / eps_0 * R**2/(2*y[abs(y)>R])
-Ey_th += c*Bx_th
 
 jz_th = np.ones_like(x) * jz0
 jz_th[abs(x)>=R] = 0.
@@ -82,11 +80,8 @@ By_sim = all_data_level_0['By'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.doma
 jz_sim = all_data_level_0['jz'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
 rho_sim = all_data_level_0['rho'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
 
-Ex_sim = all_data_level_0['ExmBy'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
-Ey_sim = all_data_level_0['EypBx'].v.squeeze()[ds.domain_dimensions[0]//2,:,ds.domain_dimensions[2]//2]
-
-print(np.max(Ex_sim))
-print(np.max(Ex_th))
+Ex_sim = all_data_level_0['ExmBy'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2] + c*By_sim
+Ey_sim = all_data_level_0['EypBx'].v.squeeze()[ds.domain_dimensions[0]//2,:,ds.domain_dimensions[2]//2] - c*Bx_sim
 
 # Plot simulation result and theory
 if args.do_plot:
@@ -95,8 +90,8 @@ if args.do_plot:
 
     if not args.norm_units:
         plt.subplot(131)
-        plt.plot(1.e6*x, Ex_sim, '+-', label='hipace++')
-        plt.plot(1.e6*x, Ex_th, 'k--', label='theory')
+        plt.plot(1.e6*y, Bx_sim, '+-', label='hipace++')
+        plt.plot(1.e6*y, Bx_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
         plt.xlim(-50., 50.)
@@ -104,8 +99,8 @@ if args.do_plot:
         plt.ylabel('Bx (T)')
 
         plt.subplot(132)
-        plt.plot(1.e6*y, Ey_sim, '+-', label='hipace++')
-        plt.plot(1.e6*y, Ey_th, 'k--', label='theory')
+        plt.plot(1.e6*x, By_sim, '+-', label='hipace++')
+        plt.plot(1.e6*x, By_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
         plt.xlim(-50., 50.)
@@ -173,3 +168,7 @@ assert(error_By < .02)
 error_Ex = np.sum((Ex_sim-Ex_th)**2) / np.sum((Ex_th)**2)
 print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.02)")
 assert(error_Ex < .02)
+
+error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
+print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.02)")
+assert(error_Ey < .02)
