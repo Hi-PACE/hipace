@@ -29,7 +29,7 @@ parser.add_argument('--normalized_units',
 parser.add_argument('--do_plot',
                     dest='do_plot',
                     action='store_true',
-                    default=True,
+                    default=False,
                     help='Plot figures and save them to file')
 
 args = parser.parse_args()
