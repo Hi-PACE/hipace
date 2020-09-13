@@ -150,25 +150,26 @@ if args.do_plot:
 # Assert that the simulation result is close enough to theory
 error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
 print("total relative error jz: " + str(error_jz) + " (tolerance = 0.1)")
-assert(error_jz < .1)
 
 # Assert that the simulation result is close enough to theory
 error_rho = np.sum((rho_sim-rho_th)**2) / np.sum((rho_th)**2)
 print("total relative error rho: " + str(error_rho) + " (tolerance = 0.1)")
-assert(error_rho < .1)
 
 error_Bx = np.sum((Bx_sim-Bx_th)**2) / np.sum((Bx_th)**2)
-print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.02)")
-assert(error_Bx < .02)
+print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.002)")
 
 error_By = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
-print("total relative error By: " + str(error_By) + " (tolerance = 0.02)")
-assert(error_By < .02)
+print("total relative error By: " + str(error_By) + " (tolerance = 0.01)")
 
 error_Ex = np.sum((Ex_sim-Ex_th)**2) / np.sum((Ex_th)**2)
-print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.02)")
-assert(error_Ex < .02)
+print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.01)")
 
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
-print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.02)")
-assert(error_Ey < .02)
+print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.002)")
+
+assert(error_jz < .1)
+assert(error_rho < .1)
+assert(error_Bx < .002)
+assert(error_By < .01)
+assert(error_Ex < .01)
+assert(error_Ey < .002)
