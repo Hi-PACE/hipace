@@ -21,12 +21,12 @@ hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     0      # Is periodic?
-geometry.prob_lo     = -100.   -100.   -75.    # physical domain
-geometry.prob_hi     =  100.    100.    20.
+geometry.prob_lo     = -100.e-6   -100.e-6   -75.e-6    # physical domain
+geometry.prob_hi     =  100.e-6    100.e-6    20.e-6
 
-beam.zmin = -10.
-beam.zmax = 10.
-beam.radius = 30.
+beam.zmin = -10.e-6
+beam.zmax = 10.e-6
+beam.radius = 30.e-6
 beam.density = 2.8239587008591567e21
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
