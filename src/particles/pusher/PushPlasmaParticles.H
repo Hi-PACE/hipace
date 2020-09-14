@@ -105,7 +105,6 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
 
     if (!temp_slice)
     {
-        amrex::Real my;
         xp -= a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
             + a4_times_dz * Fx4 + a5_times_dz * Fx5;
         yp -= a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
