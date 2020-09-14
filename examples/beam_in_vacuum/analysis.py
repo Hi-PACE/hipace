@@ -21,6 +21,7 @@ import numpy as np
 import scipy.constants as scc
 from yt.frontends.boxlib.data_structures import AMReXDataset
 import argparse
+import sys
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',
@@ -35,6 +36,16 @@ parser.add_argument('--do-plot',
                     help='Plot figures and save them to file')
 
 args = parser.parse_args()
+
+
+err_message = "Assertion error!\n"
+def assert_exit(condition, err_message):
+    try:
+        assert condition
+    except AssertionError:
+        sys.exit(err_message)
+
+
 
 ds = AMReXDataset('plt00001')
 
@@ -170,9 +181,9 @@ print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.01)")
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
 print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.002)")
 
-assert(error_jz < .1)
-assert(error_rho < .1)
-assert(error_Bx < .002)
-assert(error_By < .01)
-assert(error_Ex < .01)
-assert(error_Ey < .002)
+assert_exit((error_jz < .1), err_message)
+assert_exit((error_rho < .1), err_message)
+assert_exit((error_Bx < .002), err_message)
+assert_exit((error_By < .01), err_message)
+assert_exit((error_Ex < .01), err_message)
+assert_exit((error_Ey < .002), err_message)
