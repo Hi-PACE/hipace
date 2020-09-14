@@ -1,4 +1,4 @@
-amr.n_cell = 1024 1024 2
+amr.n_cell = 1024 1536 2
 
 hipace.normalized_units=1
 
