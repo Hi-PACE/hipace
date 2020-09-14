@@ -1,26 +1,26 @@
 {
   "beam": {
     "particle_cpu": 0.0,
-    "particle_id": 220780.0,
-    "particle_position_x": 283.984375,
-    "particle_position_y": 283.984375,
-    "particle_position_z": 664.0,
+    "particle_id": 484620.0,
+    "particle_position_x": 419.921875,
+    "particle_position_y": 415.8854166666712,
+    "particle_position_z": 984.0,
     "particle_ux": 0.0,
     "particle_uy": 0.0,
-    "particle_uz": 664000.0,
-    "particle_w": 41.5
+    "particle_uz": 984000.0,
+    "particle_w": 61.5
   },
   "lev=0": {
-    "Bx": 880.267127608005,
-    "By": 880.267127608005,
+    "Bx": 1304.3625460771939,
+    "By": 1304.3718388982188,
     "Bz": 0.0,
-    "ExmBy": 0.0027920074293327694,
-    "EypBx": 0.0027920074293327694,
+    "ExmBy": 0.004136565465412,
+    "EypBx": 0.004139574999814721,
     "Ez": 0.0,
-    "Psi": 0.2450636722930077,
+    "Psi": 0.36304870502054376,
     "jx": 0.0,
     "jy": 0.0,
-    "jz": 41.499979250015556,
-    "rho": 41.5
+    "jz": 61.49996925002306,
+    "rho": 61.5
   }
 }
