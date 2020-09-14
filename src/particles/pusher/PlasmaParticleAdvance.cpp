@@ -139,7 +139,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                    exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                    dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
                     // update force terms for a single particle
-                    std::cout<<"c "<<phys_const.c<<'\n';
                     const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
                     UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
                                      Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],

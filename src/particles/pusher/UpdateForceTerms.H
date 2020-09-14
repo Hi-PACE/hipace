@@ -47,12 +47,6 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
                                        + (psip+1.0_rt)*(psip+1.0_rt))/(2.0_rt * (psip + 1.0_rt) );
 
     const amrex::Real charge_mass_ratio = -1.0_rt;
-
-/*
-    if (ExmByp>0){
-        std::cout<<"psip "<<psip<<" uxp/c "<<uxp/phys_const.c<<" uyp/c "<<uyp/phys_const.c<<" ExmByp "<<ExmByp<<" EypBxp "<<EypBxp<<" Ezp "<<Ezp<<" Bxp "<<Bxp<<" Byp "<<Byp<<" Bzp "<<Bzp<<'\n';
-    }
-*/
     
     /* Change for x-position along zeta */
     Fx1 = -uxp / (psip + 1.0_rt) / phys_const.c;
@@ -67,11 +61,6 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
     /* Change for psi along zeta */
     Fpsi1 = -charge_mass_ratio * (1. / phys_const.c * ( uxp * ExmByp + uyp * EypBxp ) / (psip + 1.0_rt) - Ezp );
 
-/*
-    if (ExmByp>0){
-        std::cout<<"Fx1 "<<Fx1<<" Fy1 "<<Fy1<<" Fux1 "<<Fux1<<" Fuy1 "<<Fuy1<<" Fpsi1 "<<Fpsi1<<'\n';
-    }
-*/
 }
 
 /** \brief Shifting the force term coefficients
