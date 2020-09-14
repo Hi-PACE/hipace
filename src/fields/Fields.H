@@ -79,6 +79,11 @@ public:
      * \param[in] sl slice type (WhichSlice::Next, This, Previous1, Previous2 )
      */
     amrex::MultiFab& getSlices (int lev, WhichSlice sl) {return m_slices[lev][(int) sl]; }
+    /** get function for the 2D slices
+     * \param[in] lev MR level
+     * \param[in] islice slice index
+     */
+    amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
 
     /** Copy between the full MultiFab and slice MultiFab */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
