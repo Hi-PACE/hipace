@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # This Python analysis script is part of the code Hipace
 #
@@ -19,6 +19,7 @@ import numpy as np
 import scipy.constants as scc
 from yt.frontends.boxlib.data_structures import AMReXDataset
 import argparse
+import sys
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',
@@ -34,12 +35,17 @@ parser.add_argument('--do-plot',
 
 args = parser.parse_args()
 
+
+def assert_exit(condition):
+    if not condition:
+        sys.exit(1)
+
 ds = AMReXDataset('plt00001')
 
 if args.norm_units:
     c = 1.
-    jz0 = 1.
-    rho0 = 1.
+    jz0 = -1.
+    rho0 = -1.
     mu_0 = 1.
     eps_0 = 1.
     R = 1.
@@ -168,9 +174,9 @@ print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.01)")
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
 print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.002)")
 
-assert(error_jz < .1)
-assert(error_rho < .1)
-assert(error_Bx < .002)
-assert(error_By < .01)
-assert(error_Ex < .01)
-assert(error_Ey < .002)
+assert_exit(error_jz < .1)
+assert_exit(error_rho < .1)
+assert_exit(error_Bx < .002)
+assert_exit(error_By < .01)
+assert_exit(error_Ex < .01)
+assert_exit(error_Ey < .002)
