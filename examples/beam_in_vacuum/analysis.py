@@ -44,8 +44,8 @@ ds = AMReXDataset('plt00001')
 
 if args.norm_units:
     c = 1.
-    jz0 = 1.
-    rho0 = 1.
+    jz0 = -1.
+    rho0 = -1.
     mu_0 = 1.
     eps_0 = 1.
     R = 1.
