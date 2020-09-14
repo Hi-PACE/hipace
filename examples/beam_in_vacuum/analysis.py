@@ -37,9 +37,7 @@ args = parser.parse_args()
 
 
 def assert_exit(condition):
-    try:
-        assert(condition)
-    except AssertionError:
+    if not condition:
         sys.exit(1)
 
 ds = AMReXDataset('plt00001')
