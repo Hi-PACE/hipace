@@ -21,12 +21,12 @@ from yt.frontends.boxlib.data_structures import AMReXDataset
 import argparse
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
-parser.add_argument('--normalized_units',
+parser.add_argument('--normalized-units',
                     dest='norm_units',
                     action='store_true',
                     default=False,
                     help='Run the analysis in normalized units')
-parser.add_argument('--do_plot',
+parser.add_argument('--do-plot',
                     dest='do_plot',
                     action='store_true',
                     default=False,

@@ -203,8 +203,13 @@ Hipace::Evolve ()
 
         amrex::Print()<<"step "<< step <<"\n";
 
+        ResetPlasmaParticles(m_plasma_container, lev, true);
+
         /* ---------- Depose current from beam particles ---------- */
         amrex::MultiFab& fields = m_fields.getF(lev);
+        for (int islice=0; islice<(int) WhichSlice::N; islice++) {
+            m_fields.getSlices(lev, islice).setVal(0.);
+        }
 
         if (!m_slice_deposition){
             fields.setVal(0.);
@@ -405,7 +410,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     } /* end of predictor corrector loop */
 
     /* resetting the particle position after they have been pushed to the next slice */
-    ResetPlasmaParticles (m_plasma_container, lev);
+    ResetPlasmaParticles(m_plasma_container, lev);
 
     if (relative_Bfield_error > 10.)
     {
@@ -569,6 +574,7 @@ Hipace::WriteDiagnostics (int step)
             "Fux1", "Fux2", "Fux3", "Fux4", "Fux5",
             "Fuy1", "Fuy2", "Fuy3", "Fuy4", "Fuy5",
             "Fpsi1", "Fpsi2", "Fpsi3", "Fpsi4", "Fpsi5",
+            "x0", "y0"
         };
         AMREX_ALWAYS_ASSERT(real_names.size() == PlasmaIdx::nattribs);
         amrex::Vector<std::string> int_names {};

@@ -163,15 +163,51 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
 }
 
 void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool initial)
 {
     HIPACE_PROFILE("ResetPlasmaParticles()");
+
+    using namespace amrex::literals;
+
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
+        amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
+        amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
+        amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
+        amrex::Real * const uy_temp = soa.GetRealData(PlasmaIdx::uy_temp).data();
+        amrex::Real * const psi_temp = soa.GetRealData(PlasmaIdx::psi_temp).data();
+        amrex::Real * const Fx1 = soa.GetRealData(PlasmaIdx::Fx1).data();
+        amrex::Real * const Fy1 = soa.GetRealData(PlasmaIdx::Fy1).data();
+        amrex::Real * const Fux1 = soa.GetRealData(PlasmaIdx::Fux1).data();
+        amrex::Real * const Fuy1 = soa.GetRealData(PlasmaIdx::Fuy1).data();
+        amrex::Real * const Fpsi1 = soa.GetRealData(PlasmaIdx::Fpsi1).data();
+        amrex::Real * const Fx2 = soa.GetRealData(PlasmaIdx::Fx2).data();
+        amrex::Real * const Fy2 = soa.GetRealData(PlasmaIdx::Fy2).data();
+        amrex::Real * const Fux2 = soa.GetRealData(PlasmaIdx::Fux2).data();
+        amrex::Real * const Fuy2 = soa.GetRealData(PlasmaIdx::Fuy2).data();
+        amrex::Real * const Fpsi2 = soa.GetRealData(PlasmaIdx::Fpsi2).data();
+        amrex::Real * const Fx3 = soa.GetRealData(PlasmaIdx::Fx3).data();
+        amrex::Real * const Fy3 = soa.GetRealData(PlasmaIdx::Fy3).data();
+        amrex::Real * const Fux3 = soa.GetRealData(PlasmaIdx::Fux3).data();
+        amrex::Real * const Fuy3 = soa.GetRealData(PlasmaIdx::Fuy3).data();
+        amrex::Real * const Fpsi3 = soa.GetRealData(PlasmaIdx::Fpsi3).data();
+        amrex::Real * const Fx4 = soa.GetRealData(PlasmaIdx::Fx4).data();
+        amrex::Real * const Fy4 = soa.GetRealData(PlasmaIdx::Fy4).data();
+        amrex::Real * const Fux4 = soa.GetRealData(PlasmaIdx::Fux4).data();
+        amrex::Real * const Fuy4 = soa.GetRealData(PlasmaIdx::Fuy4).data();
+        amrex::Real * const Fpsi4 = soa.GetRealData(PlasmaIdx::Fpsi4).data();
+        amrex::Real * const Fx5 = soa.GetRealData(PlasmaIdx::Fx5).data();
+        amrex::Real * const Fy5 = soa.GetRealData(PlasmaIdx::Fy5).data();
+        amrex::Real * const Fux5 = soa.GetRealData(PlasmaIdx::Fux5).data();
+        amrex::Real * const Fuy5 = soa.GetRealData(PlasmaIdx::Fuy5).data();
+        amrex::Real * const Fpsi5 = soa.GetRealData(PlasmaIdx::Fpsi5).data();
+        amrex::Real * const x0 = soa.GetRealData(PlasmaIdx::x0).data();
+        amrex::Real * const y0 = soa.GetRealData(PlasmaIdx::y0).data();
 
         const auto GetPosition = GetParticlePosition(pti);
         const auto SetPosition = SetParticlePosition(pti);
@@ -181,8 +217,44 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
 
                 amrex::ParticleReal xp, yp, zp;
                 GetPosition(ip, xp, yp, zp);
-                SetPosition(ip, x_prev[ip], y_prev[ip], zp);
-
+                if (initial == false){
+                    SetPosition(ip, x_prev[ip], y_prev[ip], zp);
+                } else {
+                    SetPosition(ip, x0[ip], y0[ip], zp);
+                    uxp[ip] = 0._rt;
+                    uyp[ip] = 0._rt;
+                    psip[ip] = 0._rt;
+                    x_prev[ip] = 0._rt;
+                    y_prev[ip] = 0._rt;
+                    ux_temp[ip] = 0._rt;
+                    uy_temp[ip] = 0._rt;
+                    psi_temp[ip] = 0._rt;
+                    Fx1[ip] = 0._rt;
+                    Fy1[ip] = 0._rt;
+                    Fux1[ip] = 0._rt;
+                    Fuy1[ip] = 0._rt;
+                    Fpsi1[ip] = 0._rt;
+                    Fx2[ip] = 0._rt;
+                    Fy2[ip] = 0._rt;
+                    Fux2[ip] = 0._rt;
+                    Fuy2[ip] = 0._rt;
+                    Fpsi2[ip] = 0._rt;
+                    Fx3[ip] = 0._rt;
+                    Fy3[ip] = 0._rt;
+                    Fux3[ip] = 0._rt;
+                    Fuy3[ip] = 0._rt;
+                    Fpsi3[ip] = 0._rt;
+                    Fx4[ip] = 0._rt;
+                    Fy4[ip] = 0._rt;
+                    Fux4[ip] = 0._rt;
+                    Fuy4[ip] = 0._rt;
+                    Fpsi4[ip] = 0._rt;
+                    Fx5[ip] = 0._rt;
+                    Fy5[ip] = 0._rt;
+                    Fux5[ip] = 0._rt;
+                    Fuy5[ip] = 0._rt;
+                    Fpsi5[ip] = 0._rt;
+                }
         }
         );
     }
