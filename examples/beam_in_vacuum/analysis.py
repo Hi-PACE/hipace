@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # This Python analysis script is part of the code Hipace
 #
@@ -11,8 +11,6 @@
 # > python analysis.py
 # Note: the simulation may take some time, as the box size must be high to have
 # decent agreement
-
-print("This script is actually executed!")
 
 import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
