@@ -1,5 +1,5 @@
 #! /usr/bin/env sh
-
+set -e
 # This file is part of the Hipace test suite.
 # It runs a Hipace simulation for a can beam in vacuum, and compares the result
 # of the simulation to theory.

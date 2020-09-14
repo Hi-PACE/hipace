@@ -42,8 +42,6 @@ def assert_exit(condition):
     except AssertionError:
         sys.exit(1)
 
-
-
 ds = AMReXDataset('plt00001')
 
 if args.norm_units:
