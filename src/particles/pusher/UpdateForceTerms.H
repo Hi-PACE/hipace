@@ -20,6 +20,7 @@
  * \param[in,out] Fuy1 force term acting on y momentum of the particle
  * \param[in,out] Fpsi1 force term acting on the plasma pseudo-potential of the particle
  * \param[in] clightsq 1/c0^2
+ * \param[in] phys_const struct with all physical constant, depending on units system
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void UpdateForceTerms(const amrex::ParticleReal& uxp,

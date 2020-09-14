@@ -15,7 +15,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
 
 # Compare the result with theory
-python3 $HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
+$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
