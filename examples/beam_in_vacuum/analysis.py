@@ -38,12 +38,11 @@ parser.add_argument('--do-plot',
 args = parser.parse_args()
 
 
-err_message = "Assertion error!\n"
-def assert_exit(condition, err_message):
+def assert_exit(condition):
     try:
-        assert condition
+        assert(condition)
     except AssertionError:
-        sys.exit(err_message)
+        sys.exit(1)
 
 
 
@@ -181,9 +180,9 @@ print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.01)")
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
 print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.002)")
 
-assert_exit((error_jz < .1), err_message)
-assert_exit((error_rho < .1), err_message)
-assert_exit((error_Bx < .002), err_message)
-assert_exit((error_By < .01), err_message)
-assert_exit((error_Ex < .01), err_message)
-assert_exit((error_Ey < .002), err_message)
+assert_exit(error_jz < .1)
+assert_exit(error_rho < .1)
+assert_exit(error_Bx < .002)
+assert_exit(error_By < .01)
+assert_exit(error_Ex < .01)
+assert_exit(error_Ey < .002)
