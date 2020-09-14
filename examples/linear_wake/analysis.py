@@ -47,9 +47,11 @@ ds = AMReXDataset('plt00001')
 if args.norm_units:
     kp = 1.
     ne = 1.
+    q_e = 1.
 else:
     kp = 1./10.e-6
     ne = scc.c**2 / scc.e**2 * scc.m_e * scc.epsilon_0 * kp**2
+    q_e = scc.e
 
 nz = ds.domain_dimensions[2]
 # Load Hipace data for rho
@@ -83,7 +85,7 @@ for i in np.arange(nz-1,-1,-1):
     for j in range(nz-i):
         tmp += 1./kp*math.sin(kp*dzeta*(i-(nz-1-j)))*nb_dzdz[nz-1-j]
     n_th[i] = tmp*dzeta + nb_array[i]
-rho_th = n_th * scc.e
+rho_th = n_th * 1_e
 
 if args.do_plot:
     fig, ax = plt.subplots()
