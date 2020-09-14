@@ -20,6 +20,7 @@
  * \param[in,out] Fuy1 force term acting on y momentum of the particle
  * \param[in,out] Fpsi1 force term acting on the plasma pseudo-potential of the particle
  * \param[in] clightsq 1/c0^2
+ * \param[in] phys_const struct with all physical constant, depending on units system
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void UpdateForceTerms(const amrex::ParticleReal& uxp,
@@ -36,7 +37,8 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
                       amrex::ParticleReal& Fux1,
                       amrex::ParticleReal& Fuy1,
                       amrex::ParticleReal& Fpsi1,
-                      const amrex::Real clightsq)
+                      const amrex::Real clightsq,
+                      const PhysConst& phys_const)
 
 {
     using namespace amrex::literals;
@@ -46,19 +48,19 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
                                        + (psip+1.0_rt)*(psip+1.0_rt))/(2.0_rt * (psip + 1.0_rt) );
 
     const amrex::Real charge_mass_ratio = -1.0_rt;
-
     /* Change for x-position along zeta */
-    Fx1 = -uxp / (psip + 1.0_rt);
+    Fx1 = -uxp / (psip + 1.0_rt) / phys_const.c;
     /* Change for y-position along zeta */
-    Fy1 = -uyp / (psip + 1.0_rt);
+    Fy1 = -uyp / (psip + 1.0_rt) / phys_const.c;
     /* Change for ux along zeta */
-    Fux1 = -charge_mass_ratio * ( gammap * ExmByp / (psip + 1.0_rt) + Byp + ( uyp * Bzp )
+    Fux1 = - phys_const.q_e / phys_const.c / phys_const.m_e * charge_mass_ratio * ( gammap * ExmByp / (psip + 1.0_rt) + phys_const.c * Byp + ( uyp * Bzp )
             / (psip + 1.0_rt) );
     /* Change for uy along zeta */
-    Fuy1 = -charge_mass_ratio * ( gammap * EypBxp / (psip + 1.0_rt) - Bxp - ( uxp * Bzp )
+    Fuy1 = -phys_const.q_e / phys_const.c / phys_const.m_e * charge_mass_ratio * ( gammap * EypBxp / (psip + 1.0_rt) - phys_const.c * Bxp - ( uxp * Bzp )
             / (psip + 1.0_rt) );
     /* Change for psi along zeta */
-    Fpsi1 = -charge_mass_ratio * (( uxp * ExmByp + uyp * EypBxp ) / (psip + 1.0_rt) - Ezp );
+    Fpsi1 = -charge_mass_ratio * (1. / phys_const.c * ( uxp * ExmByp + uyp * EypBxp ) / (psip + 1.0_rt) - Ezp );
+
 }
 
 /** \brief Shifting the force term coefficients

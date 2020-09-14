@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # This Python analysis script is part of the code Hipace
 #
@@ -14,15 +14,28 @@
 
 import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
+import scipy.constants as scc
 import matplotlib
+import sys
 import numpy as np
 from yt.frontends.boxlib.data_structures import AMReXDataset
 import math
 
 import argparse
 
+def assert_exit(condition):
+    try:
+        assert(condition)
+    except AssertionError:
+        sys.exit(1)
+
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
-parser.add_argument('--do_plot',
+parser.add_argument('--normalized-units',
+                    dest='norm_units',
+                    action='store_true',
+                    default=False,
+                    help='Run the analysis in normalized units')
+parser.add_argument('--do-plot',
                     dest='do_plot',
                     action='store_true',
                     default=False,
@@ -30,6 +43,15 @@ parser.add_argument('--do_plot',
 args = parser.parse_args()
 
 ds = AMReXDataset('plt00001')
+
+if args.norm_units:
+    kp = 1.
+    ne = 1.
+    q_e = 1.
+else:
+    kp = 1./10.e-6
+    ne = scc.c**2 / scc.e**2 * scc.m_e * scc.epsilon_0 * kp**2
+    q_e = scc.e
 
 nz = ds.domain_dimensions[2]
 # Load Hipace data for rho
@@ -44,12 +66,12 @@ dzeta = zeta_array[1]-zeta_array[0]
 
 # generating the array with the beam density
 nb_array = np.zeros(nz)
-beam_starting_position = 1
+beam_starting_position = 1 / kp
 distance_to_start_pos =  ds.domain_right_edge[2].v - beam_starting_position
 index_beam_head = np.int(distance_to_start_pos / dzeta)
-beam_length = 2
+beam_length = 2 / kp
 beam_length_i = np.int(beam_length / dzeta)
-nb_array[nz-index_beam_head-beam_length_i:nz-index_beam_head] = 0.01
+nb_array[nz-index_beam_head-beam_length_i:nz-index_beam_head] = 0.01 * ne
 
 # calculating the second derivative of the beam density array
 nb_dzdz = np.zeros(nz)
@@ -61,19 +83,19 @@ n_th = np.zeros(nz)
 for i in np.arange(nz-1,-1,-1):
     tmp = 0.
     for j in range(nz-i):
-        tmp += math.sin(dzeta*(i-(nz-1-j)))*nb_dzdz[nz-1-j]
+        tmp += 1./kp*math.sin(kp*dzeta*(i-(nz-1-j)))*nb_dzdz[nz-1-j]
     n_th[i] = tmp*dzeta + nb_array[i]
+rho_th = n_th * 1_e
 
 if args.do_plot:
     fig, ax = plt.subplots()
     ax.plot(zeta_array, rho_along_z)
-    ax.plot(zeta_array, n_th, linestyle='--')
-    ax.set_xlabel('kp x')
+    ax.plot(zeta_array, rho_th, linestyle='--')
+    ax.set_xlabel('x')
     ax.set_ylabel('rho')
     plt.savefig('rho_z.png')
 
-
 # Assert that the simulation result is close enough to theory
-error_rho = np.sum((rho_along_z-n_th)**2) / np.sum((n_th)**2)
+error_rho = np.sum((rho_along_z-rho_th)**2) / np.sum((rho_th)**2)
 print("total relative error rho: " + str(error_rho) + " (tolerance = 0.01)")
-assert(error_rho < .01)
+assert_exit(error_rho < .01)

@@ -198,21 +198,24 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        configure_mpiexec(1)  # one rank in MPI_TEST_EXE
-        add_test(NAME linear_wake.1Rank
-                 COMMAND ${HiPACE_SOURCE_DIR}/tests/linear_wake.1Rank.sh
+        add_test(NAME linear_wake.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/linear_wake.normalized.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        configure_mpiexec(1)  # one rank in MPI_TEST_EXE
+        add_test(NAME linear_wake.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/linear_wake.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME slice_deposition.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/slice_deposition.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        configure_mpiexec(1)  # one rank in MPI_TEST_EXE
         add_test(NAME reset.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/reset.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}

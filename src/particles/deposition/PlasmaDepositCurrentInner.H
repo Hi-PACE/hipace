@@ -101,19 +101,22 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         pti.numParticles(),
         [=] AMREX_GPU_DEVICE (long ip) {
 
-           // calculate 1/gamma for plasma particles
-           const amrex::Real gaminv = (2.0_rt * (psip[ip]+1.0_rt) ) /(1.0_rt
-                                                         + uxp[ip]*uxp[ip]*clightsq
-                                                         + uyp[ip]*uyp[ip]*clightsq
-                                                         + (psip[ip]+1.0_rt)*(psip[ip]+1.0_rt));
+            const amrex::Real psi = psip[ip] *
+                phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c);
+
+            // calculate 1/gamma for plasma particles
+            const amrex::Real gaminv = (2.0_rt * (psi+1.0_rt) ) /(1.0_rt
+                                                                  + uxp[ip]*uxp[ip]*clightsq
+                                                                  + uyp[ip]*uyp[ip]*clightsq
+                                                                  + (psi+1.0_rt)*(psi+1.0_rt));
 
            // calculate plasma particle velocities
            const amrex::Real vx = uxp[ip]*gaminv;
            const amrex::Real vy = uyp[ip]*gaminv;
-           const amrex::Real vz = - psip[ip]*gaminv * phys_const.c;
+           const amrex::Real vz = - psi * phys_const.c * gaminv;
 
            // calculate charge of the plasma particles
-           const amrex::Real wq = q*wp[ip]/(gaminv * (psip[ip] + 1.0_rt))*invvol;
+           const amrex::Real wq = q*wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
 
            // wqx, wqy wqz are particle current in each direction
            const amrex::Real wqx = wq*vx;

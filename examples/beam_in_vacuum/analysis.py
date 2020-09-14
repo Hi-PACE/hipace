@@ -50,7 +50,6 @@ if args.norm_units:
     eps_0 = 1.
     R = 1.
 else:
-
     # Density of the can beam
     dens = 2.8239587008591567e23 # at this density, 1/kp = 10um, allowing for an easy comparison with normalized units
     # Define array for transverse coordinate and theory for By and Bx
