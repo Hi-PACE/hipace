@@ -105,8 +105,12 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
 
     if (!temp_slice)
     {
+        amrex::Real my;
+        std::cout<<"nes particle\n";
+        my= a1_times_dz * Fx1; if (abs(my)>0) std::cout<<"my "<<my<<'\n';
         xp -= a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
             + a4_times_dz * Fx4 + a5_times_dz * Fx5;
+        my = a1_times_dz * Fy1; if (abs(my)>0) std::cout<<"my "<<my<<'\n';
         yp -= a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
             + a4_times_dz * Fy4 + a5_times_dz * Fy5;
 
@@ -114,10 +118,13 @@ void PlasmaParticlePush (amrex::ParticleReal& xp,
 
         x_prev = xp;
         y_prev = yp;
+        my = a1_times_dz * Fux1; if (abs(my)>0) std::cout<<"my "<<my<<'\n';
         uxp -= a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
             + a4_times_dz * Fux4 + a5_times_dz * Fux5;
+        my = a1_times_dz * Fuy1; if (abs(my)>0) std::cout<<"my "<<my<<'\n';
         uyp -= a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
             + a4_times_dz * Fuy4 + a5_times_dz * Fuy5;
+        my = a1_times_dz * Fpsi1; if (abs(my)>0) std::cout<<"my "<<my<<'\n';
         psip -= a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
             + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5;
     }

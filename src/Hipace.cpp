@@ -413,10 +413,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
                      "Re-try by adjusting the following paramters in the input script:\n"
                      "- lower mixing factor: hipace.predcorr_B_mixing_factor "
                      "(hidden default: 0.1) \n"
-                     "- lower B field error tolerance: hipace.fld_predcorr_tol_b"
+                     "- lower B field error tolerance: hipace.predcorr_B_error_tolerance"
                      " (hidden default: 0.04)\n"
                      "- higher number of iterations in the pred. cor. loop:"
-                     "hipace.fld_predcorr_n_max_iter (hidden default: 5)\n"
+                     "hipace.predcorr_max_iterations (hidden default: 5)\n"
                      "- higher longitudinal resolution");
     }
     if (m_verbose >= 1) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
