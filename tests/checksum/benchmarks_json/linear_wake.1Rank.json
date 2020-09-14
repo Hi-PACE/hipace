@@ -62,7 +62,9 @@
     "particle_uy_temp": 0.6715233596816894,
     "particle_w": 4096.0,
     "particle_w_temp": 0.0,
+    "particle_x0": 20480.0,
     "particle_x_prev": 20481.631539746275,
+    "particle_y0": 20480.0,
     "particle_y_prev": 20481.63153974628
   }
 }
