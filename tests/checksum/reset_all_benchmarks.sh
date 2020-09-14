@@ -126,6 +126,18 @@ then
                      --test-name can_beam.1Rank
 fi
 
+# reset.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "reset.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R reset.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --plotfile ${build_dir}/bin/plt00001 \
+                     --test-name reset.1Rank
+fi
+
 # slice_deposition.1Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "slice_deposition.1Rank" ]]
 then

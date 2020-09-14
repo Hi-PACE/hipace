@@ -25,8 +25,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
 /** \brief Resets the particle position x, y, to x_prev, y_prev
  * \param[in,out] plasma plasma species to reset
  * \param[in] lev MR level
+ * \param[in] initial whether this is initial reset at each time step. iF so, reset everything.
  */
 void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev=0);
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev=0, const bool initial=false);
 
 #endif //  PLASMAPARTICLEADVANCE_H_
