@@ -85,7 +85,7 @@ for i in np.arange(nz-1,-1,-1):
     for j in range(nz-i):
         tmp += 1./kp*math.sin(kp*dzeta*(i-(nz-1-j)))*nb_dzdz[nz-1-j]
     n_th[i] = tmp*dzeta + nb_array[i]
-rho_th = n_th * 1_e
+rho_th = n_th * q_e
 
 if args.do_plot:
     fig, ax = plt.subplots()
