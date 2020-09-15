@@ -17,13 +17,13 @@ rm -r plt00001
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_si
 mv plt00001 si_data
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
-#mv plt00001 normalized_data
+mv plt00001 normalized_data
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --normalized-data plt00001 --si-data si_data
+$HIPACE_EXAMPLE_DIR/analysis.py --normalized-data normalized_data --si-data si_data
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00001 \
+    --plotfile normalized_data \
     --test-name blowout_wake.1Rank
