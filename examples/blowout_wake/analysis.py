@@ -30,11 +30,6 @@ def assert_exit(condition):
         sys.exit(1)
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
-parser.add_argument('--normalized-units',
-                    dest='norm_units',
-                    action='store_true',
-                    default=False,
-                    help='Run the analysis in normalized units')
 parser.add_argument('--normalized-data',
                     dest='norm_data',
                     default=False,
