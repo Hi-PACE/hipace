@@ -35,11 +35,6 @@ parser.add_argument('--do-plot',
 
 args = parser.parse_args()
 
-
-def assert_exit(condition):
-    if not condition:
-        sys.exit(1)
-
 ds = AMReXDataset('plt00001')
 
 if args.norm_units:
@@ -157,7 +152,6 @@ if args.do_plot:
 error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
 print("total relative error jz: " + str(error_jz) + " (tolerance = 0.1)")
 
-# Assert that the simulation result is close enough to theory
 error_rho = np.sum((rho_sim-rho_th)**2) / np.sum((rho_th)**2)
 print("total relative error rho: " + str(error_rho) + " (tolerance = 0.1)")
 
@@ -173,9 +167,9 @@ print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.01)")
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
 print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.002)")
 
-assert_exit(error_jz < .1)
-assert_exit(error_rho < .1)
-assert_exit(error_Bx < .002)
-assert_exit(error_By < .01)
-assert_exit(error_Ex < .01)
-assert_exit(error_Ey < .002)
+assert(error_jz < .1)
+assert(error_rho < .1)
+assert(error_Bx < .002)
+assert(error_By < .01)
+assert(error_Ex < .01)
+assert(error_Ey < .002)

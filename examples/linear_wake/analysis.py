@@ -23,12 +23,6 @@ import math
 
 import argparse
 
-def assert_exit(condition):
-    try:
-        assert(condition)
-    except AssertionError:
-        sys.exit(1)
-
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',
                     dest='norm_units',
@@ -98,4 +92,4 @@ if args.do_plot:
 # Assert that the simulation result is close enough to theory
 error_rho = np.sum((rho_along_z-rho_th)**2) / np.sum((rho_th)**2)
 print("total relative error rho: " + str(error_rho) + " (tolerance = 0.01)")
-assert_exit(error_rho < .01)
+assert(error_rho < .01)
