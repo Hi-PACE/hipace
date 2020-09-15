@@ -173,8 +173,8 @@ if(BUILD_TESTING)
 
     if(NOT HiPACE_MPI)
 
-        add_test(NAME can_beam.Serial
-                 COMMAND ${HiPACE_SOURCE_DIR}/tests/can_beam.Serial.sh
+        add_test(NAME blowout_wake.Serial
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.Serial.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
@@ -192,8 +192,8 @@ if(BUILD_TESTING)
     else()
 
         configure_mpiexec(1)  # one rank in MPI_TEST_EXE
-        add_test(NAME can_beam.1Rank
-                 COMMAND ${HiPACE_SOURCE_DIR}/tests/can_beam.1Rank.sh
+        add_test(NAME blowout_wake.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
@@ -224,8 +224,8 @@ if(BUILD_TESTING)
 
         # This test is temporarily removed, due to bugs in the parallelization
         # configure_mpiexec(2)  # two ranks in MPI_TEST_EXE
-        # add_test(NAME can_beam.2Rank
-        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/can_beam.2Rank.sh
+        # add_test(NAME blowout_wake.2Rank
+        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
         #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
         #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         #)

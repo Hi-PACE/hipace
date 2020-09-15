@@ -5,12 +5,19 @@
 # usage: ./analysis.py
 
 import yt ; yt.funcs.mylog.setLevel(50)
+import sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from yt.frontends.boxlib.data_structures import AMReXDataset
 
-ds = AMReXDataset('plt00001')
+try:
+    filename = sys.argv[1]
+except:
+    print('ERROR: You must provide the plotfile, for instance:\n>./analysis.py ../plt00001')
+    sys.exit(1)
+
+ds = AMReXDataset(filename)
 
 plot_yt = True
 plot_plt = True

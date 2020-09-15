@@ -121,14 +121,14 @@ Assuming AMReX' source is located in `$HOME/src/amrex` and changes are committed
 For developers, HiPACE can be configured in further detail with options from AMReX, which are [documented in the AMReX manual](https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options).
 
 An executable HiPACE binary with the current compile-time options encoded in its file name will be created in ``bin/``.
-Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`_ named ``hipace`` can be found in that directory, which points to the last built HiPACE executable. 
+Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`_ named ``hipace`` can be found in that directory, which points to the last built HiPACE executable.
 
 
 ## Run a first simulation and look at the results
 
 After compiling HiPACE (see above), from the HiPACE root directory, execute
 ```bash
-cd examples/can_beam/
+cd examples/linear_wake/
 ../../build/bin/hipace inputs # Run the simulation with fields and plasma and beam particles
 ./analysis.py # Plot results with yt, and save in img.png
 ```
