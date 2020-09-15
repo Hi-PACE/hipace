@@ -1,8 +1,8 @@
 #! /usr/bin/env sh
 
 # This file is part of the Hipace test suite.
-# It runs a Hipace simulation in the linear regime and compares the result
-# with theory.
+# It runs a Hipace simulation in the blowout regime and compares the result
+# with SI units.
 
 # Read input parameters
 HIPACE_EXECUTABLE=$1

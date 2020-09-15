@@ -67,15 +67,15 @@ then
 fi
 
 # can_beam.Serial
-if [[ $all_tests = true ]] || [[ $one_test_name = "can_beam.Serial" ]]
+if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.Serial" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R can_beam.Serial \
+    ctest --output-on-failure -R blowout_wake.Serial \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
                      --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name can_beam.Serial
+                     --test-name blowout_wake.Serial
 fi
 
 # beam_in_vacuum.SI.Serial
