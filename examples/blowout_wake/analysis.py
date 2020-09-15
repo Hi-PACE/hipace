@@ -32,11 +32,11 @@ def assert_exit(condition):
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-data',
                     dest='norm_data',
-                    default=False,
+                    required=True,
                     help='Path to the data of the normalized units run')
 parser.add_argument('--si-data',
                     dest='si_data',
-                    default=False,
+                    required=True,
                     help='Path to the data of the SI units run')
 parser.add_argument('--do-plot',
                     dest='do_plot',
@@ -45,15 +45,7 @@ parser.add_argument('--do-plot',
                     help='Plot figures and save them to file')
 args = parser.parse_args()
 
-if not (args.norm_data):
-    print("Error, no path to the normalized data is given")
-    sys.exit(1)
-
-if not (args.si_data):
-    print("Error, no path to the normalized data is given")
-    sys.exit(1)
-
-ds_norm = AMReXDataset(args.norm_data)#AMReXDataset('plt00001')
+ds_norm = AMReXDataset(args.norm_data)
 ds_si = AMReXDataset(args.si_data)
 
 elec_density = 2.8239587008591567e23 # [1/m^3]

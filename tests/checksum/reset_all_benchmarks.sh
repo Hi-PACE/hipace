@@ -66,7 +66,7 @@ then
     make -j 4
 fi
 
-# can_beam.Serial
+# blowout_wake.Serial
 if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.Serial" ]]
 then
     cd $build_dir
@@ -126,18 +126,6 @@ then
                      --test-name blowout_wake.1Rank
 fi
 
-# can_beam.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "can_beam.1Rank" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R can_beam.1Rank \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name can_beam.1Rank
-fi
-
 # reset.1Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "reset.1Rank" ]]
 then
@@ -186,15 +174,15 @@ then
                      --test-name linear_wake.SI.1Rank
 fi
 
-# can_beam.2Rank
+# blowout_wake.2Rank
 ### This test is inactive as Hipace doesn't support parallelization yet.
-#if [[ $all_tests = true ]] || [[ $one_test_name = "can_beam.2Rank" ]]
+#if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.2Rank" ]]
 #then
 #    cd $build_dir
-#    ctest --output-on-failure -R can_beam.2Rank \
+#    ctest --output-on-failure -R blowout_wake.2Rank \
 #        || echo "ctest command failed, maybe just because checksums are different. Keep going"
 #    cd $checksum_dir
 #    ./checksumAPI.py --reset-benchmark \
 #                     --plotfile ${build_dir}/bin/plt00001 \
-#                     --test-name can_beam.2Rank
+#                     --test-name blowout_wake.2Rank
 #fi
