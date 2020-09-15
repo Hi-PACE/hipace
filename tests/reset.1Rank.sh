@@ -1,8 +1,11 @@
-#! /usr/bin/env sh
+#! /usr/bin/env bash
 
 # This file is part of the Hipace test suite.
 # It runs a Hipace simulation for a can beam, and compares the result
 # of the simulation to a benchmark.
+
+# abort on first encounted error
+set -eu -o pipefail
 
 # Read input parameters
 HIPACE_EXECUTABLE=$1
