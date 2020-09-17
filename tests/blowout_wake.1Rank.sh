@@ -17,7 +17,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 rm -rf si_data
 rm -rf plt00001
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_si
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI
 mv plt00001 si_data
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
 mv plt00001 normalized_data
