@@ -21,4 +21,4 @@ $HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --plotfile plt00001 \
-    --test-name linear_wake.1Rank
+    --test-name linear_wake.normalized.1Rank

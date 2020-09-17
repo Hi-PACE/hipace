@@ -7,7 +7,7 @@
 # difference is small.
 #
 # To use it, run the simulation and execute this script with
-# > ../../build/bin/hipace inputs
+# > ../../build/bin/hipace inputs_SI
 # > python analysis.py
 # Note: the simulation may take some time, as the box size must be high to have
 # decent agreement
