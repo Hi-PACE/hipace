@@ -1,8 +1,11 @@
-#! /usr/bin/env sh
+#! /usr/bin/env bash
 
 # This file is part of the Hipace test suite.
 # It runs a Hipace simulation in the linear regime and compares the result
 # with theory.
+
+# abort on first encounted error
+set -eu -o pipefail
 
 # Read input parameters
 HIPACE_EXECUTABLE=$1

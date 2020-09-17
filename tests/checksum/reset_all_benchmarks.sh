@@ -12,7 +12,8 @@
 # To reset only benchmark <benchmark_name>, run
 # > /reset_all_benchmarks.sh <benchmark_name>
 
-set -e
+# abort on first encounted error
+set -eu -o pipefail
 
 # Check if the user wants to reset one benchmark or all of them
 if [ "$#" -ne 1 ]
