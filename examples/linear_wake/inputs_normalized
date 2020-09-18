@@ -1,13 +1,13 @@
 amr.n_cell = 64 64 400
 
 hipace.normalized_units=1
-hipace.do_plot = 1
 hipace.predcorr_B_mixing_factor = 0.05
 hipace.predcorr_max_iterations = 30
 hipace.predcorr_B_error_tolerance = 4e-2
 hipace.slice_deposition = 1
 hipace.3d_on_host = 1
 
+hipace.output_period = 1
 
 fields.do_dirichlet_poisson = 1
 

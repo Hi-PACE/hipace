@@ -88,8 +88,9 @@ public:
     /** \brief Dump simulation data to file
      *
      * \param[in] step current iteration
+     * \param[in] force_output if true, dump output regardless of output_period
      */
-    void WriteDiagnostics (int step);
+    void WriteDiagnostics (int output_step, bool force_output=false);
 
     /** Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};
@@ -127,8 +128,12 @@ public:
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
     int m_max_step = 0;
-    /** Whether to dump output data or not */
-    bool m_do_plot = true;
+    /** Number of iterations between consecutive output dumps.
+     * Default is -1, meaning no output */
+    int m_output_period = -1;
+    /** Last iteration that was written to file.
+     * This is stored to make sure we don't write the last iteration multiple times. */
+    int m_last_output_dumped = -1;
 
     /** Level of verbosity */
     static int m_verbose;

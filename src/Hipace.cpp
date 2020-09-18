@@ -62,7 +62,7 @@ Hipace::Hipace () :
     pph.query("predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
-    pph.query("do_plot", m_do_plot);
+    pph.query("output_period", m_output_period);
     pph.query("slice_deposition", m_slice_deposition);
     pph.query("3d_on_host", m_3d_on_host);
     if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_deposition);
@@ -196,7 +196,7 @@ Hipace::Evolve ()
 {
     HIPACE_PROFILE("Hipace::Evolve()");
     int const lev = 0;
-    if (m_do_plot) WriteDiagnostics(0);
+    WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
         Wait();
@@ -291,9 +291,10 @@ Hipace::Evolve ()
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
+        WriteDiagnostics(step+1);
     }
 
-    if (m_do_plot) WriteDiagnostics(1);
+    WriteDiagnostics(m_max_step, true);
 }
 
 void
@@ -528,27 +529,30 @@ Hipace::NotifyFinish ()
 }
 
 void
-Hipace::WriteDiagnostics (int step)
+Hipace::WriteDiagnostics (int output_step, bool force_output)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
+
+    // Dump before first and after last step, and every m_output_period steps in-between
+    if (m_output_period < 0 ||
+        (!force_output && output_step % m_output_period != 0) ||
+        output_step == m_last_output_dumped) return;
+
+    // Store this dump iteration
+    m_last_output_dumped = output_step;
+
     // Write fields
-    const std::string filename = amrex::Concatenate("plt", step);
+    const std::string filename = amrex::Concatenate("plt", output_step);
     const int nlev = 1;
-    const amrex::Vector< std::string > varnames {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz",
-                                                 "jx", "jy", "jz", "rho", "Psi"};
+    const amrex::Vector< std::string > varnames
+        {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
-    amrex::WriteMultiLevelPlotfile(filename, nlev,
-                                   amrex::GetVecOfConstPtrs(m_fields.getF()),
-                                   varnames, Geom(),
-                                   time, {step}, {local_ref_ratio},
-                                   "HyperCLaw-V1.1",
-                                   "Level_",
-                                   "Cell",
-                                   rfs
-        );
-
+    amrex::WriteMultiLevelPlotfile(
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, Geom(), time,
+        {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
+    
     // Write beam particles
     {
         amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
