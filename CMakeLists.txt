@@ -178,11 +178,13 @@ if(BUILD_TESTING)
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
+
         add_test(NAME beam_in_vacuum.SI.Serial
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.SI.Serial.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
+
         add_test(NAME beam_in_vacuum.normalized.Serial
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.Serial.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
@@ -218,6 +220,18 @@ if(BUILD_TESTING)
 
         add_test(NAME reset.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/reset.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME beam_in_vacuum.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME beam_in_vacuum.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )

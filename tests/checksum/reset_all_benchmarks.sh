@@ -68,40 +68,40 @@ then
 fi
 
 # blowout_wake.Serial
-if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.Serial" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R blowout_wake.Serial \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name blowout_wake.Serial
-fi
+#if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.Serial" ]]
+#then
+#    cd $build_dir
+#    ctest --output-on-failure -R blowout_wake.Serial \
+#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+#    cd $checksum_dir
+#    ./checksumAPI.py --reset-benchmark \
+#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --test-name blowout_wake.Serial
+#fi
 
 # beam_in_vacuum.SI.Serial
-if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.SI.Serial" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R beam_in_vacuum.SI.Serial \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name beam_in_vacuum.SI.Serial
-fi
+#if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.SI.Serial" ]]
+#then
+#    cd $build_dir
+#    ctest --output-on-failure -R beam_in_vacuum.SI.Serial \
+#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+#    cd $checksum_dir
+#    ./checksumAPI.py --reset-benchmark \
+#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --test-name beam_in_vacuum.SI.Serial
+#fi
 
 # beam_in_vacuum.normalized.Serial
-if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.normalized.Serial" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R beam_in_vacuum.normalized.Serial \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name beam_in_vacuum.normalized.Serial
-fi
+#if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.normalized.Serial" ]]
+#then
+#    cd $build_dir
+#    ctest --output-on-failure -R beam_in_vacuum.normalized.Serial \
+#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+#    cd $checksum_dir
+#    ./checksumAPI.py --reset-benchmark \
+#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --test-name beam_in_vacuum.normalized.Serial
+#fi
 
 ### Compile code and reset benchmarks: parallel ###
 ###################################################
@@ -173,6 +173,30 @@ then
     ./checksumAPI.py --reset-benchmark \
                      --plotfile ${build_dir}/bin/plt00001 \
                      --test-name linear_wake.SI.1Rank
+fi
+
+# beam_in_vacuum.SI.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.SI.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R beam_in_vacuum.SI.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --plotfile ${build_dir}/bin/plt00001 \
+                     --test-name beam_in_vacuum.SI.1Rank
+fi
+
+# beam_in_vacuum.normalized.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.normalized.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R beam_in_vacuum.normalized.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --plotfile ${build_dir}/bin/plt00001 \
+                     --test-name beam_in_vacuum.normalized.1Rank
 fi
 
 # blowout_wake.2Rank
