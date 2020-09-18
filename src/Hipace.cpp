@@ -552,7 +552,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     amrex::WriteMultiLevelPlotfile(
         filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, Geom(), time,
         {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
-    
+
     // Write beam particles
     {
         amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
