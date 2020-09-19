@@ -97,7 +97,7 @@ public:
 
     /** \brief Full evolve on 1 slice
      *
-     * \param[in] a_islice slice number
+     * \param[in] islice slice number
      * \param[in] lev MR level
      * \param[in] bins collections of beam particle indices sorted per slice
      */
