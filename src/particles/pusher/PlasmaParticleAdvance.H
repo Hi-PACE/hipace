@@ -20,7 +20,7 @@ void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const WhichSlice which_slice,
                         const bool temp_slice, const bool do_push, const bool do_update,
-                        const bool do_shift, int const lev=0);
+                        const bool do_shift, int const lev);
 
 /** \brief Resets the particle position x, y, to x_prev, y_prev
  * \param[in,out] plasma plasma species to reset
@@ -28,6 +28,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
  * \param[in] initial whether this is initial reset at each time step. iF so, reset everything.
  */
 void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev=0, const bool initial=false);
+ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool initial=false);
 
 #endif //  PLASMAPARTICLEADVANCE_H_

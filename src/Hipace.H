@@ -76,10 +76,10 @@ public:
      * the rank downstream.
      */
     void Notify ();
-    /** When slices sent to rank downstream, free buffer memory and make buffer nullptr */
+    /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish ();
 
-    /** return whether rank is in the same transverse communicator w/ me
+    /** \brief return whether rank is in the same transverse communicator w/ me
      *
      * \param[in] rank MPI rank to test
      */
@@ -92,8 +92,25 @@ public:
      */
     void WriteDiagnostics (int output_step, bool force_output=false);
 
-    /** Return a copy of member struct for physical constants */
+    /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};
+
+    /** \brief Full evolve on 1 slice
+     *
+     * \param[in] a_islice slice number
+     * \param[in] lev MR level
+     * \param[in] bins collections of beam particle indices sorted per slice
+     */
+    void SolveOneSlice (int islice, int lev,
+                        amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
+
+    /** \brief Reset plasma and field slice quantities to initial value.
+     *
+     * Typically done at the beginning of each iteration.
+     *
+     * \param[in] lev MR level
+     */
+    void ResetAllQuantities (int lev);
 
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
