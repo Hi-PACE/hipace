@@ -31,5 +31,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     reserveData();
     resizeData();
-    InitCanBeam(m_ppc, m_u_std, m_u_mean, m_density, geom, m_zmin, m_zmax, m_radius);
+    m_u_std = emittance / m_radius;
+    GetInitialMomentum get_momentum(m_momentum_profile, m_u_mean, m_u_std);
+    GetInitialDensity get_density(m_momentum_profile, m_radius, m_density);
+    
+    InitCanBeam(m_ppc, get_momentum, get_density, geom, m_zmin, m_zmax, m_radius);
 }

@@ -11,9 +11,8 @@ using namespace amrex;
 void
 BeamParticleContainer::
 InitCanBeam (const IntVect& a_num_particles_per_cell,
-             const amrex::RealVect& a_u_std,
-             const amrex::RealVect& a_u_mean,
-             const Real a_density,
+             const GetInitialPosition& get_position,
+             const GetInitialMomentum& get_momentum,
              const Geometry& a_geom,
              const amrex::Real a_zmin,
              const amrex::Real a_zmax,
@@ -124,8 +123,8 @@ InitCanBeam (const IntVect& a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
-                                                           a_u_std);
+                Real u[3] = {0.,0.,0.};
+                u = get_momentum(u, x, y, z);
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
@@ -140,7 +139,7 @@ InitCanBeam (const IntVect& a_num_particles_per_cell,
                 arrdata[BeamIdx::ux  ][pidx] = u[0] * phys_const.c;
                 arrdata[BeamIdx::uy  ][pidx] = u[1] * phys_const.c;
                 arrdata[BeamIdx::uz  ][pidx] = u[2] * phys_const.c;
-                arrdata[BeamIdx::w][pidx] = a_density * scale_fac;
+                arrdata[BeamIdx::w][pidx] = get_density(x, y, z);
                 ++pidx;
             }
         });
