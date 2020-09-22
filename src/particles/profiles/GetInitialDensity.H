@@ -15,17 +15,16 @@ enum struct BeamProfileType { Gaussian, Flattop };
 struct GetInitialDensity
 {
     /** Constructor.
-     * \param[in,out] a_density peak density
      */
     GetInitialDensity ();
 
     /** \brief returns the density for a beam particle at a given position
-     * \param[in,out] ux momentum in x
-     * \param[in,out] uy momentum in y
-     * \param[in,out] uz momentum in z
+     * \param[in] x position in x
+     * \param[in] y position in y
+     * \param[in] z position in z
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    amrex::Real operator() (amrex::Real x, amrex::Real y, amrex::Real z) const
+    amrex::Real operator() (const amrex::Real x, const amrex::Real y, const amrex::Real z) const
     {
         using namespace amrex::literals;
         amrex::Real weight = 0._rt;
@@ -41,7 +40,7 @@ struct GetInitialDensity
     amrex::RealVect  m_mean {0.,0.,0.};
     amrex::RealVect  m_std;
     BeamProfileType m_profile;
-    amrex::Real m_density;
+    amrex::Real m_density; /**< Pak density of the beam */
 };
 
 #endif // GETINTIALDENSITY_H_
