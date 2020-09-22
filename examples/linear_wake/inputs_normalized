@@ -6,7 +6,7 @@ hipace.predcorr_max_iterations = 30
 hipace.predcorr_B_error_tolerance = 4e-2
 hipace.slice_deposition = 1
 hipace.3d_on_host = 1
-hipace.verbose = 1
+
 hipace.output_period = 1
 
 fields.do_dirichlet_poisson = 1
@@ -30,7 +30,7 @@ beam.profile = flattop
 beam.momentum_profile = gaussian
 beam.zmin = -1.
 beam.zmax = 1.
-beam.radius = 5
+beam.radius = 3
 beam.density = 0.01
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
