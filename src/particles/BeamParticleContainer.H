@@ -3,11 +3,9 @@
 
 #include "profiles/GetInitialDensity.H"
 #include "profiles/GetInitialMomentum.H"
-
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
-
 
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
