@@ -10,12 +10,20 @@
 /** \brief Beam profile type, currently only Gaussian or Flattop */
 enum struct BeamProfileType { Gaussian, Flattop };
 
+/** \brief Functor gets the initial density for beam particles for a given position
+ */
 struct GetInitialDensity
 {
-    GetInitialDensity () = default;
+    /** Constructor.
+     * \param[in,out] a_density peak density
+     */
+    GetInitialDensity ();
 
-    GetInitialDensity (amrex::Real a_density);
-
+    /** \brief returns the density for a beam particle at a given position
+     * \param[in,out] ux momentum in x
+     * \param[in,out] uy momentum in y
+     * \param[in,out] uz momentum in z
+     */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Real operator() (amrex::Real x, amrex::Real y, amrex::Real z) const
     {

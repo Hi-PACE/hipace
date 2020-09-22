@@ -11,11 +11,19 @@
 /** \brief Beam profile type, currently only Gaussian or Flattop */
 enum struct BeamMomentumType { Gaussian, Flattop };
 
+/** \brief Functor gets the initial momentum for beam particles
+ */
 struct GetInitialMomentum
 {
-
+    /** Constructor.
+     */
     GetInitialMomentum ();
 
+    /** \brief Get the momentum for a beam particle
+     * \param[in,out] ux momentum in x, modified by this function
+     * \param[in,out] uy momentum in y, modified by this function
+     * \param[in,out] uz momentum in z, modified by this function
+     */
     void operator() (amrex::Real& ux, amrex::Real& uy, amrex::Real& uz ) const
     {
         amrex::Real u[3] = {ux,uy,uz};

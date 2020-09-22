@@ -1,6 +1,4 @@
 #include "GetInitialMomentum.H"
-
-
 #include <AMReX_ParmParse.H>
 
 GetInitialMomentum::GetInitialMomentum ()
@@ -17,7 +15,7 @@ GetInitialMomentum::GetInitialMomentum ()
     if (m_momentum_profile == BeamMomentumType::Gaussian) {
 
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        if (pp.get("u_mean", loc_array)) {
+        if (pp.query("u_mean", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
                 m_u_mean[idim] = loc_array[idim];
             }
