@@ -1,5 +1,4 @@
 #include "GetInitialDensity.H"
-
 #include <AMReX_ParmParse.H>
 
 GetInitialDensity::GetInitialDensity ()

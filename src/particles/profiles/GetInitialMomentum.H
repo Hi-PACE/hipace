@@ -2,11 +2,9 @@
 #define GETINTIALMOMENTUM_H_
 
 #include "particles/ParticleUtil.H"
-// #include "particles/BeamParticleContainer.H"
 #include <AMReX.H>
 #include <AMReX_REAL.H>
 #include <AMReX_RealVect.H>
-
 
 /** \brief Beam profile type, currently only Gaussian or Flattop */
 enum struct BeamMomentumType { Gaussian, Flattop };

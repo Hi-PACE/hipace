@@ -5,6 +5,7 @@
 #include <AMReX_REAL.H>
 #include <AMReX_IntVect.H>
 #include <AMReX_RealVect.H>
+
 /** \brief Basic helper functions that can be used for both plasma and beam species */
 namespace ParticleUtil
 {
