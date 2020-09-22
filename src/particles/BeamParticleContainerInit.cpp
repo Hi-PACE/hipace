@@ -10,13 +10,13 @@ using namespace amrex;
 
 void
 BeamParticleContainer::
-InitCanBeam (const IntVect& a_num_particles_per_cell,
-             const GetInitialPosition& get_position,
-             const GetInitialMomentum& get_momentum,
-             const Geometry& a_geom,
-             const amrex::Real a_zmin,
-             const amrex::Real a_zmax,
-             const amrex::Real a_radius)
+InitBeam (const IntVect& a_num_particles_per_cell,
+          const GetInitialDensity& get_density,
+          const GetInitialMomentum& get_momentum,
+          const Geometry& a_geom,
+          const amrex::Real a_zmin,
+          const amrex::Real a_zmax,
+          const amrex::Real a_radius)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -114,8 +114,7 @@ InitCanBeam (const IntVect& a_num_particles_per_cell,
 
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
-                Real r[3] = {0.,0.,0.};
-                Real u[3] = {0.,0.,0.};
+                amrex::Real r[3] = {0.,0.,0.};
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
@@ -123,11 +122,11 @@ InitCanBeam (const IntVect& a_num_particles_per_cell,
                 Real y = plo[1] + (j + r[1])*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
-                Real u[3] = {0.,0.,0.};
-                u = get_momentum(u, x, y, z);
-
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
+
+                amrex::Real u[3] = {0.,0.,0.};
+                get_momentum(u[0],u[1],u[2]); //, x, y, z);
 
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;
