@@ -126,8 +126,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
                     (x*x+y*y) > a_radius*a_radius) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
-                get_momentum(u[0],u[1],u[2]); //, x, y, z);
-                std::cout << " u[0] " << u[0] << " u[1] " << u[1] << " u[2] " << u[2] << "\n";
+                get_momentum(u[0],u[1],u[2]);
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;
                 p.cpu()  = procID;
@@ -139,6 +138,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
                 arrdata[BeamIdx::uy  ][pidx] = u[1] * phys_const.c;
                 arrdata[BeamIdx::uz  ][pidx] = u[2] * phys_const.c;
                 arrdata[BeamIdx::w][pidx] = get_density(x, y, z);
+                arrdata[BeamIdx::w][pidx]  *= scale_fac;
                 ++pidx;
             }
         });

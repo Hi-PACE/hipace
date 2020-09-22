@@ -2,49 +2,32 @@
 
 #include <AMReX_ParmParse.H>
 
-GetInitialDensity::GetInitialDensity (amrex::Real a_density) //amrex::Real profile, amrex::Real mean, amrex::Real std)
-    //: m_profile(profile), m_mean(mean), m_std(std)
+GetInitialDensity::GetInitialDensity (amrex::Real a_density)
 {
     m_density = a_density;
     amrex::ParmParse pp("beam");
     std::string profile;
-    pp.get("profile", profile); // to be switched to query later and default to Gaussian
+    pp.get("profile", profile);
     if        (profile == "gaussian") {
         m_profile = BeamProfileType::Gaussian;
     } else if (profile == "flattop") {
         m_profile = BeamProfileType::Flattop;
     } else {
-        amrex::Abort("Unknown beam profile!");
+        amrex::Abort("Unknown beam profile");
     }
 
-    if        (m_profile == BeamProfileType::Gaussian) {
-        // pp.get("mean", m_mean);
-        // pp.query("std", m_std);
+    if (m_profile == BeamProfileType::Gaussian) {
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         if (pp.query("mean", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
                 m_mean[idim] = loc_array[idim];
             }
         }
-        if (pp.query("std", loc_array)) {
+        if (pp.get("std", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
                 m_std[idim] = loc_array[idim];
             }
         }
-    } else if (m_profile == BeamProfileType::Flattop) {
-    } else {
-        amrex::Abort("unknown profile!");
+    } else if (m_profile == BeamProfileType::Flattop) {} // nothing to be done here yet
     }
 }
-
-// AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-// amrex::Real GetInitialDensity::operator() (amrex::Real x, amrex::Real y, amrex::Real z) const
-// {
-//     using namespace amrex::literals;
-//     amrex::Real weight = 0._rt;
-//     if        (m_profile == BeamProfileType::Gaussian){
-//         weight = 0._rt; // to be Gaussian
-//     } else if (m_profile == BeamProfileType::Flattop)
-//         weight = m_density; // scale factor for SI units missing!
-//     return weight;
-// }

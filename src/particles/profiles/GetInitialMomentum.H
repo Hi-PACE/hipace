@@ -13,9 +13,8 @@ enum struct BeamMomentumType { Gaussian, Flattop };
 
 struct GetInitialMomentum
 {
-    // GetInitialMomentum () = default;
 
-    GetInitialMomentum (); //, amrex::Real mean, amrex::Real std);
+    GetInitialMomentum ();
 
     void operator() (amrex::Real& ux, amrex::Real& uy, amrex::Real& uz ) const
     {
@@ -23,6 +22,9 @@ struct GetInitialMomentum
         if (m_momentum_profile == BeamMomentumType::Gaussian){
             ParticleUtil::get_gaussian_random_momentum(u, m_u_mean, m_u_std);
         }
+        ux = u[0];
+        uy = u[1];
+        uz = u[2];
     }
     amrex::RealVect  m_u_mean;
     amrex::RealVect  m_u_std {0.,0.,0.};
