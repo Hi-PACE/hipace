@@ -4,7 +4,7 @@
 #include <AMReX_Gpu.H>
 #include <AMReX_REAL.H>
 #include <AMReX_IntVect.H>
-
+#include <AMReX_RealVect.H>
 /** \brief Basic helper functions that can be used for both plasma and beam species */
 namespace ParticleUtil
 {
@@ -49,6 +49,8 @@ namespace ParticleUtil
         u[0] = u_mean[0] + ux_th;
         u[1] = u_mean[1] + uy_th;
         u[2] = u_mean[2] + uz_th;
+
+        std::cout << "inside function  u[0] " << u[0] << " u[1] " << u[1] << " u[2] " << u[2] << "\n"; 
     }
 }
 

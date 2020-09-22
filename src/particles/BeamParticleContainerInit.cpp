@@ -127,7 +127,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2]); //, x, y, z);
-
+                std::cout << " u[0] " << u[0] << " u[1] " << u[1] << " u[2] " << u[2] << "\n";
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;
                 p.cpu()  = procID;

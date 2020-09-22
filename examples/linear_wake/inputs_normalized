@@ -1,4 +1,4 @@
-amr.n_cell = 64 64 400
+amr.n_cell = 4 4 4
 
 hipace.normalized_units=1
 hipace.predcorr_B_mixing_factor = 0.05
@@ -6,7 +6,7 @@ hipace.predcorr_max_iterations = 30
 hipace.predcorr_B_error_tolerance = 4e-2
 hipace.slice_deposition = 1
 hipace.3d_on_host = 1
-
+hipace.verbose = 1
 hipace.output_period = 1
 
 fields.do_dirichlet_poisson = 1
@@ -26,9 +26,11 @@ geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -10.   -10.   -7.5    # physical domain
 geometry.prob_hi     =  10.    10.    2
 
+beam.profile = flattop
+beam.momentum_profile = gaussian
 beam.zmin = -1.
 beam.zmax = 1.
-beam.radius = 3
+beam.radius = 5
 beam.density = 0.01
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
