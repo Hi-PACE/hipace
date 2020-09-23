@@ -195,31 +195,26 @@ void
 Hipace::Evolve ()
 {
     HIPACE_PROFILE("Hipace::Evolve()");
+    const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
         Wait();
 
-        amrex::Print()<<"step "<< step <<"\n";
+        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<'\n';
 
-        ResetPlasmaParticles(m_plasma_container, lev, true);
+        ResetAllQuantities(lev);
 
-        /* ---------- Depose current from beam particles ---------- */
         amrex::MultiFab& fields = m_fields.getF(lev);
-        for (int islice=0; islice<(int) WhichSlice::N; islice++) {
-            m_fields.getSlices(lev, islice).setVal(0.);
-        }
 
-        if (!m_slice_deposition){
-            fields.setVal(0.);
-            DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
-        }
+        if (!m_slice_deposition) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
 
-        /* Setting rho ions */
+        /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
                        false, false, false, true, geom[lev], lev);
 
+        // Loop over longitudinal boxes on this rank, from head to tail
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
@@ -228,63 +223,9 @@ Hipace::Evolve ()
             if (m_slice_deposition) bins = findParticlesInEachSlice(
                 lev, *it, bx, m_beam_container, geom[lev]);
 
-            const int islice_hi = bx.bigEnd(Direction::z);
-            const int islice_lo = bx.smallEnd(Direction::z);
-            for (int islice = islice_hi; islice >= islice_lo; --islice)
-            {
-                // Between this push and the corresponding pop at the end of this
-                // for loop, the parallelcontext is the transverse communicator
-                amrex::ParallelContext::push(m_comm_xy);
-
-                if (m_slice_deposition){
-                    m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
-                } else {
-                    m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
-                }
-
-                AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                                       WhichSlice::This, false,
-                                       true, false, false, lev);
-
-                m_plasma_container.Redistribute();
-                amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
-                                    FieldComps::rho, 1);
-
-                DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
-                               true, true, geom[lev], lev);
-                m_fields.AddRhoIons(lev);
-
-                // need to exchange jx jy jz rho
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
-                FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
-                "changed, because the 4 components starting from jx are grabbed at once");
-                amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
-                                         amrex::make_alias, FieldComps::jx, 4);
-                j_slice.FillBoundary(Geom(lev).periodicity());
-
-                m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
-
-                if (m_slice_deposition) DepositCurrentSlice(
-                    m_beam_container, m_fields, geom[lev], lev, islice, bins);
-
-                j_slice.FillBoundary(Geom(lev).periodicity());
-
-                m_fields.SolvePoissonEz(Geom(lev),lev);
-                m_fields.SolvePoissonBz(Geom(lev), lev);
-
-                /* Modifies Bx and By in the current slice
-                 * and the force terms of the plasma particles
-                 */
-                PredictorCorrectorLoopToSolveBxBy(islice, lev);
-
-                m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
-
-                m_fields.ShiftSlices(lev);
-
-                // After this, the parallel context is the full 3D communicator again
-                amrex::ParallelContext::pop();
-            }
+            for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
+                 SolveOneSlice(isl, lev, bins);
+             };
         }
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
 
@@ -295,6 +236,77 @@ Hipace::Evolve ()
     }
 
     WriteDiagnostics(m_max_step, true);
+}
+
+void
+Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+{
+    // Between this push and the corresponding pop at the end of this
+    // for loop, the parallelcontext is the transverse communicator
+    amrex::ParallelContext::push(m_comm_xy);
+
+    if (m_slice_deposition){
+        m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+    } else {
+        m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
+    }
+
+    AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
+                           WhichSlice::This, false,
+                           true, false, false, lev);
+
+    m_plasma_container.Redistribute();
+    amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
+                        FieldComps::rho, 1);
+
+    DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
+                   true, true, geom[lev], lev);
+    m_fields.AddRhoIons(lev);
+
+    // need to exchange jx jy jz rho
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
+        FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
+        "changed, because the 4 components starting from jx are grabbed at once");
+    amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
+                            amrex::make_alias, FieldComps::jx, 4);
+    j_slice.FillBoundary(Geom(lev).periodicity());
+
+    m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
+
+    if (m_slice_deposition) DepositCurrentSlice(
+        m_beam_container, m_fields, geom[lev], lev, islice, bins);
+
+    j_slice.FillBoundary(Geom(lev).periodicity());
+
+    m_fields.SolvePoissonEz(Geom(lev),lev);
+    m_fields.SolvePoissonBz(Geom(lev), lev);
+
+    /* Modifies Bx and By in the current slice
+     * and the force terms of the plasma particles
+     */
+    PredictorCorrectorLoopToSolveBxBy(islice, lev);
+
+    m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
+
+    m_fields.ShiftSlices(lev);
+
+    // After this, the parallel context is the full 3D communicator again
+    amrex::ParallelContext::pop();
+}
+
+void
+Hipace::ResetAllQuantities (int lev)
+{
+    HIPACE_PROFILE("Hipace::ResetAllQuantities()");
+    ResetPlasmaParticles(m_plasma_container, lev, true);
+
+    amrex::MultiFab& fields = m_fields.getF(lev);
+    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
+        m_fields.getSlices(lev, islice).setVal(0.);
+    }
+
+    if (!m_slice_deposition) fields.setVal(0.);
 }
 
 void
@@ -425,8 +437,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
                      "hipace.predcorr_max_iterations (hidden default: 5)\n"
                      "- higher longitudinal resolution");
     }
-    if (m_verbose >= 1) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
-                                        " relative B field error: "<<relative_Bfield_error<< "\n";
+    if (m_verbose >= 2) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
+                            " relative B field error: "<<relative_Bfield_error<< "\n";
 }
 
 void
