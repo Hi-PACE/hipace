@@ -4,14 +4,8 @@
 GetInitialMomentum::GetInitialMomentum ()
 {
     amrex::ParmParse pp("beam");
-    std::string profile;
-    pp.get("momentum_profile", profile);
-    if        (profile == "gaussian") {
-        m_momentum_profile = BeamMomentumType::Gaussian;
-    } else {
-        amrex::Abort("Unknown beam momentum profile!");
-    }
 
+    /* currently only Gaussian beam momentum profile implemented */
     if (m_momentum_profile == BeamMomentumType::Gaussian) {
 
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
@@ -25,5 +19,7 @@ GetInitialMomentum::GetInitialMomentum ()
                 m_u_std[idim] = loc_array[idim];
             }
         }
+    } else {
+        amrex::Abort("Unknown beam momentum profile!");
     }
 }

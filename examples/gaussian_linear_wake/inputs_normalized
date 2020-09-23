@@ -26,7 +26,6 @@ geometry.prob_lo     = -10.   -10.   -6    # physical domain
 geometry.prob_hi     =  10.    10.    6
 
 beam.profile = gaussian
-beam.momentum_profile = gaussian
 beam.zmin = -5.9
 beam.zmax = 5.9
 beam.radius = 10

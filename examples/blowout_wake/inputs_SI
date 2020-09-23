@@ -22,6 +22,7 @@ geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -80.e-6   -80.e-6   -60.e-6    # physical domain
 geometry.prob_hi     =  80.e-6    80.e-6    15.e-6
 
+beam.profile = flattop
 beam.zmin = -10.e-6
 beam.zmax = 10.e-6
 beam.radius = 5.e-6

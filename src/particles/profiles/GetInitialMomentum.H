@@ -34,7 +34,7 @@ struct GetInitialMomentum
     }
     amrex::RealVect  m_u_mean;
     amrex::RealVect  m_u_std {0.,0.,0.};
-    BeamMomentumType m_momentum_profile;
+    BeamMomentumType m_momentum_profile = BeamMomentumType::Gaussian;
 };
 
 #endif // GETINTIALMOMENTUM_H_
