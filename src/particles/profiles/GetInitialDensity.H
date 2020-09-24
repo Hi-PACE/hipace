@@ -38,7 +38,7 @@ struct GetInitialDensity
         }
         return density;
     }
-    amrex::RealVect  m_mean {0.,0.,0.}; /* rms mean in case of a Gaussian density distribution. */
+    amrex::RealVect  m_mean {0.,0.,0.}; /* mean in case of a Gaussian density distribution. */
     amrex::RealVect  m_std {0.,0.,0.};  /* rms standard deviation in case of a Gaussian density distribution */
     BeamProfileType m_profile; /* beam profile type, e.g. BeamProfileType::Flattop or BeamProfileType::Gaussian*/
     amrex::Real m_density; /**< Peak density of the beam */
