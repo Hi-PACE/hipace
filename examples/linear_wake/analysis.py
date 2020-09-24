@@ -34,6 +34,11 @@ parser.add_argument('--do-plot',
                     action='store_true',
                     default=False,
                     help='Plot figures and save them to file')
+parser.add_argument('--gaussian-beam',
+                    dest='gaussian_beam',
+                    action='store_true',
+                    default=False,
+                    help='Run the analysis on the Gaussian beam')
 args = parser.parse_args()
 
 ds = AMReXDataset('plt00001')
@@ -65,7 +70,14 @@ distance_to_start_pos =  ds.domain_right_edge[2].v - beam_starting_position
 index_beam_head = np.int(distance_to_start_pos / dzeta)
 beam_length = 2 / kp
 beam_length_i = np.int(beam_length / dzeta)
-nb_array[nz-index_beam_head-beam_length_i:nz-index_beam_head] = 0.01 * ne
+sigma_z = 1.41 / kp
+if (args.gaussian_beam):
+    peak_density = 0.01*ne
+    for i in range( int(nz/2) -1):
+        nb_array[int(nz/2)-i ] = peak_density * np.exp(-0.5*((i*dzeta)/sigma_z)**2 )
+        nb_array[int(nz/2)+i ] = peak_density * np.exp(-0.5*((i*dzeta)/sigma_z)**2 )
+else:
+    nb_array[nz-index_beam_head-beam_length_i:nz-index_beam_head] = 0.01 * ne
 
 # calculating the second derivative of the beam density array
 nb_dzdz = np.zeros(nz)

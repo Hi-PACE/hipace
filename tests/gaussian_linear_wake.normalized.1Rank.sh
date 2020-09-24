@@ -11,14 +11,22 @@ set -eu -o pipefail
 HIPACE_EXECUTABLE=$1
 HIPACE_SOURCE_DIR=$2
 
-HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/gaussian_linear_wake
+HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/linear_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+            beam.profile = gaussian \
+            beam.zmin = -5.9 \
+            beam.zmax = 5.9 \
+            beam.radius = 10 \
+            beam.mean = 0. 0. 0 \
+            beam.std = 2 2 1.41 \
+            geometry.prob_lo     = -10.   -10.   -6  \
+            geometry.prob_hi     =  10.    10.    6
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
+$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units --gaussian-beam
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \

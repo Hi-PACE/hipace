@@ -1,8 +1,6 @@
 #ifndef GETINTIALDENSITY_H_
 #define GETINTIALDENSITY_H_
 
-#include <math.h>
-
 #include <AMReX.H>
 #include <AMReX_REAL.H>
 #include <AMReX_RealVect.H>
@@ -27,20 +25,23 @@ struct GetInitialDensity
     amrex::Real operator() (const amrex::Real x, const amrex::Real y, const amrex::Real z) const
     {
         using namespace amrex::literals;
-        amrex::Real weight = 0._rt;
+        amrex::Real density = 0._rt;
         if        (m_profile == BeamProfileType::Gaussian) {
-            weight = m_density* exp(-0.5* pow( (x - m_mean[0]) / m_std[0], 2) )
-                              * exp(-0.5* pow( (y - m_mean[1]) / m_std[1], 2) )
-                              * exp(-0.5* pow( (z - m_mean[2]) / m_std[2], 2) );
+            amrex::Real delta_x = (x - m_mean[0]) / m_std[0];
+            amrex::Real delta_y = (y - m_mean[1]) / m_std[1];
+            amrex::Real delta_z = (z - m_mean[2]) / m_std[2];
+            density = m_density* exp( -0.5*delta_x*delta_x )
+                              * exp( -0.5*delta_y*delta_y )
+                              * exp( -0.5*delta_z*delta_z );
         } else if (m_profile == BeamProfileType::Flattop) {
-            weight = m_density;
+            density = m_density;
         }
-        return weight;
+        return density;
     }
     amrex::RealVect  m_mean {0.,0.,0.};
-    amrex::RealVect  m_std;
+    amrex::RealVect  m_std {0.,0.,0.};
     BeamProfileType m_profile;
-    amrex::Real m_density; /**< Pak density of the beam */
+    amrex::Real m_density; /**< Peak density of the beam */
 };
 
 #endif // GETINTIALDENSITY_H_

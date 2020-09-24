@@ -28,6 +28,5 @@ GetInitialDensity::GetInitialDensity ()
                 m_std[idim] = loc_array[idim];
             }
         }
-    } else if (m_profile == BeamProfileType::Flattop) {
     }
 }
