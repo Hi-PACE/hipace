@@ -114,7 +114,6 @@ InitParticles (const IntVect& a_num_particles_per_cell,
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
                 Real r[3] = {0.,0.,0.};
-                Real u[3] = {0.,0.,0.};
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
@@ -127,6 +126,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
                     z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
                     sqrt(x*x + y*y) > a_radius ) continue;
 
+                Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
                                                            a_u_std);
 
