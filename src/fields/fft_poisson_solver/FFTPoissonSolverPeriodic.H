@@ -19,12 +19,16 @@ using SpectralField = amrex::FabArray< amrex::BaseFab <amrex::GpuComplex<amrex::
  * 2. Call FFTPoissonSolver::SolvePoissonEquation(mf), which will solve Poisson equation with RHS
  *    in the staging area and return the LHS in mf.
  */
-class FFTPoissonSolverPeriodic : public FFTPoissonSolver
+class FFTPoissonSolverPeriodic final : public FFTPoissonSolver
 {
 public:
+    /** Constructor */
     FFTPoissonSolverPeriodic ( amrex::BoxArray const& realspace_ba,
                                amrex::DistributionMapping const& dm,
-                               amrex::Geometry const& gm);// :
+                               amrex::Geometry const& gm);
+
+    /** virtual destructor */
+    virtual ~FFTPoissonSolverPeriodic () override final {}
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, multiplier

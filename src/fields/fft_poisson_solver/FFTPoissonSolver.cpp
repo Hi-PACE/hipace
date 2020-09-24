@@ -1,5 +1,8 @@
 #include "FFTPoissonSolver.H"
 
+FFTPoissonSolver::~FFTPoissonSolver ()
+{};
+
 amrex::MultiFab&
 FFTPoissonSolver::StagingArea ()
 {
