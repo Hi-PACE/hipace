@@ -123,7 +123,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --plotfile ${build_dir}/bin/normalized_data \
                      --test-name blowout_wake.1Rank
 fi
 
@@ -173,6 +173,30 @@ then
     ./checksumAPI.py --reset-benchmark \
                      --plotfile ${build_dir}/bin/plt00001 \
                      --test-name linear_wake.SI.1Rank
+fi
+
+# gaussian_linear_wake.normalized.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "gaussian_linear_wake.normalized.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R gaussian_linear_wake.normalized.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --plotfile ${build_dir}/bin/plt00001 \
+                     --test-name gaussian_linear_wake.normalized.1Rank
+fi
+
+# gaussian_linear_wake.SI.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "gaussian_linear_wake.SI.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R gaussian_linear_wake.SI.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --plotfile ${build_dir}/bin/plt00001 \
+                     --test-name gaussian_linear_wake.SI.1Rank
 fi
 
 # beam_in_vacuum.SI.1Rank
