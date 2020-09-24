@@ -6,7 +6,7 @@
 #include <AMReX_REAL.H>
 #include <AMReX_RealVect.H>
 
-/** \brief Beam profile type, currently only Gaussian or Flattop */
+/** \brief Beam profile type, currently only Gaussian */
 enum struct BeamMomentumType { Gaussian };
 
 /** \brief Functor gets the initial momentum for beam particles

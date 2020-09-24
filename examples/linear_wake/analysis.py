@@ -70,8 +70,8 @@ distance_to_start_pos =  ds.domain_right_edge[2].v - beam_starting_position
 index_beam_head = np.int(distance_to_start_pos / dzeta)
 beam_length = 2 / kp
 beam_length_i = np.int(beam_length / dzeta)
-sigma_z = 1.41 / kp
 if (args.gaussian_beam):
+    sigma_z = 1.41 / kp
     peak_density = 0.01*ne
     for i in range( int(nz/2) -1):
         nb_array[int(nz/2)-i ] = peak_density * np.exp(-0.5*((i*dzeta)/sigma_z)**2 )
