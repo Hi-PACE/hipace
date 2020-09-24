@@ -5,6 +5,7 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
 {
     amrex::ParmParse pp("plasma");
     pp.query("density", m_density);
+    pp.query("radius", m_radius);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
@@ -39,5 +40,5 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     particleBox.setHi(dir, hi);
     particleBox.setLo(dir, lo);
 
-    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, geom, particleBox);
+    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius, geom, particleBox);
 }

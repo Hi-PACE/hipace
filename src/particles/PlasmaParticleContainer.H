@@ -44,10 +44,12 @@ public:
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_density,
+        const amrex::Real a_radius,
         const amrex::Geometry& a_geom,
         const amrex::RealBox& a_bounds);
 
     amrex::Real m_density {0}; /**< Density of the plasma */
+    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /* radius of the plasma */
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
