@@ -124,7 +124,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
-                    sqrt(x*x + y*y) > a_radius ) continue;
+                    x*x + y*y > a_radius*a_radius ) continue;
 
                 Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
