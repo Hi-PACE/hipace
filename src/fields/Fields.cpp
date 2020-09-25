@@ -21,15 +21,14 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-    m_nguards = {nguards_xy, nguards_xy, Hipace::m_depos_order_z};
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     if (Hipace::m_3d_on_host){
         // The Arena uses pinned memory.
-        m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
+        m_F[lev].define(ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
     } else {
         // The Arena uses managed memory.
-        m_F[lev].define(ba, dm, FieldComps::nfields, m_nguards,
+        m_F[lev].define(ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Arena()));
     }
 
@@ -188,6 +187,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
+        // amrex::Box slice_box = mfi.validbox();
         amrex::Box slice_box = slice_fab.box();
         slice_box.setSmall(Direction::z, i_slice);
         slice_box.setBig  (Direction::z, i_slice);
@@ -201,7 +201,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         if (vbx.smallEnd(Direction::z) <= i_slice and
             vbx.bigEnd  (Direction::z) >= i_slice)
         {
-            amrex::Box copy_box = amrex::grow(vbx, m_slices_nguards);
+            amrex::Box copy_box = vbx;
             copy_box.setSmall(Direction::z, i_slice);
             copy_box.setBig  (Direction::z, i_slice);
             auto const& full_array = full_mf.array(mfi);
