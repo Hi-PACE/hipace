@@ -26,6 +26,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
     PhysConst phys_const = get_phys_const();
 
+    const amrex::Real max_gamma_per_psi_p_1 = plasma.m_max_gamma_per_psi_p_1;
+
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
@@ -55,19 +57,23 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho);
+                                          deposit_jx_jy, deposit_jz, deposit_rho,
+                                          max_gamma_per_psi_p_1);
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho);
+                                          deposit_jx_jy, deposit_jz, deposit_rho,
+                                          max_gamma_per_psi_p_1);
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho);
+                                          deposit_jx_jy, deposit_jz, deposit_rho,
+                                          max_gamma_per_psi_p_1);
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho);
+                                          deposit_jx_jy, deposit_jz, deposit_rho,
+                                          max_gamma_per_psi_p_1);
         } else {
             amrex::Abort("unknow deposition order");
         }

@@ -6,6 +6,7 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
     amrex::ParmParse pp("plasma");
     pp.query("density", m_density);
     pp.query("radius", m_radius);
+    pp.query("max_gamma_per_psi_p_1", m_max_gamma_per_psi_p_1);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
