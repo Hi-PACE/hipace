@@ -16,12 +16,16 @@
  * 2. Call FFTPoissonSolver::SolvePoissonEquation(mf), which will solve Poisson equation with RHS
  *    in the staging area and return the LHS in mf.
  */
-class FFTPoissonSolverDirichlet : public FFTPoissonSolver
+class FFTPoissonSolverDirichlet final : public FFTPoissonSolver
 {
 public:
+    /** Constructor */
     FFTPoissonSolverDirichlet ( amrex::BoxArray const& realspace_ba,
                                 amrex::DistributionMapping const& dm,
                                 amrex::Geometry const& gm);
+
+    /** virtual destructor */
+    virtual ~FFTPoissonSolverDirichlet () override final {}
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, Dirichlet

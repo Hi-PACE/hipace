@@ -19,7 +19,11 @@ class FFTPoissonSolver
 {
 public:
 
+    /** Default constructor */
     FFTPoissonSolver () = default;
+
+    /** Abstract class needs a virtual destructor */
+    virtual ~FFTPoissonSolver () = 0;
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, multiplier
