@@ -580,6 +580,9 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 
     // Write plasma particles
     {
+        amrex::ParallelContext::push(m_comm_xy);
+        m_plasma_container.Redistribute();
+        amrex::ParallelContext::pop();
         amrex::Vector<int> plot_flags(PlasmaIdx::nattribs, 1);
         amrex::Vector<int> int_flags(PlasmaIdx::nattribs, 1);
         amrex::Vector<std::string> real_names {
