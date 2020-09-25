@@ -40,7 +40,7 @@
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
  * \param[in] deposit_rho if true, deposit to rho
- * \param[in] max_gamma_per_psi_p_1 maximum allowed weighting factor gamma/(Psi +1)
+ * \param[in] max_gamma_per_psi_p_1 maximum allowed weighting factor gamma/(Psi+1)
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
