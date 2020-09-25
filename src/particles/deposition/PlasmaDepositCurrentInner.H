@@ -40,7 +40,7 @@
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
  * \param[in] deposit_rho if true, deposit to rho
- * \param[in] max_gamma_per_psi_p_1 maximum allowed weighting factor gamma/(Psi+1)
+ * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
@@ -54,7 +54,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const q,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const amrex::Real max_gamma_per_psi_p_1)
+                         const amrex::Real max_qsa_weighting_factor)
 {
     using namespace amrex::literals;
 
@@ -112,60 +112,62 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                                                                   + uyp[ip]*uyp[ip]*clightsq
                                                                   + (psi+1.0_rt)*(psi+1.0_rt));
 
-            if (( 1.0_rt/(gaminv*(psi+1)) > 0.0_rt) &&
-                ( 1.0_rt/(gaminv*(psi+1)) < max_gamma_per_psi_p_1))
+            if (( 1.0_rt/(gaminv*(psi+1.0_rt)) < 0.0_rt) ||
+                 ( 1.0_rt/(gaminv*(psi+1.0_rt)) > max_qsa_weighting_factor))
             {
-                // calculate plasma particle velocities
-                const amrex::Real vx = uxp[ip]*gaminv;
-                const amrex::Real vy = uyp[ip]*gaminv;
-                const amrex::Real vz = - psi * phys_const.c * gaminv;
+                 // This particle violates the QSA, discard it and do not deposit its current
+                 pos_structs[ip].id() = -1;
+                 return;
+            }
+            // calculate plasma particle velocities
+            const amrex::Real vx = uxp[ip]*gaminv;
+            const amrex::Real vy = uyp[ip]*gaminv;
+            const amrex::Real vz = - psi * phys_const.c * gaminv;
 
-                // calculate charge of the plasma particles
-                const amrex::Real wq = q*wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
+            // calculate charge of the plasma particles
+            const amrex::Real wq = q*wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
 
-                // wqx, wqy wqz are particle current in each direction
-                const amrex::Real wqx = wq*vx;
-                const amrex::Real wqy = wq*vy;
-                const amrex::Real wqz = wq*vz;
+            // wqx, wqy wqz are particle current in each direction
+            const amrex::Real wqx = wq*vx;
+            const amrex::Real wqy = wq*vy;
+            const amrex::Real wqz = wq*vz;
 
-                // --- Compute shape factors
-                // x direction
-                // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-                const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
-                amrex::Real sx_cell[depos_order_xy + 1];
-                const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
+            // --- Compute shape factors
+            // x direction
+            // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
+            const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
+            amrex::Real sx_cell[depos_order_xy + 1];
+            const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
 
-                // y direction
-                const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
-                amrex::Real sy_cell[depos_order_xy + 1];
-                const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
+            // y direction
+            const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
+            amrex::Real sy_cell[depos_order_xy + 1];
+            const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
-                // Deposit current into jx_arr, jy_arr and jz_arr
-                for (int iy=0; iy<=depos_order_xy; iy++){
-                    for (int ix=0; ix<=depos_order_xy; ix++){
-                        if (deposit_jx_jy) {
-                            amrex::Gpu::Atomic::Add(
-                                &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                                sx_cell[ix]*sy_cell[iy]*wqx);
-                            amrex::Gpu::Atomic::Add(
-                                &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                                sx_cell[ix]*sy_cell[iy]*wqy);
-                        }
-                        if (deposit_jz) {
-                            amrex::Gpu::Atomic::Add(
-                                &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                                sx_cell[ix]*sy_cell[iy]*wqz);
-                        }
-                        if (deposit_rho) {
-                            amrex::Gpu::Atomic::Add(
-                                &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
-                                sx_cell[ix]*sy_cell[iy]*wq);
-                        }
+            // Deposit current into jx_arr, jy_arr and jz_arr
+            for (int iy=0; iy<=depos_order_xy; iy++){
+                for (int ix=0; ix<=depos_order_xy; ix++){
+                    if (deposit_jx_jy) {
+                        amrex::Gpu::Atomic::Add(
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqx);
+                        amrex::Gpu::Atomic::Add(
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqy);
+                    }
+                    if (deposit_jz) {
+                        amrex::Gpu::Atomic::Add(
+                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wqz);
+                    }
+                    if (deposit_rho) {
+                        amrex::Gpu::Atomic::Add(
+                            &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            sx_cell[ix]*sy_cell[iy]*wq);
                     }
                 }
-            } else { // if (( 1.0_rt/(gaminv*psi) > 0.0_rt) && ( 1.0_rt/(gaminv*psi) > 35.0_rt))
-                pos_structs[ip].id() = -1;
             }
+            return;
         }
         );
 }

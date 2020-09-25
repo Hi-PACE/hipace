@@ -49,9 +49,9 @@ public:
         const amrex::RealBox& a_bounds);
 
     amrex::Real m_density {0}; /**< Density of the plasma */
-    amrex::Real m_max_gamma_per_psi_p_1 {35.}; /**< maximum weighting factor gamma/(Psi +1) before
-                                                * particle is regarded as violating the
-                                                * quasi-static approximation and is removed */
+    /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
+     *  the quasi-static approximation and is removed */
+    amrex::Real m_max_qsa_weighting_factor {35.};
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
