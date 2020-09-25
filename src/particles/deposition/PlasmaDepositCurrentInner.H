@@ -40,6 +40,7 @@
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
  * \param[in] deposit_rho if true, deposit to rho
+ * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
@@ -52,14 +53,15 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          const bool temp_slice,
-                         const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho)
+                         const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
+                         const amrex::Real max_qsa_weighting_factor)
 {
     using namespace amrex::literals;
 
     const PhysConst phys_const = get_phys_const();
 
     // Extract particle properties
-    const auto& aos = pti.GetArrayOfStructs(); // For positions
+    auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
     const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
@@ -110,18 +112,25 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                                                                   + uyp[ip]*uyp[ip]*clightsq
                                                                   + (psi+1.0_rt)*(psi+1.0_rt));
 
-           // calculate plasma particle velocities
-           const amrex::Real vx = uxp[ip]*gaminv;
-           const amrex::Real vy = uyp[ip]*gaminv;
-           const amrex::Real vz = - psi * phys_const.c * gaminv;
+            if (( 1.0_rt/(gaminv*(psi+1.0_rt)) < 0.0_rt) ||
+                 ( 1.0_rt/(gaminv*(psi+1.0_rt)) > max_qsa_weighting_factor))
+            {
+                 // This particle violates the QSA, discard it and do not deposit its current
+                 pos_structs[ip].id() = -1;
+                 return;
+            }
+            // calculate plasma particle velocities
+            const amrex::Real vx = uxp[ip]*gaminv;
+            const amrex::Real vy = uyp[ip]*gaminv;
+            const amrex::Real vz = - psi * phys_const.c * gaminv;
 
-           // calculate charge of the plasma particles
-           const amrex::Real wq = q*wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
+            // calculate charge of the plasma particles
+            const amrex::Real wq = q*wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
 
-           // wqx, wqy wqz are particle current in each direction
-           const amrex::Real wqx = wq*vx;
-           const amrex::Real wqy = wq*vy;
-           const amrex::Real wqz = wq*vz;
+            // wqx, wqy wqz are particle current in each direction
+            const amrex::Real wqx = wq*vx;
+            const amrex::Real wqy = wq*vy;
+            const amrex::Real wqz = wq*vz;
 
             // --- Compute shape factors
             // x direction
@@ -158,6 +167,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     }
                 }
             }
+            return;
         }
         );
 }
