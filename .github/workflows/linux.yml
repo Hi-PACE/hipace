@@ -31,9 +31,12 @@ jobs:
       run: .github/workflows/setup/ubuntu_ompi.sh
     - name: Build & Install
       run: |
+        export CXXFLAGS="-fsanitize=address,undefined"
+        export ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=1:check_initialization_order=true:strict_init_order=true:detect_stack_use_after_scope=1:fast_unwind_on_malloc=0
+        export LSAN_OPTIONS=suppressions=$PWD/.github/ci/sanitizer/Leak.supp
+
         mkdir build
         cd build
-        export CXXFLAGS="-fsanitize=address,undefined"
         cmake ..                                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
             -DCMAKE_CXX_STANDARD=17

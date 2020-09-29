@@ -1,0 +1,8 @@
+# OpenMPI 2.1.1 Memory Leaks
+leak:mca_io_ompi*
+leak:mca_pmix_pmix*
+leak:libopen-pal*
+leak:libopen-rte*
+leak:libmpi*
+# FFTW 3.3.7 Memory Leaks
+leak:libfftw3*
