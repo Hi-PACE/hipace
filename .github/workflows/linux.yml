@@ -22,8 +22,8 @@ jobs:
 #        ctest --output-on-failure
 #        make install
 
-  linux_gcc_cxx17_omp_ompi:
-    name: GNU@7.5 C++17 OMP OMPI
+  linux_gcc_cxx17_omp_ompi_asan_ubsan:
+    name: GNU@7.5 C++17 OMP OMPI ASAN UBSAN
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -33,6 +33,7 @@ jobs:
       run: |
         mkdir build
         cd build
+        export CXXFLAGS="-fsanitize=address,undefined"
         cmake ..                                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
             -DCMAKE_CXX_STANDARD=17
