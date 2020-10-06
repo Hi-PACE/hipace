@@ -36,7 +36,9 @@ public:
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
      */
-    void InitData (const amrex::Geometry& geom);
+    void InitData (const amrex::Geometry& geom,
+                   const amrex::DistributionMapping& dm,
+                   const amrex::BoxArray& ba);
 
     /** Initialize 1 xy slice of particles, with fixed number of particles per cell */
     void InitParticles (

@@ -110,7 +110,26 @@ Hipace::InitData ()
 
     AmrCore::InitFromScratch(0.0); // function argument is time
     m_beam_container.InitData(geom[0]);
-    m_plasma_container.InitData(geom[0]);
+
+    constexpr int lev = 0;
+
+    // Construct slice GDB to initialize particles on the slice BA
+    const amrex::BoxArray slice_ba = m_fields.getSlices(lev, WhichSlice::This).boxArray();
+    const amrex::DistributionMapping slice_dm = m_fields.getSlices(lev, WhichSlice::This).DistributionMap();
+    amrex::Geometry slice_geom = Geom(lev);
+
+
+    const int dir = AMREX_SPACEDIM-1;
+    const amrex::Real dx = Geom(lev).CellSize(dir);
+    const amrex::Real hi = Geom(lev).ProbHi(dir);
+    const amrex::Real lo = hi - dx;
+
+    amrex::RealBox slice_domain = Geom(lev).ProbDomain();
+    slice_domain.setHi(dir, hi);
+    slice_domain.setLo(dir, lo);
+    slice_geom.ResetDefaultProbDomain(slice_domain);
+
+    m_plasma_container.InitData(slice_geom, slice_dm, slice_ba);
 }
 
 void
@@ -150,7 +169,6 @@ Hipace::MakeNewLevelFromScratch (
     SetDistributionMap(lev, dm); // Let AmrCore know
 
     m_fields.AllocData(lev, ba, dm, Geom(lev));
-
 }
 
 void
