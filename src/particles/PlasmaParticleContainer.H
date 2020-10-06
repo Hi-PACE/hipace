@@ -35,6 +35,9 @@ public:
     explicit PlasmaParticleContainer (amrex::AmrCore* amr_core);
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
+     * geom geometry object onto which the slice is defined
+     * dm distribution mappint onto which the slice is defined
+     * ba BoxArray onto which the slice is defined
      */
     void InitData (const amrex::Geometry& geom,
                    const amrex::DistributionMapping& dm,
