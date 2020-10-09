@@ -141,14 +141,10 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     const amrex::Real hi = Geom(lev).ProbHi(dir);
     const amrex::Real lo = hi - dx;
 
-    // amrex::RealBox particleBox = geom.ProbDomain();
     m_slice_domain.setHi(dir, hi);
     m_slice_domain.setLo(dir, lo);
-    // m_slice_geom.setProbDomain(particleBox);
     
     slice_initialized = true;
-    // amrex::BoxArray slice_ba(std::move(bl));
-    // amrex::DistributionMapping slice_dm(std::move(procmap));
 }
 
 bool

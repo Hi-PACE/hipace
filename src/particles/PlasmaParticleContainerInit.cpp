@@ -20,13 +20,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
 
     const int lev = 0;
     const auto dx = a_geom.CellSizeArray();
-    //const auto plo = a_bounds.lo();
-    const auto phi = a_bounds.hi();
     const auto plo = a_geom.ProbLoArray();
-    //amrex::Print()<<"plo2 "<<plo2[0]<<' '<<plo2[1]<<' '<<plo2[2]<<'\n';
-    amrex::Print()<<"plo  "<<plo[0]<<' '<<plo[1]<<' '<<plo[2]<<'\n';
-    amrex::Print()<<"phi  "<<phi[0]<<' '<<phi[1]<<' '<<phi[2]<<'\n';
-    //amrex::Print()<<"plo2 "<<plo2<<'\n';
 
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],

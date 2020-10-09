@@ -190,9 +190,7 @@ private:
 
     amrex::RealBox m_slice_domain;
     amrex::DistributionMapping m_slice_dm;
-    /** Slice BoxArray. Used for field slice and plasma particles */
     amrex::BoxArray m_slice_ba;
-    bool slice_initialized = false;
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

@@ -32,21 +32,5 @@ PlasmaParticleContainer::InitData (const amrex::RealBox& slice_box, const amrex:
     reserveData();
     resizeData();
 
-    amrex::Print()<<slice_box<<'\n';
-    amrex::Print()<<geom<<'\n';
-
-    /*
-    const int dir = AMREX_SPACEDIM-1;
-    const amrex::Real dx = geom.CellSize(dir);
-    const amrex::Real hi = geom.ProbHi(dir);
-    const amrex::Real lo = hi - dx;
-
-    amrex::RealBox particleBox = geom.ProbDomain();
-    particleBox.setHi(dir, hi);
-    particleBox.setLo(dir, lo);
-    amrex::Print()<<geom.ProbLo(dir)<<' '<<geom.ProbHi(dir)<<'\n';    
-    amrex::Print()<<lo<<' '<<hi<<'\n';    
-    */
-
     InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius, geom, slice_box);
 }
