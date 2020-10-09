@@ -20,7 +20,7 @@ void doDeviceSynchronize(bool do_device_synchronize)
         amrex::Gpu::synchronize();
 }
 
-#define HIPACE_PROFILE(fname) doDeviceSynchronize(Hipace::m_do_device_synchronize); BL_PROFILE(fname)
+#define HIPACE_PROFILE(fname) doDeviceSynchronize(Hipace::m_do_device_synchronize); amrex::Print()<<fname<<'\n'; BL_PROFILE(fname)
 #define HIPACE_PROFILE_VAR(fname, vname) doDeviceSynchronize(Hipace::m_do_device_synchronize); BL_PROFILE_VAR(fname, vname)
 #define HIPACE_PROFILE_VAR_NS(fname, vname) doDeviceSynchronize(Hipace::m_do_device_synchronize); BL_PROFILE_VAR_NS(fname, vname)
 #define HIPACE_PROFILE_VAR_START(vname) doDeviceSynchronize(Hipace::m_do_device_synchronize); BL_PROFILE_VAR_START(vname)

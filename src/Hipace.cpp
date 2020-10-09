@@ -90,6 +90,67 @@ Hipace::~Hipace ()
 #endif
 }
 
+void
+Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
+{
+    std::map<int,amrex::Vector<amrex::Box> > boxes;
+    for (int i = 0; i < ba.size(); ++i) {
+        int rank = dm[i];
+        if (InSameTransverseCommunicator(rank)) {
+            boxes[rank].push_back(ba[i]);
+        }
+    }
+
+    // We assume each process may have multiple Boxes longitude direction, but only one Box in the
+    // transverse direction.  The union of all Boxes on a process is rectangular.  The slice
+    // BoxArray therefore has one Box per process.  The Boxes in the slice BoxArray have one cell in
+    // the longitude direction.  We will use the lowest longitude index in each process to construct
+    // the Boxes.  These Boxes do not have any overlaps. Transversely, there are no gaps between
+    // them.
+
+    amrex::BoxList bl;
+    amrex::Vector<int> procmap;
+    for (auto const& kv : boxes) {
+        int const iproc = kv.first;
+        auto const& boxes_i = kv.second;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes_i.size() > 0,
+                                         "We assume each process has at least one Box");
+        amrex::Box bx = boxes_i[0];
+        for (int j = 1; j < boxes_i.size(); ++j) {
+            amrex::Box const& bxj = boxes_i[j];
+            for (int idim = 0; idim < Direction::z; ++idim) {
+                AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
+                AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));
+                if (bxj.smallEnd(Direction::z) < bx.smallEnd(Direction::z)) {
+                    bx = bxj;
+                }
+            }
+        }
+        bx.setBig(Direction::z, bx.smallEnd(Direction::z));
+        bl.push_back(bx);
+        procmap.push_back(iproc);
+    }
+
+    m_slice_ba = amrex::BoxArray(std::move(bl));
+    m_slice_dm = amrex::DistributionMapping(std::move(procmap));
+    constexpr int lev = 0;
+    m_slice_domain = Geom(lev).ProbDomain();
+
+    const int dir = AMREX_SPACEDIM-1;
+    const amrex::Real dx = Geom(lev).CellSize(dir);
+    const amrex::Real hi = Geom(lev).ProbHi(dir);
+    const amrex::Real lo = hi - dx;
+
+    // amrex::RealBox particleBox = geom.ProbDomain();
+    m_slice_domain.setHi(dir, hi);
+    m_slice_domain.setLo(dir, lo);
+    // m_slice_geom.setProbDomain(particleBox);
+    
+    slice_initialized = true;
+    // amrex::BoxArray slice_ba(std::move(bl));
+    // amrex::DistributionMapping slice_dm(std::move(procmap));
+}
+
 bool
 Hipace::InSameTransverseCommunicator (int rank) const
 {
@@ -109,8 +170,12 @@ Hipace::InitData ()
     SetMaxGridSize(new_max_grid_size);
 
     AmrCore::InitFromScratch(0.0); // function argument is time
+    amrex::Print()<<"slice_initialized "<<slice_initialized<<'\n';
+    constexpr int lev = 0;
     m_beam_container.InitData(geom[0]);
-    m_plasma_container.InitData(geom[0]);
+    m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
+    m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
+    m_plasma_container.InitData(m_slice_domain, geom[0]);
 }
 
 void
@@ -148,9 +213,8 @@ Hipace::MakeNewLevelFromScratch (
         dm.define(std::move(procmap));
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
-
-    m_fields.AllocData(lev, ba, dm, Geom(lev));
-
+    DefineSliceGDB(ba, dm);
+    m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
 }
 
 void
