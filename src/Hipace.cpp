@@ -143,8 +143,6 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
 
     m_slice_domain.setHi(dir, hi);
     m_slice_domain.setLo(dir, lo);
-    
-    slice_initialized = true;
 }
 
 bool
@@ -166,7 +164,6 @@ Hipace::InitData ()
     SetMaxGridSize(new_max_grid_size);
 
     AmrCore::InitFromScratch(0.0); // function argument is time
-    amrex::Print()<<"slice_initialized "<<slice_initialized<<'\n';
     constexpr int lev = 0;
     m_beam_container.InitData(geom[0]);
     m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
