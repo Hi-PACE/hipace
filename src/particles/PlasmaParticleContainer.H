@@ -38,7 +38,14 @@ public:
      */
     void InitData ();
 
-    /** Initialize 1 xy slice of particles, with fixed number of particles per cell */
+    /** Initialize 1 xy slice of particles, with fixed number of particles per cell
+     *
+     * \param[in] a_num_particles_per_cell number of particles per cell in x and y
+     * \param[in] a_thermal_momentum_std standard deviation of the momentum distribution (3d)
+     * \param[in] a_thermal_momentum_mean average momentum (3d)
+     * \param[in] a_density plasma density (SI)
+     * \param[in] a_radius plasma radius. Only particles with x**2+y**2<a_radius**2 are injected
+     */
     void InitParticles (
         const amrex::IntVect& a_num_particles_per_cell,
         const amrex::RealVect& a_thermal_momentum_std,
