@@ -36,7 +36,7 @@ public:
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
      */
-    void InitData (const amrex::RealBox& slice_box, const amrex::Geometry& geom);
+    void InitData ();
 
     /** Initialize 1 xy slice of particles, with fixed number of particles per cell */
     void InitParticles (
@@ -44,9 +44,7 @@ public:
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_density,
-        const amrex::Real a_radius,
-        const amrex::Geometry& a_geom,
-        const amrex::RealBox& a_bounds);
+        const amrex::Real a_radius);
 
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating

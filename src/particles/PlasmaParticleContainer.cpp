@@ -27,10 +27,10 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
 }
 
 void
-PlasmaParticleContainer::InitData (const amrex::RealBox& slice_box, const amrex::Geometry& geom)
+PlasmaParticleContainer::InitData ()
 {
     reserveData();
     resizeData();
 
-    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius, geom, slice_box);
+    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius);
 }

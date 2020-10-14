@@ -131,18 +131,27 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
         procmap.push_back(iproc);
     }
 
+    // Slice BoxArray
     m_slice_ba = amrex::BoxArray(std::move(bl));
-    m_slice_dm = amrex::DistributionMapping(std::move(procmap));
-    constexpr int lev = 0;
-    m_slice_domain = Geom(lev).ProbDomain();
 
+    // Slice DistributionMapping
+    m_slice_dm = amrex::DistributionMapping(std::move(procmap));
+
+    // Slice Geometry
+    constexpr int lev = 0;
     const int dir = AMREX_SPACEDIM-1;
+    // Set the lo and hi of domain and probdomain in the z direction
+    amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
+    amrex::Box tmp_dom = Geom(lev).Domain();
     const amrex::Real dx = Geom(lev).CellSize(dir);
     const amrex::Real hi = Geom(lev).ProbHi(dir);
     const amrex::Real lo = hi - dx;
-
-    m_slice_domain.setHi(dir, hi);
-    m_slice_domain.setLo(dir, lo);
+    tmp_probdom.setLo(dir, lo);
+    tmp_probdom.setHi(dir, hi);
+    tmp_dom.setSmall(dir, 0);
+    tmp_dom.setBig(dir, 0);
+    m_slice_geom = amrex::Geometry(
+        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
 }
 
 bool
@@ -168,7 +177,7 @@ Hipace::InitData ()
     m_beam_container.InitData(geom[0]);
     m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
-    m_plasma_container.InitData(m_slice_domain, geom[0]);
+    m_plasma_container.InitData();
 }
 
 void

@@ -188,7 +188,7 @@ private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
 
-    amrex::RealBox m_slice_domain;
+    amrex::Geometry m_slice_geom;
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
 
