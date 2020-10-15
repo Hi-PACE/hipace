@@ -177,6 +177,7 @@ Hipace::InitData ()
     m_beam_container.InitData(geom[0]);
     m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
+    m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
 }
 
