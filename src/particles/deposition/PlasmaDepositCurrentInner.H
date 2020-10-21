@@ -63,9 +63,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
-    const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+    auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
-    const amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
+    amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
     const amrex::Real * const uxp = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
     const amrex::Real * const uyp = (!temp_slice) ?
@@ -116,7 +116,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                  ( 1.0_rt/(gaminv*(psi+1.0_rt)) > max_qsa_weighting_factor))
             {
                  // This particle violates the QSA, discard it and do not deposit its current
-                 pos_structs[ip].id() = -1;
+                 wp[ip] = 0.0_rt;
+                 // pos_structs[ip].id() = -1;
                  return;
             }
             // calculate plasma particle velocities

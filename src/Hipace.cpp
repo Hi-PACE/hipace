@@ -255,7 +255,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
                            WhichSlice::This, false,
                            true, false, false, lev);
 
-    m_plasma_container.Redistribute();
+    m_plasma_container.RedistributeSlice( geom[lev], lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::rho, 1);
 
@@ -372,7 +372,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                WhichSlice::Next, true,
                                true, false, false, lev);
-        m_plasma_container.Redistribute();
+        m_plasma_container.RedistributeSlice( geom[lev], lev);
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
@@ -425,18 +425,18 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     /* resetting the particle position after they have been pushed to the next slice */
     ResetPlasmaParticles(m_plasma_container, lev);
 
-    if (relative_Bfield_error > 10.)
-    {
-        amrex::Abort("Predictor corrector loop diverged!\n"
-                     "Re-try by adjusting the following paramters in the input script:\n"
-                     "- lower mixing factor: hipace.predcorr_B_mixing_factor "
-                     "(hidden default: 0.1) \n"
-                     "- lower B field error tolerance: hipace.predcorr_B_error_tolerance"
-                     " (hidden default: 0.04)\n"
-                     "- higher number of iterations in the pred. cor. loop:"
-                     "hipace.predcorr_max_iterations (hidden default: 5)\n"
-                     "- higher longitudinal resolution");
-    }
+    // if (relative_Bfield_error > 10.)
+    // {
+    //     amrex::Abort("Predictor corrector loop diverged!\n"
+    //                  "Re-try by adjusting the following paramters in the input script:\n"
+    //                  "- lower mixing factor: hipace.predcorr_B_mixing_factor "
+    //                  "(hidden default: 0.1) \n"
+    //                  "- lower B field error tolerance: hipace.predcorr_B_error_tolerance"
+    //                  " (hidden default: 0.04)\n"
+    //                  "- higher number of iterations in the pred. cor. loop:"
+    //                  "hipace.predcorr_max_iterations (hidden default: 5)\n"
+    //                  "- higher longitudinal resolution");
+    // }
     if (m_verbose >= 2) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
                             " relative B field error: "<<relative_Bfield_error<< "\n";
 }

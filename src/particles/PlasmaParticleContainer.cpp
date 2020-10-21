@@ -1,4 +1,6 @@
 #include "PlasmaParticleContainer.H"
+#include "Hipace.H"
+#include "HipaceProfilerWrapper.H"
 
 PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
     : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
@@ -42,4 +44,42 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     particleBox.setLo(dir, lo);
 
     InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius, geom, particleBox);
+}
+
+void
+PlasmaParticleContainer::RedistributeSlice ( const amrex::Geometry& geom,
+                                             int const lev)
+{
+    HIPACE_PROFILE("PlasmaParticleContainer::RedistributeSlice()");
+
+    const auto plo    = geom.ProbLoArray();
+    const auto phi    = geom.ProbHiArray();
+    const auto is_per = geom.isPeriodicArray();
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(*this, lev); pti.isValid(); ++pti)
+    {
+        // Extract properties associated with the extent of the current box
+        amrex::Box tilebox = pti.tilebox().grow(
+            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+
+        // amrex::RealBox const grid_box{tilebox, geom.CellSize(), geom.ProbLo()};
+        // amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
+        // amrex::Dim3 const lo = amrex::lbound(tilebox);
+
+        // Extract particle properties
+        auto& aos = pti.GetArrayOfStructs(); // For positions
+        const auto& pos_structs = aos.begin();
+        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+
+        // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
+        amrex::ParallelFor(
+            pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (long ip) {
+
+                enforcePeriodic(pos_structs[ip], plo, phi, is_per);
+
+            }
+            );
+        }
 }

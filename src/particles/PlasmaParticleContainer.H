@@ -48,6 +48,10 @@ public:
         const amrex::Geometry& a_geom,
         const amrex::RealBox& a_bounds);
 
+
+    void RedistributeSlice ( const amrex::Geometry& a_geom,
+                             int const lev);
+
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
