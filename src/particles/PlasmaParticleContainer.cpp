@@ -72,11 +72,10 @@ PlasmaParticleContainer::RedistributeSlice ( const amrex::Geometry& geom,
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
         amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
 
-        // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
+        // Loop over particles and handle particles outside of the box
         amrex::ParallelFor(
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
-
 
                 const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, peridicity);
 

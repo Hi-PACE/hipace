@@ -117,7 +117,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             {
                  // This particle violates the QSA, discard it and do not deposit its current
                  wp[ip] = 0.0_rt;
-                 // pos_structs[ip].id() = -1;
                  return;
             }
             // calculate plasma particle velocities
