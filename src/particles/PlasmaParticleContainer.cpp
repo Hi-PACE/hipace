@@ -52,10 +52,13 @@ PlasmaParticleContainer::RedistributeSlice ( const amrex::Geometry& geom,
 {
     HIPACE_PROFILE("PlasmaParticleContainer::RedistributeSlice()");
 
+    using namespace amrex::literals;
     const auto plo    = geom.ProbLoArray();
     const auto phi    = geom.ProbHiArray();
     const auto is_per = geom.isPeriodicArray();
+    AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
 
+    amrex::GpuArray<int,AMREX_SPACEDIM> const peridicity = {true, true, false};
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(*this, lev); pti.isValid(); ++pti)
     {
@@ -63,21 +66,21 @@ PlasmaParticleContainer::RedistributeSlice ( const amrex::Geometry& geom,
         amrex::Box tilebox = pti.tilebox().grow(
             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
-        // amrex::RealBox const grid_box{tilebox, geom.CellSize(), geom.ProbLo()};
-        // amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-        // amrex::Dim3 const lo = amrex::lbound(tilebox);
-
         // Extract particle properties
         auto& aos = pti.GetArrayOfStructs(); // For positions
         const auto& pos_structs = aos.begin();
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
 
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
         amrex::ParallelFor(
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
-                enforcePeriodic(pos_structs[ip], plo, phi, is_per);
+
+                const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, peridicity);
+
+                if (shifted && !is_per[0]) wp[ip] = 0.0_rt;
 
             }
             );
