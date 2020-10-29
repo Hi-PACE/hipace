@@ -50,6 +50,7 @@ public:
 
     /** Redistribute the particles on a slice, meaning particles, which left the box are returned
      * periodically and if peridicity = 0, their weight is set to 0
+     * \param[in] lev MR level
      */
     void RedistributeSlice (int const lev);
 
