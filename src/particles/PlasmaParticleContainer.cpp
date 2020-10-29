@@ -47,24 +47,20 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
 }
 
 void
-PlasmaParticleContainer::RedistributeSlice ( const amrex::Geometry& geom,
-                                             int const lev)
+PlasmaParticleContainer::RedistributeSlice (int const lev)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::RedistributeSlice()");
 
     using namespace amrex::literals;
-    const auto plo    = geom.ProbLoArray();
-    const auto phi    = geom.ProbHiArray();
-    const auto is_per = geom.isPeriodicArray();
+    const auto plo    = Geom(lev).ProbLoArray();
+    const auto phi    = Geom(lev).ProbHiArray();
+    const auto is_per = Geom(lev).isPeriodicArray();
     AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
 
-    amrex::GpuArray<int,AMREX_SPACEDIM> const peridicity = {true, true, false};
+    amrex::GpuArray<int,AMREX_SPACEDIM> const periodicity = {true, true, false};
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(*this, lev); pti.isValid(); ++pti)
     {
-        // Extract properties associated with the extent of the current box
-        amrex::Box tilebox = pti.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
         // Extract particle properties
         auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -77,7 +73,7 @@ PlasmaParticleContainer::RedistributeSlice ( const amrex::Geometry& geom,
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
-                const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, peridicity);
+                const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, periodicity);
 
                 if (shifted && !is_per[0]) wp[ip] = 0.0_rt;
 
