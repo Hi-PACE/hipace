@@ -17,6 +17,7 @@ namespace {
 
 Hipace* Hipace::m_instance = nullptr;
 
+amrex::Real Hipace::m_dt = 0.0;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
@@ -54,6 +55,7 @@ Hipace::Hipace () :
     } else {
         m_phys_const = make_constants_SI();
     }
+    pph.query("dt", m_dt);
     pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);

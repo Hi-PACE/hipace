@@ -145,6 +145,8 @@ public:
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
     int m_max_step = 0;
+    /** Time step for the beam evolution */
+    static amrex::Real m_dt;
     /** Number of iterations between consecutive output dumps.
      * Default is -1, meaning no output */
     int m_output_period = -1;

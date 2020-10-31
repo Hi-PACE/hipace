@@ -18,6 +18,7 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
 
+    const amrex::Real dt = Hipace::m_dt;
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
@@ -66,7 +67,7 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
 
         const auto getPosition = GetBeamParticlePosition(pti);
         const auto SetPosition = SetBeamParticlePosition(pti);
-        // const amrex::Real zmin = xyzmin[2];
+        const amrex::Real zmin = xyzmin[2];
         // const amrex::Real dz = dx[2];
 
 
@@ -91,20 +92,72 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
             [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = slice_deposition ? indices[cell_start+idx] : idx;
 
+                const amrex::Real charge_mass_ratio = -1.0_rt;
+                amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip] * uxp[ip] + uyp[ip] * uyp[ip]
+                                      + uzp[ip] * uzp[ip] );
+
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
+
+                /* first we do half a step in x,y
+                 * This is not required in z, which is pushed in one step later */
+                xp += dt * 0.5_rt * uxp[ip] / gammap;
+                yp += dt * 0.5_rt * uyp[ip] / gammap;
+
+                SetPosition(ip, xp, yp, zp);
+
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                doGatherShapeN(xp, yp, zp, //zp, or maybe zmin? This needs to be checked
+                doGatherShapeN(xp, yp, zmin, //zp, or maybe zmin? This needs to be checked
                                ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
+                /* use intermediate fields to calculate next (n+1) transverse
+                 * momenta */
+                amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
+                    * ( ExmByp + ( 1.0_rt - uzp[ip] / gammap ) * Byp );
+                amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
+                    * ( EypBxp + ( uzp[ip] / gammap - 1.0_rt ) * Bxp );
+
+
+                /* Now computing new longitudinal momentum */
+                amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
+                amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
+                amrex::ParticleReal uz_intermediate = uzp[ip]
+                                                      + dt * 0.5_rt * charge_mass_ratio * Ezp;
+
+                amrex::ParticleReal gamma_intermediate = sqrt( 1.0_rt +
+                    ux_intermediate * ux_intermediate + uy_intermediate * uy_intermediate
+                          + uz_intermediate * uz_intermediate );
+
+                amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
+                          * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
+                              / gamma_intermediate );
+
+                /* computing next gamma value */
+                amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next * uz_next + ux_next * ux_next + uy_next * uy_next );
+
+                /*
+                 * computing positions and setting momenta for the next timestep
+                 *(n+1)
+                 * The longitudinal position is updated here as well, but in
+                 * first-order (i.e. without the intermediary half-step) using
+                 * a simple Galilean transformation
+                 */
+                xp += dt * 0.5_rt * ux_next / gamma_next;
+                yp += dt * 0.5_rt * uy_next / gamma_next;
+                zp += dt * ( uz_next / gamma_next - 1.0_rt );
+                SetPosition(ip, xp, yp, zp);
+                uxp[ip] = ux_next;
+                uyp[ip] = uy_next;
+                uzp[ip] = uz_next;
+
                 // push a single beam particle
-                BeamParticlePush (xp, yp, zp, uxp[ip], uyp[ip], uzp[ip], ip, SetPosition );
+                // BeamParticlePush (xp, yp, zp, uxp[ip], uyp[ip], uzp[ip], ip, SetPosition );
 
           }
           );
