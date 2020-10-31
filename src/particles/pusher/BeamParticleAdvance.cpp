@@ -99,7 +99,7 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                doGatherShapeN(xp, yp, zmin, //zp, or maybe zp? This needs to be checked
+                doGatherShapeN(xp, yp, zp, //zp, or maybe zmin? This needs to be checked
                                ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
