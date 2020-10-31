@@ -1,13 +1,15 @@
 #include "BeamParticleAdvance.H"
 
 #include "FieldGather.H"
+#include "PushBeamParticles.H"
 #include "Constants.H"
 #include "GetAndSetPosition.H"
 #include "HipaceProfilerWrapper.H"
 
 void
 AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
-                      amrex::Geometry const& gm, int const lev, const int islice)
+                      amrex::Geometry const& gm, int const lev, const int islice,
+                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticles()");
     using namespace amrex::literals;
@@ -56,9 +58,7 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 
         // Extract particle properties
-        const auto& aos = pti.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin();
-        const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
         // const auto  wp = soa.GetRealData(BeamIdx::w).data();
         const auto uxp = soa.GetRealData(BeamIdx::ux).data();
         const auto uyp = soa.GetRealData(BeamIdx::uy).data();
@@ -66,12 +66,11 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
 
         const auto getPosition = GetBeamParticlePosition(pti);
         const auto SetPosition = SetBeamParticlePosition(pti);
-        const amrex::Real zmin = xyzmin[2];
+        // const amrex::Real zmin = xyzmin[2];
         // const amrex::Real dz = dx[2];
 
 
         // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-        amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
 
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
             indices = nullptr;
@@ -104,15 +103,8 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-                // // push a single beam particle
-                // PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_prev[ip],
-                //                    y_prev[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
-                //                    Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                //                    Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                //                    Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                //                    Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                //                    Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                //                    dz, temp_slice, ip, SetPosition );
+                // push a single beam particle
+                BeamParticlePush (xp, yp, zp, uxp[ip], uyp[ip], uzp[ip], ip, SetPosition );
 
           }
           );

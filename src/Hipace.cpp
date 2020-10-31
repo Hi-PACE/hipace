@@ -3,6 +3,7 @@
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "HipaceProfilerWrapper.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
+#include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/BinSort.H"
 
 #include <AMReX_PlotFileUtil.H>
@@ -286,6 +287,9 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
      * and the force terms of the plasma particles
      */
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
+
+    // Push beam particles
+    AdvanceBeamParticles(m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
     m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
