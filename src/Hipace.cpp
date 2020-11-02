@@ -223,8 +223,7 @@ Hipace::Evolve ()
         {
             const amrex::Box& bx = fields.box(*it);
             amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
-            if (m_slice_deposition) bins = findParticlesInEachSlice(
-                lev, *it, bx, m_beam_container, geom[lev]);
+            bins = findParticlesInEachSlice(lev, *it, bx, m_beam_container, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                  SolveOneSlice(isl, lev, bins);

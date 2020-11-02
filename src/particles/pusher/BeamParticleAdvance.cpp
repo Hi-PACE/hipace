@@ -1,7 +1,6 @@
 #include "BeamParticleAdvance.H"
 
 #include "FieldGather.H"
-#include "PushBeamParticles.H"
 #include "Constants.H"
 #include "GetAndSetPosition.H"
 #include "HipaceProfilerWrapper.H"
@@ -73,23 +72,21 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
             indices = nullptr;
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
-        const int slice_deposition = 1;
-        if (slice_deposition){
-            indices = bins.permutationPtr();
-            offsets = bins.offsetsPtr();
-            // The particles that are in slice islice are
-            // given by the indices[cell_start:cell_stop]
-            cell_start = offsets[islice];
-            cell_stop  = offsets[islice+1];
-        }
-        int const num_particles = slice_deposition ? cell_stop-cell_start : pti.numParticles();
+        indices = bins.permutationPtr();
+        offsets = bins.offsetsPtr();
+        // The particles that are in slice islice are
+        // given by the indices[cell_start:cell_stop]
+        cell_start = offsets[islice];
+        cell_stop  = offsets[islice+1];
+
+        int const num_particles = cell_stop-cell_start;
 
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
         const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (long idx) {
-                const int ip = slice_deposition ? indices[cell_start+idx] : idx;
+                const int ip = indices[cell_start+idx];
 
                 amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                             + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
