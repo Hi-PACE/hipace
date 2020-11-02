@@ -68,7 +68,6 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
         const auto SetPosition = SetBeamParticlePosition(pti);
         const amrex::Real zmin = xyzmin[2];
 
-
         // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
             indices = nullptr;
