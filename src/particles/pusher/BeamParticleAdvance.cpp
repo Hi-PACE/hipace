@@ -131,9 +131,10 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                 amrex::ParticleReal uz_intermediate = uzp[ip]
                                                       + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
-                amrex::ParticleReal gamma_intermediate = sqrt( 1.0_rt +
-                    ux_intermediate*ux_intermediate*clightsq + uy_intermediate*uy_intermediate*clightsq
-                          + uz_intermediate*uz_intermediate*clightsq );
+                amrex::ParticleReal gamma_intermediate = sqrt( 1.0_rt
+                                        + ux_intermediate*ux_intermediate*clightsq
+                                        + uy_intermediate*uy_intermediate*clightsq
+                                        + uz_intermediate*uz_intermediate*clightsq );
 
                 amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
                           * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
@@ -141,7 +142,8 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
 
                 /* computing next gamma value */
                 amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
-                                                 + ux_next*ux_next*clightsq + uy_next*uy_next*clightsq );
+                                                 + ux_next*ux_next*clightsq
+                                                 + uy_next*uy_next*clightsq );
 
                 /*
                  * computing positions and setting momenta for the next timestep
