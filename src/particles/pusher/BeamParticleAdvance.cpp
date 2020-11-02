@@ -111,7 +111,7 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                doGatherShapeN(xp, yp, zmin, //zp, or maybe zmin? This needs to be checked
+                doGatherShapeN(xp, yp, zmin,
                                ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
@@ -119,9 +119,9 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                 /* use intermediate fields to calculate next (n+1) transverse
                  * momenta */
                 amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
-                    * ( ExmByp + ( 1.0_rt - uzp[ip] / gammap ) * Byp );
+                            * ( ExmByp + ( 1.0_rt - uzp[ip] / gammap ) * Byp );
                 amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
-                    * ( EypBxp + ( uzp[ip] / gammap - 1.0_rt ) * Bxp );
+                            * ( EypBxp + ( uzp[ip] / gammap - 1.0_rt ) * Bxp );
 
 
                 /* Now computing new longitudinal momentum */
@@ -139,7 +139,8 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                               / gamma_intermediate );
 
                 /* computing next gamma value */
-                amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next * uz_next + ux_next * ux_next + uy_next * uy_next );
+                amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next * uz_next
+                                                 + ux_next * ux_next + uy_next * uy_next );
 
                 /*
                  * computing positions and setting momenta for the next timestep
@@ -155,9 +156,6 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;
-
-                // push a single beam particle
-                // BeamParticlePush (xp, yp, zp, uxp[ip], uyp[ip], uzp[ip], ip, SetPosition );
 
           }
           );
