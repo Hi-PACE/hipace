@@ -60,7 +60,6 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
 
         // Extract particle properties
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        // const auto  wp = soa.GetRealData(BeamIdx::w).data();
         const auto uxp = soa.GetRealData(BeamIdx::ux).data();
         const auto uyp = soa.GetRealData(BeamIdx::uy).data();
         const auto uzp = soa.GetRealData(BeamIdx::uz).data();
@@ -68,7 +67,6 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
         const auto getPosition = GetBeamParticlePosition(pti);
         const auto SetPosition = SetBeamParticlePosition(pti);
         const amrex::Real zmin = xyzmin[2];
-        // const amrex::Real dz = dx[2];
 
 
         // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
