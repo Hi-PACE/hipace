@@ -229,6 +229,7 @@ Hipace::Evolve ()
                  SolveOneSlice(isl, lev, bins);
              };
         }
+        m_beam_container.Redistribute();
         /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
 
         // Slices have already been shifted, so send
