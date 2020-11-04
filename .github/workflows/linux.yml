@@ -89,6 +89,6 @@ jobs:
 #            -DCMAKE_C_COMPILER=$(which gcc-8)         \
 #            -DCMAKE_CXX_COMPILER=$(which g++-8)       \
 #            -DCMAKE_CUDA_HOST_COMPILER=$(which g++-8) \
-#            -DCUDA_ARCH=6.0
+#            -DAMReX_CUDA_ARCH=6.0
 #        make -j 2 VERBOSE=ON
 #        ctest --output-on-failure
