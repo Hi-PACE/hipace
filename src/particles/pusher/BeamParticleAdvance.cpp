@@ -63,8 +63,10 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
         const auto uyp = soa.GetRealData(BeamIdx::uy).data();
         const auto uzp = soa.GetRealData(BeamIdx::uz).data();
 
-        const auto getPosition = GetBeamParticlePosition(pti);
-        const auto SetPosition = SetBeamParticlePosition(pti);
+        const auto getPosition =
+            GetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
+        const auto SetPosition =
+            SetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
         const amrex::Real zmin = xyzmin[2];
 
         // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
