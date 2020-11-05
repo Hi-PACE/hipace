@@ -73,11 +73,9 @@ jobs:
 #        make -j 2 VERBOSE=ON
 #        ctest --output-on-failure
 
-# tricky: newer Ubuntu would be better (or download & ship GCC avx patches)
-#
-#  linux_clang_cxx14_ompi_cuda:
-#    name: CUDA@9.1.85 Clang@4.0.1 C++14
-#    runs-on: ubuntu-latest
+#  linux_gcc_cxx14_ompi_cuda:
+#    name: CUDA@10.1.243 GCC@8 C++14
+#    runs-on: ubuntu-20.04
 #    steps:
 #    - uses: actions/checkout@v2
 #    - name: Dependencies
@@ -86,11 +84,11 @@ jobs:
 #      run: |
 #        mkdir build
 #        cd build
-#        cmake ..                                             \
-#            -DHiPACE_COMPUTE=CUDA                            \
-#            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
-#            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)        \
-#            -DCMAKE_CUDA_HOST_COMPILER=$(which clang++-4.0)  \
+#        cmake ..                                      \
+#            -DHiPACE_COMPUTE=CUDA                     \
+#            -DCMAKE_C_COMPILER=$(which gcc-8)         \
+#            -DCMAKE_CXX_COMPILER=$(which g++-8)       \
+#            -DCMAKE_CUDA_HOST_COMPILER=$(which g++-8) \
 #            -DCUDA_ARCH=6.0
 #        make -j 2 VERBOSE=ON
 #        ctest --output-on-failure
