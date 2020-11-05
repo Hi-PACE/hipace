@@ -129,10 +129,10 @@ macro(find_amrex)
     endif()
 endmacro()
 
-set(HiPACE_amrex_repo "https://github.com/mic84/amrex.git"
+set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "mr/cmake-overhaul-options"
+set(HiPACE_amrex_branch "development"
     CACHE STRING
     "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 
