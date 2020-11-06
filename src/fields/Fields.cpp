@@ -22,13 +22,31 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
+
+    // Create a xz slice BoxArray
+    amrex::BoxList F_boxes;
+    for (int i = 0; i < ba.size(); ++i){
+        amrex::Box bx = ba[i];
+        // Flatten the box down to 1 cell in the y direction.
+        constexpr int idim = 1;
+        bx.setSmall(idim, ba[i].length(idim)/2);
+        bx.setBig(idim, ba[i].length(idim)/2);
+        // Make this MF node-centered so it is exactly at the center of the box.
+        bx.setType(amrex::IndexType({0,1,0}));
+        F_boxes.push_back(bx);
+    }
+    amrex::BoxArray F_slice_ba(std::move(F_boxes));
+
+    // m_F is defined on F_ba, the full or the xz slice BoxArray
+    amrex::BoxArray F_ba = Hipace::m_slice_F_xz ? F_slice_ba : ba;
+
     if (Hipace::m_3d_on_host){
         // The Arena uses pinned memory.
-        m_F[lev].define(ba, dm, FieldComps::nfields, {0,0,0},
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
     } else {
         // The Arena uses managed memory.
-        m_F[lev].define(ba, dm, FieldComps::nfields, {0,0,0},
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Arena()));
     }
 
