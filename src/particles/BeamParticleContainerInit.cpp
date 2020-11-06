@@ -20,19 +20,21 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
-    const int lev = 0;
+    constexpr int lev = 0;
+    constexpr int cr = 4;
+
     const auto dx = a_geom.CellSizeArray();
     const auto plo = a_geom.ProbLoArray();
 
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
-                                      *a_num_particles_per_cell[2]);
+                                      *a_num_particles_per_cell[2]) * cr*cr*cr;
 
     const Real scale_fac = Hipace::m_normalized_units ? 1._rt/num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
-        const Box& tile_box  = mfi.tilebox();
+        const Box& tile_box  = mfi.tilebox().coarsen(cr);
 
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
