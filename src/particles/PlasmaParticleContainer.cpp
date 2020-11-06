@@ -66,7 +66,7 @@ PlasmaParticleContainer::RedistributeSlice (int const lev)
         auto& aos = pti.GetArrayOfStructs(); // For positions
         const auto& pos_structs = aos.begin();
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data() ;
+        amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data();
 
         // Loop over particles and handle particles outside of the box
         amrex::ParallelFor(
