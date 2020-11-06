@@ -117,7 +117,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
-                if (wp[ip] == 0.0) return;
+                if ( abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
                 // define field at particle position reals
