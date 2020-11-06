@@ -72,6 +72,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
+        amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data();
 
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
@@ -116,6 +117,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
+                if (wp[ip] == 0.0) return;
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
                 // define field at particle position reals
@@ -157,6 +159,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
                                        dz, temp_slice, ip, SetPosition );
                 }
+                return;
           }
           );
       }
