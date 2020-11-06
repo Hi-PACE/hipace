@@ -563,8 +563,20 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
+    amrex::Vector<amrex::Geometry> geom_io = Geom();
+    constexpr int lev = 0;
+    constexpr int idim = 1;
+    amrex::RealBox prob_domain = Geom(lev).ProbDomain();
+    amrex::Box domain = Geom(lev).Domain();
+    prob_domain.setLo(idim, -Geom(lev).CellSize(idim)/2.);
+    prob_domain.setHi(idim,  Geom(lev).CellSize(idim)/2.);
+    domain.setSmall(idim, 0);
+    domain.setBig(idim, 1);
+    if (m_slice_F_xz){
+        geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
+    }        
     amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, Geom(), time,
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, geom_io, time,
         {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
 
     // Write beam particles
