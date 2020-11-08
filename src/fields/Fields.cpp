@@ -32,7 +32,7 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
         bx.setSmall(idim, ba[i].length(idim)/2);
         bx.setBig(idim, ba[i].length(idim)/2);
         // Make this MF node-centered so it is exactly at the center of the box.
-        bx.setType(amrex::IndexType({0,1,0}));
+        // bx.setType(amrex::IndexType({0,1,0}));
         F_boxes.push_back(bx);
     }
     amrex::BoxArray F_slice_ba(std::move(F_boxes));
