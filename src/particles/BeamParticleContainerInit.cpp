@@ -26,7 +26,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
     // int (~2.e9). To avoid this, we use a coarsened box (the coarsening ratio is cr, see below)
     // to inject particles. This is just a trick to have fewer cells, it injects the same
     // by using fewer larger cells and more particles per cell.
-    constexpr amrex::IntVect cr {8,8,1};
+    amrex::IntVect cr {Hipace::m_beam_injection_cr,Hipace::m_beam_injection_cr,1};
     AMREX_ALWAYS_ASSERT(cr[AMREX_SPACEDIM-1] == 1);
     auto dx = a_geom.CellSizeArray();
     for (int i=0; i<AMREX_SPACEDIM; i++) dx[i] *= cr[i];
@@ -50,6 +50,8 @@ InitBeam (const IntVect& a_num_particles_per_cell,
         tile_box.coarsen(cr);
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
+
+        amrex::Print()<<tile_box.numPts()<<'\n';
 
         Gpu::ManagedVector<unsigned int> counts(tile_box.numPts(), 0);
         unsigned int* pcount = counts.dataPtr();
