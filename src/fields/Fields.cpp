@@ -25,7 +25,7 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
 
     // Create a xz slice BoxArray
     amrex::BoxList F_boxes;
-    if (Hipace::m_slice_F_xy){
+    if (Hipace::m_slice_F_xz){
         for (int i = 0; i < ba.size(); ++i){
             amrex::Box bx = ba[i];
             // Flatten the box down to 1 cell in the y direction.
