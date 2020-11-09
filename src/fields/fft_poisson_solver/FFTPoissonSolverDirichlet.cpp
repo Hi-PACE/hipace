@@ -39,6 +39,8 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     // These arrays will store the data just before/after the FFT
     m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
     m_tmpSpectralField = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
+    m_stagingArea.setVal(0.0);
+    m_tmpSpectralField.setVal(0.0);
 
     // This must be true even for parallel FFT.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_stagingArea.local_size() == 1,
@@ -66,9 +68,9 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
             bx, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = pow( sin(( i + 1 ) * sine_x_factor), 2);
+                    amrex::Real sinex_sq = sin(( i + 1 ) * sine_x_factor) * sin(( i + 1 ) * sine_x_factor);
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = pow( sin(( j + 1 ) * sine_y_factor), 2);
+                    amrex::Real siney_sq = sin(( j + 1 ) * sine_y_factor) * sin(( j + 1 ) * sine_y_factor);
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j,0) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));

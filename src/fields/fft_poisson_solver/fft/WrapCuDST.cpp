@@ -67,6 +67,29 @@ namespace AnyDST
             );
     };
 
+    /** \brief set the dst array to 0
+     *
+     * \param[in,out] dst destination array
+     */
+    void SetExpandedPosition (amrex::FArrayBox& dst)
+    {
+        HIPACE_PROFILE("AnyDST::SetExpandedPosition()");
+        constexpr int dcomp = 0;
+
+        const amrex::Box bx = dst.box();
+        const int nx = bx.length(0);
+        const int ny = bx.length(1);
+        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                dst_array(i,j,k,dcomp) = 0.;
+            }
+            );
+    };
+
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
                         amrex::FArrayBox* fourier_array)
     {
@@ -113,6 +136,8 @@ namespace AnyDST
     void Execute (DSTplan& dst_plan){
         HIPACE_PROFILE("AnyDST::Execute()");
 
+        // init expanded_position_array with 0s
+        SetExpandedPosition(*dst_plan.m_expanded_position_array);
         // Expand in position space m_position_array -> m_expanded_position_array
         ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
 
