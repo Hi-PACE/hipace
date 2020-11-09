@@ -25,15 +25,17 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
 
     // Create a xz slice BoxArray
     amrex::BoxList F_boxes;
-    for (int i = 0; i < ba.size(); ++i){
-        amrex::Box bx = ba[i];
-        // Flatten the box down to 1 cell in the y direction.
-        constexpr int idim = 1;
-        bx.setSmall(idim, ba[i].length(idim)/2);
-        bx.setBig(idim, ba[i].length(idim)/2);
-        // Make this MF node-centered so it is exactly at the center of the box.
-        bx.setType(amrex::IndexType({0,1,0}));
-        F_boxes.push_back(bx);
+    if (Hipace::m_slice_F_xy){
+        for (int i = 0; i < ba.size(); ++i){
+            amrex::Box bx = ba[i];
+            // Flatten the box down to 1 cell in the y direction.
+            constexpr int idim = 1;
+            bx.setSmall(idim, ba[i].length(idim)/2);
+            bx.setBig(idim, ba[i].length(idim)/2);
+            // Make this MF node-centered so it is exactly at the center of the box.
+            // bx.setType(amrex::IndexType({0,1,0}));
+            F_boxes.push_back(bx);
+        }
     }
     amrex::BoxArray F_slice_ba(std::move(F_boxes));
 
