@@ -185,6 +185,8 @@ public:
     static bool m_do_device_synchronize;
     /** whether to output the central y=0 slice (if true), or the whole 3D array (if false) */
     static bool m_slice_F_xz;
+    /** Whether to dump plasma particles */
+    static bool m_output_plasma;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
