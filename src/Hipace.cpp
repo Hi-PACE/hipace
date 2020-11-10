@@ -26,6 +26,7 @@ amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.1;
 bool Hipace::m_slice_deposition = false;
 bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
+bool Hipace::m_slice_F_xz = false;
 
 Hipace&
 Hipace::GetInstance ()
@@ -63,6 +64,7 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
+    pph.query("output_slice", m_slice_F_xz);
     pph.query("slice_deposition", m_slice_deposition);
     pph.query("3d_on_host", m_3d_on_host);
     if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_deposition);
@@ -322,7 +324,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
                            WhichSlice::This, false,
                            true, false, false, lev);
 
-    m_plasma_container.Redistribute();
+    m_plasma_container.RedistributeSlice(lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::rho, 1);
 
@@ -439,7 +441,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                WhichSlice::Next, true,
                                true, false, false, lev);
-        m_plasma_container.Redistribute();
+        m_plasma_container.RedistributeSlice(lev);
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
@@ -492,7 +494,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     /* resetting the particle position after they have been pushed to the next slice */
     ResetPlasmaParticles(m_plasma_container, lev);
 
-    if (relative_Bfield_error > 10.)
+    if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
     {
         amrex::Abort("Predictor corrector loop diverged!\n"
                      "Re-try by adjusting the following paramters in the input script:\n"

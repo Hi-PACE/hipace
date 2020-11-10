@@ -15,6 +15,15 @@ if(CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 
+# CMake policies ##############################################################
+#
+# CMake 3.18+: CMAKE_CUDA_ARCHITECTURES
+# https://cmake.org/cmake/help/latest/policy/CMP0104.html
+if(POLICY CMP0104)
+    cmake_policy(SET CMP0104 OLD)
+endif()
+
+
 # CCache Support ##############################################################
 #
 # this is an optional tool that stores compiled object files; allows fast
@@ -36,16 +45,16 @@ set_default_install_dirs()
 #
 option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
 
-set(HiPACE_PRECISION_VALUES double single)
-set(HiPACE_PRECISION double CACHE STRING "Floating point precision (single/double)")
+set(HiPACE_PRECISION_VALUES SINGLE DOUBLE)
+set(HiPACE_PRECISION DOUBLE CACHE STRING "Floating point precision (SINGLE/DOUBLE)")
 set_property(CACHE HiPACE_PRECISION PROPERTY STRINGS ${HiPACE_PRECISION_VALUES})
 if(NOT HiPACE_PRECISION IN_LIST HiPACE_PRECISION_VALUES)
     message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_PRECISION}) must be one of ${HiPACE_PRECISION_VALUES}")
 endif()
 
-set(HiPACE_COMPUTE_VALUES NOACC CUDA OMP DPCPP) # HIP
+set(HiPACE_COMPUTE_VALUES NOACC CUDA DPCPP HIP OMP)
 set(HiPACE_COMPUTE NOACC CACHE STRING
-    "On-node, accelerated computing backend (NOACC/OMP/CUDA/DPCPP)")
+    "On-node, accelerated computing backend (NOACC/CUDA/DPCPP/HIP/OMP)")
 set_property(CACHE HiPACE_COMPUTE PROPERTY STRINGS ${HiPACE_COMPUTE_VALUES})
 if(NOT HiPACE_COMPUTE IN_LIST HiPACE_COMPUTE_VALUES)
     message(FATAL_ERROR "HiPACE_COMPUTE (${HiPACE_COMPUTE}) must be one of ${HiPACE_COMPUTE_VALUES}")
@@ -70,9 +79,9 @@ include(${HiPACE_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 make_third_party_includes_system(AMReX::amrex AMReX)
 
 # FFTW (non-GPU) and cuFFT (GPU)
-if(NOT ENABLE_CUDA)
+if(NOT AMReX_CUDA)
     find_package(PkgConfig REQUIRED QUIET)
-    if(HiPACE_PRECISION STREQUAL "double")
+    if(HiPACE_PRECISION STREQUAL "DOUBLE")
         pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET fftw3)
     else()
         pkg_check_modules(fftw3f REQUIRED IMPORTED_TARGET fftw3f)
@@ -110,11 +119,11 @@ set_target_properties(HiPACE PROPERTIES
 # link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
 
-if(ENABLE_CUDA)
+if(AMReX_CUDA)
     # CUDA_ADD_CUFFT_TO_TARGET(HiPACE)
     target_link_libraries(HiPACE PUBLIC cufft)
 else()
-    if(HiPACE_PRECISION STREQUAL "double")
+    if(HiPACE_PRECISION STREQUAL "DOUBLE")
         target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3)
     else()
         target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3f)
@@ -122,7 +131,7 @@ else()
 endif()
 
 # AMReX helper function: propagate CUDA specific target & source properties
-if(ENABLE_CUDA)
+if(AMReX_CUDA)
     setup_target_for_cuda_compilation(HiPACE)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
         target_compile_features(HiPACE PUBLIC cuda_std_14)
@@ -244,6 +253,12 @@ if(BUILD_TESTING)
 
         add_test(NAME beam_in_vacuum.normalized.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME slice_IO.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/slice_IO.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )

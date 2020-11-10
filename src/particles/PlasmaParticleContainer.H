@@ -53,6 +53,12 @@ public:
         const amrex::Real a_density,
         const amrex::Real a_radius);
 
+    /** Redistribute the particles on a slice, meaning particles, which left the box are returned
+     * periodically and if peridicity = 0, their weight is set to 0
+     * \param[in] lev MR level
+     */
+    void RedistributeSlice (int const lev);
+
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */

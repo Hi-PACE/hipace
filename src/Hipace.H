@@ -183,6 +183,8 @@ public:
     static bool m_3d_on_host;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
+    /** whether to output the central y=0 slice (if true), or the whole 3D array (if false) */
+    static bool m_slice_F_xz;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */

@@ -11,7 +11,7 @@ sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
-    clang-4.0           \
+    g++-8               \
     libopenmpi-dev      \
     openmpi-bin         \
     nvidia-cuda-dev     \
