@@ -35,7 +35,9 @@ jobs:
         cd build
         cmake ..                                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DCMAKE_CXX_STANDARD=17
+            -DCMAKE_CXX_STANDARD=17                \
+            -DHiPACE_amrex_repo=https://github.com/atmyers/amrex.git \
+            -DHiPACE_amrex_branch=multiple_dual_grid
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
 
