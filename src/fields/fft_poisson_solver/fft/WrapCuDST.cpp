@@ -109,6 +109,12 @@ namespace AnyDST
             std::make_unique<amrex::BaseFab<amrex::GpuComplex<amrex::Real>>>(
                 expanded_fourier_box, 1);
 
+        // setting the initial values to 0
+        // we don't set the expanded Fourier array, because it will be initialized by the FFT
+        dst_plan.m_expanded_position_array->setVal<amrex::RunOn::Device>(0.,
+            dst_plan.m_expanded_position_array->box(), 0,
+            dst_plan.m_expanded_position_array->nComp());
+
         const amrex::IntVect& expanded_size = expanded_position_box.length();
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
@@ -136,8 +142,6 @@ namespace AnyDST
     void Execute (DSTplan& dst_plan){
         HIPACE_PROFILE("AnyDST::Execute()");
 
-        // init expanded_position_array with 0s
-        SetExpandedPosition(*dst_plan.m_expanded_position_array);
         // Expand in position space m_position_array -> m_expanded_position_array
         ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
 

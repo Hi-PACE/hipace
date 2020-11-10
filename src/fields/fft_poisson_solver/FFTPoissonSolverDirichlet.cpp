@@ -39,7 +39,7 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     // These arrays will store the data just before/after the FFT
     m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
     m_tmpSpectralField = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
-    m_stagingArea.setVal(0.0);
+    m_stagingArea.setVal(0.0); // this is not required
     m_tmpSpectralField.setVal(0.0);
 
     // This must be true even for parallel FFT.
