@@ -52,9 +52,13 @@ public:
      * \param[in] ba BoxArray for the simulation
      * \param[in] dm DistributionMapping for the whole simulation
      * \param[in] geom Geometry
+     * \param[in] slice_ba BoxArray for the slice
+     * \param[in] slice_dm DistributionMapping for the slice
      */
-    void AllocData (int lev, const amrex::BoxArray& ba,
-                    const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
+    void AllocData (
+        int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
+        amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
+        const amrex::DistributionMapping& slice_dm);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     std::unique_ptr<FFTPoissonSolver> m_poisson_solver;

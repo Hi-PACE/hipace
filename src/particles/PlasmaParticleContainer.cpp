@@ -29,21 +29,12 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
 }
 
 void
-PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
+PlasmaParticleContainer::InitData ()
 {
     reserveData();
     resizeData();
 
-    const int dir = AMREX_SPACEDIM-1;
-    const amrex::Real dx = geom.CellSize(dir);
-    const amrex::Real hi = geom.ProbHi(dir);
-    const amrex::Real lo = hi - dx;
-
-    amrex::RealBox particleBox = geom.ProbDomain();
-    particleBox.setHi(dir, hi);
-    particleBox.setLo(dir, lo);
-
-    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius, geom, particleBox);
+    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius);
 }
 
 void

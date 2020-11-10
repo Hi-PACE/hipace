@@ -12,15 +12,14 @@ InitParticles (const IntVect& a_num_particles_per_cell,
                const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
                const amrex::Real a_density,
-               const amrex::Real a_radius,
-               const Geometry& a_geom,
-               const RealBox& a_bounds)
+               const amrex::Real a_radius)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
 
     const int lev = 0;
-    const auto dx = a_geom.CellSizeArray();
-    const auto plo = a_geom.ProbLoArray();
+    const auto dx = ParticleGeom(lev).CellSizeArray();
+    const auto plo = ParticleGeom(lev).ProbLoArray();
+    const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
 
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],

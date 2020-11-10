@@ -193,6 +193,10 @@ private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
 
+    amrex::Geometry m_slice_geom;
+    amrex::DistributionMapping m_slice_dm;
+    amrex::BoxArray m_slice_ba;
+
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
      * 2. Using this Bx and By values, the plasma particles are advanced to the next slice,
@@ -209,6 +213,13 @@ private:
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev);
 
+    /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
+     * The slice MultiFAB and the plasma particles are defined on this GDB.
+     *
+     * \param[in] ba BoxArray of the whole domain
+     * \param[in] dm DistributionMappint of the whole domain
+     */
+    void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
 };
 
 #endif

@@ -15,8 +15,9 @@ Fields::Fields (Hipace const* a_hipace)
 }
 
 void
-Fields::AllocData (int lev, const amrex::BoxArray& ba,
-                   const amrex::DistributionMapping& dm, amrex::Geometry const& geom)
+Fields::AllocData (
+    int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
+    amrex::Geometry const& geom, const amrex::BoxArray& slice_ba, const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
@@ -51,47 +52,6 @@ Fields::AllocData (int lev, const amrex::BoxArray& ba,
         m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Arena()));
     }
-
-    std::map<int,amrex::Vector<amrex::Box> > boxes;
-    for (int i = 0; i < ba.size(); ++i) {
-        int rank = dm[i];
-        if (m_hipace->InSameTransverseCommunicator(rank)) {
-            boxes[rank].push_back(ba[i]);
-        }
-    }
-
-    // We assume each process may have multiple Boxes longitude direction, but only one Box in the
-    // transverse direction.  The union of all Boxes on a process is rectangular.  The slice
-    // BoxArray therefore has one Box per process.  The Boxes in the slice BoxArray have one cell in
-    // the longitude direction.  We will use the lowest longitude index in each process to construct
-    // the Boxes.  These Boxes do not have any overlaps. Transversely, there are no gaps between
-    // them.
-
-    amrex::BoxList bl;
-    amrex::Vector<int> procmap;
-    for (auto const& kv : boxes) {
-        int const iproc = kv.first;
-        auto const& boxes_i = kv.second;
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes_i.size() > 0,
-                                         "We assume each process has at least one Box");
-        amrex::Box bx = boxes_i[0];
-        for (int j = 1; j < boxes_i.size(); ++j) {
-            amrex::Box const& bxj = boxes_i[j];
-            for (int idim = 0; idim < Direction::z; ++idim) {
-                AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
-                AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));
-                if (bxj.smallEnd(Direction::z) < bx.smallEnd(Direction::z)) {
-                    bx = bxj;
-                }
-            }
-        }
-        bx.setBig(Direction::z, bx.smallEnd(Direction::z));
-        bl.push_back(bx);
-        procmap.push_back(iproc);
-    }
-
-    amrex::BoxArray slice_ba(std::move(bl));
-    amrex::DistributionMapping slice_dm(std::move(procmap));
 
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
