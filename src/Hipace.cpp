@@ -177,9 +177,23 @@ Hipace::InitData ()
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
     m_beam_container.InitData(geom[0]);
+    //m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
+    //m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
+    //m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
+    std::cout<<"m_slice_ba = \n"<<m_slice_ba<<'\n';
+    std::cout<<"before set: m_plasma_container.ParticleBoxArray(lev) = \n"<<m_plasma_container.ParticleBoxArray(lev)<<'\n';
     m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
+    std::cout<<"after  set: m_plasma_container.ParticleBoxArray(lev) = \n"<<m_plasma_container.ParticleBoxArray(lev)<<'\n';
+
+    std::cout<<"m_slice_dm = \n"<<m_slice_dm<<'\n';
+    std::cout<<"before set: m_plasma_container.ParticleDistributionMap(lev) = \n"<<m_plasma_container.ParticleDistributionMap(lev)<<'\n';
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
+    std::cout<<"before set: m_plasma_container.ParticleDistributionMap(lev) = \n"<<m_plasma_container.ParticleDistributionMap(lev)<<'\n';
+
+    std::cout<<"m_slice_geom = \n"<<m_slice_geom<<"\n\n";
+    std::cout<<"before set: m_plasma_container.Geom(lev) = \n"<<m_plasma_container.Geom(lev)<<"\n\n";
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
+    std::cout<<"after  set: m_plasma_container.Geom(lev) = \n"<<m_plasma_container.Geom(lev)<<"\n\n";
     m_plasma_container.InitData();
 }
 
