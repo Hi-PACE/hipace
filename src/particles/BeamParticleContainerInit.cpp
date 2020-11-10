@@ -20,20 +20,34 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
-    const int lev = 0;
-    const auto dx = a_geom.CellSizeArray();
+    constexpr int lev = 0;
+
+    // Since each box is allows to be very large, its number of cells may exceed the largest
+    // int (~2.e9). To avoid this, we use a coarsened box (the coarsening ratio is cr, see below)
+    // to inject particles. This is just a trick to have fewer cells, it injects the same
+    // by using fewer larger cells and more particles per cell.
+    amrex::IntVect cr {Hipace::m_beam_injection_cr,Hipace::m_beam_injection_cr,1};
+    AMREX_ALWAYS_ASSERT(cr[AMREX_SPACEDIM-1] == 1);
+    auto dx = a_geom.CellSizeArray();
+    for (int i=0; i<AMREX_SPACEDIM; i++) dx[i] *= cr[i];
     const auto plo = a_geom.ProbLoArray();
 
-    const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
-                                      *a_num_particles_per_cell[1],
-                                      *a_num_particles_per_cell[2]);
+    amrex::IntVect ppc_cr = a_num_particles_per_cell;
+    for (int i=0; i<AMREX_SPACEDIM; i++) ppc_cr[i] *= cr[i];
 
-    const Real scale_fac = Hipace::m_normalized_units ? 1._rt/num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
+    const int num_ppc = AMREX_D_TERM( ppc_cr[0],
+                                      *ppc_cr[1],
+                                      *ppc_cr[2]);
+
+    // First: loop over all cells, and count the particles effectively injected.
+    const Real scale_fac = Hipace::m_normalized_units ?
+        1._rt/num_ppc*cr[0]*cr[1]*cr[2] :
+        dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
-        const Box& tile_box  = mfi.tilebox();
-
+        Box tile_box  = mfi.tilebox();
+        tile_box.coarsen(cr);
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
@@ -50,7 +64,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
             {
                 Real r[3];
 
-                ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
                 Real x = plo[0] + (i + r[0])*dx[0];
                 Real y = plo[1] + (j + r[1])*dx[1];
@@ -77,6 +91,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 
         int num_to_add = offsets[tile_box.numPts()-1] + counts[tile_box.numPts()-1];
 
+        // Second: allocate the memory for these particles
         auto& particles = GetParticles(lev);
         auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
 
@@ -86,6 +101,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 
         if (num_to_add == 0) continue;
 
+        // Third: Actually initialize the particles at the right locations
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
 
         auto arrdata = particle_tile.GetStructOfArrays().realarray();
@@ -116,7 +132,7 @@ InitBeam (const IntVect& a_num_particles_per_cell,
             {
                 amrex::Real r[3] = {0.,0.,0.};
 
-                ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
                 Real x = plo[0] + (i + r[0])*dx[0];
                 Real y = plo[1] + (j + r[1])*dx[1];

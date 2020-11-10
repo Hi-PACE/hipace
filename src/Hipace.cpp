@@ -27,6 +27,7 @@ bool Hipace::m_slice_deposition = false;
 bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
 bool Hipace::m_slice_F_xz = false;
+int Hipace::m_beam_injection_cr = 1;
 
 Hipace&
 Hipace::GetInstance ()
@@ -65,6 +66,7 @@ Hipace::Hipace () :
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
     pph.query("output_slice", m_slice_F_xz);
+    pph.query("beam_injection_cr", m_beam_injection_cr);
     pph.query("slice_deposition", m_slice_deposition);
     pph.query("3d_on_host", m_3d_on_host);
     if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_deposition);
