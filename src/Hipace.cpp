@@ -578,7 +578,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     domain.setBig(idim, 1);
     if (m_slice_F_xz){
         geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
-    }        
+    }
     amrex::WriteMultiLevelPlotfile(
         filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, geom_io, time,
         {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
