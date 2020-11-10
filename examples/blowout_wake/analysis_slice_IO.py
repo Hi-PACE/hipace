@@ -28,7 +28,7 @@ ad = ds2.all_data()
 Ez_slice = ad['Ez'].reshape(ds2.domain_dimensions).v.squeeze()
 
 if do_plot:
-    plt.figure(figsize=(6,12))
+    plt.figure(figsize=(12,4))
     plt.subplot(131)
     plt.title('full')
     plt.imshow(Ez_full_sliced)
