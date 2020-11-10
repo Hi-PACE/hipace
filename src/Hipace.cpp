@@ -340,6 +340,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     amrex::MultiFab By_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                             m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                             m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    Bx_iter.setVal(0.0);
+    By_iter.setVal(0.0);
     amrex::MultiFab Bx_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
