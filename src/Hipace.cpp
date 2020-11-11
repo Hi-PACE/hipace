@@ -27,6 +27,7 @@ bool Hipace::m_slice_deposition = false;
 bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
 bool Hipace::m_slice_F_xz = false;
+bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
 
 Hipace&
@@ -75,6 +76,7 @@ Hipace::Hipace () :
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
+    pph.query("output_plasma", m_output_plasma);
 
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
@@ -652,7 +654,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     }
 
     // Write plasma particles
-    {
+    if (m_output_plasma){
         amrex::ParallelContext::push(m_comm_xy);
         m_plasma_container.Redistribute();
         amrex::ParallelContext::pop();

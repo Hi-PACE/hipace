@@ -5,6 +5,7 @@ hipace.predcorr_max_iterations = 30
 hipace.predcorr_B_error_tolerance = 4e-2
 hipace.slice_deposition = 1
 hipace.3d_on_host = 1
+hipace.output_plasma = 1
 
 fields.do_dirichlet_poisson = 1
 
