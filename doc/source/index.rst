@@ -6,7 +6,7 @@
 Hipace++ documentation
 ======================
 
-Hipace++ is a quasi-static particle-in-cell (PIC) code to simulate plasma accelerators. 
+Hipace++ is a quasi-static particle-in-cell (PIC) code to simulate plasma accelerators.
 
 .. toctree::
    :maxdepth: 1
