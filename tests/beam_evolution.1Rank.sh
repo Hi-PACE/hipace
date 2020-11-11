@@ -17,6 +17,8 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
             max_step = 3 \
+            hipace.slice_beam = 1 \
+            hipace.3d_on_host = 1 \
             hipace.dt = 3.0 \
             hipace.output_period = 3 \
 
