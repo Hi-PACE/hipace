@@ -50,4 +50,4 @@ print("Ez_full.shape", Ez_full.shape)
 print("Ez_slice.shape", Ez_slice.shape)
 print("error", error)
 
-assert(np.all(Ez_slice == Ez_full[:,Ez_full.shape[1]//2,:]))
+assert(np.all(Ez_slice == Ez_full_sliced))
