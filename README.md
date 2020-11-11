@@ -5,6 +5,13 @@
 
 Highly efficient Plasma Accelerator Emulation, quasistatic particle-in-cell code
 
+Note: this page is outdated, in order to get the latest documentation please do
+
+```bash
+   cd doc
+   make html
+   open build/html/index.html # or any way to open this HTML file.
+```
 
 ## Users
 
