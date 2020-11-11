@@ -9,6 +9,7 @@ Note: this page is outdated, in order to get the latest documentation please do
 
 ```bash
    cd doc
+   pip install -r requirements.txt # only the first time
    make html
    open build/html/index.html # or any way to open this HTML file.
 ```
