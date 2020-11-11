@@ -5,7 +5,7 @@
 #include "fields/Fields.H"
 #include "Hipace.H"
 
-/** Push the beam particles
+/** Push beam particles contained in one z slice
  * \param[in,out] beam species of which the current is deposited
  * \param[in] fields the general field class, modified by this function
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
