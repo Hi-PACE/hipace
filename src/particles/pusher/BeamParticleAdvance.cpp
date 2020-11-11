@@ -42,10 +42,10 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
         // Extract field array from FabArrays in MultiFabs
         amrex::Array4<const amrex::Real> const& exmby_arr = exmby[pti].array();
         amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx[pti].array();
-        amrex::Array4<const amrex::Real> const& ez[pti] = ez_fab.array();
-        amrex::Array4<const amrex::Real> const& bx[pti] = bx_fab.array();
-        amrex::Array4<const amrex::Real> const& by[pti] = by_fab.array();
-        amrex::Array4<const amrex::Real> const& bz[pti] = bz_fab.array();
+        amrex::Array4<const amrex::Real> const& ez_arr = ez[pti].array();
+        amrex::Array4<const amrex::Real> const& bx_arr = bx[pti].array();
+        amrex::Array4<const amrex::Real> const& by_arr = by[pti].array();
+        amrex::Array4<const amrex::Real> const& bz_arr = bz[pti].array();
 
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
