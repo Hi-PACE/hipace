@@ -28,6 +28,9 @@ amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.1;
 bool Hipace::m_slice_beam = false;
 bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
+bool Hipace::m_slice_F_xz = false;
+bool Hipace::m_output_plasma = false;
+int Hipace::m_beam_injection_cr = 1;
 
 Hipace&
 Hipace::GetInstance ()
@@ -66,6 +69,8 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
+    pph.query("output_slice", m_slice_F_xz);
+    pph.query("beam_injection_cr", m_beam_injection_cr);
     pph.query("slice_beam", m_slice_beam);
     pph.query("3d_on_host", m_3d_on_host);
     if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_beam);
@@ -74,6 +79,7 @@ Hipace::Hipace () :
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
+    pph.query("output_plasma", m_output_plasma);
 
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
@@ -91,6 +97,70 @@ Hipace::~Hipace ()
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
+}
+
+void
+Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
+{
+    std::map<int,amrex::Vector<amrex::Box> > boxes;
+    for (int i = 0; i < ba.size(); ++i) {
+        int rank = dm[i];
+        if (InSameTransverseCommunicator(rank)) {
+            boxes[rank].push_back(ba[i]);
+        }
+    }
+
+    // We assume each process may have multiple Boxes longitude direction, but only one Box in the
+    // transverse direction.  The union of all Boxes on a process is rectangular.  The slice
+    // BoxArray therefore has one Box per process.  The Boxes in the slice BoxArray have one cell in
+    // the longitude direction.  We will use the lowest longitude index in each process to construct
+    // the Boxes.  These Boxes do not have any overlaps. Transversely, there are no gaps between
+    // them.
+
+    amrex::BoxList bl;
+    amrex::Vector<int> procmap;
+    for (auto const& kv : boxes) {
+        int const iproc = kv.first;
+        auto const& boxes_i = kv.second;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes_i.size() > 0,
+                                         "We assume each process has at least one Box");
+        amrex::Box bx = boxes_i[0];
+        for (int j = 1; j < boxes_i.size(); ++j) {
+            amrex::Box const& bxj = boxes_i[j];
+            for (int idim = 0; idim < Direction::z; ++idim) {
+                AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
+                AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));
+                if (bxj.smallEnd(Direction::z) < bx.smallEnd(Direction::z)) {
+                    bx = bxj;
+                }
+            }
+        }
+        bx.setBig(Direction::z, bx.smallEnd(Direction::z));
+        bl.push_back(bx);
+        procmap.push_back(iproc);
+    }
+
+    // Slice BoxArray
+    m_slice_ba = amrex::BoxArray(std::move(bl));
+
+    // Slice DistributionMapping
+    m_slice_dm = amrex::DistributionMapping(std::move(procmap));
+
+    // Slice Geometry
+    constexpr int lev = 0;
+    const int dir = AMREX_SPACEDIM-1;
+    // Set the lo and hi of domain and probdomain in the z direction
+    amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
+    amrex::Box tmp_dom = Geom(lev).Domain();
+    const amrex::Real dx = Geom(lev).CellSize(dir);
+    const amrex::Real hi = Geom(lev).ProbHi(dir);
+    const amrex::Real lo = hi - dx;
+    tmp_probdom.setLo(dir, lo);
+    tmp_probdom.setHi(dir, hi);
+    tmp_dom.setSmall(dir, 0);
+    tmp_dom.setBig(dir, 0);
+    m_slice_geom = amrex::Geometry(
+        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
 }
 
 bool
@@ -112,8 +182,12 @@ Hipace::InitData ()
     SetMaxGridSize(new_max_grid_size);
 
     AmrCore::InitFromScratch(0.0); // function argument is time
+    constexpr int lev = 0;
     m_beam_container.InitData(geom[0]);
-    m_plasma_container.InitData(geom[0]);
+    m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
+    m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
+    m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
+    m_plasma_container.InitData();
 }
 
 void
@@ -151,9 +225,8 @@ Hipace::MakeNewLevelFromScratch (
         dm.define(std::move(procmap));
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
-
-    m_fields.AllocData(lev, ba, dm, Geom(lev));
-
+    DefineSliceGDB(ba, dm);
+    m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
 }
 
 void
@@ -344,6 +417,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     amrex::MultiFab By_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                             m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                             m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    Bx_iter.setVal(0.0);
+    By_iter.setVal(0.0);
     amrex::MultiFab Bx_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
@@ -569,8 +644,24 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     const int time = 0.;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
+    amrex::Vector<amrex::Geometry> geom_io = Geom();
+    constexpr int lev = 0;
+    constexpr int idim = 1;
+    amrex::RealBox prob_domain = Geom(lev).ProbDomain();
+    amrex::Box domain = Geom(lev).Domain();
+
+    // Define slice box
+    int const icenter = domain.length(idim)/2;
+    prob_domain.setLo(idim, -Geom(lev).CellSize(idim)/2.);
+    prob_domain.setHi(idim,  Geom(lev).CellSize(idim)/2.);
+    domain.setSmall(idim, icenter);
+    domain.setBig(idim, icenter);
+    if (m_slice_F_xz){
+        geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
+    }
+
     amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, Geom(), time,
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, geom_io, time,
         {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
 
     // Write beam particles
@@ -587,7 +678,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     }
 
     // Write plasma particles
-    {
+    if (m_output_plasma){
         amrex::ParallelContext::push(m_comm_xy);
         m_plasma_container.Redistribute();
         amrex::ParallelContext::pop();

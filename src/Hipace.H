@@ -185,10 +185,21 @@ public:
     static bool m_3d_on_host;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
+    /** whether to output the central y=0 slice (if true), or the whole 3D array (if false) */
+    static bool m_slice_F_xz;
+    /** Whether to dump plasma particles */
+    static bool m_output_plasma;
+    /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
+     * Otherwise, changing this parameter only will not affect the simulation results. */
+    static int m_beam_injection_cr;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
+
+    amrex::Geometry m_slice_geom;
+    amrex::DistributionMapping m_slice_dm;
+    amrex::BoxArray m_slice_ba;
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
@@ -206,6 +217,13 @@ private:
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev);
 
+    /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
+     * The slice MultiFAB and the plasma particles are defined on this GDB.
+     *
+     * \param[in] ba BoxArray of the whole domain
+     * \param[in] dm DistributionMappint of the whole domain
+     */
+    void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
 };
 
 #endif

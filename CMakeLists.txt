@@ -263,6 +263,12 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME slice_IO.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/slice_IO.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         # This test is temporarily removed, due to bugs in the parallelization
         # configure_mpiexec(2)  # two ranks in MPI_TEST_EXE
         # add_test(NAME blowout_wake.2Rank

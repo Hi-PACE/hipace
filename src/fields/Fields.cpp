@@ -15,63 +15,43 @@ Fields::Fields (Hipace const* a_hipace)
 }
 
 void
-Fields::AllocData (int lev, const amrex::BoxArray& ba,
-                   const amrex::DistributionMapping& dm, amrex::Geometry const& geom)
+Fields::AllocData (
+    int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
+    amrex::Geometry const& geom, const amrex::BoxArray& slice_ba, const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
+
+    // Create a xz slice BoxArray
+    amrex::BoxList F_boxes;
+    if (Hipace::m_slice_F_xz){
+        for (int i = 0; i < ba.size(); ++i){
+            amrex::Box bx = ba[i];
+            // Flatten the box down to 1 cell in the y direction.
+            constexpr int idim = 1;
+            bx.setSmall(idim, ba[i].length(idim)/2);
+            bx.setBig(idim, ba[i].length(idim)/2);
+            // Make this MF node-centered so it is exactly at the center of the box.
+            // bx.setType(amrex::IndexType({0,1,0}));
+            F_boxes.push_back(bx);
+        }
+    }
+    amrex::BoxArray F_slice_ba(std::move(F_boxes));
+
+    // m_F is defined on F_ba, the full or the xz slice BoxArray
+    amrex::BoxArray F_ba = Hipace::m_slice_F_xz ? F_slice_ba : ba;
+
     if (Hipace::m_3d_on_host){
         // The Arena uses pinned memory.
-        m_F[lev].define(ba, dm, FieldComps::nfields, {0,0,0},
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
     } else {
         // The Arena uses managed memory.
-        m_F[lev].define(ba, dm, FieldComps::nfields, {0,0,0},
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
                         amrex::MFInfo().SetArena(amrex::The_Arena()));
     }
-
-    std::map<int,amrex::Vector<amrex::Box> > boxes;
-    for (int i = 0; i < ba.size(); ++i) {
-        int rank = dm[i];
-        if (m_hipace->InSameTransverseCommunicator(rank)) {
-            boxes[rank].push_back(ba[i]);
-        }
-    }
-
-    // We assume each process may have multiple Boxes longitude direction, but only one Box in the
-    // transverse direction.  The union of all Boxes on a process is rectangular.  The slice
-    // BoxArray therefore has one Box per process.  The Boxes in the slice BoxArray have one cell in
-    // the longitude direction.  We will use the lowest longitude index in each process to construct
-    // the Boxes.  These Boxes do not have any overlaps. Transversely, there are no gaps between
-    // them.
-
-    amrex::BoxList bl;
-    amrex::Vector<int> procmap;
-    for (auto const& kv : boxes) {
-        int const iproc = kv.first;
-        auto const& boxes_i = kv.second;
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(boxes_i.size() > 0,
-                                         "We assume each process has at least one Box");
-        amrex::Box bx = boxes_i[0];
-        for (int j = 1; j < boxes_i.size(); ++j) {
-            amrex::Box const& bxj = boxes_i[j];
-            for (int idim = 0; idim < Direction::z; ++idim) {
-                AMREX_ALWAYS_ASSERT(bxj.smallEnd(idim) == bx.smallEnd(idim));
-                AMREX_ALWAYS_ASSERT(bxj.bigEnd(idim) == bx.bigEnd(idim));
-                if (bxj.smallEnd(Direction::z) < bx.smallEnd(Direction::z)) {
-                    bx = bxj;
-                }
-            }
-        }
-        bx.setBig(Direction::z, bx.smallEnd(Direction::z));
-        bl.push_back(bx);
-        procmap.push_back(iproc);
-    }
-
-    amrex::BoxArray slice_ba(std::move(bl));
-    amrex::DistributionMapping slice_dm(std::move(procmap));
 
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
