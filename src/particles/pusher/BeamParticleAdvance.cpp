@@ -74,14 +74,12 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
             indices = nullptr;
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const *
             offsets = nullptr;
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
-            cell_start = 0, cell_stop = 0;
         indices = bins.permutationPtr();
         offsets = bins.offsetsPtr();
+        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
+            cell_start = offsets[islice], cell_stop = offsets[islice+1];
         // The particles that are in slice islice are
         // given by the indices[cell_start:cell_stop]
-        cell_start = offsets[islice];
-        cell_stop  = offsets[islice+1];
 
         int const num_particles = cell_stop-cell_start;
 
@@ -103,7 +101,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                 xp += dt * 0.5_rt * uxp[ip] / gammap;
                 yp += dt * 0.5_rt * uyp[ip] / gammap;
 
-                SetPosition(ip, xp, yp, zp);
+                setPosition(ip, xp, yp, zp);
 
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
@@ -152,7 +150,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                 xp += dt * 0.5_rt * ux_next  / gamma_next;
                 yp += dt * 0.5_rt * uy_next  / gamma_next;
                 zp += dt * ( uz_next  / gamma_next - phys_const.c );
-                SetPosition(ip, xp, yp, zp);
+                setPosition(ip, xp, yp, zp);
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;

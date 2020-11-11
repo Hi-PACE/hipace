@@ -178,10 +178,10 @@ public:
     static amrex::Real m_predcorr_B_mixing_factor;
     /** whether to deposit the beam density per slice, into the slice multifab.
      * If not, when running on GPU, the 3D arrays must be on the GPU. */
-    static bool m_slice_deposition;
+    static bool m_slice_beam;
     /** whether the 3D array stays in host memory (Pinned memory) or is allowed
      * to be in device memory (allocated in Managed memory).
-     * If true, required m_slice_deposition = true. */
+     * If true, required m_slice_beam = true. */
     static bool m_3d_on_host;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;

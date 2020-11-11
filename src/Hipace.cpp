@@ -25,7 +25,7 @@ int Hipace::m_depos_order_z = 0;
 amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 5;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.1;
-bool Hipace::m_slice_deposition = false;
+bool Hipace::m_slice_beam = false;
 bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
 
@@ -66,9 +66,9 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
-    pph.query("slice_deposition", m_slice_deposition);
+    pph.query("slice_beam", m_slice_beam);
     pph.query("3d_on_host", m_3d_on_host);
-    if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_deposition);
+    if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_beam);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -211,7 +211,7 @@ Hipace::Evolve ()
 
         amrex::MultiFab& fields = m_fields.getF(lev);
 
-        if (!m_slice_deposition) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
+        if (!m_slice_beam) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
@@ -223,7 +223,7 @@ Hipace::Evolve ()
         {
             const amrex::Box& bx = fields.box(*it);
             amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
-            if (m_slice_deposition) bins = findParticlesInEachSlice(
+            if (m_slice_beam) bins = findParticlesInEachSlice(
                 lev, *it, bx, m_beam_container, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -249,7 +249,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
     // for loop, the parallelcontext is the transverse communicator
     amrex::ParallelContext::push(m_comm_xy);
 
-    if (m_slice_deposition){
+    if (m_slice_beam){
         m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
     } else {
         m_fields.Copy(lev, islice, FieldCopyType::FtoS, 0, 0, FieldComps::nfields);
@@ -278,7 +278,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
-    if (m_slice_deposition) DepositCurrentSlice(
+    if (m_slice_beam) DepositCurrentSlice(
         m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
@@ -292,7 +292,8 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    AdvanceBeamParticlesSlice(m_beam_container, m_fields, geom[lev], lev, islice, bins);
+    if (m_slice_beam) AdvanceBeamParticlesSlice(
+        m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
     m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
@@ -313,7 +314,7 @@ Hipace::ResetAllQuantities (int lev)
         m_fields.getSlices(lev, islice).setVal(0.);
     }
 
-    if (!m_slice_deposition) fields.setVal(0.);
+    if (!m_slice_beam) fields.setVal(0.);
 }
 
 void
