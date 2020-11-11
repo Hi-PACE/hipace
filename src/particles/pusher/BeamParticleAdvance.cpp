@@ -6,11 +6,11 @@
 #include "HipaceProfilerWrapper.H"
 
 void
-AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
+AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                       amrex::Geometry const& gm, int const lev, const int islice,
                       amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
-    HIPACE_PROFILE("AdvanceBeamParticles()");
+    HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
 
     // Extract properties associated with physical size of the box
@@ -65,15 +65,17 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
 
         const auto getPosition =
             GetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
-        const auto SetPosition =
+        const auto setPosition =
             SetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
         const amrex::Real zmin = xyzmin[2];
 
         // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
             indices = nullptr;
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
+        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const *
+            offsets = nullptr;
+        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
+            cell_start = 0, cell_stop = 0;
         indices = bins.permutationPtr();
         offsets = bins.offsetsPtr();
         // The particles that are in slice islice are
@@ -90,7 +92,7 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
             [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = indices[cell_start+idx];
 
-                amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip]*uxp[ip]*clightsq
+                const amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                             + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
 
                 amrex::ParticleReal xp, yp, zp;
@@ -115,29 +117,28 @@ AdvanceBeamParticles (BeamParticleContainer& beam, Fields& fields,
 
                 /* use intermediate fields to calculate next (n+1) transverse
                  * momenta */
-                amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
+                const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
                             * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
-                amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
+                const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
                             * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
 
-
                 /* Now computing new longitudinal momentum */
-                amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
-                amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
-                amrex::ParticleReal uz_intermediate = uzp[ip]
+                const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
+                const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
+                const amrex::ParticleReal uz_intermediate = uzp[ip]
                                                       + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
-                amrex::ParticleReal gamma_intermediate = sqrt( 1.0_rt
+                const amrex::ParticleReal gamma_intermediate = sqrt( 1.0_rt
                                         + ux_intermediate*ux_intermediate*clightsq
                                         + uy_intermediate*uy_intermediate*clightsq
                                         + uz_intermediate*uz_intermediate*clightsq );
 
-                amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
+                const amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
                           * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
                               / gamma_intermediate );
 
                 /* computing next gamma value */
-                amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
+                const amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
                                                  + ux_next*ux_next*clightsq
                                                  + uy_next*uy_next*clightsq );
 

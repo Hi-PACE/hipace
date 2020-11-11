@@ -223,7 +223,8 @@ Hipace::Evolve ()
         {
             const amrex::Box& bx = fields.box(*it);
             amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
-            bins = findParticlesInEachSlice(lev, *it, bx, m_beam_container, geom[lev]);
+            if (m_slice_deposition) bins = findParticlesInEachSlice(
+                lev, *it, bx, m_beam_container, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                  SolveOneSlice(isl, lev, bins);
@@ -291,7 +292,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    AdvanceBeamParticles(m_beam_container, m_fields, geom[lev], lev, islice, bins);
+    AdvanceBeamParticlesSlice(m_beam_container, m_fields, geom[lev], lev, islice, bins);
 
     m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
