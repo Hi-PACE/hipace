@@ -24,7 +24,8 @@ uzp = ad['beam', 'particle_uz'].v
 wp = ad['beam', 'particle_w'].v
 
 std_theory = x_std_initial * np.abs(np.cos(omega_beta * ds.current_time))
-std_sim = np.sqrt(np.sum(xp**2*wp)/np.sum(wp))
+std_sim_x = np.sqrt(np.sum(xp**2*wp)/np.sum(wp))
+std_sim_y = np.sqrt(np.sum(yp**2*wp)/np.sum(wp))
 
 if do_plot:
     plt.figure()
@@ -35,8 +36,10 @@ if do_plot:
     plt.ylabel('y')
     plt.savefig('image.pdf', bbox_inches='tight')
 
-print("beam width theory    : " + str(std_theory))
-print("beam width simulation: " + str(std_sim))
+print("beam width theory      : " + str(std_theory))
+print("beam width simulation x: " + str(std_sim_x))
+print("beam width simulation y: " + str(std_sim_y))
 
 # Assert sub-permille error
-assert((std_sim-std_theory)/std_theory < 1.e-3)
+assert((std_sim_x-std_theory)/std_theory < 1.e-3)
+assert((std_sim_y-std_theory)/std_theory < 1.e-3)
