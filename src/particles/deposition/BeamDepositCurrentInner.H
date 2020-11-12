@@ -18,7 +18,7 @@
 /** \brief Loop over beam particles in iterator (=box) pti and deposit their current
  * into jx_fab, jy_fab and jz_fab and their charge density to rho_fab
  *
- * If slice_deposition is true, only deposit charge and current for beam particles in islice.
+ * If slice_beam is true, only deposit charge and current for beam particles in islice.
  * Note that particles are not sorted in memory, argument bins only contains indices of particles
  * sorted per slice.
  *
@@ -33,9 +33,9 @@
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
  * \param[in] q elementary charge
- * \param[in] islice If slice_deposition true, particles in slice islice will deposit
- * \param[in] bins Indices of particles arranged per slices. Used if slice_deposition is true.
- * \param[in] slice_deposition Whether to deposit in 3D array or in slice islice only.
+ * \param[in] islice If slice_beam true, particles in slice islice will deposit
+ * \param[in] bins Indices of particles arranged per slices. Used if slice_beam is true.
+ * \param[in] slice_beam Whether to deposit in 3D array or in slice islice only.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleIterator& pti,
@@ -49,7 +49,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
                          amrex::Real const q,
                          int islice,
                          amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
-                         bool slice_deposition)
+                         bool slice_beam)
 {
     using namespace amrex::literals;
 
@@ -94,7 +94,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         indices = nullptr;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
-    if (slice_deposition){
+    if (slice_beam){
         indices = bins.permutationPtr();
         offsets = bins.offsetsPtr();
         // The particles that are in slice islice are
@@ -102,13 +102,13 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
         cell_start = offsets[islice];
         cell_stop  = offsets[islice+1];
     }
-    int const num_particles = slice_deposition ? cell_stop-cell_start : pti.numParticles();
+    int const num_particles = slice_beam ? cell_stop-cell_start : pti.numParticles();
 
     // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
-            const int ip = slice_deposition ? indices[cell_start+idx] : idx;
+            const int ip = slice_beam ? indices[cell_start+idx] : idx;
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
@@ -139,7 +139,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
             amrex::Real sz_cell[depos_order_z + 1];
             int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
-            if (slice_deposition) { l_cell = 0; }
+            if (slice_beam) { l_cell = 0; }
 
             // Deposit current into jx_arr, jy_arr, jz_arr, and rho_arr
             for (int iz=0; iz<=depos_order_z; iz++){
@@ -154,7 +154,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
-                        if (!slice_deposition){
+                        if (!slice_beam){
                             amrex::Gpu::Atomic::Add(
                                 &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wq);

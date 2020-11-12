@@ -145,6 +145,8 @@ public:
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
     int m_max_step = 0;
+    /** Time step for the beam evolution */
+    static amrex::Real m_dt;
     /** Number of iterations between consecutive output dumps.
      * Default is -1, meaning no output */
     int m_output_period = -1;
@@ -176,10 +178,10 @@ public:
     static amrex::Real m_predcorr_B_mixing_factor;
     /** whether to deposit the beam density per slice, into the slice multifab.
      * If not, when running on GPU, the 3D arrays must be on the GPU. */
-    static bool m_slice_deposition;
+    static bool m_slice_beam;
     /** whether the 3D array stays in host memory (Pinned memory) or is allowed
      * to be in device memory (allocated in Managed memory).
-     * If true, required m_slice_deposition = true. */
+     * If true, required m_slice_beam = true. */
     static bool m_3d_on_host;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
@@ -190,6 +192,9 @@ public:
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     static int m_beam_injection_cr;
+    /** Strength of external fields applied to beam particles.
+     * The fields applied are ExmBy = m_external_field_strength*x, and same in y. */
+    static amrex::Real m_external_field_strength;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */

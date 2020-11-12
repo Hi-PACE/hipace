@@ -18,11 +18,11 @@ rm -rf plt00001
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.output_slice=0 \
-        hipace.slice_deposition=1
+        hipace.slice_beam=1
 mv plt00001 full_io
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.output_slice=1 \
-        hipace.slice_deposition=1
+        hipace.slice_beam=1
 mv plt00001 slice_io
 
 # assert whether the two IO types match
