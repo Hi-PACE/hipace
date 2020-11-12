@@ -306,7 +306,6 @@ Hipace::Evolve ()
              };
         }
         m_beam_container.Redistribute();
-        /* xxxxxxxxxx Gather and push beam particles xxxxxxxxxx */
 
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
