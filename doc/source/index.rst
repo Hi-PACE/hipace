@@ -11,7 +11,7 @@ Hipace++ is a quasi-static particle-in-cell (PIC) code to simulate plasma accele
 .. toctree::
    :maxdepth: 1
 
-   build/building.rst
+   building/building.rst
    run/run.rst
    run/parameters.rst
    visualize/visualization.rst
