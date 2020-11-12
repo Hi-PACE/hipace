@@ -192,6 +192,9 @@ public:
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     static int m_beam_injection_cr;
+    /** Strength of external fields applied to beam particles.
+     * The fields applied are ExmBy = m_external_field_strength*x, and same in y. */
+    static amrex::Real m_external_field_strength;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */

@@ -1,5 +1,5 @@
 #include "BeamParticleAdvance.H"
-
+#include "particles/ExternalFields.H"
 #include "FieldGather.H"
 #include "Constants.H"
 #include "GetAndSetPosition.H"
@@ -89,8 +89,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 
-                /* first we do half a step in x,y
-                 * This is not required in z, which is pushed in one step later */
+                // first we do half a step in x,y
+                // This is not required in z, which is pushed in one step later
                 xp += dt * 0.5_rt * uxp[ip] / gammap;
                 yp += dt * 0.5_rt * uyp[ip] / gammap;
 
@@ -106,14 +106,15 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-                /* use intermediate fields to calculate next (n+1) transverse
-                 * momenta */
+                ApplyExternalField(xp, yp, ExmByp, EypBxp, Hipace::m_external_field_strength);
+
+                // use intermediate fields to calculate next (n+1) transverse momenta
                 const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
                             * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
                 const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
                             * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
 
-                /* Now computing new longitudinal momentum */
+                // Now computing new longitudinal momentum
                 const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
                 const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
                 const amrex::ParticleReal uz_intermediate = uzp[ip]

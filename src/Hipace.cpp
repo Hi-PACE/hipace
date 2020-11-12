@@ -31,6 +31,7 @@ bool Hipace::m_do_device_synchronize = false;
 bool Hipace::m_slice_F_xz = false;
 bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
+amrex::Real Hipace::m_external_field_strength = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -80,6 +81,7 @@ Hipace::Hipace () :
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
     pph.query("output_plasma", m_output_plasma);
+    pph.query("external_field_strength", m_external_field_strength);
 
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
@@ -641,7 +643,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     const int nlev = 1;
     const amrex::Vector< std::string > varnames
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
-    const int time = 0.;
+    const int time = m_dt*output_step;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
     amrex::Vector<amrex::Geometry> geom_io = Geom();
