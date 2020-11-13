@@ -14,6 +14,7 @@ geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -2000.e-6   -2000.e-6   -20.e-6    # physical domain
 geometry.prob_hi     =  2000.e-6    2000.e-6    20.e-6
 
+beam.injection_type = fixed_ppc
 beam.profile = flattop
 beam.zmin = -100.e-6
 beam.zmax = 100.e-6
