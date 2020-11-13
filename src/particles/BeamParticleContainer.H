@@ -36,8 +36,8 @@ public:
      */
     void InitData (const amrex::Geometry& geom);
 
-    /** Initialize a can beam */
-    void InitBeam (
+    /** Initialize a beam with a fix number of particles per cell */
+    void InitBeamFixedPPC (
         const amrex::IntVect&  a_num_particles_per_cell,
         const GetInitialDensity& get_density,
         const GetInitialMomentum& get_momentum,
@@ -46,11 +46,26 @@ public:
         const amrex::Real     a_zmax,
         const amrex::Real     a_radius);
 
+    /** Initialize a beam with a fix number of particles, and fixed weight */
+    void InitBeamFixedWeight (const int num_to_add,
+                              const GetInitialMomentum& get_momentum,
+                              const amrex::RealVect pos_mean,
+                              const amrex::RealVect pos_std,
+                              const amrex::Real total_charge);
+
 private:
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
     amrex::Real m_zmax; /**< Max longitudinal position of the can beam */
     amrex::Real m_radius; /**< Radius of the can beam */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
+    /** Average position of the Gaussian beam. Only used for a fixed-weight beam */
+    amrex::RealVect m_position_mean {0., 0., 0.};
+    /** Width of the Gaussian beam. Only used for a fixed-weight beam */
+    amrex::RealVect m_position_std {0., 0., 0.};
+    /** injection type, fixed_width or fixed_ppc */
+    std::string m_injection_type;
+    int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
+    amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
 };
 
 /** \brief Iterator over boxes in a particle container */

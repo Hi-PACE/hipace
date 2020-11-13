@@ -10,13 +10,13 @@ using namespace amrex;
 
 void
 BeamParticleContainer::
-InitBeam (const IntVect& a_num_particles_per_cell,
-          const GetInitialDensity& get_density,
-          const GetInitialMomentum& get_momentum,
-          const Geometry& a_geom,
-          const amrex::Real a_zmin,
-          const amrex::Real a_zmax,
-          const amrex::Real a_radius)
+InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
+                  const GetInitialDensity& get_density,
+                  const GetInitialMomentum& get_momentum,
+                  const Geometry& a_geom,
+                  const amrex::Real a_zmin,
+                  const amrex::Real a_zmax,
+                  const amrex::Real a_radius)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -39,13 +39,13 @@ InitBeam (const IntVect& a_num_particles_per_cell,
                                       *ppc_cr[1],
                                       *ppc_cr[2]);
 
-    // First: loop over all cells, and count the particles effectively injected.
     const Real scale_fac = Hipace::m_normalized_units ?
         1._rt/num_ppc*cr[0]*cr[1]*cr[2] :
         dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
+        // First: loop over all cells, and count the particles effectively injected.
         Box tile_box  = mfi.tilebox();
         tile_box.coarsen(cr);
         const auto lo = amrex::lbound(tile_box);
@@ -159,6 +159,72 @@ InitBeam (const IntVect& a_num_particles_per_cell,
             }
         });
     }
-
     AMREX_ASSERT(OK());
+}
+
+void
+BeamParticleContainer::
+InitBeamFixedWeight (const int num_to_add,
+                     const GetInitialMomentum& get_momentum,
+                     const amrex::RealVect pos_mean,
+                     const amrex::RealVect pos_std,
+                     const amrex::Real total_charge)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+
+    constexpr int lev = 0;
+
+    if (num_to_add == 0) return;
+
+    PhysConst phys_const = get_phys_const();
+
+    if (ParallelDescriptor::IOProcessor()) {
+
+        // WARNING Implemented for 1 box per MPI rank.
+        for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+        {
+            // Allocate the memory for these particles
+            auto& particles = GetParticles(lev);
+            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+            auto old_size = particle_tile.GetArrayOfStructs().size();
+            auto new_size = old_size + num_to_add;
+            particle_tile.resize(new_size);
+
+            // Access particles' AoS and SoA
+            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+            auto arrdata = particle_tile.GetStructOfArrays().realarray();
+
+            const int procID = ParallelDescriptor::MyProc();
+            const int pid = ParticleType::NextID();
+            ParticleType::NextID(pid + num_to_add);
+
+            amrex::ParallelFor(
+                num_to_add,
+                [=] AMREX_GPU_DEVICE (int i) noexcept
+                {
+                    const Real x = amrex::RandomNormal(pos_mean[0], pos_std[0]);
+                    const Real y = amrex::RandomNormal(pos_mean[1], pos_std[1]);
+                    const Real z = amrex::RandomNormal(pos_mean[2], pos_std[2]);
+                    amrex::Real u[3] = {0.,0.,0.};
+                    get_momentum(u[0],u[1],u[2]);
+                    ParticleType& p = pstruct[i];
+
+                    // Set particle AoS
+                    p.id()   = pid + i;
+                    p.cpu()  = procID;
+                    p.pos(0) = x;
+                    p.pos(1) = y;
+                    p.pos(2) = z;
+
+                    // Set particle SoA
+                    arrdata[BeamIdx::ux  ][i] = u[0] * phys_const.c;
+                    arrdata[BeamIdx::uy  ][i] = u[1] * phys_const.c;
+                    arrdata[BeamIdx::uz  ][i] = u[2] * phys_const.c;
+                    arrdata[BeamIdx::w][i] = total_charge / num_to_add / phys_const.q_e;
+                });
+        }
+    }
+    Redistribute();
+    AMREX_ASSERT(OK());
+    return;
 }
