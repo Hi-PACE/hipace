@@ -41,7 +41,7 @@ if do_plot:
     plt.ylabel('dQ/dx or dy or dz')
     plt.legend()
     plt.savefig('image.pdf', bbox_inches='tight')
-    
+
 charge_sim = np.sum(wp) * scc.e
 
 assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
