@@ -163,6 +163,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
               int ncomp)
 {
     HIPACE_PROFILE("Fields::Copy()");
+    const bool do_node_center = Hipace::m_slice_F_xz;
     auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
@@ -189,7 +190,13 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
                 amrex::ParallelFor(copy_box, ncomp,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
                 {
-                    slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
+                    if (do_node_center){
+                        slice_array(i,j,k,n+slice_comp) =
+                            (full_array(i,j-1,k,n+full_comp)+
+                             full_array(i,j,k,n+full_comp)) * 0.5_rt;
+                    } else {
+                        slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
+                    }
                 });
             } else {
                 amrex::ParallelFor(copy_box, ncomp,
