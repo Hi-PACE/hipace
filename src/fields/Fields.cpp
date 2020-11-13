@@ -162,6 +162,7 @@ void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
               int ncomp)
 {
+    using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
     const bool do_node_center = Hipace::m_slice_F_xz;
     auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
