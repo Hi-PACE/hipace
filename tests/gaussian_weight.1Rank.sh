@@ -24,4 +24,5 @@ $HIPACE_EXAMPLE_DIR/analysis.py
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --plotfile plt00000 \
+    --rtol=.01 \
     --test-name gaussian_weight.1Rank
