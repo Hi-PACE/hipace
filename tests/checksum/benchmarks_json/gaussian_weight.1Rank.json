@@ -1,0 +1,26 @@
+{
+  "beam": {
+    "particle_cpu": 0.0,
+    "particle_id": 4999255201.0,
+    "particle_position_x": 2.3946736180079125,
+    "particle_position_y": 3.2855910892474203,
+    "particle_position_z": 4.315124974342569,
+    "particle_ux": 0.0,
+    "particle_uy": 0.0,
+    "particle_uz": 2.9975348498046e+16,
+    "particle_w": 6240697678.281083
+  },
+  "lev=0": {
+    "Bx": 0.0,
+    "By": 0.0,
+    "Bz": 0.0,
+    "ExmBy": 0.0,
+    "EypBx": 0.0,
+    "Ez": 0.0,
+    "Psi": 0.0,
+    "jx": 0.0,
+    "jy": 0.0,
+    "jz": 0.0,
+    "rho": 0.0
+  }
+}
