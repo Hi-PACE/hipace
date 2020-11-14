@@ -21,8 +21,8 @@ all_data_level_0 = ds1.covering_grid(level=0,
                                      left_edge=ds1.domain_left_edge,
                                      dims=ds1.domain_dimensions)
 Ez_full = all_data_level_0['Ez'].v.squeeze()
-Ez_full_sliced = Ez_full[:,Ez_full.shape[1]//2,:].squeeze()
-
+Ez_full_sliced = (Ez_full[:,Ez_full.shape[1]//2,:].squeeze() +
+                  Ez_full[:,Ez_full.shape[1]//2-1,:].squeeze())/2.
 ds2 = AMReXDataset('slice_io')
 ad = ds2.all_data()
 Ez_slice = ad['Ez'].reshape(ds2.domain_dimensions).v.squeeze()
@@ -50,4 +50,4 @@ print("Ez_full.shape", Ez_full.shape)
 print("Ez_slice.shape", Ez_slice.shape)
 print("error", error)
 
-assert(np.all(Ez_slice == Ez_full_sliced))
+assert(error < 1.e-14)
