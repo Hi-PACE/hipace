@@ -290,7 +290,7 @@ Hipace::Evolve ()
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                       false, false, false, true, geom[lev], lev);
+                       false, false, false, true, geom[lev], lev, m_verbose);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         const amrex::Vector<int> index_array = fields.IndexArray();
@@ -338,7 +338,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
                         FieldComps::rho, 1);
 
     DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
-                   true, true, geom[lev], lev);
+                   true, true, geom[lev], lev, m_verbose);
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
@@ -460,7 +460,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
-                       true, false, false, geom[lev], lev);
+                       true, false, false, geom[lev], lev, m_verbose);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),

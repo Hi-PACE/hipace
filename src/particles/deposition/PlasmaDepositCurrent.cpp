@@ -11,7 +11,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const WhichSlice which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                amrex::Geometry const& gm, int const lev)
+                amrex::Geometry const& gm, int const lev, const int verbose)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
@@ -58,22 +58,22 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          max_qsa_weighting_factor, verbose);
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          max_qsa_weighting_factor, verbose);
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          max_qsa_weighting_factor, verbose);
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          max_qsa_weighting_factor, verbose);
         } else {
             amrex::Abort("unknow deposition order");
         }

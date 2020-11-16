@@ -16,12 +16,13 @@
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
+ * \param[in] verbose level of verbosity
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const WhichSlice which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                amrex::Geometry const& gm, int const lev);
+                amrex::Geometry const& gm, int const lev, const int verbose);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_
