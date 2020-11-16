@@ -41,7 +41,6 @@
  * \param[in] deposit_jz if true, deposit to jz
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
- * \param[in] verbose level of verbosity
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
@@ -55,8 +54,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const q,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const amrex::Real max_qsa_weighting_factor,
-                         const int verbose)
+                         const amrex::Real max_qsa_weighting_factor)
 {
     using namespace amrex::literals;
 
@@ -178,7 +176,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         }
         );
         n_qsa_violation = gpu_n_qsa_violation.dataValue();
-        if (n_qsa_violation > 0 && (verbose >= 4))
+        if (n_qsa_violation > 0 && (Hipace::m_verbose >= 4))
             amrex::Print()<< "number of QSA violating particles on this slice: " \
             << n_qsa_violation << "\n";
 }
