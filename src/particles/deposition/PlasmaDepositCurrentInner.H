@@ -122,7 +122,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             // calculate plasma particle velocities
             const amrex::Real vx = uxp[ip]*gaminv;
             const amrex::Real vy = uyp[ip]*gaminv;
-            const amrex::Real vz = 1.0_rt -(psi + 1.0_rt)*gaminv;
+            const amrex::Real vz = phys_const.c*(1.0_rt -(psi + 1.0_rt)*gaminv);
 
             // calculate charge of the plasma particles
             const amrex::Real wq = q*wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
