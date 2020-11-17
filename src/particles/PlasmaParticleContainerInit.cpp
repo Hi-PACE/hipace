@@ -42,20 +42,22 @@ InitParticles (const IntVect& a_num_particles_per_cell,
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
+            std::cout<<lo<<' '<<hi<<' '<<i<<'\n';
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
                 Real r[3];
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
+                Real x = plo[0] + (i + r[0] + 0.5_rt)*dx[0];
+                Real y = plo[1] + (j + r[1] + 0.5_rt)*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
-                    x*x + y*y > a_radius*a_radius ) continue;
+                    x*x + y*y > a_radius*a_radius ||
+                    i == hi.x || j == hi.y) continue;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -116,14 +118,15 @@ InitParticles (const IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
+                Real x = plo[0] + (i + r[0] + 0.5_rt)*dx[0];
+                Real y = plo[1] + (j + r[1] + 0.5_rt)*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
-                    x*x + y*y > a_radius*a_radius ) continue;
+                    x*x + y*y > a_radius*a_radius ||
+                    i == hi.x || j == hi.y ) continue;
 
                 Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,

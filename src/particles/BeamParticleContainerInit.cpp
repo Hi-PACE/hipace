@@ -66,12 +66,13 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
+                Real x = plo[0] + (i + r[0] + 0.5_rt)*dx[0];
+                Real y = plo[1] + (j + r[1] + 0.5_rt)*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
-                    (x*x+y*y) > a_radius*a_radius) continue;
+                    (x*x+y*y) > a_radius*a_radius ||
+                    i == hi.x || j == hi.y) continue;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -134,12 +135,13 @@ InitBeam (const IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
+                Real x = plo[0] + (i + r[0] + 0.5_rt)*dx[0];
+                Real y = plo[1] + (j + r[1] + 0.5_rt)*dx[1];
                 Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
-                    (x*x+y*y) > a_radius*a_radius) continue;
+                    (x*x+y*y) > a_radius*a_radius ||
+                    i == hi.x || j == hi.y) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2]);
