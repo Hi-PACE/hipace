@@ -42,7 +42,6 @@ InitParticles (const IntVect& a_num_particles_per_cell,
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            std::cout<<lo<<' '<<hi<<' '<<i<<'\n';
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
                 Real r[3];
