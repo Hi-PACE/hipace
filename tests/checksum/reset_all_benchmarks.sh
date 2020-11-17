@@ -135,7 +135,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00003 \
+                     --plotfile ${build_dir}/bin/plt00020 \
                      --test-name beam_evolution.1Rank
 fi
 

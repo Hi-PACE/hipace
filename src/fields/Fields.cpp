@@ -162,12 +162,13 @@ void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
               int ncomp)
 {
+    using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
+    const bool do_node_center = Hipace::m_slice_F_xz;
     auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
-        // amrex::Box slice_box = mfi.validbox();
         amrex::Box slice_box = slice_fab.box();
         slice_box.setSmall(Direction::z, i_slice);
         slice_box.setBig  (Direction::z, i_slice);
@@ -195,7 +196,12 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
                 amrex::ParallelFor(copy_box, ncomp,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
                 {
-                    full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                    if (do_node_center){
+                        full_array(i,j,k,n+full_comp) = 0.5_rt *
+                            (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                    } else {
+                        full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                    }
                 });
             }
         }
