@@ -235,6 +235,18 @@ then
                      --test-name beam_in_vacuum.normalized.1Rank
 fi
 
+# gaussian_weight.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "gaussian_weight.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R gaussian_weight.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --plotfile ${build_dir}/bin/plt00000 \
+                     --test-name gaussian_weight.1Rank
+fi
+
 # blowout_wake.2Rank
 ### This test is inactive as Hipace doesn't support parallelization yet.
 #if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.2Rank" ]]
