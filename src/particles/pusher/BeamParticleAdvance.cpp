@@ -21,6 +21,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
+        // Assumes '2' == 'z' == 'the long dimension'.
+        int islice_local = islice - pti.tilebox().smallEnd(2);
+
         // Extract properties associated with the extent of the current box
         const int depos_order_xy = Hipace::m_depos_order_xy;
         const amrex::Box tilebox = pti.tilebox().grow(
@@ -39,13 +42,16 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
         const amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, 1);
         const amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
         const amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
-        // Extract field array from FabArrays in MultiFabs
-        amrex::Array4<const amrex::Real> const& exmby_arr = exmby[pti].array();
-        amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx[pti].array();
-        amrex::Array4<const amrex::Real> const& ez_arr = ez[pti].array();
-        amrex::Array4<const amrex::Real> const& bx_arr = bx[pti].array();
-        amrex::Array4<const amrex::Real> const& by_arr = by[pti].array();
-        amrex::Array4<const amrex::Real> const& bz_arr = bz[pti].array();
+
+        // Extract field array from FabArrays in MultiFabs.
+        // (because there is currently no transverse parallelization, the index
+        // we want in the slice multifab is always 0. Fix later.
+        amrex::Array4<const amrex::Real> const& exmby_arr = exmby[0].array();
+        amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx[0].array();
+        amrex::Array4<const amrex::Real> const& ez_arr = ez[0].array();
+        amrex::Array4<const amrex::Real> const& bx_arr = bx[0].array();
+        amrex::Array4<const amrex::Real> const& by_arr = by[0].array();
+        amrex::Array4<const amrex::Real> const& bz_arr = bz[0].array();
 
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
@@ -70,8 +76,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
         indices = bins.permutationPtr();
         offsets = bins.offsetsPtr();
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
-            cell_start = offsets[islice], cell_stop = offsets[islice+1];
-        // The particles that are in slice islice are
+            cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
+        // The particles that are in slice islice_local are
         // given by the indices[cell_start:cell_stop]
 
         int const num_particles = cell_stop-cell_start;
