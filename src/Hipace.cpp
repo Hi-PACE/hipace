@@ -278,11 +278,11 @@ Hipace::Evolve ()
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
-        Wait();
-
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<'\n';
 
         ResetAllQuantities(lev);
+
+        Wait();
 
         amrex::MultiFab& fields = m_fields.getF(lev);
 
@@ -305,12 +305,19 @@ Hipace::Evolve ()
                  SolveOneSlice(isl, lev, bins);
              };
         }
-        m_beam_container.Redistribute();
-
+        if (amrex::ParallelDescriptor::NProcs() == 1) {
+            m_beam_container.Redistribute();
+        } else {
+            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed.";
+        }
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
-        WriteDiagnostics(step+1);
+        if (amrex::ParallelDescriptor::NProcs() == 1) {
+            WriteDiagnostics(step+1);
+        } else {
+            amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step.";
+        }
     }
 
     WriteDiagnostics(m_max_step, true);
