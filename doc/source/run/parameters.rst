@@ -26,8 +26,3 @@ Plasma parameters
 
 Beam parameters
 ---------------
-Note: The following is just an example for how to import from doxygen.
-
-.. doxygenclass:: PlasmaParticleContainer
-
-.. doxygenclass:: BeamParticleContainer
