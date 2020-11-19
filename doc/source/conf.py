@@ -10,8 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import sys
+import os, sys, subprocess
 sys.path.insert(0, os.path.abspath('../../src/'))
 
 
@@ -27,7 +26,7 @@ author = 'Severin Diederichs, Maxence Thevenet'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
+extensions = ['breathe'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,3 +49,16 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# Setup the breathe extension
+breathe_projects = {
+    "Hipace++": "../doxyxml/"
+}
+breathe_default_project = "Hipace++"
+
+# Tell sphinx what the primary language being documented is.
+primary_domain = 'cpp'
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = 'cpp'
+
+subprocess.call('cd ../; doxygen; mkdir -p source/_static; cp -r doxyhtml source/_static/', shell=True)
