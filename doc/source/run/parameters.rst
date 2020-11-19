@@ -12,10 +12,10 @@ General parameters
 Plasma parameters
 -----------------
 
-* ``plasma.density`` (`float`)
+* ``plasma.density`` (`float`) optional (default `0.`)
     The plasma density.
 
-* ``plasma.ppc`` (2 `float`)
+* ``plasma.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
@@ -26,3 +26,8 @@ Plasma parameters
 
 Beam parameters
 ---------------
+Note: The following is just an example for how to import from doxygen.
+
+.. doxygenclass:: PlasmaParticleContainer
+
+.. doxygenclass:: BeamParticleContainer
