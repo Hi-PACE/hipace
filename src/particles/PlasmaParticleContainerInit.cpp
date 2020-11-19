@@ -33,10 +33,10 @@ InitParticles (const IntVect& a_num_particles_per_cell,
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
-        Gpu::ManagedVector<unsigned int> counts(tile_box.numPts(), 0);
+        Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
         unsigned int* pcount = counts.dataPtr();
 
-        Gpu::ManagedVector<unsigned int> offsets(tile_box.numPts());
+        Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
 
         amrex::ParallelFor(tile_box,
@@ -71,9 +71,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
             }
         });
 
-        Gpu::exclusive_scan(counts.begin(), counts.end(), offsets.begin());
-
-        int num_to_add = offsets[tile_box.numPts()-1] + counts[tile_box.numPts()-1];
+        int num_to_add = Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
         auto& particles = GetParticles(lev);
         auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
