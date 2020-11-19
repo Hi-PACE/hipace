@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from yt.frontends.boxlib.data_structures import AMReXDataset
 
-do_plot = True
+do_plot = False
 
 ds = AMReXDataset('REF_plt00001')
 ad = ds.all_data()
@@ -83,8 +83,5 @@ for field in ['ExmBy', 'EypBx', 'Ez', 'Bx', 'By', 'By', 'jz']:
     print('comparing ' + field)
     F = ad[field].v.reshape(ds.domain_dimensions).squeeze()
     Fr = adr[field].v.reshape(dsr.domain_dimensions).squeeze()
-    if (np.sum(np.abs(Fr))) > 0:
-        error = np.sum(np.abs(F-Fr))/np.sum(np.abs(Fr))
-        print(error)
     assert( np.all( F == Fr ) )
 

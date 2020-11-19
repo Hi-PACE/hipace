@@ -27,5 +27,3 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.radius = 20.
 
 $HIPACE_EXAMPLE_DIR/analysis_2ranks.py
-
-# hipace.output_period=4 \
