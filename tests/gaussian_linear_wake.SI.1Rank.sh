@@ -21,8 +21,8 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
             beam.zmin = -59.e-6 \
             beam.zmax = 59.e-6 \
             beam.radius = 100.e-6 \
-            beam.mean = 0. 0. 0 \
-            beam.std = 20.e-6 20.e-6 14.1e-6 \
+            beam.position_mean = 0. 0. 0 \
+            beam.position_std = 20.e-6 20.e-6 14.1e-6 \
             geometry.prob_lo     = -100.e-6   -100.e-6   -60.e-6 \
             geometry.prob_hi     =  100.e-6    100.e-6    60.e-6
 

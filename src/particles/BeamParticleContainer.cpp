@@ -1,5 +1,6 @@
 #include "BeamParticleContainer.H"
 #include "Constants.H"
+#include "Hipace.H"
 
 void
 BeamParticleContainer::ReadParameters ()
@@ -43,14 +44,18 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         "Please specify exlusively either total_charge or density of the beam");
         if (peak_density_is_specified)
         {
-            auto dx = geom.CellSizeArray();
-            m_total_charge = m_density / (dx[0]*dx[1]*dx[2]);
+            m_total_charge = m_density;
             for (int idim=0; idim<AMREX_SPACEDIM; ++idim)
             {
                 m_total_charge *= m_position_std[idim] * sqrt(2. * MathConst::pi);
             }
         }
-        std::cout << "total charge : " << m_total_charge << "\n";
+        if (Hipace::m_normalized_units)
+        {
+            auto dx = geom.CellSizeArray();
+            m_total_charge /= dx[0]*dx[1]*dx[2];
+        }
+        
         const GetInitialMomentum get_momentum;
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge);
