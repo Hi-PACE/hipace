@@ -66,6 +66,7 @@ private:
     std::string m_injection_type;
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
+    amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
 };
 
 /** \brief Iterator over boxes in a particle container */

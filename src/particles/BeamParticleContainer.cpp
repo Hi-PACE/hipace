@@ -1,4 +1,5 @@
 #include "BeamParticleContainer.H"
+#include "Constants.H"
 
 void
 BeamParticleContainer::ReadParameters ()
@@ -36,7 +37,18 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.get("position_std", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
         pp.get("num_particles", m_num_particles);
-        pp.get("total_charge", m_total_charge);
+        bool charge_is_specified = pp.query("total_charge", m_total_charge);
+        bool peak_density_is_specified = pp.query("density", m_density);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
+        "Please specify exlusively either total_charge or density of the beam");
+        if (peak_density_is_specified)
+        {
+            m_total_charge = m_density;
+            for (int idim=0; idim<AMREX_SPACEDIM; ++idim)
+            {
+                m_total_charge *= m_position_std[idim] * sqrt(2. * MathConst::pi);
+            }
+        }
         const GetInitialMomentum get_momentum;
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge);
