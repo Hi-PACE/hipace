@@ -24,7 +24,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     resizeData();
 
     PhysConst phys_const = get_phys_const();
-    
+
     if (m_injection_type == "fixed_ppc") {
 
         const GetInitialDensity get_density;
