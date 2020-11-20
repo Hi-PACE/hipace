@@ -31,8 +31,8 @@ beam.radius = 1.2
 beam.density = 3.
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
-beam.position_mean = 0. 0. 0
-beam.position_std = 0.3 0.3 1.41
+beam.mean = 0. 0. 0
+beam.std = 0.3 0.3 1.41
 beam.ppc = 1 1 1
 
 plasma.density = 1.
