@@ -23,6 +23,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     reserveData();
     resizeData();
 
+    PhysConst phys_const = get_phys_const();
+    
     if (m_injection_type == "fixed_ppc") {
 
         const GetInitialDensity get_density;
@@ -44,7 +46,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         "Please specify exlusively either total_charge or density of the beam");
         if (peak_density_is_specified)
         {
-            m_total_charge = m_density;
+            m_total_charge = m_density*phys_const.q_e;
             for (int idim=0; idim<AMREX_SPACEDIM; ++idim)
             {
                 m_total_charge *= m_position_std[idim] * sqrt(2. * MathConst::pi);
@@ -55,7 +57,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             auto dx = geom.CellSizeArray();
             m_total_charge /= dx[0]*dx[1]*dx[2];
         }
-        
+
         const GetInitialMomentum get_momentum;
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge);
