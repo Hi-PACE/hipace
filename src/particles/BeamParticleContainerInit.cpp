@@ -162,17 +162,19 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
 
 void
 BeamParticleContainer::
-InitBeamFixedWeight (const int num_to_add,
+InitBeamFixedWeight (int num_to_add,
                      const GetInitialMomentum& get_momentum,
                      const amrex::RealVect pos_mean,
                      const amrex::RealVect pos_std,
-                     const amrex::Real total_charge)
+                     const amrex::Real total_charge,
+                     const bool do_symmetrize)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     constexpr int lev = 0;
 
     if (num_to_add == 0) return;
+    if (do_symmetrize) num_to_add /=4;
 
     PhysConst phys_const = get_phys_const();
 
@@ -185,7 +187,7 @@ InitBeamFixedWeight (const int num_to_add,
             auto& particles = GetParticles(lev);
             auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
             auto old_size = particle_tile.GetArrayOfStructs().size();
-            auto new_size = old_size + num_to_add;
+            auto new_size = do_symmetrize? old_size + 4*num_to_add : old_size + num_to_add;
             particle_tile.resize(new_size);
 
             // Access particles' AoS and SoA
@@ -196,30 +198,107 @@ InitBeamFixedWeight (const int num_to_add,
             const int pid = ParticleType::NextID();
             ParticleType::NextID(pid + num_to_add);
 
-            amrex::ParallelFor(
-                num_to_add,
-                [=] AMREX_GPU_DEVICE (int i) noexcept
-                {
-                    const Real x = amrex::RandomNormal(pos_mean[0], pos_std[0]);
-                    const Real y = amrex::RandomNormal(pos_mean[1], pos_std[1]);
-                    const Real z = amrex::RandomNormal(pos_mean[2], pos_std[2]);
-                    amrex::Real u[3] = {0.,0.,0.};
-                    get_momentum(u[0],u[1],u[2]);
-                    ParticleType& p = pstruct[i];
+            if (!do_symmetrize)
+            {
+                amrex::ParallelFor(
+                    num_to_add,
+                    [=] AMREX_GPU_DEVICE (int i) noexcept
+                    {
+                        const Real x = amrex::RandomNormal(pos_mean[0], pos_std[0]);
+                        const Real y = amrex::RandomNormal(pos_mean[1], pos_std[1]);
+                        const Real z = amrex::RandomNormal(pos_mean[2], pos_std[2]);
+                        amrex::Real u[3] = {0.,0.,0.};
+                        get_momentum(u[0],u[1],u[2]);
+                        ParticleType& p = pstruct[i];
 
-                    // Set particle AoS
-                    p.id()   = pid + i;
-                    p.cpu()  = procID;
-                    p.pos(0) = x;
-                    p.pos(1) = y;
-                    p.pos(2) = z;
+                        // Set particle AoS
+                        p.id()   = pid + i;
+                        p.cpu()  = procID;
+                        p.pos(0) = x;
+                        p.pos(1) = y;
+                        p.pos(2) = z;
 
-                    // Set particle SoA
-                    arrdata[BeamIdx::ux  ][i] = u[0] * phys_const.c;
-                    arrdata[BeamIdx::uy  ][i] = u[1] * phys_const.c;
-                    arrdata[BeamIdx::uz  ][i] = u[2] * phys_const.c;
-                    arrdata[BeamIdx::w][i] = total_charge / num_to_add / phys_const.q_e;
-                });
+                        // Set particle SoA
+                        arrdata[BeamIdx::ux  ][i] = u[0] * phys_const.c;
+                        arrdata[BeamIdx::uy  ][i] = u[1] * phys_const.c;
+                        arrdata[BeamIdx::uz  ][i] = u[2] * phys_const.c;
+                        arrdata[BeamIdx::w][i] = total_charge / num_to_add / phys_const.q_e;
+                    });
+            }
+            else // do_symmetrize = True
+            {
+                /* for each particle (x, y, ux, uy) three more particles are generated with
+                 * (-x, y, -ux, uy), (x, -y, ux, -uy), and (-x, -y, -ux, -uy)
+                 */
+                const amrex::Real weight = total_charge / num_to_add /4  / phys_const.q_e;
+
+                amrex::ParallelFor(
+                    num_to_add,
+                    [=] AMREX_GPU_DEVICE (int i) noexcept
+                    {
+                        const Real x = amrex::RandomNormal(0, pos_std[0]);
+                        const Real y = amrex::RandomNormal(0, pos_std[1]);
+                        const Real z = amrex::RandomNormal(0, pos_std[2]);
+                        amrex::Real u[3] = {0.,0.,0.};
+                        get_momentum(u[0],u[1],u[2]);
+
+                        // first particle
+                        ParticleType& p1 = pstruct[4*i];
+                        // Set particle AoS
+                        p1.id()   = pid + 4*i;
+                        p1.cpu()  = procID;
+                        p1.pos(0) = pos_mean[0]+x;
+                        p1.pos(1) = pos_mean[1]+y;
+                        p1.pos(2) = pos_mean[2]+z;
+                        // Set particle SoA
+                        arrdata[BeamIdx::ux  ][4*i] = u[0] * phys_const.c;
+                        arrdata[BeamIdx::uy  ][4*i] = u[1] * phys_const.c;
+                        arrdata[BeamIdx::uz  ][4*i] = u[2] * phys_const.c;
+                        arrdata[BeamIdx::w][4*i] = weight;
+
+                        // second particle
+                        ParticleType& p2 = pstruct[4*i+1];
+                        // Set particle AoS
+                        p2.id()   = pid + 4*i+1;
+                        p2.cpu()  = procID;
+                        p2.pos(0) = pos_mean[0]-x;
+                        p2.pos(1) = pos_mean[1]+y;
+                        p2.pos(2) = pos_mean[2]+z;
+                        // Set particle SoA
+                        arrdata[BeamIdx::ux  ][4*i+1] = -u[0] * phys_const.c;
+                        arrdata[BeamIdx::uy  ][4*i+1] = u[1] * phys_const.c;
+                        arrdata[BeamIdx::uz  ][4*i+1] = u[2] * phys_const.c;
+                        arrdata[BeamIdx::w][4*i+1] = weight;
+
+                        //third particle
+                        ParticleType& p3 = pstruct[4*i+2];
+                        // Set particle AoS
+                        p3.id()   = pid + 4*i+2;
+                        p3.cpu()  = procID;
+                        p3.pos(0) = pos_mean[0]+x;
+                        p3.pos(1) = pos_mean[1]-y;
+                        p3.pos(2) = pos_mean[2]+z;
+                        // Set particle SoA
+                        arrdata[BeamIdx::ux  ][4*i+2] = u[0] * phys_const.c;
+                        arrdata[BeamIdx::uy  ][4*i+2] = -u[1] * phys_const.c;
+                        arrdata[BeamIdx::uz  ][4*i+2] = u[2] * phys_const.c;
+                        arrdata[BeamIdx::w][4*i+2] = weight;
+
+                        // fourth particle
+                        ParticleType& p4 = pstruct[4*i+3];
+                        // Set particle AoS
+                        p4.id()   = pid + 4*i+3;
+                        p4.cpu()  = procID;
+                        p4.pos(0) = pos_mean[0]-x;
+                        p4.pos(1) = pos_mean[1]-y;
+                        p4.pos(2) = pos_mean[2]+z;
+                        // Set particle SoA
+                        arrdata[BeamIdx::ux  ][4*i+3] = -u[0] * phys_const.c;
+                        arrdata[BeamIdx::uy  ][4*i+3] = -u[1] * phys_const.c;
+                        arrdata[BeamIdx::uz  ][4*i+3] = u[2] * phys_const.c;
+                        arrdata[BeamIdx::w][4*i+3] = weight;
+                    });
+            } // end if do_symmetrize = True
         }
     }
     Redistribute();

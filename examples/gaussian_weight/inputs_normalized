@@ -23,4 +23,4 @@ beam.zmin = -20.
 beam.zmax =  20.
 beam.radius = 40.
 beam.u_mean = 0. 0. 1.e3
-beam.u_std = 0. 0. 0.
+beam.u_std = 3. 4. 0.

@@ -44,6 +44,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool peak_density_is_specified = pp.query("density", m_density);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
         "Please specify exlusively either total_charge or density of the beam");
+        pp.query("do_symmetrize", m_do_symmetrize);
+
         if (peak_density_is_specified)
         {
             m_total_charge = m_density*phys_const.q_e;
@@ -60,7 +62,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         const GetInitialMomentum get_momentum;
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
-                            m_position_std, m_total_charge);
+                            m_position_std, m_total_charge, m_do_symmetrize);
 
     } else {
 

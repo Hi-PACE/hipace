@@ -42,10 +42,18 @@ else:
     z_std = 50.e-6
     charge = 1.e-9
 
+# only required in the normalized units test
+ux_avg = 1.
+uy_avg = 2.
+ux_std = 3.
+uy_std = 4.
+
 # Get particle data into numpy arrays
 xp = ad['beam', 'particle_position_x'].v
 yp = ad['beam', 'particle_position_y'].v
 zp = ad['beam', 'particle_position_z'].v
+uxp = ad['beam', 'particle_ux'].v
+uyp = ad['beam', 'particle_uy'].v
 uzp = ad['beam', 'particle_uz'].v
 wp = ad['beam', 'particle_w'].v
 
@@ -71,11 +79,15 @@ else:
 
 assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
 if args.norm_units:
-    assert(np.abs((np.average(xp)-x_avg)) < 5.e-2)
+    assert(np.abs((np.average(xp)-x_avg)) < 1e-12)
+    assert(np.abs((np.average(yp)-y_avg)/y_avg) < 1e-4)
+    assert(np.average(uxp) < 1e-12)
+    assert(np.average(uyp) < 1e-12)
 else:
     assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
+    assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
 
-assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
+
 assert(np.abs((np.average(zp)-z_avg)/z_avg) < .02)
 assert(np.abs((np.std(xp)-x_std)/x_std) < .02)
 assert(np.abs((np.std(yp)-y_std)/y_std) < .02)
