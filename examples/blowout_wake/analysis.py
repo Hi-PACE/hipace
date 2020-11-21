@@ -32,6 +32,10 @@ parser.add_argument('--si-data',
                     dest='si_data',
                     required=True,
                     help='Path to the data of the SI units run')
+parser.add_argument('--si-fixed-weight-data',
+                    dest='si_fixed_weight_data',
+                    required=True,
+                    help='Path to the data of the SI units run with a fixed weight beam')
 parser.add_argument('--do-plot',
                     dest='do_plot',
                     action='store_true',
@@ -41,6 +45,7 @@ args = parser.parse_args()
 
 ds_norm = AMReXDataset(args.norm_data)
 ds_si = AMReXDataset(args.si_data)
+ds_si_fixed_weight = AMReXDataset(args.si_fixed_weight_data)
 
 elec_density = 2.8239587008591567e23 # [1/m^3]
 # calculation of the plasma frequency
@@ -60,6 +65,11 @@ all_data_level_0_si = ds_si.covering_grid(level=0, left_edge=ds_si.domain_left_e
 Ez_along_z_si = all_data_level_0_si['Ez'].v.squeeze()[ds_si.domain_dimensions[0]//2,
     ds_si.domain_dimensions[1]//2, :]
 
+all_data_level_0_si_fixed_w = ds_si_fixed_weight.covering_grid(level=0, left_edge=ds_si.domain_left_edge,
+    dims=ds_si.domain_dimensions)
+Ez_along_z_si_fixed_w = all_data_level_0_si_fixed_w['Ez'].v.squeeze()[ds_si.domain_dimensions[0]//2,
+    ds_si.domain_dimensions[1]//2, :]
+
 zeta_norm = np.linspace(ds_norm.domain_left_edge[2].v, ds_norm.domain_right_edge[2].v, ds_norm.domain_dimensions[2])
 zeta_si = np.linspace(ds_si.domain_left_edge[2].v, ds_si.domain_right_edge[2].v, ds_si.domain_dimensions[2])
 
@@ -74,4 +84,7 @@ if args.do_plot:
 # Assert that the simulation result is close enough to theory
 error_Ez = np.sum((Ez_along_z_si/E_0-Ez_along_z_norm)**2) / np.sum((Ez_along_z_norm)**2)
 print("total relative error Ez: " + str(error_Ez) + " (tolerance = 1e-10)")
+error_Ez_fixed_weight = np.sum((Ez_along_z_si_fixed_w-Ez_along_z_si)**2) / np.sum((Ez_along_z_si)**2)
+print("total relative error Ez for a fixed weight beam to the fixed ppc beam: " + str(error_Ez_fixed_weight) + " (tolerance = 1e-2)")
 assert(error_Ez < 1e-10)
+assert(error_Ez_fixed_weight < 1e-2)
