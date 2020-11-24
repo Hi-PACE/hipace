@@ -29,9 +29,9 @@ namespace
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
         BeamParticleContainer::ParticleType* pstruct,
-        GpuArray<ParticleReal*, BeamIdx::nattribs>  arrdata, const amrex::Real x, const amrex::Real y, const amrex::Real z,
-        const amrex::Real ux, const amrex::Real uy, const amrex::Real uz, const amrex::Real weight,
-        const int pid, const int procID, const int ip, const amrex::Real speed_of_light) noexcept
+        GpuArray<ParticleReal*, BeamIdx::nattribs>&  arrdata, const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
+        const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz, const amrex::Real& weight,
+        const int& pid, const int& procID, const int& ip, const amrex::Real& speed_of_light) noexcept
     {
         BeamParticleContainer::ParticleType& p = pstruct[ip];
         // Set particle AoS
@@ -144,7 +144,7 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
 
         GpuArray<ParticleReal*, BeamIdx::nattribs> arrdata =
-                                                    particle_tile.GetStructOfArrays().realarray();
+            particle_tile.GetStructOfArrays().realarray();
 
         int procID = ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
@@ -228,7 +228,7 @@ InitBeamFixedWeight (int num_to_add,
             // Access particles' AoS and SoA
             ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
             GpuArray<ParticleReal*, BeamIdx::nattribs> arrdata =
-                                                        particle_tile.GetStructOfArrays().realarray();
+                particle_tile.GetStructOfArrays().realarray();
 
             const int procID = ParallelDescriptor::MyProc();
             const int pid = ParticleType::NextID();
