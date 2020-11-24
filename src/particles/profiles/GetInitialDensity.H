@@ -27,9 +27,9 @@ struct GetInitialDensity
         using namespace amrex::literals;
         amrex::Real density = 0._rt;
         if        (m_profile == BeamProfileType::Gaussian) {
-            amrex::Real delta_x = (x - m_mean[0]) / m_std[0];
-            amrex::Real delta_y = (y - m_mean[1]) / m_std[1];
-            amrex::Real delta_z = (z - m_mean[2]) / m_std[2];
+            amrex::Real delta_x = (x - m_position_mean[0]) / m_position_std[0];
+            amrex::Real delta_y = (y - m_position_mean[1]) / m_position_std[1];
+            amrex::Real delta_z = (z - m_position_mean[2]) / m_position_std[2];
             density = m_density * exp( -0.5_rt*delta_x*delta_x )
                                 * exp( -0.5_rt*delta_y*delta_y )
                                 * exp( -0.5_rt*delta_z*delta_z );
@@ -38,8 +38,8 @@ struct GetInitialDensity
         }
         return density;
     }
-    amrex::RealVect  m_mean {0.,0.,0.}; /* mean in case of a Gaussian density distribution. */
-    amrex::RealVect  m_std {0.,0.,0.};  /* rms standard deviation in case of a Gaussian density distribution */
+    amrex::RealVect  m_position_mean {0.,0.,0.}; /* mean in case of a Gaussian density distribution. */
+    amrex::RealVect  m_position_std {0.,0.,0.};  /* rms standard deviation in case of a Gaussian density distribution */
     BeamProfileType m_profile; /* beam profile type, e.g. BeamProfileType::Flattop or BeamProfileType::Gaussian*/
     amrex::Real m_density; /**< Peak density of the beam */
 };

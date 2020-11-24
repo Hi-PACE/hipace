@@ -1,0 +1,27 @@
+amr.n_cell = 64 64 64
+
+amr.blocking_factor = 2
+amr.max_level = 0
+
+max_step = 1
+hipace.output_period = 1
+hipace.normalized_units = 1
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+hipace.predcorr_B_mixing_factor = 0.95
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = 0 0 0      # Is periodic?
+geometry.prob_lo     = -20   -20   -20    # physical domain
+geometry.prob_hi     =  20    20    20
+
+beam.position_mean = 0. 1. 2.
+beam.position_std = 3. 4. 5.
+beam.injection_type = fixed_weight
+beam.num_particles = 1000000
+beam.do_symmetrize = 1
+beam.density = 1.
+beam.zmin = -20.
+beam.zmax =  20.
+beam.radius = 40.
+beam.u_mean = 0. 0. 1.e3
+beam.u_std = 3. 4. 0.

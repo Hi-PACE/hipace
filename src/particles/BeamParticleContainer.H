@@ -47,11 +47,12 @@ public:
         const amrex::Real     a_radius);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
-    void InitBeamFixedWeight (const int num_to_add,
+    void InitBeamFixedWeight (int num_to_add,
                               const GetInitialMomentum& get_momentum,
                               const amrex::RealVect pos_mean,
                               const amrex::RealVect pos_std,
-                              const amrex::Real total_charge);
+                              const amrex::Real total_charge,
+                              const bool do_symmetrize);
 
 private:
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
@@ -66,6 +67,8 @@ private:
     std::string m_injection_type;
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
+    amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
+    bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
 };
 
 /** \brief Iterator over boxes in a particle container */

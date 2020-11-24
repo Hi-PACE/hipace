@@ -6,28 +6,58 @@ import numpy as np
 from yt.frontends.boxlib.data_structures import AMReXDataset
 import scipy.constants as scc
 
-do_plot = False
+import argparse
+
+parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
+parser.add_argument('--normalized-units',
+                    dest='norm_units',
+                    action='store_true',
+                    default=False,
+                    help='Run the analysis in normalized units')
+parser.add_argument('--do-plot',
+                    dest='do_plot',
+                    action='store_true',
+                    default=False,
+                    help='Plot figures and save them to file')
+args = parser.parse_args()
 
 # Load data with yt
 ds = AMReXDataset('plt00000')
 ad = ds.all_data()
 
-x_avg =  0.e-6
-y_avg = 10.e-6
-z_avg = 20.e-6
-x_std = 30.e-6
-y_std = 40.e-6
-z_std = 50.e-6
-charge = 1.e-9
+if args.norm_units:
+    x_avg = 0.
+    y_avg = 1.
+    z_avg = 2.
+    x_std = 3.
+    y_std = 4.
+    z_std = 5.
+    charge = 1.*3.*4.*5.*(2.*np.pi)**(3/2)/(40./64.)**3
+else:
+    x_avg =  0.e-6
+    y_avg = 10.e-6
+    z_avg = 20.e-6
+    x_std = 30.e-6
+    y_std = 40.e-6
+    z_std = 50.e-6
+    charge = 1.e-9
+
+# only required in the normalized units test
+ux_avg = 1.
+uy_avg = 2.
+ux_std = 3.
+uy_std = 4.
 
 # Get particle data into numpy arrays
 xp = ad['beam', 'particle_position_x'].v
 yp = ad['beam', 'particle_position_y'].v
 zp = ad['beam', 'particle_position_z'].v
+uxp = ad['beam', 'particle_ux'].v
+uyp = ad['beam', 'particle_uy'].v
 uzp = ad['beam', 'particle_uz'].v
 wp = ad['beam', 'particle_w'].v
 
-if do_plot:
+if args.do_plot:
     Hx, bins = np.histogram(xp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)
     Hy, bins = np.histogram(yp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)
     Hz, bins = np.histogram(zp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)
@@ -42,11 +72,22 @@ if do_plot:
     plt.legend()
     plt.savefig('image.pdf', bbox_inches='tight')
 
-charge_sim = np.sum(wp) * scc.e
+if args.norm_units:
+    charge_sim = np.sum(wp)
+else:
+    charge_sim = np.sum(wp) * scc.e
 
 assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
-assert(np.abs((np.average(xp)-x_avg)) < 5.e-7)
-assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
+if args.norm_units:
+    assert(np.abs((np.average(xp)-x_avg)) < 1e-12)
+    assert(np.abs((np.average(yp)-y_avg)/y_avg) < 1e-4)
+    assert(np.average(uxp) < 1e-12)
+    assert(np.average(uyp) < 1e-12)
+else:
+    assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
+    assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
+
+
 assert(np.abs((np.average(zp)-z_avg)/z_avg) < .02)
 assert(np.abs((np.std(xp)-x_std)/x_std) < .02)
 assert(np.abs((np.std(yp)-y_std)/y_std) < .02)
