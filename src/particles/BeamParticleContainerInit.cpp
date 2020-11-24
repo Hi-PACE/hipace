@@ -250,8 +250,7 @@ InitBeamFixedWeight (int num_to_add,
                         AddOneBeamParticle(pstruct, arrdata, pos_mean[0]+x, pos_mean[1]+y,
                                            pos_mean[2]+z, u[0], u[1], u[2], weight,
                                            pid, procID, i, phys_const.c);
-                    } else
-                    {
+                    } else {
                         weight /= 4;
                         AddOneBeamParticle(pstruct, arrdata, pos_mean[0]+x, pos_mean[1]+y,
                                            pos_mean[2]+z, u[0], u[1], u[2], weight,
