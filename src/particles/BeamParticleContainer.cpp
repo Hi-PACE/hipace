@@ -43,10 +43,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool charge_is_specified = pp.query("total_charge", m_total_charge);
         bool peak_density_is_specified = pp.query("density", m_density);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
-        "Please specify exlusively either total_charge or density of the beam");
+            "Please specify exlusively either total_charge or density of the beam");
         pp.query("do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
-        "To symmetrize the beam, please specify a beam particle number divisible by 4.");
+            "To symmetrize the beam, please specify a beam particle number divisible by 4.");
 
         if (peak_density_is_specified)
         {
