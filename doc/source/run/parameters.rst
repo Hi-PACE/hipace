@@ -36,8 +36,8 @@ General parameters
     Transverse particle shape order. Currently, only `0` is implemented.
 
 * ``hipace.output_period`` (`integer`) optional (default `-1`)
-    Output period. No output is given for `hipace.output_period = -1`.
-    **Warning:** `hipace.output_period = 0` will make the simulation crash.
+    | Output period. No output is given for `hipace.output_period = -1`.
+    | **Warning:** `hipace.output_period = 0` will make the simulation crash.
 
 * ``hipace.slice_beam`` (`bool`) optional (default `0`)
     Treat the beam per slice. The beam particles are assigned to their nearest slice in z.
@@ -45,20 +45,22 @@ General parameters
     the fields of that slice are calculated.
 
 * ``hipace.output_slice`` (`bool`) optional (default `0`)
-    Gives only a 2D slice output in the XZ-plane. The output is averaged over the two central grid points of the y-axis.
-    **Note:** requires `hipace.slice_beam = 1`.
+    | Gives only a 2D slice output in the XZ-plane. The output is averaged over
+      the two central grid points of the y-axis.
+    | **Note:** requires `hipace.slice_beam = 1`.
 
 * ``hipace.3d_on_host`` (`bool`) optional (default `0`)
-    Allocates the 3D arrays of the fields for I/O on the host, and not the device.
-    This enables to run simulations, where the 3D array exceeds the GPU memory.
-    **Note:** requires `hipace.slice_beam = 1`.
+    | Allocates the 3D arrays of the fields for I/O on the host, and not the device.
+      This enables to run simulations, where the 3D array exceeds the GPU memory.
+    | **Note:** requires `hipace.slice_beam = 1`.
 
 * ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
-    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
-    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
-    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
-    fail otherwise. E.g. for a simulation with `(2048*2048*2048)` grid points,
-    `hipace.beam_injection_cr = 8` is required.
+    | Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
+      For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
+      exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
+      fail otherwise. As an example, a simulation with `(2048*2048*2048)` grid points
+      requires
+    | `hipace.beam_injection_cr = 8`.
 
 Predictor-corrector loop parameters
 -----------------------------------
