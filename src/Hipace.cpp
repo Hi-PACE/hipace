@@ -75,6 +75,8 @@ Hipace::Hipace () :
     pph.query("slice_beam", m_slice_beam);
     pph.query("3d_on_host", m_3d_on_host);
     if (m_3d_on_host) AMREX_ALWAYS_ASSERT(m_slice_beam);
+    if (m_slice_F_xz) AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_slice_beam,
+                        "To enable slice I/O, 'hipace.slice_beam = 1' is required ");
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
