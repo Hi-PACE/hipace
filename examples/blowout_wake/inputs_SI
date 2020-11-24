@@ -1,11 +1,5 @@
 amr.n_cell = 128 128 200
 
-hipace.predcorr_B_mixing_factor = 0.05
-hipace.predcorr_max_iterations = 30
-hipace.predcorr_B_error_tolerance = 4e-2
-
-fields.do_dirichlet_poisson = 1
-
 amr.blocking_factor = 2
 amr.max_level = 0
 

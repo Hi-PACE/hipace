@@ -176,7 +176,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         }
         );
         n_qsa_violation = gpu_n_qsa_violation.dataValue();
-        if (n_qsa_violation > 0 && (Hipace::m_verbose >= 4))
+        if (n_qsa_violation > 0 && (Hipace::m_verbose >= 3))
             amrex::Print()<< "number of QSA violating particles on this slice: " \
             << n_qsa_violation << "\n";
 }
