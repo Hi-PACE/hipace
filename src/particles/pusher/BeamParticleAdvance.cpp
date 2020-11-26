@@ -160,3 +160,73 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
           );
       }
 }
+
+
+void
+CalculateAdaptiveTimeStep (BeamParticleContainer& beam, int const lev)
+{
+    HIPACE_PROFILE("CalculateAdaptiveTimeStep()");
+    using namespace amrex::literals;
+
+    // Extract properties associated with physical size of the box
+    const PhysConst phys_const = get_phys_const();
+
+    // const amrex::Real dt = Hipace::m_dt;
+    const amrex::Real omega_beta_dyndt = 0.07;
+    // Loop over particle boxes
+    for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
+    {
+
+        // Extract particle properties
+        const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+        const auto wp = soa.GetRealData(BeamIdx::w).data();
+
+        amrex::Real min_gamma = 1e100;
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_gamma(min_gamma);
+        amrex::Real* p_min_gamma = gpu_min_gamma.dataPtr();
+
+        amrex::Real sum_weights = 0;
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(sum_weights);
+        amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
+
+        amrex::Real sum_weights_times_gamma = 0;
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_gamma(sum_weights_times_gamma);
+        amrex::Real* p_sum_weights_times_gamma = gpu_sum_weights_times_gamma.dataPtr();
+
+        amrex::Real sum_weights_times_gamma_squared = 0;
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_gamma_squared(sum_weights_times_gamma_squared);
+        amrex::Real* p_sum_weights_times_gamma_squared = gpu_sum_weights_times_gamma_squared.dataPtr();
+
+        int const num_particles = pti.numParticles();
+        amrex::ParallelFor(num_particles,
+            [=] AMREX_GPU_DEVICE (long ip) {
+
+                amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
+                amrex::Gpu::Atomic::Add(p_sum_weights_times_gamma, wp[ip]*uzp[ip]);
+                amrex::Gpu::Atomic::Add(p_sum_weights_times_gamma_squared, wp[ip]*uzp[ip]*uzp[ip]);
+                amrex::Gpu::Atomic::Min(p_min_gamma, uzp[ip]);
+
+          }
+          );
+          sum_weights = gpu_sum_weights.dataValue();
+          sum_weights_times_gamma = gpu_sum_weights_times_gamma.dataValue();
+          sum_weights_times_gamma_squared = gpu_sum_weights_times_gamma_squared.dataValue();
+          min_gamma = std::min(min_gamma, gpu_min_gamma.dataValue());
+
+          // if last rank of the pipeline
+          // To be fixed for longitudinal parallelization!
+          const amrex::Real mean_gamma = sum_weights_times_gamma / sum_weights;
+          const amrex::Real sigma_gamma = sqrt(sum_weights_times_gamma_squared / sum_weights - mean_gamma);
+          const amrex::Real sigma_gamma_dev = mean_gamma - 4.*sigma_gamma;
+
+          const amrex::Real chosen_min_gamma = std::min( std::max(sigma_gamma_dev, min_gamma), 1e100 );
+          if (chosen_min_gamma < 1) amrex::Print()<<"WARNING: beam particles have non-relativistic velocities!";
+
+          if (chosen_min_gamma > 1) // and density above min density
+          {
+              Hipace::m_dt = sqrt(2.*chosen_min_gamma) * omega_beta_dyndt;
+          }
+
+    }
+}

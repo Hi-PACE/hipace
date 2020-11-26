@@ -18,4 +18,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                       amrex::Geometry const& gm, int const lev, const int islice,
                       amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
 
+void
+CalculateAdaptiveTimeStep (BeamParticleContainer& beam, int const lev);
+
 #endif //  BEAMPARTICLEADVANCE_H_

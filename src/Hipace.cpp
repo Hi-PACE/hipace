@@ -280,7 +280,7 @@ Hipace::Evolve ()
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
-        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<'\n';
+        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
 
@@ -312,6 +312,13 @@ Hipace::Evolve ()
         } else {
             amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed.";
         }
+
+        if (amrex::ParallelDescriptor::NProcs() == 1) {
+            CalculateAdaptiveTimeStep(m_beam_container, lev);
+        } else {
+            amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";
+        }
+
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
