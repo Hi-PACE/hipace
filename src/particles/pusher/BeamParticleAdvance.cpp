@@ -171,8 +171,6 @@ CalculateAdaptiveTimeStep (BeamParticleContainer& beam, int const lev)
     // Extract properties associated with physical size of the box
     const PhysConst phys_const = get_phys_const();
 
-    // const amrex::Real dt = Hipace::m_dt;
-    const amrex::Real omega_beta_dyndt = 0.07;
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
     {
@@ -225,7 +223,7 @@ CalculateAdaptiveTimeStep (BeamParticleContainer& beam, int const lev)
 
           if (chosen_min_gamma > 1) // and density above min density
           {
-              Hipace::m_dt = sqrt(2.*chosen_min_gamma) * omega_beta_dyndt;
+              Hipace::m_dt = sqrt(2.*chosen_min_gamma) * Hipace::m_nt_per_omega_betatron;
           }
 
     }
