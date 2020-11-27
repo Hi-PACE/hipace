@@ -32,6 +32,7 @@ bool Hipace::m_slice_F_xz = false;
 bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_field_strength = 0.;
+bool Hipace::m_do_adaptive_time_step = false;
 amrex::Real Hipace::m_nt_per_omega_betatron = 0.07;
 
 Hipace&
@@ -84,7 +85,9 @@ Hipace::Hipace () :
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
     pph.query("output_plasma", m_output_plasma);
+    pph.query("do_adaptive_time_step", m_do_adaptive_time_step);
     pph.query("external_field_strength", m_external_field_strength);
+
     pph.query("nt_per_omega_betatron", m_nt_per_omega_betatron);
 
 #ifdef AMREX_USE_MPI
@@ -315,7 +318,7 @@ Hipace::Evolve ()
             amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed.";
         }
 
-        if (amrex::ParallelDescriptor::NProcs() == 1) {
+        if ((amrex::ParallelDescriptor::NProcs() == 1) && (m_do_adaptive_time_step == 1)) {
             CalculateAdaptiveTimeStep(m_beam_container, lev);
         } else {
             amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";

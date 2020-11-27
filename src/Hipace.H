@@ -195,6 +195,8 @@ public:
     /** Strength of external fields applied to beam particles.
      * The fields applied are ExmBy = m_external_field_strength*x, and same in y. */
     static amrex::Real m_external_field_strength;
+    /** Whether to use an adaptive time step */
+    static bool m_do_adaptive_time_step;
     /** Number of time steps per betatron period for the adaptive time step */
     static amrex::Real m_nt_per_omega_betatron;
 
