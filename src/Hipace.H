@@ -196,10 +196,8 @@ public:
     /** Strength of external fields applied to beam particles.
      * The fields applied are ExmBy = m_external_field_strength*x, and same in y. */
     static amrex::Real m_external_field_strength;
-
+    /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
-
-
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
