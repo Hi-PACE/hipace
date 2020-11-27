@@ -5,6 +5,7 @@
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
 #include "particles/PlasmaParticleContainer.H"
 #include "particles/BeamParticleContainer.H"
+#include "AdaptiveTimeStep.H"
 #include "Constants.H"
 
 #include <AMReX_AmrCore.H>
@@ -195,10 +196,9 @@ public:
     /** Strength of external fields applied to beam particles.
      * The fields applied are ExmBy = m_external_field_strength*x, and same in y. */
     static amrex::Real m_external_field_strength;
-    /** Whether to use an adaptive time step */
-    static bool m_do_adaptive_time_step;
-    /** Number of time steps per betatron period for the adaptive time step */
-    static amrex::Real m_nt_per_omega_betatron;
+
+    AdaptiveTimeStep m_adaptive_time_step;
+
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
