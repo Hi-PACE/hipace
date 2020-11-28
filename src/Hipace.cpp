@@ -314,7 +314,7 @@ Hipace::Evolve ()
         }
 
         if (amrex::ParallelDescriptor::NProcs() == 1) {
-            m_adaptive_time_step.Calculate(m_beam_container, m_plasma_container, lev);
+            m_adaptive_time_step.Calculate(m_dt, m_beam_container, m_plasma_container, lev);
         } else {
             amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";
         }

@@ -5,20 +5,13 @@
 #include "particles/PlasmaParticleContainer.H"
 #include <AMReX_AmrCore.H>
 
-class Hipace;
-
-/** \brief describes which double is used for the adaptive time step */
-struct WhichDouble {
-    enum Comp { Dt=0, MinUz, SumWeights, SumWeightsTimesUz, SumWeightsTimesUzSquared, N };
-};
-
 /** \brief class handling the adaptive time step */
 class AdaptiveTimeStep
 {
 private:
 
     /** container including dt, min_gamma, sum of weights and the sum of weights times gamma */
-    amrex::Real m_container[5] = {0., 1e100, 0., 0., 0.};
+    amrex::Real m_timestep_data[5] = {0., 1e100, 0., 0., 0.};
 
     /** Whether to use an adaptive time step */
     bool m_do_adaptive_time_step = false;
@@ -27,15 +20,17 @@ private:
 
 public:
     /** Constructor */
-    explicit AdaptiveTimeStep ();//(Hipace const* a_hipace);
+    explicit AdaptiveTimeStep ();
 
     /** calculate the adaptive time step based on the beam energy
+     * \param[in,out] dt the time step
      * \param[in] beam species on which the time step is based
      * \param[in] plasma plasma container to get the plasma density
      * \param[in] lev MR level
      */
-    void
-    Calculate (BeamParticleContainer& beam, PlasmaParticleContainer& plasma, int const lev);
+     void
+     Calculate (amrex::Real& dt, BeamParticleContainer& beam,
+                                  PlasmaParticleContainer& plasma, int const lev);
 
 };
 
