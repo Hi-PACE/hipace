@@ -1,8 +1,5 @@
 #! /usr/bin/env python3
 
-import yt ; yt.funcs.mylog.setLevel(50)
-import matplotlib.pyplot as plt
-import matplotlib
 import numpy as np
 
 with open("negative_gradient.txt") as file_in:

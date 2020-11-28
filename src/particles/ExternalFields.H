@@ -46,5 +46,4 @@ void ApplyExternalAccelField(
     return;
 }
 
-
 #endif // EXTERNALFIELDS_H_
