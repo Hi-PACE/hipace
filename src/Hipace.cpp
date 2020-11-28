@@ -31,7 +31,8 @@ bool Hipace::m_do_device_synchronize = false;
 bool Hipace::m_slice_F_xz = false;
 bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
-amrex::Real Hipace::m_external_field_strength = 0.;
+amrex::Real Hipace::m_external_focusing_field_strength = 0.;
+amrex::Real Hipace::m_external_accel_field_strength = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -83,7 +84,8 @@ Hipace::Hipace () :
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
     pph.query("output_plasma", m_output_plasma);
-    pph.query("external_field_strength", m_external_field_strength);
+    pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
+    pph.query("external_accel_field_strength", m_external_accel_field_strength);
 
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();

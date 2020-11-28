@@ -11,7 +11,7 @@
  * \param[in] field_strength strength of the linear field: Ex = field_strength * x
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void ApplyExternalField(
+void ApplyExternalFocusingField(
     const amrex::ParticleReal xp,
     const amrex::ParticleReal yp,
     amrex::ParticleReal& ExmByp,
@@ -25,5 +25,26 @@ void ApplyExternalField(
 
     return;
 }
+
+/** \brief add axisymmetric linear accelerating field on particles. Typically called right after
+ * the field gather.
+ *
+ * \param[in] zp particle position x
+ * \param[in,out] Ezp Ez Field on particle
+ * \param[in] field_strength strength of the linear field: Ex = field_strength * x
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void ApplyExternalAccelField(
+    const amrex::ParticleReal zp,
+    amrex::ParticleReal& Ezp,
+    const amrex::Real field_strength)
+{
+    if (field_strength == 0.) return;
+
+    Ezp += field_strength * zp;
+
+    return;
+}
+
 
 #endif // EXTERNALFIELDS_H_

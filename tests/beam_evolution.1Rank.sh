@@ -27,7 +27,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.density = 1.e-8 \
         beam.radius = 1. \
         beam.ppc = 4 4 1 \
-        hipace.external_field_strength = .5
+        hipace.external_focusing_field_strength = .5
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_beam_push.py
