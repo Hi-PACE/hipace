@@ -215,6 +215,12 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME adaptive_time_step.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/adaptive_time_step.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME linear_wake.normalized.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/linear_wake.normalized.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
