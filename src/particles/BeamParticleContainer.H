@@ -52,7 +52,10 @@ public:
                               const amrex::RealVect pos_mean,
                               const amrex::RealVect pos_std,
                               const amrex::Real total_charge,
-                              const bool do_symmetrize);
+                              const bool do_symmetrize,
+                              const amrex::Real dx_per_dzeta,
+                              const amrex::Real dy_per_dzeta,
+                              const amrex::Real tilt_zeta_position);
 
 private:
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
@@ -63,6 +66,9 @@ private:
     amrex::RealVect m_position_mean {0., 0., 0.};
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
+    amrex::Real m_dx_per_dzeta {0.}; /**< tilt in x direction */
+    amrex::Real m_dy_per_dzeta {0.}; /**< tilt in y direction */
+    amrex::Real m_tilt_zeta_position {0.}; /**< position from which tilt is introduced */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */

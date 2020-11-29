@@ -6,9 +6,6 @@ void
 BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp("beam");
-    pp.get("zmin", m_zmin);
-    pp.get("zmax", m_zmax);
-    pp.get("radius", m_radius);
     pp.get("injection_type", m_injection_type);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
@@ -27,6 +24,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     if (m_injection_type == "fixed_ppc") {
 
+        amrex::ParmParse pp("beam");
+        pp.get("zmin", m_zmin);
+        pp.get("zmax", m_zmax);
+        pp.get("radius", m_radius);
         const GetInitialDensity get_density;
         const GetInitialMomentum get_momentum;
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin, m_zmax, m_radius);
@@ -47,6 +48,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.query("do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
+        pp.query("dx_per_dzeta", m_dx_per_dzeta);
+        pp.query("dy_per_dzeta", m_dx_per_dzeta);
+        pp.query("tilt_zeta_position", m_tilt_zeta_position);
 
         if (peak_density_is_specified)
         {
@@ -64,7 +68,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         const GetInitialMomentum get_momentum;
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
-                            m_position_std, m_total_charge, m_do_symmetrize);
+                            m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
+                            m_dy_per_dzeta, m_tilt_zeta_position);
 
     } else {
 

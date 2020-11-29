@@ -202,7 +202,10 @@ InitBeamFixedWeight (int num_to_add,
                      const amrex::RealVect pos_mean,
                      const amrex::RealVect pos_std,
                      const amrex::Real total_charge,
-                     const bool do_symmetrize)
+                     const bool do_symmetrize,
+                     const amrex::Real dx_per_dzeta,
+                     const amrex::Real dy_per_dzeta,
+                     const amrex::Real tilt_zeta_position)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
