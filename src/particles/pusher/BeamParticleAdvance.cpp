@@ -115,10 +115,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-                ApplyExternalFocusingField(xp, yp, ExmByp, EypBxp,
-                                           external_focusing_field_strength);
-
-                ApplyExternalAccelField(zp, Ezp, external_accel_field_strength);
+                ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
+                                   external_focusing_field_strength,
+                                   external_accel_field_strength);
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
                 const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
