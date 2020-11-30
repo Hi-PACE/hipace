@@ -25,7 +25,7 @@ void ApplyExternalField(
     const amrex::Real focusing_field_strength,
     const amrex::Real accel_field_strength)
 {
-    if (focusing_field_strength == 0. && accel_field_strength == 0.) return;
+    if ((focusing_field_strength == 0.) && (accel_field_strength == 0.)) return;
 
     ExmByp += focusing_field_strength * xp;
     EypBxp += focusing_field_strength * yp;
