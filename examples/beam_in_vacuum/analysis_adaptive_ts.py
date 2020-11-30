@@ -36,9 +36,8 @@ positive_gradient_lines = np.array(positive_gradient_lines)
 uz = 1000
 nt_per_omega_betatron = 0.07
 dt_analytic = np.sqrt(2*uz)*nt_per_omega_betatron
-print(dt_analytic)
-print(dt1[1])
 error_analytic = (dt1[1]-dt_analytic)/dt_analytic
+assert(error_analytic < 1e-5)
 print("Error on the first time step ", error_analytic)
 #assert()
 error = np.sum(dt1 - dt2)/np.sum(dt2)
