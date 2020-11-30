@@ -12,6 +12,12 @@ BeamParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
         for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
     }
+    pp.query("dx_per_dzeta", m_dx_per_dzeta);
+    pp.query("dy_per_dzeta", m_dy_per_dzeta);
+    if (m_injection_type == "fixed_ppc"){
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.),
+            "Tilted beams are not yet implemented for fixed ppc beams");
+    }
 }
 
 void
@@ -48,8 +54,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.query("do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
-        pp.query("dx_per_dzeta", m_dx_per_dzeta);
-        pp.query("dy_per_dzeta", m_dy_per_dzeta);
 
         if (peak_density_is_specified)
         {

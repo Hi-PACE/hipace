@@ -80,7 +80,7 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
                                       *ppc_cr[1],
                                       *ppc_cr[2]);
 
-    const amrex::Real scale_fac = Hipace::m_normalized_units ?
+    const Real scale_fac = Hipace::m_normalized_units ?
         1._rt/num_ppc*cr[0]*cr[1]*cr[2] :
         dx[0]*dx[1]*dx[2]/num_ppc;
 
@@ -103,13 +103,13 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         {
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
-                amrex::Real r[3];
+                Real r[3];
 
                 ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
+                Real x = plo[0] + (i + r[0])*dx[0];
+                Real y = plo[1] + (j + r[1])*dx[1];
+                Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
@@ -174,9 +174,9 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
+                Real x = plo[0] + (i + r[0])*dx[0];
+                Real y = plo[1] + (j + r[1])*dx[1];
+                Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
@@ -240,9 +240,9 @@ InitBeamFixedWeight (int num_to_add,
                 num_to_add,
                 [=] AMREX_GPU_DEVICE (int i) noexcept
                 {
-                    const amrex::Real x = amrex::RandomNormal(0, pos_std[0]);
-                    const amrex::Real y = amrex::RandomNormal(0, pos_std[1]);
-                    const amrex::Real z = amrex::RandomNormal(0, pos_std[2]);
+                    const Real x = amrex::RandomNormal(0, pos_std[0]);
+                    const Real y = amrex::RandomNormal(0, pos_std[1]);
+                    const Real z = amrex::RandomNormal(0, pos_std[2]);
                     amrex::Real u[3] = {0.,0.,0.};
                     get_momentum(u[0],u[1],u[2]);
 
