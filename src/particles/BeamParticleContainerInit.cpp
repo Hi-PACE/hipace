@@ -6,6 +6,8 @@
 
 #include <AMReX_REAL.H>
 
+using namespace amrex;
+
 namespace
 {
     /** \brief Adds a single beam particle
@@ -202,8 +204,7 @@ InitBeamFixedWeight (int num_to_add,
                      const amrex::Real total_charge,
                      const bool do_symmetrize,
                      const amrex::Real dx_per_dzeta,
-                     const amrex::Real dy_per_dzeta,
-                     const amrex::Real tilt_zeta_position)
+                     const amrex::Real dy_per_dzeta)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -245,24 +246,27 @@ InitBeamFixedWeight (int num_to_add,
                     amrex::Real u[3] = {0.,0.,0.};
                     get_momentum(u[0],u[1],u[2]);
 
+                    const amrex::Real cental_x_pos = pos_mean[0] + z*dx_per_dzeta;
+                    const amrex::Real cental_y_pos = pos_mean[1] + z*dy_per_dzeta;
+
                     amrex::Real weight = total_charge / num_to_add / phys_const.q_e;
                     if (!do_symmetrize)
                     {
-                        AddOneBeamParticle(pstruct, arrdata, pos_mean[0]+x, pos_mean[1]+y,
+                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
                                            pos_mean[2]+z, u[0], u[1], u[2], weight,
                                            pid, procID, i, phys_const.c);
                     } else {
                         weight /= 4;
-                        AddOneBeamParticle(pstruct, arrdata, pos_mean[0]+x, pos_mean[1]+y,
+                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
                                            pos_mean[2]+z, u[0], u[1], u[2], weight,
                                            pid, procID, 4*i, phys_const.c);
-                        AddOneBeamParticle(pstruct, arrdata, pos_mean[0]-x, pos_mean[1]+y,
+                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
                                            pos_mean[2]+z, -u[0], u[1], u[2], weight,
                                            pid, procID, 4*i+1, phys_const.c);
-                        AddOneBeamParticle(pstruct, arrdata, pos_mean[0]+x, pos_mean[1]-y,
+                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
                                            pos_mean[2]+z, u[0], -u[1], u[2], weight,
                                            pid, procID, 4*i+2, phys_const.c);
-                        AddOneBeamParticle(pstruct, arrdata, pos_mean[0]-x, pos_mean[1]-y,
+                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
                                            pos_mean[2]+z, -u[0], -u[1], u[2], weight,
                                            pid, procID, 4*i+3, phys_const.c);
                     }

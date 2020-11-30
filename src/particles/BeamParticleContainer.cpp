@@ -49,8 +49,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
         pp.query("dx_per_dzeta", m_dx_per_dzeta);
-        pp.query("dy_per_dzeta", m_dx_per_dzeta);
-        pp.query("tilt_zeta_position", m_tilt_zeta_position);
+        pp.query("dy_per_dzeta", m_dy_per_dzeta);
 
         if (peak_density_is_specified)
         {
@@ -69,7 +68,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         const GetInitialMomentum get_momentum;
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
-                            m_dy_per_dzeta, m_tilt_zeta_position);
+                            m_dy_per_dzeta);
 
     } else {
 

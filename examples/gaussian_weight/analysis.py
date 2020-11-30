@@ -19,6 +19,11 @@ parser.add_argument('--do-plot',
                     action='store_true',
                     default=False,
                     help='Plot figures and save them to file')
+parser.add_argument('--tilted-beam',
+                    dest='tilted_beam',
+                    action='store_true',
+                    default=False,
+                    help='Run the analysis with a tilted beam')
 args = parser.parse_args()
 
 # Load data with yt
@@ -72,23 +77,29 @@ if args.do_plot:
     plt.legend()
     plt.savefig('image.pdf', bbox_inches='tight')
 
-if args.norm_units:
-    charge_sim = np.sum(wp)
+if args.tilted_beam:
+    x_tilt_at_1 = xp[np.where( zp <1.01 ) and np.where(0.99 < zp)]
+    y_tilt_at_1 = yp[np.where( zp <1.01 ) and np.where(0.99 < zp)]
+    assert(np.abs(np.average(x_tilt_at_1-0.1)/0.1) < 0.02)
+    assert(np.abs(np.average(y_tilt_at_1+0.2-1.0)/0.2) < 0.02)
 else:
-    charge_sim = np.sum(wp) * scc.e
+    if args.norm_units:
+        charge_sim = np.sum(wp)
+    else:
+        charge_sim = np.sum(wp) * scc.e
 
-assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
-if args.norm_units:
-    assert(np.abs((np.average(xp)-x_avg)) < 1e-12)
-    assert(np.abs((np.average(yp)-y_avg)/y_avg) < 1e-4)
-    assert(np.average(uxp) < 1e-12)
-    assert(np.average(uyp) < 1e-12)
-else:
-    assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
-    assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
+    assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
+    if args.norm_units:
+        assert(np.abs((np.average(xp)-x_avg)) < 1e-12)
+        assert(np.abs((np.average(yp)-y_avg)/y_avg) < 1e-4)
+        assert(np.average(uxp) < 1e-12)
+        assert(np.average(uyp) < 1e-12)
+    else:
+        assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
+        assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
 
 
-assert(np.abs((np.average(zp)-z_avg)/z_avg) < .02)
-assert(np.abs((np.std(xp)-x_std)/x_std) < .02)
-assert(np.abs((np.std(yp)-y_std)/y_std) < .02)
-assert(np.abs((np.std(zp)-z_std)/z_std) < .02)
+    assert(np.abs((np.average(zp)-z_avg)/z_avg) < .02)
+    assert(np.abs((np.std(xp)-x_std)/x_std) < .02)
+    assert(np.abs((np.std(yp)-y_std)/y_std) < .02)
+    assert(np.abs((np.std(zp)-z_std)/z_std) < .02)
