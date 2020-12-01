@@ -24,14 +24,20 @@ public:
 
     /** calculate the adaptive time step based on the beam energy
      * \param[in,out] dt the time step
+     * \param[in] nt number of the current time step
      * \param[in] beam species on which the time step is based
      * \param[in] plasma plasma container to get the plasma density
      * \param[in] lev MR level
+     * \param[in] a_comm_z longitudinal MPI communicator
      */
     void
     Calculate (amrex::Real& dt, const int nt, BeamParticleContainer& beam,
                                 PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z);
 
+    /** pass the time step data to the next lower proc in the pipeline
+     * \param[in] nt number of the current time step
+     * \param[in] a_comm_z longitudinal MPI communicator
+     */
     void
     PassTimeStepInfo (const int nt, MPI_Comm a_comm_z);
 

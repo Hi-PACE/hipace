@@ -86,6 +86,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         }
 
     } else {
+        /* lower ranks receive all time step data from the upper rank */
         auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*WhichDouble::N);
         MPI_Status status;
@@ -96,6 +97,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
             m_timestep_data[idouble] = recv_buffer[idouble];
         }
+        /* setting dt, so it is used in the beam pusher */
         dt = recv_buffer[WhichDouble::Dt];
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
@@ -137,6 +139,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
 
         }
         );
+        /* adding beam particle information to time step info */
         m_timestep_data[WhichDouble::SumWeights] = gpu_sum_weights.dataValue();
         m_timestep_data[WhichDouble::SumWeightsTimesUz] = gpu_sum_weights_times_uz.dataValue();
         m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] =
