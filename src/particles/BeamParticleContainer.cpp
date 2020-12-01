@@ -5,7 +5,6 @@
 void
 BeamParticleContainer::ReadParameters ()
 {
-    amrex::Print()<<"here! "<<m_name<<'\n';
     amrex::ParmParse pp(m_name);
     pp.get("injection_type", m_injection_type);
     amrex::Vector<amrex::Real> tmp_vector;
