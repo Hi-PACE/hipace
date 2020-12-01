@@ -1,5 +1,5 @@
 #include "AnyDST.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 namespace AnyDST
 {

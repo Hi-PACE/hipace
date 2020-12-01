@@ -1,6 +1,6 @@
 #include "FFTPoissonSolverPeriodic.H"
-#include "Constants.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/Constants.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 FFTPoissonSolverPeriodic::FFTPoissonSolverPeriodic (
     amrex::BoxArray const& realspace_ba,

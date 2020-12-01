@@ -1,6 +1,6 @@
 
 #include "Hipace.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX.H>
 

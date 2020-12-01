@@ -3,7 +3,7 @@
 
 #include "particles/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
-#include "Constants.H"
+#include "utils/Constants.H"
 #include "Hipace.H"
 
 /** Depose current of particles in species plasma into the current 2D slice in fields

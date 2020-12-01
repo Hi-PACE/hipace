@@ -5,8 +5,8 @@
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
 #include "particles/PlasmaParticleContainer.H"
 #include "particles/BeamParticleContainer.H"
-#include "AdaptiveTimeStep.H"
-#include "Constants.H"
+#include "utils/AdaptiveTimeStep.H"
+#include "utils/Constants.H"
 
 #include <AMReX_AmrCore.H>
 

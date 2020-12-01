@@ -2,9 +2,9 @@
 #include "particles/BeamParticleContainer.H"
 #include "particles/deposition/BeamDepositCurrentInner.H"
 #include "fields/Fields.H"
-#include "Constants.H"
+#include "utils/Constants.H"
 #include "Hipace.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_DenseBins.H>
 

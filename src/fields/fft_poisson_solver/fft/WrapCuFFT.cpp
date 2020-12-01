@@ -6,7 +6,7 @@
  */
 #include "AnyFFT.H"
 #include "CuFFTUtils.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 namespace AnyFFT
 {

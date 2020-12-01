@@ -9,7 +9,7 @@
 #define HIPACE_BEAMDEPOSITCURRENTINNER_H_
 
 #include "particles/ShapeFactors.H"
-#include "Constants.H"
+#include "utils/Constants.H"
 #include "Hipace.H"
 
 #include <AMReX_Array4.H>
