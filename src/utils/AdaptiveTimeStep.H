@@ -28,9 +28,12 @@ public:
      * \param[in] plasma plasma container to get the plasma density
      * \param[in] lev MR level
      */
-     void
-     Calculate (amrex::Real& dt, BeamParticleContainer& beam,
-                                  PlasmaParticleContainer& plasma, int const lev);
+    void
+    Calculate (amrex::Real& dt, const int nt, BeamParticleContainer& beam,
+                                PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z);
+
+    void
+    PassTimeStepInfo (amrex::Real& dt, const int nt, MPI_Comm a_comm_z);
 
 };
 
