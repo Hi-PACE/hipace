@@ -324,6 +324,8 @@ Hipace::Evolve ()
             amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";
         }
 
+        /* Passing the adaptive time step info */
+        m_adaptive_time_step.PassTimeStepInfo(m_dt, step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
