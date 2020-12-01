@@ -40,7 +40,7 @@ public:
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] lev MR level
      * \param[in] ibox box index
-     * \param[in] box box
+     * \param[in] bx 3D box on which per-slice sorting is done
      * \param[in] geom Geometry of the simulation domain
      */
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
