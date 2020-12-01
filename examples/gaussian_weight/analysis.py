@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
@@ -47,6 +47,12 @@ else:
     z_std = 50.e-6
     charge = 1.e-9
 
+if args.tilted_beam:
+    y_avg = 1.
+    z_avg = 2.
+    dx_per_dzeta = 0.1
+    dy_per_dzeta = -0.2
+
 # only required in the normalized units test
 ux_avg = 1.
 uy_avg = 2.
@@ -78,10 +84,13 @@ if args.do_plot:
     plt.savefig('image.pdf', bbox_inches='tight')
 
 if args.tilted_beam:
-    x_tilt_at_1 = xp[np.where( zp <1.01 ) and np.where(0.99 < zp)]
-    y_tilt_at_1 = yp[np.where( zp <1.01 ) and np.where(0.99 < zp)]
-    assert(np.abs(np.average(x_tilt_at_1-0.1)/0.1) < 0.02)
-    assert(np.abs(np.average(y_tilt_at_1+0.2-1.0)/0.2) < 0.02)
+    # getting xp and yp at z_avg + 1.
+    x_tilt_at_1 = xp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
+    y_tilt_at_1 = yp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
+    x_tilt_error = np.abs(np.average(x_tilt_at_1-dx_per_dzeta)/dx_per_dzeta)
+    y_tilt_error = np.abs(np.average(y_tilt_at_1-dy_per_dzeta-y_avg)/dy_per_dzeta)
+    assert(x_tilt_error < 1e-4)
+    assert(y_tilt_error < 1e-4)
 else:
     if args.norm_units:
         charge_sim = np.sum(wp)
