@@ -315,24 +315,18 @@ Hipace::Evolve ()
         if (amrex::ParallelDescriptor::NProcs() == 1) {
             m_beam_container.Redistribute();
         } else {
-            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed.";
-        }
-
-        if (amrex::ParallelDescriptor::NProcs() == 1) {
-            m_adaptive_time_step.Calculate(m_dt, m_beam_container, m_plasma_container, lev);
-        } else {
-            amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";
+            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed. \n";
         }
 
         /* Passing the adaptive time step info */
-        m_adaptive_time_step.PassTimeStepInfo(m_dt, step, m_comm_z);
+        m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
         if (amrex::ParallelDescriptor::NProcs() == 1) {
             WriteDiagnostics(step+1);
         } else {
-            amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step.";
+            amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step. \n";
         }
     }
 

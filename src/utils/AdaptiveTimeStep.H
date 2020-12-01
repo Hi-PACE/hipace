@@ -33,7 +33,7 @@ public:
                                 PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z);
 
     void
-    PassTimeStepInfo (amrex::Real& dt, const int nt, MPI_Comm a_comm_z);
+    PassTimeStepInfo (const int nt, MPI_Comm a_comm_z);
 
 };
 
