@@ -1,9 +1,9 @@
 #include "BeamParticleAdvance.H"
 #include "particles/ExternalFields.H"
 #include "FieldGather.H"
-#include "Constants.H"
+#include "utils/Constants.H"
 #include "GetAndSetPosition.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,

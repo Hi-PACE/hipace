@@ -3,9 +3,9 @@
 #include "particles/PlasmaParticleContainer.H"
 #include "particles/deposition/PlasmaDepositCurrentInner.H"
 #include "fields/Fields.H"
-#include "Constants.H"
+#include "utils/Constants.H"
 #include "Hipace.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,

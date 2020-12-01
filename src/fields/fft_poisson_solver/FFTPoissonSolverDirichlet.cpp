@@ -1,6 +1,6 @@
 #include "FFTPoissonSolverDirichlet.H"
-#include "Constants.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/Constants.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 FFTPoissonSolverDirichlet::FFTPoissonSolverDirichlet (
     amrex::BoxArray const& realspace_ba,

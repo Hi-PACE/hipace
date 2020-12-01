@@ -2,8 +2,8 @@
 #include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichlet.H"
 #include "Hipace.H"
-#include "HipaceProfilerWrapper.H"
-#include "Constants.H"
+#include "utils/HipaceProfilerWrapper.H"
+#include "utils/Constants.H"
 
 Fields::Fields (Hipace const* a_hipace)
     : m_hipace(a_hipace),

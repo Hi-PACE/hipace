@@ -1,7 +1,7 @@
 #include "Hipace.H"
 #include "particles/deposition/BeamDepositCurrent.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/BinSort.H"

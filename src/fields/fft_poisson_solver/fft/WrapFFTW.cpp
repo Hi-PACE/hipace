@@ -5,7 +5,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "AnyFFT.H"
-#include "HipaceProfilerWrapper.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 namespace AnyFFT
 {
