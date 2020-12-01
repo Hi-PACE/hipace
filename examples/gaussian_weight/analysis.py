@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
@@ -19,6 +19,11 @@ parser.add_argument('--do-plot',
                     action='store_true',
                     default=False,
                     help='Plot figures and save them to file')
+parser.add_argument('--tilted-beam',
+                    dest='tilted_beam',
+                    action='store_true',
+                    default=False,
+                    help='Run the analysis with a tilted beam')
 args = parser.parse_args()
 
 # Load data with yt
@@ -41,6 +46,12 @@ else:
     y_std = 40.e-6
     z_std = 50.e-6
     charge = 1.e-9
+
+if args.tilted_beam:
+    y_avg = 1.
+    z_avg = 2.
+    dx_per_dzeta = 0.1
+    dy_per_dzeta = -0.2
 
 # only required in the normalized units test
 ux_avg = 1.
@@ -72,23 +83,32 @@ if args.do_plot:
     plt.legend()
     plt.savefig('image.pdf', bbox_inches='tight')
 
-if args.norm_units:
-    charge_sim = np.sum(wp)
+if args.tilted_beam:
+    # getting xp and yp at z_avg + 1.
+    x_tilt_at_1 = xp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
+    y_tilt_at_1 = yp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
+    x_tilt_error = np.abs(np.average(x_tilt_at_1-dx_per_dzeta)/dx_per_dzeta)
+    y_tilt_error = np.abs(np.average(y_tilt_at_1-dy_per_dzeta-y_avg)/dy_per_dzeta)
+    assert(x_tilt_error < 1e-4)
+    assert(y_tilt_error < 1e-4)
 else:
-    charge_sim = np.sum(wp) * scc.e
+    if args.norm_units:
+        charge_sim = np.sum(wp)
+    else:
+        charge_sim = np.sum(wp) * scc.e
 
-assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
-if args.norm_units:
-    assert(np.abs((np.average(xp)-x_avg)) < 1e-12)
-    assert(np.abs((np.average(yp)-y_avg)/y_avg) < 1e-4)
-    assert(np.average(uxp) < 1e-12)
-    assert(np.average(uyp) < 1e-12)
-else:
-    assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
-    assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
+    assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
+    if args.norm_units:
+        assert(np.abs((np.average(xp)-x_avg)) < 1e-12)
+        assert(np.abs((np.average(yp)-y_avg)/y_avg) < 1e-4)
+        assert(np.average(uxp) < 1e-12)
+        assert(np.average(uyp) < 1e-12)
+    else:
+        assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
+        assert(np.abs((np.average(yp)-y_avg)/y_avg) < .02)
 
 
-assert(np.abs((np.average(zp)-z_avg)/z_avg) < .02)
-assert(np.abs((np.std(xp)-x_std)/x_std) < .02)
-assert(np.abs((np.std(yp)-y_std)/y_std) < .02)
-assert(np.abs((np.std(zp)-z_std)/z_std) < .02)
+    assert(np.abs((np.average(zp)-z_avg)/z_avg) < .02)
+    assert(np.abs((np.std(xp)-x_std)/x_std) < .02)
+    assert(np.abs((np.std(yp)-y_std)/y_std) < .02)
+    assert(np.abs((np.std(zp)-z_std)/z_std) < .02)
