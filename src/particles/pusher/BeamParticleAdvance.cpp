@@ -85,7 +85,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
         const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
         const amrex::Real external_focusing_field_strength =
-                                                        Hipace::m_external_focusing_field_strength;
+             Hipace::m_external_focusing_field_strength;
         const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
 
         amrex::ParallelFor(num_particles,

@@ -15,24 +15,6 @@ dt2 = get_dt("negative_gradient.txt");
 print(dt1)
 print(dt2)
 
-with open("negative_gradient.txt") as file_in:
-    negative_gradient_lines = []
-    for line in file_in:
-        words = line.split()
-        if len(words)>0:
-            if words[0] == "Rank":
-                negative_gradient_lines.append(float(words[-1]))
-negative_gradient_lines = np.array(negative_gradient_lines)
-
-with open("positive_gradient.txt") as file_in:
-    positive_gradient_lines = []
-    for line in file_in:
-        words = line.split()
-        if len(words)>0:
-            if words[0] == "Rank":
-                positive_gradient_lines.append(float(words[-1]))
-positive_gradient_lines = np.array(positive_gradient_lines)
-
 uz = 1000
 nt_per_omega_betatron = 0.07
 dt_analytic = np.sqrt(2*uz)*nt_per_omega_betatron
