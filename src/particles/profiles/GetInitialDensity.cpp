@@ -1,9 +1,9 @@
 #include "GetInitialDensity.H"
 #include <AMReX_ParmParse.H>
 
-GetInitialDensity::GetInitialDensity ()
+GetInitialDensity::GetInitialDensity (const std::string& name)
 {
-    amrex::ParmParse pp("beam");
+    amrex::ParmParse pp(name);
     std::string profile;
     pp.get("density", m_density);
     pp.get("profile", profile);

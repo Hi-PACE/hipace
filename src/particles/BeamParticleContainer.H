@@ -23,8 +23,9 @@ class BeamParticleContainer
 {
 public:
     /** Constructor */
-    explicit BeamParticleContainer (amrex::AmrCore* amr_core) :
-        amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB())
+    explicit BeamParticleContainer (amrex::AmrCore* amr_core, std::string name) :
+        amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB()),
+        m_name(name)
     {
         ReadParameters();
     }
@@ -56,7 +57,9 @@ public:
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
+    std::string get_name () {return m_name;};
 private:
+    std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
     amrex::Real m_zmax; /**< Max longitudinal position of the can beam */
     amrex::Real m_radius; /**< Radius of the can beam */

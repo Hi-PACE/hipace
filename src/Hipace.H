@@ -4,6 +4,7 @@
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
 #include "particles/PlasmaParticleContainer.H"
+#include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/Constants.H"
@@ -102,8 +103,9 @@ public:
      * \param[in] lev MR level
      * \param[in] bins collections of beam particle indices sorted per slice
      */
-    void SolveOneSlice (int islice, int lev,
-                        amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
+    void SolveOneSlice (
+        int islice, int lev,
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -141,7 +143,8 @@ public:
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Particle container for a beam */
-    BeamParticleContainer m_beam_container;
+    MultiBeam m_multi_beam;
+    // BeamParticleContainer m_beam_container;
     /** Particle container for the plasma */
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
