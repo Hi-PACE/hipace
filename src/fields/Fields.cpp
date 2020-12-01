@@ -43,13 +43,15 @@ Fields::AllocData (
     // m_F is defined on F_ba, the full or the xz slice BoxArray
     amrex::BoxArray F_ba = Hipace::m_slice_F_xz ? F_slice_ba : ba;
 
+    amrex::IntVect nguards_F = Hipace::m_slice_beam ? amrex::IntVect(0,0,0) : m_slices_nguards;
+
     if (Hipace::m_3d_on_host){
         // The Arena uses pinned memory.
-        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
                         amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
     } else {
         // The Arena uses managed memory.
-        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
                         amrex::MFInfo().SetArena(amrex::The_Arena()));
     }
 
