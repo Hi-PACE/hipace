@@ -45,7 +45,10 @@ Fields::AllocData (
 
     if (Hipace::m_3d_on_host){
         // The Arena uses pinned memory.
-        m_F[lev].define(F_ba, dm, FieldComps::nfields, {0,0,0},
+        amrex::IntVect nguards_F = Hipace::m_slice_beam == true ?
+            amrex::IntVect(0,0,0)
+            : m_slices_nguards;
+        m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
                         amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
     } else {
         // The Arena uses managed memory.
