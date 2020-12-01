@@ -73,9 +73,11 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         {
             if (nt > 0){
                 // first rank receives the new dt from last rank
-                auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
+                auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
+                    sizeof(amrex::Real));
                 MPI_Status status;
-                MPI_Recv(recv_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                MPI_Recv(recv_buffer, 1,
+                         amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                          0, comm_z_tag, a_comm_z, &status);
                 dt = recv_buffer[WhichDouble::Dt];
                 amrex::The_Pinned_Arena()->free(recv_buffer);
@@ -97,7 +99,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
             m_timestep_data[idouble] = recv_buffer[idouble];
         }
-        /* setting dt, so it is used in the beam pusher */
+        /* setting dt, so it can be used in the beam pusher */
         dt = recv_buffer[WhichDouble::Dt];
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
@@ -151,6 +153,8 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
 
     if (my_rank_z == 0 )
     {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[WhichDouble::SumWeights] != 0,
+            "The sum of all weights is 0! Probably no beam particles are initialized");
         const amrex::Real mean_uz = m_timestep_data[WhichDouble::SumWeightsTimesUz]
                                        /m_timestep_data[WhichDouble::SumWeights];
         const amrex::Real sigma_uz = sqrt(m_timestep_data[WhichDouble::SumWeightsTimesUzSquared]
@@ -159,7 +163,10 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         const amrex::Real chosen_min_uz = std::min( std::max(sigma_uz_dev,
                                              m_timestep_data[WhichDouble::MinUz]), 1e100 );
 
-        std::cout << "min gamma " << chosen_min_uz << "\n";
+        if (Hipace::m_verbose >=2 ){
+            amrex::Print()<<"Minimum gamma to calculate new time step: " << chosen_min_uz << "\n";
+        }
+
         if (chosen_min_uz < 1) {
             amrex::Print()<<"WARNING: beam particles have non-relativistic velocities!";
         }
@@ -179,7 +186,3 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         amrex::The_Pinned_Arena()->free(send_buffer);
     }
 }
-
-
-//TODO:: solve issue with dt
-// have same number of procs as in hipace.cpp
