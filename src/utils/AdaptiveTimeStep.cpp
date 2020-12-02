@@ -179,6 +179,9 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
             new_dt = sqrt(2.*chosen_min_uz)/omega_p * m_nt_per_omega_betatron;
         }
 
+        /* For serial runs, set adaptive time step right away */
+        if (numprocs_z == 1) dt = new_dt;
+
         auto send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
         send_buffer[WhichDouble::Dt] = new_dt;
         MPI_Send(send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
