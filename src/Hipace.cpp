@@ -45,7 +45,7 @@ Hipace::GetInstance ()
 
 Hipace::Hipace () :
     m_fields(this),
-    m_beam_container(this),
+    m_multi_beam(this),
     m_plasma_container(this)
 {
     m_instance = this;
@@ -189,7 +189,7 @@ Hipace::InitData ()
 
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
-    m_beam_container.InitData(geom[0]);
+    m_multi_beam.InitData(geom[0]);
     m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
@@ -283,7 +283,7 @@ Hipace::Evolve ()
     for (int step = 0; step < m_max_step; ++step)
     {
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        m_adaptive_time_step.Calculate(m_dt, step, m_beam_container, m_plasma_container, lev, m_comm_z);
+        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam.getBeam(0), m_plasma_container, lev, m_comm_z);
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
@@ -293,7 +293,7 @@ Hipace::Evolve ()
 
         amrex::MultiFab& fields = m_fields.getF(lev);
 
-        if (!m_slice_beam) DepositCurrent(m_beam_container, m_fields, geom[lev], lev);
+        if (!m_slice_beam) m_multi_beam.DepositCurrent(m_fields, geom[lev], lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
@@ -304,16 +304,15 @@ Hipace::Evolve ()
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
             const amrex::Box& bx = fields.box(*it);
-            amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
-            if (m_slice_beam) bins = findParticlesInEachSlice(
-                lev, *it, bx, m_beam_container, geom[lev]);
+            amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
+            if (m_slice_beam) bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                 SolveOneSlice(isl, lev, bins);
-             };
+                SolveOneSlice(isl, lev, bins);
+            };
         }
         if (amrex::ParallelDescriptor::NProcs() == 1) {
-            m_beam_container.Redistribute();
+            m_multi_beam.Redistribute();
         } else {
             amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed. \n";
         }
@@ -328,13 +327,17 @@ Hipace::Evolve ()
         } else {
             amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step. \n";
         }
+        m_physical_time += m_dt;
     }
-
+    // For consistency, decrement the physical time, so the last time step is like the others:
+    // the time stored in the output file is the time for the fields. The beam is one time step
+    // ahead.
+    m_physical_time -= m_dt;
     WriteDiagnostics(m_max_step, true);
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     // Between this push and the corresponding pop at the end of this
     // for loop, the parallelcontext is the transverse communicator
@@ -369,8 +372,8 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
-    if (m_slice_beam) DepositCurrentSlice(
-        m_beam_container, m_fields, geom[lev], lev, islice, bins);
+    if (m_slice_beam) m_multi_beam.DepositCurrentSlice(
+        m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -383,8 +386,8 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::DenseBins<BeamParticleContain
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    if (m_slice_beam) AdvanceBeamParticlesSlice(
-        m_beam_container, m_fields, geom[lev], lev, islice, bins);
+    if (m_slice_beam) m_multi_beam.AdvanceBeamParticlesSlice(
+        m_fields, geom[lev], lev, islice, bins);
 
     m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
 
@@ -659,7 +662,6 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     const int nlev = 1;
     const amrex::Vector< std::string > varnames
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
-    const int time = m_dt*output_step;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
     amrex::Vector<amrex::Geometry> geom_io = Geom();
@@ -679,21 +681,12 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     }
 
     amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, geom_io, time,
-        {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames,
+        geom_io, m_physical_time, {output_step}, {local_ref_ratio},
+        "HyperCLaw-V1.1", "Level_", "Cell", rfs);
 
     // Write beam particles
-    {
-        amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
-        amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
-        amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
-        AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
-        amrex::Vector<std::string> int_names {};
-        m_beam_container.WritePlotFile(
-            filename, "beam",
-            plot_flags, int_flags,
-            real_names, int_names);
-    }
+    m_multi_beam.WritePlotFile(filename);
 
     // Write plasma particles
     if (m_output_plasma){

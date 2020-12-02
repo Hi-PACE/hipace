@@ -15,12 +15,24 @@ geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -2000.e-6   -2000.e-6   -20.e-6    # physical domain
 geometry.prob_hi     =  2000.e-6    2000.e-6    20.e-6
 
+beams.names = beam beam2
+
 beam.injection_type = fixed_ppc
 beam.profile = flattop
 beam.zmin = -100.e-6
-beam.zmax = 100.e-6
+beam.zmax =  100.e-6
 beam.radius = 10.e-6
-beam.density = 2.8239587008591567e23 # at this density, 1/kp = 10um
+beam.density = 1.4119793504295784e23 # at this density, 1/kp = 10um
 beam.u_mean = 0. 0. 1.e3
 beam.u_std = 0. 0. 0.
 beam.ppc = 2 2 1
+
+beam2.injection_type = fixed_ppc
+beam2.profile = flattop
+beam2.zmin = -100.e-6
+beam2.zmax =  100.e-6
+beam2.radius = 10.e-6
+beam2.density = 1.4119793504295784e23 # at this density, 1/kp = 10um
+beam2.u_mean = 0. 0. 1.e3
+beam2.u_std = 0. 0. 0.
+beam2.ppc = 2 2 1

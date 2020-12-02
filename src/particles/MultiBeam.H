@@ -1,0 +1,84 @@
+#ifndef MULTIBEAM_H_
+#define MULTIBEAM_H_
+
+#include "BeamParticleContainer.H"
+#include "fields/Fields.H"
+#include "particles/BinSort.H"
+
+class MultiBeam
+{
+
+public:
+
+    /** Constructor
+     * \param[in] amr_core AmrCore object
+     */
+    MultiBeam (amrex::AmrCore* amr_core);
+
+    /** Destructor
+     */
+    ~MultiBeam () {}
+
+    /** Loop over all beam species and deposit their current on the 3D grid
+     * \param[in] fields Field object, with 3D MultiFabs
+     * \param[in] geom Geometry object at level lev
+     * \param[in] lev MR level
+     */
+    void DepositCurrent (Fields& fields, const amrex::Geometry& geom, const int lev);
+
+    /** Loop over all beam species and deposit their current on the 2D XY slice
+     * \param[in] fields Field object, with 2D slice MultiFabs
+     * \param[in] geom Geometry object at level lev
+     * \param[in] lev MR level
+     * \param[in] islice slice index in which the current is stored
+     * \param[in] bins Vector (over species) of particles sorted by slices
+     */
+    void DepositCurrentSlice (
+        Fields& fields, const amrex::Geometry& geom, const int lev, int islice,
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins);
+
+    /** Loop over all beam species and build and return the indices of particles sorted per slice
+     * \param[in] lev MR level
+     * \param[in] ibox box index
+     * \param[in] bx 3D box on which per-slice sorting is done
+     * \param[in] geom Geometry of the simulation domain
+     */
+    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
+    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom);
+
+    /** Loop over all beam species and advance slice islice of all beam species
+     * \param[in] fields Field object, with 2D slice MultiFabs
+     * \param[in] gm Geometry object at level lev
+     * \param[in] lev MR level
+     * \param[in] islice slice index in which the current is stored
+     * \param[in] bins Vector (over species) of particles sorted by slices
+     */
+    void AdvanceBeamParticlesSlice (
+        Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+
+    /** Loop over species and call their Redistribute */
+    void Redistribute ();
+
+    /** Loop over species and dump them to plotfile
+     * \param[in] filename name of the output file
+     */
+    void WritePlotFile (const std::string& filename);
+
+    /** Loop over species and init them
+     * \param[in] geom Simulation geometry
+     */
+    void InitData (const amrex::Geometry& geom);
+
+    /** Return 1 species
+     * \param[in] i index of the beam
+     */
+    BeamParticleContainer& getBeam (int i) {return m_all_beams[i];};
+private:
+
+    amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
+    amrex::Vector<std::string> m_names; /**< names of all beam containers */
+    int m_nbeams; /**< number of beam containers */
+};
+
+#endif // MULTIBEAM_H_

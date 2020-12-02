@@ -14,6 +14,7 @@ geometry.is_periodic = 0 0 0      # Is periodic?
 geometry.prob_lo     = -200.e-6   -200.e-6   -200.e-6    # physical domain
 geometry.prob_hi     =  200.e-6    200.e-6    200.e-6
 
+beams.names = beam
 beam.position_mean = 0. 10.e-6 20.e-6
 beam.position_std = 30.e-6 40.e-6 50.e-6
 beam.injection_type = fixed_weight

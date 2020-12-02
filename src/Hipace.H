@@ -4,6 +4,7 @@
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
 #include "particles/PlasmaParticleContainer.H"
+#include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/Constants.H"
@@ -102,8 +103,9 @@ public:
      * \param[in] lev MR level
      * \param[in] bins collections of beam particle indices sorted per slice
      */
-    void SolveOneSlice (int islice, int lev,
-                        amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
+    void SolveOneSlice (
+        int islice, int lev,
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -141,7 +143,7 @@ public:
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Particle container for a beam */
-    BeamParticleContainer m_beam_container;
+    MultiBeam m_multi_beam;
     /** Particle container for the plasma */
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
@@ -154,7 +156,9 @@ public:
     /** Last iteration that was written to file.
      * This is stored to make sure we don't write the last iteration multiple times. */
     int m_last_output_dumped = -1;
-
+    /** Physical time of the simulation. At the end of the time step, it is the physical time
+     * at which the fields have been calculated. The beam is one step ahead. */
+    amrex::Real m_physical_time = 0.;
     /** Level of verbosity */
     static int m_verbose;
     /** Whether to use normalized units */

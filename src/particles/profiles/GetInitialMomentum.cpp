@@ -1,9 +1,9 @@
 #include "GetInitialMomentum.H"
 #include <AMReX_ParmParse.H>
 
-GetInitialMomentum::GetInitialMomentum ()
+GetInitialMomentum::GetInitialMomentum (const std::string& name)
 {
-    amrex::ParmParse pp("beam");
+    amrex::ParmParse pp(name);
 
     /* currently only Gaussian beam momentum profile implemented */
     if (m_momentum_profile == BeamMomentumType::Gaussian) {
