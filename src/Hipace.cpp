@@ -329,8 +329,12 @@ Hipace::Evolve ()
         } else {
             amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step.";
         }
+        m_physical_time += m_dt;
     }
-
+    // For consistency, decrement the physical time, so the last time step is like the others:
+    // the time stored in the output file is the time for the fields. The beam is one time step
+    // ahead.
+    m_physical_time -= m_dt;
     WriteDiagnostics(m_max_step, true);
 }
 
@@ -660,7 +664,6 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     const int nlev = 1;
     const amrex::Vector< std::string > varnames
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
-    const int time = m_dt*output_step;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
     amrex::Vector<amrex::Geometry> geom_io = Geom();
@@ -680,8 +683,9 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     }
 
     amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames, geom_io, time,
-        {output_step}, {local_ref_ratio}, "HyperCLaw-V1.1", "Level_", "Cell", rfs);
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames,
+        geom_io, m_physical_time, {output_step}, {local_ref_ratio},
+        "HyperCLaw-V1.1", "Level_", "Cell", rfs);
 
     // Write beam particles
     {
