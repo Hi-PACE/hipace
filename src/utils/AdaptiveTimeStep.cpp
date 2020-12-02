@@ -48,7 +48,7 @@ AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
 }
 
 void
-AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContainer& beam,
+AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
                              PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z)
 {
     HIPACE_PROFILE("CalculateAdaptiveTimeStep()");
@@ -105,51 +105,53 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
-    // Loop over particle boxes
-    for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
-    {
+    for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
+        // Loop over particle boxes
+        for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
+        {
 
-        // Extract particle properties
-        const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-        const auto wp = soa.GetRealData(BeamIdx::w).data();
+            // Extract particle properties
+            const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+            const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+            const auto wp = soa.GetRealData(BeamIdx::w).data();
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[WhichDouble::MinUz]);
-        amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
+            amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[WhichDouble::MinUz]);
+            amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
-            m_timestep_data[WhichDouble::SumWeights]);
-        amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
+            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
+                m_timestep_data[WhichDouble::SumWeights]);
+            amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz(
-            m_timestep_data[WhichDouble::SumWeightsTimesUz]);
-        amrex::Real* p_sum_weights_times_uz = gpu_sum_weights_times_uz.dataPtr();
+            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz(
+                m_timestep_data[WhichDouble::SumWeightsTimesUz]);
+            amrex::Real* p_sum_weights_times_uz = gpu_sum_weights_times_uz.dataPtr();
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz_squared(
-            m_timestep_data[WhichDouble::SumWeightsTimesUzSquared]);
-        amrex::Real* p_sum_weights_times_uz_squared =
-            gpu_sum_weights_times_uz_squared.dataPtr();
+            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz_squared(
+                m_timestep_data[WhichDouble::SumWeightsTimesUzSquared]);
+            amrex::Real* p_sum_weights_times_uz_squared =
+                gpu_sum_weights_times_uz_squared.dataPtr();
 
-        int const num_particles = pti.numParticles();
-        amrex::ParallelFor(num_particles,
-            [=] AMREX_GPU_DEVICE (long ip) {
+            int const num_particles = pti.numParticles();
+            amrex::ParallelFor(num_particles,
+                [=] AMREX_GPU_DEVICE (long ip) {
 
-                amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
-                amrex::Gpu::Atomic::Add(p_sum_weights_times_uz, wp[ip]*uzp[ip]/phys_const.c);
-                amrex::Gpu::Atomic::Add(p_sum_weights_times_uz_squared, wp[ip]*uzp[ip]*uzp[ip]
-                                        /phys_const.c/phys_const.c);
-                amrex::Gpu::Atomic::Min(p_min_uz, uzp[ip]/phys_const.c);
+                    amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
+                    amrex::Gpu::Atomic::Add(p_sum_weights_times_uz, wp[ip]*uzp[ip]/phys_const.c);
+                    amrex::Gpu::Atomic::Add(p_sum_weights_times_uz_squared, wp[ip]*uzp[ip]*uzp[ip]
+                                            /phys_const.c/phys_const.c);
+                    amrex::Gpu::Atomic::Min(p_min_uz, uzp[ip]/phys_const.c);
+
+            }
+            );
+            /* adding beam particle information to time step info */
+            m_timestep_data[WhichDouble::SumWeights] = gpu_sum_weights.dataValue();
+            m_timestep_data[WhichDouble::SumWeightsTimesUz] = gpu_sum_weights_times_uz.dataValue();
+            m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] =
+                                                   gpu_sum_weights_times_uz_squared.dataValue();
+            m_timestep_data[WhichDouble::MinUz] = std::min(m_timestep_data[WhichDouble::MinUz],
+                                                   gpu_min_uz.dataValue());
 
         }
-        );
-        /* adding beam particle information to time step info */
-        m_timestep_data[WhichDouble::SumWeights] = gpu_sum_weights.dataValue();
-        m_timestep_data[WhichDouble::SumWeightsTimesUz] = gpu_sum_weights_times_uz.dataValue();
-        m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] =
-                                               gpu_sum_weights_times_uz_squared.dataValue();
-        m_timestep_data[WhichDouble::MinUz] = std::min(m_timestep_data[WhichDouble::MinUz],
-                                               gpu_min_uz.dataValue());
-
     }
 
     if (my_rank_z == 0 )

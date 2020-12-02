@@ -1,6 +1,7 @@
 #ifndef ADAPTIVETIMESTEP_H_
 #define ADAPTIVETIMESTEP_H_
 
+#include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "particles/PlasmaParticleContainer.H"
 #include <AMReX_AmrCore.H>
@@ -31,8 +32,8 @@ public:
      * \param[in] a_comm_z longitudinal MPI communicator
      */
     void
-    Calculate (amrex::Real& dt, const int nt, BeamParticleContainer& beam,
-                                PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z);
+    Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
+               PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z);
 
     /** pass the time step data to the next lower proc in the pipeline
      * \param[in] nt number of the current time step

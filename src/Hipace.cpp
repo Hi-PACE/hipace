@@ -283,7 +283,7 @@ Hipace::Evolve ()
     for (int step = 0; step < m_max_step; ++step)
     {
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam.getBeam(0), m_plasma_container, lev, m_comm_z);
+        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
