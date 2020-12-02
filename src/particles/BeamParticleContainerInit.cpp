@@ -6,7 +6,7 @@
 
 #include <AMReX_REAL.H>
 
-using namespace amrex;
+//using namespace amrex;
 
 namespace
 {
@@ -29,7 +29,7 @@ namespace
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
         BeamParticleContainer::ParticleType* pstruct,
-        GpuArray<ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
+        GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
         const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz, const amrex::Real& weight,
         const int& pid, const int& procID, const int& ip, const amrex::Real& speed_of_light) noexcept
     {
@@ -80,14 +80,14 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
                                       *ppc_cr[1],
                                       *ppc_cr[2]);
 
-    const Real scale_fac = Hipace::m_normalized_units ?
+    const amrex::Real scale_fac = Hipace::m_normalized_units ?
         1._rt/num_ppc*cr[0]*cr[1]*cr[2] :
         dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
         // First: loop over all cells, and count the particles effectively injected.
-        Box tile_box  = mfi.tilebox();
+        amrex::Box tile_box  = mfi.tilebox();
         tile_box.coarsen(cr);
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
@@ -103,13 +103,13 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         {
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
-                Real r[3];
+                amrex::Real r[3];
 
                 ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
-                Real z = plo[2] + (k + r[2])*dx[2];
+                amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
@@ -143,7 +143,7 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         // Third: Actually initialize the particles at the right locations
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
 
-        GpuArray<ParticleReal*, BeamIdx::nattribs> arrdata =
+        GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
             particle_tile.GetStructOfArrays().realarray();
 
         int procID = ParallelDescriptor::MyProc();
@@ -174,9 +174,9 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
-                Real z = plo[2] + (k + r[2])*dx[2];
+                amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
@@ -229,7 +229,7 @@ InitBeamFixedWeight (int num_to_add,
 
             // Access particles' AoS and SoA
             ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-            GpuArray<ParticleReal*, BeamIdx::nattribs> arrdata =
+            GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
                 particle_tile.GetStructOfArrays().realarray();
 
             const int procID = ParallelDescriptor::MyProc();
@@ -240,9 +240,9 @@ InitBeamFixedWeight (int num_to_add,
                 num_to_add,
                 [=] AMREX_GPU_DEVICE (int i) noexcept
                 {
-                    const Real x = amrex::RandomNormal(0, pos_std[0]);
-                    const Real y = amrex::RandomNormal(0, pos_std[1]);
-                    const Real z = amrex::RandomNormal(0, pos_std[2]);
+                    const amrex::Real x = amrex::RandomNormal(0, pos_std[0]);
+                    const amrex::Real y = amrex::RandomNormal(0, pos_std[1]);
+                    const amrex::Real z = amrex::RandomNormal(0, pos_std[2]);
                     amrex::Real u[3] = {0.,0.,0.};
                     get_momentum(u[0],u[1],u[2]);
 
