@@ -4,11 +4,9 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-using namespace amrex;
-
 void
 PlasmaParticleContainer::
-InitParticles (const IntVect& a_num_particles_per_cell,
+InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
                const amrex::Real a_density,
@@ -24,19 +22,19 @@ InitParticles (const IntVect& a_num_particles_per_cell,
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
-    const Real scale_fac = Hipace::m_normalized_units? 1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
+    const amrex::Real scale_fac = Hipace::m_normalized_units? 1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
-    for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+    for( amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
-        const Box& tile_box  = mfi.tilebox();
+        const amrex::Box& tile_box  = mfi.tilebox();
 
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
-        Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
+        amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
         unsigned int* pcount = counts.dataPtr();
 
-        Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
+        amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
 
         amrex::ParallelFor(tile_box,
@@ -44,13 +42,13 @@ InitParticles (const IntVect& a_num_particles_per_cell,
         {
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
-                Real r[3];
+                amrex::Real r[3];
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
-                Real z = plo[2] + (k + r[2])*dx[2];
+                amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
@@ -71,7 +69,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
             }
         });
 
-        int num_to_add = Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
+        int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
         auto& particles = GetParticles(lev);
         auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
@@ -86,7 +84,7 @@ InitParticles (const IntVect& a_num_particles_per_cell,
 
         auto arrdata = particle_tile.GetStructOfArrays().realarray();
 
-        int procID = ParallelDescriptor::MyProc();
+        int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
@@ -110,20 +108,20 @@ InitParticles (const IntVect& a_num_particles_per_cell,
 
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
-                Real r[3] = {0.,0.,0.};
+                amrex::Real r[3] = {0.,0.,0.};
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                Real x = plo[0] + (i + r[0])*dx[0];
-                Real y = plo[1] + (j + r[1])*dx[1];
-                Real z = plo[2] + (k + r[2])*dx[2];
+                amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
                     x*x + y*y > a_radius*a_radius ) continue;
 
-                Real u[3] = {0.,0.,0.};
+                amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
                                                            a_u_std);
 
