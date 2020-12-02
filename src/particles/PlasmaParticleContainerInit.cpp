@@ -22,9 +22,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
-    const amrex::Real scale_fac = Hipace::m_normalized_units? 1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
+    const amrex::Real scale_fac = Hipace::m_normalized_units?
+                                  1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
-    for( amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+    for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tile_box  = mfi.tilebox();
 

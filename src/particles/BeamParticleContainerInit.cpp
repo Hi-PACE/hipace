@@ -27,9 +27,10 @@ namespace
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
         BeamParticleContainer::ParticleType* pstruct,
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
-        const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz, const amrex::Real& weight,
-        const int& pid, const int& procID, const int& ip, const amrex::Real& speed_of_light) noexcept
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x,
+        const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
+        const amrex::Real& uz, const amrex::Real& weight, const int& pid, const int& procID,
+        const int& ip, const amrex::Real& speed_of_light) noexcept
     {
         BeamParticleContainer::ParticleType& p = pstruct[ip];
         // Set particle AoS
