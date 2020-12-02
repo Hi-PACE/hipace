@@ -11,7 +11,7 @@ class AdaptiveTimeStep
 private:
 
     /** container including dt, min_gamma, sum of weights and the sum of weights times gamma */
-    amrex::Real m_timestep_data[5] = {0., 1e100, 0., 0., 0.};
+    amrex::Real m_timestep_data[5] = {0., 1e30, 0., 0., 0.};
 
     /** Whether to use an adaptive time step */
     bool m_do_adaptive_time_step = false;

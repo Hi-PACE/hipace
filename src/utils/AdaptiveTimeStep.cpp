@@ -33,7 +33,8 @@ AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
 
     if ((nt % numprocs_z == 0) && (my_rank_z >= 1))
     {
-        auto send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real)*WhichDouble::N);
+        auto send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
+            sizeof(amrex::Real)*WhichDouble::N);
         for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
             send_buffer[idouble] = m_timestep_data[idouble];
         }
@@ -68,7 +69,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         m_timestep_data[WhichDouble::SumWeights] = 0.;
         m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
         m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
-        m_timestep_data[WhichDouble::MinUz] = 1e100;
+        m_timestep_data[WhichDouble::MinUz] = 1e30;
         if (my_rank_z == numprocs_z -1 )
         {
             if (nt > 0){
@@ -161,7 +162,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
                                           /m_timestep_data[WhichDouble::SumWeights] - mean_uz);
         const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
         const amrex::Real chosen_min_uz = std::min( std::max(sigma_uz_dev,
-                                             m_timestep_data[WhichDouble::MinUz]), 1e100 );
+                                             m_timestep_data[WhichDouble::MinUz]), amrex::Real 1e30 );
 
         if (Hipace::m_verbose >=2 ){
             amrex::Print()<<"Minimum gamma to calculate new time step: " << chosen_min_uz << "\n";
