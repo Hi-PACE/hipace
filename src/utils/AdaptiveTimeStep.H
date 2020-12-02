@@ -26,7 +26,7 @@ public:
     /** calculate the adaptive time step based on the beam energy
      * \param[in,out] dt the time step
      * \param[in] nt number of the current time step
-     * \param[in] beam species on which the time step is based
+     * \param[in] beams multibeam containing all beams
      * \param[in] plasma plasma container to get the plasma density
      * \param[in] lev MR level
      * \param[in] a_comm_z longitudinal MPI communicator
