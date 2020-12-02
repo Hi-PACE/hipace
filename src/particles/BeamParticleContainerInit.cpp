@@ -6,8 +6,6 @@
 
 #include <AMReX_REAL.H>
 
-//using namespace amrex;
-
 namespace
 {
     /** \brief Adds a single beam particle
@@ -29,7 +27,7 @@ namespace
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
         BeamParticleContainer::ParticleType* pstruct,
-        GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
         const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz, const amrex::Real& weight,
         const int& pid, const int& procID, const int& ip, const amrex::Real& speed_of_light) noexcept
     {
@@ -51,14 +49,16 @@ namespace
 
 void
 BeamParticleContainer::
-InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
+InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                   const GetInitialDensity& get_density,
                   const GetInitialMomentum& get_momentum,
-                  const Geometry& a_geom,
+                  const amrex::Geometry& a_geom,
                   const amrex::Real a_zmin,
                   const amrex::Real a_zmax,
                   const amrex::Real a_radius)
 {
+    using namespace amrex::literals;
+
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     constexpr int lev = 0;
@@ -84,7 +84,7 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         1._rt/num_ppc*cr[0]*cr[1]*cr[2] :
         dx[0]*dx[1]*dx[2]/num_ppc;
 
-    for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+    for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
         // First: loop over all cells, and count the particles effectively injected.
         amrex::Box tile_box  = mfi.tilebox();
@@ -92,10 +92,10 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
-        Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
+        amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
         unsigned int* pcount = counts.dataPtr();
 
-        Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
+        amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
 
         amrex::ParallelFor(tile_box,
@@ -128,7 +128,7 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
             }
         });
 
-        int num_to_add = Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
+        int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
         // Second: allocate the memory for these particles
         auto& particles = GetParticles(lev);
@@ -143,10 +143,10 @@ InitBeamFixedPPC (const IntVect& a_num_particles_per_cell,
         // Third: Actually initialize the particles at the right locations
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
 
-        GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
             particle_tile.GetStructOfArrays().realarray();
 
-        int procID = ParallelDescriptor::MyProc();
+        int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
@@ -215,10 +215,10 @@ InitBeamFixedWeight (int num_to_add,
 
     PhysConst phys_const = get_phys_const();
 
-    if (ParallelDescriptor::IOProcessor()) {
+    if (amrex::ParallelDescriptor::IOProcessor()) {
 
         // WARNING Implemented for 1 box per MPI rank.
-        for(MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+        for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
         {
             // Allocate the memory for these particles
             auto& particles = GetParticles(lev);
@@ -229,10 +229,10 @@ InitBeamFixedWeight (int num_to_add,
 
             // Access particles' AoS and SoA
             ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-            GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
                 particle_tile.GetStructOfArrays().realarray();
 
-            const int procID = ParallelDescriptor::MyProc();
+            const int procID = amrex::ParallelDescriptor::MyProc();
             const int pid = ParticleType::NextID();
             ParticleType::NextID(pid + num_to_add);
 
