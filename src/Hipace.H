@@ -144,7 +144,6 @@ public:
     Fields m_fields;
     /** Particle container for a beam */
     MultiBeam m_multi_beam;
-    // BeamParticleContainer m_beam_container;
     /** Particle container for the plasma */
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */

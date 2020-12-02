@@ -315,6 +315,7 @@ Hipace::Evolve ()
         }
 
         if (amrex::ParallelDescriptor::NProcs() == 1) {
+            // WARNING: only the first beam is used to calculate the time step. This should integrate all beams.
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam.getBeam(0), m_plasma_container, lev);
         } else {
             amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";
