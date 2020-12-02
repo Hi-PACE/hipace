@@ -161,8 +161,9 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, BeamParticleContaine
         const amrex::Real sigma_uz = sqrt(m_timestep_data[WhichDouble::SumWeightsTimesUzSquared]
                                           /m_timestep_data[WhichDouble::SumWeights] - mean_uz);
         const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
+        const amrex::Real max_supported_uz = 1e30;
         const amrex::Real chosen_min_uz = std::min( std::max(sigma_uz_dev,
-                                             m_timestep_data[WhichDouble::MinUz]), amrex::Real 1e30 );
+                                          m_timestep_data[WhichDouble::MinUz]), max_supported_uz);
 
         if (Hipace::m_verbose >=2 ){
             amrex::Print()<<"Minimum gamma to calculate new time step: " << chosen_min_uz << "\n";
