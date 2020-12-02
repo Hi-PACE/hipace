@@ -18,6 +18,7 @@ geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -8.   -8.   -6    # physical domain
 geometry.prob_hi     =  8.    8.    6
 
+beams.names = beam
 beam.injection_type = fixed_ppc
 beam.profile = gaussian
 beam.zmin = -5.9

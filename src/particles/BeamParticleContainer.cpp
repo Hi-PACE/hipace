@@ -5,7 +5,7 @@
 void
 BeamParticleContainer::ReadParameters ()
 {
-    amrex::ParmParse pp("beam");
+    amrex::ParmParse pp(m_name);
     pp.get("injection_type", m_injection_type);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
@@ -30,17 +30,17 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     if (m_injection_type == "fixed_ppc") {
 
-        amrex::ParmParse pp("beam");
+        amrex::ParmParse pp(m_name);
         pp.get("zmin", m_zmin);
         pp.get("zmax", m_zmax);
         pp.get("radius", m_radius);
-        const GetInitialDensity get_density;
-        const GetInitialMomentum get_momentum;
+        const GetInitialDensity get_density(m_name);
+        const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin, m_zmax, m_radius);
 
     } else if (m_injection_type == "fixed_weight") {
 
-        amrex::ParmParse pp("beam");
+        amrex::ParmParse pp(m_name);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         pp.get("position_mean", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
@@ -69,7 +69,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             m_total_charge /= dx[0]*dx[1]*dx[2];
         }
 
-        const GetInitialMomentum get_momentum;
+        const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
                             m_dy_per_dzeta);

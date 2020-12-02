@@ -14,7 +14,7 @@ struct GetInitialDensity
 {
     /** Constructor.
      */
-    GetInitialDensity ();
+    GetInitialDensity (const std::string& name);
 
     /** \brief returns the density for a beam particle at a given position
      * \param[in] x position in x
