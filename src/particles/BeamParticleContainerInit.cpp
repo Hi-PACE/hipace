@@ -58,8 +58,6 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                   const amrex::Real a_zmax,
                   const amrex::Real a_radius)
 {
-    using namespace amrex::literals;
-
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     constexpr int lev = 0;
@@ -77,13 +75,10 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
     amrex::IntVect ppc_cr = a_num_particles_per_cell;
     for (int i=0; i<AMREX_SPACEDIM; i++) ppc_cr[i] *= cr[i];
 
-    const int num_ppc = AMREX_D_TERM( ppc_cr[0],
-                                      *ppc_cr[1],
-                                      *ppc_cr[2]);
+    const int num_ppc = AMREX_D_TERM( ppc_cr[0], *ppc_cr[1], *ppc_cr[2]);
 
     const amrex::Real scale_fac = Hipace::m_normalized_units ?
-        1._rt/num_ppc*cr[0]*cr[1]*cr[2] :
-        dx[0]*dx[1]*dx[2]/num_ppc;
+        1./num_ppc*cr[0]*cr[1]*cr[2] : dx[0]*dx[1]*dx[2]/num_ppc;
 
     for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
