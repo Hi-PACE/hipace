@@ -32,7 +32,7 @@ template <>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 int compute_shape_factor <0> (amrex::Real* const sx, amrex::Real xmid){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid+0.5_rt));
     sx[0] = 1.0_rt;
@@ -48,7 +48,7 @@ template <>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 int compute_shape_factor <1> (amrex::Real* const sx, amrex::Real xmid){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid));
     const amrex::Real xint = xmid-j;
@@ -66,7 +66,7 @@ template <>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 int compute_shape_factor <2> (amrex::Real* const sx, amrex::Real xmid){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid+0.5_rt));
     const amrex::Real xint = xmid-j;
@@ -86,7 +86,7 @@ template <>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 int compute_shape_factor <3> (amrex::Real* const sx, amrex::Real xmid){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid));
     const amrex::Real xint = xmid-j;
@@ -120,7 +120,7 @@ int compute_shifted_shape_factor <1> (amrex::Real* const sx,
                                       const amrex::Real x_old,
                                       const int i_new){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto i = static_cast<int>(amrex::Math::floor(x_old));
     const int i_shift = i - i_new;
@@ -141,7 +141,7 @@ int compute_shifted_shape_factor <2> (amrex::Real* const sx,
                                       const amrex::Real x_old,
                                       const int i_new){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto i = static_cast<int>(amrex::Math::floor(x_old+0.5_rt));
     const int i_shift = i - (i_new + 1);
@@ -164,7 +164,7 @@ int compute_shifted_shape_factor <3> (amrex::Real* const sx,
                                       const amrex::Real x_old,
                                       const int i_new){
 
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const auto i = static_cast<int>(amrex::Math::floor(x_old));
     const int i_shift = i - (i_new + 1);
