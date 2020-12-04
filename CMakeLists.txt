@@ -44,6 +44,7 @@ set_default_install_dirs()
 # Options and Variants ########################################################
 #
 option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
+option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                  OFF)
 
 set(HiPACE_PRECISION_VALUES SINGLE DOUBLE)
 set(HiPACE_PRECISION DOUBLE CACHE STRING "Floating point precision (SINGLE/DOUBLE)")
@@ -89,7 +90,7 @@ if(NOT AMReX_CUDA)
 endif()
 
 # openPMD-api
-
+include(${HiPACE_SOURCE_DIR}/cmake/dependencies/openPMD.cmake)
 
 # Targets #####################################################################
 #
@@ -140,6 +141,11 @@ if(AMReX_CUDA)
             CUDA_STANDARD_REQUIRED ON
         )
     endif()
+endif()
+
+if(HiPACE_OPENPMD)
+    target_compile_definitions(HiPACE PUBLIC HIPACE_USE_OPENPMD)
+    target_link_libraries(HiPACE PUBLIC openPMD::openPMD)
 endif()
 
 # fancy binary name for build variants
