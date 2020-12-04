@@ -14,9 +14,11 @@ BeamParticleContainer::ReadParameters ()
     }
     pp.query("dx_per_dzeta", m_dx_per_dzeta);
     pp.query("dy_per_dzeta", m_dy_per_dzeta);
+    pp.query("duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     if (m_injection_type == "fixed_ppc"){
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.),
-            "Tilted beams are not yet implemented for fixed ppc beams");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.)
+            && (m_duz_per_uz0_dzeta == 0.),
+            "Tilted beams and correlated energy spreads are not implemented for fixed ppc beams");
     }
 }
 
@@ -46,6 +48,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
         pp.get("position_std", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
+        pp.get("u_mean", loc_array);
+        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_u_mean[idim] = loc_array[idim];
+        pp.get("u_std", loc_array);
+        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_u_std[idim] = loc_array[idim];
         pp.get("num_particles", m_num_particles);
         bool charge_is_specified = pp.query("total_charge", m_total_charge);
         bool peak_density_is_specified = pp.query("density", m_density);
@@ -69,10 +75,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             m_total_charge /= dx[0]*dx[1]*dx[2];
         }
 
-        const GetInitialMomentum get_momentum(m_name);
-        InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
-                            m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
-                            m_dy_per_dzeta);
+        InitBeamFixedWeight(m_num_particles, m_position_mean, m_position_std, m_u_mean, m_u_std,
+                            m_total_charge, m_do_symmetrize, m_dx_per_dzeta, m_dy_per_dzeta,
+                            m_duz_per_uz0_dzeta);
 
     } else {
 

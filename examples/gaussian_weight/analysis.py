@@ -52,6 +52,8 @@ if args.tilted_beam:
     z_avg = 2.
     dx_per_dzeta = 0.1
     dy_per_dzeta = -0.2
+    duz_per_uz0_dzeta = 0.01
+    uz_avg = 1000.
 
 # only required in the normalized units test
 ux_avg = 1.
@@ -87,10 +89,15 @@ if args.tilted_beam:
     # getting xp and yp at z_avg + 1.
     x_tilt_at_1 = xp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
     y_tilt_at_1 = yp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
+    uz_at_1 = uzp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
     x_tilt_error = np.abs(np.average(x_tilt_at_1-dx_per_dzeta)/dx_per_dzeta)
     y_tilt_error = np.abs(np.average(y_tilt_at_1-dy_per_dzeta-y_avg)/dy_per_dzeta)
+    uz_error = np.abs(np.average( (uz_at_1 - (uz_avg + 1*uz_avg*duz_per_uz0_dzeta) )/
+                                (uz_avg + 1*duz_per_uz0_dzeta ) ))
+
     assert(x_tilt_error < 1e-4)
     assert(y_tilt_error < 1e-4)
+    assert(uz_error < 1e-4)
 else:
     if args.norm_units:
         charge_sim = np.sum(wp)

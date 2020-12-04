@@ -49,13 +49,15 @@ public:
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
-                              const GetInitialMomentum& get_momentum,
                               const amrex::RealVect pos_mean,
                               const amrex::RealVect pos_std,
+                              const amrex::RealVect u_mean,
+                              const amrex::RealVect u_std,
                               const amrex::Real total_charge,
                               const bool do_symmetrize,
                               const amrex::Real dx_per_dzeta,
-                              const amrex::Real dy_per_dzeta);
+                              const amrex::Real dy_per_dzeta,
+                              const amrex::Real duz_per_uz0_dzeta);
 
     std::string get_name () {return m_name;};
 private:
@@ -64,12 +66,17 @@ private:
     amrex::Real m_zmax; /**< Max longitudinal position of the can beam */
     amrex::Real m_radius; /**< Radius of the can beam */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
-    /** Average position of the Gaussian beam. Only used for a fixed-weight beam */
+    /** Average position of the Gaussian beam. */
     amrex::RealVect m_position_mean {0., 0., 0.};
-    /** Width of the Gaussian beam. Only used for a fixed-weight beam */
+    /** Width of the Gaussian beam. */
     amrex::RealVect m_position_std {0., 0., 0.};
+    /** Average momentum of the Gaussian beam. */
+    amrex::RealVect m_u_mean {0., 0., 0.};
+    /** Spread of the momentum of the Gaussian beam. */
+    amrex::RealVect m_u_std {0., 0., 0.};
     amrex::Real m_dx_per_dzeta {0.}; /**< tilt in x direction */
     amrex::Real m_dy_per_dzeta {0.}; /**< tilt in y direction */
+    amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
