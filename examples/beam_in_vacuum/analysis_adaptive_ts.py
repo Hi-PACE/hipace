@@ -18,7 +18,7 @@ print(dt2)
 uz = 1000
 nt_per_omega_betatron = 0.07
 dt_analytic = np.sqrt(2*uz)*nt_per_omega_betatron
-error_analytic = (dt1[1]-dt_analytic)/dt_analytic
+error_analytic = (dt1[0]-dt_analytic)/dt_analytic
 assert(error_analytic < 1e-5)
 print("Error on the first time step ", error_analytic)
 #assert()

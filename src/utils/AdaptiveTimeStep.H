@@ -1,6 +1,7 @@
 #ifndef ADAPTIVETIMESTEP_H_
 #define ADAPTIVETIMESTEP_H_
 
+#include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "particles/PlasmaParticleContainer.H"
 #include <AMReX_AmrCore.H>
@@ -11,7 +12,7 @@ class AdaptiveTimeStep
 private:
 
     /** container including dt, min_gamma, sum of weights and the sum of weights times gamma */
-    amrex::Real m_timestep_data[5] = {0., 1e100, 0., 0., 0.};
+    amrex::Real m_timestep_data[5] = {0., 1e30, 0., 0., 0.};
 
     /** Whether to use an adaptive time step */
     bool m_do_adaptive_time_step = false;
@@ -24,13 +25,22 @@ public:
 
     /** calculate the adaptive time step based on the beam energy
      * \param[in,out] dt the time step
-     * \param[in] beam species on which the time step is based
+     * \param[in] nt number of the current time step
+     * \param[in] beams multibeam containing all beams
      * \param[in] plasma plasma container to get the plasma density
      * \param[in] lev MR level
+     * \param[in] a_comm_z longitudinal MPI communicator
      */
-     void
-     Calculate (amrex::Real& dt, BeamParticleContainer& beam,
-                                  PlasmaParticleContainer& plasma, int const lev);
+    void
+    Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
+               PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z);
+
+    /** pass the time step data to the next lower proc in the pipeline
+     * \param[in] nt number of the current time step
+     * \param[in] a_comm_z longitudinal MPI communicator
+     */
+    void
+    PassTimeStepInfo (const int nt, MPI_Comm a_comm_z);
 
 };
 

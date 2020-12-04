@@ -282,6 +282,9 @@ Hipace::Evolve ()
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
+        /* calculate the adaptive time step before printout, so the ranks already print their new dt */
+        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
+
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
@@ -311,23 +314,18 @@ Hipace::Evolve ()
         if (amrex::ParallelDescriptor::NProcs() == 1) {
             m_multi_beam.Redistribute();
         } else {
-            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed.";
+            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed. \n";
         }
 
-        if (amrex::ParallelDescriptor::NProcs() == 1) {
-            // WARNING: only the first beam is used to calculate the time step. This should integrate all beams.
-            m_adaptive_time_step.Calculate(m_dt, m_multi_beam.getBeam(0), m_plasma_container, lev);
-        } else {
-            amrex::Print()<<"WARNING: In parallel runs, no adaptive time step is implemented.";
-        }
-
+        /* Passing the adaptive time step info */
+        m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
         if (amrex::ParallelDescriptor::NProcs() == 1) {
             WriteDiagnostics(step+1);
         } else {
-            amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step.";
+            amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step. \n";
         }
         m_physical_time += m_dt;
     }

@@ -74,6 +74,9 @@ public:
      * \param[in] i index of the beam
      */
     BeamParticleContainer& getBeam (int i) {return m_all_beams[i];};
+
+    /**< returns the number of beams */
+    int get_nbeams () {return m_nbeams;};
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
