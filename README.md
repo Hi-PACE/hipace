@@ -122,7 +122,7 @@ or by providing arguments to the CMake call: `cmake .. -D<OPTION_A>=<VALUE_A> -D
 | `HiPACE_amrex_repo`          | `https://github.com/AMReX-Codes/amrex.git` | Repository URI to pull and build AMReX from         |
 | `HiPACE_amrex_branch`        | `development`                              | Repository branch for `HiPACE_amrex_repo`           |
 | `HiPACE_amrex_internal`      | **ON**/OFF                                 | Needs a pre-installed AMReX library if set to `OFF` |
-| `HiPACE_OPENPMD``            |  ON/**OFF**                                | openPMD I/O (HDF5, ADIOS)                          |
+| `HiPACE_OPENPMD`             |  ON/**OFF**                                | openPMD I/O (HDF5, ADIOS)                           |
 
 For example, one can also build against a local AMReX git repo.
 Assuming AMReX' source is located in `$HOME/src/amrex` and changes are committed into a branch such as `my-amrex-branch` then pass to `cmake` the arguments `-DHiPACE_amrex_repo=file://$HOME/src/amrex -DHiPACE_amrex_branch=my-amrex-branch`.
