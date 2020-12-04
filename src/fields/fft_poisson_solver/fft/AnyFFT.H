@@ -7,13 +7,15 @@
 #ifndef ANYFFT_H_
 #define ANYFFT_H_
 
-#include <AMReX_LayoutData.H>
+#include <AMReX_Config.H>
 
 #ifdef AMREX_USE_CUDA
 #  include <cufft.h>
 #else
 #  include <fftw3.h>
 #endif
+
+#include <AMReX_LayoutData.H>
 
 /**
  * \brief Wrapper around multiple FFT libraries.
