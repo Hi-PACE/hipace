@@ -672,8 +672,6 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 
     // Define slice box
     int const icenter = domain.length(idim)/2;
-    prob_domain.setLo(idim, -Geom(lev).CellSize(idim)/2.);
-    prob_domain.setHi(idim,  Geom(lev).CellSize(idim)/2.);
     domain.setSmall(idim, icenter);
     domain.setBig(idim, icenter);
     if (m_slice_F_xz){
