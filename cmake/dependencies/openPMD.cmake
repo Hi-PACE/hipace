@@ -62,7 +62,7 @@ if(HiPACE_OPENPMD)
     set(HiPACE_openpmd_repo "https://github.com/openPMD/openPMD-api.git"
         CACHE STRING
         "Repository URI to pull and build openPMD-api from if(HiPACE_openpmd_internal)")
-    set(HiPACE_openpmd_branch "dev"
+    set(HiPACE_openpmd_branch "0.12.0-alpha"
         CACHE STRING
         "Repository branch for HiPACE_openpmd_repo if(HiPACE_openpmd_internal)")
 
