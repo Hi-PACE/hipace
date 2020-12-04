@@ -7,6 +7,8 @@
 #ifndef ANYFFT_H_
 #define ANYFFT_H_
 
+#include <AMReX_Config.H>
+
 #ifdef AMREX_USE_CUDA
 #  include <cufft.h>
 #else
