@@ -115,6 +115,7 @@ or by providing arguments to the CMake call
  ``HiPACE_amrex_repo``           https://github.com/AMReX-Codes/amrex.git  Repository URI to pull and build AMReX from
  ``HiPACE_amrex_branch``         ``development``                               Repository branch for ``HiPACE_amrex_repo``
  ``HiPACE_amrex_internal``       **ON**/OFF                                  Needs a pre-installed AMReX library if set to ``OFF``
+ ``HiPACE_OPENPMD``              ON/**OFF**                                  openPMD I/O (HDF5, ADIOS)
 =============================  ==========================================  ============
 
 For example, one can also build against a local AMReX git repo.
