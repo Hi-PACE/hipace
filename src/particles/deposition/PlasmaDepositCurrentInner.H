@@ -82,8 +82,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const amrex::Real ymin = xyzmin[1];
 
     // slice is only one cell thick
-    AMREX_ASSERT(jx_fab.box().smallEnd(2) == jx_fab.box().bigEnd(2));
-    const int z_index = jx_fab.box().smallEnd(2);
+    AMREX_ASSERT(pti.tilebox().smallEnd(2) == pti.tilebox().bigEnd(2));
+    const int z_index = pti.tilebox().smallEnd(2);
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
