@@ -12,6 +12,7 @@
 #ifdef AMREX_USE_MPI
 namespace {
     constexpr int comm_z_tag = 1000;
+    constexpr int pcomm_z_tag = 1001;
 }
 #endif
 
@@ -551,6 +552,7 @@ Hipace::Wait ()
     HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
     if (m_rank_z != m_numprocs_z-1) {
+        {
         const int lev = 0;
         amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
         amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
@@ -582,6 +584,36 @@ Hipace::Wait ()
                  slice_fab3(i,j,k,n) = buf3(i,j,k,n);
              });
         amrex::The_Pinned_Arena()->free(recv_buffer);
+        }
+
+        // Same thing for the plasma particles. Currently only one tile.
+        {
+            const int lev = 0;
+            amrex::Long np = m_plasma_container.m_num_exchange;
+            amrex::Long psize = m_plasma_container.superParticleSize();
+            amrex::Long buffer_size = psize*np;
+            auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+
+            MPI_Status status;
+            MPI_Recv(recv_buffer, buffer_size,
+                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                     m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
+
+            auto& ptile = m_plasma_container.DefineAndReturnParticleTile(lev, 0, 0);
+            ptile.resize(np);
+            auto ptd = ptile.getParticleTileData();
+
+            amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
+            amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+            auto p_comm_real = comm_real.data();
+            auto p_comm_int = comm_int.data();
+            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int i) noexcept
+            {
+                ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
+            });
+
+            amrex::The_Pinned_Arena()->free(recv_buffer);
+        }
     }
 #endif
 }
@@ -592,10 +624,12 @@ Hipace::Notify ()
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
+
 #ifdef AMREX_USE_MPI
     if (m_rank_z != 0) {
         NotifyFinish(); // finish the previous send
 
+        {
         const int lev = 0;
         const amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
         const amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
@@ -625,6 +659,33 @@ Hipace::Notify ()
         MPI_Isend(m_send_buffer, nreals_total,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   m_rank_z-1, comm_z_tag, m_comm_z, &m_send_request);
+        }
+
+        // Same thing for the plasma particles. Currently only one tile.
+        {
+            const int lev = 0;
+
+            amrex::Long np = m_plasma_container.m_num_exchange;
+            amrex::Long psize = m_plasma_container.superParticleSize();
+            amrex::Long buffer_size = psize*np;
+            m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+
+            auto& ptile = m_plasma_container.ParticlesAt(lev, 0, 0);
+            const auto ptd = ptile.getConstParticleTileData();
+
+            amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
+            amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+            auto p_comm_real = comm_real.data();
+            auto p_comm_int = comm_int.data();
+            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int i) noexcept
+            {
+                ptd.packParticleData(m_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
+            });
+
+            MPI_Isend(m_psend_buffer, buffer_size,
+                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                      m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
+        }
     }
 #endif
 }
@@ -639,6 +700,12 @@ Hipace::NotifyFinish ()
             MPI_Wait(&m_send_request, &status);
             amrex::The_Pinned_Arena()->free(m_send_buffer);
             m_send_buffer = nullptr;
+        }
+        if (m_send_buffer) {
+            MPI_Status status;
+            MPI_Wait(&m_psend_request, &status);
+            amrex::The_Pinned_Arena()->free(m_psend_buffer);
+            m_psend_buffer = nullptr;
         }
     }
 #endif
