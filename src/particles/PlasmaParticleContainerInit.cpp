@@ -51,7 +51,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
