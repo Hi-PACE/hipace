@@ -26,6 +26,11 @@ PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
             m_u_std[idim] = loc_array[idim];
         }
     }
+    pp.query("sort_int", m_sort_int);
+    if (pp.query("sort_bin_size", m_sort_bin_size))
+    {
+        m_sort_bin = {m_sort_bin_size, m_sort_bin_size, 1};
+    }
 }
 
 void
@@ -58,17 +63,24 @@ PlasmaParticleContainer::RedistributeSlice (int const lev)
         const auto& pos_structs = aos.begin();
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
         amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data();
-
+        
         // Loop over particles and handle particles outside of the box
         amrex::ParallelFor(
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
-
+                
                 const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, periodicity);
-
+                
                 if (shifted && !is_per[0]) wp[ip] = 0.0_rt;
-
+                
             }
             );
-        }
+    }
+}
+
+void
+PlasmaParticleContainer::BinSort (int step)
+{
+    if (step % m_sort_int != 0) return;
+    SortParticlesByBin(m_sort_bin);
 }

@@ -354,6 +354,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
                            true, false, false, lev);
 
     m_plasma_container.RedistributeSlice(lev);
+    m_plasma_container.BinSort(islice);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::rho, 1);
 

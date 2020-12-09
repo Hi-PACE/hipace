@@ -205,6 +205,7 @@ public:
     static amrex::Real m_external_accel_field_strength;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;

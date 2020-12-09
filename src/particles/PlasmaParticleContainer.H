@@ -59,6 +59,8 @@ public:
      */
     void RedistributeSlice (int const lev);
 
+    void BinSort (int step);
+
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
@@ -67,6 +69,9 @@ public:
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
+    int m_sort_int {100}; /**< Period at which plasma particles are sorted */
+    int m_sort_bin_size {512}; /**< Bin size to sort plasma particles */
+    amrex::IntVect m_sort_bin = amrex::IntVect::TheZeroVector();
   };
 
 /** \brief Iterator over boxes in a particle container */
