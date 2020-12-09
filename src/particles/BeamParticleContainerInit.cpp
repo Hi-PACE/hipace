@@ -273,3 +273,5 @@ InitBeamFixedWeight (int num_to_add,
     AMREX_ASSERT(OK());
     return;
 }
+
+//void
