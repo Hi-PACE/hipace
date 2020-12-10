@@ -81,6 +81,10 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
 
+    // slice is only one cell thick
+    AMREX_ASSERT(pti.tilebox().smallEnd(2) == pti.tilebox().bigEnd(2));
+    const int z_index = pti.tilebox().smallEnd(2);
+
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
@@ -154,20 +158,20 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 for (int ix=0; ix<=depos_order_xy; ix++){
                     if (deposit_jx_jy) {
                         amrex::Gpu::Atomic::Add(
-                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
                             sx_cell[ix]*sy_cell[iy]*wqx);
                         amrex::Gpu::Atomic::Add(
-                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
                             sx_cell[ix]*sy_cell[iy]*wqy);
                     }
                     if (deposit_jz) {
                         amrex::Gpu::Atomic::Add(
-                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
                             sx_cell[ix]*sy_cell[iy]*wqz);
                     }
                     if (deposit_rho) {
                         amrex::Gpu::Atomic::Add(
-                            &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, 0),
+                            &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
                             sx_cell[ix]*sy_cell[iy]*wq);
                     }
                 }
