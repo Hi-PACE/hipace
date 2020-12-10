@@ -74,6 +74,13 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                             m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
                             m_dy_per_dzeta);
 
+    } else if (m_injection_type == "from_file") {
+
+        amrex::ParmParse pp(m_name);
+        pp.get("input_file", m_input_file);
+
+        InitBeamFromFile(m_input_file);
+
     } else {
 
         amrex::Abort("Unknown beam injection type. Must be fixed_ppc or fixed_weight");

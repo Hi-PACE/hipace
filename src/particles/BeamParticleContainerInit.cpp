@@ -4,6 +4,14 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
+#include <openPMD/openPMD.hpp>
+
+// example: data handling & print
+#include <vector>   // std::vector
+#include <iostream> // std::cout
+#include <memory>   // std::shared_ptr
+
+
 #include <AMReX_REAL.H>
 
 namespace
@@ -45,6 +53,7 @@ namespace
         arrdata[BeamIdx::uy  ][ip] = uy * speed_of_light;
         arrdata[BeamIdx::uz  ][ip] = uz * speed_of_light;
         arrdata[BeamIdx::w][ip] = weight;
+        //std::cout << p << "##" << arrdata[BeamIdx::ux  ][ip] << "##"<< arrdata[BeamIdx::uy  ][ip] << "##"<< arrdata[BeamIdx::uz  ][ip] << "##"<< arrdata[BeamIdx::w][ip] << std::endl;
     }
 }
 
@@ -274,4 +283,65 @@ InitBeamFixedWeight (int num_to_add,
     return;
 }
 
-//void
+void
+BeamParticleContainer::
+InitBeamFromFile (std::string input_file)
+{
+    #ifdef HIPACE_USE_OPENPMD
+    // do whatever you like
+
+    std::cout << "#############_beam_from_file_###################" << input_file <<std::endl;
+
+    auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
+    auto E = series.iterations[0].particles["Baelle"];
+
+    const std::shared_ptr< double > r_x_data = E["r"]["x"].loadChunk< double >();
+    const std::shared_ptr< double > r_y_data = E["r"]["y"].loadChunk< double >();
+    const std::shared_ptr< double > r_z_data = E["r"]["z"].loadChunk< double >();
+    const std::shared_ptr< double > u_x_data = E["u"]["x"].loadChunk< double >();
+    const std::shared_ptr< double > u_y_data = E["u"]["y"].loadChunk< double >();
+    const std::shared_ptr< double > u_z_data = E["u"]["z"].loadChunk< double >();
+    const std::shared_ptr< double > q_q_data = E["q"]["q"].loadChunk< double >();
+
+    series.flush();
+
+    // for(int i = 0; i < 100; ++i) std::cout << r_x_data.get()[i] << std::endl;
+
+    //std::cout << E["r"]["x"].getExtent()[0] << std::endl;
+
+    const int num_to_add = E["r"]["x"].getExtent()[0];
+    const PhysConst phys_const = get_phys_const();
+
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+
+        // WARNING Implemented for 1 box per MPI rank.
+        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi)
+            {
+            auto& particles = GetParticles(0);
+            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+            auto old_size = particle_tile.GetArrayOfStructs().size();
+            auto new_size = old_size + num_to_add;
+            particle_tile.resize(new_size);
+            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+                                                  particle_tile.GetStructOfArrays().realarray();
+            const int procID = amrex::ParallelDescriptor::MyProc();
+            const int pid = ParticleType::NextID();
+
+            amrex::ParallelFor(num_to_add,[=] AMREX_GPU_DEVICE (int i) noexcept
+                {
+                  //std::cout << (amrex::Real)r_x_data.get()[i] << std::endl;
+                   AddOneBeamParticle(pstruct, arrdata, r_x_data.get()[i],
+                      r_y_data.get()[i], r_z_data.get()[i],
+                      u_x_data.get()[i], u_y_data.get()[i],
+                      u_z_data.get()[i], q_q_data.get()[i],
+                      pid, procID, i, phys_const.c);
+                });
+            }
+    }
+    #else
+        amrex::Abort("beam particle injection via external_file requires openPMD support: "
+                   "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+    #endif  // HIPACE_USE_OPENPMD
+    return;
+}
