@@ -69,7 +69,7 @@ Predictor-corrector loop parameters
     The tolerance of the transverse B-field error. To enable a fixed number of iterations,
     `predcorr_B_error_tolerance` must be negative.
 
-* ``hipace.m_predcorr_max_iterations`` (`int`) optional (default `30`)
+* ``hipace.predcorr_max_iterations`` (`int`) optional (default `30`)
     The maximum number of iterations in the predictor-corrector loop for single slice.
 
 * ``hipace.predcorr_B_mixing_factor`` (`float`) optional (default `0.05`)
@@ -82,7 +82,7 @@ Predictor-corrector loop parameters
 
    First, a fixed B-field error tolerance. This ensures the same level of convergence at each grid point.
    To do so, use e.g. the default settings of `hipace.predcorr_B_error_tolerance = 4e-2`,
-   `hipace.m_predcorr_max_iterations = 30`, `hipace.predcorr_B_mixing_factor = 0.05`.
+   `hipace.predcorr_max_iterations = 30`, `hipace.predcorr_B_mixing_factor = 0.05`.
    This should almost always give reasonable results.
 
    Second, a fixed (low) number of iterations. This is usually much faster than the fixed B-field error,
@@ -90,7 +90,7 @@ Predictor-corrector loop parameters
    (e.g. a standard PWFA simulation the blowout regime) it reproduces the same results as the fixed
    B-field error tolerance setting.
    A good setting for the fixed number of iterations is usually given by
-   `hipace.predcorr_B_error_tolerance = -1.`, `hipace.m_predcorr_max_iterations = 1`,
+   `hipace.predcorr_B_error_tolerance = -1.`, `hipace.predcorr_max_iterations = 1`,
    `hipace.predcorr_B_mixing_factor = 0.15`. The B-field error tolerance must be negative.
 
 Plasma parameters
