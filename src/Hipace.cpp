@@ -297,8 +297,10 @@ Hipace::Evolve ()
         if (!m_slice_beam) m_multi_beam.DepositCurrent(m_fields, geom[lev], lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                       false, false, false, true, geom[lev], lev);
+        if (m_rank_z == m_numprocs_z-1){
+            DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
+                           false, false, false, true, geom[lev], lev);
+        }
 
         // Loop over longitudinal boxes on this rank, from head to tail
         const amrex::Vector<int> index_array = fields.IndexArray();
