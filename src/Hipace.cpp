@@ -699,9 +699,10 @@ Hipace::Notify ()
             amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
             auto p_comm_real = comm_real.data();
             auto p_comm_int = comm_int.data();
+            auto p_psend_buffer = m_psend_buffer;
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int i) noexcept
             {
-                ptd.packParticleData(m_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
+                ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
             });
 
             MPI_Isend(m_psend_buffer, buffer_size,
