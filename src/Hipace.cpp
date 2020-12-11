@@ -558,20 +558,26 @@ Hipace::Wait ()
         const int lev = 0;
         amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
         amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
+        amrex::MultiFab& slice4 = m_fields.getSlices(lev, WhichSlice::RhoIons);
         // Note that there is only one local Box in slice multifab's boxarray.
         const int box_index = slice2.IndexArray()[0];
         amrex::Array4<amrex::Real> const& slice_fab2 = slice2.array(box_index);
         amrex::Array4<amrex::Real> const& slice_fab3 = slice3.array(box_index);
+        amrex::Array4<amrex::Real> const& slice_fab4 = slice4.array(box_index);
         const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
         const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
         const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
-        const std::size_t nreals_total = nreals_valid_slice2 + nreals_valid_slice3;
+        const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
+        const std::size_t nreals_total =
+            nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
         auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*nreals_total);
         auto const buf2 = amrex::makeArray4(recv_buffer,
                                             bx, slice_fab2.nComp());
         auto const buf3 = amrex::makeArray4(recv_buffer+nreals_valid_slice2,
                                             bx, slice_fab3.nComp());
+        auto const buf4 = amrex::makeArray4(recv_buffer+nreals_valid_slice2+nreals_valid_slice3,
+                                            bx, slice_fab4.nComp());
         MPI_Status status;
         MPI_Recv(recv_buffer, nreals_total,
                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
@@ -584,6 +590,10 @@ Hipace::Wait ()
              bx, slice_fab3.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
              {
                  slice_fab3(i,j,k,n) = buf3(i,j,k,n);
+             },
+             bx, slice_fab4.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+             {
+                 slice_fab4(i,j,k,n) = buf4(i,j,k,n);
              });
         amrex::The_Pinned_Arena()->free(recv_buffer);
         }
@@ -635,20 +645,26 @@ Hipace::Notify ()
         const int lev = 0;
         const amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
         const amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
+        const amrex::MultiFab& slice4 = m_fields.getSlices(lev, WhichSlice::RhoIons);
         // Note that there is only one local Box in slice multifab's boxarray.
         const int box_index = slice2.IndexArray()[0];
         amrex::Array4<amrex::Real const> const& slice_fab2 = slice2.array(box_index);
         amrex::Array4<amrex::Real const> const& slice_fab3 = slice3.array(box_index);
+        amrex::Array4<amrex::Real const> const& slice_fab4 = slice4.array(box_index);
         const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
         const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
         const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
-        const std::size_t nreals_total = nreals_valid_slice2 + nreals_valid_slice3;
+        const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
+        const std::size_t nreals_total =
+            nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
         m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*nreals_total);
         auto const buf2 = amrex::makeArray4(m_send_buffer,
                                             bx, slice_fab2.nComp());
         auto const buf3 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2,
                                             bx, slice_fab3.nComp());
+        auto const buf4 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2+nreals_valid_slice3,
+                                            bx, slice_fab4.nComp());
         amrex::ParallelFor
             (bx, slice_fab2.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
              {
@@ -657,6 +673,10 @@ Hipace::Notify ()
              bx, slice_fab3.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
              {
                  buf3(i,j,k,n) = slice_fab3(i,j,k,n);
+             },
+             bx, slice_fab4.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+             {
+                 buf4(i,j,k,n) = slice_fab4(i,j,k,n);
              });
         MPI_Isend(m_send_buffer, nreals_total,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
