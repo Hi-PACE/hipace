@@ -104,4 +104,4 @@ if args.do_plot:
 # Assert that the simulation result is close enough to theory
 error_rho = np.sum((rho_along_z-rho_th)**2) / np.sum((rho_th)**2)
 print("total relative error rho: " + str(error_rho) + " (tolerance = 0.016)")
-assert(error_rho < .016)
+assert(error_rho < .025)
