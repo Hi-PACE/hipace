@@ -89,8 +89,6 @@ if args.tilted_beam:
     y_tilt_at_1 = yp[ np.logical_and(z_avg + 0.99 < zp, zp < z_avg + 1.01) ]
     x_tilt_error = np.abs(np.average(x_tilt_at_1-dx_per_dzeta)/dx_per_dzeta)
     y_tilt_error = np.abs(np.average(y_tilt_at_1-dy_per_dzeta-y_avg)/dy_per_dzeta)
-    print(x_tilt_error)
-    print(y_tilt_error)
     assert(x_tilt_error < 5e-3)
     assert(y_tilt_error < 5e-3)
 else:
@@ -107,8 +105,6 @@ else:
         assert(np.average(uyp) < 1e-12)
     else:
         assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
-        print(np.average(yp))
-        print(np.abs((np.average(yp)-y_avg)/y_avg))
         assert(np.abs((np.average(yp)-y_avg)/y_avg) < .03)
 
     assert( np.abs((np.average(zp)-z_avg)/z_avg) < .025)
