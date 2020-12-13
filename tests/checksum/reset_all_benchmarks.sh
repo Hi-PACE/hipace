@@ -155,7 +155,7 @@ fi
 if [[ $all_tests = true ]] || [[ $one_test_name = "reset.2Rank" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R reset.1Rank \
+    ctest --output-on-failure -R reset.2Rank \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
