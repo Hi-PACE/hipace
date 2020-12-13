@@ -151,8 +151,8 @@ then
                      --test-name adaptive_time_step.1Rank
 fi
 
-# reset.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "reset.1Rank" ]]
+# reset.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "reset.2Rank" ]]
 then
     cd $build_dir
     ctest --output-on-failure -R reset.1Rank \
@@ -160,7 +160,7 @@ then
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
                      --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name reset.1Rank
+                     --test-name reset.2Rank
 fi
 
 # slice_beam.1Rank
