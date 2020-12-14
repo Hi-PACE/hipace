@@ -330,11 +330,11 @@ Hipace::Evolve ()
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
-        if (amrex::ParallelDescriptor::NProcs() == 1) {
-            WriteDiagnostics(step+1);
-        } else {
-            amrex::Print()<<"WARNING: In parallel runs, data is only dumped at the first and last time step. \n";
-        }
+#ifdef HIPACE_USE_OPENPMD
+        WriteDiagnostics(step+1);
+#else
+        amrex::Print()<<"WARNING: In parallel runs only openPMD supports dumping all time steps. \n";
+#endif
         m_physical_time += m_dt;
     }
     // For consistency, decrement the physical time, so the last time step is like the others:
@@ -752,8 +752,6 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         (!force_output && output_step % m_output_period != 0) ||
         output_step == m_last_output_dumped) return;
 
-    const int rank = amrex::ParallelDescriptor::MyProc();
-
     // Store this dump iteration
     m_last_output_dumped = output_step;
 
@@ -766,6 +764,18 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     amrex::Vector<std::string> rfs;
     amrex::Vector<amrex::Geometry> geom_io = Geom();
 
+    constexpr int lev = 0; // we only have one level
+    constexpr int idim = 1;
+    amrex::RealBox prob_domain = Geom(lev).ProbDomain();
+    amrex::Box domain = Geom(lev).Domain();
+    // Define slice box
+    int const icenter = domain.length(idim)/2;
+    domain.setSmall(idim, icenter);
+    domain.setBig(idim, icenter);
+    if (m_slice_F_xz){
+        geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
+    }
+
 #ifdef HIPACE_USE_OPENPMD
     io::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(m_physical_time);
@@ -773,7 +783,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
 
-    constexpr int lev = 0; // we only have one level
+
     // loop over field components
     for (int icomp = 0; icomp < FieldComps::nfields; ++icomp)
     {
@@ -790,7 +800,6 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         // data type and global size of the simulation
         io::Datatype datatype = io::determineDatatype< amrex::Real >();
         io::Extent global_size = utils::getReversedVec(geom_io[lev].Domain().size());
-        std::cout << "gsize: " << global_size[0] <<  global_size[1]<<  global_size[2] ;
         io::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
 
@@ -806,39 +815,12 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
         {
             amrex::FArrayBox const& fab = mf[mfi];
-            const amrex::Box& bx = fab.box();
-            const int nx_loc = bx.length(0);
-            const int ny_loc = bx.length(1);
-            const int nz_loc = bx.bigEnd(Direction::z) - bx.smallEnd(Direction::z);
-            const int offset_nz = rank*nz_loc; // assuption: equal distribution in z over ranks
-            amrex::AllPrint()<<"rank: "<<rank<<" nx_loc: "<<nx_loc<<" ny_loc: "<<ny_loc<<" nz_loc: "<<nz_loc<<" offsetz " << offset_nz<<"\n";
-
-            constexpr int idim = 1;
-            amrex::RealBox prob_domain = Geom(lev).ProbDomain();
-            amrex::Box domain = Geom(lev).Domain();
-
-            // Define slice box
-            int const icenter = domain.length(idim)/2;
-            domain.setSmall(idim, icenter);
-            domain.setBig(idim, icenter);
-            if (m_slice_F_xz){
-                geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
-            }
-
-            //amrex::AllPrint()<<"rank: "<<rank<<" geom_io: "<<geom_io[lev]<<"\n";
-            //amrex::AllPrint()<<"rank: "<<rank<<" domain: "<<domain<<"\n";
-            //amrex::AllPrint()<<"rank: "<<rank<<" prob_domain: "<<prob_domain<<"\n";
-
             amrex::Box const& local_box = fab.box();
+
             // Determine the offset and size of this chunk_size
-            amrex::AllPrint()<<"local_box.smallEnd(): "<<local_box.smallEnd() << "\n";
-            amrex::AllPrint()<<"domain.smallEnd(): "<<domain.smallEnd() << "\n";
             amrex::IntVect const box_offset = local_box.smallEnd();
             io::Offset const chunk_offset = utils::getReversedVec(box_offset);
             io::Extent const chunk_size = utils::getReversedVec(local_box.size());
-
-            std::cout << "loffset: " << chunk_offset[0] <<  chunk_offset[1]<<  chunk_offset[2] ;
-            std::cout << " lsize: " << chunk_size[0] << chunk_size[1] << chunk_size[2] ;
 
             amrex::Real const * local_data = fab.dataPtr( icomp );
             field_comp.storeChunk(io::shareRaw(local_data), chunk_offset, chunk_size);
