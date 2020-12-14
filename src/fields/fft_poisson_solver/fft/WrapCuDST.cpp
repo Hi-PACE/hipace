@@ -32,13 +32,13 @@ namespace AnyDST
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 /* upper left quadrant */
-                dst_array(i+1,j+1,k,dcomp) = src_array(i, j, k, scomp);
+                dst_array(i+1,j+1,0,dcomp) = src_array(i, j, k, scomp);
                 /* lower left quadrant */
-                dst_array(i+1,j+ny+2,k,dcomp) = -src_array(i, ny-1-j, k, scomp);
+                dst_array(i+1,j+ny+2,0,dcomp) = -src_array(i, ny-1-j, k, scomp);
                 /* upper right quadrant */
-                dst_array(i+nx+2,j+1,k,dcomp) = -src_array(nx-1-i, j, k, scomp);
+                dst_array(i+nx+2,j+1,0,dcomp) = -src_array(nx-1-i, j, k, scomp);
                 /* lower right quadrant */
-                dst_array(i+nx+2,j+ny+2,k,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
+                dst_array(i+nx+2,j+ny+2,0,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
             }
             );
     };
@@ -62,7 +62,7 @@ namespace AnyDST
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 /* upper left quadrant */
-                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, k, scomp).real();
+                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
             }
             );
     };
