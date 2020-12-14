@@ -115,16 +115,16 @@ then
     make -j 4
 fi
 
-# blowout_wake.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.1Rank" ]]
+#blowout_wake.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.2Rank" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R blowout_wake.1Rank \
+    ctest --output-on-failure -R blowout_wake.2Rank \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
                      --plotfile ${build_dir}/bin/normalized_data \
-                     --test-name blowout_wake.1Rank
+                     --test-name blowout_wake.2Rank
 fi
 
 # beam_evolution.1Rank
@@ -151,16 +151,16 @@ then
                      --test-name adaptive_time_step.1Rank
 fi
 
-# reset.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "reset.1Rank" ]]
+# reset.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "reset.2Rank" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R reset.1Rank \
+    ctest --output-on-failure -R reset.2Rank \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name reset.1Rank
+                     --plotfile ${build_dir}/bin/plt00002 \
+                     --test-name reset.2Rank
 fi
 
 # slice_beam.1Rank
@@ -258,16 +258,3 @@ then
                      --plotfile ${build_dir}/bin/plt00000 \
                      --test-name gaussian_weight.1Rank
 fi
-
-# blowout_wake.2Rank
-### This test is inactive as Hipace doesn't support parallelization yet.
-#if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.2Rank" ]]
-#then
-#    cd $build_dir
-#    ctest --output-on-failure -R blowout_wake.2Rank \
-#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-#    cd $checksum_dir
-#    ./checksumAPI.py --reset-benchmark \
-#                     --plotfile ${build_dir}/bin/plt00001 \
-#                     --test-name blowout_wake.2Rank
-#fi
