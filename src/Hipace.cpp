@@ -5,9 +5,13 @@
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/BinSort.H"
+#include "utils/IOUtil.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
+#include <AMReX_IntVect.H>
+
+#include <algorithm>
 
 #ifdef AMREX_USE_MPI
 namespace {
@@ -280,6 +284,7 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
+    InitDiagnostics();
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
     {
@@ -337,6 +342,9 @@ Hipace::Evolve ()
     // ahead.
     m_physical_time -= m_dt;
     WriteDiagnostics(m_max_step, true);
+#ifdef HIPACE_USE_OPENPMD
+    m_outputSeries.reset();
+#endif
 }
 
 void
@@ -744,30 +752,103 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         (!force_output && output_step % m_output_period != 0) ||
         output_step == m_last_output_dumped) return;
 
+    const int rank = amrex::ParallelDescriptor::MyProc();
+
     // Store this dump iteration
     m_last_output_dumped = output_step;
 
     // Write fields
     const std::string filename = amrex::Concatenate("plt", output_step);
-    const int nlev = 1;
+    // assumption: same order as in struct enum Field Comps
     const amrex::Vector< std::string > varnames
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
     const amrex::IntVect local_ref_ratio {1, 1, 1};
     amrex::Vector<std::string> rfs;
     amrex::Vector<amrex::Geometry> geom_io = Geom();
-    constexpr int lev = 0;
-    constexpr int idim = 1;
-    amrex::RealBox prob_domain = Geom(lev).ProbDomain();
-    amrex::Box domain = Geom(lev).Domain();
 
-    // Define slice box
-    int const icenter = domain.length(idim)/2;
-    domain.setSmall(idim, icenter);
-    domain.setBig(idim, icenter);
-    if (m_slice_F_xz){
-        geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
+#ifdef HIPACE_USE_OPENPMD
+    io::Iteration iteration = m_outputSeries->iterations[output_step];
+    iteration.setTime(m_physical_time);
+
+    // todo: periodicity/boundary, field solver, particle pusher, etc.
+    auto meshes = iteration.meshes;
+
+    constexpr int lev = 0; // we only have one level
+    // loop over field components
+    for (int icomp = 0; icomp < FieldComps::nfields; ++icomp)
+    {
+        std::string fieldname = varnames[icomp];
+        //                      "B"                "x" (todo)
+        //                      "Bx"               ""  (just for now)
+        io::Mesh field = meshes[fieldname];
+        io::MeshRecordComponent field_comp = field[io::MeshRecordComponent::SCALAR];
+        field.setDataOrder(io::Mesh::DataOrder::C);
+        field.setAxisLabels({"z", "y", "x"});
+        field.setGridSpacing(utils::getReversedVec(Geom(lev).CellSize())); // dx, dy, dz
+        field.setGridGlobalOffset(utils::getReversedVec(Geom(lev).ProbLo())); // begin of moving window
+
+        // data type and global size of the simulation
+        io::Datatype datatype = io::determineDatatype< amrex::Real >();
+        io::Extent global_size = utils::getReversedVec(geom_io[lev].Domain().size());
+        std::cout << "gsize: " << global_size[0] <<  global_size[1]<<  global_size[2] ;
+        io::Dataset dataset(datatype, global_size);
+        field_comp.resetDataset(dataset);
+
+        auto const& mf = m_fields.getF(lev);
+
+        // note staggering
+        auto relative_cell_pos = utils::getRelativeCellPosition(mf);           // AMReX Fortran index order
+        std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
+        field_comp.setPosition(relative_cell_pos);
+
+        // Loop over longitudinal boxes on this rank, from head to tail:
+        // Loop through the multifab and store each box as a chunk with openpmd
+        for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
+        {
+            amrex::FArrayBox const& fab = mf[mfi];
+            const amrex::Box& bx = fab.box();
+            const int nx_loc = bx.length(0);
+            const int ny_loc = bx.length(1);
+            const int nz_loc = bx.bigEnd(Direction::z) - bx.smallEnd(Direction::z);
+            const int offset_nz = rank*nz_loc; // assuption: equal distribution in z over ranks
+            amrex::AllPrint()<<"rank: "<<rank<<" nx_loc: "<<nx_loc<<" ny_loc: "<<ny_loc<<" nz_loc: "<<nz_loc<<" offsetz " << offset_nz<<"\n";
+
+            constexpr int idim = 1;
+            amrex::RealBox prob_domain = Geom(lev).ProbDomain();
+            amrex::Box domain = Geom(lev).Domain();
+
+            // Define slice box
+            int const icenter = domain.length(idim)/2;
+            domain.setSmall(idim, icenter);
+            domain.setBig(idim, icenter);
+            if (m_slice_F_xz){
+                geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
+            }
+
+            //amrex::AllPrint()<<"rank: "<<rank<<" geom_io: "<<geom_io[lev]<<"\n";
+            //amrex::AllPrint()<<"rank: "<<rank<<" domain: "<<domain<<"\n";
+            //amrex::AllPrint()<<"rank: "<<rank<<" prob_domain: "<<prob_domain<<"\n";
+
+            amrex::Box const& local_box = fab.box();
+            // Determine the offset and size of this chunk_size
+            amrex::AllPrint()<<"local_box.smallEnd(): "<<local_box.smallEnd() << "\n";
+            amrex::AllPrint()<<"domain.smallEnd(): "<<domain.smallEnd() << "\n";
+            amrex::IntVect const box_offset = local_box.smallEnd();
+            io::Offset const chunk_offset = utils::getReversedVec(box_offset);
+            io::Extent const chunk_size = utils::getReversedVec(local_box.size());
+
+            std::cout << "loffset: " << chunk_offset[0] <<  chunk_offset[1]<<  chunk_offset[2] ;
+            std::cout << " lsize: " << chunk_size[0] << chunk_size[1] << chunk_size[2] ;
+
+            amrex::Real const * local_data = fab.dataPtr( icomp );
+            field_comp.storeChunk(io::shareRaw(local_data), chunk_offset, chunk_size);
+        }
     }
+    m_outputSeries->flush();
+#endif
 
+#ifndef HIPACE_USE_OPENPMD
+    constexpr int nlev = 1;
     amrex::WriteMultiLevelPlotfile(
         filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames,
         geom_io, m_physical_time, {output_step}, {local_ref_ratio},
@@ -800,4 +881,24 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
             plot_flags, int_flags,
             real_names, int_names);
     }
+#endif
+}
+
+void
+Hipace::InitDiagnostics ()
+{
+    HIPACE_PROFILE("Hipace::InitDiagnostics()");
+
+#ifdef HIPACE_USE_OPENPMD
+    std::string filename = "diags/openPMD/openpmd_%06T.h5"; // bp or h5
+#   ifdef AMREX_USE_MPI
+    m_outputSeries = std::make_unique< io::Series >(
+        filename, io::Access::CREATE, amrex::ParallelDescriptor::Communicator());
+#   else
+    m_outputSeries = std::make_unique< io::Series >(
+        filename, io::Access::CREATE);
+#   endif
+
+    // TODO: meta-data: author, mesh path, extensions, software
+#endif
 }
