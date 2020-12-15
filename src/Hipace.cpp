@@ -333,7 +333,7 @@ Hipace::Evolve ()
 #ifdef HIPACE_USE_OPENPMD
         WriteDiagnostics(step+1);
 #else
-        amrex::Print()<<"WARNING: In parallel runs only openPMD supports dumping all time steps. \n";
+        amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
 #endif
         m_physical_time += m_dt;
     }
@@ -794,19 +794,20 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         io::MeshRecordComponent field_comp = field[io::MeshRecordComponent::SCALAR];
         field.setDataOrder(io::Mesh::DataOrder::C);
         field.setAxisLabels({"z", "y", "x"});
-        field.setGridSpacing(utils::getReversedVec(Geom(lev).CellSize())); // dx, dy, dz
-        field.setGridGlobalOffset(utils::getReversedVec(Geom(lev).ProbLo())); // begin of moving window
+        field.setGridSpacing(utils::getReversedVec(Geom(lev).CellSize())); // dx, dy, dz // Should be geom_io[lev]
+        field.setGridGlobalOffset(utils::getReversedVec(Geom(lev).ProbLo()));  // begin of moving window // should geom_io[lev]
 
         // data type and global size of the simulation
         io::Datatype datatype = io::determineDatatype< amrex::Real >();
-        io::Extent global_size = utils::getReversedVec(geom_io[lev].Domain().size());
+        io::Extent global_size = utils::getReversedVec(Geom(lev).Domain().size()); // should be geom_io[lev]
+
         io::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
 
         auto const& mf = m_fields.getF(lev);
 
         // note staggering
-        auto relative_cell_pos = utils::getRelativeCellPosition(mf);           // AMReX Fortran index order
+        auto relative_cell_pos = utils::getRelativeCellPosition(mf);      // AMReX Fortran index order
         std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
         field_comp.setPosition(relative_cell_pos);
 
@@ -815,13 +816,16 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
         {
             amrex::FArrayBox const& fab = mf[mfi];
-            amrex::Box const& local_box = fab.box();
+            amrex::Box const& local_box = fab.box(); // this should probably be something else for slice IO
 
             // Determine the offset and size of this chunk_size
-            amrex::IntVect const box_offset = local_box.smallEnd();
+            amrex::IntVect const box_offset = local_box.smallEnd(); // in slice IO this offset is (0, ny/2, 0), it really should be (0,0,0)
             io::Offset const chunk_offset = utils::getReversedVec(box_offset);
             io::Extent const chunk_size = utils::getReversedVec(local_box.size());
 
+            // amrex::PrintAll()<< "box_offset " << box_offset[0] << " " << box_offset[1] << " " << box_offset[2] << "\n";
+            // amrex::PrintAll()<< "chunk_offset " << chunk_offset[0] << " " << chunk_offset[1] << " " << chunk_offset[2] << "\n";
+            // amrex::PrintAll()<< "chunk_size " << chunk_size[0] << " " << chunk_size[1] << " " << chunk_size[2] << "\n";
             amrex::Real const * local_data = fab.dataPtr( icomp );
             field_comp.storeChunk(io::shareRaw(local_data), chunk_offset, chunk_size);
         }
