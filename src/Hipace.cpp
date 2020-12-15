@@ -603,6 +603,8 @@ Hipace::Wait ()
              {
                  slice_fab4(i,j,k,n) = buf4(i,j,k,n);
              });
+
+        amrex::Gpu::Device::synchronize();
         amrex::The_Pinned_Arena()->free(recv_buffer);
         }
 
@@ -632,6 +634,7 @@ Hipace::Wait ()
                 ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
             });
 
+            amrex::Gpu::Device::synchronize();
             amrex::The_Pinned_Arena()->free(recv_buffer);
         }
     }
@@ -686,6 +689,8 @@ Hipace::Notify ()
              {
                  buf4(i,j,k,n) = slice_fab4(i,j,k,n);
              });
+
+        amrex::Gpu::Device::synchronize();
         MPI_Isend(m_send_buffer, nreals_total,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   m_rank_z-1, comm_z_tag, m_comm_z, &m_send_request);
@@ -713,6 +718,7 @@ Hipace::Notify ()
                 ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
             });
 
+            amrex::Gpu::Device::synchronize();
             MPI_Isend(m_psend_buffer, buffer_size,
                       amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
