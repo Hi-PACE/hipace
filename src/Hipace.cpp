@@ -760,7 +760,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     // assumption: same order as in struct enum Field Comps
     const amrex::Vector< std::string > varnames
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
-    const amrex::IntVect local_ref_ratio {1, 1, 1};
+
     amrex::Vector<std::string> rfs;
     amrex::Vector<amrex::Geometry> geom_io = Geom();
 
@@ -833,6 +833,8 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 
 #ifndef HIPACE_USE_OPENPMD
     constexpr int nlev = 1;
+    const amrex::IntVect local_ref_ratio {1, 1, 1};
+    
     amrex::WriteMultiLevelPlotfile(
         filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames,
         geom_io, m_physical_time, {output_step}, {local_ref_ratio},
