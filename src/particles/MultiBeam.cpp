@@ -80,3 +80,19 @@ MultiBeam::WritePlotFile (const std::string& filename)
         beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
     }
 }
+
+void
+MultiBeam::PassNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
+{
+    for (auto& beam : m_all_beams) {
+        beam.PassNumParticlesUpstreamRanks(a_comm_z);
+    }
+}
+
+void
+MultiBeam::RecvNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
+{
+    for (auto& beam : m_all_beams) {
+        beam.RecvNumParticlesUpstreamRanks(a_comm_z);
+    }
+}

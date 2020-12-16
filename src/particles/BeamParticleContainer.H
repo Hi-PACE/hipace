@@ -57,8 +57,16 @@ public:
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
+    /**< Loop over beams and pass total number of beam particles on upstream ranks */
+    void PassNumParticlesUpstreamRanks (MPI_Comm a_comm_z);
+
+    /**< Loop over beams and receive total number of beam particles on upstream ranks */
+    void RecvNumParticlesUpstreamRanks (MPI_Comm a_comm_z);
+
     std::string get_name () {return m_name;};
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
+    /** Number of particles on upstream rank (required for IO) */
+    int m_num_particles_on_upstream_ranks {0};
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
