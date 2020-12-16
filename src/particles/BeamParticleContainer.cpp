@@ -92,7 +92,7 @@ void
 BeamParticleContainer::PassNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
 {
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
-    
+
     if (my_rank_z >= 1)
     {
         const int num_local_particles = TotalNumberOfParticles(1,1); // get local number of particles
