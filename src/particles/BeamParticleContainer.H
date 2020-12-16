@@ -58,6 +58,7 @@ public:
                               const amrex::Real dy_per_dzeta);
 
     std::string get_name () {return m_name;};
+    bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
