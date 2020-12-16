@@ -112,11 +112,11 @@ BeamParticleContainer::RecvNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     if (my_rank_z  < amrex::ParallelDescriptor::NProcs()-1)
     {
-        int buffer = 0;
+
         MPI_Status status;
-        MPI_Recv(&buffer, 1,
+        MPI_Recv(&m_num_particles_on_upstream_ranks, 1,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                  my_rank_z+1, comm_z_tag, a_comm_z, &status);
-        m_num_particles_on_upstream_ranks = buffer;
+
     }
 }
