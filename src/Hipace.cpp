@@ -331,10 +331,9 @@ Hipace::Evolve ()
         m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
-
         Notify();
-        /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
 
+        /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
         m_multi_beam.PassNumParticlesUpstreamRanks(m_comm_z);
 #ifdef HIPACE_USE_OPENPMD
         WriteDiagnostics(step+1);
