@@ -53,9 +53,9 @@ if(NOT HiPACE_PRECISION IN_LIST HiPACE_PRECISION_VALUES)
     message(FATAL_ERROR "HiPACE_PRECISION (${HiPACE_PRECISION}) must be one of ${HiPACE_PRECISION_VALUES}")
 endif()
 
-set(HiPACE_COMPUTE_VALUES NOACC CUDA DPCPP HIP OMP)
+set(HiPACE_COMPUTE_VALUES NOACC CUDA SYCL HIP OMP)
 set(HiPACE_COMPUTE NOACC CACHE STRING
-    "On-node, accelerated computing backend (NOACC/CUDA/DPCPP/HIP/OMP)")
+    "On-node, accelerated computing backend (NOACC/CUDA/SYCL/HIP/OMP)")
 set_property(CACHE HiPACE_COMPUTE PROPERTY STRINGS ${HiPACE_COMPUTE_VALUES})
 if(NOT HiPACE_COMPUTE IN_LIST HiPACE_COMPUTE_VALUES)
     message(FATAL_ERROR "HiPACE_COMPUTE (${HiPACE_COMPUTE}) must be one of ${HiPACE_COMPUTE_VALUES}")
@@ -80,7 +80,7 @@ include(${HiPACE_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 make_third_party_includes_system(AMReX::amrex AMReX)
 
 # FFTW (non-GPU) and cuFFT (GPU)
-if(NOT AMReX_CUDA)
+if(NOT HiPACE_COMPUTE STREQUAL CUDA)
     find_package(PkgConfig REQUIRED QUIET)
     if(HiPACE_PRECISION STREQUAL "DOUBLE")
         pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET fftw3)
@@ -120,7 +120,7 @@ set_target_properties(HiPACE PROPERTIES
 # link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
 
-if(AMReX_CUDA)
+if(HiPACE_COMPUTE STREQUAL CUDA)
     # CUDA_ADD_CUFFT_TO_TARGET(HiPACE)
     target_link_libraries(HiPACE PUBLIC cufft)
 else()
@@ -132,7 +132,7 @@ else()
 endif()
 
 # AMReX helper function: propagate CUDA specific target & source properties
-if(AMReX_CUDA)
+if(HiPACE_COMPUTE STREQUAL CUDA)
     setup_target_for_cuda_compilation(HiPACE)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
         target_compile_features(HiPACE PUBLIC cuda_std_14)
