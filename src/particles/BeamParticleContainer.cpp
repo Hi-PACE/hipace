@@ -14,6 +14,7 @@ BeamParticleContainer::ReadParameters ()
     }
     pp.query("dx_per_dzeta", m_dx_per_dzeta);
     pp.query("dy_per_dzeta", m_dy_per_dzeta);
+    pp.query("do_z_push", m_do_z_push);
     if (m_injection_type == "fixed_ppc"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.),
             "Tilted beams are not yet implemented for fixed ppc beams");
