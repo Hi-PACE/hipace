@@ -824,10 +824,9 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
             amrex::FArrayBox const& fab = mf[mfi]; // note: this might include guards
             amrex::Box data_box = mfi.validbox();  // w/o guards in all cases
             std::shared_ptr< amrex::Real const > data;
-            if (mfi.validbox() == fab.box() )
+            if (mfi.validbox() == fab.box() ) {
                 data = io::shareRaw( fab.dataPtr( icomp ) );
-            else
-            {
+            } else {
                 // cut away guards
                 amrex::FArrayBox io_fab(mfi.validbox(), 1, amrex::The_Pinned_Arena());
                 io_fab.copy< amrex::RunOn::Host >(fab, fab.box(), icomp, mfi.validbox(), 0, 1);
