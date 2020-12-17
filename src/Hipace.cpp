@@ -821,17 +821,32 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         // Loop through the multifab and store each box as a chunk with openpmd
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
         {
-            amrex::FArrayBox const& fab = mf[mfi];
-            amrex::Box const& local_box = fab.box();
+            amrex::FArrayBox const& fab = mf[mfi]; // note: this might include guards
+            amrex::Box data_box = mfi.validbox();  // w/o guards in all cases
+            std::shared_ptr< amrex::Real const > data;
+            if (mfi.validbox() == fab.box() ) {
+                data = io::shareRaw( fab.dataPtr( icomp ) );
+            } else {
+                // cut away guards
+                amrex::FArrayBox io_fab(mfi.validbox(), 1, amrex::The_Pinned_Arena());
+                io_fab.copy< amrex::RunOn::Host >(fab, fab.box(), icomp, mfi.validbox(), 0, 1);
+                // copy into a shared pointer to keep data alive
+                //   TODO: moving data of an FArrayBox would be nice here
+                auto d = std::shared_ptr< amrex::Real >(
+                    new amrex::Real[io_fab.size()],
+                    std::default_delete<amrex::Real[]>());
+                std::copy(io_fab.dataPtr(0), io_fab.dataPtr(0) + io_fab.size(), d.get());
+                data = d;
+            }
 
-            // Determine the offset and size of this chunk_size
-            amrex::IntVect box_offset = local_box.smallEnd();
+
+            // Determine the offset and size of this data chunk in the global output
+            amrex::IntVect box_offset = data_box.smallEnd();
             if (m_slice_F_xz) box_offset[1] = 0; // setting the y offset to 0 by hand for slice I/O
             io::Offset const chunk_offset = utils::getReversedVec(box_offset);
-            io::Extent const chunk_size = utils::getReversedVec(local_box.size());
+            io::Extent const chunk_size = utils::getReversedVec(data_box.size());
 
-            amrex::Real const * local_data = fab.dataPtr( icomp );
-            field_comp.storeChunk(io::shareRaw(local_data), chunk_offset, chunk_size);
+            field_comp.storeChunk(data, chunk_offset, chunk_size);
         }
     }
     m_outputSeries->flush();
