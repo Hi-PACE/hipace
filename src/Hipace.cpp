@@ -882,7 +882,7 @@ Hipace::InitDiagnostics ()
     HIPACE_PROFILE("Hipace::InitDiagnostics()");
 
 #ifdef HIPACE_USE_OPENPMD
-    std::string filename = "diags/openPMD/openpmd_%06T.h5"; // bp or h5
+    std::string filename = "diags/openPMD/openpmd.h5"; // bp or h5
 #   ifdef AMREX_USE_MPI
     m_outputSeries = std::make_unique< io::Series >(
         filename, io::Access::CREATE, amrex::ParallelDescriptor::Communicator());
@@ -890,6 +890,10 @@ Hipace::InitDiagnostics ()
     m_outputSeries = std::make_unique< io::Series >(
         filename, io::Access::CREATE);
 #   endif
+
+    // open files early and collectively, so later flush calls are non-collective
+    m_outputSeries->setIterationEncoding( io::IterationEncoding::groupBased );
+    m_outputSeries->flush();
 
     // TODO: meta-data: author, mesh path, extensions, software
 #endif
