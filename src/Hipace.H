@@ -11,6 +11,13 @@
 
 #include <AMReX_AmrCore.H>
 
+#ifdef HIPACE_USE_OPENPMD
+#include <openPMD/openPMD.hpp>
+namespace io = openPMD;
+#endif
+
+#include <memory>
+
 /** \brief Singleton class, that intialize, runs and finalizes the simulation */
 class Hipace final : public amrex::AmrCore
 {
@@ -115,6 +122,10 @@ public:
      */
     void ResetAllQuantities (int lev);
 
+    /** \brief Initialize diagnostics (collective operation)
+     */
+    void InitDiagnostics ();
+
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
      */
@@ -137,8 +148,12 @@ public:
     int m_grid_size_z = 0;
     /** Send buffer for longitudinal parallelization (pipeline) */
     amrex::Real* m_send_buffer = nullptr;
+    /** Send buffer for particle longitudinal parallelization (pipeline) */
+    char* m_psend_buffer = nullptr;
     /** status of the send request */
     MPI_Request m_send_request = MPI_REQUEST_NULL;
+    /** status of the particle send request */
+    MPI_Request m_psend_request = MPI_REQUEST_NULL;
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
@@ -212,6 +227,11 @@ private:
     amrex::Geometry m_slice_geom;
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
+
+#ifdef HIPACE_USE_OPENPMD
+    /** Parallel openPMD-api Series object for output */
+    std::unique_ptr< io::Series > m_outputSeries;
+#endif
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

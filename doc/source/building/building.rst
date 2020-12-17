@@ -109,7 +109,7 @@ or by providing arguments to the CMake call
  CMake Option                  Default & Values                            Description
 -----------------------------  ------------------------------------------  ------------
  ``CMAKE_BUILD_TYPE``            **RelWithDebInfo**/Release/Debug            Type of build, symbols & optimizations
- ``HiPACE_COMPUTE``              **NOACC**/CUDA/DPCPP/HIP/OMP                On-node, accelerated computing backend
+ ``HiPACE_COMPUTE``              **NOACC**/CUDA/SYCL/HIP/OMP                 On-node, accelerated computing backend
  ``HiPACE_MPI``                  **ON**/OFF                                  Multi-node support (message-passing)
  ``HiPACE_PRECISION``            SINGLE/**DOUBLE**                           Floating point precision (single/double)
  ``HiPACE_amrex_repo``           https://github.com/AMReX-Codes/amrex.git  Repository URI to pull and build AMReX from

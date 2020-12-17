@@ -27,6 +27,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
     for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
+        if (Hipace::GetInstance().m_rank_z == Hipace::GetInstance().m_numprocs_z-1) {
+
         const amrex::Box& tile_box  = mfi.tilebox();
 
         const auto lo = amrex::lbound(tile_box);
@@ -49,11 +51,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
                     x*x + y*y > a_radius*a_radius ) continue;
 
                 int ix = i - lo.x;
@@ -119,7 +119,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    z >= a_bounds.hi(2) || z < a_bounds.lo(2) ||
                     x*x + y*y > a_radius*a_radius ) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
@@ -173,6 +172,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 ++pidx;
             }
         });
+        }
     }
 
     AMREX_ASSERT(OK());

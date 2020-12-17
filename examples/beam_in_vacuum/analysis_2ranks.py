@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
@@ -84,4 +84,3 @@ for field in ['ExmBy', 'EypBx', 'Ez', 'Bx', 'By', 'By', 'jz']:
     F = ad[field].v.reshape(ds.domain_dimensions).squeeze()
     Fr = adr[field].v.reshape(dsr.domain_dimensions).squeeze()
     assert( np.all( F == Fr ) )
-

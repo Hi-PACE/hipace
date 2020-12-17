@@ -17,6 +17,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
 
+    const bool do_z_push = beam.m_do_z_push;
+
     const amrex::Real dt = Hipace::m_dt;
     // Loop over particle boxes
     for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
@@ -154,7 +156,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                  */
                 xp += dt * 0.5_rt * ux_next  / gamma_next;
                 yp += dt * 0.5_rt * uy_next  / gamma_next;
-                zp += dt * ( uz_next  / gamma_next - phys_const.c );
+                if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
                 setPosition(ip, xp, yp, zp);
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;

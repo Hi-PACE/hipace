@@ -1,37 +1,37 @@
 {
   "beam": {
     "particle_cpu": 0.0,
-    "particle_id": 131328.0,
-    "particle_position_x": 0.0022187499999999916,
-    "particle_position_y": 0.002229166666666664,
-    "particle_position_z": 0.00512,
+    "particle_id": 8256.0,
+    "particle_position_x": 0.0005624999999999727,
+    "particle_position_y": 0.0005416666666666695,
+    "particle_position_z": 0.0012800000000000003,
     "particle_ux": 0.0,
     "particle_uy": 0.0,
-    "particle_uz": 153493738496000.0,
+    "particle_uz": 38373434624000.0,
     "particle_w": 1838514779.205181
   },
   "beam2": {
     "particle_cpu": 0.0,
-    "particle_id": 393472.0,
-    "particle_position_x": 0.0022187499999999916,
-    "particle_position_y": 0.002229166666666664,
-    "particle_position_z": 0.00512,
+    "particle_id": 24640.0,
+    "particle_position_x": 0.0005624999999999727,
+    "particle_position_y": 0.0005416666666666695,
+    "particle_position_z": 0.0012800000000000003,
     "particle_ux": 0.0,
     "particle_uy": 0.0,
-    "particle_uz": 153493738496000.0,
+    "particle_uz": 38373434624000.0,
     "particle_w": 1838514779.205181
   },
   "lev=0": {
-    "Bx": 1755260.1514291156,
-    "By": 1755332.0907846626,
+    "Bx": 439057.2672975587,
+    "By": 439054.37812541245,
     "Bz": 0.0,
-    "ExmBy": 439923451.5115832,
-    "EypBx": 440233298.7475757,
+    "ExmBy": 109874035.45294258,
+    "EypBx": 110035326.8219831,
     "Ez": 0.0,
-    "Psi": 386117.6214403605,
+    "Psi": 96686.19704881456,
     "jx": 0.0,
     "jy": 0.0,
-    "jz": 1736197754630364.0,
-    "rho": 5791335.2267488465
+    "jz": 434049438657591.0,
+    "rho": 1447833.8066872116
   }
 }

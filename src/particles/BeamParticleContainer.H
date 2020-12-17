@@ -69,6 +69,7 @@ public:
                            amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz);
 
     std::string get_name () {return m_name;};
+    bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
 private:
     std::string m_input_file; /**< path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
