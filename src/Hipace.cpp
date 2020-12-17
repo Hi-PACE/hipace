@@ -748,6 +748,13 @@ Hipace::NotifyFinish ()
 #endif
 }
 
+auto const copyToShared = []( amrex::Real const * data, unsigned long size ) {
+    auto d = std::shared_ptr<amrex::Real>(
+        new amrex::Real[size], std::default_delete<amrex::Real[]>());
+    std::copy(data, data + size, d.get());
+    return d;
+};
+
 void
 Hipace::WriteDiagnostics (int output_step, bool force_output)
 {
@@ -822,16 +829,25 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
         {
             amrex::FArrayBox const& fab = mf[mfi];
-            amrex::Box const& local_box = fab.box();
-
+            // amrex::Box const& local_box = fab.box();
+            amrex::FArrayBox io_fab(mfi.validbox());
+            io_fab.copy(fab, fab.box(), icomp, mfi.validbox(), 0, 1);
+            auto data = copyToShared(io_fab.dataPtr(0), io_fab.size());
             // Determine the offset and size of this chunk_size
-            amrex::IntVect box_offset = local_box.smallEnd();
+            amrex::IntVect box_offset = io_fab.smallEnd();
             if (m_slice_F_xz) box_offset[1] = 0; // setting the y offset to 0 by hand for slice I/O
             io::Offset const chunk_offset = utils::getReversedVec(box_offset);
-            io::Extent const chunk_size = utils::getReversedVec(local_box.size());
+            io::Extent const chunk_size = utils::getReversedVec(io_fab.length());
 
-            amrex::Real const * local_data = fab.dataPtr( icomp );
-            field_comp.storeChunk(io::shareRaw(local_data), chunk_offset, chunk_size);
+ //            amrex::AllPrint()<< "global_size " << global_size[0] << " " << global_size[1] << " " << global_size[2] << "\n";
+ //    amrex::AllPrint()<< "local_box big end - small end " << io_fab.bigEnd()[0] - io_fab.smallEnd()[0] << io_fab.bigEnd()[1] - io_fab.smallEnd()[1]<< io_fab.bigEnd()[2] - io_fab.smallEnd()[2]<< "\n";
+ //        amrex::AllPrint()<< "local_box " << io_fab.bigEnd()[0] << io_fab.bigEnd()[1] << io_fab.bigEnd()[2] << "\n";
+ //            amrex::AllPrint()<< "box_offset " << box_offset[0] << " " << box_offset[1] << " " << box_offset[2] << "\n";
+ // amrex::AllPrint()<< "chunk_offset " << chunk_offset[0] << " " << chunk_offset[1] << " " << chunk_offset[2] << "\n";
+ // amrex::AllPrint()<< "chunk_size " << chunk_size[0] << " " << chunk_size[1] << " " << chunk_size[2] << "\n";
+            // amrex::Real const * local_data = io_fab.dataPtr( icomp );
+            field_comp.storeChunk(data, chunk_offset, chunk_size);
+            // field_comp.storeChunk(io::shareRaw(local_data), chunk_offset, chunk_size);
         }
     }
     m_outputSeries->flush();
