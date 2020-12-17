@@ -62,7 +62,7 @@ public:
                                  bool coordinates_specified,
                                  amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz);
 
-    /** Checks the input file first to determine its Datatype*/                             
+    /** Checks the input file first to determine its Datatype*/
     template<typename input_type>
     void InitBeamFromFile (std::string input_file,
                            bool coordinates_specified,
