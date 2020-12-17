@@ -57,11 +57,22 @@ public:
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
-    void InitBeamFromFile (std::string);
+    /** Initialize a beam from an external input file using openPMD and HDF5 */
+    void InitBeamFromFileHelper (std::string input_file,
+                                 bool coordinates_specified,
+                                 amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz);
+
+    /** Checks the input file first to determine its Datatype*/                             
+    template<typename input_type>
+    void InitBeamFromFile (std::string input_file,
+                           bool coordinates_specified,
+                           amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz);
 
     std::string get_name () {return m_name;};
 private:
-    std::string m_input_file;
+    std::string m_input_file; /**< path to bean input file */
+    /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
+    amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
     amrex::Real m_zmax; /**< Max longitudinal position of the can beam */
