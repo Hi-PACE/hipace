@@ -290,6 +290,8 @@ InitBeamFromFileHelper (std::string input_file,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
+    #ifdef HIPACE_USE_OPENPMD
+
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     {
         // Check what kind of Datatype is used in beam file
@@ -315,6 +317,10 @@ InitBeamFromFileHelper (std::string input_file,
     else{
         amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
     }
+    #else
+        amrex::Abort("beam particle injection via external_file " + input_file +
+                     " requires openPMD support: Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+    #endif  // HIPACE_USE_OPENPMD
     return;
 }
 
