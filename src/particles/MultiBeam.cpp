@@ -82,17 +82,17 @@ MultiBeam::WritePlotFile (const std::string& filename)
 }
 
 void
-MultiBeam::PassNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
+MultiBeam::NotifyNumParticles (MPI_Comm a_comm_z)
 {
     for (auto& beam : m_all_beams) {
-        beam.PassNumParticlesUpstreamRanks(a_comm_z);
+        beam.NotifyNumParticles(a_comm_z);
     }
 }
 
 void
-MultiBeam::RecvNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
+MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
 {
     for (auto& beam : m_all_beams) {
-        beam.RecvNumParticlesUpstreamRanks(a_comm_z);
+        beam.WaitNumParticles(a_comm_z);
     }
 }

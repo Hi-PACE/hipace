@@ -89,7 +89,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 }
 
 void
-BeamParticleContainer::PassNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
+BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
 {
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
 
@@ -105,7 +105,7 @@ BeamParticleContainer::PassNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
 }
 
 void
-BeamParticleContainer::RecvNumParticlesUpstreamRanks (MPI_Comm a_comm_z)
+BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
 {
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     if (my_rank_z  < amrex::ParallelDescriptor::NProcs()-1)

@@ -297,8 +297,6 @@ Hipace::Evolve ()
 
         Wait();
 
-        m_multi_beam.RecvNumParticlesUpstreamRanks(m_comm_z);
-
         amrex::MultiFab& fields = m_fields.getF(lev);
 
         if (!m_slice_beam) m_multi_beam.DepositCurrent(m_fields, geom[lev], lev);
@@ -333,8 +331,6 @@ Hipace::Evolve ()
         // slices {2,3} from upstream to {2,3} in downstream.
         Notify();
 
-        /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
-        m_multi_beam.PassNumParticlesUpstreamRanks(m_comm_z);
 #ifdef HIPACE_USE_OPENPMD
         WriteDiagnostics(step+1);
 #else
@@ -643,6 +639,9 @@ Hipace::Wait ()
             amrex::The_Pinned_Arena()->free(recv_buffer);
         }
     }
+    #ifdef HIPACE_USE_OPENPMD
+    m_multi_beam.WaitNumParticles(m_comm_z);
+    #endif
 #endif
 }
 
@@ -729,6 +728,10 @@ Hipace::Notify ()
                       m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
         }
     }
+    #ifdef HIPACE_USE_OPENPMD
+    /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
+    m_multi_beam.NotifyNumParticles(m_comm_z);
+    #endif
 #endif
 }
 
