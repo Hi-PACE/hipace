@@ -802,36 +802,48 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     // loop over field components
     for (int icomp = 0; icomp < FieldComps::nfields; ++icomp)
     {
+        auto const& mf = m_fields.getF(lev);
+
         std::string fieldname = varnames[icomp];
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
         io::Mesh field = meshes[fieldname];
         io::MeshRecordComponent field_comp = field[io::MeshRecordComponent::SCALAR];
+
+        // meta-data
         field.setDataOrder(io::Mesh::DataOrder::C);
-        field.setAxisLabels({"z", "y", "x"});
-        field.setGridSpacing(utils::getReversedVec(geom_io[lev].CellSize())); // dx, dy, dz
-        field.setGridGlobalOffset(utils::getReversedVec(geom_io[lev].ProbLo()));  // begin of moving window
+        //   node staggering
+        auto relative_cell_pos = utils::getRelativeCellPosition(mf);      // AMReX Fortran index order
+        std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
+        //   labels, spacing and offsets
+        std::vector< std::string > axisLabels {"z", "y", "x"};
+        auto dCells = utils::getReversedVec(geom_io[lev].CellSize()); // dx, dy, dz
+        auto offWindow = utils::getReversedVec(geom_io[lev].ProbLo()); // start of moving window
+        if (m_slice_F_xz) {
+            relative_cell_pos.erase(relative_cell_pos.begin() + 1);  // remove for y
+            axisLabels.erase(axisLabels.begin() + 1); // remove y
+            dCells.erase(dCells.begin() + 1); // remove dy
+            offWindow.erase(offWindow.begin() + 1); // remove offset in y
+        }
+        field_comp.setPosition(relative_cell_pos);
+        field.setAxisLabels(axisLabels);
+        field.setGridSpacing(dCells);
+        field.setGridGlobalOffset(offWindow);
 
         // data type and global size of the simulation
         io::Datatype datatype = io::determineDatatype< amrex::Real >();
         io::Extent global_size = utils::getReversedVec(geom_io[lev].Domain().size());
+        if (m_slice_F_xz) global_size.erase(global_size.begin() + 1);  // remove Ny
 
         io::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
-
-        auto const& mf = m_fields.getF(lev);
-
-        // note staggering
-        auto relative_cell_pos = utils::getRelativeCellPosition(mf);      // AMReX Fortran index order
-        std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
-        field_comp.setPosition(relative_cell_pos);
 
         // Loop over longitudinal boxes on this rank, from head to tail:
         // Loop through the multifab and store each box as a chunk with openpmd
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
         {
             amrex::FArrayBox const& fab = mf[mfi]; // note: this might include guards
-            amrex::Box data_box = mfi.validbox();  // w/o guards in all cases
+            amrex::Box const data_box = mfi.validbox();  // w/o guards in all cases
             std::shared_ptr< amrex::Real const > data;
             if (mfi.validbox() == fab.box() ) {
                 data = io::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
@@ -844,10 +856,13 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
             }
 
             // Determine the offset and size of this data chunk in the global output
-            amrex::IntVect box_offset = data_box.smallEnd();
-            if (m_slice_F_xz) box_offset[1] = 0; // setting the y offset to 0 by hand for slice I/O
-            io::Offset const chunk_offset = utils::getReversedVec(box_offset);
-            io::Extent const chunk_size = utils::getReversedVec(data_box.size());
+            amrex::IntVect const box_offset = data_box.smallEnd();
+            io::Offset chunk_offset = utils::getReversedVec(box_offset);
+            io::Extent chunk_size = utils::getReversedVec(data_box.size());
+            if (m_slice_F_xz) { // remove Ny components
+                chunk_offset.erase(chunk_offset.begin() + 1);
+                chunk_size.erase(chunk_size.begin() + 1);
+            }
 
             field_comp.storeChunk(data, chunk_offset, chunk_size);
         }
