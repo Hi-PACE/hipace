@@ -12,6 +12,7 @@
 #include <AMReX_IntVect.H>
 
 #include <algorithm>
+#include <memory>
 
 #ifdef AMREX_USE_MPI
 namespace {
@@ -825,20 +826,14 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
             amrex::Box data_box = mfi.validbox();  // w/o guards in all cases
             std::shared_ptr< amrex::Real const > data;
             if (mfi.validbox() == fab.box() ) {
-                data = io::shareRaw( fab.dataPtr( icomp ) );
+                data = io::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
             } else {
-                // cut away guards
+                // copy data to cut away guards
                 amrex::FArrayBox io_fab(mfi.validbox(), 1, amrex::The_Pinned_Arena());
                 io_fab.copy< amrex::RunOn::Host >(fab, fab.box(), icomp, mfi.validbox(), 0, 1);
-                // copy into a shared pointer to keep data alive
-                //   TODO: moving data of an FArrayBox would be nice here
-                auto d = std::shared_ptr< amrex::Real >(
-                    new amrex::Real[io_fab.size()],
-                    std::default_delete<amrex::Real[]>());
-                std::copy(io_fab.dataPtr(0), io_fab.dataPtr(0) + io_fab.size(), d.get());
-                data = d;
+                // move ownership into a shared pointer: openPMD-api will free the copy in flush()
+                data = std::move(io_fab.release()); // note: a move honors the custom array-deleter
             }
-
 
             // Determine the offset and size of this data chunk in the global output
             amrex::IntVect box_offset = data_box.smallEnd();
