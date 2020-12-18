@@ -75,8 +75,14 @@ public:
      */
     BeamParticleContainer& getBeam (int i) {return m_all_beams[i];};
 
-    /**< returns the number of beams */
+    /** returns the number of beams */
     int get_nbeams () {return m_nbeams;};
+
+    /** Loop over beams and pass total number of beam particles on upstream ranks */
+    void NotifyNumParticles (MPI_Comm a_comm_z);
+
+    /** Loop over beams and receive total number of beam particles on upstream ranks */
+    void WaitNumParticles (MPI_Comm a_comm_z);
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
