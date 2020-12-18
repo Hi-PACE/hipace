@@ -60,13 +60,15 @@ public:
     /** Initialize a beam from an external input file using openPMD and HDF5 */
     void InitBeamFromFileHelper (std::string input_file,
                                  bool coordinates_specified,
-                                 amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz);
+                                 amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                 const amrex::Geometry& geom);
 
     /** Checks the input file first to determine its Datatype*/
     template<typename input_type>
     void InitBeamFromFile (std::string input_file,
                            bool coordinates_specified,
-                           amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz);
+                           amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                           const amrex::Geometry& geom);
 
     std::string get_name () {return m_name;};
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */

@@ -81,7 +81,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.get("input_file", m_input_file);
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
 
-        InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz);
+        InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom);
 
     } else {
 

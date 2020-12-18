@@ -19,7 +19,7 @@ for i in [0,1,2]:
     data[i]=random.normal(beam_position_mean[i],beam_position_std[i],n)
     data[i+3]=random.normal(beam_u_mean[i],beam_u_std[i],n)
 
-series = io.Series("data_%05T.h5", io.Access.create)
+series = io.Series("beam_%05T.h5", io.Access.create)
 
 i = series.iterations[0]
 
@@ -45,18 +45,23 @@ partikel["m"].unit_dimension = {
     io.Unit_Dimension.M:  1,
 }
 
-for j,k,m in [["r","x",0],["r","y",1],["r","z",2],["u","x",3],["u","y",4],["u","z",5]]:
+for j,k,m in [["r","x",0],["r","y",1],["r","z",2]]:
     partikel[j][k].reset_dataset(dataset)
     partikel[j][k].store_chunk(data[m])
     partikel[j][k].unit_SI = 1.e-5
 
+for j,k,m in [["u","x",3],["u","y",4],["u","z",5]]:
+    partikel[j][k].reset_dataset(dataset)
+    partikel[j][k].store_chunk(data[m])
+    partikel[j][k].unit_SI = 1
+
 partikel["q"]["q"].reset_dataset(dataset)
 partikel["q"]["q"].make_constant(single_charge)
-partikel["q"]["q"].unit_SI = 1.602176634e-19 * 2.8239587008591567e23 * (1.e+5)**3
+partikel["q"]["q"].unit_SI = 1.602176634e-19 * 2.8239587008591567e23 * (1.e-5)**3
 
 partikel["m"]["m"].reset_dataset(dataset)
 partikel["m"]["m"].make_constant(single_charge)
-partikel["m"]["m"].unit_SI = 1.602176634e-19 * 2.8239587008591567e23 * (1.e+5)**3 / 1.7588e11
+partikel["m"]["m"].unit_SI = 1.602176634e-19 * 2.8239587008591567e23 * (1.e-5)**3 / 1.7588e11
 
 series.flush()
 

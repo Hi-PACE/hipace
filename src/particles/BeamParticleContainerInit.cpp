@@ -285,7 +285,8 @@ void
 BeamParticleContainer::
 InitBeamFromFileHelper (std::string input_file,
                         bool coordinates_specified,
-                        amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz)
+                        amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                        const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -306,10 +307,10 @@ InitBeamFromFileHelper (std::string input_file,
     }
 
     if(input_type == openPMD::Datatype::FLOAT) {
-        InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz);
+        InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz, geom);
     }
     else if(input_type == openPMD::Datatype::DOUBLE) {
-        InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz);
+        InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz, geom);
     }
     else{
         amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
@@ -322,7 +323,8 @@ void
 BeamParticleContainer::
 InitBeamFromFile (std::string input_file,
                   bool coordinates_specified,
-                  amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz)
+                  amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                  const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -447,19 +449,20 @@ InitBeamFromFile (std::string input_file,
     series.flush();
 
     // calculate the multiplier to convert to Hipace units
-    input_type si_to_norm_pos = 1;
-    input_type si_to_norm_charge = 1;
+    input_type si_to_norm_pos = 1.;
+    input_type si_to_norm_charge = 1.602176634e-19;
     if(Hipace::m_normalized_units) {
+        auto dx = geom.CellSizeArray();
         si_to_norm_pos = 1e-5;
-        si_to_norm_charge = 2.8239587008591567e23;
+        si_to_norm_charge = 2.8239587008591567e23 * 1.602176634e-19 * dx[0] * dx[1] * dx[2] * 1e-15;
     }
 
     input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
     input_type unit_ry = electrons[name_r][name_ry].unitSI() / si_to_norm_pos;
     input_type unit_rz = electrons[name_r][name_rz].unitSI() / si_to_norm_pos;
-    input_type unit_ux = electrons[name_u][name_ux].unitSI() / si_to_norm_pos;
-    input_type unit_uy = electrons[name_u][name_uy].unitSI() / si_to_norm_pos;
-    input_type unit_uz = electrons[name_u][name_uz].unitSI() / si_to_norm_pos;
+    input_type unit_ux = electrons[name_u][name_ux].unitSI();
+    input_type unit_uy = electrons[name_u][name_uy].unitSI();
+    input_type unit_uz = electrons[name_u][name_uz].unitSI();
     input_type unit_qq = electrons[name_q][name_qq].unitSI() / si_to_norm_charge;
 
     // Check if q/m matches that of electrons
