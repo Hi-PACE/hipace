@@ -94,6 +94,21 @@ public:
      */
     bool InSameTransverseCommunicator (int rank) const;
 
+    void
+    SetupPos(openPMD::ParticleSpecies& currSpecies,
+             const unsigned long long& np);
+
+    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
+
+    void
+    SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
+                          const amrex::Vector<std::string>& real_comp_names,
+                          unsigned long long np);
+
+    void
+    SaveRealProperty(BeamParticleIterator& pti, openPMD::ParticleSpecies& currSpecies,
+                     unsigned long long const offset, amrex::Vector<std::string> const& real_comp_names);
+
     /** \brief Dump simulation data to file
      *
      * \param[in] output_step current iteration

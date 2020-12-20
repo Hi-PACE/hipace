@@ -67,6 +67,12 @@ public:
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     /** Number of particles on upstream rank (required for IO) */
     int m_num_particles_on_upstream_ranks {0};
+
+    unsigned long long m_total_num_particles {0};
+
+    int get_upstream_n_part () {return m_num_particles_on_upstream_ranks;};
+
+    unsigned long long get_total_num_particles () {return m_total_num_particles;};
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
