@@ -33,7 +33,6 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     currSpecies["charge"][scalar].resetDataset( realType );
     // currSpecies["charge"][scalar].makeConstant( phys_const.q_e ); // if this is set, the charge is wrong
     currSpecies["mass"][scalar].resetDataset( realType );
-    // currSpecies["mass"][scalar].makeConstant( phys_const.m_e ); // if this is set, the momentum is wrong
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
@@ -63,9 +62,6 @@ OpenPMDWriter::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
         auto particleVarComp = currSpecies[record_name][component_name];
         particleVarComp.resetDataset(particlesLineup);
 
-        // handle scalar and non-scalar records by name
-        // std::string record_name, component_name;
-        // std::tie(record_name, component_name) = utils::name2openPMD(real_comp_names[i]);
         auto currRecord = currSpecies[record_name];
 
         // meta data for ED-PIC extension
