@@ -88,13 +88,11 @@ OpenPMDWriter::SaveRealProperty(BeamParticleIterator& pti,
     /* we have 4 SoA real attributes: weight, ux, uy, uz */
     int const NumSoARealAttributes = real_comp_names.size();
 
-
     auto const numParticleOnTile = pti.numParticles();
     uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-    // auto const& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
     auto const& soa = pti.GetStructOfArrays();
     {
-        for (auto idx=0; idx<NumSoARealAttributes; idx++) {
+        for (int idx=0; idx<NumSoARealAttributes; idx++) {
 
             // handle scalar and non-scalar records by name
             std::string record_name, component_name;
