@@ -780,7 +780,7 @@ Hipace::SetupPos(openPMD::ParticleSpecies& currSpecies,
     currSpecies["charge"][scalar].resetDataset( realType );
     currSpecies["charge"][scalar].makeConstant( phys_const.q_e );
     currSpecies["mass"][scalar].resetDataset( realType );
-    // currSpecies["mass"][scalar].makeConstant( phys_const.m_e );
+    // currSpecies["mass"][scalar].makeConstant( phys_const.m_e ); //if this is set, the momentum is wrong
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
@@ -793,11 +793,12 @@ Hipace::SetupPos(openPMD::ParticleSpecies& currSpecies,
 void
 Hipace::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
                       const amrex::Vector<std::string>& real_comp_names,
-                      unsigned long long np)
+                      const unsigned long long np)
 {
     auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
 
-    int const m_NumSoARealAttributes = 4;
+    /* we have 4 SoA real attributes: weight, ux, uy, uz */
+    int const NumSoARealAttributes = 4;
 
     auto counter = real_comp_names.size();
     for (int i = 0; i < counter; ++i)
@@ -811,8 +812,8 @@ Hipace::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
     }
 
     std::set< std::string > addedRecords; // add meta-data per record only once
-    for (auto idx=0; idx<m_NumSoARealAttributes; idx++) {
-
+    for (auto idx=0; idx<NumSoARealAttributes; idx++)
+    {
         // handle scalar and non-scalar records by name
         std::string record_name, component_name;
         std::tie(record_name, component_name) = utils::name2openPMD(real_comp_names[idx]);
@@ -828,8 +829,8 @@ Hipace::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
             currRecord.setAttribute( "weightingPower", 1.0 );
         else
             currRecord.setAttribute( "weightingPower", 0.0 );
-        }
-    }
+        } // end if newRecord
+    } // end for NumSoARealAttributes
 }
 
 void
@@ -839,16 +840,16 @@ Hipace::SaveRealProperty(BeamParticleIterator& pti,
                         amrex::Vector<std::string> const& real_comp_names)
 
 {
-    int const m_NumSoARealAttributes = 4;
+    /* we have 4 SoA real attributes: weight, ux, uy, uz */
+    int const NumSoARealAttributes = 4;
 
 
     auto const numParticleOnTile = pti.numParticles();
     uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
     // auto const& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
     auto const& soa = pti.GetStructOfArrays();
-
     {
-        for (auto idx=0; idx<m_NumSoARealAttributes; idx++) {
+        for (auto idx=0; idx<NumSoARealAttributes; idx++) {
 
             // handle scalar and non-scalar records by name
             std::string record_name, component_name;
@@ -858,9 +859,8 @@ Hipace::SaveRealProperty(BeamParticleIterator& pti,
 
             currRecordComp.storeChunk(openPMD::shareRaw(soa.GetRealData(idx)),
                 {offset}, {numParticleOnTile64});
-
-        }
-  }
+        } // end for NumSoARealAttributes
+    }
 }
 
 void
@@ -906,7 +906,8 @@ Hipace::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
                         curr.get()[i] = pos_structs[i].pos(currDim);
                     }
                     std::string const positionComponent = positionComponents[currDim];
-                    beam_species["position"][positionComponent].storeChunk(curr, {offset}, {numParticleOnTile64});
+                    beam_species["position"][positionComponent].storeChunk(curr, {offset},
+                                                                           {numParticleOnTile64});
                 }
 
 
@@ -921,7 +922,6 @@ Hipace::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
             }
             //  save "extra" particle properties in SoA (momenta and weight)
             SaveRealProperty(pti, beam_species, offset, real_names);
-
 
         }  // end for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
     }
