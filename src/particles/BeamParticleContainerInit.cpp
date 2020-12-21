@@ -491,12 +491,24 @@ InitBeamFromFile (std::string input_file,
 
         input_type file_e_m = q_q_data.get()[0] * unit_qq / (q_q_data.get()[0] * unit_mm);
         if( std::abs(file_e_m - 1.7588e11) > 1e9) {
+            std::cout << "beam charge mass ratio "<<file_e_m << "\n";
             amrex::Abort("Charge / Mass of Beam Particle from file "
-                         "dose not match electrons (1.7588e11)\n");
+                         "does not match electrons (1.7588e11)\n");
         }
     }
     else {
         series.flush();
+    }
+
+    if (m_beam_in_normalized_units) {
+        auto dx = geom.CellSizeArray();
+        unit_rx = 1.;
+        unit_ry = 1.;
+        unit_rz = 1.;
+        unit_ux = 1.;
+        unit_uy = 1.;
+        unit_uz = 1.;
+        unit_qq = m_weight_is_charge_density ? 1. : 1./(dx[0] * dx[1] * dx[2]);
     }
 
     // input data using AddOneBeamParticle function, make necessary variables and arrays

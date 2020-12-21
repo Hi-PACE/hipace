@@ -105,6 +105,9 @@ private:
     std::string m_input_file; /**< Path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
+    bool m_beam_in_normalized_units {0}; /**< Normalization of the input beam from file */
+     /** Whether the weight of input beam from file  is a charge density (or a total charge)*/
+    bool m_weight_is_charge_density {1};
 };
 
 /** \brief Iterator over boxes in a particle container */
