@@ -50,9 +50,10 @@ private:
                           unsigned long long const offset,
                           amrex::Vector<std::string> const& real_comp_names);
 
+    amrex::Vector<std::string> m_real_names {"weighting","momentum_x","momentum_y","momentum_z"};
 public:
     /** Constructor */
-    explicit OpenPMDWriter () {};
+    explicit OpenPMDWriter ();
     /** \brief writing openPMD beam particle data
      *
      * \param[in] beams multi beam container which is written to openPMD file

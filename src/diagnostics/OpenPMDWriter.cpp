@@ -7,6 +7,12 @@
 
 #ifdef HIPACE_USE_OPENPMD
 
+OpenPMDWriter::OpenPMDWriter ()
+{
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
+        "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
+}
+
 void
 OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
          const unsigned long long& np)
@@ -45,10 +51,10 @@ OpenPMDWriter::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
     auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
 
     /* we have 4 SoA real attributes: weight, ux, uy, uz */
-    int const NumSoARealAttributes = 4;
+    int const NumSoARealAttributes = real_comp_names.size();
+    std::set< std::string > addedRecords; // add meta-data per record only once
 
-    auto counter = real_comp_names.size();
-    for (int i = 0; i < counter; ++i)
+    for (int i = 0; i < NumSoARealAttributes; ++i)
     {
         // handle scalar and non-scalar records by name
         std::string record_name, component_name;
@@ -56,14 +62,10 @@ OpenPMDWriter::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
 
         auto particleVarComp = currSpecies[record_name][component_name];
         particleVarComp.resetDataset(particlesLineup);
-    }
 
-    std::set< std::string > addedRecords; // add meta-data per record only once
-    for (auto idx=0; idx<NumSoARealAttributes; idx++)
-    {
         // handle scalar and non-scalar records by name
-        std::string record_name, component_name;
-        std::tie(record_name, component_name) = utils::name2openPMD(real_comp_names[idx]);
+        // std::string record_name, component_name;
+        // std::tie(record_name, component_name) = utils::name2openPMD(real_comp_names[i]);
         auto currRecord = currSpecies[record_name];
 
         // meta data for ED-PIC extension
@@ -88,7 +90,7 @@ OpenPMDWriter::SaveRealProperty(BeamParticleIterator& pti,
 
 {
     /* we have 4 SoA real attributes: weight, ux, uy, uz */
-    int const NumSoARealAttributes = 4;
+    int const NumSoARealAttributes = real_comp_names.size();
 
 
     auto const numParticleOnTile = pti.numParticles();
@@ -121,9 +123,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
 
         const unsigned long long np = beams.get_total_num_particles(ibeam);
-        amrex::Vector<std::string> real_names {"weighting","momentum_x","momentum_y","momentum_z"};
         SetupPos(beam_species, np);
-        SetupRealProperties(beam_species, real_names, np);
+        SetupRealProperties(beam_species, m_real_names, np);
 
         const int lev = 0; // we only have 1 level for now
 
@@ -167,7 +168,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                 beam_species["id"][scalar].storeChunk(ids, {offset}, {numParticleOnTile64});
             }
             //  save "extra" particle properties in SoA (momenta and weight)
-            SaveRealProperty(pti, beam_species, offset, real_names);
+            SaveRealProperty(pti, beam_species, offset, m_real_names);
 
         }  // end for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
     }
