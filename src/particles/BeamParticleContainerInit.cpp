@@ -468,9 +468,9 @@ InitBeamFromFile (std::string input_file,
         input_type m_e = 9.1093837015e-31;
         input_type c = 299'792'458.;
         input_type omega_p = q_e * sqrt( n_0 / ( ep0 * m_e ));
-        input_type kp_inf = c / omega_p;
-        si_to_norm_pos = kp_inf;
-        si_to_norm_charge = n_0 * q_e * dx[0] * dx[1] * dx[2] * kp_inf * kp_inf * kp_inf;
+        input_type kp_inv = c / omega_p;
+        si_to_norm_pos = kp_inv;
+        si_to_norm_charge = n_0 * q_e * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
     }
 
     input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
