@@ -157,7 +157,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                                                                            {numParticleOnTile64});
                 }
 
-
                 // save particle ID after converting it to a globally unique ID
                 std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                     [](uint64_t const *p){ delete[] p; } );
