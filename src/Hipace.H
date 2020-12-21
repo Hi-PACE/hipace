@@ -13,6 +13,7 @@
 
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
+#include "diagnostics/OpenPMDWriter.H"
 namespace io = openPMD;
 #endif
 
@@ -93,43 +94,6 @@ public:
      * \param[in] rank MPI rank to test
      */
     bool InSameTransverseCommunicator (int rank) const;
-
-    /** \brief setup the openPMD parameters do dump the AoS beam data
-     *
-     * \param[in,out] currSpecies openPMD species to set up
-     * \param[in] np total number of particles in the bunch
-     */
-    void SetupPos(openPMD::ParticleSpecies& currSpecies,
-                  const unsigned long long& np);
-
-    /** \brief writing openPMD beam particle data
-     *
-     * \param[in] beams multi beam container which is written to openPMD file
-     * \param[in,out] iteration openPMD iteration to which the data is written
-     */
-    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
-
-    /** \brief setup the openPMD parameters do dump the SoA beam data
-     *
-     * \param[in,out] currSpecies openPMD species to set up
-     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
-     * \param[in] np total number of particles in the bunch
-     */
-    void SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
-                             const amrex::Vector<std::string>& real_comp_names,
-                             const unsigned long long np);
-
-    /** \brief save the SoA beam data to openPMD
-     *
-     * \param[in,out] pti beam particle iterator of the data to be dumped
-     * \param[in,out] currSpecies openPMD species to set up
-     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
-     * \param[in] offset number of particles which have already been written
-     * \param[in] np total number of particles in the bunch
-     */
-    void SaveRealProperty(BeamParticleIterator& pti, openPMD::ParticleSpecies& currSpecies,
-                          unsigned long long const offset,
-                          amrex::Vector<std::string> const& real_comp_names);
 
     /** \brief Dump simulation data to file
      *
@@ -257,6 +221,11 @@ public:
     static amrex::Real m_external_accel_field_strength;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+#ifdef HIPACE_USE_OPENPMD
+    /** openPMD writer instance */
+    OpenPMDWriter m_openpmd_writer;
+#endif
+
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
