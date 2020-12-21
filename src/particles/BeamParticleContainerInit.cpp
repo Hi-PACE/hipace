@@ -286,7 +286,8 @@ BeamParticleContainer::
 InitBeamFromFileHelper (std::string input_file,
                         bool coordinates_specified,
                         amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
-                        const amrex::Geometry& geom)
+                        const amrex::Geometry& geom,
+                        const amrex::Real n_0)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -309,10 +310,12 @@ InitBeamFromFileHelper (std::string input_file,
     }
 
     if(input_type == openPMD::Datatype::FLOAT) {
-        InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz, geom);
+        InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz,
+                                geom, n_0);
     }
     else if(input_type == openPMD::Datatype::DOUBLE) {
-        InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz, geom);
+        InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz,
+                                 geom, n_0);
     }
     else{
         amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
@@ -330,7 +333,8 @@ BeamParticleContainer::
 InitBeamFromFile (std::string input_file,
                   bool coordinates_specified,
                   amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
-                  const amrex::Geometry& geom)
+                  const amrex::Geometry& geom,
+                  const amrex::Real n_0)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -455,12 +459,18 @@ InitBeamFromFile (std::string input_file,
     series.flush();
 
     // calculate the multiplier to convert to Hipace units
+    input_type q_e = 1.602176634e-19;
     input_type si_to_norm_pos = 1.;
-    input_type si_to_norm_charge = 1.602176634e-19;
+    input_type si_to_norm_charge = q_e;
     if(Hipace::m_normalized_units) {
         auto dx = geom.CellSizeArray();
-        si_to_norm_pos = 1e-5;
-        si_to_norm_charge = 2.8239587008591567e23 * 1.602176634e-19 * dx[0] * dx[1] * dx[2] * 1e-15;
+        input_type ep0 = 8.8541878128e-12;
+        input_type m_e = 9.1093837015e-31;
+        input_type c = 299'792'458.;
+        input_type omega_p = q_e * sqrt( n_0 / ( ep0 * m_e ));
+        input_type kp_inf = c / omega_p;
+        si_to_norm_pos = kp_inf;
+        si_to_norm_charge = n_0 * q_e * dx[0] * dx[1] * dx[2] * kp_inf * kp_inf * kp_inf;
     }
 
     input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;

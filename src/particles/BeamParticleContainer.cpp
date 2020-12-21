@@ -80,8 +80,15 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::ParmParse pp(m_name);
         pp.get("input_file", m_input_file);
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
+        bool n_0_specified = pp.query("plasma_density", m_plasma_density);
 
-        InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom);
+        if(Hipace::m_normalized_units) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(n_0_specified, "Please specify the plasma density of "
+            "the external beam to use it with normalized units with beam.plasma_density");
+        }
+
+        InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,
+                               m_plasma_density);
 
     } else {
 

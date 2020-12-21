@@ -2,13 +2,17 @@ import math
 import openpmd_api as io
 import numpy as np
 from numpy import random
+from scipy import constants
 
 n = 1000000
-beam_density = 3
+beam_density = 3.
+plasma_density = 2.8239587008591567e23
 beam_position_mean = [0, 0, 0]
 beam_position_std = [0.3, 0.3, 1.4]
 beam_u_mean = [0, 0, 2000]
 beam_u_std = [0, 0, 0]
+
+kp_inf = constants.c / constants.e * math.sqrt(constants.epsilon_0 * constants.m_e / plasma_density)
 
 single_charge = (beam_density * beam_position_std[0] * beam_position_std[1] *
                  beam_position_std[2] * np.sqrt(2. * math.pi)**3 / n)
@@ -23,45 +27,45 @@ series = io.Series("beam_%05T.h5", io.Access.create)
 
 i = series.iterations[0]
 
-partikel = i.particles["Electrons"]
+particel = i.particles["Electrons"]
 
 dataset = io.Dataset(data[0].dtype,data[0].shape)
 
-partikel["r"].unit_dimension = {
+particel["r"].unit_dimension = {
     io.Unit_Dimension.L:  1,
 }
 
-partikel["u"].unit_dimension = {
+particel["u"].unit_dimension = {
     io.Unit_Dimension.L:  1,
     io.Unit_Dimension.T: -1,
 }
 
-partikel["q"].unit_dimension = {
+particel["q"].unit_dimension = {
     io.Unit_Dimension.I:  1,
     io.Unit_Dimension.T:  1,
 }
 
-partikel["m"].unit_dimension = {
+particel["m"].unit_dimension = {
     io.Unit_Dimension.M:  1,
 }
 
-for j,k,m in [["r","x",0],["r","y",1],["r","z",2]]:
-    partikel[j][k].reset_dataset(dataset)
-    partikel[j][k].store_chunk(data[m])
-    partikel[j][k].unit_SI = 1.e-5
+for k,m in [["x",0],["y",1],["z",2]]:
+    particel["r"][k].reset_dataset(dataset)
+    particel["r"][k].store_chunk(data[m])
+    particel["r"][k].unit_SI = kp_inf
 
-for j,k,m in [["u","x",3],["u","y",4],["u","z",5]]:
-    partikel[j][k].reset_dataset(dataset)
-    partikel[j][k].store_chunk(data[m])
-    partikel[j][k].unit_SI = 1
+for k,m in [["x",3],["y",4],["z",5]]:
+    particel["u"][k].reset_dataset(dataset)
+    particel["u"][k].store_chunk(data[m])
+    particel["u"][k].unit_SI = 1
 
-partikel["q"]["q"].reset_dataset(dataset)
-partikel["q"]["q"].make_constant(single_charge)
-partikel["q"]["q"].unit_SI = 1.602176634e-19 * 2.8239587008591567e23 * (1.e-5)**3
+particel["q"]["q"].reset_dataset(dataset)
+particel["q"]["q"].make_constant(single_charge)
+particel["q"]["q"].unit_SI = constants.e * plasma_density * kp_inf**3
 
-partikel["m"]["m"].reset_dataset(dataset)
-partikel["m"]["m"].make_constant(single_charge)
-partikel["m"]["m"].unit_SI = 1.602176634e-19 * 2.8239587008591567e23 * (1.e-5)**3 / 1.7588e11
+particel["m"]["m"].reset_dataset(dataset)
+particel["m"]["m"].make_constant(single_charge)
+particel["m"]["m"].unit_SI = constants.m_e * plasma_density * kp_inf**3
 
 series.flush()
 
