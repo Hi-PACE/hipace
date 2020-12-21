@@ -58,6 +58,7 @@ utils::getReversedVec( const amrex::Real* v )
   return u;
 }
 
+#ifdef HIPACE_USE_OPENPMD
 std::pair< std::string, std::string >
 utils::name2openPMD( std::string const& fullName )
 {
@@ -112,3 +113,4 @@ utils::getUnitDimension( std::string const & record_name )
     };
     else return {};
 }
+#endif

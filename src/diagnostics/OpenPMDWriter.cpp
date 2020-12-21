@@ -5,6 +5,8 @@
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
 
+#ifdef HIPACE_USE_OPENPMD
+
 void
 OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
          const unsigned long long& np)
@@ -171,3 +173,5 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         }  // end for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
     }
 }
+
+#endif // HIPACE_USE_OPENPMD

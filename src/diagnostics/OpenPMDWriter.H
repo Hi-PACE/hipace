@@ -13,11 +13,9 @@
 #include <cstdint>
 #include <vector>
 
-//#ifdef HIPACE_USE_OPENPMD
+#ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
 // namespace io = openPMD;
-
-//#endif
 
 /** \brief class handling the IO with openPMD */
 class OpenPMDWriter
@@ -64,6 +62,6 @@ public:
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
 };
 
-
+#endif // HIPACE_USE_OPENPMD
 
 #endif

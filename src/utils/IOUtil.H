@@ -68,6 +68,7 @@ namespace utils
         return uint64_t(id) | uint64_t(cpu) << 32u;
     }
 
+#ifdef HIPACE_USE_OPENPMD
     std::pair< std::string, std::string >
     name2openPMD( std::string const& fullName );
 
@@ -78,6 +79,7 @@ namespace utils
      */
     std::map< openPMD::UnitDimension, double >
     getUnitDimension( std::string const & record_name );
+#endif
 
 }
 
