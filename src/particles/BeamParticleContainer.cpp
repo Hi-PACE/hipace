@@ -2,6 +2,12 @@
 #include "utils/Constants.H"
 #include "Hipace.H"
 
+#ifdef AMREX_USE_MPI
+namespace {
+    constexpr int comm_z_tag = 3000;
+}
+#endif
+
 void
 BeamParticleContainer::ReadParameters ()
 {
@@ -94,5 +100,34 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
 
+    }
+}
+
+void
+BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
+{
+    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
+
+    if (my_rank_z >= 1)
+    {
+        const int num_local_particles = TotalNumberOfParticles(1,1); // get local number of particles
+        const int upstream_particles = m_num_particles_on_upstream_ranks + num_local_particles;
+
+        MPI_Send(&upstream_particles, 1,
+                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                 my_rank_z-1, comm_z_tag, a_comm_z);
+    }
+}
+
+void
+BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
+{
+    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
+    if (my_rank_z  < amrex::ParallelDescriptor::NProcs()-1)
+    {
+        MPI_Status status;
+        MPI_Recv(&m_num_particles_on_upstream_ranks, 1,
+                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                 my_rank_z+1, comm_z_tag, a_comm_z, &status);
     }
 }

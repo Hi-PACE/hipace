@@ -80,3 +80,19 @@ MultiBeam::WritePlotFile (const std::string& filename)
         beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
     }
 }
+
+void
+MultiBeam::NotifyNumParticles (MPI_Comm a_comm_z)
+{
+    for (auto& beam : m_all_beams) {
+        beam.NotifyNumParticles(a_comm_z);
+    }
+}
+
+void
+MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
+{
+    for (auto& beam : m_all_beams) {
+        beam.WaitNumParticles(a_comm_z);
+    }
+}
