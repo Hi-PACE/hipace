@@ -81,9 +81,24 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                             m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
                             m_dy_per_dzeta);
 
+    } else if (m_injection_type == "from_file") {
+
+        amrex::ParmParse pp(m_name);
+        pp.get("input_file", m_input_file);
+        bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
+        bool n_0_specified = pp.query("plasma_density", m_plasma_density);
+
+        if(Hipace::m_normalized_units) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(n_0_specified, "Please specify the plasma density of "
+            "the external beam to use it with normalized units with beam.plasma_density");
+        }
+
+        InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,
+                               m_plasma_density);
+
     } else {
 
-        amrex::Abort("Unknown beam injection type. Must be fixed_ppc or fixed_weight");
+        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
 
     }
 }

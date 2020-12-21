@@ -57,6 +57,21 @@ public:
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
+    /** Initialize a beam from an external input file using openPMD and HDF5 */
+    void InitBeamFromFileHelper (std::string input_file,
+                                 bool coordinates_specified,
+                                 amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                 const amrex::Geometry& geom,
+                                 const amrex::Real n_0);
+
+    /** Checks the input file first to determine its Datatype*/
+    template<typename input_type>
+    void InitBeamFromFile (std::string input_file,
+                           bool coordinates_specified,
+                           amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                           const amrex::Geometry& geom,
+                           const amrex::Real n_0);
+
     /** Loop over beams and pass total number of beam particles on upstream ranks */
     void NotifyNumParticles (MPI_Comm a_comm_z);
 
@@ -85,6 +100,11 @@ private:
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
+    amrex::Real m_plasma_density;
+    /** Density of plasma to convert from_file beam to normalized units */
+    std::string m_input_file; /**< Path to bean input file */
+    /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
+    amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
 };
 
 /** \brief Iterator over boxes in a particle container */
