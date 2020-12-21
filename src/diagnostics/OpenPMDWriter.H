@@ -43,9 +43,8 @@ private:
      *
      * \param[in,out] pti beam particle iterator of the data to be dumped
      * \param[in,out] currSpecies openPMD species to set up
-     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
      * \param[in] offset number of particles which have already been written
-     * \param[in] np total number of particles in the bunch
+     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
      */
     void SaveRealProperty(BeamParticleIterator& pti, openPMD::ParticleSpecies& currSpecies,
                           unsigned long long const offset,
