@@ -31,8 +31,9 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     auto const scalar = openPMD::RecordComponent::SCALAR;
     currSpecies["id"][scalar].resetDataset( idType );
     currSpecies["charge"][scalar].resetDataset( realType );
-    // currSpecies["charge"][scalar].makeConstant( phys_const.q_e ); // if this is set, the charge is wrong
+    currSpecies["charge"][scalar].makeConstant( phys_const.q_e );
     currSpecies["mass"][scalar].resetDataset( realType );
+    currSpecies["charge"][scalar].makeConstant( phys_const.m_e );
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
