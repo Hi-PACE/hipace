@@ -57,3 +57,60 @@ utils::getReversedVec( const amrex::Real* v )
   std::reverse( u.begin(), u.end() );
   return u;
 }
+
+#ifdef HIPACE_USE_OPENPMD
+std::pair< std::string, std::string >
+utils::name2openPMD( std::string const& fullName )
+{
+    std::string record_name = fullName;
+    std::string component_name = openPMD::RecordComponent::SCALAR;
+    std::size_t startComp = fullName.find_last_of("_");
+
+    if( startComp != std::string::npos ) {  // non-scalar
+        record_name = fullName.substr(0, startComp);
+        component_name = fullName.substr(startComp + 1u);
+    }
+    return make_pair(record_name, component_name);
+}
+
+/** Get the openPMD physical dimensionality of a record
+ *
+ * @param record_name name of the openPMD record
+ * @return map with base quantities and power scaling
+ */
+std::map< openPMD::UnitDimension, double >
+utils::getUnitDimension( std::string const & record_name )
+{
+
+    if( record_name == "position" ) return {
+        {openPMD::UnitDimension::L,  1.}
+    };
+    else if( record_name == "positionOffset" ) return {
+        {openPMD::UnitDimension::L,  1.}
+    };
+    else if( record_name == "momentum" ) return {
+        {openPMD::UnitDimension::L,  1.},
+        {openPMD::UnitDimension::M,  1.},
+        {openPMD::UnitDimension::T, -1.}
+    };
+    else if( record_name == "charge" ) return {
+        {openPMD::UnitDimension::T,  1.},
+        {openPMD::UnitDimension::I,  1.}
+    };
+    else if( record_name == "mass" ) return {
+        {openPMD::UnitDimension::M,  1.}
+    };
+    else if( record_name == "E" ) return {
+        {openPMD::UnitDimension::L,  1.},
+        {openPMD::UnitDimension::M,  1.},
+        {openPMD::UnitDimension::T, -3.},
+        {openPMD::UnitDimension::I, -1.},
+    };
+    else if( record_name == "B" ) return {
+        {openPMD::UnitDimension::M,  1.},
+        {openPMD::UnitDimension::I, -1.},
+        {openPMD::UnitDimension::T, -2.}
+    };
+    else return {};
+}
+#endif

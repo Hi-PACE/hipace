@@ -867,6 +867,9 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
             field_comp.storeChunk(data, chunk_offset, chunk_size);
         }
     }
+
+    m_openpmd_writer.WriteBeamParticleData (m_multi_beam, iteration);
+
     m_outputSeries->flush();
 #endif
 
