@@ -33,7 +33,7 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     currSpecies["charge"][scalar].resetDataset( realType );
     currSpecies["charge"][scalar].makeConstant( phys_const.q_e );
     currSpecies["mass"][scalar].resetDataset( realType );
-    currSpecies["charge"][scalar].makeConstant( phys_const.m_e );
+    currSpecies["mass"][scalar].makeConstant( phys_const.m_e );
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
