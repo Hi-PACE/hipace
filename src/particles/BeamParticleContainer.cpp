@@ -104,6 +104,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
 
     }
+
+    /* setting total number of particles, which is required for openPMD I/O */
+    m_total_num_particles = TotalNumberOfParticles();
 }
 
 void

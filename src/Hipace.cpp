@@ -867,6 +867,9 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
             field_comp.storeChunk(data, chunk_offset, chunk_size);
         }
     }
+
+    m_openpmd_writer.WriteBeamParticleData (m_multi_beam, iteration);
+
     m_outputSeries->flush();
 #endif
 
@@ -915,7 +918,7 @@ Hipace::InitDiagnostics ()
     HIPACE_PROFILE("Hipace::InitDiagnostics()");
 
 #ifdef HIPACE_USE_OPENPMD
-    std::string filename = "diags/openPMD/openpmd.h5"; // bp or h5
+    std::string filename = "diags/h5/openpmd.h5"; // bp or h5
 #   ifdef AMREX_USE_MPI
     m_outputSeries = std::make_unique< io::Series >(
         filename, io::Access::CREATE, amrex::ParallelDescriptor::Communicator());
