@@ -35,14 +35,27 @@ OpenPMDWriter::InitDiagnostics ()
 }
 
 void
-OpenPMDWriter::WriteDiagnostics(Fields& a_fields, MultiBeam& a_multi_beam,
-                                amrex::Geometry const& geom, amrex::Real physical_time,
-                                int output_step, int lev, bool slice_F_xz,
-                                const amrex::Vector< std::string > varnames)
+OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
+                                 amrex::Geometry const& geom, amrex::Real physical_time,
+                                 const int output_step, const int lev, const bool slice_F_xz,
+                                 const amrex::Vector< std::string > varnames)
 {
     io::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
+    WriteFieldData(a_fields, geom, output_step, lev, slice_F_xz, varnames, iteration);
+
+    WriteBeamParticleData(a_multi_beam, iteration);
+
+    m_outputSeries->flush();
+}
+
+void
+OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
+                               const int output_step, const int lev, const bool slice_F_xz,
+                               const amrex::Vector< std::string > varnames,
+                               openPMD::Iteration iteration)
+{
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
 
@@ -115,9 +128,68 @@ OpenPMDWriter::WriteDiagnostics(Fields& a_fields, MultiBeam& a_multi_beam,
         }
     }
 
-    WriteBeamParticleData (a_multi_beam, iteration);
+}
 
-    m_outputSeries->flush();
+void
+OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
+{
+    HIPACE_PROFILE("WriteBeamParticleData()");
+
+    for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
+
+        std::string name = beams.get_name(ibeam);
+        openPMD::ParticleSpecies beam_species = iteration.particles[name];
+
+        const unsigned long long np = beams.get_total_num_particles(ibeam);
+        SetupPos(beam_species, np);
+        SetupRealProperties(beam_species, m_real_names, np);
+
+        const int lev = 0; // we only have 1 level for now
+
+        uint64_t offset = static_cast<uint64_t>( beams.get_upstream_n_part(ibeam) );
+        // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
+        for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
+        {
+
+            auto const numParticleOnTile = pti.numParticles();
+            uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
+            // get position and particle ID from aos
+            // note: this implementation iterates the AoS 4x...
+            // if we flush late as we do now, we can also copy out the data in one go
+            const auto& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
+            const auto& pos_structs = aos.begin();
+            {
+                // Save positions
+                std::vector< std::string > const positionComponents{"x", "y", "z"};
+
+                for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
+                {
+                    std::shared_ptr< amrex::ParticleReal > curr(
+                        new amrex::ParticleReal[numParticleOnTile],
+                        [](amrex::ParticleReal const *p){ delete[] p; } );
+
+                    for (auto i=0; i<numParticleOnTile; i++) {
+                        curr.get()[i] = pos_structs[i].pos(currDim);
+                    }
+                    std::string const positionComponent = positionComponents[currDim];
+                    beam_species["position"][positionComponent].storeChunk(curr, {offset},
+                                                                           {numParticleOnTile64});
+                }
+
+                // save particle ID after converting it to a globally unique ID
+                std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
+                    [](uint64_t const *p){ delete[] p; } );
+                for (auto i=0; i<numParticleOnTile; i++) {
+                    ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
+                }
+                auto const scalar = openPMD::RecordComponent::SCALAR;
+                beam_species["id"][scalar].storeChunk(ids, {offset}, {numParticleOnTile64});
+            }
+            //  save "extra" particle properties in SoA (momenta and weight)
+            SaveRealProperty(pti, beam_species, offset, m_real_names);
+
+        }  // end for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
+    }
 }
 
 void
@@ -211,68 +283,6 @@ OpenPMDWriter::SaveRealProperty(BeamParticleIterator& pti,
             currRecordComp.storeChunk(openPMD::shareRaw(soa.GetRealData(idx)),
                 {offset}, {numParticleOnTile64});
         } // end for NumSoARealAttributes
-    }
-}
-
-void
-OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
-{
-    HIPACE_PROFILE("WriteBeamParticleData()");
-
-    for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
-
-        std::string name = beams.get_name(ibeam);
-        openPMD::ParticleSpecies beam_species = iteration.particles[name];
-
-        const unsigned long long np = beams.get_total_num_particles(ibeam);
-        SetupPos(beam_species, np);
-        SetupRealProperties(beam_species, m_real_names, np);
-
-        const int lev = 0; // we only have 1 level for now
-
-        uint64_t offset = static_cast<uint64_t>( beams.get_upstream_n_part(ibeam) );
-        // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
-        for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
-        {
-
-            auto const numParticleOnTile = pti.numParticles();
-            uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-            // get position and particle ID from aos
-            // note: this implementation iterates the AoS 4x...
-            // if we flush late as we do now, we can also copy out the data in one go
-            const auto& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
-            const auto& pos_structs = aos.begin();
-            {
-                // Save positions
-                std::vector< std::string > const positionComponents{"x", "y", "z"};
-
-                for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
-                {
-                    std::shared_ptr< amrex::ParticleReal > curr(
-                        new amrex::ParticleReal[numParticleOnTile],
-                        [](amrex::ParticleReal const *p){ delete[] p; } );
-
-                    for (auto i=0; i<numParticleOnTile; i++) {
-                        curr.get()[i] = pos_structs[i].pos(currDim);
-                    }
-                    std::string const positionComponent = positionComponents[currDim];
-                    beam_species["position"][positionComponent].storeChunk(curr, {offset},
-                                                                           {numParticleOnTile64});
-                }
-
-                // save particle ID after converting it to a globally unique ID
-                std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
-                    [](uint64_t const *p){ delete[] p; } );
-                for (auto i=0; i<numParticleOnTile; i++) {
-                    ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
-                }
-                auto const scalar = openPMD::RecordComponent::SCALAR;
-                beam_species["id"][scalar].storeChunk(ids, {offset}, {numParticleOnTile64});
-            }
-            //  save "extra" particle properties in SoA (momenta and weight)
-            SaveRealProperty(pti, beam_species, offset, m_real_names);
-
-        }  // end for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
     }
 }
 

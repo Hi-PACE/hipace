@@ -217,8 +217,10 @@ public:
     static amrex::Real m_external_accel_field_strength;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+#ifdef HIPACE_USE_OPENPMD
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
+#endif
 
 private:
     /** Pointer to current (and only) instance of class Hipace */

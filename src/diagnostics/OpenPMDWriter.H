@@ -57,6 +57,20 @@ private:
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
 
+    /** \brief writing openPMD field data
+     *
+     * \param[in] a_fields the field class
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] output_step current iteration to be written to file
+     * \param[in] lev MR level
+     * \param[in] slice_F_xz whether to use slice IO or not
+     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in,out] iteration openPMD iteration to which the data is written
+     */
+    void WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
+                         const int output_step, const int lev, const bool slice_F_xz,
+                         const amrex::Vector< std::string > varnames, openPMD::Iteration iteration);
+
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
     amrex::Vector<std::string> m_real_names {"weighting", "momentum_x", "momentum_y", "momentum_z"};
@@ -71,9 +85,20 @@ public:
      */
     void InitDiagnostics ();
 
+    /** \brief writing openPMD data
+     *
+     * \param[in] a_fields the field class
+     * \param[in] beams multi beam container which is written to openPMD file
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] physical_time Physical time of the currenerationt it.
+     * \param[in] output_step current iteration to be written to file
+     * \param[in] lev MR level
+     * \param[in] slice_F_xz whether to use slice IO or not
+     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     */
     void WriteDiagnostics(Fields& a_fields, MultiBeam& a_multi_beam, amrex::Geometry const& geom,
-                          amrex::Real physical_time, int output_step, int lev, bool slice_F_xz,
-                          const amrex::Vector< std::string > varnames);
+                          const amrex::Real physical_time, const int output_step, const int lev,
+                          const bool slice_F_xz, const amrex::Vector< std::string > varnames);
 
     void reset () {m_outputSeries.reset();};
 };
