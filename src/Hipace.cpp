@@ -796,9 +796,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io[lev], m_physical_time,
                                       output_step,  lev, m_slice_F_xz, varnames);
-#endif
-
-#ifndef HIPACE_USE_OPENPMD
+#else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
 
