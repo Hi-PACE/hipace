@@ -199,10 +199,11 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
         /* For serial runs, set adaptive time step right away */
         if (numprocs_z == 1) dt = new_dt;
 
-        auto send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
-        send_buffer[WhichDouble::Dt] = new_dt;
-        MPI_Send(send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 numprocs_z-1, comm_z_tag, a_comm_z);
-        amrex::The_Pinned_Arena()->free(send_buffer);
+        PassTimeStepInfoFinish();
+        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
+        m_send_buffer[WhichDouble::Dt] = new_dt;
+        MPI_Isend(m_send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 numprocs_z-1, comm_z_tag, a_comm_z, &m_send_request);
+
     }
 }
