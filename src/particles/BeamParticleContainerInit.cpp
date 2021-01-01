@@ -490,8 +490,7 @@ InitBeamFromFile (std::string input_file,
         series.flush();
 
         input_type file_e_m = q_q_data.get()[0] * unit_qq / (q_q_data.get()[0] * unit_mm);
-        if( std::abs(file_e_m - 1.7588e11) > 1e9) {
-            std::cout << "beam charge mass ratio "<<file_e_m << "\n";
+        if( std::abs(file_e_m - 1.7588e11 && !m_beam_in_normalized_units) > 1e9) {
             amrex::Abort("Charge / Mass of Beam Particle from file "
                          "does not match electrons (1.7588e11)\n");
         }
