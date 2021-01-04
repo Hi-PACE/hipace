@@ -747,7 +747,7 @@ Hipace::NotifyFinish ()
             amrex::The_Pinned_Arena()->free(m_send_buffer);
             m_send_buffer = nullptr;
         }
-        if (m_send_buffer) {
+        if (m_psend_buffer) {
             MPI_Status status;
             MPI_Wait(&m_psend_request, &status);
             amrex::The_Pinned_Arena()->free(m_psend_buffer);
