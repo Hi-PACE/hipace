@@ -8,7 +8,7 @@ n = 1000000
 beam_density = 3.
 plasma_density = 2.8239587008591567e23
 beam_position_mean = [0, 0, 0]
-beam_position_std = [0.3, 0.3, 1.4]
+beam_position_std = [0.3, 0.3, 1.41]
 beam_u_mean = [0, 0, 2000]
 beam_u_std = [0, 0, 0]
 
