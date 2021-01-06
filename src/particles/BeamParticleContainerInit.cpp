@@ -289,9 +289,9 @@ InitBeamFromFileHelper (std::string input_file,
                         const amrex::Geometry& geom,
                         const amrex::Real n_0)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
-
     #ifdef HIPACE_USE_OPENPMD
+
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     {
@@ -336,9 +336,9 @@ InitBeamFromFile (std::string input_file,
                   const amrex::Geometry& geom,
                   const amrex::Real n_0)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
-
     #ifdef HIPACE_USE_OPENPMD
+
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
 
@@ -459,18 +459,17 @@ InitBeamFromFile (std::string input_file,
     series.flush();
 
     // calculate the multiplier to convert to Hipace units
-    input_type q_e = 1.602176634e-19;
-    input_type si_to_norm_pos = 1.;
-    input_type si_to_norm_charge = q_e;
+    const PhysConst phys_const_SI = make_constants_SI();
+    input_type si_to_norm_pos = (input_type)( 1. );
+    input_type si_to_norm_charge = (input_type)( phys_const_SI.q_e );
     if(Hipace::m_normalized_units) {
         auto dx = geom.CellSizeArray();
-        input_type ep0 = 8.8541878128e-12;
-        input_type m_e = 9.1093837015e-31;
-        input_type c = 299'792'458.;
-        input_type omega_p = q_e * sqrt( n_0 / ( ep0 * m_e ));
-        input_type kp_inv = c / omega_p;
-        si_to_norm_pos = kp_inv;
-        si_to_norm_charge = n_0 * q_e * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
+        double omega_p = (double)phys_const_SI.q_e * sqrt( (double)n_0 /
+                                      ( (double)phys_const_SI.ep0 * (double)phys_const_SI.m_e ) );
+        double kp_inv = (double)phys_const_SI.c / omega_p;
+        si_to_norm_pos = (input_type)kp_inv;
+        si_to_norm_charge = (input_type)( n_0 * phys_const_SI.q_e * dx[0] * dx[1] * dx[2] *
+                                          kp_inv * kp_inv * kp_inv );
     }
 
     input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
@@ -490,7 +489,7 @@ InitBeamFromFile (std::string input_file,
         series.flush();
 
         input_type file_e_m = q_q_data.get()[0] * unit_qq / (q_q_data.get()[0] * unit_mm);
-        if( std::abs(file_e_m - 1.7588e11) > 1e9) {
+        if( std::abs(file_e_m - ( phys_const_SI.q_e / phys_const_SI.m_e ) ) > 1e9) {
             amrex::Abort("Charge / Mass of Beam Particle from file "
                          "dose not match electrons (1.7588e11)\n");
         }
