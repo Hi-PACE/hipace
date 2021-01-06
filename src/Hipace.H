@@ -13,6 +13,7 @@
 
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
+#include "diagnostics/OpenPMDWriter.H"
 namespace io = openPMD;
 #endif
 
@@ -122,10 +123,6 @@ public:
      */
     void ResetAllQuantities (int lev);
 
-    /** \brief Initialize diagnostics (collective operation)
-     */
-    void InitDiagnostics ();
-
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
      */
@@ -220,6 +217,11 @@ public:
     static amrex::Real m_external_accel_field_strength;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+#ifdef HIPACE_USE_OPENPMD
+    /** openPMD writer instance */
+    OpenPMDWriter m_openpmd_writer;
+#endif
+
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
@@ -227,11 +229,6 @@ private:
     amrex::Geometry m_slice_geom;
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
-
-#ifdef HIPACE_USE_OPENPMD
-    /** Parallel openPMD-api Series object for output */
-    std::unique_ptr< io::Series > m_outputSeries;
-#endif
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
