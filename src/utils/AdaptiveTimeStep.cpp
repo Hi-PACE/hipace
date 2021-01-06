@@ -33,18 +33,31 @@ AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
 
     if ((nt % numprocs_z == 0) && (my_rank_z >= 1))
     {
-        auto send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
+        PassTimeStepInfoFinish();
+        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
             sizeof(amrex::Real)*WhichDouble::N);
         for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
-            send_buffer[idouble] = m_timestep_data[idouble];
+            m_send_buffer[idouble] = m_timestep_data[idouble];
         }
 
-        MPI_Send(send_buffer, WhichDouble::N,
+        MPI_Isend(m_send_buffer, WhichDouble::N,
                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 my_rank_z-1, comm_z_tag, a_comm_z);
+                 my_rank_z-1, comm_z_tag, a_comm_z, &m_send_request);
 
-        amrex::The_Pinned_Arena()->free(send_buffer);
     }
+}
+
+void
+AdaptiveTimeStep::PassTimeStepInfoFinish ()
+{
+#ifdef AMREX_USE_MPI
+    if (m_send_buffer) {
+        MPI_Status status;
+        MPI_Wait(&m_send_request, &status);
+        amrex::The_Pinned_Arena()->free(m_send_buffer);
+        m_send_buffer = nullptr;
+    }
+#endif
 }
 
 void
@@ -186,10 +199,11 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
         /* For serial runs, set adaptive time step right away */
         if (numprocs_z == 1) dt = new_dt;
 
-        auto send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
-        send_buffer[WhichDouble::Dt] = new_dt;
-        MPI_Send(send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 numprocs_z-1, comm_z_tag, a_comm_z);
-        amrex::The_Pinned_Arena()->free(send_buffer);
+        PassTimeStepInfoFinish();
+        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
+        m_send_buffer[WhichDouble::Dt] = new_dt;
+        MPI_Isend(m_send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 numprocs_z-1, comm_z_tag, a_comm_z, &m_send_request);
+
     }
 }
