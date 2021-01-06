@@ -45,9 +45,13 @@ OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
 
     WriteFieldData(a_fields, geom, output_step, lev, slice_F_xz, varnames, iteration);
 
+    a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
     WriteBeamParticleData(a_multi_beam, iteration);
 
     m_outputSeries->flush();
+
+    // back conversion after the flush, to not change the data to be written to file
+    a_multi_beam.ConvertUnits(ConvertDirection::SI_to_HIPACE);
 }
 
 void

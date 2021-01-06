@@ -1,6 +1,7 @@
 #include "BeamParticleContainer.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 #ifdef AMREX_USE_MPI
 namespace {
@@ -133,4 +134,58 @@ BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                  my_rank_z+1, comm_z_tag, a_comm_z, &status);
     }
+}
+
+// Particle momentum is defined as gamma*velocity, which is neither
+// SI mass*gamma*velocity nor normalized gamma*velocity/c.
+// This converts momentum to SI units (or vice-versa) to write SI data
+// to file. For normalized units, it converts it to the normalized momentum
+void
+BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
+{
+    HIPACE_PROFILE("BeamParticleContainer::ConvertUnits()");
+    using namespace amrex::literals;
+
+    const PhysConst phys_const_SI = make_constants_SI();
+
+    // Compute conversion factor
+    amrex::ParticleReal factor = 1_rt;
+
+    if(Hipace::m_normalized_units){
+        if (convert_direction == ConvertDirection::HIPACE_to_SI){
+            factor = phys_const_SI.c;
+        } else if (convert_direction == ConvertDirection::SI_to_HIPACE){
+            factor = 1._rt/phys_const_SI.c;
+        }
+    }
+    else {
+        if (convert_direction == ConvertDirection::HIPACE_to_SI){
+            factor = phys_const_SI.m_e;
+        } else if (convert_direction == ConvertDirection::SI_to_HIPACE){
+            factor = 1._rt/phys_const_SI.m_e;
+        }
+    }
+
+    const int nLevels = finestLevel();
+    for (int lev=0; lev<=nLevels; lev++){
+
+        for (BeamParticleIterator pti(*this, lev); pti.isValid(); ++pti)
+        {
+            // - momenta are stored as a struct of array, in `attribs`
+            auto& soa = pti.GetStructOfArrays();
+            const auto uxp = soa.GetRealData(BeamIdx::ux).data();
+            const auto uyp = soa.GetRealData(BeamIdx::uy).data();
+            const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+
+            // Loop over the particles and convert momentum
+            const long np = pti.numParticles();
+            amrex::ParallelFor( np,
+                [=] AMREX_GPU_DEVICE (long i) {
+                    uxp[i] *= factor;
+                    uyp[i] *= factor;
+                    uzp[i] *= factor;
+                });
+        }
+    }
+    return;
 }
