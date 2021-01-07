@@ -136,10 +136,6 @@ BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
     }
 }
 
-// Particle momentum is defined as gamma*velocity, which is neither
-// SI mass*gamma*velocity nor normalized gamma*velocity/c.
-// This converts momentum to SI units (or vice-versa) to write SI data
-// to file. For normalized units, it converts it to the normalized momentum
 void
 BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
 {

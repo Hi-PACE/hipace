@@ -91,7 +91,12 @@ public:
 
     unsigned long long get_total_num_particles () {return m_total_num_particles;};
 
-    /** converts the momenta from the HiPACE convention to SI and vice-versa */
+    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
+     *
+     * Particle momentum is defined as gamma*velocity, which is neither
+     * SI mass*gamma*velocity nor normalized gamma*velocity/c.
+     * This converts momentum to SI units (or vice-versa) to write SI data
+     * to file. For normalized units, it converts it to the normalized momentum */
     void ConvertUnits (ConvertDirection convert_dir);
 private:
     std::string m_name; /**< name of the species */
