@@ -297,16 +297,23 @@ InitBeamFromFileHelper (std::string input_file,
     {
         // Check what kind of Datatype is used in beam file
         auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
-        if(series.iterations[0].particles.size() != 1) {
-            amrex::Abort("Beam Input file must have exactly one particle type in iteration 0\n");
+
+        amrex::Print() << "provided name " << m_particle_name << "\n";
+        if (!series.iterations[m_iteration_to_read_in].particles.contains(m_particle_name)) {
+                amrex::Print() << "Error, beam input file must have exactly one particle species or the "
+                "particle species name must be provided. The input file contains the "
+                "following particle species names: ";
+                for( auto const& particle_type : series.iterations[m_iteration_to_read_in].particles ) {
+                    amrex::Print() << "- " << particle_type.first << "\n";
+                }
+            amrex::Abort();
         }
-        for( auto const& particle_type : series.iterations[0].particles ) {
-            for( auto const& physical_quantity : particle_type.second ) {
+        auto const particle_type = series.iterations[m_iteration_to_read_in].particles[m_particle_name];
+            for( auto const& physical_quantity : particle_type ) {
                 for( auto const& axes_direction : physical_quantity.second ) {
                     input_type = axes_direction.second.getDatatype();
                 }
             }
-        }
     }
 
     if(input_type == openPMD::Datatype::FLOAT) {
@@ -343,78 +350,91 @@ InitBeamFromFile (std::string input_file,
     auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
 
     // Initialize variables to translate between names from the file and names in Hipace
-    std::string name_particle ="";
-    std::string name_r ="";
-    std::string name_rx ="";
-    std::string name_ry ="";
-    std::string name_rz ="";
-    std::string name_u ="";
-    std::string name_ux ="";
-    std::string name_uy ="";
-    std::string name_uz ="";
-    std::string name_m ="";
-    std::string name_mm ="";
-    std::string name_q ="";
-    std::string name_qq ="";
+    // std::string name_particle ="";
+    std::string name_r ="position";
+    std::string name_rx ="x";
+    std::string name_ry ="y";
+    std::string name_rz ="z";
+    std::string name_u ="momentum";
+    std::string name_ux ="x";
+    std::string name_uy ="y";
+    std::string name_uz ="z";
+    std::string name_m ="mass";
+    std::string name_mm = openPMD::RecordComponent::SCALAR;
+    std::string name_q ="charge";
+    std::string name_qq = openPMD::RecordComponent::SCALAR;
 
-    if(series.iterations[0].particles.size() != 1) {
-        amrex::Abort("Beam Input File must have exactly one particle type in iteration 0");
+    if(!series.iterations[m_iteration_to_read_in].particles.contains(m_particle_name)) {
+            amrex::Print() << "Error, beam input file must have exactly one particle species or the "
+            "particle species name must be provided. The input file contains the "
+            "following particle species names: ";
+            for( auto const& particle_type : series.iterations[m_iteration_to_read_in].particles ) {
+                amrex::Print() << "- " << particle_type.first << "\n";
+            }
+        amrex::Abort();
     }
 
     // Iterate through all matadata in file, search for unit combination for Distance, Velocity,
     // Charge, Mass. Auto detect coordinates if named x y z or X Y Z etc.
-    for( auto const& particle_type : series.iterations[0].particles ) {
-        name_particle =  particle_type.first;
+    // auto beam_name = series.iterations[m_iteration_to_read_in].particles[m_particle_name];
+    // std::vector
+    // for( auto const& particle_type : series.iterations[m_iteration_to_read_in].particles ) {
+    //     name_particle =  particle_type.first;
+    // }
 
-        for( auto const& physical_quantity : particle_type.second ) {
+    auto const particle_type = series.iterations[m_iteration_to_read_in].particles[m_particle_name];
+    // name_particle =  particle_type.first;
 
-            std::string units = "";
-            for( auto const& unit_dimension : physical_quantity.second.unitDimension()) {
-                units += std::to_string(unit_dimension) + ",";
-            }
+    for( auto const& physical_quantity : particle_type ) {
 
-            if(units == "1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
-                name_r = physical_quantity.first;
-                for( auto const& axes_direction : physical_quantity.second ) {
-                    if(axes_direction.first == "x" || axes_direction.first == "X") {
-                        name_rx = axes_direction.first;
-                    }
-                    if(axes_direction.first == "y" || axes_direction.first == "Y") {
-                        name_ry = axes_direction.first;
-                    }
-                    if(axes_direction.first == "z" || axes_direction.first == "Z") {
-                        name_rz = axes_direction.first;
-                    }
+        std::string units = "";
+        for( auto const& unit_dimension : physical_quantity.second.unitDimension()) {
+            units += std::to_string(unit_dimension) + ",";
+        }
+
+        // FIXME: a safer comparison with epsilon
+        if(units == "1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+            name_r = physical_quantity.first;
+            for( auto const& axes_direction : physical_quantity.second ) {
+                if(axes_direction.first == "x" || axes_direction.first == "X") {
+                    name_rx = axes_direction.first;
                 }
-            }
-            else if(units == "1.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,") {
-                name_u = physical_quantity.first;
-                for( auto const& axes_direction : physical_quantity.second ) {
-                    if(axes_direction.first == "x" || axes_direction.first == "X") {
-                        name_ux = axes_direction.first;
-                    }
-                    if(axes_direction.first == "y" || axes_direction.first == "Y") {
-                        name_uy = axes_direction.first;
-                    }
-                    if(axes_direction.first == "z" || axes_direction.first == "Z") {
-                        name_uz = axes_direction.first;
-                    }
+                if(axes_direction.first == "y" || axes_direction.first == "Y") {
+                    name_ry = axes_direction.first;
                 }
-            }
-            else if(units == "0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
-                name_m = physical_quantity.first;
-                for( auto const& axes_direction : physical_quantity.second ) {
-                    name_mm = axes_direction.first;
-                }
-            }
-            else if(units == "0.000000,0.000000,1.000000,1.000000,0.000000,0.000000,0.000000,") {
-                name_q = physical_quantity.first;
-                for( auto const& axes_direction : physical_quantity.second ) {
-                    name_qq = axes_direction.first;
+                if(axes_direction.first == "z" || axes_direction.first == "Z") {
+                    name_rz = axes_direction.first;
                 }
             }
         }
+        else if(units == "1.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,") {
+            name_u = physical_quantity.first;
+            for( auto const& axes_direction : physical_quantity.second ) {
+                if(axes_direction.first == "x" || axes_direction.first == "X") {
+                    name_ux = axes_direction.first;
+                }
+                if(axes_direction.first == "y" || axes_direction.first == "Y") {
+                    name_uy = axes_direction.first;
+                }
+                if(axes_direction.first == "z" || axes_direction.first == "Z") {
+                    name_uz = axes_direction.first;
+                }
+            }
+        }
+        else if(units == "0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+            name_m = physical_quantity.first;
+            for( auto const& axes_direction : physical_quantity.second ) {
+                name_mm = axes_direction.first;
+            }
+        }
+        else if(units == "0.000000,0.000000,1.000000,1.000000,0.000000,0.000000,0.000000,") {
+            name_q = physical_quantity.first;
+            for( auto const& axes_direction : physical_quantity.second ) {
+                name_qq = axes_direction.first;
+            }
+        }
     }
+
 
     // Overide coordinate names with those from file_coordinates_xyz argument
     if(coordinates_specified) {
@@ -423,31 +443,32 @@ InitBeamFromFile (std::string input_file,
         name_rz = name_uz = file_coordinates_xyz[2];
     }
 
-    if(name_particle == "") {
+    if(m_particle_name == "") {
         amrex::Abort("Could not find a Particle type in Iteration 0 in file\n");
     }
-    if(name_r == "") {
-        amrex::Abort("Could not find Position of dimension L in file\n");
-    }
-    if(name_u == "") {
-        amrex::Abort("Could not find Momentum of dimension L / T in file\n");
-    }
-    if(name_q == "") {
-        amrex::Abort("Could not find Charge of dimension I * T in file\n");
-    }
-    if(name_rx == "" || name_ux == "") {
-        amrex::Abort("Coud not find x coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
-    }
-    if(name_ry == "" || name_uy == "") {
-        amrex::Abort("Coud not find y coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
-    }
-    if(name_rz == "" || name_uz == "") {
-        amrex::Abort("Coud not find z coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
-    }
+    // if(name_r == "") {
+    //     amrex::Abort("Could not find Position of dimension L in file\n");
+    // }
+    // if(name_u == "") {
+    //     amrex::Abort("Could not find Momentum of dimension L / T in file\n");
+    // }
+    // if(name_q == "") {
+    //     amrex::Abort("Could not find Charge of dimension I * T in file\n");
+    // }
+    // if(name_rx == "" || name_ux == "") {
+    //     amrex::Abort("Coud not find x coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
+    // }
+    // if(name_ry == "" || name_uy == "") {
+    //     amrex::Abort("Coud not find y coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
+    // }
+    // if(name_rz == "" || name_uz == "") {
+    //     amrex::Abort("Coud not find z coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
+    // }
 
-    auto electrons = series.iterations[0].particles[name_particle];
+    auto electrons = series.iterations[m_iteration_to_read_in].particles[m_particle_name];
 
     // copy Data
+    amrex::Print() << name_u << " " << name_ux << "\n";
     const std::shared_ptr<input_type> r_x_data = electrons[name_r][name_rx].loadChunk<input_type>();
     const std::shared_ptr<input_type> r_y_data = electrons[name_r][name_ry].loadChunk<input_type>();
     const std::shared_ptr<input_type> r_z_data = electrons[name_r][name_rz].loadChunk<input_type>();
@@ -472,16 +493,27 @@ InitBeamFromFile (std::string input_file,
                                           kp_inv * kp_inv * kp_inv );
     }
 
-    input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
-    input_type unit_ry = electrons[name_r][name_ry].unitSI() / si_to_norm_pos;
-    input_type unit_rz = electrons[name_r][name_rz].unitSI() / si_to_norm_pos;
-    input_type unit_ux = electrons[name_u][name_ux].unitSI();
-    input_type unit_uy = electrons[name_u][name_uy].unitSI();
-    input_type unit_uz = electrons[name_u][name_uz].unitSI();
-    input_type unit_qq = electrons[name_q][name_qq].unitSI() / si_to_norm_charge;
+    bool beam_in_normalized_units = 1;
+    input_type unit_rx = 1;
+    input_type unit_ry = 1;
+    input_type unit_rz = 1;
+    input_type unit_ux = 1;
+    input_type unit_uy = 1;
+    input_type unit_uz = 1;
+    input_type unit_qq = 1;
+    if (!beam_in_normalized_units){
+        unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
+        unit_ry = electrons[name_r][name_ry].unitSI() / si_to_norm_pos;
+        unit_rz = electrons[name_r][name_rz].unitSI() / si_to_norm_pos;
+        unit_ux = electrons[name_u][name_ux].unitSI();
+        unit_uy = electrons[name_u][name_uy].unitSI();
+        unit_uz = electrons[name_u][name_uz].unitSI();
+        unit_qq = electrons[name_q][name_qq].unitSI() / si_to_norm_charge;
+    }
+
 
     // Check if q/m matches that of electrons
-    if(name_mm != "") {
+    if(name_mm != "" && false) {
         input_type unit_mm = electrons[name_m][name_mm].unitSI() / si_to_norm_charge;
         const std::shared_ptr< input_type > m_m_data = electrons[name_m][
                                                        name_mm].loadChunk< input_type >();

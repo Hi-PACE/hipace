@@ -7,7 +7,8 @@ hipace.predcorr_B_error_tolerance = -1
 amr.blocking_factor = 2
 amr.max_level = 0
 
-max_step = 1
+max_step = 10
+hipace.do_adaptive_time_step=1
 hipace.output_period = 1
 
 hipace.numprocs_x = 1
@@ -20,7 +21,7 @@ geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -80.e-6   -80.e-6   -60.e-6    # physical domain
 geometry.prob_hi     =  80.e-6    80.e-6    60.e-6
 
-beams.names = beam
+beams.names = beam beam2
 beam.injection_type = fixed_ppc
 beam.profile = gaussian
 beam.zmin = -59.e-6
@@ -32,6 +33,18 @@ beam.u_std = 0. 0. 0.
 beam.position_mean = 0. 0. 0
 beam.position_std = 3.e-6 3.e-6 14.1e-6
 beam.ppc = 1 1 1
+
+beam2.injection_type = fixed_ppc
+beam2.profile = gaussian
+beam2.zmin = -59.e-6
+beam2.zmax = 59.e-6
+beam2.radius = 12.e-6
+beam2.density = 8.47187610257747e23 # 3*ne
+beam2.u_mean = 0. 0. 2000
+beam2.u_std = 0. 0. 0.
+beam2.position_mean = 0. 0. 0
+beam2.position_std = 3.e-6 3.e-6 14.1e-6
+beam2.ppc = 1 1 1
 
 plasma.density =  2.8239587008591567e23 # at this density, 1/kp = 10um
 plasma.ppc = 1 1

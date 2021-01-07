@@ -89,6 +89,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
         bool n_0_specified = pp.query("plasma_density", m_plasma_density);
 
+        pp.query("iteration_to_read_in", m_iteration_to_read_in);
+        pp.query("particle_type_name", m_particle_name);
+
         if(Hipace::m_normalized_units) {
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(n_0_specified, "Please specify the plasma density of "
             "the external beam to use it with normalized units with beam.plasma_density");

@@ -27,7 +27,7 @@ series = io.Series("beam_%05T.h5", io.Access.create)
 
 i = series.iterations[0]
 
-particel = i.particles["Electrons"]
+particel = i.particles["electrons"]
 
 dataset = io.Dataset(data[0].dtype,data[0].shape)
 

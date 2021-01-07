@@ -121,6 +121,8 @@ private:
     std::string m_input_file; /**< Path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
+    int m_iteration_to_read_in {0}; /**< iteration for read in from file with many iterations */
+    std::string m_particle_name {"electrons"};
 };
 
 /** \brief Iterator over boxes in a particle container */
