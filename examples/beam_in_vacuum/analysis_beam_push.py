@@ -7,6 +7,11 @@ import numpy as np
 import scipy.constants as scc
 from yt.frontends.boxlib.data_structures import AMReXDataset
 
+import openpmd_viewer
+
+print('############')
+print(openpmd_viewer.__file__)
+
 do_plot = True
 
 # Numerical parameters of the simulation
