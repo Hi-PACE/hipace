@@ -136,7 +136,8 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             // z direction
             const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
             amrex::Real sz_cell[depos_order_z + 1]; // depos_order_z MUST be 0.
-            int l_cell = 0;
+            int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
+            l_cell = 0;
 
             // Deposit current into jx_arr, jy_arr, jz_arr, and rho_arr
             for (int iz=0; iz<=depos_order_z; iz++){
