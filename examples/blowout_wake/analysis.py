@@ -21,6 +21,11 @@ import numpy as np
 from yt.frontends.boxlib.data_structures import AMReXDataset
 import math
 
+import openpmd_viewer
+
+print('############')
+print(openpmd_viewer.__file__)
+
 import argparse
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
