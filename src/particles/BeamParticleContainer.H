@@ -7,6 +7,8 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
+enum struct ConvertDirection{HIPACE_to_SI, SI_to_HIPACE};
+
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
@@ -88,6 +90,14 @@ public:
     int get_upstream_n_part () {return m_num_particles_on_upstream_ranks;};
 
     unsigned long long get_total_num_particles () {return m_total_num_particles;};
+
+    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
+     *
+     * Particle momentum is defined as gamma*velocity, which is neither
+     * SI mass*gamma*velocity nor normalized gamma*velocity/c.
+     * This converts momentum to SI units (or vice-versa) to write SI data
+     * to file. For normalized units, it converts it to the normalized momentum */
+    void ConvertUnits (ConvertDirection convert_dir);
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
