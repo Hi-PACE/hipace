@@ -20,6 +20,8 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
 
+ls
+
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
