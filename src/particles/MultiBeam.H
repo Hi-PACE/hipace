@@ -19,13 +19,6 @@ public:
      */
     ~MultiBeam () {}
 
-    /** Loop over all beam species and deposit their current on the 3D grid
-     * \param[in] fields Field object, with 3D MultiFabs
-     * \param[in] geom Geometry object at level lev
-     * \param[in] lev MR level
-     */
-    void DepositCurrent (Fields& fields, const amrex::Geometry& geom, const int lev);
-
     /** Loop over all beam species and deposit their current on the 2D XY slice
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] geom Geometry object at level lev
