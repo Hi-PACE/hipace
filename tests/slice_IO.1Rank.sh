@@ -15,12 +15,21 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 rm -rf plt00001
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized diagnostic.type=xyz
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        diagnostic.type=xyz \
+        amr.n_cell = 64 86 100
 rm -rf full_io
 mv plt00001 full_io
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized diagnostic.type=xz
-rm -rf slice_io
-mv plt00001 slice_io
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        diagnostic.type=xz \
+        amr.n_cell = 64 86 100
+rm -rf slice_io_xz
+mv plt00001 slice_io_xz
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        diagnostic.type=yz \
+        amr.n_cell = 64 86 100
+rm -rf slice_io_yz
+mv plt00001 slice_io_yz
 
 # assert whether the two IO types match
 $HIPACE_EXAMPLE_DIR/analysis_slice_IO.py
