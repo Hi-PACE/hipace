@@ -8,7 +8,7 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
 {
     amrex::ParmParse ppd("diagnostic");
     std::string str_type;
-    ppd.get("type", str_type);
+    ppd.get("diag_type", str_type);
     if        (str_type == "xyz"){
         m_diag_type = DiagType::xyz;
         m_slice_dir = -1;

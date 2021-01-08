@@ -27,4 +27,4 @@ beam.radius = 40.
 beam.u_mean = 0. 0. 1.e3
 beam.u_std = 3. 4. 0.
 
-diagnostic.type = xyz
+diagnostic.diag_type = xyz

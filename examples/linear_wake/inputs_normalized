@@ -34,4 +34,4 @@ plasma.density = 1.
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
 
-diagnostic.type = xyz
+diagnostic.diag_type = xyz

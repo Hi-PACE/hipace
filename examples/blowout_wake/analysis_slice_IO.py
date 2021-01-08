@@ -14,7 +14,7 @@ from yt.frontends.boxlib.data_structures import AMReXDataset
 import math
 import argparse
 
-do_plot = True
+do_plot = False
 field = 'Bz'
 
 ds1 = AMReXDataset('full_io')
@@ -38,7 +38,7 @@ F_slice_yz = ad[field].reshape(ds3.domain_dimensions).v.squeeze()
 if do_plot:
     plt.figure(figsize=(12,8))
     plt.subplot(231)
-    plt.title('full')
+    plt.title('full_xz')
     plt.imshow(F_full_xz)
     plt.colorbar()
     plt.subplot(232)
@@ -51,11 +51,11 @@ if do_plot:
     plt.colorbar()
 
     plt.subplot(234)
-    plt.title('full')
+    plt.title('full_yz')
     plt.imshow(F_full_yz)
     plt.colorbar()
     plt.subplot(235)
-    plt.title('slice xz')
+    plt.title('slice yz')
     plt.imshow(F_slice_yz)
     plt.colorbar()
     plt.subplot(236)
