@@ -11,7 +11,6 @@
 
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
-// namespace io = openPMD;
 #endif
 
 namespace utils

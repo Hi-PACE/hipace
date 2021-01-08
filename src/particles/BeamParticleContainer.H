@@ -80,16 +80,16 @@ public:
     /** Loop over beams and receive total number of beam particles on upstream ranks */
     void WaitNumParticles (MPI_Comm a_comm_z);
 
-    std::string get_name () {return m_name;};
+    std::string get_name () const {return m_name;};
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     /** Number of particles on upstream rank (required for IO) */
     int m_num_particles_on_upstream_ranks {0};
 
     unsigned long long m_total_num_particles {0};
 
-    int get_upstream_n_part () {return m_num_particles_on_upstream_ranks;};
+    int get_upstream_n_part () const {return m_num_particles_on_upstream_ranks;};
 
-    unsigned long long get_total_num_particles () {return m_total_num_particles;};
+    unsigned long long get_total_num_particles () const {return m_total_num_particles;};
 
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
      *
