@@ -84,12 +84,29 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+    /** \brief get diagnostics multifab */
     amrex::Vector<amrex::MultiFab>& getDiagF () { return m_diags.getF(); };
+    /** \brief get diagnostics geometry */
     amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
+    /** \brief get slicing direction of the diagnostics */
     int getDiagSliceDir () { return m_diags.sliceDir(); };
-
+    /** \brief Copy the data from xy slices to the field diagnostics.
+     *
+     * \param[in] lev MR leve
+     * \param[in] i_slice z slice in which to write the data
+     */
     void FillDiagnostics(int lev, int i_slice);
-    /** Copy between the full MultiFab and slice MultiFab */
+    /** \brief Copy between the full MultiFab and slice MultiFab.
+     *
+     * \param[in] lev MR level
+     * \param[in] i_slice z slice in which to write the data
+     * \param[in] copy_type whether to copy from the xy slice to the main array or opposite
+     * \param[in] slice_comp first component of the xy slice to copy from/to
+     * \param[in] full_comp first component of the full array to copy from/to
+     * \param[in] ncomp number of components to copy
+     * \param[in,out] full MMultiFab
+     * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
+     */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
                int ncomp, amrex::MultiFab& full_mf, int slice_dir);
 
