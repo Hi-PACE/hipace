@@ -87,22 +87,19 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
             m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
             m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
             m_timestep_data[WhichDouble::MinUz] = 1e30;
-            if (my_rank_z == numprocs_z -1 )
-            {
-                if (nt > 0){
-                    // first rank receives the new dt from last rank
-                    auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
-                        sizeof(amrex::Real));
-                    MPI_Status status;
-                    MPI_Recv(recv_buffer, 1,
-                             amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                             0, comm_z_tag, a_comm_z, &status);
-                    dt = recv_buffer[WhichDouble::Dt];
-                    amrex::The_Pinned_Arena()->free(recv_buffer);
-                }
-                /* always set time step, because it will be passed */
-                m_timestep_data[WhichDouble::Dt] = dt;
+            if (nt > 0){
+                // first rank receives the new dt from last rank
+                auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
+                    sizeof(amrex::Real));
+                MPI_Status status;
+                MPI_Recv(recv_buffer, 1,
+                         amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                         0, comm_z_tag, a_comm_z, &status);
+                dt = recv_buffer[WhichDouble::Dt];
+                amrex::The_Pinned_Arena()->free(recv_buffer);
             }
+            /* always set time step, because it will be passed */
+            m_timestep_data[WhichDouble::Dt] = dt;
         } else {
             /* lower ranks receive all time step data from the upper rank */
             auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
