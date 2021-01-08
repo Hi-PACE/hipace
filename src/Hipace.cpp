@@ -31,7 +31,6 @@ int Hipace::m_depos_order_z = 0;
 amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
-bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
 bool Hipace::m_slice_F_xz = false;
 bool Hipace::m_output_plasma = false;
@@ -78,7 +77,6 @@ Hipace::Hipace () :
     pph.query("output_period", m_output_period);
     pph.query("output_slice", m_slice_F_xz);
     pph.query("beam_injection_cr", m_beam_injection_cr);
-    pph.query("3d_on_host", m_3d_on_host);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),

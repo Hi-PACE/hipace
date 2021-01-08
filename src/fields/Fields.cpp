@@ -46,15 +46,9 @@ Fields::AllocData (
     // Only xy slices need guard cells, there is no deposition to/gather from the output array F.
     amrex::IntVect nguards_F = amrex::IntVect(0,0,0);
 
-    if (Hipace::m_3d_on_host){
-        // The Arena uses pinned memory.
-        m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
-                        amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
-    } else {
-        // The Arena uses managed memory.
-        m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
-                        amrex::MFInfo().SetArena(amrex::The_Arena()));
-    }
+    // The Arena uses pinned memory.
+    m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
+                    amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
 
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
