@@ -193,13 +193,8 @@ public:
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_mixing_factor;
-    /** whether the 3D array stays in host memory (Pinned memory) or is allowed
-     * to be in device memory (allocated in Managed memory). */
-    static bool m_3d_on_host;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
-    /** whether to output the central y=0 slice (if true), or the whole 3D array (if false) */
-    static bool m_slice_F_xz;
     /** Whether to dump plasma particles */
     static bool m_output_plasma;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.

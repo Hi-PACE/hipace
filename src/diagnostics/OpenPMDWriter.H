@@ -58,16 +58,16 @@ private:
 
     /** \brief writing openPMD field data
      *
-     * \param[in] a_fields the field class
+     * \param[in] mf the MultiFab to dump
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
-     * \param[in] lev MR level
-     * \param[in] slice_F_xz whether to use slice IO or not
+     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
-    void WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
-                         const int lev, const bool slice_F_xz,
-                         const amrex::Vector< std::string > varnames, openPMD::Iteration iteration);
+    void WriteFieldData (
+        amrex::MultiFab const& mf, amrex::Geometry const& geom,
+        const int slice_dir, const amrex::Vector< std::string > varnames,
+        openPMD::Iteration iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
@@ -85,18 +85,20 @@ public:
 
     /** \brief writing openPMD data
      *
-     * \param[in] a_fields the field class
-     * \param[in] beams multi beam container which is written to openPMD file
+     * \param[in] a_mf Vector (levels) of multifabs
+     * \param[in] a_multi_beams multi beam container which is written to openPMD file
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] physical_time Physical time of the currenerationt it.
      * \param[in] output_step current iteration to be written to file
      * \param[in] lev MR level
-     * \param[in] slice_F_xz whether to use slice IO or not
+     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      */
-    void WriteDiagnostics(Fields& a_fields, MultiBeam& a_multi_beam, amrex::Geometry const& geom,
-                          const amrex::Real physical_time, const int output_step, const int lev,
-                          const bool slice_F_xz, const amrex::Vector< std::string > varnames);
+    void WriteDiagnostics(
+        amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
+        amrex::Vector<amrex::Geometry> const& geom,
+        const amrex::Real physical_time, const int output_step, const int lev,
+        const int slice_dir, const amrex::Vector< std::string > varnames);
 
     void reset () {m_outputSeries.reset();};
 };
