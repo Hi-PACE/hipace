@@ -14,7 +14,7 @@ from yt.frontends.boxlib.data_structures import AMReXDataset
 import math
 import argparse
 
-do_plot = False
+do_plot = True
 field = 'Bz'
 
 ds1 = AMReXDataset('full_io')

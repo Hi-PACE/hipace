@@ -26,3 +26,5 @@ beam.radius = 1.
 beam.u_mean = 0. 0. 1.e3
 beam.u_std = 0. 0. 0.
 beam.ppc = 2 2 1
+
+diagnostic.type = xyz

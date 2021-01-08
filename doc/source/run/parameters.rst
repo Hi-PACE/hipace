@@ -39,10 +39,6 @@ General parameters
     | Output period. No output is given for `hipace.output_period = -1`.
     | **Warning:** `hipace.output_period = 0` will make the simulation crash.
 
-* ``hipace.output_slice`` (`bool`) optional (default `0`)
-    | Gives only a 2D slice output in the XZ-plane. The output is averaged over
-      the two central grid points of the y-axis.
-
 * ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
     | Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
       For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
