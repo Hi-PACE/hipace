@@ -6,9 +6,10 @@
 #include "utils/Constants.H"
 
 Fields::Fields (Hipace const* a_hipace)
-    : m_hipace(a_hipace),
+    : /* m_hipace(a_hipace), */
       m_F(a_hipace->maxLevel()+1),
-      m_slices(a_hipace->maxLevel()+1)
+      m_slices(a_hipace->maxLevel()+1),
+      m_diags(a_hipace->maxLevel()+1)
 {
     amrex::ParmParse ppf("fields");
     ppf.query("do_dirichlet_poisson", m_do_dirichlet_poisson);
@@ -24,31 +25,13 @@ Fields::AllocData (
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
 
-    // Create a xz slice BoxArray
-    amrex::BoxList F_boxes;
-    if (Hipace::m_slice_F_xz){
-        for (int i = 0; i < ba.size(); ++i){
-            amrex::Box bx = ba[i];
-            // Flatten the box down to 1 cell in the y direction.
-            constexpr int idim = 1;
-            bx.setSmall(idim, ba[i].length(idim)/2);
-            bx.setBig(idim, ba[i].length(idim)/2);
-            // Make this MF node-centered so it is exactly at the center of the box.
-            // bx.setType(amrex::IndexType({0,1,0}));
-            F_boxes.push_back(bx);
-        }
-    }
-    amrex::BoxArray F_slice_ba(std::move(F_boxes));
-
-    // m_F is defined on F_ba, the full or the xz slice BoxArray
-    amrex::BoxArray F_ba = Hipace::m_slice_F_xz ? F_slice_ba : ba;
-
     // Only xy slices need guard cells, there is no deposition to/gather from the output array F.
     amrex::IntVect nguards_F = amrex::IntVect(0,0,0);
 
     // The Arena uses pinned memory.
-    m_F[lev].define(F_ba, dm, FieldComps::nfields, nguards_F,
+    m_F[lev].define(ba, dm, FieldComps::nfields, nguards_F,
                     amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+    m_diags.AllocData(lev, ba, FieldComps::nfields, dm);
 
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
@@ -157,7 +140,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-              int ncomp, amrex::MultiFab& full_mf, bool do_node_center)
+              int ncomp, amrex::MultiFab& full_mf, int slice_dir)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
@@ -191,16 +174,25 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
                 amrex::ParallelFor(copy_box, ncomp,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
                 {
-                    if (do_node_center){
+                    if        (slice_dir == -1 /* 3D data */){
+                        full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                    } else if (slice_dir == 0 /* yz slice */){
                         full_array(i,j,k,n+full_comp) = 0.5_rt *
                             (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
-                    } else {
-                        full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                    } else /* slice_dir == 1, xz slice */{
+                        full_array(i,j,k,n+full_comp) = 0.5_rt *
+                            (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
                     }
                 });
             }
         }
     }
+}
+
+void
+Fields::FillDiagnostics (int lev, int i_slice)
+{
+    Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, FieldComps::nfields, m_F[lev], -1);
 }
 
 void

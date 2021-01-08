@@ -2,6 +2,7 @@
 #define FIELDS_H_
 
 #include "fft_poisson_solver/FFTPoissonSolver.H"
+#include "diagnostics/FieldDiagnostic.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -84,9 +85,10 @@ public:
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
 
+    void FillDiagnostics(int lev, int i_slice);
     /** Copy between the full MultiFab and slice MultiFab */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp, amrex::MultiFab& ful_mf, bool do_node_center);
+               int ncomp, amrex::MultiFab& full_mf, int slice_dir);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
@@ -203,8 +205,8 @@ public:
                                        const int lev);
 
 private:
-    /** Pointer to const singleton of class Hipace */
-    Hipace const* m_hipace;
+    // /** Pointer to const singleton of class Hipace */
+    // Hipace const* m_hipace;
     /** Vector over levels, all fields */
     amrex::Vector<amrex::MultiFab> m_F;
     /** Vector over levels, array of 4 slices required to compute current slice */
@@ -213,6 +215,8 @@ private:
     amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
+    /** Diagnostics */
+    FieldDiagnostic m_diags;
 };
 
 #endif
