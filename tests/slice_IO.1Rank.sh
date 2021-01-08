@@ -36,7 +36,7 @@ $HIPACE_EXAMPLE_DIR/analysis_slice_IO.py
 
 # Make sure that the slice is much smaller than the full diagnostics
 size_full=$(du -s full_io/Level_0 | cut -f1)
-size_slice=$(du -s slice_io/Level_0 | cut -f1)
+size_slice=$(du -s slice_io_yz/Level_0 | cut -f1)
 
 if [[ $((size_full/size_slice<60)) == 1 ]]; then
     echo $size_full
