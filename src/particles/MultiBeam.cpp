@@ -23,14 +23,6 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 }
 
 void
-MultiBeam::DepositCurrent (Fields& fields, const amrex::Geometry& geom, const int lev)
-{
-    for (auto& beam : m_all_beams) {
-        ::DepositCurrent(beam, fields, geom, lev);
-    }
-}
-
-void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, const amrex::Geometry& geom, const int lev, int islice,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins)

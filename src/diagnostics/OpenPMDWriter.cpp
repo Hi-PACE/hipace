@@ -43,7 +43,7 @@ OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
     io::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
-    WriteFieldData(a_fields, geom, output_step, lev, slice_F_xz, varnames, iteration);
+    WriteFieldData(a_fields, geom, lev, slice_F_xz, varnames, iteration);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
     WriteBeamParticleData(a_multi_beam, iteration);
@@ -56,7 +56,7 @@ OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
 
 void
 OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
-                               const int output_step, const int lev, const bool slice_F_xz,
+                               const int lev, const bool slice_F_xz,
                                const amrex::Vector< std::string > varnames,
                                openPMD::Iteration iteration)
 {
@@ -131,7 +131,6 @@ OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
             field_comp.storeChunk(data, chunk_offset, chunk_size);
         }
     }
-
 }
 
 void
@@ -154,7 +153,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
         for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
         {
-
             auto const numParticleOnTile = pti.numParticles();
             uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
             // get position and particle ID from aos
@@ -191,7 +189,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             }
             //  save "extra" particle properties in SoA (momenta and weight)
             SaveRealProperty(pti, beam_species, offset, m_real_names);
-
         }  // end for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
     }
 }
@@ -223,7 +220,6 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     currSpecies["positionOffset"].setUnitDimension( utils::getUnitDimension("positionOffset") );
     currSpecies["charge"].setUnitDimension( utils::getUnitDimension("charge") );
     currSpecies["mass"].setUnitDimension( utils::getUnitDimension("mass") );
-
 }
 
 void

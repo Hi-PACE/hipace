@@ -1,6 +1,5 @@
 amr.n_cell = 32 32 200
 
-hipace.slice_beam = 1
 hipace.3d_on_host = 1
 hipace.output_plasma = 1
 
