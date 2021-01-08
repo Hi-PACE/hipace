@@ -157,11 +157,10 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-              int ncomp)
+              int ncomp, amrex::MultiFab& full_mf, bool do_node_center)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
-    const bool do_node_center = Hipace::m_slice_F_xz;
     auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
@@ -173,7 +172,6 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         // slice_array's longitude index is i_slice.
     }
 
-    auto& full_mf = m_F[lev];
     for (amrex::MFIter mfi(full_mf); mfi.isValid(); ++mfi) {
         amrex::Box const& vbx = mfi.validbox();
         if (vbx.smallEnd(Direction::z) <= i_slice and

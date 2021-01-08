@@ -86,7 +86,7 @@ public:
 
     /** Copy between the full MultiFab and slice MultiFab */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp);
+               int ncomp, amrex::MultiFab& ful_mf, bool do_node_center);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *

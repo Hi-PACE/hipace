@@ -389,7 +389,8 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
-    m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
+    m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields,
+                  m_fields.getF(lev), Hipace::m_slice_F_xz);
 
     m_fields.ShiftSlices(lev);
 
