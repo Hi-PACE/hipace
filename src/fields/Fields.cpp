@@ -31,7 +31,7 @@ Fields::AllocData (
     // The Arena uses pinned memory.
     m_F[lev].define(ba, dm, FieldComps::nfields, nguards_F,
                     amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
-    m_diags.AllocData(lev, ba, FieldComps::nfields, dm);
+    m_diags.AllocData(lev, ba, FieldComps::nfields, dm, geom);
 
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
@@ -192,7 +192,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 void
 Fields::FillDiagnostics (int lev, int i_slice)
 {
-    Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, FieldComps::nfields, m_F[lev], -1);
+    Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, FieldComps::nfields, m_diags.getF(lev), m_diags.sliceDir());
 }
 
 void

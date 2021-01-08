@@ -3,7 +3,8 @@
 #include <AMReX_ParmParse.H>
 
 FieldDiagnostic::FieldDiagnostic (int nlev)
-    : m_F(nlev)
+    : m_F(nlev),
+      m_geom_io(nlev)
 {
     amrex::ParmParse ppd("diagnostic");
     std::string str_type;
@@ -23,7 +24,7 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
 }
 
 void
-FieldDiagnostic::AllocData (int lev, const amrex::BoxArray& ba, int nfields, const amrex::DistributionMapping& dm)
+FieldDiagnostic::AllocData (int lev, const amrex::BoxArray& ba, int nfields, const amrex::DistributionMapping& dm, amrex::Geometry const& geom)
 {
     m_nfields = nfields;
     // Create a xz slice BoxArray
@@ -46,4 +47,15 @@ FieldDiagnostic::AllocData (int lev, const amrex::BoxArray& ba, int nfields, con
     // The Arena uses pinned memory.
     m_F[lev].define(F_ba, dm, m_nfields, nguards_F,
                     amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+
+    m_geom_io[lev] = geom;
+    amrex::RealBox prob_domain = geom.ProbDomain();
+    amrex::Box domain = geom.Domain();
+    // Define slice box
+    if (m_slice_dir >= 0){
+        int const icenter = domain.length(m_slice_dir)/2;
+        domain.setSmall(m_slice_dir, icenter);
+        domain.setBig(m_slice_dir, icenter);
+        m_geom_io[lev] = amrex::Geometry(domain, &prob_domain, geom.Coord());
+    }
 }

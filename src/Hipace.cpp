@@ -761,6 +761,11 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
 
     amrex::Vector<std::string> rfs;
+
+
+
+
+    
     amrex::Vector<amrex::Geometry> geom_io = Geom();
 
     constexpr int lev = 0; // we only have one level
@@ -775,6 +780,11 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
     }
 
+
+
+
+
+    
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io[lev], m_physical_time,
                                       output_step,  lev, m_slice_F_xz, varnames);
