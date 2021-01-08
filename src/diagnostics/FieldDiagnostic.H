@@ -9,7 +9,9 @@ enum struct DiagType{xyz, xz, yz};
 /** \brief This class holds data for 1 diagnostics (full or slice) */
 class FieldDiagnostic
 {
+
 public:
+
     /** \brief Constructor */
     explicit FieldDiagnostic (int nlev);
 
@@ -22,19 +24,24 @@ public:
      * \param[in] geom geometry of the full simulation domain
      */
     void AllocData (int lev, const amrex::BoxArray& ba, int nfields, const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
-    
+
     /** \brief return the main diagnostics multifab */
     amrex::Vector<amrex::MultiFab>& getF () { return m_F; };
+
     /** \brief return the main diagnostics multifab
      *
      * \param[in] lev MR level
      */
     amrex::MultiFab& getF (int lev) {return m_F[lev];};
+
     /** return the diagnostics geometry */
     amrex::Vector<amrex::Geometry>& getGeom () { return m_geom_io; };
+
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;};
+
 private:
+
     /** Vector over levels, all fields */
     amrex::Vector<amrex::MultiFab> m_F;
     DiagType m_diag_type; /**< Type of diagnostics (xyz xz yz) */

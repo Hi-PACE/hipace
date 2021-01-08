@@ -104,7 +104,7 @@ public:
      * \param[in] slice_comp first component of the xy slice to copy from/to
      * \param[in] full_comp first component of the full array to copy from/to
      * \param[in] ncomp number of components to copy
-     * \param[in,out] full MMultiFab
+     * \param[in,out] full_mf full MultiFab
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
      */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
