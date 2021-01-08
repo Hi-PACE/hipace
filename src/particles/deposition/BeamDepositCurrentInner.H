@@ -16,7 +16,7 @@
 #include <AMReX_REAL.H>
 
 /** \brief Loop over beam particles in iterator (=box) pti and deposit their current
- * into jx_fab, jy_fab and jz_fab and their charge density to rho_fab
+ * into jx_fab, jy_fab, and jz_fab
  *
  * Only deposit charge and current for beam particles in islice.
  * Note that particles are not sorted in memory, argument bins only contains indices of particles
@@ -28,7 +28,6 @@
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to pti
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
- * \param[in,out] rho_fab array of charge density rho, on the box corresponding to pti
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
@@ -41,7 +40,6 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
                          amrex::FArrayBox& jx_fab,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
-                         amrex::FArrayBox& rho_fab,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
@@ -76,16 +74,14 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
-    amrex::Array4<amrex::Real> const& rho_arr = rho_fab.array();
 
     constexpr int CELL = amrex::IndexType::CELL;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         jx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
-        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
-        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
-        "jx, jy, jz and rho must be nodal in all directions."
+        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
+        "jx, jy, and jz must be nodal in all directions."
         );
 
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
@@ -102,7 +98,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
 
     int const num_particles = cell_stop-cell_start;
 
-    // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
+    // Loop over particles and deposit into jx_fab, jy_fab, and jz_fab
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
@@ -139,7 +135,7 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
             int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
             l_cell = 0;
 
-            // Deposit current into jx_arr, jy_arr, jz_arr, and rho_arr
+            // Deposit current into jx_arr, jy_arr, jz_arr
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){

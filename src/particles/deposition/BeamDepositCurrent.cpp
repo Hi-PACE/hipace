@@ -42,7 +42,6 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
         amrex::MultiFab jx(S, amrex::make_alias, FieldComps::jx, 1);
         amrex::MultiFab jy(S, amrex::make_alias, FieldComps::jy, 1);
         amrex::MultiFab jz(S, amrex::make_alias, FieldComps::jz, 1);
-        amrex::MultiFab rho(S, amrex::make_alias, FieldComps::rho, 1);
 
         // Extract FabArray for this box (because there is currently no transverse
         // parallelization, the index we want in the slice multifab is always 0.
@@ -50,23 +49,22 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
         amrex::FArrayBox& jx_fab = jx[0];
         amrex::FArrayBox& jy_fab = jy[0];
         amrex::FArrayBox& jz_fab = jz[0];
-        amrex::FArrayBox& rho_fab = rho[0];
 
         // For now: fix the value of the charge
         const amrex::Real q = - phys_const.q_e;
 
         // Call deposition function in each box
         if        (Hipace::m_depos_order_xy == 0){
-            doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+            doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab,
                                       dx, xyzmin, lo, q, islice_local, bins);
         } else if (Hipace::m_depos_order_xy == 1){
-            doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+            doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab,
                                       dx, xyzmin, lo, q, islice_local, bins);
         } else if (Hipace::m_depos_order_xy == 2){
-            doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+            doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab,
                                       dx, xyzmin, lo, q, islice_local, bins);
         } else if (Hipace::m_depos_order_xy == 3){
-            doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+            doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab,
                                       dx, xyzmin, lo, q, islice_local, bins);
         } else {
             amrex::Abort("unknown deposition order");
