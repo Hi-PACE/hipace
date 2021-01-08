@@ -215,13 +215,6 @@ Fields::ShiftSlices (int lev)
               m_slices[lev][(int) WhichSlice::Previous1]);
 }
 
-amrex::MultiFab
-Fields::getF (int lev, int icomp )
-{
-    amrex::MultiFab F_comp(m_F[lev], amrex::make_alias, icomp, 1);
-    return F_comp;
-}
-
 void
 Fields::AddRhoIons (const int lev)
 {
