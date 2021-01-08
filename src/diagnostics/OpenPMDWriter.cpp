@@ -85,10 +85,10 @@ OpenPMDWriter::WriteFieldData (
         if (slice_dir >= 0) {
             // User requested slice IO
             // remove the slicing direction in position, label, resolution, offset
-            relative_cell_pos.erase(relative_cell_pos.begin() + slice_dir);
-            axisLabels.erase(axisLabels.begin() + slice_dir);
-            dCells.erase(dCells.begin() + slice_dir);
-            offWindow.erase(offWindow.begin() + slice_dir);
+            relative_cell_pos.erase(relative_cell_pos.begin() + 2-slice_dir);
+            axisLabels.erase(axisLabels.begin() + 2-slice_dir);
+            dCells.erase(dCells.begin() + 2-slice_dir);
+            offWindow.erase(offWindow.begin() + 2-slice_dir);
         }
         field_comp.setPosition(relative_cell_pos);
         field.setAxisLabels(axisLabels);
@@ -99,7 +99,7 @@ OpenPMDWriter::WriteFieldData (
         io::Datatype datatype = io::determineDatatype< amrex::Real >();
         io::Extent global_size = utils::getReversedVec(geom.Domain().size());
         // If slicing requested, remove number of points for the slicing direction
-        if (slice_dir >= 0) global_size.erase(global_size.begin() + slice_dir);
+        if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
         io::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
@@ -126,8 +126,8 @@ OpenPMDWriter::WriteFieldData (
             io::Offset chunk_offset = utils::getReversedVec(box_offset);
             io::Extent chunk_size = utils::getReversedVec(data_box.size());
             if (slice_dir >= 0) { // remove Ny components
-                chunk_offset.erase(chunk_offset.begin() + slice_dir);
-                chunk_size.erase(chunk_size.begin() + slice_dir);
+                chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
+                chunk_size.erase(chunk_size.begin() + 2-slice_dir);
             }
 
             field_comp.storeChunk(data, chunk_offset, chunk_size);
