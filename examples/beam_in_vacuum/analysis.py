@@ -62,8 +62,8 @@ jz_sim = ts.get_field(field='jz', iteration=1, slice_across=['y','z'], slice_rel
 rho_sim = ts.get_field(field='rho', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0]
 Ex_sim = ts.get_field(field='ExmBy', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0] + c*By_sim
 Ey_sim = ts.get_field(field='EypBx', iteration=1, slice_across=['x','z'], slice_relative_position=[0,0])[0] - c*Bx_sim
-y = Bx_meta.y - Bx_meta.dy
-x = By_meta.x - By_meta.dx
+y = Bx_meta.y
+x = By_meta.x
 
 By_th = mu_0 * jz0 * x / 2.
 By_th[abs(x)>=R] = mu_0 * jz0 * R**2/(2*x[abs(x)>R])
