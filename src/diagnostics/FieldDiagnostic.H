@@ -10,7 +10,9 @@ class FieldDiagnostic
 public:
     explicit FieldDiagnostic (int nlev);
     void AllocData (int lev, const amrex::BoxArray& ba, int nfields, const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
+    amrex::Vector<amrex::MultiFab>& getF () { return m_F; };
     amrex::MultiFab& getF (int lev) {return m_F[lev];};
+    amrex::Vector<amrex::Geometry>& getGeom () { return m_geom_io; };
     int sliceDir () {return m_slice_dir;};
 private:
     /** Vector over levels, all fields */

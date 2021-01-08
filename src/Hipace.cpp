@@ -764,7 +764,6 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 
 
 
-
     
     amrex::Vector<amrex::Geometry> geom_io = Geom();
 
@@ -783,18 +782,17 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 
 
 
-
     
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io[lev], m_physical_time,
+    m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io, m_physical_time,
                                       output_step,  lev, m_slice_F_xz, varnames);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
 
     amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames,
-        geom_io, m_physical_time, {output_step}, {local_ref_ratio},
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getDiagF()), varnames,
+        m_fields.getDiagGeom(), m_physical_time, {output_step}, {local_ref_ratio},
         "HyperCLaw-V1.1", "Level_", "Cell", rfs);
 
     // Write beam particles

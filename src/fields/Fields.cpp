@@ -29,8 +29,7 @@ Fields::AllocData (
     amrex::IntVect nguards_F = amrex::IntVect(0,0,0);
 
     // The Arena uses pinned memory.
-    m_F[lev].define(ba, dm, FieldComps::nfields, nguards_F,
-                    amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+    m_F[lev].define(ba, dm, FieldComps::nfields, nguards_F, amrex::MFInfo().SetAlloc(false));
     m_diags.AllocData(lev, ba, FieldComps::nfields, dm, geom);
 
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
@@ -174,14 +173,14 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
                 amrex::ParallelFor(copy_box, ncomp,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
                 {
-                    if        (slice_dir == -1 /* 3D data */){
+                    if        (slice_dir ==-1 /* 3D data */){
                         full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
                     } else if (slice_dir == 0 /* yz slice */){
                         full_array(i,j,k,n+full_comp) = 0.5_rt *
-                            (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                            (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
                     } else /* slice_dir == 1, xz slice */{
                         full_array(i,j,k,n+full_comp) = 0.5_rt *
-                            (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                            (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
                     }
                 });
             }
@@ -192,7 +191,8 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 void
 Fields::FillDiagnostics (int lev, int i_slice)
 {
-    Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, FieldComps::nfields, m_diags.getF(lev), m_diags.sliceDir());
+    Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, FieldComps::nfields,
+         m_diags.getF(lev), m_diags.sliceDir());
 }
 
 void

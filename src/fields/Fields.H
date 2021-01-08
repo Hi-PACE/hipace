@@ -84,6 +84,8 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+    amrex::Vector<amrex::MultiFab>& getDiagF () { return m_diags.getF(); };
+    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
 
     void FillDiagnostics(int lev, int i_slice);
     /** Copy between the full MultiFab and slice MultiFab */
