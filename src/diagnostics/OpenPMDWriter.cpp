@@ -43,7 +43,7 @@ OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
     io::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
-    WriteFieldData(a_fields, geom, output_step, lev, slice_F_xz, varnames, iteration);
+    WriteFieldData(a_fields, geom, lev, slice_F_xz, varnames, iteration);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
     WriteBeamParticleData(a_multi_beam, iteration);
@@ -56,7 +56,7 @@ OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
 
 void
 OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
-                               const int output_step, const int lev, const bool slice_F_xz,
+                               const int lev, const bool slice_F_xz,
                                const amrex::Vector< std::string > varnames,
                                openPMD::Iteration iteration)
 {

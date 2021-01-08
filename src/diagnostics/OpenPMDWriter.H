@@ -61,14 +61,13 @@ private:
      *
      * \param[in] a_fields the field class
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
-     * \param[in] output_step current iteration to be written to file
      * \param[in] lev MR level
      * \param[in] slice_F_xz whether to use slice IO or not
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
     void WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
-                         const int output_step, const int lev, const bool slice_F_xz,
+                         const int lev, const bool slice_F_xz,
                          const amrex::Vector< std::string > varnames, openPMD::Iteration iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
