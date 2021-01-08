@@ -6,7 +6,8 @@ This file is part of WarpX.
 License: BSD-3-Clause-LBNL
 """
 from benchmark import Benchmark
-from backend.amrex_backend import Backend
+# from backend.amrex_backend import Backend
+from backend.openpmd_backend import Backend
 import re
 import sys
 import numpy as np
@@ -15,37 +16,37 @@ class Checksum:
     '''Class for checksum comparison of one test.
     '''
 
-    def __init__(self, test_name, plotfile, do_fields=True, do_particles=True):
+    def __init__(self, test_name, file_name, do_fields=True, do_particles=True):
         '''Constructor
 
-        Store test_name and plotfile name, and compute checksum
-        from plotfile and store it in self.data.
+        Store test_name and file_name name, and compute checksum
+        from file_name and store it in self.data.
 
         @param self The object pointer.
         @param test_name Name of test, as found between [] in .ini file.
-        @param plotfile Plotfile from which the checksum is computed.
+        @param file_name IO file from which the checksum is computed.
         @param do_fields Whether to compare fields in the checksum.
         @param do_particles Whether to compare particles in the checksum.
         '''
 
         self.test_name = test_name
-        self.plotfile = plotfile
-        self.data = self.read_plotfile(do_fields=do_fields,
-                                       do_particles=do_particles)
+        self.file_name = file_name
+        self.data = self.read_output_file(do_fields=do_fields,
+                                   do_particles=do_particles)
 
-    def read_plotfile(self, do_fields=True, do_particles=True):
-        '''Get checksum from plotfile.
+    def read_output_file(self, do_fields=True, do_particles=True):
+        '''Get checksum from IO file.
 
-        Read an simulation output file, compute 1 checksum per field and return
+        Read an simulation IO file, compute 1 checksum per field and return
         all checksums in a dictionary.
         The checksum of quantity Q is max(abs(Q)).
 
         @param self The object pointer.
-        @param do_fields Whether to read fields from the plotfile.
-        @param do_particles Whether to read particles from the plotfile.
+        @param do_fields Whether to read fields from the IO file.
+        @param do_particles Whether to read particles from the IO file.
         '''
 
-        ds = Backend(self.plotfile)
+        ds = Backend(self.file_name)
         grid_fields = ds.fields_list()
         species_list = ds.species_list()
 
@@ -71,16 +72,16 @@ class Checksum:
         return data
 
     def evaluate(self, rtol=1.e-9, atol=1.e-40):
-        '''Compare plotfile checksum with benchmark.
+        '''Compare IO file checksum with benchmark.
 
-        Read checksum from input plotfile, read benchmark
+        Read checksum from IO file, read benchmark
         corresponding to test_name, and assert that they are equal.
         Almost all the body of this functions is for
         user-readable print statements.
 
         @param self The object pointer.
         @param test_name Name of test, as found between [] in .ini file.
-        @param plotfile Plotfile from which the checksum is computed.
+        @param file_name IO file from which the checksum is computed.
         '''
 
         print("Checksum evaluation started...")
@@ -89,21 +90,21 @@ class Checksum:
 
         # Dictionaries have same outer keys (levels, species)?
         if (self.data.keys() != ref_benchmark.data.keys()):
-            print("ERROR: Benchmark and plotfile checksum "
+            print("ERROR: Benchmark and IO file checksum "
                   "have different outer keys:")
             print("Benchmark: %s" % ref_benchmark.data.keys())
-            print("Plotfile : %s" % self.data.keys())
+            print("IO file  : %s" % self.data.keys())
             sys.exit(1)
 
         # Dictionaries have same inner keys (field and particle quantities)?
         for key1 in ref_benchmark.data.keys():
             if (self.data[key1].keys() != ref_benchmark.data[key1].keys()):
-                print("ERROR: Benchmark and plotfile checksum have "
+                print("ERROR: Benchmark and IO file checksum have "
                       "different inner keys:")
                 print("Common outer keys: %s" % ref_benchmark.data.keys())
                 print("Benchmark inner keys in %s: %s"
                       % (key1, ref_benchmark.data[key1].keys()))
-                print("Plotfile  inner keys in %s: %s"
+                print("IO file   inner keys in %s: %s"
                       % (key1, self.data[key1].keys()))
                 sys.exit(1)
 
@@ -115,11 +116,11 @@ class Checksum:
                                     ref_benchmark.data[key1][key2],
                                     rtol=rtol, atol=atol)
                 if not passed:
-                    print("ERROR: Benchmark and plotfile checksum have "
+                    print("ERROR: Benchmark and IO file checksum have "
                           "different value for key [%s,%s]" % (key1, key2))
                     print("Benchmark: [%s,%s] %.40f"
                           % (key1, key2, ref_benchmark.data[key1][key2]))
-                    print("Plotfile : [%s,%s] %.40f"
+                    print("IO file  : [%s,%s] %.40f"
                           % (key1, key2, self.data[key1][key2]))
                     checksums_differ = True
         if checksums_differ:
