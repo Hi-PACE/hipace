@@ -90,7 +90,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
                 // first rank receives the new dt from last rank
                 auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
                     sizeof(amrex::Real));
-        MPI_Status status;
+                MPI_Status status;
                 MPI_Recv(recv_buffer, 1,
                          amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                          0, comm_z_tag, a_comm_z, &status);
@@ -199,7 +199,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
 
         /* For serial runs, set adaptive time step right away */
         if (numprocs_z == 1) dt = new_dt;
-        
+
         if (nt < Hipace::m_max_step -numprocs_z -1) {
         m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
             m_send_buffer[WhichDouble::Dt] = new_dt;
