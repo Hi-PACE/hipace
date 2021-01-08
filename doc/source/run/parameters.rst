@@ -39,20 +39,13 @@ General parameters
     | Output period. No output is given for `hipace.output_period = -1`.
     | **Warning:** `hipace.output_period = 0` will make the simulation crash.
 
-* ``hipace.slice_beam`` (`bool`) optional (default `0`)
-    Treat the beam per slice. The beam particles are assigned to their nearest slice in z.
-    Then, the beam particles deposit the current on their respective slice and are pushed after
-    the fields of that slice are calculated.
-
 * ``hipace.output_slice`` (`bool`) optional (default `0`)
     | Gives only a 2D slice output in the XZ-plane. The output is averaged over
       the two central grid points of the y-axis.
-    | **Note:** requires `hipace.slice_beam = 1`.
 
 * ``hipace.3d_on_host`` (`bool`) optional (default `0`)
     | Allocates the 3D arrays of the fields for I/O on the host, and not the device.
       This enables to run simulations, where the 3D array exceeds the GPU memory.
-    | **Note:** requires `hipace.slice_beam = 1`.
 
 * ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
     | Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
