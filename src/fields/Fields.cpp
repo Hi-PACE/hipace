@@ -6,8 +6,7 @@
 #include "utils/Constants.H"
 
 Fields::Fields (Hipace const* a_hipace)
-    : /* m_hipace(a_hipace), */
-      m_F(a_hipace->maxLevel()+1),
+    : m_F(a_hipace->maxLevel()+1),
       m_slices(a_hipace->maxLevel()+1),
       m_diags(a_hipace->maxLevel()+1)
 {

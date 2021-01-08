@@ -759,10 +759,10 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
 
     amrex::Vector<std::string> rfs;
-    
+
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io, m_physical_time,
-                                      output_step,  lev, false, varnames);
+    m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io[lev], m_physical_time,
+                                      output_step,  lev, true, varnames);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};

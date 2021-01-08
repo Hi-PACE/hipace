@@ -207,8 +207,6 @@ public:
                                        const int lev);
 
 private:
-    // /** Pointer to const singleton of class Hipace */
-    // Hipace const* m_hipace;
     /** Vector over levels, all fields */
     amrex::Vector<amrex::MultiFab> m_F;
     /** Vector over levels, array of 4 slices required to compute current slice */

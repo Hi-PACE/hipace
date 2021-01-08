@@ -18,14 +18,12 @@ rm -rf plt* REF*
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
-        diagnostic.type = xyz \
         beam.radius = 20.
 
 mv plt00001 REF_plt00001
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
-        diagnostic.type = xyz \
         beam.radius = 20.
 
 $HIPACE_EXAMPLE_DIR/analysis_2ranks.py
