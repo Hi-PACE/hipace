@@ -1,7 +1,6 @@
 amr.n_cell = 32 32 200
 
 hipace.normalized_units=1
-hipace.3d_on_host = 1
 
 hipace.output_period = 1
 
@@ -34,3 +33,5 @@ beam.ppc = 1 1 1
 plasma.density = 1.
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
+
+diagnostic.diag_type = xyz

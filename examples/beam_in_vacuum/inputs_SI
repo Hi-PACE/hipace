@@ -36,3 +36,5 @@ beam2.density = 1.4119793504295784e23 # at this density, 1/kp = 10um
 beam2.u_mean = 0. 0. 1.e3
 beam2.u_std = 0. 0. 0.
 beam2.ppc = 2 2 1
+
+diagnostic.diag_type = xyz

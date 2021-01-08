@@ -32,9 +32,7 @@ int Hipace::m_depos_order_z = 0;
 amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
-bool Hipace::m_3d_on_host = false;
 bool Hipace::m_do_device_synchronize = false;
-bool Hipace::m_slice_F_xz = false;
 bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_focusing_field_strength = 0.;
@@ -77,9 +75,7 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
-    pph.query("output_slice", m_slice_F_xz);
     pph.query("beam_injection_cr", m_beam_injection_cr);
-    pph.query("3d_on_host", m_3d_on_host);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -308,7 +304,7 @@ Hipace::Evolve ()
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
-            const amrex::Box& bx = fields.box(*it);
+            const amrex::Box& bx = boxArray(lev)[*it];
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
 
@@ -392,7 +388,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
-    m_fields.Copy(lev, islice, FieldCopyType::StoF, 0, 0, FieldComps::nfields);
+    m_fields.FillDiagnostics(lev, islice);
 
     m_fields.ShiftSlices(lev);
 
@@ -748,6 +744,7 @@ void
 Hipace::WriteDiagnostics (int output_step, bool force_output)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
+    constexpr int lev = 0;
 
     // Dump before first and after last step, and every m_output_period steps in-between
     if (m_output_period < 0 ||
@@ -764,30 +761,17 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
 
     amrex::Vector<std::string> rfs;
-    amrex::Vector<amrex::Geometry> geom_io = Geom();
-
-    constexpr int lev = 0; // we only have one level
-    constexpr int idim = 1;
-    amrex::RealBox prob_domain = Geom(lev).ProbDomain();
-    amrex::Box domain = Geom(lev).Domain();
-    // Define slice box
-    int const icenter = domain.length(idim)/2;
-    domain.setSmall(idim, icenter);
-    domain.setBig(idim, icenter);
-    if (m_slice_F_xz){
-        geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
-    }
 
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io[lev], m_physical_time,
-                                      output_step,  lev, m_slice_F_xz, varnames);
+    m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
+                                      m_physical_time, output_step,  lev, m_fields.getDiagSliceDir(), varnames);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
 
     amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getF()), varnames,
-        geom_io, m_physical_time, {output_step}, {local_ref_ratio},
+        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getDiagF()), varnames,
+        m_fields.getDiagGeom(), m_physical_time, {output_step}, {local_ref_ratio},
         "HyperCLaw-V1.1", "Level_", "Cell", rfs);
 
     // Write beam particles

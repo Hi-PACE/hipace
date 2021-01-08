@@ -23,7 +23,6 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \
         geometry.prob_hi =  2.  2.  2. \
-        hipace.3d_on_host = 1 \
         hipace.dt = 0. \
         hipace.output_period = 20 \
         beam.density = 1.e-8 \
@@ -42,7 +41,6 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \
         geometry.prob_hi =  2.  2.  2. \
-        hipace.3d_on_host = 1 \
         hipace.dt = 0. \
         hipace.output_period = 20 \
         beam.density = 1.e-8 \
