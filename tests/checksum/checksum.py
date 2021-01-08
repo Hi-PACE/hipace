@@ -6,9 +6,7 @@ This file is part of WarpX.
 License: BSD-3-Clause-LBNL
 """
 from benchmark import Benchmark
-import yt
-yt.funcs.mylog.setLevel(50)
-from yt.frontends.boxlib.data_structures import AMReXDataset
+from backend.amrex_backend import Backend
 import re
 import sys
 import numpy as np
@@ -38,7 +36,7 @@ class Checksum:
     def read_plotfile(self, do_fields=True, do_particles=True):
         '''Get checksum from plotfile.
 
-        Read an AMReX plotfile with yt, compute 1 checksum per field and return
+        Read an simulation output file, compute 1 checksum per field and return
         all checksums in a dictionary.
         The checksum of quantity Q is max(abs(Q)).
 
@@ -47,48 +45,27 @@ class Checksum:
         @param do_particles Whether to read particles from the plotfile.
         '''
 
-        ds = AMReXDataset(self.plotfile)
-        grid_fields = [item for item in ds.field_list if item[0] == 'boxlib']
-        species_list = set([item[0] for item in ds.field_list if
-                            item[1][:9] == 'particle_' and item[0] != 'all'])
+        ds = Backend(self.plotfile)
+        grid_fields = ds.fields_list()
+        species_list = ds.species_list()
 
         data = {}
 
         # Compute checksum for field quantities
         if do_fields:
-            # Boolean variable parsed from test name needed for workaround below
-            galilean = True if re.search('galilean', self.test_name) else False
-            for lev in range(ds.max_level+1):
+            for lev in range(ds.n_levels()):
                 data_lev = {}
-                lev_grids = [grid for grid in ds.index.grids
-                             if grid.Level == lev]
-                if not (galilean):
-                    # Warning: For now, we assume all levels are rectangular
-                    LeftEdge = np.min(
-                        np.array([grid.LeftEdge.v for grid in lev_grids]), axis=0)
-                    all_data_level = ds.covering_grid(
-                        level=lev, left_edge=LeftEdge, dims=ds.domain_dimensions)
-                    for field in grid_fields:
-                        Q = all_data_level[field].v.squeeze()
-                        data_lev[field[1]] = np.sum(np.abs(Q))
-                # Workaround for Galilean tests: the standard procedure above
-                # does not seem to read 2D fields data correctly
-                elif (galilean):
-                    for field in grid_fields:
-                        Q = ds.index.grids[lev][field].v.squeeze()
-                        data_lev[field[1]] = np.sum(np.abs(Q))
+                for field in grid_fields:
+                    data_lev[field[1]] = ds.get_field_checksum(lev, field, self.test_name)
                 data['lev=' + str(lev)] = data_lev
 
         # Compute checksum for particle quantities
         if do_particles:
-            ad = ds.all_data()
             for species in species_list:
-                part_fields = [item[1] for item in ds.field_list
-                               if item[0] == species]
+                part_fields = ds.get_species_attributes(species)
                 data_species = {}
                 for field in part_fields:
-                    Q = ad[(species, field)].v
-                    data_species[field] = np.sum(np.abs(Q))
+                    data_species[field] = ds.get_species_checksum(species, field)
                 data[species] = data_species
 
         return data
