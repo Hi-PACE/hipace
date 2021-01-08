@@ -35,15 +35,16 @@ OpenPMDWriter::InitDiagnostics ()
 }
 
 void
-OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
-                                 amrex::Geometry const& geom, amrex::Real physical_time,
-                                 const int output_step, const int lev, const bool slice_F_xz,
-                                 const amrex::Vector< std::string > varnames)
+OpenPMDWriter::WriteDiagnostics (
+    amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
+    amrex::Vector<amrex::Geometry> const& geom,
+    const amrex::Real physical_time, const int output_step, const int lev,
+    const int slice_dir, const amrex::Vector< std::string > varnames)
 {
     io::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
-    WriteFieldData(a_fields, geom, lev, slice_F_xz, varnames, iteration);
+    WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
     WriteBeamParticleData(a_multi_beam, iteration);
@@ -55,10 +56,10 @@ OpenPMDWriter::WriteDiagnostics (Fields& a_fields, MultiBeam& a_multi_beam,
 }
 
 void
-OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
-                               const int lev, const bool slice_F_xz,
-                               const amrex::Vector< std::string > varnames,
-                               openPMD::Iteration iteration)
+OpenPMDWriter::WriteFieldData (
+    amrex::MultiFab const& mf, amrex::Geometry const& geom,
+    const int slice_dir, const amrex::Vector< std::string > varnames,
+    openPMD::Iteration iteration)
 {
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
@@ -66,8 +67,6 @@ OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
     // loop over field components
     for (int icomp = 0; icomp < FieldComps::nfields; ++icomp)
     {
-        auto const& mf = a_fields.getF(lev);
-
         std::string fieldname = varnames[icomp];
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
@@ -83,11 +82,13 @@ OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
         std::vector< std::string > axisLabels {"z", "y", "x"};
         auto dCells = utils::getReversedVec(geom.CellSize()); // dx, dy, dz
         auto offWindow = utils::getReversedVec(geom.ProbLo()); // start of moving window
-        if (slice_F_xz) {
-            relative_cell_pos.erase(relative_cell_pos.begin() + 1);  // remove for y
-            axisLabels.erase(axisLabels.begin() + 1); // remove y
-            dCells.erase(dCells.begin() + 1); // remove dy
-            offWindow.erase(offWindow.begin() + 1); // remove offset in y
+        if (slice_dir >= 0) {
+            // User requested slice IO
+            // remove the slicing direction in position, label, resolution, offset
+            relative_cell_pos.erase(relative_cell_pos.begin() + slice_dir);
+            axisLabels.erase(axisLabels.begin() + slice_dir);
+            dCells.erase(dCells.begin() + slice_dir);
+            offWindow.erase(offWindow.begin() + slice_dir);
         }
         field_comp.setPosition(relative_cell_pos);
         field.setAxisLabels(axisLabels);
@@ -97,7 +98,8 @@ OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
         // data type and global size of the simulation
         io::Datatype datatype = io::determineDatatype< amrex::Real >();
         io::Extent global_size = utils::getReversedVec(geom.Domain().size());
-        if (slice_F_xz) global_size.erase(global_size.begin() + 1);  // remove Ny
+        // If slicing requested, remove number of points for the slicing direction
+        if (slice_dir >= 0) global_size.erase(global_size.begin() + slice_dir);
 
         io::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
@@ -123,9 +125,9 @@ OpenPMDWriter::WriteFieldData (Fields& a_fields, amrex::Geometry const& geom,
             amrex::IntVect const box_offset = data_box.smallEnd();
             io::Offset chunk_offset = utils::getReversedVec(box_offset);
             io::Extent chunk_size = utils::getReversedVec(data_box.size());
-            if (slice_F_xz) { // remove Ny components
-                chunk_offset.erase(chunk_offset.begin() + 1);
-                chunk_size.erase(chunk_size.begin() + 1);
+            if (slice_dir >= 0) { // remove Ny components
+                chunk_offset.erase(chunk_offset.begin() + slice_dir);
+                chunk_size.erase(chunk_size.begin() + slice_dir);
             }
 
             field_comp.storeChunk(data, chunk_offset, chunk_size);
