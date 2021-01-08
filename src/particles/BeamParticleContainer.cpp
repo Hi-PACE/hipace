@@ -83,7 +83,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                             m_dy_per_dzeta);
 
     } else if (m_injection_type == "from_file") {
-
+#ifdef HIPACE_USE_OPENPMD
         amrex::ParmParse pp(m_name);
         pp.get("input_file", m_input_file);
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
@@ -96,7 +96,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,
                                m_plasma_density);
-
+#else
+        amrex::Abort("beam particle injection via external_file requires openPMD support: "
+                     "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+#endif  // HIPACE_USE_OPENPMD
     } else {
 
         amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
