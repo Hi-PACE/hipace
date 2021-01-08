@@ -107,6 +107,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     m_total_num_particles = TotalNumberOfParticles();
 }
 
+#ifdef AMREX_USE_MPI
 void
 BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
 {
@@ -135,6 +136,7 @@ BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
                  my_rank_z+1, comm_z_tag, a_comm_z, &status);
     }
 }
+#endif
 
 void
 BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)

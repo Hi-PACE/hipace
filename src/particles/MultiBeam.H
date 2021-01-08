@@ -85,11 +85,13 @@ public:
     /** returns the number of beam particles of the upstream ranks */
     int get_upstream_n_part (int i) const {return m_all_beams[i].get_upstream_n_part();};
 
+#ifdef AMREX_USE_MPI
     /** Loop over beams and pass total number of beam particles on upstream ranks */
     void NotifyNumParticles (MPI_Comm a_comm_z);
 
     /** Loop over beams and receive total number of beam particles on upstream ranks */
     void WaitNumParticles (MPI_Comm a_comm_z);
+#endif
 
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
     void ConvertUnits (ConvertDirection convert_dir);
