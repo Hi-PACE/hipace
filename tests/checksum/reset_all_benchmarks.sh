@@ -219,7 +219,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name beam_in_vacuum.SI.1Rank
 fi
 
