@@ -23,6 +23,7 @@ namespace {
 
 Hipace* Hipace::m_instance = nullptr;
 
+int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_verbose = 0;

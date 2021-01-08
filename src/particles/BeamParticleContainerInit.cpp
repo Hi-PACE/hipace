@@ -281,6 +281,7 @@ InitBeamFixedWeight (int num_to_add,
     return;
 }
 
+#ifdef HIPACE_USE_OPENPMD
 void
 BeamParticleContainer::
 InitBeamFromFileHelper (std::string input_file,
@@ -289,8 +290,6 @@ InitBeamFromFileHelper (std::string input_file,
                         const amrex::Geometry& geom,
                         const amrex::Real n_0)
 {
-#ifdef HIPACE_USE_OPENPMD
-
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     openPMD::Datatype input_type = openPMD::Datatype::INT;
@@ -320,10 +319,6 @@ InitBeamFromFileHelper (std::string input_file,
     else{
         amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
     }
-#else
-        amrex::Abort("beam particle injection via external_file " + input_file +
-                     " requires openPMD support: Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
-#endif  // HIPACE_USE_OPENPMD
     return;
 }
 
@@ -336,8 +331,6 @@ InitBeamFromFile (std::string input_file,
                   const amrex::Geometry& geom,
                   const amrex::Real n_0)
 {
-#ifdef HIPACE_USE_OPENPMD
-
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
     auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
@@ -532,9 +525,6 @@ InitBeamFromFile (std::string input_file,
         }
     }
     Redistribute();
-#else
-        amrex::Abort("beam particle injection via external_file " + input_file +
-                     " requires openPMD support: Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
-#endif  // HIPACE_USE_OPENPMD
     return;
 }
+#endif // HIPACE_USE_OPENPMD
