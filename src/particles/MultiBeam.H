@@ -69,19 +69,21 @@ public:
     BeamParticleContainer& getBeam (int i) {return m_all_beams[i];};
 
     /** returns the number of beams */
-    int get_nbeams () {return m_nbeams;};
+    int get_nbeams () const {return m_nbeams;};
 
     /** returns the name of a beam */
-    std::string get_name (int i) {return m_all_beams[i].get_name();};
+    std::string get_name (int i) const {return m_all_beams[i].get_name();};
 
     /** returns the local number of particles of a beam */
-    unsigned long long get_local_n_part (int i) {return m_all_beams[i].TotalNumberOfParticles(1,1);};
+    unsigned long long get_local_n_part (int i) const
+        {return m_all_beams[i].TotalNumberOfParticles(1,1);};
 
     /** returns the local number of particles of a beam */
-    unsigned long long get_total_num_particles (int i) {return m_all_beams[i].get_total_num_particles();};
+    unsigned long long get_total_num_particles (int i) const
+        {return m_all_beams[i].get_total_num_particles();};
 
     /** returns the number of beam particles of the upstream ranks */
-    int get_upstream_n_part (int i) {return m_all_beams[i].get_upstream_n_part();};
+    int get_upstream_n_part (int i) const {return m_all_beams[i].get_upstream_n_part();};
 
     /** Loop over beams and pass total number of beam particles on upstream ranks */
     void NotifyNumParticles (MPI_Comm a_comm_z);
