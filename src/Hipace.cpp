@@ -405,7 +405,6 @@ Hipace::ResetAllQuantities (int lev)
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
     ResetPlasmaParticles(m_plasma_container, lev, true);
 
-    amrex::MultiFab& fields = m_fields.getF(lev);
     for (int islice=0; islice<(int) WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
