@@ -195,8 +195,6 @@ public:
     static amrex::Real m_predcorr_B_mixing_factor;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
-    /** whether to output the central y=0 slice (if true), or the whole 3D array (if false) */
-    static bool m_slice_F_xz;
     /** Whether to dump plasma particles */
     static bool m_output_plasma;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.

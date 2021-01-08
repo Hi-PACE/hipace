@@ -32,7 +32,6 @@ amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_device_synchronize = false;
-bool Hipace::m_slice_F_xz = false;
 bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_focusing_field_strength = 0.;
@@ -75,7 +74,6 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
-    pph.query("output_slice", m_slice_F_xz);
     pph.query("beam_injection_cr", m_beam_injection_cr);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
@@ -761,31 +759,10 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
         {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
 
     amrex::Vector<std::string> rfs;
-
-
-
-    
-    amrex::Vector<amrex::Geometry> geom_io = Geom();
-
-    constexpr int lev = 0; // we only have one level
-    constexpr int idim = 1;
-    amrex::RealBox prob_domain = Geom(lev).ProbDomain();
-    amrex::Box domain = Geom(lev).Domain();
-    // Define slice box
-    int const icenter = domain.length(idim)/2;
-    domain.setSmall(idim, icenter);
-    domain.setBig(idim, icenter);
-    if (m_slice_F_xz){
-        geom_io[lev] = amrex::Geometry(domain, &prob_domain, Geom(lev).Coord());
-    }
-
-
-
-
     
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.WriteDiagnostics(m_fields, m_multi_beam, geom_io, m_physical_time,
-                                      output_step,  lev, m_slice_F_xz, varnames);
+                                      output_step,  lev, false, varnames);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
