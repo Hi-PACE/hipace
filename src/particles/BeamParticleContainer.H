@@ -59,6 +59,7 @@ public:
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
+#ifdef HIPACE_USE_OPENPMD
     /** Initialize a beam from an external input file using openPMD and HDF5 */
     void InitBeamFromFileHelper (std::string input_file,
                                  bool coordinates_specified,
@@ -73,6 +74,7 @@ public:
                            amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                            const amrex::Geometry& geom,
                            const amrex::Real n_0);
+#endif
 
 #ifdef AMREX_USE_MPI
     /** Loop over beams and pass total number of beam particles on upstream ranks */
