@@ -17,15 +17,14 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 rm -rf si_data
 rm -rf si_data_fixed_weight
 rm -rf normalized_data
-rm -rf plt00001
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI
-mv plt00001 si_data
+mv diags/h5 si_data
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI beam.injection_type=fixed_weight \
                                                               beam.num_particles=1000000
-mv plt00001 si_data_fixed_weight
+mv diags/h5 si_data_fixed_weight
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
-mv plt00001 normalized_data
+mv diags/h5 normalized_data
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --normalized-data normalized_data --si-data si_data \
@@ -34,5 +33,5 @@ $HIPACE_EXAMPLE_DIR/analysis.py --normalized-data normalized_data --si-data si_d
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile normalized_data \
+    --file_name normalized_data \
     --test-name blowout_wake.2Rank

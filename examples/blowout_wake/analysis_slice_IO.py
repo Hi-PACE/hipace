@@ -4,29 +4,25 @@
 #
 # It compares a field from a simulation with full IO and from a simulation with only slice IO
 
-import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
 import scipy.constants as scc
 import matplotlib
 import sys
 import numpy as np
-from yt.frontends.boxlib.data_structures import AMReXDataset
 import math
 import argparse
+from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = False
 field = 'Bz'
 
-ds1 = AMReXDataset('full_io')
-all_data_level_0 = ds1.covering_grid(level=0,
-                                     left_edge=ds1.domain_left_edge,
-                                     dims=ds1.domain_dimensions)
-F_full = all_data_level_0[field].v.squeeze()
+ts1 = OpenPMDTimeSeries('full_io')
+F_full = ts1.get_field(field=field, iteration=ts1.iterations[-1])[0]
 F_full_sliced = (F_full[:,F_full.shape[1]//2,:].squeeze() +
                   F_full[:,F_full.shape[1]//2-1,:].squeeze())/2.
-ds2 = AMReXDataset('slice_io')
-ad = ds2.all_data()
-F_slice = ad[field].reshape(ds2.domain_dimensions).v.squeeze()
+
+ts2 = OpenPMDTimeSeries('slice_io')
+F_slice = ts2.get_field(field=field, iteration=ts2.iterations[-1])[0]
 
 if do_plot:
     plt.figure(figsize=(12,4))

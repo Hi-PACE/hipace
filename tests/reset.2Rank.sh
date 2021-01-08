@@ -20,5 +20,5 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized max_step=2
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00002 \
+    --file_name diags/h5 \
     --test-name blowout_wake.2Rank

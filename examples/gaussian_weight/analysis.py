@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
 import numpy as np
-from yt.frontends.boxlib.data_structures import AMReXDataset
 import scipy.constants as scc
-
 import argparse
+from openpmd_viewer import OpenPMDTimeSeries
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',
@@ -27,8 +25,7 @@ parser.add_argument('--tilted-beam',
 args = parser.parse_args()
 
 # Load data with yt
-ds = AMReXDataset('plt00000')
-ad = ds.all_data()
+ts = OpenPMDTimeSeries('./diags/h5/')
 
 if args.norm_units:
     x_avg = 0.
@@ -60,13 +57,9 @@ ux_std = 3.
 uy_std = 4.
 
 # Get particle data into numpy arrays
-xp = ad['beam', 'particle_position_x'].v
-yp = ad['beam', 'particle_position_y'].v
-zp = ad['beam', 'particle_position_z'].v
-uxp = ad['beam', 'particle_ux'].v
-uyp = ad['beam', 'particle_uy'].v
-uzp = ad['beam', 'particle_uz'].v
-wp = ad['beam', 'particle_w'].v
+xp, yp, zp, uxp, uyp, uzp, wp = ts.get_particle(
+    species='beam', iteration=ts.iterations[0],
+    var_list=['x', 'y', 'z', 'ux', 'uy', 'uz', 'w'])
 
 if args.do_plot:
     Hx, bins = np.histogram(xp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)
@@ -107,7 +100,7 @@ else:
         assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
         assert(np.abs((np.average(yp)-y_avg)/y_avg) < .03)
 
-    assert( np.abs((np.average(zp)-z_avg)/z_avg) < .025)
+    assert( np.abs((np.average(zp)-z_avg)/z_avg) < .035)
     assert(np.abs((np.std(xp)-x_std)/x_std) < .03)
     assert(np.abs((np.std(yp)-y_std)/y_std) < .03)
     assert(np.abs((np.std(zp)-z_std)/z_std) < .03)

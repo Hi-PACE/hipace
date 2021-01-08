@@ -35,8 +35,6 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasma.density=1 \
         > negative_gradient.txt
 
-# mv plt00001 negative_gradient_data
-
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell = 32 32 32 \
         max_step = 20 \
@@ -54,13 +52,11 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasma.density=1 \
         > positive_gradient.txt
 
-# mv plt00001 positive_gradient_data
-
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_adaptive_ts.py
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00020 \
+    --file_name diags/h5 \
     --test-name adaptive_time_step.1Rank
