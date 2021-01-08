@@ -305,7 +305,7 @@ Hipace::Evolve ()
         const amrex::Vector<int> index_array = fields.IndexArray();
         for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
         {
-            const amrex::Box& bx = boxArray(0)[*it];
+            const amrex::Box& bx = boxArray(lev)[*it];
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
 
