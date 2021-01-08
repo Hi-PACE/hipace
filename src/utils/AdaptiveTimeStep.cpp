@@ -25,15 +25,16 @@ void
 AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
 {
     HIPACE_PROFILE("SetTimeStep()");
-
+#ifdef AMREX_USE_MPI
     if (m_do_adaptive_time_step == 0) return;
 
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     const int numprocs_z = amrex::ParallelDescriptor::NProcs();
+    if (numprocs_z == 0) return;
 
-    if ((nt % numprocs_z == 1) && (my_rank_z >= 1)) PassTimeStepInfoFinish();
     if ((nt % numprocs_z == 0) && (my_rank_z >= 1))
     {
+        PassTimeStepInfoFinish();
         m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
             sizeof(amrex::Real)*WhichDouble::N);
         for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
@@ -45,6 +46,7 @@ AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
                  my_rank_z-1, comm_z_tag, a_comm_z, &m_send_request);
 
     }
+#endif
 }
 
 void
@@ -74,56 +76,56 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     const int numprocs_z = amrex::ParallelDescriptor::NProcs();
 
-    if (nt % numprocs_z == 1 && my_rank_z == 0) PassTimeStepInfoFinish();
     if (nt % numprocs_z != 0) return;
     // Extract properties associated with physical size of the box
     const PhysConst phys_const = get_phys_const();
 
-    if (my_rank_z == numprocs_z-1) {
-        m_timestep_data[WhichDouble::SumWeights] = 0.;
-        m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
-        m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
-        m_timestep_data[WhichDouble::MinUz] = 1e30;
-        if (my_rank_z == numprocs_z -1 )
-        {
-            if (nt > 0){
-                // first rank receives the new dt from last rank
-                auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
-                    sizeof(amrex::Real));
-                MPI_Status status;
-                MPI_Recv(recv_buffer, 1,
-                         amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                         0, comm_z_tag, a_comm_z, &status);
-                dt = recv_buffer[WhichDouble::Dt];
-                amrex::The_Pinned_Arena()->free(recv_buffer);
+#ifdef AMREX_USE_MPI
+    if (numprocs_z > 1) {
+        if (my_rank_z == numprocs_z-1) {
+            m_timestep_data[WhichDouble::SumWeights] = 0.;
+            m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
+            m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
+            m_timestep_data[WhichDouble::MinUz] = 1e30;
+            if (my_rank_z == numprocs_z -1 )
+            {
+                if (nt > 0){
+                    // first rank receives the new dt from last rank
+                    auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
+                        sizeof(amrex::Real));
+                    MPI_Status status;
+                    MPI_Recv(recv_buffer, 1,
+                             amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                             0, comm_z_tag, a_comm_z, &status);
+                    dt = recv_buffer[WhichDouble::Dt];
+                    amrex::The_Pinned_Arena()->free(recv_buffer);
+                }
+                /* always set time step, because it will be passed */
+                m_timestep_data[WhichDouble::Dt] = dt;
             }
-            /* always set time step, because it will be passed */
-            m_timestep_data[WhichDouble::Dt] = dt;
+        } else {
+            /* lower ranks receive all time step data from the upper rank */
+            auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+                (sizeof(amrex::Real)*WhichDouble::N);
+            MPI_Status status;
+            MPI_Recv(recv_buffer, WhichDouble::N,
+                     amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                     my_rank_z+1, comm_z_tag, a_comm_z, &status);
 
+            for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
+                m_timestep_data[idouble] = recv_buffer[idouble];
+            }
+            /* setting dt, so it can be used in the beam pusher */
+            dt = recv_buffer[WhichDouble::Dt];
+            amrex::The_Pinned_Arena()->free(recv_buffer);
         }
-
-    } else {
-        /* lower ranks receive all time step data from the upper rank */
-        auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-            (sizeof(amrex::Real)*WhichDouble::N);
-        MPI_Status status;
-        MPI_Recv(recv_buffer, WhichDouble::N,
-                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 my_rank_z+1, comm_z_tag, a_comm_z, &status);
-
-        for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
-            m_timestep_data[idouble] = recv_buffer[idouble];
-        }
-        /* setting dt, so it can be used in the beam pusher */
-        dt = recv_buffer[WhichDouble::Dt];
-        amrex::The_Pinned_Arena()->free(recv_buffer);
     }
+#endif
 
     for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
         // Loop over particle boxes
         for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
         {
-
             // Extract particle properties
             const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
             const auto uzp = soa.GetRealData(BeamIdx::uz).data();
@@ -200,12 +202,16 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
         /* For serial runs, set adaptive time step right away */
         if (numprocs_z == 1) dt = new_dt;
 
-        if (nt < Hipace::m_max_step -numprocs_z -1) {
-            m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
-            m_send_buffer[WhichDouble::Dt] = new_dt;
-            MPI_Isend(m_send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 numprocs_z-1, comm_z_tag, a_comm_z, &m_send_request);
+#ifdef AMREX_USE_MPI
+        if (numprocs_z > 1) {
+            PassTimeStepInfoFinish();
+            if (nt < Hipace::m_max_step -numprocs_z -1 ) {
+                m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
+                m_send_buffer[WhichDouble::Dt] = new_dt;
+                MPI_Isend(m_send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                     numprocs_z-1, comm_z_tag, a_comm_z, &m_send_request);
+            }
         }
-
+#endif
     }
 }
