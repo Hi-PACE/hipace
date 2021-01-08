@@ -159,7 +159,7 @@ public:
     /** Particle container for the plasma */
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
-    int m_max_step = 0;
+    static int m_max_step;
     /** Time step for the beam evolution */
     static amrex::Real m_dt;
     /** Number of iterations between consecutive output dumps.
