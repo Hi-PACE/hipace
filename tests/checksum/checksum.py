@@ -57,7 +57,7 @@ class Checksum:
             for lev in range(ds.n_levels()):
                 data_lev = {}
                 for field in grid_fields:
-                    data_lev[field[1]] = ds.get_field_checksum(lev, field, self.test_name)
+                    data_lev[field] = ds.get_field_checksum(lev, field, self.test_name)
                 data['lev=' + str(lev)] = data_lev
 
         # Compute checksum for particle quantities

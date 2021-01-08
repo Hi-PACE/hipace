@@ -27,7 +27,7 @@ class Backend:
         ''' Return the list of fields defined on the grid
         '''
 
-        return [item for item in self.dataset.field_list if item[0] == 'boxlib']
+        return [item[1] for item in self.dataset.field_list if item[0] == 'boxlib']
 
     def species_list(self):
         ''' Return the list of species in the dataset
@@ -56,12 +56,12 @@ class Backend:
                 np.array([grid.LeftEdge.v for grid in lev_grids]), axis=0)
             all_data_level = self.dataset.covering_grid(
                 level=lev, left_edge=LeftEdge, dims=self.dataset.domain_dimensions)
-            Q = all_data_level[field].v.squeeze()
+            Q = all_data_level[('boxlib', field)].v.squeeze()
             return np.sum(np.abs(Q))
         # Workaround for Galilean tests: the standard procedure above
         # does not seem to read 2D fields data correctly
         elif (galilean):
-            Q = self.dataset.index.grids[lev][field].v.squeeze()
+            Q = self.dataset.index.grids[lev][('boxlib', field)].v.squeeze()
             return np.sum(np.abs(Q))
 
     def get_species_attributes(self, species):
