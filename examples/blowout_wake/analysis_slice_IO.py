@@ -26,7 +26,7 @@ F_full_yz = (F_full[F_full.shape[0]//2,:,:].squeeze() +
 ts2 = OpenPMDTimeSeries('slice_io_xz')
 F_slice_xz = ts2.get_field(field=field, iteration=ts2.iterations[-1])[0]
 
-ts3 = OpenPMDTimeSeries('slice_io_+yz')
+ts3 = OpenPMDTimeSeries('slice_io_yz')
 F_slice_xz = ts2.get_field(field=field, iteration=ts3.iterations[-1])[0]
 
 if do_plot:
