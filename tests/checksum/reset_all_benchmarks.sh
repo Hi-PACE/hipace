@@ -28,10 +28,10 @@ fi
 # Depending on the user input, recompile serial and/or parallel
 compile_serial=false
 compile_parallel=false
-#if [[ $one_test_name == *"Serial" ]] || [[ $all_tests = true ]]
-#then
-#    compile_serial=true
-#fi
+if [[ $one_test_name == *"Serial" ]] || [[ $all_tests = true ]]
+then
+    compile_serial=true
+fi
 if [[ $one_test_name == *"Rank" ]] || [[ $all_tests = true ]]
 then
     compile_parallel=true
