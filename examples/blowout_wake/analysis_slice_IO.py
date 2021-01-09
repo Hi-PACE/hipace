@@ -27,7 +27,7 @@ ts2 = OpenPMDTimeSeries('slice_io_xz')
 F_slice_xz = ts2.get_field(field=field, iteration=ts2.iterations[-1])[0]
 
 ts3 = OpenPMDTimeSeries('slice_io_yz')
-F_slice_xz = ts2.get_field(field=field, iteration=ts3.iterations[-1])[0]
+F_slice_yz = ts3.get_field(field=field, iteration=ts3.iterations[-1])[0]
 
 if do_plot:
     plt.figure(figsize=(12,8))
