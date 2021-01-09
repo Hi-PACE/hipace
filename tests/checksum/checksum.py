@@ -6,7 +6,6 @@ This file is part of WarpX.
 License: BSD-3-Clause-LBNL
 """
 from benchmark import Benchmark
-# from backend.amrex_backend import Backend
 from backend.openpmd_backend import Backend
 import re
 import sys
