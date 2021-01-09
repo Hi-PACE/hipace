@@ -16,7 +16,6 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-            hipace.output_plasma = 0 \
             beam.profile = gaussian \
             beam.zmin = -59.e-6 \
             beam.zmax = 59.e-6 \
