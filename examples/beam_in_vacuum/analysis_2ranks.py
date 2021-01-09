@@ -9,13 +9,6 @@ do_plot = False
 ts_ref = OpenPMDTimeSeries('./REF_diags/h5/')
 ts = OpenPMDTimeSeries('./diags/h5/')
 
-# ds = AMReXDataset('REF_plt00001')
-# ad = ds.all_data()
-# dsr = AMReXDataset('plt00001')
-# I don't know why, but dsr.all_data() would give wrong results here.
-# adr = dsr.covering_grid(level=0, left_edge=dsr.domain_left_edge,
-#                         dims=dsr.domain_dimensions)
-
 if do_plot:
 
     field = 'Bx'
