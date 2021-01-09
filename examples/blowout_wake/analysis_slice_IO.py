@@ -18,16 +18,17 @@ field = 'Bz'
 
 ts1 = OpenPMDTimeSeries('full_io')
 F_full = ts1.get_field(field=field, iteration=ts1.iterations[-1])[0]
+F_full = np.swapaxes(F_full,0,2)
 F_full_xz = (F_full[:,F_full.shape[1]//2,:].squeeze() +
              F_full[:,F_full.shape[1]//2-1,:].squeeze())/2.
 F_full_yz = (F_full[F_full.shape[0]//2,:,:].squeeze() +
              F_full[F_full.shape[0]//2-1,:,:].squeeze())/2.
 
 ts2 = OpenPMDTimeSeries('slice_io_xz')
-F_slice_xz = ts2.get_field(field=field, iteration=ts2.iterations[-1])[0]
+F_slice_xz = ts2.get_field(field=field, iteration=ts2.iterations[-1])[0].transpose()
 
 ts3 = OpenPMDTimeSeries('slice_io_yz')
-F_slice_yz = ts3.get_field(field=field, iteration=ts3.iterations[-1])[0]
+F_slice_yz = ts3.get_field(field=field, iteration=ts3.iterations[-1])[0].transpose()
 
 if do_plot:
     plt.figure(figsize=(12,8))
