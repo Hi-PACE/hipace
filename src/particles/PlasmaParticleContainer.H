@@ -10,7 +10,7 @@ struct PlasmaIdx
 {
     enum {
         w = 0,                               // weight
-        w0    ,                              // initial weight
+        w0,                                  // initial weight
         ux, uy,                              // momentum
         psi,                                 //
         x_prev, y_prev,                      // temporary position
