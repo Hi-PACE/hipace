@@ -753,8 +753,8 @@ Hipace::Notify ()
 
                     for (unsigned int index = m;
                          index < mend*psize/sizeof(double); index += blockDim.x) {
-                        double *csrc = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
-                        double *cdest = (double *)shared;
+                        double *csrc = (double *)shared;
+                        double *cdest = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
                         cdest[index] = csrc[index];
                     }
                 });
