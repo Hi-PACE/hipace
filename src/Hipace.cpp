@@ -742,7 +742,6 @@ void
 Hipace::WriteDiagnostics (int output_step, bool force_output)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
-    constexpr int lev = 0;
 
     // Dump before first and after last step, and every m_output_period steps in-between
     if (m_output_period < 0 ||
@@ -761,6 +760,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     amrex::Vector<std::string> rfs;
 
 #ifdef HIPACE_USE_OPENPMD
+    constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
                                       m_physical_time, output_step,  lev, m_fields.getDiagSliceDir(), varnames);
 #else
