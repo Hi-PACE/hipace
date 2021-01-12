@@ -614,9 +614,9 @@ Hipace::Wait ()
             auto p_comm_int = comm_int.data();
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion()) {
-                int np_per_block = 128;
-                int nblocks = (np+np_per_block-1)/np_per_block;
-                std::size_t shared_mem_bytes = np_per_block * psize;
+                int const np_per_block = 128;
+                int const nblocks = (np+np_per_block-1)/np_per_block;
+                std::size_t const shared_mem_bytes = np_per_block * psize;
                 // NOTE - TODO DPC++
                 amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
                 [=] AMREX_GPU_DEVICE () noexcept
@@ -624,6 +624,7 @@ Hipace::Wait ()
                     amrex::Gpu::SharedMemory<char> gsm;
                     char* const shared = gsm.dataPtr();
 
+                    // Copy packed data from recv_buffer (in pinned memory) to shared memory
                     int i = blockDim.x*blockIdx.x+threadIdx.x;
                     unsigned int m = threadIdx.x;
                     unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
@@ -635,6 +636,7 @@ Hipace::Wait ()
                     }
 
                     __syncthreads();
+                    // Unpack in shared memory, and move to device memory
                     if (i < np) {
                         ptd.unpackParticleData(shared, m*psize, i, p_comm_real, p_comm_int);
                     }
@@ -742,6 +744,7 @@ Hipace::Notify ()
                     amrex::Gpu::SharedMemory<char> gsm;
                     char* const shared = gsm.dataPtr();
 
+                    // Pack particles from device memory to shared memory
                     int i = blockDim.x*blockIdx.x+threadIdx.x;
                     unsigned int m = threadIdx.x;
                     unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
@@ -751,6 +754,7 @@ Hipace::Notify ()
 
                     __syncthreads();
 
+                    // Copy packed particles from shared memory to psend_buffer in pinned memory
                     for (unsigned int index = m;
                          index < mend*psize/sizeof(double); index += blockDim.x) {
                         double *csrc = (double *)shared;
