@@ -213,6 +213,8 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         amrex::Real * const Fpsi5 = soa.GetRealData(PlasmaIdx::Fpsi5).data();
         amrex::Real * const x0 = soa.GetRealData(PlasmaIdx::x0).data();
         amrex::Real * const y0 = soa.GetRealData(PlasmaIdx::y0).data();
+        amrex::Real * const w = soa.GetRealData(PlasmaIdx::w).data();
+        amrex::Real * const w0 = soa.GetRealData(PlasmaIdx::w0).data();
 
         const auto GetPosition =
             GetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
@@ -228,6 +230,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     SetPosition(ip, x_prev[ip], y_prev[ip], zp);
                 } else {
                     SetPosition(ip, x0[ip], y0[ip], zp);
+                    w[ip] = w0[ip];
                     uxp[ip] = 0._rt;
                     uyp[ip] = 0._rt;
                     psip[ip] = 0._rt;
