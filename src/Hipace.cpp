@@ -612,10 +612,41 @@ Hipace::Wait ()
             amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
             auto p_comm_real = comm_real.data();
             auto p_comm_int = comm_int.data();
-            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int i) noexcept
+#ifdef AMREX_USE_GPU
+            if (amrex::Gpu::inLaunchRegion()) {
+                int np_per_block = 128;
+                int nblocks = (np+np_per_block-1)/np_per_block;
+                std::size_t shared_mem_bytes = np_per_block * psize;
+                // NOTE - TODO DPC++
+                amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+                [=] AMREX_GPU_DEVICE () noexcept
+                {
+                    amrex::Gpu::SharedMemory<char> gsm;
+                    char* const shared = gsm.dataPtr();
+
+                    int i = blockDim.x*blockIdx.x+threadIdx.x;
+                    unsigned int m = threadIdx.x;
+                    unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
+                    for (unsigned int index = m;
+                         index < mend*psize/sizeof(double); index += blockDim.x) {
+                        double *csrc = (double *)(recv_buffer+blockDim.x*blockIdx.x*psize);
+                        double *cdest = (double *)shared;
+                        cdest[index] = csrc[index];
+                    }
+
+                    __syncthreads();
+                    if (i < np) {
+                        ptd.unpackParticleData(shared, m*psize, i, p_comm_real, p_comm_int);
+                    }
+                });
+            } else
+#endif
             {
-                ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
-            });
+                for (int i = 0; i < np; ++i)
+                {
+                    ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
+                }
+            }
 
             amrex::Gpu::Device::synchronize();
             amrex::The_Pinned_Arena()->free(recv_buffer);
@@ -699,10 +730,42 @@ Hipace::Notify ()
             auto p_comm_real = comm_real.data();
             auto p_comm_int = comm_int.data();
             auto p_psend_buffer = m_psend_buffer;
-            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int i) noexcept
+#ifdef AMREX_USE_GPU
+            if (amrex::Gpu::inLaunchRegion()) {
+                int np_per_block = 128;
+                int nblocks = (np+np_per_block-1)/np_per_block;
+                std::size_t shared_mem_bytes = np_per_block * psize;
+                // NOTE - TODO DPC++
+                amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+                [=] AMREX_GPU_DEVICE () noexcept
+                {
+                    amrex::Gpu::SharedMemory<char> gsm;
+                    char* const shared = gsm.dataPtr();
+
+                    int i = blockDim.x*blockIdx.x+threadIdx.x;
+                    unsigned int m = threadIdx.x;
+                    unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
+                    if (i < np) {
+                        ptd.packParticleData(shared, i, m*psize, p_comm_real, p_comm_int);
+                    }
+
+                    __syncthreads();
+
+                    for (unsigned int index = m;
+                         index < mend*psize/sizeof(double); index += blockDim.x) {
+                        double *csrc = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
+                        double *cdest = (double *)shared;
+                        cdest[index] = csrc[index];
+                    }
+                });
+            } else
+#endif
             {
-                ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
-            });
+                for (int i = 0; i < np; ++i)
+                {
+                    ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
+                }
+            }
 
             amrex::Gpu::Device::synchronize();
             MPI_Isend(m_psend_buffer, buffer_size,
