@@ -7,7 +7,6 @@ License: BSD-3-Clause-LBNL
 """
 from benchmark import Benchmark
 from backend.openpmd_backend import Backend
-import re
 import sys
 import numpy as np
 
