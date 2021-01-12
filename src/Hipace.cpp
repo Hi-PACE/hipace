@@ -33,7 +33,6 @@ amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_device_synchronize = false;
-bool Hipace::m_output_plasma = false;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_focusing_field_strength = 0.;
 amrex::Real Hipace::m_external_accel_field_strength = 0.;
@@ -81,7 +80,6 @@ Hipace::Hipace () :
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
-    pph.query("output_plasma", m_output_plasma);
     pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
     pph.query("external_accel_field_strength", m_external_accel_field_strength);
 
@@ -776,30 +774,5 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 
     // Write beam particles
     m_multi_beam.WritePlotFile(filename);
-
-    // Write plasma particles
-    if (m_output_plasma){
-        amrex::ParallelContext::push(m_comm_xy);
-        m_plasma_container.Redistribute();
-        amrex::ParallelContext::pop();
-        amrex::Vector<int> plot_flags(PlasmaIdx::nattribs, 1);
-        amrex::Vector<int> int_flags(PlasmaIdx::nattribs, 1);
-        amrex::Vector<std::string> real_names {
-            "w","ux","uy", "psi",
-            "x_prev", "y_prev", "w_temp", "ux_temp", "uy_temp", "psi_temp",
-            "Fx1", "Fx2", "Fx3", "Fx4", "Fx5",
-            "Fy1", "Fy2", "Fy3", "Fy4", "Fy5",
-            "Fux1", "Fux2", "Fux3", "Fux4", "Fux5",
-            "Fuy1", "Fuy2", "Fuy3", "Fuy4", "Fuy5",
-            "Fpsi1", "Fpsi2", "Fpsi3", "Fpsi4", "Fpsi5",
-            "x0", "y0"
-        };
-        AMREX_ALWAYS_ASSERT(real_names.size() == PlasmaIdx::nattribs);
-        amrex::Vector<std::string> int_names {};
-        m_plasma_container.WritePlotFile(
-            filename, "plasma",
-            plot_flags, int_flags,
-            real_names, int_names);
-    }
 #endif
 }

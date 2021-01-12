@@ -33,5 +33,5 @@ $HIPACE_EXAMPLE_DIR/analysis_beam_push.py
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00020 \
+    --file_name 'diags/h5' \
     --test-name beam_evolution.1Rank

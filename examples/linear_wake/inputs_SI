@@ -1,7 +1,5 @@
 amr.n_cell = 32 32 200
 
-hipace.output_plasma = 1
-
 amr.blocking_factor = 2
 amr.max_level = 0
 
