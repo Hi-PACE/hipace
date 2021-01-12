@@ -195,8 +195,6 @@ public:
     static amrex::Real m_predcorr_B_mixing_factor;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
-    /** Whether to dump plasma particles */
-    static bool m_output_plasma;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     static int m_beam_injection_cr;

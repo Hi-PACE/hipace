@@ -44,7 +44,7 @@ set_default_install_dirs()
 # Options and Variants ########################################################
 #
 option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
-option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                  OFF)
+option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                  ON)
 
 set(HiPACE_PRECISION_VALUES SINGLE DOUBLE)
 set(HiPACE_PRECISION DOUBLE CACHE STRING "Floating point precision (SINGLE/DOUBLE)")
