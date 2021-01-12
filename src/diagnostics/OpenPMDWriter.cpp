@@ -20,15 +20,15 @@ OpenPMDWriter::InitDiagnostics ()
 
     std::string filename = "diags/h5/openpmd.h5"; // bp or h5
 #ifdef AMREX_USE_MPI
-    m_outputSeries = std::make_unique< io::Series >(
-        filename, io::Access::CREATE, amrex::ParallelDescriptor::Communicator());
+    m_outputSeries = std::make_unique< openPMD::Series >(
+        filename, openPMD::Access::CREATE, amrex::ParallelDescriptor::Communicator());
 #else
-    m_outputSeries = std::make_unique< io::Series >(
-        filename, io::Access::CREATE);
+    m_outputSeries = std::make_unique< openPMD::Series >(
+        filename, openPMD::Access::CREATE);
 #endif
 
     // open files early and collectively, so later flush calls are non-collective
-    m_outputSeries->setIterationEncoding( io::IterationEncoding::groupBased );
+    m_outputSeries->setIterationEncoding( openPMD::IterationEncoding::groupBased );
     m_outputSeries->flush();
 
     // TODO: meta-data: author, mesh path, extensions, software
@@ -41,7 +41,7 @@ OpenPMDWriter::WriteDiagnostics (
     const amrex::Real physical_time, const int output_step, const int lev,
     const int slice_dir, const amrex::Vector< std::string > varnames)
 {
-    io::Iteration iteration = m_outputSeries->iterations[output_step];
+    openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration);
@@ -70,11 +70,11 @@ OpenPMDWriter::WriteFieldData (
         std::string fieldname = varnames[icomp];
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
-        io::Mesh field = meshes[fieldname];
-        io::MeshRecordComponent field_comp = field[io::MeshRecordComponent::SCALAR];
+        openPMD::Mesh field = meshes[fieldname];
+        openPMD::MeshRecordComponent field_comp = field[openPMD::MeshRecordComponent::SCALAR];
 
         // meta-data
-        field.setDataOrder(io::Mesh::DataOrder::C);
+        field.setDataOrder(openPMD::Mesh::DataOrder::C);
         //   node staggering
         auto relative_cell_pos = utils::getRelativeCellPosition(mf);      // AMReX Fortran index order
         std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
@@ -96,12 +96,12 @@ OpenPMDWriter::WriteFieldData (
         field.setGridGlobalOffset(offWindow);
 
         // data type and global size of the simulation
-        io::Datatype datatype = io::determineDatatype< amrex::Real >();
-        io::Extent global_size = utils::getReversedVec(geom.Domain().size());
+        openPMD::Datatype datatype = openPMD::determineDatatype< amrex::Real >();
+        openPMD::Extent global_size = utils::getReversedVec(geom.Domain().size());
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
-        io::Dataset dataset(datatype, global_size);
+        openPMD::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
 
         // Loop over longitudinal boxes on this rank, from head to tail:
@@ -112,7 +112,7 @@ OpenPMDWriter::WriteFieldData (
             amrex::Box const data_box = mfi.validbox();  // w/o guards in all cases
             std::shared_ptr< amrex::Real const > data;
             if (mfi.validbox() == fab.box() ) {
-                data = io::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
+                data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
             } else {
                 // copy data to cut away guards
                 amrex::FArrayBox io_fab(mfi.validbox(), 1, amrex::The_Pinned_Arena());
@@ -123,8 +123,8 @@ OpenPMDWriter::WriteFieldData (
 
             // Determine the offset and size of this data chunk in the global output
             amrex::IntVect const box_offset = data_box.smallEnd();
-            io::Offset chunk_offset = utils::getReversedVec(box_offset);
-            io::Extent chunk_size = utils::getReversedVec(data_box.size());
+            openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
+            openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
             if (slice_dir >= 0) { // remove Ny components
                 chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
                 chunk_size.erase(chunk_size.begin() + 2-slice_dir);

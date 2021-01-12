@@ -14,7 +14,6 @@
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
 #include "diagnostics/OpenPMDWriter.H"
-namespace io = openPMD;
 #endif
 
 #include <memory>
