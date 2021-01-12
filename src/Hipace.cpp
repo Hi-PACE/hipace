@@ -356,9 +356,9 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         FieldComps::rho, 1);
 
-    DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
-                   true, true, geom[lev], lev);
-    m_fields.AddRhoIons(lev);
+    // DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
+    //                true, true, geom[lev], lev);
+    // m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
