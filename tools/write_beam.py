@@ -27,45 +27,47 @@ series = io.Series("beam_%05T.h5", io.Access.create)
 
 i = series.iterations[0]
 
-particel = i.particles["Electrons"]
+particle = i.particles["Electrons"]
+
+particle.set_attribute("Hipace++_Plasma_Density", plasma_density)
 
 dataset = io.Dataset(data[0].dtype,data[0].shape)
 
-particel["r"].unit_dimension = {
+particle["r"].unit_dimension = {
     io.Unit_Dimension.L:  1,
 }
 
-particel["u"].unit_dimension = {
+particle["u"].unit_dimension = {
     io.Unit_Dimension.L:  1,
     io.Unit_Dimension.T: -1,
 }
 
-particel["q"].unit_dimension = {
+particle["q"].unit_dimension = {
     io.Unit_Dimension.I:  1,
     io.Unit_Dimension.T:  1,
 }
 
-particel["m"].unit_dimension = {
+particle["m"].unit_dimension = {
     io.Unit_Dimension.M:  1,
 }
 
 for k,m in [["x",0],["y",1],["z",2]]:
-    particel["r"][k].reset_dataset(dataset)
-    particel["r"][k].store_chunk(data[m])
-    particel["r"][k].unit_SI = kp_inv
+    particle["r"][k].reset_dataset(dataset)
+    particle["r"][k].store_chunk(data[m])
+    particle["r"][k].unit_SI = kp_inv
 
 for k,m in [["x",3],["y",4],["z",5]]:
-    particel["u"][k].reset_dataset(dataset)
-    particel["u"][k].store_chunk(data[m])
-    particel["u"][k].unit_SI = 1
+    particle["u"][k].reset_dataset(dataset)
+    particle["u"][k].store_chunk(data[m])
+    particle["u"][k].unit_SI = 1
 
-particel["q"]["q"].reset_dataset(dataset)
-particel["q"]["q"].make_constant(single_charge)
-particel["q"]["q"].unit_SI = constants.e * plasma_density * kp_inv**3
+particle["q"]["q"].reset_dataset(dataset)
+particle["q"]["q"].make_constant(single_charge)
+particle["q"]["q"].unit_SI = constants.e * plasma_density * kp_inv**3
 
-particel["m"]["m"].reset_dataset(dataset)
-particel["m"]["m"].make_constant(single_charge)
-particel["m"]["m"].unit_SI = constants.m_e * plasma_density * kp_inv**3
+particle["m"]["m"].reset_dataset(dataset)
+particle["m"]["m"].make_constant(single_charge)
+particle["m"]["m"].unit_SI = constants.m_e * plasma_density * kp_inv**3
 
 series.flush()
 

@@ -22,9 +22,9 @@ BeamParticleContainer::ReadParameters ()
     pp.query("dx_per_dzeta", m_dx_per_dzeta);
     pp.query("dy_per_dzeta", m_dy_per_dzeta);
     pp.query("do_z_push", m_do_z_push);
-    if (m_injection_type == "fixed_ppc"){
+    if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.),
-            "Tilted beams are not yet implemented for fixed ppc beams");
+            "Tilted beams are not yet implemented for fixed ppc beams or beams from file");
     }
 }
 
@@ -89,9 +89,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
         bool n_0_specified = pp.query("plasma_density", m_plasma_density);
 
-        if(Hipace::m_normalized_units) {
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(n_0_specified, "Please specify the plasma density of "
-            "the external beam to use it with normalized units with beam.plasma_density");
+        if(!n_0_specified) {
+            m_plasma_density = 0;
         }
 
         InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,

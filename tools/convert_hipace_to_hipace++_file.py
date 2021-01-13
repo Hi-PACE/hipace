@@ -571,7 +571,7 @@ def main():
 
     particle = i.particles["Electrons"]
 
-    i.set_attribute("Hipace++_Plasma_Density", args.n0)
+    particle.set_attribute("Hipace++_Plasma_Density", args.n0)
 
     dataset = io.Dataset(x1.dtype,x1.shape)
 
