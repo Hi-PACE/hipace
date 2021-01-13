@@ -33,8 +33,11 @@ HiPACE depends on the following popular third party software.
 Please see installation instructions below in the *Developers* section.
 
 - a mature [C++14](https://en.wikipedia.org/wiki/C%2B%2B14) compiler: e.g. GCC 5, Clang 3.6 or newer
-- [CMake 3.14.0+](https://cmake.org/)
+- [CMake 3.15.0+](https://cmake.org/)
 - [AMReX *development*](https://amrex-codes.github.io): we automatically download and compile a copy of AMReX
+- [openPMD-api *dev*](https://github.com/openPMD/openPMD-api): we automatically download and compile a copy of openPMD-api
+  - [HDF5](https://support.hdfgroup.org/HDF5) 1.8.13+ (optional; for `.h5` file support)
+  - [ADIOS2](https://github.com/ornladios/ADIOS2) 2.6.0+ (optional; for `.bp` file support)
 - Nvidia GPU support:
   - [CUDA Toolkit 9.0+](https://developer.nvidia.com/cuda-downloads) (see [matching host-compilers](https://gist.github.com/ax3l/9489132))
 - CPU-only:
@@ -51,9 +54,11 @@ macOS/Linux:
 ```bash
 spack env create hipace-dev
 spack env activate hipace-dev
+spack add adios2  # for .bp file support
 spack add ccache
 spack add cmake
 spack add fftw
+spack add hdf5    # for .h5 file support
 spack add mpi
 spack add pkgconfig  # for fftw
 # optional:
@@ -65,15 +70,17 @@ spack install
 or macOS/Linux:
 ```bash
 brew update
+brew install adios2  # for .bp file support
 brew install ccache
 brew install cmake
 brew install fftw
+brew install hdf5-mpi  # for .h5 file support
 brew install libomp
 brew install pkg-config  # for fftw
 brew install open-mpi
 ```
 
-Now, `cmake --version` should be at version 3.14.0 or newer.
+Now, `cmake --version` should be at version 3.15.0 or newer.
 
 ### Configure your compiler
 
@@ -122,7 +129,7 @@ or by providing arguments to the CMake call: `cmake .. -D<OPTION_A>=<VALUE_A> -D
 | `HiPACE_amrex_repo`          | `https://github.com/AMReX-Codes/amrex.git` | Repository URI to pull and build AMReX from         |
 | `HiPACE_amrex_branch`        | `development`                              | Repository branch for `HiPACE_amrex_repo`           |
 | `HiPACE_amrex_internal`      | **ON**/OFF                                 | Needs a pre-installed AMReX library if set to `OFF` |
-| `HiPACE_OPENPMD`             |  ON/**OFF**                                | openPMD I/O (HDF5, ADIOS)                           |
+| `HiPACE_OPENPMD`             |  **ON**/OFF                                | openPMD I/O (HDF5, ADIOS2)                           |
 
 For example, one can also build against a local AMReX git repo.
 Assuming AMReX' source is located in `$HOME/src/amrex` and changes are committed into a branch such as `my-amrex-branch` then pass to `cmake` the arguments `-DHiPACE_amrex_repo=file://$HOME/src/amrex -DHiPACE_amrex_branch=my-amrex-branch`.
