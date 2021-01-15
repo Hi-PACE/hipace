@@ -10,7 +10,7 @@ function(find_openpmd)
         set(openPMD_BUILD_CLI_TOOLS OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_EXAMPLES  OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_TESTING   OFF           CACHE INTERNAL "")
-        set(openPMD_INSTALL ${BUILD_SHARED_LIBS}  CACHE INTERNAL "")
+        set(openPMD_BUILD_SHARED_LIBS OFF         CACHE INTERNAL "")
 
         FetchContent_Declare(fetchedopenpmd
             GIT_REPOSITORY ${HiPACE_openpmd_repo}
