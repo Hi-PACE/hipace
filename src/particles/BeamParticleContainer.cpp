@@ -114,6 +114,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 void
 BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
 {
+    HIPACE_PROFILE("BeamParticleContainer::NotifyNumParticles()");
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
 
     if (my_rank_z >= 1)
@@ -130,6 +131,7 @@ BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
 void
 BeamParticleContainer::NotifyNumParticlesFinish ()
 {
+    HIPACE_PROFILE("BeamParticleContainer::NotifyNumParticlesFinish()");
     if (m_send_request) {
         MPI_Status status;
         MPI_Wait(&m_send_request, &status);
@@ -140,6 +142,7 @@ BeamParticleContainer::NotifyNumParticlesFinish ()
 void
 BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
 {
+    HIPACE_PROFILE("BeamParticleContainer::WaitNumParticles()");
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     if (my_rank_z  < amrex::ParallelDescriptor::NProcs()-1)
     {
