@@ -141,7 +141,7 @@ public:
     /** My rank in the longitudinal communicator */
     int m_rank_z = 0;
     /** Max number of grid size in the longitudinal direction */
-    int m_grid_size_z = 0;    
+    int m_grid_size_z = 0;
     /** Field send buffer for the pipeline */
     amrex::Real* m_fields_send_buffer = nullptr;
     /** Field recv buffer for the pipeline */
