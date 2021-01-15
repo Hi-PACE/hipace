@@ -83,6 +83,14 @@ MultiBeam::NotifyNumParticles (MPI_Comm a_comm_z)
 }
 
 void
+MultiBeam::NotifyNumParticlesFinish ()
+{
+    for (auto& beam : m_all_beams) {
+        beam.NotifyNumParticlesFinish();
+    }
+}
+
+void
 MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
 {
     for (auto& beam : m_all_beams) {

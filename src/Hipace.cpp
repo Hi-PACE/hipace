@@ -777,7 +777,9 @@ Hipace::Notify ()
         }
     }
     #ifdef HIPACE_USE_OPENPMD
-    /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
+    // finish the previous non-blockign send of the number of upstream beam particles
+    m_multi_beam.NotifyNumParticlesFinish();
+    // pass the number of beam particles from the upstream ranks to get the offset for openPMD IO
     m_multi_beam.NotifyNumParticles(m_comm_z);
     #endif
 #endif

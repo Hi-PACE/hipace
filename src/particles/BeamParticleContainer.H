@@ -80,6 +80,9 @@ public:
     /** Loop over beams and pass total number of beam particles on upstream ranks */
     void NotifyNumParticles (MPI_Comm a_comm_z);
 
+    /** finish the non-blocking send of the number of upstream beam particles */
+    void NotifyNumParticlesFinish ();
+
     /** Loop over beams and receive total number of beam particles on upstream ranks */
     void WaitNumParticles (MPI_Comm a_comm_z);
 #endif
@@ -125,6 +128,8 @@ private:
     std::string m_input_file; /**< Path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
+    /** status of the send request for the beam particle offset required for I/O */
+    MPI_Request m_send_request = MPI_REQUEST_NULL;
 };
 
 /** \brief Iterator over boxes in a particle container */

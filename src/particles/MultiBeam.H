@@ -89,6 +89,9 @@ public:
     /** Loop over beams and pass total number of beam particles on upstream ranks */
     void NotifyNumParticles (MPI_Comm a_comm_z);
 
+    /** finish the non-blocking send of the number of upstream beam particles */
+    void NotifyNumParticlesFinish ();
+
     /** Loop over beams and receive total number of beam particles on upstream ranks */
     void WaitNumParticles (MPI_Comm a_comm_z);
 #endif

@@ -121,9 +121,19 @@ BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
         const int num_local_particles = TotalNumberOfParticles(1,1); // get local number of particles
         const int upstream_particles = m_num_particles_on_upstream_ranks + num_local_particles;
 
-        MPI_Send(&upstream_particles, 1,
+        MPI_Isend(&upstream_particles, 1,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 my_rank_z-1, comm_z_tag, a_comm_z);
+                 my_rank_z-1, comm_z_tag, a_comm_z, &m_send_request);
+    }
+}
+
+void
+BeamParticleContainer::NotifyNumParticlesFinish ()
+{
+    if (m_send_request) {
+        MPI_Status status;
+        MPI_Wait(&m_send_request, &status);
+        m_send_request = MPI_REQUEST_NULL;
     }
 }
 
