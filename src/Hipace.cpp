@@ -98,6 +98,14 @@ Hipace::~Hipace ()
     NotifyFinish();
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
+    amrex::The_Pinned_Arena()->free(m_fields_recv_buffer);
+    amrex::The_Pinned_Arena()->free(m_fields_send_buffer);
+    amrex::The_Pinned_Arena()->free(m_plasma_recv_buffer);
+    amrex::The_Pinned_Arena()->free(m_plasma_send_buffer);
+    m_fields_send_buffer = nullptr;
+    m_fields_recv_buffer = nullptr;
+    m_plasma_send_buffer = nullptr;
+    m_plasma_recv_buffer = nullptr;
 #endif
 }
 
@@ -190,6 +198,38 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
+
+#ifdef AMREX_USE_MPI
+    // Allocate field buffers for the pipeline
+    {
+        amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
+        amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
+        amrex::MultiFab& slice4 = m_fields.getSlices(lev, WhichSlice::RhoIons);
+        // Note that there is only one local Box in slice multifab's boxarray.
+        const int box_index = slice2.IndexArray()[0];
+        amrex::Array4<amrex::Real> const& slice_fab2 = slice2.array(box_index);
+        amrex::Array4<amrex::Real> const& slice_fab3 = slice3.array(box_index);
+        amrex::Array4<amrex::Real> const& slice_fab4 = slice4.array(box_index);
+        const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
+        const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
+        const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
+        const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
+        const std::size_t nreals_total =
+            nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
+        m_fields_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            (sizeof(amrex::Real)*nreals_total);
+        m_fields_recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            (sizeof(amrex::Real)*nreals_total);
+    }
+    // Allocate plasma particle buffers for the pipeline
+    {
+        const amrex::Long np = m_plasma_container.m_num_exchange;
+        const amrex::Long psize = m_plasma_container.superParticleSize();
+        const amrex::Long buffer_size = psize*np;
+        m_plasma_recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+        m_plasma_send_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+    }
+#endif // AMREX_USE_MPI
 }
 
 void
@@ -561,16 +601,14 @@ Hipace::Wait ()
         const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
         const std::size_t nreals_total =
             nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
-        auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-            (sizeof(amrex::Real)*nreals_total);
-        auto const buf2 = amrex::makeArray4(recv_buffer,
+        auto const buf2 = amrex::makeArray4(m_fields_recv_buffer,
                                             bx, slice_fab2.nComp());
-        auto const buf3 = amrex::makeArray4(recv_buffer+nreals_valid_slice2,
+        auto const buf3 = amrex::makeArray4(m_fields_recv_buffer+nreals_valid_slice2,
                                             bx, slice_fab3.nComp());
-        auto const buf4 = amrex::makeArray4(recv_buffer+nreals_valid_slice2+nreals_valid_slice3,
+        auto const buf4 = amrex::makeArray4(m_fields_recv_buffer+nreals_valid_slice2+nreals_valid_slice3,
                                             bx, slice_fab4.nComp());
         MPI_Status status;
-        MPI_Recv(recv_buffer, nreals_total,
+        MPI_Recv(m_fields_recv_buffer, nreals_total,
                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                  m_rank_z+1, comm_z_tag, m_comm_z, &status);
         amrex::ParallelFor
@@ -588,7 +626,6 @@ Hipace::Wait ()
              });
 
         amrex::Gpu::Device::synchronize();
-        amrex::The_Pinned_Arena()->free(recv_buffer);
         }
 
         // Same thing for the plasma particles. Currently only one tile.
@@ -597,10 +634,9 @@ Hipace::Wait ()
             const amrex::Long np = m_plasma_container.m_num_exchange;
             const amrex::Long psize = m_plasma_container.superParticleSize();
             const amrex::Long buffer_size = psize*np;
-            auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
-
+            const auto loc_plasma_recv_buffer = m_plasma_recv_buffer;
             MPI_Status status;
-            MPI_Recv(recv_buffer, buffer_size,
+            MPI_Recv(m_plasma_recv_buffer, buffer_size,
                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                      m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
 
@@ -624,13 +660,13 @@ Hipace::Wait ()
                     amrex::Gpu::SharedMemory<char> gsm;
                     char* const shared = gsm.dataPtr();
 
-                    // Copy packed data from recv_buffer (in pinned memory) to shared memory
+                    // Copy packed data from m_plasma_recv_buffer (in pinned memory) to shared memory
                     const int i = blockDim.x*blockIdx.x+threadIdx.x;
                     const unsigned int m = threadIdx.x;
                     const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
                     for (unsigned int index = m;
                          index < mend*psize/sizeof(double); index += blockDim.x) {
-                        const double *csrc = (double *)(recv_buffer+blockDim.x*blockIdx.x*psize);
+                        const double *csrc = (double *)(loc_plasma_recv_buffer+blockDim.x*blockIdx.x*psize);
                         double *cdest = (double *)shared;
                         cdest[index] = csrc[index];
                     }
@@ -646,12 +682,11 @@ Hipace::Wait ()
             {
                 for (int i = 0; i < np; ++i)
                 {
-                    ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
+                    ptd.unpackParticleData(loc_plasma_recv_buffer, i*psize, i, p_comm_real, p_comm_int);
                 }
             }
 
             amrex::Gpu::Device::synchronize();
-            amrex::The_Pinned_Arena()->free(recv_buffer);
         }
     }
     #ifdef HIPACE_USE_OPENPMD
@@ -687,13 +722,11 @@ Hipace::Notify ()
         const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
         const std::size_t nreals_total =
             nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
-        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-            (sizeof(amrex::Real)*nreals_total);
-        auto const buf2 = amrex::makeArray4(m_send_buffer,
+        auto const buf2 = amrex::makeArray4(m_fields_send_buffer,
                                             bx, slice_fab2.nComp());
-        auto const buf3 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2,
+        auto const buf3 = amrex::makeArray4(m_fields_send_buffer+nreals_valid_slice2,
                                             bx, slice_fab3.nComp());
-        auto const buf4 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2+nreals_valid_slice3,
+        auto const buf4 = amrex::makeArray4(m_fields_send_buffer+nreals_valid_slice2+nreals_valid_slice3,
                                             bx, slice_fab4.nComp());
         amrex::ParallelFor
             (bx, slice_fab2.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -710,7 +743,7 @@ Hipace::Notify ()
              });
 
         amrex::Gpu::Device::synchronize();
-        MPI_Isend(m_send_buffer, nreals_total,
+        MPI_Isend(m_fields_send_buffer, nreals_total,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   m_rank_z-1, comm_z_tag, m_comm_z, &m_send_request);
         }
@@ -721,7 +754,6 @@ Hipace::Notify ()
             const amrex::Long np = m_plasma_container.m_num_exchange;
             const amrex::Long psize = m_plasma_container.superParticleSize();
             const amrex::Long buffer_size = psize*np;
-            m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
             const auto& ptile = m_plasma_container.ParticlesAt(lev, 0, 0);
             const auto ptd = ptile.getConstParticleTileData();
@@ -730,7 +762,7 @@ Hipace::Notify ()
             const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
-            const auto p_psend_buffer = m_psend_buffer;
+            const auto loc_plasma_send_buffer = m_plasma_send_buffer;
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion()) {
                 const int np_per_block = 128;
@@ -753,11 +785,11 @@ Hipace::Notify ()
 
                     __syncthreads();
 
-                    // Copy packed particles from shared memory to psend_buffer in pinned memory
+                    // Copy packed particles from shared memory to m_plasma_send_buffer in pinned memory
                     for (unsigned int index = m;
                          index < mend*psize/sizeof(double); index += blockDim.x) {
                         const double *csrc = (double *)shared;
-                        double *cdest = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
+                        double *cdest = (double *)(loc_plasma_send_buffer+blockDim.x*blockIdx.x*psize);
                         cdest[index] = csrc[index];
                     }
                 });
@@ -766,12 +798,12 @@ Hipace::Notify ()
             {
                 for (int i = 0; i < np; ++i)
                 {
-                    ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
+                    ptd.packParticleData(loc_plasma_send_buffer, i, i*psize, p_comm_real, p_comm_int);
                 }
             }
 
             amrex::Gpu::Device::synchronize();
-            MPI_Isend(m_psend_buffer, buffer_size,
+            MPI_Isend(loc_plasma_send_buffer, buffer_size,
                       amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
         }
@@ -788,17 +820,13 @@ Hipace::NotifyFinish ()
 {
 #ifdef AMREX_USE_MPI
     if (m_rank_z != 0) {
-        if (m_send_buffer) {
+        if (m_fields_send_buffer) {
             MPI_Status status;
             MPI_Wait(&m_send_request, &status);
-            amrex::The_Pinned_Arena()->free(m_send_buffer);
-            m_send_buffer = nullptr;
         }
-        if (m_psend_buffer) {
+        if (m_plasma_send_buffer) {
             MPI_Status status;
             MPI_Wait(&m_psend_request, &status);
-            amrex::The_Pinned_Arena()->free(m_psend_buffer);
-            m_psend_buffer = nullptr;
         }
     }
 #endif
