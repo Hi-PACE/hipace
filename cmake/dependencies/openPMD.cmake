@@ -4,13 +4,13 @@ function(find_openpmd)
         include(FetchContent)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
-        # see https://openpmd-api.readthedocs.io/en/0.12.0-alpha/dev/buildoptions.html
-        set(openPMD_USE_MPI    ${HiPACE_MPI}        CACHE INTERNAL "")
-        set(openPMD_USE_PYTHON OFF                  CACHE INTERNAL "")
-        set(BUILD_CLI_TOOLS    OFF                  CACHE INTERNAL "")  # FIXME
-        set(BUILD_EXAMPLES     OFF                  CACHE INTERNAL "")  # FIXME
-        set(BUILD_TESTING      ${BUILD_TESTING}     CACHE INTERNAL "")  # FIXME
-        set(openPMD_INSTALL    ${BUILD_SHARED_LIBS} CACHE INTERNAL "")
+        # see https://openpmd-api.readthedocs.io/en/0.13.1-alpha/dev/buildoptions.html
+        set(openPMD_USE_MPI         ${HiPACE_MPI} CACHE INTERNAL "")
+        set(openPMD_USE_PYTHON      OFF           CACHE INTERNAL "")
+        set(openPMD_BUILD_CLI_TOOLS OFF           CACHE INTERNAL "")
+        set(openPMD_BUILD_EXAMPLES  OFF           CACHE INTERNAL "")
+        set(openPMD_BUILD_TESTING   OFF           CACHE INTERNAL "")
+        set(openPMD_BUILD_SHARED_LIBS OFF         CACHE INTERNAL "")
 
         FetchContent_Declare(fetchedopenpmd
             GIT_REPOSITORY ${HiPACE_openpmd_repo}
@@ -62,7 +62,7 @@ if(HiPACE_OPENPMD)
     set(HiPACE_openpmd_repo "https://github.com/openPMD/openPMD-api.git"
         CACHE STRING
         "Repository URI to pull and build openPMD-api from if(HiPACE_openpmd_internal)")
-    set(HiPACE_openpmd_branch "0.13.1"
+    set(HiPACE_openpmd_branch "ac083025ee662469b8cad1adf93eef48cde35f58"
         CACHE STRING
         "Repository branch for HiPACE_openpmd_repo if(HiPACE_openpmd_internal)")
 
