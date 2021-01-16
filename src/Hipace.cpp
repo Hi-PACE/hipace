@@ -98,14 +98,22 @@ Hipace::~Hipace ()
     NotifyFinish();
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
-    amrex::The_Pinned_Arena()->free(m_fields_recv_buffer);
-    amrex::The_Pinned_Arena()->free(m_fields_send_buffer);
-    amrex::The_Pinned_Arena()->free(m_plasma_recv_buffer);
-    amrex::The_Pinned_Arena()->free(m_plasma_send_buffer);
-    m_fields_send_buffer = nullptr;
-    m_fields_recv_buffer = nullptr;
-    m_plasma_send_buffer = nullptr;
-    m_plasma_recv_buffer = nullptr;
+    if (m_fields_recv_buffer){
+        amrex::The_Pinned_Arena()->free(m_fields_recv_buffer);
+        m_fields_send_buffer = nullptr;
+    }
+    if (m_fields_send_buffer){
+        amrex::The_Pinned_Arena()->free(m_fields_send_buffer);
+        m_fields_recv_buffer = nullptr;
+    }
+    if (m_plasma_recv_buffer){
+        amrex::The_Pinned_Arena()->free(m_plasma_recv_buffer);
+        m_plasma_send_buffer = nullptr;
+    }
+    if (m_plasma_send_buffer){
+        amrex::The_Pinned_Arena()->free(m_plasma_send_buffer);
+        m_plasma_recv_buffer = nullptr;
+    }
 #endif
 }
 
