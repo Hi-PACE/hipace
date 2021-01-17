@@ -18,7 +18,7 @@
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
-                        amrex::Geometry const& gm, const WhichSlice which_slice,
+                        amrex::Geometry const& gm, const int which_slice,
                         const bool temp_slice, const bool do_push, const bool do_update,
                         const bool do_shift, int const lev);
 

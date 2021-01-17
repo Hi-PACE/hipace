@@ -31,7 +31,7 @@ Fields::AllocData (
     m_F[lev].define(ba, dm, FieldComps::nfields, nguards_F, amrex::MFInfo().SetAlloc(false));
     m_diags.AllocData(lev, ba, FieldComps::nfields, dm, geom);
 
-    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
+    for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(slice_ba, slice_dm, FieldComps::nfields, m_slices_nguards,
                                      amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
@@ -142,7 +142,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][(int) WhichSlice::This]; // copy from/to the current slice
+    auto& slice_mf = m_slices[lev][WhichSlice::This]; // copy from/to the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
@@ -198,10 +198,10 @@ void
 Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    std::swap(m_slices[lev][(int) WhichSlice::Previous1],
-              m_slices[lev][(int) WhichSlice::Previous2]);
-    std::swap(m_slices[lev][(int) WhichSlice::This],
-              m_slices[lev][(int) WhichSlice::Previous1]);
+    std::swap(m_slices[lev][WhichSlice::Previous1],
+              m_slices[lev][WhichSlice::Previous2]);
+    std::swap(m_slices[lev][WhichSlice::This],
+              m_slices[lev][WhichSlice::Previous1]);
 }
 
 void

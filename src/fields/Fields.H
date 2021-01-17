@@ -20,7 +20,9 @@ struct FieldComps{
 enum struct FieldCopyType { FtoS, StoF };
 
 /** \brief describes which slice with respect to the currently calculated is used */
-enum struct WhichSlice { Next=0, This, Previous1, Previous2, RhoIons, N };
+struct WhichSlice {
+    enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
+};
 
 /** \brief Operation performed in the TransverseDerivative function:
  * either assign or add to the destination array
@@ -74,11 +76,6 @@ public:
      * \param[in] lev MR level
      */
     std::array<amrex::MultiFab, m_nslices>& getSlices (int lev) {return m_slices[lev]; }
-    /** get function for the 2D slices
-     * \param[in] lev MR level
-     * \param[in] sl slice type (WhichSlice::Next, This, Previous1, Previous2 )
-     */
-    amrex::MultiFab& getSlices (int lev, WhichSlice sl) {return m_slices[lev][(int) sl]; }
     /** get function for the 2D slices
      * \param[in] lev MR level
      * \param[in] islice slice index

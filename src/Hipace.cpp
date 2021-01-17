@@ -400,7 +400,7 @@ Hipace::ResetAllQuantities (int lev)
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
     ResetPlasmaParticles(m_plasma_container, lev, true);
 
-    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
+    for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
 }

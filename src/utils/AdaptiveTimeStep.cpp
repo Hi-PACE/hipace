@@ -37,7 +37,7 @@ AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
         PassTimeStepInfoFinish();
         m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
             sizeof(amrex::Real)*WhichDouble::N);
-        for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
+        for (int idouble=0; idouble<WhichDouble::N; idouble++) {
             m_send_buffer[idouble] = m_timestep_data[idouble];
         }
 
@@ -109,7 +109,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
                      amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                      my_rank_z+1, comm_z_tag, a_comm_z, &status);
 
-            for (int idouble=0; idouble<(int) WhichDouble::N; idouble++) {
+            for (int idouble=0; idouble<WhichDouble::N; idouble++) {
                 m_timestep_data[idouble] = recv_buffer[idouble];
             }
             /* setting dt, so it can be used in the beam pusher */
