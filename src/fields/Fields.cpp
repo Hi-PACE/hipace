@@ -386,7 +386,7 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
         geom.CellSize(Direction::y),
         phys_const.mu0,
         SliceOperatorType::Assign,
-        Comps[WhichSlice::This]["jz"]);
+        Comps[WhichSlice::This]["jx"]);
 
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
