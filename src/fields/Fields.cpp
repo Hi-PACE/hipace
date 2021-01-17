@@ -33,7 +33,7 @@ Fields::AllocData (
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
-            slice_ba, slice_dm, Comps[WhichSlice::This]["N"], m_slices_nguards,
+            slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
     }
