@@ -18,17 +18,18 @@ struct WhichSlice {
     enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
 };
 
-AMREX_ALWAYS_ASSERT(
-    (WhichSlice::Next == 0) &&
-    (WhichSlice::This == 1) &&
-    (WhichSlice::Previous1 == 2) &&
-    (WhichSlice::Previous2 == 3) &&
-    (WhichSlice::RhoIons == 4) &&
-    );
+//AMREX_ALWAYS_ASSERT(
+//    (WhichSlice::Next == 0) && (WhichSlice::This == 1) &&
+//    (WhichSlice::Previous1 == 2) &&
+//    (WhichSlice::Previous2 == 3) &&
+//    (WhichSlice::RhoIons == 4)
+//    );
 
+//#ifndef FIELD_COMPS_MAP_H_
+//#define FIELD_COMPS_MAP_H_
 /** \brief Map names and indices of each fields in each slice
  */
-std::array<std::map<std::string, int>, 4> Comps
+static std::array<std::map<std::string, int>, 5> Comps
 {{
         /* WhichSlice::Next */
         {{
@@ -51,6 +52,7 @@ std::array<std::map<std::string, int>, 4> Comps
                 {"rho", 0}, {"N", 1}
             }}
     }};
+//#endif // FIELD_COMPS_MAP_H_
 
 // struct FieldComps{
 //     enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, rho, Psi, nfields};
