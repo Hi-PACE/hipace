@@ -42,12 +42,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
         // Extract the fields
         const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-        const amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
-        const amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
-        const amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);
-        const amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, 1);
-        const amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
-        const amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
+        const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
+        const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
+        const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
+        const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
+        const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
+        const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
         // Extract FabArray for this box
         const amrex::FArrayBox& exmby_fab = exmby[pti];
         const amrex::FArrayBox& eypbx_fab = eypbx[pti];
