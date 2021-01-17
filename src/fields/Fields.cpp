@@ -199,10 +199,18 @@ void
 Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    std::swap(m_slices[lev][WhichSlice::Previous1],
-              m_slices[lev][WhichSlice::Previous2]);
-    std::swap(m_slices[lev][WhichSlice::This],
-              m_slices[lev][WhichSlice::Previous1]);
+    amrex::MultiFab::Copy(
+        getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
+        Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous2]["Bx"],
+        2, m_slices_nguards);
+    amrex::MultiFab::Copy(
+        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
+        Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::Previous1]["Bx"],
+        2, m_slices_nguards);
+    amrex::MultiFab::Copy(
+        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
+        Comps[WhichSlice::This]["jx"], Comps[WhichSlice::Previous1]["jx"],
+        2, m_slices_nguards);
 }
 
 void
