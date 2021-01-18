@@ -288,7 +288,7 @@ Hipace::Evolve ()
 
         ResetAllQuantities(lev);
 
-        Wait();
+        Wait(step);
 
         amrex::MultiFab& fields = m_fields.getF(lev);
 
@@ -320,7 +320,7 @@ Hipace::Evolve ()
         m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
-        Notify();
+        Notify(step);
 
 #ifdef HIPACE_USE_OPENPMD
         WriteDiagnostics(step+1);
@@ -540,7 +540,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 }
 
 void
-Hipace::Wait ()
+Hipace::Wait (const int step)
 {
     HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
@@ -655,13 +655,13 @@ Hipace::Wait ()
         }
     }
     #ifdef HIPACE_USE_OPENPMD
-    m_multi_beam.WaitNumParticles(m_comm_z);
+    if (step == 0) m_multi_beam.WaitNumParticles(m_comm_z);
     #endif
 #endif
 }
 
 void
-Hipace::Notify ()
+Hipace::Notify (const int step)
 {
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
@@ -778,7 +778,7 @@ Hipace::Notify ()
     }
     #ifdef HIPACE_USE_OPENPMD
     /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
-    m_multi_beam.NotifyNumParticles(m_comm_z);
+    if (step == 0) m_multi_beam.NotifyNumParticles(m_comm_z);
     #endif
 #endif
 }
