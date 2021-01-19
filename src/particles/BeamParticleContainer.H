@@ -65,7 +65,7 @@ public:
                                  bool coordinates_specified,
                                  amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                                  const amrex::Geometry& geom,
-                                 const amrex::Real n_0);
+                                 amrex::Real n_0);
 
     /** Checks the input file first to determine its Datatype*/
     template<typename input_type>
@@ -73,7 +73,7 @@ public:
                            bool coordinates_specified,
                            amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                            const amrex::Geometry& geom,
-                           const amrex::Real n_0);
+                           amrex::Real n_0);
 #endif
 
 #ifdef AMREX_USE_MPI
