@@ -18,10 +18,10 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI hipace.depos_order_xy=0
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py
+$HIPACE_EXAMPLE_DIR/analysis.py --do-plot
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00001 \
+    --file_name diags/h5 \
     --test-name beam_in_vacuum.SI.1Rank

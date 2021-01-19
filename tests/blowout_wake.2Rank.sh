@@ -1,8 +1,8 @@
 #! /usr/bin/env bash
 
 # This file is part of the Hipace test suite.
-# It runs a Hipace simulation in the blowout regime, and compares the result
-# of the simulation to a benchmark.
+# It runs a Hipace simulation in the blowout regime and compares the result
+# with SI units.
 
 # abort on first encounted error
 set -eu -o pipefail
@@ -14,11 +14,24 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+rm -rf si_data
+rm -rf si_data_fixed_weight
+rm -rf normalized_data
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI
+mv diags/h5 si_data
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI beam.injection_type=fixed_weight \
+                                                              beam.num_particles=1000000
+mv diags/h5 si_data_fixed_weight
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
+mv diags/h5 normalized_data
+
+# Compare the result with theory
+$HIPACE_EXAMPLE_DIR/analysis.py --normalized-data normalized_data --si-data si_data \
+                                --si-fixed-weight-data si_data_fixed_weight
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00001 \
+    --file_name normalized_data \
     --test-name blowout_wake.2Rank

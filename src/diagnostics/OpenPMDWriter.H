@@ -1,0 +1,108 @@
+#ifndef OPENPMDWRITER_H_
+#define OPENPMDWRITER_H_
+
+#include "particles/MultiBeam.H"
+#include "particles/BeamParticleContainer.H"
+
+#include <AMReX_REAL.H>
+#include <AMReX_IntVect.H>
+#include <AMReX_RealVect.H>
+#include <AMReX_MultiFab.H>
+#include <AMReX_AmrCore.H>
+
+#include <cstdint>
+#include <vector>
+
+#ifdef HIPACE_USE_OPENPMD
+#include <openPMD/openPMD.hpp>
+
+/** \brief class handling the IO with openPMD */
+class OpenPMDWriter
+{
+private:
+    /** \brief setup the openPMD parameters do dump the AoS beam data
+     *
+     * \param[in,out] currSpecies openPMD species to set up
+     * \param[in] np total number of particles in the bunch
+     */
+    void SetupPos(openPMD::ParticleSpecies& currSpecies,
+                  const unsigned long long& np);
+
+    /** \brief setup the openPMD parameters do dump the SoA beam data
+     *
+     * \param[in,out] currSpecies openPMD species to set up
+     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
+     * \param[in] np total number of particles in the bunch
+     */
+    void SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
+                             const amrex::Vector<std::string>& real_comp_names,
+                             const unsigned long long np);
+
+    /** \brief save the SoA beam data to openPMD
+     *
+     * \param[in,out] pti beam particle iterator of the data to be dumped
+     * \param[in,out] currSpecies openPMD species to set up
+     * \param[in] offset number of particles which have already been written
+     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
+     */
+    void SaveRealProperty(BeamParticleIterator& pti, openPMD::ParticleSpecies& currSpecies,
+                          unsigned long long const offset,
+                          amrex::Vector<std::string> const& real_comp_names);
+
+    /** \brief writing openPMD beam particle data
+     *
+     * \param[in] beams multi beam container which is written to openPMD file
+     * \param[in,out] iteration openPMD iteration to which the data is written
+     */
+    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
+
+    /** \brief writing openPMD field data
+     *
+     * \param[in] mf the MultiFab to dump
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
+     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in,out] iteration openPMD iteration to which the data is written
+     */
+    void WriteFieldData (
+        amrex::MultiFab const& mf, amrex::Geometry const& geom,
+        const int slice_dir, const amrex::Vector< std::string > varnames,
+        openPMD::Iteration iteration);
+
+    /** Named Beam SoA attributes per particle as defined in BeamIdx
+     */
+    amrex::Vector<std::string> m_real_names {"weighting", "momentum_x", "momentum_y", "momentum_z"};
+
+    /** Parallel openPMD-api Series object for output */
+    std::unique_ptr< openPMD::Series > m_outputSeries;
+public:
+    /** Constructor */
+    explicit OpenPMDWriter ();
+
+    /** \brief Initialize diagnostics (collective operation)
+     */
+    void InitDiagnostics ();
+
+    /** \brief writing openPMD data
+     *
+     * \param[in] a_mf Vector (levels) of multifabs
+     * \param[in] a_multi_beams multi beam container which is written to openPMD file
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] physical_time Physical time of the currenerationt it.
+     * \param[in] output_step current iteration to be written to file
+     * \param[in] lev MR level
+     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
+     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     */
+    void WriteDiagnostics(
+        amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
+        amrex::Vector<amrex::Geometry> const& geom,
+        const amrex::Real physical_time, const int output_step, const int lev,
+        const int slice_dir, const amrex::Vector< std::string > varnames);
+
+    void reset () {m_outputSeries.reset();};
+};
+
+#endif // HIPACE_USE_OPENPMD
+
+#endif // OPENPMDWRITER_H_

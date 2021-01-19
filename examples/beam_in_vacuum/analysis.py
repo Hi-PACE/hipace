@@ -12,14 +12,13 @@
 # Note: the simulation may take some time, as the box size must be high to have
 # decent agreement
 
-import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import scipy.constants as scc
-from yt.frontends.boxlib.data_structures import AMReXDataset
 import argparse
 import sys
+from openpmd_viewer import OpenPMDTimeSeries
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',
@@ -35,7 +34,7 @@ parser.add_argument('--do-plot',
 
 args = parser.parse_args()
 
-ds = AMReXDataset('plt00001')
+ts = OpenPMDTimeSeries('./diags/h5/')
 
 if args.norm_units:
     c = 1.
@@ -56,13 +55,21 @@ else:
     # Radius of the can beam
     R = 10.e-6
 
-x = np.linspace(ds.domain_left_edge[0].v, ds.domain_right_edge[0].v, ds.domain_dimensions[0])
+# Load Hipace data for By in SI units
+Bx_sim, Bx_meta = ts.get_field(field='Bx', iteration=1, slice_across=['x','z'], slice_relative_position=[0,0])
+By_sim, By_meta = ts.get_field(field='By', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])
+jz_sim = ts.get_field(field='jz', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0]
+rho_sim = ts.get_field(field='rho', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0]
+Ex_sim = ts.get_field(field='ExmBy', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0] + c*By_sim
+Ey_sim = ts.get_field(field='EypBx', iteration=1, slice_across=['x','z'], slice_relative_position=[0,0])[0] - c*Bx_sim
+y = Bx_meta.y
+x = By_meta.x
+
 By_th = mu_0 * jz0 * x / 2.
 By_th[abs(x)>=R] = mu_0 * jz0 * R**2/(2*x[abs(x)>R])
 Ex_th = rho0 / eps_0 * x / 2.
 Ex_th[abs(x)>=R] = rho0 / eps_0 * R**2/(2*x[abs(x)>R])
 
-y = np.linspace(ds.domain_left_edge[1].v, ds.domain_right_edge[1].v, ds.domain_dimensions[1])
 Bx_th = -mu_0 * jz0 * y / 2.
 Bx_th[abs(y)>=R] = -mu_0 * jz0 * R**2/(2*y[abs(y)>R])
 Ey_th = rho0 / eps_0 * y / 2.
@@ -72,17 +79,6 @@ jz_th = np.ones_like(x) * jz0
 jz_th[abs(x)>=R] = 0.
 rho_th = np.ones_like(x) * rho0
 rho_th[abs(x)>=R] = 0.
-
-# Load Hipace data for By in SI units
-all_data_level_0 = ds.covering_grid(level=0, left_edge=ds.domain_left_edge,
-    dims=ds.domain_dimensions)
-Bx_sim = all_data_level_0['Bx'].v.squeeze()[ds.domain_dimensions[0]//2,:,ds.domain_dimensions[2]//2]
-By_sim = all_data_level_0['By'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
-jz_sim = all_data_level_0['jz'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
-rho_sim = all_data_level_0['rho'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2]
-
-Ex_sim = all_data_level_0['ExmBy'].v.squeeze()[:,ds.domain_dimensions[1]//2,ds.domain_dimensions[2]//2] + c*By_sim
-Ey_sim = all_data_level_0['EypBx'].v.squeeze()[ds.domain_dimensions[0]//2,:,ds.domain_dimensions[2]//2] - c*Bx_sim
 
 # Plot simulation result and theory
 if args.do_plot:
@@ -152,24 +148,20 @@ if args.do_plot:
 error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
 print("total relative error jz: " + str(error_jz) + " (tolerance = 0.1)")
 
-error_rho = np.sum((rho_sim-rho_th)**2) / np.sum((rho_th)**2)
-print("total relative error rho: " + str(error_rho) + " (tolerance = 0.1)")
-
 error_Bx = np.sum((Bx_sim-Bx_th)**2) / np.sum((Bx_th)**2)
-print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.002)")
+print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.005)")
 
 error_By = np.sum((By_sim-By_th)**2) / np.sum((By_th)**2)
-print("total relative error By: " + str(error_By) + " (tolerance = 0.01)")
+print("total relative error By: " + str(error_By) + " (tolerance = 0.015)")
 
 error_Ex = np.sum((Ex_sim-Ex_th)**2) / np.sum((Ex_th)**2)
-print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.01)")
+print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.015)")
 
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
-print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.002)")
+print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.005)")
 
 assert(error_jz < .1)
-assert(error_rho < .1)
-assert(error_Bx < .002)
-assert(error_By < .01)
-assert(error_Ex < .01)
-assert(error_Ey < .002)
+assert(error_Bx < .005)
+assert(error_By < .015)
+assert(error_Ex < .015)
+assert(error_Ey < .005)

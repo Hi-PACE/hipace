@@ -3,8 +3,15 @@
 #include "ParticleUtil.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
-
 #include <AMReX_REAL.H>
+
+#ifdef HIPACE_USE_OPENPMD
+#include <openPMD/openPMD.hpp>
+#include <iostream> // std::cout
+#include <memory>   // std::shared_ptr
+#endif  // HIPACE_USE_OPENPMD
+
+
 
 namespace
 {
@@ -273,3 +280,251 @@ InitBeamFixedWeight (int num_to_add,
     AMREX_ASSERT(OK());
     return;
 }
+
+#ifdef HIPACE_USE_OPENPMD
+void
+BeamParticleContainer::
+InitBeamFromFileHelper (std::string input_file,
+                        bool coordinates_specified,
+                        amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                        const amrex::Geometry& geom,
+                        const amrex::Real n_0)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+
+    openPMD::Datatype input_type = openPMD::Datatype::INT;
+    {
+        // Check what kind of Datatype is used in beam file
+        auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
+        if(series.iterations[0].particles.size() != 1) {
+            amrex::Abort("Beam Input file must have exactly one particle type in iteration 0\n");
+        }
+        for( auto const& particle_type : series.iterations[0].particles ) {
+            for( auto const& physical_quantity : particle_type.second ) {
+                for( auto const& axes_direction : physical_quantity.second ) {
+                    input_type = axes_direction.second.getDatatype();
+                }
+            }
+        }
+    }
+
+    if(input_type == openPMD::Datatype::FLOAT) {
+        InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz,
+                                geom, n_0);
+    }
+    else if(input_type == openPMD::Datatype::DOUBLE) {
+        InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz,
+                                 geom, n_0);
+    }
+    else{
+        amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
+    }
+    return;
+}
+
+template <typename input_type>
+void
+BeamParticleContainer::
+InitBeamFromFile (std::string input_file,
+                  bool coordinates_specified,
+                  amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                  const amrex::Geometry& geom,
+                  const amrex::Real n_0)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+
+    auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
+
+    // Initialize variables to translate between names from the file and names in Hipace
+    std::string name_particle ="";
+    std::string name_r ="";
+    std::string name_rx ="";
+    std::string name_ry ="";
+    std::string name_rz ="";
+    std::string name_u ="";
+    std::string name_ux ="";
+    std::string name_uy ="";
+    std::string name_uz ="";
+    std::string name_m ="";
+    std::string name_mm ="";
+    std::string name_q ="";
+    std::string name_qq ="";
+
+    if(series.iterations[0].particles.size() != 1) {
+        amrex::Abort("Beam Input File must have exactly one particle type in iteration 0");
+    }
+
+    // Iterate through all matadata in file, search for unit combination for Distance, Velocity,
+    // Charge, Mass. Auto detect coordinates if named x y z or X Y Z etc.
+    for( auto const& particle_type : series.iterations[0].particles ) {
+        name_particle =  particle_type.first;
+
+        for( auto const& physical_quantity : particle_type.second ) {
+
+            std::string units = "";
+            for( auto const& unit_dimension : physical_quantity.second.unitDimension()) {
+                units += std::to_string(unit_dimension) + ",";
+            }
+
+            if(units == "1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+                name_r = physical_quantity.first;
+                for( auto const& axes_direction : physical_quantity.second ) {
+                    if(axes_direction.first == "x" || axes_direction.first == "X") {
+                        name_rx = axes_direction.first;
+                    }
+                    if(axes_direction.first == "y" || axes_direction.first == "Y") {
+                        name_ry = axes_direction.first;
+                    }
+                    if(axes_direction.first == "z" || axes_direction.first == "Z") {
+                        name_rz = axes_direction.first;
+                    }
+                }
+            }
+            else if(units == "1.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,") {
+                name_u = physical_quantity.first;
+                for( auto const& axes_direction : physical_quantity.second ) {
+                    if(axes_direction.first == "x" || axes_direction.first == "X") {
+                        name_ux = axes_direction.first;
+                    }
+                    if(axes_direction.first == "y" || axes_direction.first == "Y") {
+                        name_uy = axes_direction.first;
+                    }
+                    if(axes_direction.first == "z" || axes_direction.first == "Z") {
+                        name_uz = axes_direction.first;
+                    }
+                }
+            }
+            else if(units == "0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+                name_m = physical_quantity.first;
+                for( auto const& axes_direction : physical_quantity.second ) {
+                    name_mm = axes_direction.first;
+                }
+            }
+            else if(units == "0.000000,0.000000,1.000000,1.000000,0.000000,0.000000,0.000000,") {
+                name_q = physical_quantity.first;
+                for( auto const& axes_direction : physical_quantity.second ) {
+                    name_qq = axes_direction.first;
+                }
+            }
+        }
+    }
+
+    // Overide coordinate names with those from file_coordinates_xyz argument
+    if(coordinates_specified) {
+        name_rx = name_ux = file_coordinates_xyz[0];
+        name_ry = name_uy = file_coordinates_xyz[1];
+        name_rz = name_uz = file_coordinates_xyz[2];
+    }
+
+    if(name_particle == "") {
+        amrex::Abort("Could not find a Particle type in Iteration 0 in file\n");
+    }
+    if(name_r == "") {
+        amrex::Abort("Could not find Position of dimension L in file\n");
+    }
+    if(name_u == "") {
+        amrex::Abort("Could not find Momentum of dimension L / T in file\n");
+    }
+    if(name_q == "") {
+        amrex::Abort("Could not find Charge of dimension I * T in file\n");
+    }
+    if(name_rx == "" || name_ux == "") {
+        amrex::Abort("Coud not find x coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
+    }
+    if(name_ry == "" || name_uy == "") {
+        amrex::Abort("Coud not find y coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
+    }
+    if(name_rz == "" || name_uz == "") {
+        amrex::Abort("Coud not find z coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
+    }
+
+    auto electrons = series.iterations[0].particles[name_particle];
+
+    // copy Data
+    const std::shared_ptr<input_type> r_x_data = electrons[name_r][name_rx].loadChunk<input_type>();
+    const std::shared_ptr<input_type> r_y_data = electrons[name_r][name_ry].loadChunk<input_type>();
+    const std::shared_ptr<input_type> r_z_data = electrons[name_r][name_rz].loadChunk<input_type>();
+    const std::shared_ptr<input_type> u_x_data = electrons[name_u][name_ux].loadChunk<input_type>();
+    const std::shared_ptr<input_type> u_y_data = electrons[name_u][name_uy].loadChunk<input_type>();
+    const std::shared_ptr<input_type> u_z_data = electrons[name_u][name_uz].loadChunk<input_type>();
+    const std::shared_ptr<input_type> q_q_data = electrons[name_q][name_qq].loadChunk<input_type>();
+
+    series.flush();
+
+    // calculate the multiplier to convert to Hipace units
+    const PhysConst phys_const_SI = make_constants_SI();
+    input_type si_to_norm_pos = (input_type)( 1. );
+    input_type si_to_norm_charge = (input_type)( phys_const_SI.q_e );
+    if(Hipace::m_normalized_units) {
+        auto dx = geom.CellSizeArray();
+        double omega_p = (double)phys_const_SI.q_e * sqrt( (double)n_0 /
+                                      ( (double)phys_const_SI.ep0 * (double)phys_const_SI.m_e ) );
+        double kp_inv = (double)phys_const_SI.c / omega_p;
+        si_to_norm_pos = (input_type)kp_inv;
+        si_to_norm_charge = (input_type)( n_0 * phys_const_SI.q_e * dx[0] * dx[1] * dx[2] *
+                                          kp_inv * kp_inv * kp_inv );
+    }
+
+    input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
+    input_type unit_ry = electrons[name_r][name_ry].unitSI() / si_to_norm_pos;
+    input_type unit_rz = electrons[name_r][name_rz].unitSI() / si_to_norm_pos;
+    input_type unit_ux = electrons[name_u][name_ux].unitSI();
+    input_type unit_uy = electrons[name_u][name_uy].unitSI();
+    input_type unit_uz = electrons[name_u][name_uz].unitSI();
+    input_type unit_qq = electrons[name_q][name_qq].unitSI() / si_to_norm_charge;
+
+    // Check if q/m matches that of electrons
+    if(name_mm != "") {
+        input_type unit_mm = electrons[name_m][name_mm].unitSI() / si_to_norm_charge;
+        const std::shared_ptr< input_type > m_m_data = electrons[name_m][
+                                                       name_mm].loadChunk< input_type >();
+
+        series.flush();
+
+        input_type file_e_m = q_q_data.get()[0] * unit_qq / (q_q_data.get()[0] * unit_mm);
+        if( std::abs(file_e_m - ( phys_const_SI.q_e / phys_const_SI.m_e ) ) > 1e9) {
+            amrex::Abort("Charge / Mass of Beam Particle from file "
+                         "dose not match electrons (1.7588e11)\n");
+        }
+    }
+    else {
+        series.flush();
+    }
+
+    // input data using AddOneBeamParticle function, make necessary variables and arrays
+    const int num_to_add = electrons[name_r][name_rx].getExtent()[0];
+    const PhysConst phys_const = get_phys_const();
+
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+
+        // WARNING Implemented for 1 box per MPI rank.
+        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi)
+            {
+            auto& particles = GetParticles(0);
+            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+            auto old_size = particle_tile.GetArrayOfStructs().size();
+            auto new_size = old_size + num_to_add;
+            particle_tile.resize(new_size);
+            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+                                                  particle_tile.GetStructOfArrays().realarray();
+            const int procID = amrex::ParallelDescriptor::MyProc();
+            const int pid = ParticleType::NextID();
+
+            for( int i=0; i < num_to_add; ++i)
+            {
+                AddOneBeamParticle(pstruct, arrdata, (amrex::Real)(r_x_data.get()[i] * unit_rx),
+                                  (amrex::Real)(r_y_data.get()[i] * unit_ry),
+                                  (amrex::Real)(r_z_data.get()[i] * unit_rz),
+                                  (amrex::Real)(u_x_data.get()[i] * unit_ux),
+                                  (amrex::Real)(u_y_data.get()[i] * unit_uy),
+                                  (amrex::Real)(u_z_data.get()[i] * unit_uz),
+                                  (amrex::Real)(q_q_data.get()[i] * unit_qq),
+                                  pid, procID, i, phys_const.c);
+            }
+        }
+    }
+    Redistribute();
+    return;
+}
+#endif // HIPACE_USE_OPENPMD

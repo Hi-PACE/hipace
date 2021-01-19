@@ -23,5 +23,5 @@ $HIPACE_EXAMPLE_DIR/analysis.py
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00001 \
+    --file_name diags/h5 \
     --test-name linear_wake.SI.1Rank

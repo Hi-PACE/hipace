@@ -1,4 +1,4 @@
-if (AMReX_CUDA)
+if (HiPACE_COMPUTE STREQUAL CUDA)
   target_sources(HiPACE
     PRIVATE
         WrapCuFFT.cpp

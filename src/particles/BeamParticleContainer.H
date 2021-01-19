@@ -7,6 +7,8 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
+enum struct ConvertDirection{HIPACE_to_SI, SI_to_HIPACE};
+
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
@@ -57,7 +59,49 @@ public:
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
-    std::string get_name () {return m_name;};
+#ifdef HIPACE_USE_OPENPMD
+    /** Initialize a beam from an external input file using openPMD and HDF5 */
+    void InitBeamFromFileHelper (std::string input_file,
+                                 bool coordinates_specified,
+                                 amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                 const amrex::Geometry& geom,
+                                 const amrex::Real n_0);
+
+    /** Checks the input file first to determine its Datatype*/
+    template<typename input_type>
+    void InitBeamFromFile (std::string input_file,
+                           bool coordinates_specified,
+                           amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                           const amrex::Geometry& geom,
+                           const amrex::Real n_0);
+#endif
+
+#ifdef AMREX_USE_MPI
+    /** Loop over beams and pass total number of beam particles on upstream ranks */
+    void NotifyNumParticles (MPI_Comm a_comm_z);
+
+    /** Loop over beams and receive total number of beam particles on upstream ranks */
+    void WaitNumParticles (MPI_Comm a_comm_z);
+#endif
+
+    std::string get_name () const {return m_name;};
+    bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
+    /** Number of particles on upstream rank (required for IO) */
+    int m_num_particles_on_upstream_ranks {0};
+
+    unsigned long long m_total_num_particles {0};
+
+    int get_upstream_n_part () const {return m_num_particles_on_upstream_ranks;};
+
+    unsigned long long get_total_num_particles () const {return m_total_num_particles;};
+
+    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
+     *
+     * Particle momentum is defined as gamma*velocity, which is neither
+     * SI mass*gamma*velocity nor normalized gamma*velocity/c.
+     * This converts momentum to SI units (or vice-versa) to write SI data
+     * to file. For normalized units, it converts it to the normalized momentum */
+    void ConvertUnits (ConvertDirection convert_dir);
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
@@ -76,6 +120,11 @@ private:
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
+    /** Density of plasma to convert from_file beam to normalized units */
+    amrex::Real m_plasma_density;
+    std::string m_input_file; /**< Path to bean input file */
+    /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
+    amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
 };
 
 /** \brief Iterator over boxes in a particle container */

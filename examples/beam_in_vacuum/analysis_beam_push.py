@@ -1,11 +1,10 @@
 #! /usr/bin/env python3
 
-import yt ; yt.funcs.mylog.setLevel(50)
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import scipy.constants as scc
-from yt.frontends.boxlib.data_structures import AMReXDataset
+from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = True
 
@@ -16,14 +15,11 @@ x_std_initial = 1./2.
 omega_beta = np.sqrt(field_strength/gamma)
 
 # Load beam particle data
-ds = AMReXDataset('plt00020')
-ad = ds.all_data()
-xp = ad['beam', 'particle_position_x'].v
-yp = ad['beam', 'particle_position_y'].v
-uzp = ad['beam', 'particle_uz'].v
-wp = ad['beam', 'particle_w'].v
+ts = OpenPMDTimeSeries('./diags/h5/')
+xp, yp, uzp, wp = ts.get_particle(species='beam', iteration=ts.iterations[-1],
+                                  var_list=['x', 'y', 'uz', 'w'])
 
-std_theory = x_std_initial * np.abs(np.cos(omega_beta * ds.current_time))
+std_theory = x_std_initial * np.abs(np.cos(omega_beta * ts.current_t))
 std_sim_x = np.sqrt(np.sum(xp**2*wp)/np.sum(wp))
 std_sim_y = np.sqrt(np.sum(yp**2*wp)/np.sum(wp))
 

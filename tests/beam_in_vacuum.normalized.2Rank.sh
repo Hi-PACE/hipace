@@ -14,13 +14,13 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
-rm -rf plt* REF*
+rm -rf diags* REF*
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
         beam.radius = 20.
 
-mv plt00001 REF_plt00001
+mv diags REF_diags
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \

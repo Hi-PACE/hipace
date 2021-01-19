@@ -40,6 +40,8 @@ PlasmaParticleContainer::InitData ()
     resizeData();
 
     InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius);
+
+    m_num_exchange = TotalNumberOfParticles();
 }
 
 void

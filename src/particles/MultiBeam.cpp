@@ -23,14 +23,6 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 }
 
 void
-MultiBeam::DepositCurrent (Fields& fields, const amrex::Geometry& geom, const int lev)
-{
-    for (auto& beam : m_all_beams) {
-        ::DepositCurrent(beam, fields, geom, lev);
-    }
-}
-
-void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, const amrex::Geometry& geom, const int lev, int islice,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins)
@@ -78,5 +70,31 @@ MultiBeam::WritePlotFile (const std::string& filename)
     amrex::Vector<std::string> int_names {};
     for (auto& beam : m_all_beams){
         beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
+    }
+}
+
+#ifdef AMREX_USE_MPI
+void
+MultiBeam::NotifyNumParticles (MPI_Comm a_comm_z)
+{
+    for (auto& beam : m_all_beams) {
+        beam.NotifyNumParticles(a_comm_z);
+    }
+}
+
+void
+MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
+{
+    for (auto& beam : m_all_beams) {
+        beam.WaitNumParticles(a_comm_z);
+    }
+}
+#endif
+
+void
+MultiBeam::ConvertUnits (ConvertDirection convert_direction)
+{
+    for (auto& beam : m_all_beams) {
+        beam.ConvertUnits(convert_direction);
     }
 }

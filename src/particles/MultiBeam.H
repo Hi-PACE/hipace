@@ -19,13 +19,6 @@ public:
      */
     ~MultiBeam () {}
 
-    /** Loop over all beam species and deposit their current on the 3D grid
-     * \param[in] fields Field object, with 3D MultiFabs
-     * \param[in] geom Geometry object at level lev
-     * \param[in] lev MR level
-     */
-    void DepositCurrent (Fields& fields, const amrex::Geometry& geom, const int lev);
-
     /** Loop over all beam species and deposit their current on the 2D XY slice
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] geom Geometry object at level lev
@@ -75,8 +68,33 @@ public:
      */
     BeamParticleContainer& getBeam (int i) {return m_all_beams[i];};
 
-    /**< returns the number of beams */
-    int get_nbeams () {return m_nbeams;};
+    /** returns the number of beams */
+    int get_nbeams () const {return m_nbeams;};
+
+    /** returns the name of a beam */
+    std::string get_name (int i) const {return m_all_beams[i].get_name();};
+
+    /** returns the local number of particles of a beam */
+    unsigned long long get_local_n_part (int i) const
+        {return m_all_beams[i].TotalNumberOfParticles(1,1);};
+
+    /** returns the local number of particles of a beam */
+    unsigned long long get_total_num_particles (int i) const
+        {return m_all_beams[i].get_total_num_particles();};
+
+    /** returns the number of beam particles of the upstream ranks */
+    int get_upstream_n_part (int i) const {return m_all_beams[i].get_upstream_n_part();};
+
+#ifdef AMREX_USE_MPI
+    /** Loop over beams and pass total number of beam particles on upstream ranks */
+    void NotifyNumParticles (MPI_Comm a_comm_z);
+
+    /** Loop over beams and receive total number of beam particles on upstream ranks */
+    void WaitNumParticles (MPI_Comm a_comm_z);
+#endif
+
+    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
+    void ConvertUnits (ConvertDirection convert_dir);
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

@@ -75,7 +75,7 @@ fi
 #        || echo "ctest command failed, maybe just because checksums are different. Keep going"
 #    cd $checksum_dir
 #    ./checksumAPI.py --reset-benchmark \
-#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --file_name ${build_dir}/bin/diags/h5 \
 #                     --test-name blowout_wake.Serial
 #fi
 
@@ -87,7 +87,7 @@ fi
 #        || echo "ctest command failed, maybe just because checksums are different. Keep going"
 #    cd $checksum_dir
 #    ./checksumAPI.py --reset-benchmark \
-#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --file_name ${build_dir}/bin/diags/h5 \
 #                     --test-name beam_in_vacuum.SI.Serial
 #fi
 
@@ -99,7 +99,7 @@ fi
 #        || echo "ctest command failed, maybe just because checksums are different. Keep going"
 #    cd $checksum_dir
 #    ./checksumAPI.py --reset-benchmark \
-#                     --plotfile ${build_dir}/bin/plt00001 \
+#                     --file_name ${build_dir}/bin/diags/h5 \
 #                     --test-name beam_in_vacuum.normalized.Serial
 #fi
 
@@ -115,16 +115,16 @@ then
     make -j 4
 fi
 
-# blowout_wake.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.1Rank" ]]
+#blowout_wake.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.2Rank" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R blowout_wake.1Rank \
+    ctest --output-on-failure -R blowout_wake.2Rank \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/normalized_data \
-                     --test-name blowout_wake.1Rank
+                     --file_name ${build_dir}/bin/normalized_data \
+                     --test-name blowout_wake.2Rank
 fi
 
 # beam_evolution.1Rank
@@ -135,7 +135,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00020 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name beam_evolution.1Rank
 fi
 
@@ -147,32 +147,20 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00020 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name adaptive_time_step.1Rank
 fi
 
-# reset.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "reset.1Rank" ]]
+# reset.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "reset.2Rank" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R reset.1Rank \
+    ctest --output-on-failure -R reset.2Rank \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name reset.1Rank
-fi
-
-# slice_beam.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "slice_beam.1Rank" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R slice_beam.1Rank \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
-                     --test-name slice_beam.1Rank
+                     --file_name ${build_dir}/bin/diags/h5 \
+                     --test-name reset.2Rank
 fi
 
 # linear_wake.normalized.1Rank
@@ -183,7 +171,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name linear_wake.normalized.1Rank
 fi
 
@@ -195,7 +183,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name linear_wake.SI.1Rank
 fi
 
@@ -207,7 +195,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name gaussian_linear_wake.normalized.1Rank
 fi
 
@@ -219,7 +207,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name gaussian_linear_wake.SI.1Rank
 fi
 
@@ -231,7 +219,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name beam_in_vacuum.SI.1Rank
 fi
 
@@ -243,7 +231,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00001 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name beam_in_vacuum.normalized.1Rank
 fi
 
@@ -255,19 +243,6 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --plotfile ${build_dir}/bin/plt00000 \
+                     --file_name ${build_dir}/bin/diags/h5 \
                      --test-name gaussian_weight.1Rank
 fi
-
-# blowout_wake.2Rank
-### This test is inactive as Hipace doesn't support parallelization yet.
-#if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.2Rank" ]]
-#then
-#    cd $build_dir
-#    ctest --output-on-failure -R blowout_wake.2Rank \
-#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-#    cd $checksum_dir
-#    ./checksumAPI.py --reset-benchmark \
-#                     --plotfile ${build_dir}/bin/plt00001 \
-#                     --test-name blowout_wake.2Rank
-#fi

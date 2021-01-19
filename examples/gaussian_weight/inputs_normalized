@@ -18,7 +18,7 @@ beams.names = beam
 beam.position_mean = 0. 1. 2.
 beam.position_std = 3. 4. 5.
 beam.injection_type = fixed_weight
-beam.num_particles = 1000000
+beam.num_particles = 10000
 beam.do_symmetrize = 1
 beam.density = 1.
 beam.zmin = -20.
@@ -26,3 +26,5 @@ beam.zmax =  20.
 beam.radius = 40.
 beam.u_mean = 0. 0. 1.e3
 beam.u_std = 3. 4. 0.
+
+diagnostic.diag_type = xyz

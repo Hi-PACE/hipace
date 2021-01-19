@@ -1,8 +1,8 @@
 #! /usr/bin/env bash
 
 # This file is part of the Hipace test suite.
-# It runs a Hipace simulation for a can beam with per-slice beam deposition,
-# and compares the result of the simulation to a benchmark.
+# It runs a Hipace simulation for a can beam, and compares the result
+# of the simulation to a benchmark.
 
 # abort on first encounted error
 set -eu -o pipefail
@@ -15,10 +15,10 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized hipace.slice_beam=1
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized max_step=2
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00001 \
-    --test-name slice_beam.1Rank
+    --file_name diags/h5 \
+    --test-name blowout_wake.2Rank

@@ -1,4 +1,4 @@
-amr.n_cell = 1024 1536 4
+amr.n_cell = 512 768 4
 
 hipace.normalized_units=1
 
@@ -27,3 +27,5 @@ beam.density = 1.0
 beam.u_mean = 0. 0. 1.e3
 beam.u_std = 0. 0. 0.
 beam.ppc = 2 2 1
+
+diagnostic.diag_type = xyz

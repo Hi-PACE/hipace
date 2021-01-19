@@ -20,8 +20,6 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \
         geometry.prob_hi =  2.  2.  2. \
-        hipace.slice_beam = 1 \
-        hipace.3d_on_host = 1 \
         hipace.dt = 3. \
         hipace.output_period = 20 \
         beam.density = 1.e-8 \
@@ -35,5 +33,5 @@ $HIPACE_EXAMPLE_DIR/analysis_beam_push.py
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --plotfile plt00020 \
+    --file_name 'diags/h5' \
     --test-name beam_evolution.1Rank

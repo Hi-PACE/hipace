@@ -18,7 +18,7 @@ class Benchmark:
         '''Constructor
 
         Store test name and reference checksum value, either from benchmark
-        (used for comparison) or from a plotfile (used to reset a benchmark).
+        (used for comparison) or from an IO file (used to reset a benchmark).
 
         @param self The object pointer.
         @param test_name Name of test, as found between [] in .ini file.

@@ -11,6 +11,13 @@
 
 #include <AMReX_AmrCore.H>
 
+#ifdef HIPACE_USE_OPENPMD
+#include <openPMD/openPMD.hpp>
+#include "diagnostics/OpenPMDWriter.H"
+#endif
+
+#include <memory>
+
 /** \brief Singleton class, that intialize, runs and finalizes the simulation */
 class Hipace final : public amrex::AmrCore
 {
@@ -137,8 +144,12 @@ public:
     int m_grid_size_z = 0;
     /** Send buffer for longitudinal parallelization (pipeline) */
     amrex::Real* m_send_buffer = nullptr;
+    /** Send buffer for particle longitudinal parallelization (pipeline) */
+    char* m_psend_buffer = nullptr;
     /** status of the send request */
     MPI_Request m_send_request = MPI_REQUEST_NULL;
+    /** status of the particle send request */
+    MPI_Request m_psend_request = MPI_REQUEST_NULL;
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
@@ -147,7 +158,7 @@ public:
     /** Particle container for the plasma */
     PlasmaParticleContainer m_plasma_container;
     /** Number of time iterations */
-    int m_max_step = 0;
+    static int m_max_step;
     /** Time step for the beam evolution */
     static amrex::Real m_dt;
     /** Number of iterations between consecutive output dumps.
@@ -181,19 +192,8 @@ public:
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_mixing_factor;
-    /** whether to deposit the beam density per slice, into the slice multifab.
-     * If not, when running on GPU, the 3D arrays must be on the GPU. */
-    static bool m_slice_beam;
-    /** whether the 3D array stays in host memory (Pinned memory) or is allowed
-     * to be in device memory (allocated in Managed memory).
-     * If true, required m_slice_beam = true. */
-    static bool m_3d_on_host;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
-    /** whether to output the central y=0 slice (if true), or the whole 3D array (if false) */
-    static bool m_slice_F_xz;
-    /** Whether to dump plasma particles */
-    static bool m_output_plasma;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     static int m_beam_injection_cr;
@@ -205,6 +205,10 @@ public:
     static amrex::Real m_external_accel_field_strength;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+#ifdef HIPACE_USE_OPENPMD
+    /** openPMD writer instance */
+    OpenPMDWriter m_openpmd_writer;
+#endif
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
