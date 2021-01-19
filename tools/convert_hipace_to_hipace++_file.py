@@ -537,7 +537,6 @@ def main():
 
     args = parser.parse_args()
 
-
     h5fl = H5FList(args.path, h5ftype='raw')
     flist = h5fl.get(verbose=False) #, stride=args.Nstride)
     if len(h5fl.get_uniques()) > 1:
