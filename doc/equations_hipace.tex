@@ -169,7 +169,7 @@ E_z
 
 \subsection*{Algorithm}
 
-Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(n+2)$ mean "predicted". $\rho$ and capital letters are field data, others are particle data. $x$, $u$ and $\psi$ are the position, momentum and pseudo-potential respectively.
+Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(n+2)$ mean "predicted". $\rho$ and capital letters are field data, others are particle data. $x$, $u$ and $\psi$ are the position, momentum and pseudo-potential respectively. $f$ stands for the force terms.
 
 \begin{subequations}
 \begin{align}
@@ -181,7 +181,7 @@ J_{\perp}^{n+1} &\rightarrow E_z^{n+1}, B_z^{n+1} \\
 B_{\perp}^{n-1}, B_{\perp}^{n} &\rightarrow B_{\perp}^{(n+1)}, B_{\perp}^{prev}=B_{\perp}^{(n+1)} \\
 E^{n+1}, B_z^{n+1}, B_{\perp}^{(n+1) }&\rightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
 \end{align}
-\text{And then, while $error(B_{\perp, iter}^{(n+1)}, B_{\perp}^{(n+1)})$:}
+\text{And then, while error$(B_{\perp, iter}^{(n+1)}, B_{\perp}^{(n+1)}) >$ tolerance:}
 \begin{align}
 x_p^{n+1}, u_p^{n+1}, \psi_p^{n+1}, f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)} &\rightarrow x_p^{(n+2)}, u_p^{(n+2)}, \psi_p^{(n+2)} \\
 x_p^{(n+2)}, u_p^{(n+2)}, \psi_p^{(n+2)} &\rightarrow J_{\perp}^{(n+2)} \\
