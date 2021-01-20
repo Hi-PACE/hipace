@@ -9,7 +9,7 @@
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
-                const WhichSlice which_slice, const bool temp_slice,
+                const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 amrex::Geometry const& gm, int const lev)
 {
@@ -41,10 +41,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         // Extract the fields currents
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
-        amrex::MultiFab jx(S, amrex::make_alias, FieldComps::jx, 1);
-        amrex::MultiFab jy(S, amrex::make_alias, FieldComps::jy, 1);
-        amrex::MultiFab jz(S, amrex::make_alias, FieldComps::jz, 1);
-        amrex::MultiFab rho(S, amrex::make_alias, FieldComps::rho, 1);
+        amrex::MultiFab jx(S, amrex::make_alias, Comps[which_slice]["jx"], 1);
+        amrex::MultiFab jy(S, amrex::make_alias, Comps[which_slice]["jy"], 1);
+        amrex::MultiFab jz(S, amrex::make_alias, Comps[which_slice]["jz"], 1);
+        amrex::MultiFab rho(S, amrex::make_alias, Comps[which_slice]["rho"], 1);
         // Extract FabArray for this box
         amrex::FArrayBox& jx_fab = jx[pti];
         amrex::FArrayBox& jy_fab = jy[pti];

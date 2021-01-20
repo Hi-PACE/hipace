@@ -10,17 +10,39 @@
 
 class Hipace;
 
-/** \brief Map names and indices of each fields in the field Multifabs (both 3D and 2D)
- */
-struct FieldComps{
-    enum Comps{ExmBy = 0, EypBx, Ez, Bx, By, Bz, jx, jy, jz, rho, Psi, nfields};
-};
-
 /** \brief Direction of field copies: from 3D F to 2D slice S or the other way round */
 enum struct FieldCopyType { FtoS, StoF };
 
 /** \brief describes which slice with respect to the currently calculated is used */
-enum struct WhichSlice { Next=0, This, Previous1, Previous2, RhoIons, N };
+struct WhichSlice {
+    enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
+};
+
+/** \brief Map names and indices of each fields in each slice
+ */
+static std::array<std::map<std::string, int>, 5> Comps
+{{
+        /* WhichSlice::Next */
+        {{
+                {"jx", 0}, {"jy", 1}, {"jz", 2}, {"rho", 3}, {"N", 4}
+            }},
+        /* WhichSlice::This */
+        {{
+                {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6}, {"jy", 7}, {"jz", 8}, {"rho", 9}, {"Psi", 10}, {"N", 11}
+            }},
+        /* WhichSlice::Previous1 */
+        {{
+                {"Bx", 0}, {"By", 1}, {"jx", 2}, {"jy", 3}, {"N", 4}
+            }},
+        /* WhichSlice::Previous2 */
+        {{
+                {"Bx", 0}, {"By", 1}, {"N", 2}
+            }},
+        /* WhichSlice::RhoIons */
+        {{
+                {"rho", 0}, {"N", 1}
+            }}
+    }};
 
 /** \brief Operation performed in the TransverseDerivative function:
  * either assign or add to the destination array
@@ -74,11 +96,6 @@ public:
      * \param[in] lev MR level
      */
     std::array<amrex::MultiFab, m_nslices>& getSlices (int lev) {return m_slices[lev]; }
-    /** get function for the 2D slices
-     * \param[in] lev MR level
-     * \param[in] sl slice type (WhichSlice::Next, This, Previous1, Previous2 )
-     */
-    amrex::MultiFab& getSlices (int lev, WhichSlice sl) {return m_slices[lev][(int) sl]; }
     /** get function for the 2D slices
      * \param[in] lev MR level
      * \param[in] islice slice index
@@ -174,7 +191,7 @@ public:
     void SolvePoissonBz (amrex::Geometry const& geom, const int lev);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
-     * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
+     * This modifies component Bx or By of slice 1 in m_fields.m_slices
      *
      * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
      * \param[in] predcorr_B_error_tolerance relative B field error tolerance in the predcorr loop
@@ -184,11 +201,11 @@ public:
                              const amrex::Real predcorr_B_error_tolerance, const int lev);
     /** \brief Mixes the B field with the calculated current and previous iteration
      * of it and shifts the current to the previous iteration afterwards.
-     * This modifies component FieldComps::Bx or By of slice 1 in m_fields.m_slices
+     * This modifies component Bx or By of slice 1 in m_fields.m_slices
      *
      * \param[in] B_iter B field during current iteration of the predictor-corrector loop
      * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
-     * \param[in] field_comp field component to be mixed (usually FieldComps::Bx or FieldComps::By)
+     * \param[in] field_comp field component to be mixed (usually Bx or By)
      * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
      * \param[in] relative_Bfield_error_prev_iter relative B field error of the previous iteration
      * \param[in] predcorr_B_mixing_factor mixing factor for B fields in predcorr loop
@@ -207,13 +224,13 @@ public:
      * \param[in] Bx_iter Bx field from the previous iteration (input as MutliFab)
      * \param[in] By_iter By field from the previous iteration (input as MutliFab)
      * \param[in] Bx_comp component of the Bx field in the MultiFab
-     *            (usually either FieldComps::Bx or 0)
+     *            (usually either Bx or 0)
      * \param[in] By_comp component of the By field in the MultiFab
-     *            (usually either FieldComps::By or 0)
+     *            (usually either By or 0)
      * \param[in] Bx_iter_comp component of the Bx field of the previous iteration in the MultiFab
-     *            (usually either FieldComps::Bx or 0)
+     *            (usually either Bx or 0)
      * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
-     *            (usually either FieldComps::By or 0)
+     *            (usually either By or 0)
      * \param[in] geom Geometry of the problem
      * \param[in] lev current level
      */

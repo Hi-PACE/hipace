@@ -354,19 +354,15 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
 
     m_plasma_container.RedistributeSlice(lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        FieldComps::rho, 1);
+                        Comps[WhichSlice::This]["rho"], 1);
 
     DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
                    true, true, geom[lev], lev);
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
-        FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
-        "changed, because the 4 components starting from jx are grabbed at once");
     amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
-                            amrex::make_alias, FieldComps::jx, 4);
+                            amrex::make_alias, Comps[WhichSlice::This]["jx"], 4);
     j_slice.FillBoundary(Geom(lev).periodicity());
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
@@ -400,7 +396,7 @@ Hipace::ResetAllQuantities (int lev)
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
     ResetPlasmaParticles(m_plasma_container, lev, true);
 
-    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
+    for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
 }
@@ -416,7 +412,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_fields.getSlices(lev, WhichSlice::Previous1),
         m_fields.getSlices(lev, WhichSlice::Previous2),
         m_fields.getSlices(lev, WhichSlice::Previous2),
-        FieldComps::Bx, FieldComps::By,FieldComps::Bx, FieldComps::By, Geom(lev), lev);
+        Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
+        Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
+        Geom(lev), lev);
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
@@ -438,19 +436,19 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(Bx_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          FieldComps::Bx, 0, 1, 0);
+                          Comps[WhichSlice::This]["Bx"], 0, 1, 0);
     amrex::MultiFab By_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          FieldComps::By, 0, 1, 0);
+                          Comps[WhichSlice::This]["By"], 0, 1, 0);
 
     /* creating aliases to the current in the next slice.
      * This needs to be reset after each push to the next slice */
     amrex::MultiFab jx_next(m_fields.getSlices(lev, WhichSlice::Next),
-                            amrex::make_alias, FieldComps::jx, 1);
+                            amrex::make_alias, Comps[WhichSlice::Next]["jx"], 1);
     amrex::MultiFab jy_next(m_fields.getSlices(lev, WhichSlice::Next),
-                            amrex::make_alias, FieldComps::jy, 1);
+                            amrex::make_alias, Comps[WhichSlice::Next]["jy"], 1);
 
 
     /* shift force terms, update force terms using guessed Bx and By */
@@ -478,7 +476,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
-                                     amrex::make_alias, FieldComps::jx, 4);
+                                     amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
         j_slice_next.FillBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
 
@@ -487,20 +485,21 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_fields.SolvePoissonBy(By_iter, Geom(lev), lev);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
-                                               m_fields.getSlices(lev, WhichSlice::This),
-                                               m_fields.getSlices(lev, WhichSlice::This),
-                                               Bx_iter, By_iter, FieldComps::Bx,
-                                               FieldComps::By, 0, 0, Geom(lev), lev);
+            m_fields.getSlices(lev, WhichSlice::This),
+            m_fields.getSlices(lev, WhichSlice::This),
+            Bx_iter, By_iter,
+            Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::This]["By"],
+            0, 0, Geom(lev), lev);
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 
         /* Mixing the calculated B fields to the actual B field and shifting iterated B fields */
-        m_fields.MixAndShiftBfields(Bx_iter, Bx_prev_iter, FieldComps::Bx, relative_Bfield_error,
-                                    relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor,
-                                    lev);
-        m_fields.MixAndShiftBfields(By_iter, By_prev_iter, FieldComps::By, relative_Bfield_error,
-                                    relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor,
-                                    lev);
+        m_fields.MixAndShiftBfields(
+            Bx_iter, Bx_prev_iter, Comps[WhichSlice::This]["Bx"], relative_Bfield_error,
+            relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
+        m_fields.MixAndShiftBfields(
+            By_iter, By_prev_iter, Comps[WhichSlice::This]["By"], relative_Bfield_error,
+            relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
         jx_next.setVal(0.);
