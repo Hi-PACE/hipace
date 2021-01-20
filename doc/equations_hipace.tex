@@ -23,7 +23,7 @@
 In the beginning of the plasma routine, the plasma particles are pushed and the current and charge densities are deposited. All fields are calculated from there.
 The transverse focusing field will be calculated from $-\Psi$, which can be calculated from the plasma charge density $\rho_p$ and the longitudinal current density $J_z$:
 \begin{equation}
-\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0} c} (\rho_p \blue{c} - J_z ).
+\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0}}\rho_p - \blue{\frac{1}{c}}J_z .
 \label{eq:psi}
 \end{equation}
 Note: the beam contribution is not needed in this equation. In the ultra-relativistic limit, neglecting the transverse currents within the beam, the charge density of the beam $\rho_b$ equals $J_{z,b}$ and cancels out. The contribution of the beam to $J_z$ is added after $-\Psi$ is calculated.
