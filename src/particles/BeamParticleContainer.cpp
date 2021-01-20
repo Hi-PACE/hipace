@@ -88,13 +88,31 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.get("input_file", m_input_file);
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
         bool n_0_specified = pp.query("plasma_density", m_plasma_density);
+        pp.query("iteration", m_num_iteration);
+        bool species_specified = pp.query("species_name", m_species_name);
 
         if(!n_0_specified) {
             m_plasma_density = 0;
         }
 
         InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,
-                               m_plasma_density);
+                          m_plasma_density, m_num_iteration, m_species_name, species_specified);
+#else
+        amrex::Abort("beam particle injection via external_file requires openPMD support: "
+                     "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+#endif  // HIPACE_USE_OPENPMD
+} else if (m_injection_type == "restart") {
+#ifdef HIPACE_USE_OPENPMD
+        amrex::ParmParse pp(m_name);
+        pp.get("input_file", m_input_file);
+        pp.query("iteration", m_num_iteration);
+        bool species_specified = pp.query("species_name", m_species_name);
+        if(!species_specified) {
+            m_species_name = m_name;
+        }
+
+        InitBeamRestartHelper(m_input_file, m_num_iteration, m_species_name);
+
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
@@ -107,6 +125,19 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
+
+    /*
+    for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi){
+    auto& particles = GetParticles(0);
+    auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+    ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+                                          particle_tile.GetStructOfArrays().realarray();
+    for(int i=0; i<(int)m_total_num_particles;i++){
+        std::cout<<pstruct[i]<<" "<<arrdata[BeamIdx::ux  ][i]<<" "<<arrdata[BeamIdx::uy  ][i]
+            <<" "<<arrdata[BeamIdx::uz  ][i]<<" "<<arrdata[BeamIdx::w][i]<<std::endl;
+    }}
+    */
 }
 
 #ifdef AMREX_USE_MPI

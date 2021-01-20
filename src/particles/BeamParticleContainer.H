@@ -60,20 +60,37 @@ public:
                               const amrex::Real dy_per_dzeta);
 
 #ifdef HIPACE_USE_OPENPMD
-    /** Initialize a beam from an external input file using openPMD and HDF5 */
+    /** Checks the input file first to determine its Datatype*/
     void InitBeamFromFileHelper (std::string input_file,
                                  bool coordinates_specified,
                                  amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                                  const amrex::Geometry& geom,
-                                 amrex::Real n_0);
+                                 amrex::Real n_0,
+                                 int num_iteration,
+                                 std::string species_name,
+                                 bool species_specified);
 
-    /** Checks the input file first to determine its Datatype*/
+    /** Initialize a beam from an external input file using openPMD and HDF5 */
     template<typename input_type>
     void InitBeamFromFile (std::string input_file,
                            bool coordinates_specified,
                            amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                            const amrex::Geometry& geom,
-                           amrex::Real n_0);
+                           amrex::Real n_0,
+                           int num_iteration,
+                           std::string species_name,
+                           bool species_specified);
+
+    /** Checks the input file first to determine its Datatype*/
+    void InitBeamRestartHelper (std::string input_file,
+                                int num_iteration,
+                                std::string species_name);
+
+    /** Initialize a beam from a previous simulation using openPMD and HDF5 */
+    template <typename input_type>
+    void InitBeamRestart (std::string input_file,
+                          int num_iteration,
+                          std::string species_name);
 #endif
 
 #ifdef AMREX_USE_MPI
@@ -125,6 +142,8 @@ private:
     std::string m_input_file; /**< Path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
+    int m_num_iteration {0}; /**< the iteration of the openPMD beam */
+    std::string m_species_name ; /**< the name of the particle species in the beam file */
 };
 
 /** \brief Iterator over boxes in a particle container */
