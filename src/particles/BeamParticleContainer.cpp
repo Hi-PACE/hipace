@@ -125,19 +125,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
-
-    /*
-    for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi){
-    auto& particles = GetParticles(0);
-    auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
-    ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
-                                          particle_tile.GetStructOfArrays().realarray();
-    for(int i=0; i<(int)m_total_num_particles;i++){
-        std::cout<<pstruct[i]<<" "<<arrdata[BeamIdx::ux  ][i]<<" "<<arrdata[BeamIdx::uy  ][i]
-            <<" "<<arrdata[BeamIdx::uz  ][i]<<" "<<arrdata[BeamIdx::w][i]<<std::endl;
-    }}
-    */
 }
 
 #ifdef AMREX_USE_MPI
