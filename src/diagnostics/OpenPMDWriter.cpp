@@ -18,18 +18,19 @@ OpenPMDWriter::InitDiagnostics ()
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
 
 
-    std::string filename = "diags/h5/openpmd.h5"; // bp or h5
-#ifdef AMREX_USE_MPI
-    m_outputSeries = std::make_unique< openPMD::Series >(
-        filename, openPMD::Access::CREATE, amrex::ParallelDescriptor::Communicator());
-#else
+    // std::string filename = "diags/h5/openpmd.h5"; // bp or h5
+    std::string filename = "diags/h5/openpmd_%06T.h5";
+// #ifdef AMREX_USE_MPI
+//     m_outputSeries = std::make_unique< openPMD::Series >(
+//         filename, openPMD::Access::CREATE, amrex::ParallelDescriptor::Communicator());
+// #else
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
-#endif
+// #endif
 
-    // open files early and collectively, so later flush calls are non-collective
-    m_outputSeries->setIterationEncoding( openPMD::IterationEncoding::groupBased );
-    m_outputSeries->flush();
+    // // open files early and collectively, so later flush calls are non-collective
+    // m_outputSeries->setIterationEncoding( openPMD::IterationEncoding::groupBased );
+    // m_outputSeries->flush();
 
     // TODO: meta-data: author, mesh path, extensions, software
 }

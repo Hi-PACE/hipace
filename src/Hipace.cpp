@@ -222,6 +222,7 @@ Hipace::MakeNewLevelFromScratch (
         const int nboxes_x_local = 1;
         const int nboxes_y_local = 1;
         const int nboxes_z_local = nboxes_z / m_numprocs_z;
+        amrex::AllPrint()<< "nboxes_z_local " << nboxes_z_local << "\n";
         for (int k = 0; k < nboxes_z; ++k) {
             int rz = k/nboxes_z_local;
             for (int j = 0; j < nboxes_y; ++j) {
@@ -283,20 +284,23 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
-#ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.InitDiagnostics();
-#endif
-    WriteDiagnostics(0);
-    for (int step = 0; step < m_max_step; ++step)
+
+    // WriteDiagnostics(0);
+
+    // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
+    for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
     {
+#ifdef HIPACE_USE_OPENPMD
+        m_openpmd_writer.InitDiagnostics();
+#endif
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
+        // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
 
-        Wait();
+        // Wait();
 
         amrex::MultiFab& fields = m_fields.getF(lev);
 
@@ -325,10 +329,10 @@ Hipace::Evolve ()
         }
 
         /* Passing the adaptive time step info */
-        m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
+        // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
-        Notify();
+        // Notify();
 
 #ifdef HIPACE_USE_OPENPMD
         WriteDiagnostics(step+1);
