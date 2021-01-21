@@ -222,7 +222,6 @@ Hipace::MakeNewLevelFromScratch (
         const int nboxes_x_local = 1;
         const int nboxes_y_local = 1;
         const int nboxes_z_local = nboxes_z / m_numprocs_z;
-        amrex::AllPrint()<< "nboxes_z_local " << nboxes_z_local << "\n";
         for (int k = 0; k < nboxes_z; ++k) {
             int rz = k/nboxes_z_local;
             for (int j = 0; j < nboxes_y; ++j) {
