@@ -190,6 +190,14 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
+
+#ifdef AMREX_USE_MPI
+    #ifdef HIPACE_USE_OPENPMD
+    // receive and pass the number of beam particles to share the offset for openPMD IO
+    m_multi_beam.WaitNumParticles(m_comm_z);
+    m_multi_beam.NotifyNumParticles(m_comm_z);
+    #endif
+#endif
 }
 
 void
@@ -653,9 +661,6 @@ Hipace::Wait ()
             amrex::The_Pinned_Arena()->free(recv_buffer);
         }
     }
-    #ifdef HIPACE_USE_OPENPMD
-    m_multi_beam.WaitNumParticles(m_comm_z);
-    #endif
 #endif
 }
 
@@ -775,10 +780,6 @@ Hipace::Notify ()
                       m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
         }
     }
-    #ifdef HIPACE_USE_OPENPMD
-    /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
-    m_multi_beam.NotifyNumParticles(m_comm_z);
-    #endif
 #endif
 }
 
