@@ -12,17 +12,11 @@
 
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
-                        amrex::Geometry const& gm, const int which_slice,
-                        const bool temp_slice, const bool do_push, const bool do_update,
-                        const bool do_shift, int const lev)
+                        amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
+                        const bool do_update, const bool do_shift, int const lev)
 {
     HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
-
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        which_slice == WhichSlice::This || which_slice == WhichSlice::Next,
-        "Plasma particles can only be pushed to this slice (WhichSlice::This) "
-        "or the next slice (WhichSlice::Next)");
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
