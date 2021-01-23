@@ -123,9 +123,6 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     // Slice DistributionMapping
     m_slice_dm = amrex::DistributionMapping(std::move(procmap));
 
-    amrex::Print()<<m_slice_ba<<'\n';
-    amrex::Print()<<m_slice_dm<<'\n';
-
     // Slice Geometry
     constexpr int lev = 0;
     const int dir = AMREX_SPACEDIM-1;
