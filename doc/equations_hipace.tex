@@ -1,4 +1,5 @@
 \documentclass{article}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
 \usepackage[utf8]{inputenc}
 
 \title{Contemporary field equations in HiPACE}
@@ -23,7 +24,7 @@
 In the beginning of the plasma routine, the plasma particles are pushed and the current and charge densities are deposited. All fields are calculated from there.
 The transverse focusing field will be calculated from $-\Psi$, which can be calculated from the plasma charge density $\rho_p$ and the longitudinal current density $J_z$:
 \begin{equation}
-\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0} c} (\rho_p \blue{c} - J_z ).
+\nabla^2_{\perp} (- \Psi)  = \blue{\frac{1}{\epsilon_0}}\rho_p - \blue{\frac{1}{c}}J_z .
 \label{eq:psi}
 \end{equation}
 Note: the beam contribution is not needed in this equation. In the ultra-relativistic limit, neglecting the transverse currents within the beam, the charge density of the beam $\rho_b$ equals $J_{z,b}$ and cancels out. The contribution of the beam to $J_z$ is added after $-\Psi$ is calculated.
@@ -165,4 +166,29 @@ E_z
                 {2\left(1+\blue{\frac{e}{m_ec^2}}\psi_p\right)}
 \end{equation}
 
+\pagebreak
+
+\subsection*{Algorithm}
+
+Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(n+2)$ mean "predicted". $\rho$ and capital letters are field data, others are particle data. $x$, $u$ and $\psi$ are the position, momentum and pseudo-potential respectively. $f$ stands for the force terms.
+
+\begin{subequations}
+\begin{align}
+\text{plasma push: } f_x^n, f_u^n, f_{\psi}^n &\longrightarrow x_p^{n+1}, u_p^{n+1}, \psi_p^{n+1}, x_{prev}=x_p^{n+1} \\
+\text{plasma deposition: } x_p^{n+1}, u_p^{n+1} &\longrightarrow \rho_p^{n+1}, J_{p,\perp}^{n+1}, J_{p,z}^{n+1} \\
+\text{Poisson solve: } \rho_p^{n+1}, J_{p,z}^{n+1} &\longrightarrow \Psi_p^{n+1} \longrightarrow (E_x-cB_y)^{n+1}, (E_y+cB_x)^{n+1}\\
+\text{beam deposition: } x_b^{n+1}, u_b^{n+1} &\longrightarrow J_{\perp}^{n+1}, J_z^{n+1} \\
+\text{Poisson solve: } J_{\perp}^{n+1} &\longrightarrow E_z^{n+1}, B_z^{n+1} \\
+\text{Init Pred-Corr guess: } B_{\perp}^{n-1}, B_{\perp}^{n} &\longrightarrow B_{\perp}^{(n+1)}, B_{\perp}^{prev}=B_{\perp}^{(n+1)} \\
+\text{update plasma forces: } E^{n+1}, B_z^{n+1}, B_{\perp}^{(n+1) }&\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
+\end{align}
+\text{Predictor-corrector loop, while error$(B_{\perp, iter}^{(n+1)}, B_{\perp}^{(n+1)}) >$ tolerance:}
+\begin{align}
+\text{plasma push: } x_p^{n+1}, u_p^{n+1}, \psi_p^{n+1}, f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)} &\longrightarrow x_p^{(n+2)}, u_p^{(n+2)}, \psi_p^{(n+2)} \\
+\text{plasma deposition: }x_p^{(n+2)}, u_p^{(n+2)}, \psi_p^{(n+2)} &\longrightarrow J_{\perp}^{(n+2)} \\
+\text{Poisson solve: }J_z^{n+1}, J_{\perp}^{n}, J_{\perp}^{(n+2)} &\longrightarrow B_{\perp, iter}^{(n+1)}\\
+\text{New guess: }B_{\perp}^{n}, B_{\perp, iter}^{(n+1)}, B_{\perp}^{prev} &\longrightarrow B_{\perp}^{(n+1)}, B_{\perp}^{prev}=B_{\perp, iter}^{(n+1)} \\
+\text{update plasma forces: }B_{\perp}^{(n+1)}, E_{\perp}^{n+1} &\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
+\end{align}
+\end{subequations}
 \end{document}
