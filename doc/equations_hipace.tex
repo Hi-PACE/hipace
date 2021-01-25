@@ -180,7 +180,7 @@ Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(
 \text{beam deposition: } x_b^{n+1}, u_b^{n+1} &\longrightarrow J_{\perp}^{n+1}, J_z^{n+1} \\
 \text{Poisson solve: } J_{\perp}^{n+1} &\longrightarrow E_z^{n+1}, B_z^{n+1} \\
 \text{Init Pred-Corr guess: } B_{\perp}^{n-1}, B_{\perp}^{n} &\longrightarrow B_{\perp}^{(n+1)}, B_{\perp}^{prev}=B_{\perp}^{(n+1)} \\
-\text{plasma forces: } E^{n+1}, B_z^{n+1}, B_{\perp}^{(n+1) }&\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
+\text{update plasma forces: } E^{n+1}, B_z^{n+1}, B_{\perp}^{(n+1) }&\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
 \end{align}
 \text{Predictor-corrector loop, while error$(B_{\perp, iter}^{(n+1)}, B_{\perp}^{(n+1)}) >$ tolerance:}
 \begin{align}
@@ -188,7 +188,7 @@ Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(
 \text{plasma deposition: }x_p^{(n+2)}, u_p^{(n+2)}, \psi_p^{(n+2)} &\longrightarrow J_{\perp}^{(n+2)} \\
 \text{Poisson solve: }J_z^{n+1}, J_{\perp}^{n}, J_{\perp}^{(n+2)} &\longrightarrow B_{\perp, iter}^{(n+1)}\\
 \text{New guess: }B_{\perp}^{n}, B_{\perp, iter}^{(n+1)}, B_{\perp}^{prev} &\longrightarrow B_{\perp}^{(n+1)}, B_{\perp}^{prev}=B_{\perp, iter}^{(n+1)} \\
-\text{plasma forces: }B_{\perp}^{(n+1)}, E_{\perp}^{n+1} &\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
+\text{update plasma forces: }B_{\perp}^{(n+1)}, E_{\perp}^{n+1} &\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
 \end{align}
 \end{subequations}
 \end{document}
