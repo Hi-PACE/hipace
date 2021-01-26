@@ -359,8 +359,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           WhichSlice::This, false,
-                           true, false, false, lev);
+                           false, true, false, false, lev);
 
     m_plasma_container.RedistributeSlice(lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
@@ -463,8 +462,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
     /* shift force terms, update force terms using guessed Bx and By */
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           WhichSlice::This, false,
-                           false, true, true, lev);
+                           false, false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
     int i_iter = 0;
@@ -476,8 +474,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         i_iter++;
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               WhichSlice::Next, true,
-                               true, false, false, lev);
+                               true, true, false, false, lev);
         m_plasma_container.RedistributeSlice(lev);
 
         /* deposit current to next slice */
@@ -522,8 +519,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
         /* Update force terms using the calculated Bx and By */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               WhichSlice::Next, false,
-                               false, true, false, lev);
+                               false, false, true, false, lev);
 
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;
