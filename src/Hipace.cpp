@@ -286,7 +286,7 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.InitDiagnostics();
+    if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
@@ -345,7 +345,7 @@ Hipace::Evolve ()
     m_physical_time -= m_dt;
     WriteDiagnostics(m_max_step, true);
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.reset();
+    if (m_output_period > 0) m_openpmd_writer.reset();
 #endif
 }
 
