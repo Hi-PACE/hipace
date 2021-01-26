@@ -74,6 +74,8 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_period != 0,
+                                     "To avoid output, please use output_period = -1.");
     pph.query("beam_injection_cr", m_beam_injection_cr);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
