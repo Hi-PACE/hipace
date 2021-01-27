@@ -89,7 +89,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
         bool n_0_specified = pp.query("plasma_density", m_plasma_density);
         pp.query("iteration", m_num_iteration);
-        bool species_specified = pp.query("species_name", m_species_name);
+        bool species_specified = pp.query("openPMD_species_name", m_species_name);
 
         if(!n_0_specified) {
             m_plasma_density = 0;
@@ -106,7 +106,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::ParmParse pp(m_name);
         pp.get("input_file", m_input_file);
         pp.query("iteration", m_num_iteration);
-        bool species_specified = pp.query("species_name", m_species_name);
+        bool species_specified = pp.query("openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;
         }
