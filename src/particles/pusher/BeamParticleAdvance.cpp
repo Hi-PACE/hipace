@@ -95,7 +95,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
             [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = indices[cell_start+idx];
 
-                if ( abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
+                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 
                 const amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                             + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
