@@ -71,9 +71,11 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
     const amrex::IntVect ncells = a_geom.Domain().length();
     amrex::Long ncells_total = (amrex::Long) ncells[0] * ncells[1] * ncells[2];
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        ncells_total < std::numeric_limits<int>::max(),
-        "Too many cells for beam injection. Consider using a larger hipace.beam_injection_cr, e.g., 8 (the default is 1).");
+    if ( ncells_total / Hipace::m_beam_injection_cr / Hipace::m_beam_injection_cr
+         > std::numeric_limits<int>::max() / 100 ){
+        amrex::Print()<<"WARNING: the number of cells is close to overflowing the maximum int,\n";
+        amrex::Print()<<"consider using a larger hipace.beam_injection_cr\n";
+    }
 
     // Since each box is allows to be very large, its number of cells may exceed the largest
     // int (~2.e9). To avoid this, we use a coarsened box (the coarsening ratio is cr, see below)
