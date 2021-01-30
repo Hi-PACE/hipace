@@ -148,6 +148,8 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
             amrex::ParallelFor(num_particles,
                 [=] AMREX_GPU_DEVICE (long ip) {
 
+                    if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
+
                     amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
                     amrex::Gpu::Atomic::Add(p_sum_weights_times_uz, wp[ip]*uzp[ip]/phys_const.c);
                     amrex::Gpu::Atomic::Add(p_sum_weights_times_uz_squared, wp[ip]*uzp[ip]*uzp[ip]

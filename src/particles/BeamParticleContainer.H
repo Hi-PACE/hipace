@@ -82,6 +82,12 @@ public:
 
     /** Loop over beams and receive total number of beam particles on upstream ranks */
     void WaitNumParticles (MPI_Comm a_comm_z);
+
+    /** Redistribute the particles on a slice, meaning particles, which left the box are returned
+     * periodically and if peridicity = 0, their weight is set to 0
+     * \param[in] lev MR level
+     */
+    void RedistributeSlice (int const lev);
 #endif
 
     std::string get_name () const {return m_name;};

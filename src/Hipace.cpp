@@ -323,7 +323,9 @@ Hipace::Evolve ()
         if (amrex::ParallelDescriptor::NProcs() == 1) {
             m_multi_beam.Redistribute();
         } else {
-            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed. \n";
+            m_multi_beam.RedistributeSlice(lev);
+            amrex::Print()<<"WARNING: In parallel runs, beam particles are only redistributed "
+                            " transversely. \n";
         }
 
         /* Passing the adaptive time step info */
