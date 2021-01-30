@@ -144,7 +144,6 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
             amrex::Real* p_sum_weights_times_uz_squared =
                 gpu_sum_weights_times_uz_squared.dataPtr();
 
-            amrex::Print() << "< std::numeric_limits<amrex::Real>::epsilon()  " << std::numeric_limits<amrex::Real>::epsilon()  << "\n";
             int const num_particles = pti.numParticles();
             amrex::ParallelFor(num_particles,
                 [=] AMREX_GPU_DEVICE (long ip) {
