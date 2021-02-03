@@ -296,7 +296,10 @@ InitBeamFromFileHelper (std::string input_file,
                         bool coordinates_specified,
                         amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                         const amrex::Geometry& geom,
-                        amrex::Real n_0)
+                        amrex::Real n_0,
+                        int num_iteration,
+                        std::string species_name,
+                        bool species_specified)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -304,10 +307,13 @@ InitBeamFromFileHelper (std::string input_file,
     {
         // Check what kind of Datatype is used in beam file
         auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
-        if(series.iterations[0].particles.size() != 1) {
-            amrex::Abort("Beam Input file must have exactly one particle type in iteration 0\n");
+
+        if(!series.iterations.contains(num_iteration)) {
+            amrex::Abort("Could not find iteration " + std::to_string(num_iteration) +
+                                                        " in file " + input_file + "\n");
         }
-        for( auto const& particle_type : series.iterations[0].particles ) {
+
+        for( auto const& particle_type : series.iterations[num_iteration].particles ) {
             for( auto const& physical_quantity : particle_type.second ) {
                 for( auto const& axes_direction : physical_quantity.second ) {
                     input_type = axes_direction.second.getDatatype();
@@ -318,11 +324,11 @@ InitBeamFromFileHelper (std::string input_file,
 
     if(input_type == openPMD::Datatype::FLOAT) {
         InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz,
-                                geom, n_0);
+                                geom, n_0, num_iteration, species_name, species_specified);
     }
     else if(input_type == openPMD::Datatype::DOUBLE) {
         InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz,
-                                 geom, n_0);
+                                 geom, n_0, num_iteration, species_name, species_specified);
     }
     else{
         amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
@@ -337,7 +343,10 @@ InitBeamFromFile (std::string input_file,
                   bool coordinates_specified,
                   amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                   const amrex::Geometry& geom,
-                  amrex::Real n_0)
+                  amrex::Real n_0,
+                  int num_iteration,
+                  std::string species_name,
+                  bool species_specified)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -358,16 +367,29 @@ InitBeamFromFile (std::string input_file,
     std::string name_q ="";
     std::string name_qq ="";
 
-    if(series.iterations[0].particles.size() != 1) {
-        amrex::Abort("Beam Input File must have exactly one particle type in iteration 0");
-    }
-
     // Iterate through all matadata in file, search for unit combination for Distance, Velocity,
     // Charge, Mass. Auto detect coordinates if named x y z or X Y Z etc.
-    for( auto const& particle_type : series.iterations[0].particles ) {
-        name_particle =  particle_type.first;
+    for( auto const& particle_type : series.iterations[num_iteration].particles ) {
+        if( species_specified ) {
+            name_particle = species_name;
+        }
+        else {
+            name_particle =  particle_type.first;
+        }
 
-        for( auto const& physical_quantity : particle_type.second ) {
+        if(!series.iterations[num_iteration].particles.contains(name_particle)) {
+            std::string err = "Error, the particle species name " + name_particle +
+                  " was not found. The input file contains the" +
+                  " following particle species names:\n";
+            for( auto const& species_type : series.iterations[num_iteration].particles ) {
+                      err += species_type.first + "\n";
+            }
+            amrex::Abort(err);
+        }
+
+        for( auto const& physical_quantity : series.iterations[num_iteration].particles[
+                                                                          name_particle] )
+            {
 
             std::string units = "";
             for( auto const& unit_dimension : physical_quantity.second.unitDimension()) {
@@ -425,7 +447,8 @@ InitBeamFromFile (std::string input_file,
     }
 
     if(name_particle == "") {
-        amrex::Abort("Could not find a Particle type in Iteration 0 in file\n");
+        amrex::Abort("Could not find a Particle type in Iteration " +
+                                                std::to_string(num_iteration) + " in file\n");
     }
     if(name_r == "") {
         amrex::Abort("Could not find Position of dimension L in file\n");
@@ -446,7 +469,20 @@ InitBeamFromFile (std::string input_file,
         amrex::Abort("Coud not find z coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
     }
 
-    auto electrons = series.iterations[0].particles[name_particle];
+    for(std::string name_r_c : {name_rx, name_ry, name_rz}) {
+        if(!series.iterations[num_iteration].particles[name_particle][name_r].contains(name_r_c)) {
+            amrex::Abort("Beam input file does not contain " + name_r_c + " coordinate in " +
+            name_r + " (position)\n");
+        }
+    }
+    for(std::string name_u_c : {name_ux, name_uy, name_uz}) {
+        if(!series.iterations[num_iteration].particles[name_particle][name_u].contains(name_u_c)) {
+            amrex::Abort("Beam input file does not contain " + name_u_c + " coordinate in " +
+            name_u + " (momentum)\n");
+        }
+    }
+
+    auto electrons = series.iterations[num_iteration].particles[name_particle];
 
     // copy Data
     const std::shared_ptr<input_type> r_x_data = electrons[name_r][name_rx].loadChunk<input_type>();
@@ -509,6 +545,10 @@ InitBeamFromFile (std::string input_file,
         series.flush();
     }
 
+    if(electrons[name_r][name_rx].getExtent()[0] >= 2147483647) {
+        amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
+    }
+
     // input data using AddOneBeamParticle function, make necessary variables and arrays
     const int num_to_add = electrons[name_r][name_rx].getExtent()[0];
     const PhysConst phys_const = get_phys_const();
@@ -517,7 +557,7 @@ InitBeamFromFile (std::string input_file,
 
         // WARNING Implemented for 1 box per MPI rank.
         for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi)
-            {
+        {
             auto& particles = GetParticles(0);
             auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
             auto old_size = particle_tile.GetArrayOfStructs().size();
@@ -528,10 +568,12 @@ InitBeamFromFile (std::string input_file,
                                                   particle_tile.GetStructOfArrays().realarray();
             const int procID = amrex::ParallelDescriptor::MyProc();
             const int pid = ParticleType::NextID();
+            ParticleType::NextID(pid + num_to_add);
 
             for( int i=0; i < num_to_add; ++i)
             {
-                AddOneBeamParticle(pstruct, arrdata, (amrex::Real)(r_x_data.get()[i] * unit_rx),
+                AddOneBeamParticle(pstruct, arrdata,
+                                  (amrex::Real)(r_x_data.get()[i] * unit_rx),
                                   (amrex::Real)(r_y_data.get()[i] * unit_ry),
                                   (amrex::Real)(r_z_data.get()[i] * unit_rz),
                                   (amrex::Real)(u_x_data.get()[i] * unit_ux),
@@ -543,6 +585,126 @@ InitBeamFromFile (std::string input_file,
         }
     }
     Redistribute();
+    return;
+}
+
+void
+BeamParticleContainer::
+InitBeamRestartHelper (std::string input_file,
+                       int num_iteration,
+                       std::string species_name)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+
+    openPMD::Datatype input_type = openPMD::Datatype::INT;
+    {
+        // Check what kind of Datatype is used in beam file
+        auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
+
+        if(!series.iterations.contains(num_iteration)) {
+            amrex::Abort("Could not find iteration " + std::to_string(num_iteration) +
+                                                        " in file " + input_file + "\n");
+        }
+        if(!series.iterations[num_iteration].particles.contains(species_name)) {
+            std::string err = "Error, the particle species name " + species_name +
+                  " was not found. The input file contains the" +
+                  " following particle species names:\n";
+            for( auto const& particle_type : series.iterations[num_iteration].particles ) {
+                      err += particle_type.first + "\n";
+            }
+            amrex::Abort(err);
+        }
+        if(!series.iterations[num_iteration].particles[species_name].contains("position") ||
+           !series.iterations[num_iteration].particles[species_name]["position"].contains("x"))
+        {
+            amrex::Abort("Beam input file does not have the proper syntax "
+                         "of a Hipace++ output file\n");
+        }
+
+        input_type = series.iterations[num_iteration].particles[species_name
+                                                              ]["position"]["x"].getDatatype();
+    }
+
+    if(input_type == openPMD::Datatype::FLOAT) {
+        InitBeamRestart<float>(input_file, num_iteration, species_name);
+    }
+    else if(input_type == openPMD::Datatype::DOUBLE) {
+        InitBeamRestart<double>(input_file, num_iteration, species_name);
+    }
+    else{
+        amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
+    }
+    return;
+}
+
+template <typename input_type>
+void
+BeamParticleContainer::
+InitBeamRestart (std::string input_file,
+                 int num_iteration,
+                 std::string species_name)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+
+    auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY);
+
+    auto electrons = series.iterations[num_iteration].particles[species_name];
+
+    const std::shared_ptr<input_type> rx_data = electrons["position"]["x"].loadChunk<input_type>();
+    const std::shared_ptr<input_type> ry_data = electrons["position"]["y"].loadChunk<input_type>();
+    const std::shared_ptr<input_type> rz_data = electrons["position"]["z"].loadChunk<input_type>();
+
+    const std::shared_ptr<input_type> ux_data = electrons["momentum"]["x"].loadChunk<input_type>();
+    const std::shared_ptr<input_type> uy_data = electrons["momentum"]["y"].loadChunk<input_type>();
+    const std::shared_ptr<input_type> uz_data = electrons["momentum"]["z"].loadChunk<input_type>();
+
+    auto const scalar = openPMD::RecordComponent::SCALAR;
+    const std::shared_ptr<input_type> m_data = electrons["weighting"][scalar
+                                                                        ].loadChunk<input_type>();
+
+    series.flush();
+
+    if(electrons["position"]["x"].getExtent()[0] >= 2147483647) {
+        amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
+    }
+
+    // input data using AddOneBeamParticle function, make necessary variables and arrays
+    const int num_to_add = electrons["position"]["x"].getExtent()[0];
+
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+
+        // WARNING Implemented for 1 box per MPI rank.
+        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi)
+        {
+            auto& particles = GetParticles(0);
+            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+            auto old_size = particle_tile.GetArrayOfStructs().size();
+            auto new_size = old_size + num_to_add;
+            particle_tile.resize(new_size);
+            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+                                                  particle_tile.GetStructOfArrays().realarray();
+            const int procID = amrex::ParallelDescriptor::MyProc();
+            const int pid = ParticleType::NextID();
+            ParticleType::NextID(pid + num_to_add);
+
+            for( int i=0; i < num_to_add; ++i)
+            {
+                AddOneBeamParticle(pstruct, arrdata,
+                                  (amrex::Real)(rx_data.get()[i]),
+                                  (amrex::Real)(ry_data.get()[i]),
+                                  (amrex::Real)(rz_data.get()[i]),
+                                  (amrex::Real)(ux_data.get()[i]),
+                                  (amrex::Real)(uy_data.get()[i]),
+                                  (amrex::Real)(uz_data.get()[i]),
+                                  (amrex::Real)(m_data.get()[i]),
+                                  pid, procID, i, 1.);
+            }
+        }
+    }
+    Redistribute();
+
+    ConvertUnits(ConvertDirection::SI_to_HIPACE);
     return;
 }
 #endif // HIPACE_USE_OPENPMD
