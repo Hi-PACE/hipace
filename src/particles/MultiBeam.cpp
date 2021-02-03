@@ -89,4 +89,12 @@ MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
         beam.WaitNumParticles(a_comm_z);
     }
 }
+
+void
+MultiBeam::RedistributeSlice (int const lev)
+{
+    for (auto& beam : m_all_beams) {
+        beam.RedistributeSlice(lev);
+    }
+}
 #endif

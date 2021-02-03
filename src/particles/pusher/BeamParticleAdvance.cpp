@@ -38,12 +38,12 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
 
         // Extract the fields
         const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-        const amrex::MultiFab exmby(S, amrex::make_alias, FieldComps::ExmBy, 1);
-        const amrex::MultiFab eypbx(S, amrex::make_alias, FieldComps::EypBx, 1);
-        const amrex::MultiFab ez(S, amrex::make_alias, FieldComps::Ez, 1);
-        const amrex::MultiFab bx(S, amrex::make_alias, FieldComps::Bx, 1);
-        const amrex::MultiFab by(S, amrex::make_alias, FieldComps::By, 1);
-        const amrex::MultiFab bz(S, amrex::make_alias, FieldComps::Bz, 1);
+        const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
+        const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
+        const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
+        const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
+        const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
+        const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
 
         // Extract field array from FabArrays in MultiFabs.
         // (because there is currently no transverse parallelization, the index
@@ -60,9 +60,10 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
 
         // Extract particle properties
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-        const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-        const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+        amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data();
+        amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data();
+        amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data();
+        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
 
         const auto getPosition =
             GetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
@@ -93,6 +94,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = indices[cell_start+idx];
+
+                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 
                 const amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                             + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);

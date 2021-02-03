@@ -64,7 +64,7 @@ OpenPMDWriter::WriteFieldData (
     auto meshes = iteration.meshes;
 
     // loop over field components
-    for (int icomp = 0; icomp < FieldComps::nfields; ++icomp)
+    for (int icomp = 0; icomp < Comps[WhichSlice::This]["N"]; ++icomp)
     {
         std::string fieldname = varnames[icomp];
         //                      "B"                "x" (todo)

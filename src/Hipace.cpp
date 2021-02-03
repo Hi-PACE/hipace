@@ -75,6 +75,8 @@ Hipace::Hipace () :
     pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
     pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
     pph.query("output_period", m_output_period);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_period != 0,
+                                     "To avoid output, please use output_period = -1.");
     pph.query("beam_injection_cr", m_beam_injection_cr);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
@@ -191,6 +193,14 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
+
+#ifdef AMREX_USE_MPI
+    #ifdef HIPACE_USE_OPENPMD
+    // receive and pass the number of beam particles to share the offset for openPMD IO
+    m_multi_beam.WaitNumParticles(m_comm_z);
+    m_multi_beam.NotifyNumParticles(m_comm_z);
+    #endif
+#endif
 }
 
 void
@@ -277,7 +287,7 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.InitDiagnostics();
+    if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
     WriteDiagnostics(0);
     for (int step = 0; step < m_max_step; ++step)
@@ -314,7 +324,9 @@ Hipace::Evolve ()
         if (amrex::ParallelDescriptor::NProcs() == 1) {
             m_multi_beam.Redistribute();
         } else {
-            amrex::Print()<<"WARNING: In parallel runs, beam particles are not redistributed. \n";
+            m_multi_beam.RedistributeSlice(lev);
+            amrex::Print()<<"WARNING: In parallel runs, beam particles are only redistributed "
+                            " transversely. \n";
         }
 
         /* Passing the adaptive time step info */
@@ -336,7 +348,7 @@ Hipace::Evolve ()
     m_physical_time -= m_dt;
     WriteDiagnostics(m_max_step, true);
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.reset();
+    if (m_output_period > 0) m_openpmd_writer.reset();
 #endif
 }
 
@@ -350,24 +362,19 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           WhichSlice::This, false,
-                           true, false, false, lev);
+                           false, true, false, false, lev);
 
     m_plasma_container.RedistributeSlice(lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        FieldComps::rho, 1);
+                        Comps[WhichSlice::This]["rho"], 1);
 
     DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
                    true, true, geom[lev], lev);
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        FieldComps::jy == FieldComps::jx+1 && FieldComps::jz == FieldComps::jx+2 &&
-        FieldComps::rho == FieldComps::jx+3, "The order of jx, jy, jz, rho must not be "
-        "changed, because the 4 components starting from jx are grabbed at once");
     amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
-                            amrex::make_alias, FieldComps::jx, 4);
+                            amrex::make_alias, Comps[WhichSlice::This]["jx"], 4);
     j_slice.FillBoundary(Geom(lev).periodicity());
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
@@ -401,7 +408,7 @@ Hipace::ResetAllQuantities (int lev)
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
     ResetPlasmaParticles(m_plasma_container, lev, true);
 
-    for (int islice=0; islice<(int) WhichSlice::N; islice++) {
+    for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
 }
@@ -417,7 +424,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_fields.getSlices(lev, WhichSlice::Previous1),
         m_fields.getSlices(lev, WhichSlice::Previous2),
         m_fields.getSlices(lev, WhichSlice::Previous2),
-        FieldComps::Bx, FieldComps::By,FieldComps::Bx, FieldComps::By, Geom(lev), lev);
+        Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
+        Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
+        Geom(lev), lev);
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
@@ -439,25 +448,24 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(Bx_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          FieldComps::Bx, 0, 1, 0);
+                          Comps[WhichSlice::This]["Bx"], 0, 1, 0);
     amrex::MultiFab By_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          FieldComps::By, 0, 1, 0);
+                          Comps[WhichSlice::This]["By"], 0, 1, 0);
 
     /* creating aliases to the current in the next slice.
      * This needs to be reset after each push to the next slice */
     amrex::MultiFab jx_next(m_fields.getSlices(lev, WhichSlice::Next),
-                            amrex::make_alias, FieldComps::jx, 1);
+                            amrex::make_alias, Comps[WhichSlice::Next]["jx"], 1);
     amrex::MultiFab jy_next(m_fields.getSlices(lev, WhichSlice::Next),
-                            amrex::make_alias, FieldComps::jy, 1);
+                            amrex::make_alias, Comps[WhichSlice::Next]["jy"], 1);
 
 
     /* shift force terms, update force terms using guessed Bx and By */
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                           WhichSlice::This, false,
-                           false, true, true, lev);
+                           false, false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
     int i_iter = 0;
@@ -469,8 +477,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         i_iter++;
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               WhichSlice::Next, true,
-                               true, false, false, lev);
+                               true, true, false, false, lev);
         m_plasma_container.RedistributeSlice(lev);
 
         /* deposit current to next slice */
@@ -479,7 +486,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
-                                     amrex::make_alias, FieldComps::jx, 4);
+                                     amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
         j_slice_next.FillBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
 
@@ -488,20 +495,21 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_fields.SolvePoissonBy(By_iter, Geom(lev), lev);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
-                                               m_fields.getSlices(lev, WhichSlice::This),
-                                               m_fields.getSlices(lev, WhichSlice::This),
-                                               Bx_iter, By_iter, FieldComps::Bx,
-                                               FieldComps::By, 0, 0, Geom(lev), lev);
+            m_fields.getSlices(lev, WhichSlice::This),
+            m_fields.getSlices(lev, WhichSlice::This),
+            Bx_iter, By_iter,
+            Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::This]["By"],
+            0, 0, Geom(lev), lev);
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 
         /* Mixing the calculated B fields to the actual B field and shifting iterated B fields */
-        m_fields.MixAndShiftBfields(Bx_iter, Bx_prev_iter, FieldComps::Bx, relative_Bfield_error,
-                                    relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor,
-                                    lev);
-        m_fields.MixAndShiftBfields(By_iter, By_prev_iter, FieldComps::By, relative_Bfield_error,
-                                    relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor,
-                                    lev);
+        m_fields.MixAndShiftBfields(
+            Bx_iter, Bx_prev_iter, Comps[WhichSlice::This]["Bx"], relative_Bfield_error,
+            relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
+        m_fields.MixAndShiftBfields(
+            By_iter, By_prev_iter, Comps[WhichSlice::This]["By"], relative_Bfield_error,
+            relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
         jx_next.setVal(0.);
@@ -514,8 +522,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
         /* Update force terms using the calculated Bx and By */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-                               WhichSlice::Next, false,
-                               false, true, false, lev);
+                               false, false, true, false, lev);
 
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;
@@ -655,9 +662,6 @@ Hipace::Wait ()
             amrex::The_Pinned_Arena()->free(recv_buffer);
         }
     }
-    #ifdef HIPACE_USE_OPENPMD
-    m_multi_beam.WaitNumParticles(m_comm_z);
-    #endif
 #endif
 }
 
@@ -777,10 +781,6 @@ Hipace::Notify ()
                       m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
         }
     }
-    #ifdef HIPACE_USE_OPENPMD
-    /* pass the number of beam particles from the upstream ranks to get the offset for openPMD IO */
-    m_multi_beam.NotifyNumParticles(m_comm_z);
-    #endif
 #endif
 }
 

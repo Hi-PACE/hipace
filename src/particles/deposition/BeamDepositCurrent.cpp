@@ -39,9 +39,9 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
         // Extract the fields currents
         amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-        amrex::MultiFab jx(S, amrex::make_alias, FieldComps::jx, 1);
-        amrex::MultiFab jy(S, amrex::make_alias, FieldComps::jy, 1);
-        amrex::MultiFab jz(S, amrex::make_alias, FieldComps::jz, 1);
+        amrex::MultiFab jx(S, amrex::make_alias, Comps[WhichSlice::This]["jx"], 1);
+        amrex::MultiFab jy(S, amrex::make_alias, Comps[WhichSlice::This]["jy"], 1);
+        amrex::MultiFab jz(S, amrex::make_alias, Comps[WhichSlice::This]["jz"], 1);
 
         // Extract FabArray for this box (because there is currently no transverse
         // parallelization, the index we want in the slice multifab is always 0.
