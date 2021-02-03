@@ -39,20 +39,21 @@ OpenPMDWriter::WriteDiagnostics (
     amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int lev,
-    const int slice_dir, const amrex::Vector< std::string > varnames)
+    const int slice_dir, const amrex::Vector< std::string > varnames,
+    const amrex::Geometry& geom3D)
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration);
 
-    a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    WriteBeamParticleData(a_multi_beam, iteration);
+    //a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
+    WriteBeamParticleData(a_multi_beam, iteration, geom3D);
 
     m_outputSeries->flush();
 
     // back conversion after the flush, to not change the data to be written to file
-    a_multi_beam.ConvertUnits(ConvertDirection::SI_to_HIPACE);
+    //a_multi_beam.ConvertUnits(ConvertDirection::SI_to_HIPACE);
 }
 
 void
@@ -136,7 +137,8 @@ OpenPMDWriter::WriteFieldData (
 }
 
 void
-OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
+OpenPMDWriter::WriteBeamParticleData (
+    MultiBeam& beams, openPMD::Iteration iteration, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
@@ -146,7 +148,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
 
         const unsigned long long np = beams.get_total_num_particles(ibeam);
-        SetupPos(beam_species, np);
+        SetupPos(beam_species, np, geom);
         SetupRealProperties(beam_species, m_real_names, np);
 
         const int lev = 0; // we only have 1 level for now
@@ -197,9 +199,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
 void
 OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
-         const unsigned long long& np)
+         const unsigned long long& np, const amrex::Geometry& geom)
 {
-    PhysConst const phys_const = get_phys_const();
+    const PhysConst phys_const_SI = make_constants_SI();
     auto const realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
     auto const idType = openPMD::Dataset(openPMD::determineDatatype< uint64_t >(), {np});
 
@@ -213,15 +215,46 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     auto const scalar = openPMD::RecordComponent::SCALAR;
     currSpecies["id"][scalar].resetDataset( idType );
     currSpecies["charge"][scalar].resetDataset( realType );
-    currSpecies["charge"][scalar].makeConstant( phys_const.q_e );
+    currSpecies["charge"][scalar].makeConstant( phys_const_SI.q_e );
     currSpecies["mass"][scalar].resetDataset( realType );
-    currSpecies["mass"][scalar].makeConstant( phys_const.m_e );
+    currSpecies["mass"][scalar].makeConstant( phys_const_SI.m_e );
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
     currSpecies["positionOffset"].setUnitDimension( utils::getUnitDimension("positionOffset") );
     currSpecies["charge"].setUnitDimension( utils::getUnitDimension("charge") );
     currSpecies["mass"].setUnitDimension( utils::getUnitDimension("mass") );
+
+    // calculate the multiplier to convert from Hipace to SI units
+    double hipace_to_SI_pos = 1.;
+    double hipace_to_SI_weight = 1.;
+    double hipace_to_SI_momentum = phys_const_SI.m_e;
+
+    if(Hipace::m_normalized_units) {
+        const auto dx = geom.CellSizeArray();
+        const double n_0 = 1.;
+        currSpecies.setAttribute("Hipace++_Plasma_Density", n_0);
+        const double omega_p = (double)phys_const_SI.q_e * sqrt( (double)n_0 /
+                                      ( (double)phys_const_SI.ep0 * (double)phys_const_SI.m_e ) );
+        const double kp_inv = (double)phys_const_SI.c / omega_p;
+        hipace_to_SI_pos = kp_inv;
+        hipace_to_SI_weight = n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
+        hipace_to_SI_momentum *= phys_const_SI.c;
+    }
+
+    // write SI conversion
+    currSpecies["position"]["x"].setUnitSI(hipace_to_SI_pos);
+    currSpecies["position"]["y"].setUnitSI(hipace_to_SI_pos);
+    currSpecies["position"]["z"].setUnitSI(hipace_to_SI_pos);
+    currSpecies["positionOffset"]["x"].setUnitSI(hipace_to_SI_pos); //posOffset allways 0
+    currSpecies["positionOffset"]["y"].setUnitSI(hipace_to_SI_pos);
+    currSpecies["positionOffset"]["z"].setUnitSI(hipace_to_SI_pos);
+    currSpecies["momentum"]["x"].setUnitSI(hipace_to_SI_momentum );
+    currSpecies["momentum"]["y"].setUnitSI(hipace_to_SI_momentum );
+    currSpecies["momentum"]["z"].setUnitSI(hipace_to_SI_momentum );
+    currSpecies["weighting"][scalar].setUnitSI(hipace_to_SI_weight);
+    currSpecies["charge"][scalar].setUnitSI(1.);
+    currSpecies["mass"][scalar].setUnitSI(1.);
 }
 
 void

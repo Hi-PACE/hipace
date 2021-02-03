@@ -90,6 +90,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool n_0_specified = pp.query("plasma_density", m_plasma_density);
         pp.query("iteration", m_num_iteration);
         bool species_specified = pp.query("openPMD_species_name", m_species_name);
+        if(!species_specified) {
+            m_species_name = m_name;
+        }
 
         if(!n_0_specified) {
             m_plasma_density = 0;
@@ -125,6 +128,23 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
+
+    if(Hipace::m_verbose >= 4) {
+        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi){
+            auto& particles = GetParticles(0);
+            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+                                                  particle_tile.GetStructOfArrays().realarray();
+            amrex::Print() << "Internal Beam particle data of the first 100 particles of Beam: "
+                           << m_name << "\nid cpu pos_x pos_y pos_z   u_x u_y u_z   weight\n";
+            for(int i=0; i<std::min((int)m_total_num_particles, 100);i++){
+                amrex::Print() << pstruct[i] << "  " << arrdata[BeamIdx::ux][i] << " "
+                               << arrdata[BeamIdx::uy][i] << " " << arrdata[BeamIdx::uz][i] << "   "
+                               << arrdata[BeamIdx::w][i] << std::endl;
+            }
+        }
+    }
 }
 
 #ifdef AMREX_USE_MPI
@@ -169,14 +189,7 @@ BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
     // Compute conversion factor
     amrex::ParticleReal factor = 1_rt;
 
-    if(Hipace::m_normalized_units){
-        if (convert_direction == ConvertDirection::HIPACE_to_SI){
-            factor = phys_const_SI.c;
-        } else if (convert_direction == ConvertDirection::SI_to_HIPACE){
-            factor = 1._rt/phys_const_SI.c;
-        }
-    }
-    else {
+    if(!Hipace::m_normalized_units){
         if (convert_direction == ConvertDirection::HIPACE_to_SI){
             factor = phys_const_SI.m_e;
         } else if (convert_direction == ConvertDirection::SI_to_HIPACE){

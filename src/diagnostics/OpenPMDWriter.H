@@ -24,9 +24,11 @@ private:
      *
      * \param[in,out] currSpecies openPMD species to set up
      * \param[in] np total number of particles in the bunch
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
      */
     void SetupPos(openPMD::ParticleSpecies& currSpecies,
-                  const unsigned long long& np);
+                  const unsigned long long& np,
+                  const amrex::Geometry& geom);
 
     /** \brief setup the openPMD parameters do dump the SoA beam data
      *
@@ -53,8 +55,10 @@ private:
      *
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in,out] iteration openPMD iteration to which the data is written
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
      */
-    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
+    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
+                                const amrex::Geometry& geom);
 
     /** \brief writing openPMD field data
      *
@@ -93,12 +97,14 @@ public:
      * \param[in] lev MR level
      * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
      */
     void WriteDiagnostics(
         amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int lev,
-        const int slice_dir, const amrex::Vector< std::string > varnames);
+        const int slice_dir, const amrex::Vector< std::string > varnames,
+        const amrex::Geometry& geom3D);
 
     void reset () {m_outputSeries.reset();};
 };

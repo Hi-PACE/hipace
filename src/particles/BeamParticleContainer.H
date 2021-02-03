@@ -61,25 +61,25 @@ public:
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype*/
-    void InitBeamFromFileHelper (std::string input_file,
-                                 bool coordinates_specified,
-                                 amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+    void InitBeamFromFileHelper (const std::string input_file,
+                                 const bool coordinates_specified,
+                                 const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                                  const amrex::Geometry& geom,
                                  amrex::Real n_0,
-                                 int num_iteration,
-                                 std::string species_name,
-                                 bool species_specified);
+                                 const int num_iteration,
+                                 const std::string species_name,
+                                 const bool species_specified);
 
     /** Initialize a beam from an external input file using openPMD and HDF5 */
     template<typename input_type>
-    void InitBeamFromFile (std::string input_file,
-                           bool coordinates_specified,
-                           amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+    void InitBeamFromFile (const std::string input_file,
+                           const bool coordinates_specified,
+                           const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
                            const amrex::Geometry& geom,
                            amrex::Real n_0,
-                           int num_iteration,
-                           std::string species_name,
-                           bool species_specified);
+                           const int num_iteration,
+                           const std::string species_name,
+                           const bool species_specified);
 
     /** Checks the input file first to determine its Datatype*/
     void InitBeamRestartHelper (std::string input_file,
