@@ -90,11 +90,3 @@ MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
     }
 }
 #endif
-
-void
-MultiBeam::ConvertUnits (ConvertDirection convert_direction)
-{
-    for (auto& beam : m_all_beams) {
-        beam.ConvertUnits(convert_direction);
-    }
-}

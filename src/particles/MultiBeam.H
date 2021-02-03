@@ -92,9 +92,6 @@ public:
     /** Loop over beams and receive total number of beam particles on upstream ranks */
     void WaitNumParticles (MPI_Comm a_comm_z);
 #endif
-
-    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
-    void ConvertUnits (ConvertDirection convert_dir);
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

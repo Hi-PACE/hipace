@@ -80,17 +80,6 @@ public:
                            const int num_iteration,
                            const std::string species_name,
                            const bool species_specified);
-
-    /** Checks the input file first to determine its Datatype*/
-    void InitBeamRestartHelper (std::string input_file,
-                                int num_iteration,
-                                std::string species_name);
-
-    /** Initialize a beam from a previous simulation using openPMD and HDF5 */
-    template <typename input_type>
-    void InitBeamRestart (std::string input_file,
-                          int num_iteration,
-                          std::string species_name);
 #endif
 
 #ifdef AMREX_USE_MPI
@@ -111,14 +100,6 @@ public:
     int get_upstream_n_part () const {return m_num_particles_on_upstream_ranks;};
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;};
-
-    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
-     *
-     * Particle momentum is defined as gamma*velocity, which is neither
-     * SI mass*gamma*velocity nor normalized gamma*velocity/c.
-     * This converts momentum to SI units (or vice-versa) to write SI data
-     * to file. For normalized units, it converts it to the normalized momentum */
-    void ConvertUnits (ConvertDirection convert_dir);
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal position of the can beam */

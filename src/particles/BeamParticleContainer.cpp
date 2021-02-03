@@ -104,22 +104,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif  // HIPACE_USE_OPENPMD
-} else if (m_injection_type == "restart") {
-#ifdef HIPACE_USE_OPENPMD
-        amrex::ParmParse pp(m_name);
-        pp.get("input_file", m_input_file);
-        pp.query("iteration", m_num_iteration);
-        bool species_specified = pp.query("openPMD_species_name", m_species_name);
-        if(!species_specified) {
-            m_species_name = m_name;
-        }
-
-        InitBeamRestartHelper(m_input_file, m_num_iteration, m_species_name);
-
-#else
-        amrex::Abort("beam particle injection via external_file requires openPMD support: "
-                     "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
-#endif  // HIPACE_USE_OPENPMD
     } else {
 
         amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
@@ -177,46 +161,3 @@ BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
     }
 }
 #endif
-
-void
-BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
-{
-    HIPACE_PROFILE("BeamParticleContainer::ConvertUnits()");
-    using namespace amrex::literals;
-
-    const PhysConst phys_const_SI = make_constants_SI();
-
-    // Compute conversion factor
-    amrex::ParticleReal factor = 1_rt;
-
-    if(!Hipace::m_normalized_units){
-        if (convert_direction == ConvertDirection::HIPACE_to_SI){
-            factor = phys_const_SI.m_e;
-        } else if (convert_direction == ConvertDirection::SI_to_HIPACE){
-            factor = 1._rt/phys_const_SI.m_e;
-        }
-    }
-
-    const int nLevels = finestLevel();
-    for (int lev=0; lev<=nLevels; lev++){
-
-        for (BeamParticleIterator pti(*this, lev); pti.isValid(); ++pti)
-        {
-            // - momenta are stored as a struct of array, in `attribs`
-            auto& soa = pti.GetStructOfArrays();
-            const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-            const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-            const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-
-            // Loop over the particles and convert momentum
-            const long np = pti.numParticles();
-            amrex::ParallelFor( np,
-                [=] AMREX_GPU_DEVICE (long i) {
-                    uxp[i] *= factor;
-                    uyp[i] *= factor;
-                    uzp[i] *= factor;
-                });
-        }
-    }
-    return;
-}
