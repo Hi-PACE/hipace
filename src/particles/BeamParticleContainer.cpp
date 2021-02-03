@@ -161,3 +161,43 @@ BeamParticleContainer::WaitNumParticles (MPI_Comm a_comm_z)
     }
 }
 #endif
+
+void
+BeamParticleContainer::RedistributeSlice (int const lev)
+{
+    HIPACE_PROFILE("BeamParticleContainer::RedistributeSlice()");
+
+    using namespace amrex::literals;
+    const auto plo    = Geom(lev).ProbLoArray();
+    const auto phi    = Geom(lev).ProbHiArray();
+    const auto is_per = Geom(lev).isPeriodicArray();
+    AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
+
+    amrex::GpuArray<int,AMREX_SPACEDIM> const periodicity = {true, true, false};
+    // Loop over particle boxes
+    for (BeamParticleIterator pti(*this, lev); pti.isValid(); ++pti)
+    {
+
+        // Extract particle properties
+        auto& aos = pti.GetArrayOfStructs(); // For positions
+        const auto& pos_structs = aos.begin();
+        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+
+        // Loop over particles and handle particles outside of the box
+        amrex::ParallelFor(
+            pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (long ip) {
+                // Set particle AoS
+
+                const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, periodicity);
+
+                if (shifted && !is_per[0]) {
+                    wp[ip] = 0.0_rt;
+                    pos_structs[ip].id() = -1;
+                }
+
+            }
+            );
+        }
+}
