@@ -34,7 +34,7 @@ if args.norm_units:
     x_std = 3.
     y_std = 4.
     z_std = 5.
-    charge = 1.*3.*4.*5.*(2.*np.pi)**(3/2)/(40./64.)**3
+    charge = 1.e-9
     plasma_density = 1.
     kp_inv = scc.c / scc.e * np.sqrt(scc.epsilon_0 * scc.m_e / plasma_density)
 else:
