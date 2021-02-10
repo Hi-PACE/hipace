@@ -34,7 +34,7 @@ if args.norm_units:
     x_std = 3.
     y_std = 4.
     z_std = 5.
-    charge = 1.e-9
+    charge = 1.*3.*4.*5.*(2.*np.pi)**(3/2)/(40./64.)**3
     plasma_density = 1.
     kp_inv = scc.c / scc.e * np.sqrt(scc.epsilon_0 * scc.m_e / plasma_density)
 else:
@@ -67,7 +67,7 @@ if args.norm_units:
     xp /= kp_inv
     yp /= kp_inv
     zp /= kp_inv
-    wp /= np.sqrt(2.8239587008591567e23)
+    wp /= kp_inv**3 * (40./64.)**3
 
 if args.do_plot:
     Hx, bins = np.histogram(xp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)
@@ -93,7 +93,10 @@ if args.tilted_beam:
     assert(x_tilt_error < 5e-3)
     assert(y_tilt_error < 5e-3)
 else:
-    charge_sim = np.sum(wp) * scc.e
+    if args.norm_units:
+        charge_sim = np.sum(wp)
+    else:
+        charge_sim = np.sum(wp) * scc.e
 
     assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
     if args.norm_units:
