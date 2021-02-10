@@ -67,6 +67,7 @@ if args.norm_units:
     xp /= kp_inv
     yp /= kp_inv
     zp /= kp_inv
+    wp /= np.sqrt(2.8239587008591567e23)
 
 if args.do_plot:
     Hx, bins = np.histogram(xp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)
