@@ -92,10 +92,7 @@ if args.tilted_beam:
     assert(x_tilt_error < 5e-3)
     assert(y_tilt_error < 5e-3)
 else:
-    if args.norm_units:
-        charge_sim = np.sum(wp)
-    else:
-        charge_sim = np.sum(wp) * scc.e
+    charge_sim = np.sum(wp) * scc.e
 
     assert(np.abs((charge_sim-charge)/charge) < 1.e-3)
     if args.norm_units:
