@@ -21,19 +21,19 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
                     beam.position_std = 0.1 0.1 2.
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units --tilted-beam
+#$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units --tilted-beam
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
+#$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py
+#$HIPACE_EXAMPLE_DIR/analysis.py
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
