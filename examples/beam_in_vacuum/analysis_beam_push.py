@@ -14,7 +14,7 @@ gamma = 1000.
 x_std_initial = 1./2.
 omega_beta = np.sqrt(field_strength/gamma)
 plasma_density = 1.
-kp_inv = constants.c / constants.e * math.sqrt(constants.epsilon_0 * constants.m_e / plasma_density)
+kp_inv = scc.c / scc.e * math.sqrt(scc.epsilon_0 * scc.m_e / plasma_density)
 
 # Load beam particle data
 ts = OpenPMDTimeSeries('./diags/h5/')
