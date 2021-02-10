@@ -4,7 +4,7 @@ import numpy as np
 from numpy import random
 from scipy import constants
 
-n = 1000000
+n = 10000000
 beam_density = 3.
 plasma_density = 2.8239587008591567e23
 beam_position_mean = [0, 0, 0]
