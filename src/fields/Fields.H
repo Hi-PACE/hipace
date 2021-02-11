@@ -101,9 +101,9 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
-    /** \brief get diagnostics multifab */
-    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
     /** \brief get diagnostics Component names of Fields to output */
+    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
+    /** \brief get diagnostics multifab */
     amrex::Vector<amrex::MultiFab>& getDiagF () { return m_diags.getF(); };
     /** \brief get diagnostics geometry */
     amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
