@@ -1,7 +1,13 @@
 macro(find_amrex)
-    if(HiPACE_amrex_internal)
+    if(HiPACE_amrex_src)
+        message(STATUS "Compiling local AMReX ...")
+        message(STATUS "AMReX source path: ${HiPACE_amrex_src}")
+    elseif(HiPACE_amrex_internal)
         message(STATUS "Downloading AMReX ...")
+        message(STATUS "AMReX repository: ${HiPACE_amrex_repo} (${HiPACE_amrex_branch})")
         include(FetchContent)
+    endif()
+    if(HiPACE_amrex_internal OR HiPACE_amrex_src)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
@@ -55,30 +61,39 @@ macro(find_amrex)
 
         set(AMReX_SPACEDIM 3 CACHE INTERNAL "")
 
-        FetchContent_Declare(fetchedamrex
-            GIT_REPOSITORY ${HiPACE_amrex_repo}
-            GIT_TAG        ${HiPACE_amrex_branch}
-            BUILD_IN_SOURCE 0
-        )
-        FetchContent_GetProperties(fetchedamrex)
-
-        if(NOT fetchedamrex_POPULATED)
-            FetchContent_Populate(fetchedamrex)
-            list(APPEND CMAKE_MODULE_PATH "${fetchedamrex_SOURCE_DIR}/Tools/CMake")
+        if(HiPACE_amrex_src)
+            list(APPEND CMAKE_MODULE_PATH "${HiPACE_amrex_src}/Tools/CMake")
             if(HiPACE_COMPUTE STREQUAL CUDA)
                 enable_language(CUDA)
                 include(AMReX_SetupCUDA)
             endif()
-            add_subdirectory(${fetchedamrex_SOURCE_DIR} ${fetchedamrex_BINARY_DIR})
-        endif()
+            add_subdirectory(${HiPACE_amrex_src} _deps/localamrex-build/)
+        else()
+            FetchContent_Declare(fetchedamrex
+                GIT_REPOSITORY ${HiPACE_amrex_repo}
+                GIT_TAG        ${HiPACE_amrex_branch}
+                BUILD_IN_SOURCE 0
+            )
+            FetchContent_GetProperties(fetchedamrex)
 
-        # advanced fetch options
-        mark_as_advanced(FETCHCONTENT_BASE_DIR)
-        mark_as_advanced(FETCHCONTENT_FULLY_DISCONNECTED)
-        mark_as_advanced(FETCHCONTENT_QUIET)
-        mark_as_advanced(FETCHCONTENT_SOURCE_DIR_FETCHEDAMREX)
-        mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED)
-        mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDAMREX)
+            if(NOT fetchedamrex_POPULATED)
+                FetchContent_Populate(fetchedamrex)
+                list(APPEND CMAKE_MODULE_PATH "${fetchedamrex_SOURCE_DIR}/Tools/CMake")
+                if(HiPACE_COMPUTE STREQUAL CUDA)
+                    enable_language(CUDA)
+                    include(AMReX_SetupCUDA)
+                endif()
+                add_subdirectory(${fetchedamrex_SOURCE_DIR} ${fetchedamrex_BINARY_DIR})
+            endif()
+
+            # advanced fetch options
+            mark_as_advanced(FETCHCONTENT_BASE_DIR)
+            mark_as_advanced(FETCHCONTENT_FULLY_DISCONNECTED)
+            mark_as_advanced(FETCHCONTENT_QUIET)
+            mark_as_advanced(FETCHCONTENT_SOURCE_DIR_FETCHEDAMREX)
+            mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED)
+            mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDAMREX)
+        endif()
 
         # AMReX options not relevant to HiPACE users
         mark_as_advanced(AMREX_BUILD_DATETIME)
@@ -108,15 +123,21 @@ macro(find_amrex)
         mark_as_advanced(AMReX_TP_PROFILE)
         mark_as_advanced(USE_XSDK_DEFAULTS)
 
-        set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
-
-        message(STATUS "AMReX: Using INTERNAL version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})")
+        message(STATUS "AMReX: Using version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})") 
     else()
+        message(STATUS "Searching for pre-installed AMReX ...")
+        set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
         find_package(AMReX 20.11 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES TINYP)
         message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
     endif()
 endmacro()
 
+# local source-tree
+set(HiPACE_amrex_src ""
+    CACHE PATH
+    "Local path to AMReX source directory (preferred if set)")
+
+# Git fetcher
 set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")

@@ -1,7 +1,13 @@
 function(find_openpmd)
-    if(HiPACE_openpmd_internal)
+    if(HiPACE_openpmd_src)
+        message(STATUS "Compiling local openPMD-api ...")
+        message(STATUS "openPMD-api source path: ${HiPACE_openpmd_src}")
+    elseif(HiPACE_openpmd_internal)
         message(STATUS "Downloading openPMD-api ...")
+        message(STATUS "openPMD-api repository: ${HiPACE_openpmd_repo} (${HiPACE_openpmd_branch})")
         include(FetchContent)
+    endif()
+    if(HiPACE_openpmd_internal OR HiPACE_openpmd_src)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://openpmd-api.readthedocs.io/en/0.13.1-alpha/dev/buildoptions.html
@@ -12,25 +18,29 @@ function(find_openpmd)
         set(openPMD_BUILD_TESTING   OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_SHARED_LIBS OFF         CACHE INTERNAL "")
 
-        FetchContent_Declare(fetchedopenpmd
-            GIT_REPOSITORY ${HiPACE_openpmd_repo}
-            GIT_TAG        ${HiPACE_openpmd_branch}
-            BUILD_IN_SOURCE 0
-        )
-        FetchContent_GetProperties(fetchedopenpmd)
+        if(HiPACE_openpmd_src)
+            add_subdirectory(${HiPACE_openpmd_src} _deps/localopenpmd-build/)
+        else()
+            FetchContent_Declare(fetchedopenpmd
+                GIT_REPOSITORY ${HiPACE_openpmd_repo}
+                GIT_TAG        ${HiPACE_openpmd_branch}
+                BUILD_IN_SOURCE 0
+            )
+            FetchContent_GetProperties(fetchedopenpmd)
 
-        if(NOT fetchedopenpmd_POPULATED)
-            FetchContent_Populate(fetchedopenpmd)
-            add_subdirectory(${fetchedopenpmd_SOURCE_DIR} ${fetchedopenpmd_BINARY_DIR})
+            if(NOT fetchedopenpmd_POPULATED)
+                FetchContent_Populate(fetchedopenpmd)
+                add_subdirectory(${fetchedopenpmd_SOURCE_DIR} ${fetchedopenpmd_BINARY_DIR})
+            endif()
+
+            # advanced fetch options
+            mark_as_advanced(FETCHCONTENT_BASE_DIR)
+            mark_as_advanced(FETCHCONTENT_FULLY_DISCONNECTED)
+            mark_as_advanced(FETCHCONTENT_QUIET)
+            mark_as_advanced(FETCHCONTENT_SOURCE_DIR_FETCHEDOPENPMD)
+            mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED)
+            mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDOPENPMD)
         endif()
-
-        # advanced fetch options
-        mark_as_advanced(FETCHCONTENT_BASE_DIR)
-        mark_as_advanced(FETCHCONTENT_FULLY_DISCONNECTED)
-        mark_as_advanced(FETCHCONTENT_QUIET)
-        mark_as_advanced(FETCHCONTENT_SOURCE_DIR_FETCHEDOPENPMD)
-        mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED)
-        mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDOPENPMD)
 
         # openPMD options not relevant to HiPACE users
         mark_as_advanced(openPMD_USE_INTERNAL_VARIANT)
@@ -40,12 +50,15 @@ function(find_openpmd)
         mark_as_advanced(openPMD_HAVE_PKGCONFIG)
         mark_as_advanced(openPMD_USE_INVASIVE_TESTS)
         mark_as_advanced(openPMD_USE_VERIFY)
-        mark_as_advanced(ADIOS2_DOR)
+        mark_as_advanced(ADIOS2_DIR)
         mark_as_advanced(ADIOS_CONFIG)
         mark_as_advanced(HDF5_DIR)
+        mark_as_advanced(HDF5_C_LIBRARY_dl)
+        mark_as_advanced(HDF5_C_LIBRARY_hdf5)
+        mark_as_advanced(HDF5_C_LIBRARY_m)
+        mark_as_advanced(HDF5_C_LIBRARY_z)
+        mark_as_advanced(JSON_ImplicitConversions)
         mark_as_advanced(JSON_MultipleHeaders)
-
-        message(STATUS "openPMD-api: Using INTERNAL version '${HiPACE_openpmd_branch}'")
     else()
         if(HiPACE_MPI)
             set(COMPONENT_WMPI MPI)
@@ -58,6 +71,12 @@ function(find_openpmd)
 endfunction()
 
 if(HiPACE_OPENPMD)
+    # local source-tree
+    set(HiPACE_openpmd_src ""
+        CACHE PATH
+        "Local path to openPMD-api source directory (preferred if set)")
+
+    # Git fetcher
     option(HiPACE_openpmd_internal   "Download & build openPMD-api" ON)
     set(HiPACE_openpmd_repo "https://github.com/openPMD/openPMD-api.git"
         CACHE STRING
