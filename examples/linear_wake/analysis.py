@@ -73,7 +73,7 @@ else:
 
 # calculating the second derivative of the beam density array
 nb_dzdz = np.zeros(nz)
-nb_dzdz[1:nz-1] = nb_array[0:nz-2] - 2*nb_array[1:nz-1] + nb_array[2:nz]
+nb_dzdz[1:nz-1] = (nb_array[0:nz-2] - 2*nb_array[1:nz-1] + nb_array[2:nz])/dzeta**2
 
 # calculating the theoretical plasma density (see Timon Mehrling's thesis page 41)
 n_th = np.zeros(nz)
