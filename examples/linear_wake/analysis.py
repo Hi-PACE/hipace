@@ -77,12 +77,11 @@ nb_dzdz[1:nz-1] = nb_array[0:nz-2] - 2*nb_array[1:nz-1] + nb_array[2:nz]
 
 # calculating the theoretical plasma density (see Timon Mehrling's thesis page 41)
 n_th = np.zeros(nz)
+tmp  = np.zeros([nz,nz],dtype=float)
 for i in np.arange(nz-1,-1,-1):
-    tmp = 0.
     for j in range(nz-i):
-	tmp[i,j]= i-(nz-1-j)
-tmp = (dzeta/kp*np.sin(kp*dzeta*tmp) * np.full([nz,nz],1)
-      * nb_dzdz[np.linspace(nsteps-1,0,nsteps,dtype=int)]) 
+        tmp[i,j]= i-(nz-1-j)
+tmp = (dzeta/kp*np.sin(kp*dzeta*tmp) * np.full([nz,nz],1) * nb_dzdz[np.linspace(nz-1,0,nz,dtype=int)]) 
 n_th = np.sum(tmp,axis = 1) + nb_array
 rho_th = n_th * q_e
 
