@@ -1,9 +1,6 @@
 #ifndef GRIDCURRENT_H_
 #define GRIDCURRENT_H_
 
-// #include "particles/MultiBeam.H"
-// #include "particles/BeamParticleContainer.H"
-// #include "particles/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include <AMReX_AmrCore.H>
 
@@ -25,12 +22,14 @@ public:
     explicit GridCurrent ();
 
     /** calculate the adaptive time step based on the beam energy
-     * \param[in,out] dt the time step
+     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] lev MR level
+     * \param[in] islice index of the slice on which the beam particles are pushed
      */
     void
-    DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, int const lev, const int islice);
-
-
+    DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, int const lev,
+                         const int islice);
 
 };
 
