@@ -8,12 +8,12 @@ GridCurrent::GridCurrent ()
     amrex::ParmParse ppa("grid_current");
 
     if (ppa.query("use_grid_current", m_use_grid_current) ) {
-        ppa.query("amplitude", m_amplitude);
+        ppa.get("amplitude", m_amplitude);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        if (ppa.query("position_mean", loc_array)) {
+        if (ppa.get("position_mean", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
         }
-        if (ppa.query("position_std", loc_array)) {
+        if (ppa.get("position_std", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
         }
     }
