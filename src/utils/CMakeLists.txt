@@ -3,4 +3,5 @@ target_sources(HiPACE
     Constants.cpp
     AdaptiveTimeStep.cpp
     IOUtil.cpp
+    GridCurrent.cpp
 )

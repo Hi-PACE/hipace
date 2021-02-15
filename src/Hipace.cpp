@@ -378,11 +378,8 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
-    if (m_grid_current){
-        DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    } else {
-        m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
-    }
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice); //m_fields, geom[lev], lev, islice);
+    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -845,20 +842,4 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     // Write beam particles
     m_multi_beam.WritePlotFile(filename);
 #endif
-}
-
-Hipace::DepositCurrentSlice(m_fields, geom[lev], lev, islice)
-{
-    z(slice);
-    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-        const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
-        amrex::Array4<amrex::Real> const & dst_array = dst.array(mfi);
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                // (k ignored)
-            }
-            );
 }
