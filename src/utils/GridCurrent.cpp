@@ -31,10 +31,10 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     const auto plo = geom.ProbLoArray();
     amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();
 
-    const amrex::GpuArray<amrex::Real, 3>  pos_mean = {m_position_mean[0], m_position_mean[1],
-                                                       m_position_mean[2]};
-    const amrex::GpuArray<amrex::Real, 3>  pos_std = {m_position_std[0], m_position_std[1],
-                                                      m_position_std[2]};
+    const amrex::GpuArray<amrex::Real, 3> pos_mean = {m_position_mean[0], m_position_mean[1],
+                                                      m_position_mean[2]};
+    const amrex::GpuArray<amrex::Real, 3> pos_std = {m_position_std[0], m_position_std[1],
+                                                     m_position_std[2]};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     // Extract the fields currents
