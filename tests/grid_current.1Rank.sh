@@ -31,8 +31,6 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.radius = 1. \
         beam.ppc = 1 1 1 \
 
-
-
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_grid_current.py
 
