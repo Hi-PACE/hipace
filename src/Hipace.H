@@ -112,8 +112,8 @@ public:
      * \param[in] bins collections of beam particle indices sorted per slice
      */
     void SolveOneSlice (
-        int islice, int lev,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+        int islice, int lev); //, FIXME: beam disabled
+        // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
