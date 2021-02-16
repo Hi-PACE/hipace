@@ -109,7 +109,6 @@ public:
      *
      * \param[in] islice slice number
      * \param[in] lev MR level
-     * \param[in] bins collections of beam particle indices sorted per slice
      */
     void SolveOneSlice (
         int islice, int lev); //, FIXME: beam disabled
