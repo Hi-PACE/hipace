@@ -7,6 +7,7 @@
 #include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
+#include "utils/GridCurrent.H"
 #include "utils/Constants.H"
 
 #include <AMReX_AmrCore.H>
@@ -205,6 +206,8 @@ public:
     static amrex::Real m_external_accel_field_strength;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+    /** GridCurrent instance */
+    GridCurrent m_grid_current;
 #ifdef HIPACE_USE_OPENPMD
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
