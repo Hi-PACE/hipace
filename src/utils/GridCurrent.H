@@ -15,7 +15,7 @@ private:
     amrex::RealVect m_position_mean {0., 0., 0.};
     /** Width of the Gaussian grid current. */
     amrex::RealVect m_position_std {0., 0., 0.};
-    amrex::Real m_amplitude {0.}; /**< peak amplitude for grid current */
+    amrex::Real m_peak_current_density {0.}; /**< peak density for the grid current */
 
 public:
     /** Constructor */
