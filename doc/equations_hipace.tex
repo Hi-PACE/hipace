@@ -8,6 +8,7 @@
 \usepackage{natbib}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{bm}
 \begin{document}
 
 
@@ -170,7 +171,7 @@ E_z
 
 \subsection*{Algorithm}
 
-Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(n+2)$ mean "predicted". $\rho$ and capital letters are field data, others are particle data. $x$, $u$ and $\psi$ are the position, momentum and pseudo-potential respectively. $f$ stands for the force terms.
+Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(n==+2)$ mean "predicted". $\rho$ and capital letters are field data, others are particle data. $x$, $u$ and $\psi$ are the position, momentum and pseudo-potential respectively. $f$ stands for the force terms.
 
 \begin{subequations}
 \begin{align}
@@ -191,4 +192,20 @@ Subscript $p$ means plasma, subscript $b$ means beam. Brackets in superscript $(
 \text{update plasma forces: }B_{\perp}^{(n+1)}, E_{\perp}^{n+1} &\longrightarrow f_x^{(n+1)}, f_u^{(n+1)}, f_{\psi}^{(n+1)}
 \end{align}
 \end{subequations}
+
+\subsection*{WAND-PIC method}
+
+The WAND-PIC paper https://arxiv.org/abs/2012.00881 proposes a new approach to get rid of all steps of the predictor-correct loop above, and derives an equation (albeit a bit more complicated than a Poisson equation) for $B_x$ and $B_y$. This is equation (19) of their paper:
+
+\begin{subequations}
+\begin{align}
+\Delta_\perp \bm{B_\perp} &= \frac{n_*}{1+\psi} \bm{B_\perp} - \bm{e_z} \times \bm{S} \\
+\bm{S}_\perp &= \frac{1}{1+\psi} B_z \left( \bm{e_z} \times n_* \bm{v_\perp} \right) + n_* \langle \bm{\tilde{a}} \rangle - \partial_x\left( n_*\langle v_x\bm{v_\perp} \rangle \right) - \partial_y\left( n_*\langle v_y\bm{v_\perp} \rangle \right) + \bm{\nabla_\perp}j_z^{total} \\
+n_* \langle \bm{\tilde{a}} \rangle &= \frac{1}{1+\psi} \left(  \frac{n_*\langle\gamma\rangle}{1+\psi}\bm{\nabla_\perp}\psi - n_* \langle \bm{v_\perp} \rangle E_z - n_* \langle v_x\bm{v_\perp}\rangle \partial_x\psi - n_* \langle v_y\bm{v_\perp}\rangle \partial_y\psi \right) \\
+n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\langle v_y^2\rangle + n_*\right) + \frac{n_*}{2(1+\psi)}
+\end{align}
+\end{subequations}
+
+where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is the longitudinal current density. All densities are only plasma densities (charge and current), except when $total$ is specified in subscript, in that case it is the full density (plasma + beam). $n_*\langle \bm{v_\perp}\rangle$ is the plasma transverse current density, already computed (or close to) in Hipace++ ($J_x$ and $J_y$). $n_*\langle v_x\bm{v_\perp}\rangle$ etc. are new quantities that would have to be deposited ($J_{xx}$, $J_{yy}$ and $J_{xy}$).
+
 \end{document}
