@@ -22,7 +22,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_lo = -8. -8. -6. \
         geometry.prob_hi =  8.  8.  6. \
         grid_current.use_grid_current = 1 \
-        grid_current.amplitude= -0.2 \
+        grid_current.amplitude= 0.2 \
         grid_current.position_std = 0.3 0.3 1.41 \
         hipace.output_period = 1 \
         beam.profile = gaussian \
