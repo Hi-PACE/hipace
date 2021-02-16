@@ -285,22 +285,23 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
-#ifdef HIPACE_USE_OPENPMD
-    if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
-#endif
-    WriteDiagnostics(0);
-    for (int step = 0; step < m_max_step; ++step)
+
+    // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
+    for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
     {
+#ifdef HIPACE_USE_OPENPMD
+        if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
+#endif
+        //WriteDiagnostics(0); FIXME: if we want to keep this, only the beam initializing rank may call this
+
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
+        // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
 
-        Wait();
-
-        amrex::MultiFab& fields = m_fields.getF(lev);
+        // Wait();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_rank_z == m_numprocs_z-1){
@@ -309,10 +310,10 @@ Hipace::Evolve ()
         }
 
         // Loop over longitudinal boxes on this rank, from head to tail
-        const amrex::Vector<int> index_array = fields.IndexArray();
-        for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
+        for (int it = m_numprocs_z-1; it >= 0; --it)
         {
-            const amrex::Box& bx = boxArray(lev)[*it];
+            const amrex::Box& bx = boxArray(lev)[it];
+            // FIXME use amrex::FArrayBox::resize(bx) to re-use the same memory
             // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins; FIXME: beam disabled
             // bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
 
@@ -331,10 +332,10 @@ Hipace::Evolve ()
         // }
 
         /* Passing the adaptive time step info */
-        m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
+        // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
-        Notify();
+        // Notify();
 
 #ifdef HIPACE_USE_OPENPMD
         WriteDiagnostics(step+1);
