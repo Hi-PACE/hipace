@@ -321,7 +321,7 @@ Hipace::Evolve ()
             };
         }
         if (amrex::ParallelDescriptor::NProcs() == 1) {
-            m_multi_beam.Redistribute();
+            //            m_multi_beam.Redistribute();
         } else {
             m_multi_beam.RedistributeSlice(lev);
             amrex::Print()<<"WARNING: In parallel runs, beam particles are only redistributed "

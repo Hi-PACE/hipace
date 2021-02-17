@@ -45,7 +45,7 @@ private:
      * \param[in] offset number of particles which have already been written
      * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
      */
-    void SaveRealProperty(BeamParticleIterator& pti, openPMD::ParticleSpecies& currSpecies,
+    void SaveRealProperty(BeamParticleContainer& pc, openPMD::ParticleSpecies& currSpecies,
                           unsigned long long const offset,
                           amrex::Vector<std::string> const& real_comp_names);
 

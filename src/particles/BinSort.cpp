@@ -2,19 +2,15 @@
 
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
-    int lev, int ibox, amrex::Box bx,
+    int /*lev*/, int /*ibox*/, amrex::Box bx,
     BeamParticleContainer& beam, amrex::Geometry& geom)
 {
-    // Assume only 1 tile per grid (no tiling).
-    BeamParticleContainer::ParticleTileType& ptile =
-        beam.ParticlesAt(lev, ibox, 0);
-
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     const amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
 
     // Extract particle structures for this tile
-    int const np = ptile.numParticles();
-    BeamParticleContainer::ParticleType const* particle_ptr = ptile.GetArrayOfStructs()().data();
+    int const np = beam.numParticles();
+    BeamParticleContainer::ParticleType const* particle_ptr = beam.GetArrayOfStructs()().data();
 
     // Extract box properties
     const auto lo = lbound(cbx);

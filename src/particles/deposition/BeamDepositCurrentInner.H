@@ -36,7 +36,7 @@
  * \param[in] bins Indices of particles arranged per slices.
  */
 template <int depos_order_xy, int depos_order_z>
-void doDepositionShapeN (const BeamParticleIterator& pti,
+void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::FArrayBox& jx_fab,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
@@ -52,9 +52,9 @@ void doDepositionShapeN (const BeamParticleIterator& pti,
     PhysConst const phys_const = get_phys_const();
 
     // Extract particle properties
-    const auto& aos = pti.GetArrayOfStructs(); // For positions
+    const auto& aos = ptile.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
-    const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+    const auto& soa = ptile.GetStructOfArrays(); // For momenta and weights
     const auto  wp = soa.GetRealData(BeamIdx::w).data();
     const auto uxp = soa.GetRealData(BeamIdx::ux).data();
     const auto uyp = soa.GetRealData(BeamIdx::uy).data();

@@ -50,9 +50,6 @@ public:
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
-    /** Loop over species and call their Redistribute */
-    void Redistribute ();
-
     /** Loop over species and dump them to plotfile
      * \param[in] filename name of the output file
      */

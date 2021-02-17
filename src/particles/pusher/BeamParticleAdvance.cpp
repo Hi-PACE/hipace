@@ -7,8 +7,8 @@
 
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
-                      amrex::Geometry const& gm, int const lev, const int islice,
-                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+                           amrex::Geometry const& gm, int const lev, const int islice,
+                           amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -20,79 +20,76 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
     const bool do_z_push = beam.m_do_z_push;
 
     const amrex::Real dt = Hipace::m_dt;
-    // Loop over particle boxes
-    for (BeamParticleIterator pti(beam, lev); pti.isValid(); ++pti)
-    {
-        // Assumes '2' == 'z' == 'the long dimension'.
-        int islice_local = islice - pti.tilebox().smallEnd(2);
 
-        // Extract properties associated with the extent of the current box
-        const int depos_order_xy = Hipace::m_depos_order_xy;
-        const amrex::Box tilebox = pti.tilebox().grow(
-            {depos_order_xy, depos_order_xy,
-             Hipace::m_depos_order_z});
+    // Assumes '2' == 'z' == 'the long dimension'.
+    int islice_local = islice - gm.Domain().smallEnd(2);
 
-        amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
-        amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-        amrex::Dim3 const lo = amrex::lbound(tilebox);
+    // Extract properties associated with the extent of the current box
+    const int depos_order_xy = Hipace::m_depos_order_xy;
+    amrex::Box tilebox = gm.Domain();
+    tilebox.grow({depos_order_xy, depos_order_xy, Hipace::m_depos_order_z});
 
-        // Extract the fields
-        const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-        const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
-        const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
-        const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
-        const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
-        const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
-        const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
+    amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
+    amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
+    amrex::Dim3 const lo = amrex::lbound(tilebox);
 
-        // Extract field array from FabArrays in MultiFabs.
-        // (because there is currently no transverse parallelization, the index
-        // we want in the slice multifab is always 0. Fix later.
-        amrex::Array4<const amrex::Real> const& exmby_arr = exmby[0].array();
-        amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx[0].array();
-        amrex::Array4<const amrex::Real> const& ez_arr = ez[0].array();
-        amrex::Array4<const amrex::Real> const& bx_arr = bx[0].array();
-        amrex::Array4<const amrex::Real> const& by_arr = by[0].array();
-        amrex::Array4<const amrex::Real> const& bz_arr = bz[0].array();
+    // Extract the fields
+    const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
+    const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
+    const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
+    const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
+    const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
+    const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
+    const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
 
-        const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-        const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+    // Extract field array from FabArrays in MultiFabs.
+    // (because there is currently no transverse parallelization, the index
+    // we want in the slice multifab is always 0. Fix later.
+    amrex::Array4<const amrex::Real> const& exmby_arr = exmby[0].array();
+    amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx[0].array();
+    amrex::Array4<const amrex::Real> const& ez_arr = ez[0].array();
+    amrex::Array4<const amrex::Real> const& bx_arr = bx[0].array();
+    amrex::Array4<const amrex::Real> const& by_arr = by[0].array();
+    amrex::Array4<const amrex::Real> const& bz_arr = bz[0].array();
 
-        // Extract particle properties
-        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data();
-        amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data();
-        amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data();
-        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+    const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 
-        const auto getPosition =
-            GetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
-        const auto setPosition =
-            SetParticlePosition<BeamParticleContainer, BeamParticleIterator>(pti);
-        const amrex::Real zmin = xyzmin[2];
+    // Extract particle properties
+    auto& soa = beam.GetStructOfArrays(); // For momenta and weights
+    amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data();
+    amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data();
+    amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data();
+    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
 
-        // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
-            indices = nullptr;
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const *
-            offsets = nullptr;
-        indices = bins.permutationPtr();
-        offsets = bins.offsetsPtr();
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
-            cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
-        // The particles that are in slice islice_local are
-        // given by the indices[cell_start:cell_stop]
+    const auto getPosition =
+        GetParticlePosition<BeamParticleContainer>(beam);
+    const auto setPosition =
+        SetParticlePosition<BeamParticleContainer>(beam);
+    const amrex::Real zmin = xyzmin[2];
 
-        int const num_particles = cell_stop-cell_start;
+    // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+        indices = nullptr;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const *
+        offsets = nullptr;
+    indices = bins.permutationPtr();
+    offsets = bins.offsetsPtr();
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
+        cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
+    // The particles that are in slice islice_local are
+    // given by the indices[cell_start:cell_stop]
 
-        const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
-        const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
-        const amrex::Real external_focusing_field_strength =
-             Hipace::m_external_focusing_field_strength;
-        const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
+    int const num_particles = cell_stop-cell_start;
 
-        amrex::ParallelFor(num_particles,
-            [=] AMREX_GPU_DEVICE (long idx) {
+    const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
+    const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
+    const amrex::Real external_focusing_field_strength =
+        Hipace::m_external_focusing_field_strength;
+    const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
+
+    amrex::ParallelFor(num_particles,
+                       [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = indices[cell_start+idx];
 
                 if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
@@ -164,8 +161,5 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;
-
-          }
-          );
-      }
+    });
 }
