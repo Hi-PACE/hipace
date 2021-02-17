@@ -822,15 +822,14 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     // Write fields
     const std::string filename = amrex::Concatenate("plt", output_step);
     // assumption: same order as in struct enum Field Comps
-    const amrex::Vector< std::string > varnames
-        {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
+    const amrex::Vector< std::string > varnames = m_fields.getDiagComps();
 
     amrex::Vector<std::string> rfs;
 
 #ifdef HIPACE_USE_OPENPMD
     constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
-                                      m_physical_time, output_step,  lev, m_fields.getDiagSliceDir(), varnames);
+                        m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};
