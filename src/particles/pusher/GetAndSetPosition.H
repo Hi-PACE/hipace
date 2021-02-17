@@ -31,7 +31,7 @@ struct GetParticlePosition
     GetParticlePosition () = default;
 
     /** Constructor.
-     * \param a_pti iterator to the tile containing the macroparticles
+     * \param a_ptile tile containing the macroparticles
      * \param a_offset offset to apply to the particle indices
      */
     GetParticlePosition (const T_ParTile& a_ptile, int a_offset = 0) noexcept
@@ -67,7 +67,7 @@ struct SetParticlePosition
     PType* AMREX_RESTRICT m_structs;
 
     /** Constructor.
-     * \param a_pti iterator to the tile containing the macroparticles
+     * \param a_ptile tile containing the macroparticles
      * \param a_offset offset to apply to the particle indices
      */
     SetParticlePosition (T_ParTile& a_ptile, int a_offset = 0) noexcept
