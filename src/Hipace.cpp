@@ -314,6 +314,7 @@ Hipace::Evolve ()
             if (step > 0) Wait();
 
             const amrex::Box& bx = boxArray(lev)[it];
+            // m_fields.ResizeFDiagFAB(bx, lev);
             // FIXME use amrex::FArrayBox::resize(bx) to re-use the same memory
             // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins; FIXME: beam disabled
             // bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);

@@ -26,7 +26,7 @@ OpenPMDWriter::InitDiagnostics ()
 
 void
 OpenPMDWriter::WriteDiagnostics (
-    amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
+    amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int lev,
     const int slice_dir, const amrex::Vector< std::string > varnames)
@@ -47,7 +47,7 @@ OpenPMDWriter::WriteDiagnostics (
 
 void
 OpenPMDWriter::WriteFieldData (
-    amrex::MultiFab const& mf, amrex::Geometry const& geom,
+    amrex::FArrayBox const& fab, amrex::Geometry const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
     openPMD::Iteration iteration)
 {
@@ -66,7 +66,8 @@ OpenPMDWriter::WriteFieldData (
         // meta-data
         field.setDataOrder(openPMD::Mesh::DataOrder::C);
         //   node staggering
-        auto relative_cell_pos = utils::getRelativeCellPosition(mf);      // AMReX Fortran index order
+        // FIXME fix IO in general
+        auto relative_cell_pos = utils::getRelativeCellPosition(fab);      // AMReX Fortran index order
         std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
         //   labels, spacing and offsets
         std::vector< std::string > axisLabels {"z", "y", "x"};
@@ -96,32 +97,24 @@ OpenPMDWriter::WriteFieldData (
 
         // Loop over longitudinal boxes on this rank, from head to tail:
         // Loop through the multifab and store each box as a chunk with openpmd
-        for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
-        {
-            amrex::FArrayBox const& fab = mf[mfi]; // note: this might include guards
-            amrex::Box const data_box = mfi.validbox();  // w/o guards in all cases
-            std::shared_ptr< amrex::Real const > data;
-            if (mfi.validbox() == fab.box() ) {
-                data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
-            } else {
-                // copy data to cut away guards
-                amrex::FArrayBox io_fab(mfi.validbox(), 1, amrex::The_Pinned_Arena());
-                io_fab.copy< amrex::RunOn::Host >(fab, fab.box(), icomp, mfi.validbox(), 0, 1);
-                // move ownership into a shared pointer: openPMD-api will free the copy in flush()
-                data = std::move(io_fab.release()); // note: a move honors the custom array-deleter
-            }
+        // FIXME loop over multifab not needed anymore
 
-            // Determine the offset and size of this data chunk in the global output
-            amrex::IntVect const box_offset = data_box.smallEnd();
-            openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
-            openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
-            if (slice_dir >= 0) { // remove Ny components
-                chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
-                chunk_size.erase(chunk_size.begin() + 2-slice_dir);
-            }
+        amrex::Box const data_box = fab.box();  // w/o guards in all cases
+        std::shared_ptr< amrex::Real const > data;
 
-            field_comp.storeChunk(data, chunk_offset, chunk_size);
+        data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
+
+
+        // Determine the offset and size of this data chunk in the global output
+        amrex::IntVect const box_offset = data_box.smallEnd();
+        openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
+        openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
+        if (slice_dir >= 0) { // remove Ny components
+            chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
+            chunk_size.erase(chunk_size.begin() + 2-slice_dir);
         }
+
+        field_comp.storeChunk(data, chunk_offset, chunk_size);
     }
 }
 

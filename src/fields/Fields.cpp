@@ -29,7 +29,7 @@ Fields::AllocData (
 
     // The Arena uses pinned memory.
     m_F[lev].define(ba, dm, Comps[WhichSlice::This]["N"], nguards_F, amrex::MFInfo().SetAlloc(false));
-    m_diags.AllocData(lev, ba, Comps[WhichSlice::This]["N"], dm, geom);
+    m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -139,7 +139,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-              int ncomp, amrex::MultiFab& full_mf, int slice_dir)
+              int ncomp, amrex::FArrayBox& full_mf, int slice_dir) //FIXME fix name full_mf
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
@@ -150,40 +150,43 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         amrex::Box slice_box = slice_fab.box();
         slice_box.setSmall(Direction::z, i_slice);
         slice_box.setBig  (Direction::z, i_slice);
+        amrex::AllPrint() << " slice_fab.nComp() " << slice_fab.nComp() << "\n";
         slice_array = amrex::makeArray4(slice_fab.dataPtr(), slice_box, slice_fab.nComp());
         // slice_array's longitude index is i_slice.
     }
 
-    for (amrex::MFIter mfi(full_mf); mfi.isValid(); ++mfi) {
-        amrex::Box const& vbx = mfi.validbox();
-        if (vbx.smallEnd(Direction::z) <= i_slice and
-            vbx.bigEnd  (Direction::z) >= i_slice)
-        {
-            amrex::Box copy_box = vbx;
-            copy_box.setSmall(Direction::z, i_slice);
-            copy_box.setBig  (Direction::z, i_slice);
-            auto const& full_array = full_mf.array(mfi);
-            if (copy_type == FieldCopyType::FtoS) {
-                amrex::ParallelFor(copy_box, ncomp,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-                {
-                    slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
-                });
-            } else {
-                amrex::ParallelFor(copy_box, ncomp,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-                {
-                    if        (slice_dir ==-1 /* 3D data */){
-                        full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
-                    } else if (slice_dir == 0 /* yz slice */){
-                        full_array(i,j,k,n+full_comp) = 0.5_rt *
-                            (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
-                    } else /* slice_dir == 1, xz slice */{
-                        full_array(i,j,k,n+full_comp) = 0.5_rt *
-                            (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
-                    }
-                });
-            }
+// FIXME remove loop over multifabs
+    amrex::Box const& vbx = full_mf.box();
+    if (vbx.smallEnd(Direction::z) <= i_slice and
+        vbx.bigEnd  (Direction::z) >= i_slice)
+    {
+        amrex::Box copy_box = vbx;
+        copy_box.setSmall(Direction::z, i_slice);
+        copy_box.setBig  (Direction::z, i_slice);
+        amrex::Array4<amrex::Real> const& full_array = full_mf.array(0,3); // FIXME, I think this should be
+        if (copy_type == FieldCopyType::FtoS) {
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
+            });
+        } else {
+            amrex::AllPrint() << "vbx " << vbx << " copy_box " << copy_box << " ncomp " << ncomp <<"\n";
+            amrex::AllPrint() << "slice_array(i,j,k,n+slice_comp) " << slice_array(0,0,99,1) << "\n";
+            amrex::AllPrint() << "full_array(i,j,k,n+slice_comp) " << full_array(0,0,99,0) << "\n";
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                if        (slice_dir ==-1 /* 3D data */){
+                    full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                } else if (slice_dir == 0 /* yz slice */){
+                    full_array(i,j,k,n+full_comp) = 0.5_rt *
+                        (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                } else /* slice_dir == 1, xz slice */{
+                    full_array(i,j,k,n+full_comp) = 0.5_rt *
+                        (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                }
+            });
         }
     }
 }
