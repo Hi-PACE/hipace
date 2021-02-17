@@ -201,15 +201,26 @@ The WAND-PIC paper (open-source implementation available, see below) proposes a 
 \begin{subequations}
 \begin{align}
 \Delta_\perp \bm{B_\perp} &= \frac{n_*}{1+\psi} \bm{B_\perp} - \bm{e_z} \times \bm{S} \\
-\bm{S}_\perp &= \frac{1}{1+\psi} B_z \left( \bm{e_z} \times n_* \bm{v_\perp} \right) + n_* \langle \bm{\tilde{a}} \rangle - \partial_x\left( n_*\langle v_x\bm{v_\perp} \rangle \right) - \partial_y\left( n_*\langle v_y\bm{v_\perp} \rangle \right) + \bm{\nabla_\perp}j_z^{total} \\
+\bm{S}_\perp &= \frac{1}{1+\psi} B_z \left( \bm{e_z} \times n_* \langle\bm{v_\perp}\rangle \right) + n_* \langle \bm{\tilde{a}} \rangle - \partial_x\left( n_*\langle v_x\bm{v_\perp} \rangle \right) - \partial_y\left( n_*\langle v_y\bm{v_\perp} \rangle \right) + \bm{\nabla_\perp}j_z^{total} \\
 n_* \langle \bm{\tilde{a}} \rangle &= \frac{1}{1+\psi} \left(  \frac{n_*\langle\gamma\rangle}{1+\psi}\bm{\nabla_\perp}\psi - n_* \langle \bm{v_\perp} \rangle E_z - n_* \langle v_x\bm{v_\perp}\rangle \partial_x\psi - n_* \langle v_y\bm{v_\perp}\rangle \partial_y\psi \right) \\
 n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\langle v_y^2\rangle + n_*\right) + \frac{n_*}{2(1+\psi)}
 \end{align}
 \end{subequations}
 
-where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is the longitudinal current density. All densities are only plasma densities (charge and current), except when $total$ is specified in subscript, in that case it is the full density (plasma + beam). $n_*\langle \bm{v_\perp}\rangle$ is the plasma transverse current density, already computed (or close to) in Hipace++ ($J_x$ and $J_y$). $n_*\langle v_x\bm{v_\perp}\rangle$ etc. are new quantities that would have to be deposited ($J_{xx}$, $J_{yy}$ and $J_{xy}$).
+where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is the longitudinal current density. All densities are only plasma densities (charge and current), except when $total$ is specified in subscript, in that case it is the full density (plasma + beam). The notations used here are from the WAND-PIC paper.
 
-The main equation to solve is the first one. It is an inhomogeneous Helmholtz equation with non-constant coefficients, unfortunately I can't see any way to solve it with FFT, so the plan is to use it using AMReX' Multigrid solver.
+The correspondance between quantities Hipace++ and WAND-PIC is:
+\begin{subequations}
+\begin{align}
+\text{WAND-PIC} &\leftrightarrow \text{Hipace++} \\
+n_* &\leftrightarrow \rho - j_z \text{ (+ ions)} \\
+n_e &\leftrightarrow \rho \text{ (+ ions)}  \\
+n_*\langle \bm{v_\perp}\rangle &\leftrightarrow \bm{J_\perp} (J_x \text{ and } J_y) \\
+n_*\langle v_x \bm{v_\perp}\rangle \text{ and } n_*\langle v_y \bm{v_\perp}\rangle &\leftrightarrow \text{does not exist } (J_{xx}, J_{yy}, J_{xy})
+\end{align}
+\end{subequations}
+
+The main equation to solve is the first one. It is an inhomogeneous Helmholtz equation with non-constant coefficients, unfortunately I can't see any way to solve it with FFT, so the plan is to use AMReX' Multigrid solver.
 
 \begin{itemize}
 \item WAND-PIC paper: https://arxiv.org/abs/2012.00881
