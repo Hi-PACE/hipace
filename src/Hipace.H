@@ -100,9 +100,8 @@ public:
     /** \brief Dump simulation data to file
      *
      * \param[in] output_step current iteration
-     * \param[in] force_output if true, dump output regardless of output_period
      */
-    void WriteDiagnostics (int output_step, bool force_output=false);
+    void WriteDiagnostics (int output_step);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};
