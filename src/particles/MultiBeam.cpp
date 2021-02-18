@@ -3,14 +3,14 @@
 #include "particles/BinSort.H"
 #include "pusher/BeamParticleAdvance.H"
 
-MultiBeam::MultiBeam (amrex::AmrCore* amr_core)
+MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 {
 
     amrex::ParmParse pp("beams");
     pp.getarr("names", m_names);
     m_nbeams = m_names.size();
     for (int i = 0; i < m_nbeams; ++i) {
-        m_all_beams.emplace_back(BeamParticleContainer(amr_core, m_names[i]));
+        m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
 }
 
@@ -43,14 +43,6 @@ MultiBeam::findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Ge
 }
 
 void
-MultiBeam::Redistribute ()
-{
-    for (auto& beam : m_all_beams) {
-        beam.Redistribute();
-    }
-}
-
-void
 MultiBeam::AdvanceBeamParticlesSlice (
     Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
@@ -61,16 +53,16 @@ MultiBeam::AdvanceBeamParticlesSlice (
 }
 
 void
-MultiBeam::WritePlotFile (const std::string& filename)
+MultiBeam::WritePlotFile (const std::string& /*filename*/)
 {
     amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
     amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
     amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
     AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
     amrex::Vector<std::string> int_names {};
-    for (auto& beam : m_all_beams){
-        beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
-    }
+    // for (auto& beam : m_all_beams){
+    //     beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
+    // }
 }
 
 #ifdef AMREX_USE_MPI

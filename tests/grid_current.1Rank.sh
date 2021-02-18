@@ -14,6 +14,9 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
+
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell = 32 32 32 \
@@ -22,7 +25,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_lo = -8. -8. -6. \
         geometry.prob_hi =  8.  8.  6. \
         grid_current.use_grid_current = 1 \
-        grid_current.amplitude= 0.2 \
+        grid_current.peak_current_density= 0.2 \
         grid_current.position_mean = 0. 0. 0. \
         grid_current.position_std = 0.3 0.3 1.41 \
         hipace.output_period = 1 \
@@ -31,12 +34,13 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.density = 0.2 \
         beam.radius = 1. \
         beam.ppc = 1 1 1 \
+        hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_grid_current.py
+$HIPACE_EXAMPLE_DIR/analysis_grid_current.py --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name diags/h5 \
-    --test-name grid_current.1Rank
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME

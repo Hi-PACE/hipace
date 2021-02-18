@@ -8,7 +8,7 @@ GridCurrent::GridCurrent ()
     amrex::ParmParse pp("grid_current");
 
     if (pp.query("use_grid_current", m_use_grid_current) ) {
-        pp.get("amplitude", m_amplitude);
+        pp.get("peak_current_density", m_peak_current_density);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         pp.get("position_mean", loc_array);
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
@@ -45,7 +45,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     const amrex::Real z = plo[2] + islice*dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
     const amrex::Real long_pos_factor =  std::exp( -0.5_rt*(delta_z*delta_z) );
-    const amrex::Real loc_amplitude = m_amplitude;
+    const amrex::Real loc_peak_current_density = m_peak_current_density;
 
     for ( amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -62,7 +62,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
             const amrex::Real trans_pos_factor =  std::exp( -0.5_rt*(delta_x*delta_x
                                                                     + delta_y*delta_y) );
 
-            jz_arr(i, j, k) += loc_amplitude*trans_pos_factor*long_pos_factor;
+            jz_arr(i, j, k) += loc_peak_current_density*trans_pos_factor*long_pos_factor;
         });
     }
 }

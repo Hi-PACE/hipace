@@ -11,14 +11,18 @@ set -eu -o pipefail
 HIPACE_EXECUTABLE=$1
 HIPACE_SOURCE_DIR=$2
 
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
+
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
-$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
+$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        hipace.file_prefix=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name diags/h5 \
-    --test-name blowout_wake.Serial
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME

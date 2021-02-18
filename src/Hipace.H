@@ -84,8 +84,10 @@ public:
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
      * copy from slice multifabs of current rank to the buffer, MPI_Isend the buffer to
      * the rank downstream.
+     *
+     * \param[in] step current time step
      */
-    void Notify ();
+    void Notify (const int step);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish ();
 
@@ -142,12 +144,9 @@ public:
     int m_rank_z = 0;
     /** Max number of grid size in the longitudinal direction */
     int m_grid_size_z = 0;
-    /** Send buffer for longitudinal parallelization (pipeline) */
-    amrex::Real* m_send_buffer = nullptr;
-    /** Send buffer for particle longitudinal parallelization (pipeline) */
-    char* m_psend_buffer = nullptr;
-    /** status of the send request */
-    MPI_Request m_send_request = MPI_REQUEST_NULL;
+    // FIXME: beam particle communication
+    // /** Send buffer for particle longitudinal parallelization (pipeline) */
+    // char* m_psend_buffer = nullptr;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
 

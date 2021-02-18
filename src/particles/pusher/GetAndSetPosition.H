@@ -19,10 +19,10 @@
 /** \brief Functor that can be used to extract the positions of the macroparticles
  *         inside a ParallelFor kernel
  */
-template <class T_PC, class T_ParIter>
+template <class T_ParTile>
 struct GetParticlePosition
 {
-    using PType = typename T_PC::ParticleType;
+    using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
     const PType* AMREX_RESTRICT m_structs;
@@ -31,12 +31,12 @@ struct GetParticlePosition
     GetParticlePosition () = default;
 
     /** Constructor.
-     * \param a_pti iterator to the tile containing the macroparticles
+     * \param a_ptile tile containing the macroparticles
      * \param a_offset offset to apply to the particle indices
      */
-    GetParticlePosition (const T_ParIter& a_pti, int a_offset = 0) noexcept
+    GetParticlePosition (const T_ParTile& a_ptile, int a_offset = 0) noexcept
     {
-        const auto& aos = a_pti.GetArrayOfStructs();
+        const auto& aos = a_ptile.GetArrayOfStructs();
         m_structs = aos().dataPtr() + a_offset;
     }
 
@@ -58,21 +58,21 @@ struct GetParticlePosition
 /** \brief Functor that can be used to modify the positions of the macroparticles
  *         inside a ParallelFor kernel
  */
-template <class T_PC, class T_ParIter>
+template <class T_ParTile>
 struct SetParticlePosition
 {
-    using PType = typename T_PC::ParticleType;
+    using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
     PType* AMREX_RESTRICT m_structs;
 
     /** Constructor.
-     * \param a_pti iterator to the tile containing the macroparticles
+     * \param a_ptile tile containing the macroparticles
      * \param a_offset offset to apply to the particle indices
      */
-    SetParticlePosition (T_ParIter& a_pti, int a_offset = 0) noexcept
+    SetParticlePosition (T_ParTile& a_ptile, int a_offset = 0) noexcept
     {
-        auto& aos = a_pti.GetArrayOfStructs();
+        auto& aos = a_ptile.GetArrayOfStructs();
         m_structs = aos().dataPtr() + a_offset;
     }
 

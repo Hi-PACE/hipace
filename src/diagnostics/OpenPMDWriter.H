@@ -45,7 +45,7 @@ private:
      * \param[in] offset number of particles which have already been written
      * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
      */
-    void SaveRealProperty(BeamParticleIterator& pti, openPMD::ParticleSpecies& currSpecies,
+    void SaveRealProperty(BeamParticleContainer& pc, openPMD::ParticleSpecies& currSpecies,
                           unsigned long long const offset,
                           amrex::Vector<std::string> const& real_comp_names);
 
@@ -101,6 +101,9 @@ public:
         const int slice_dir, const amrex::Vector< std::string > varnames);
 
     void reset () {m_outputSeries.reset();};
+
+    /** Prefix/path for the output files */
+    std::string m_file_prefix = "diag/hdf5";
 };
 
 #endif // HIPACE_USE_OPENPMD
