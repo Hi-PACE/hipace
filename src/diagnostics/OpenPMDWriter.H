@@ -101,6 +101,9 @@ public:
         const int slice_dir, const amrex::Vector< std::string > varnames);
 
     void reset () {m_outputSeries.reset();};
+
+    /** Prefix/path for the output files */
+    std::string m_file_prefix = "diag/h5/";
 };
 
 #endif // HIPACE_USE_OPENPMD

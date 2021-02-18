@@ -10,6 +10,8 @@ OpenPMDWriter::OpenPMDWriter ()
 {
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
         "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
+    amrex::ParmParse pp("hipace");
+    pp.query("file_prefix", m_file_prefix);
 }
 
 void
@@ -17,7 +19,7 @@ OpenPMDWriter::InitDiagnostics ()
 {
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
 
-    std::string filename = "diags/h5/openpmd_%06T.h5"; // bp or h5
+    std::string filename = m_file_prefix + "openpmd_%06T.h5"; // bp or h5
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
 
