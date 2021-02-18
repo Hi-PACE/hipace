@@ -70,7 +70,6 @@ OpenPMDWriter::WriteFieldData (
         // meta-data
         field.setDataOrder(openPMD::Mesh::DataOrder::C);
         //   node staggering
-        // FIXME fix IO in general
         auto relative_cell_pos = utils::getRelativeCellPosition(fab);      // AMReX Fortran index order
         std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
         //   labels, spacing and offsets

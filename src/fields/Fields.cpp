@@ -155,7 +155,6 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         // slice_array's longitude index is i_slice.
     }
 
-// FIXME remove loop over multifabs
     amrex::Box const& vbx = fab.box();
     if (vbx.smallEnd(Direction::z) <= i_slice and
         vbx.bigEnd  (Direction::z) >= i_slice)
@@ -163,7 +162,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         amrex::Box copy_box = vbx;
         copy_box.setSmall(Direction::z, i_slice);
         copy_box.setBig  (Direction::z, i_slice);
-        amrex::Array4<amrex::Real> const& full_array = fab.array(); // FIXME, I think this should be
+        amrex::Array4<amrex::Real> const& full_array = fab.array();
         if (copy_type == FieldCopyType::FtoS) {
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
