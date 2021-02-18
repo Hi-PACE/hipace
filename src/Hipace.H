@@ -113,8 +113,8 @@ public:
      * \param[in] lev MR level
      */
     void SolveOneSlice (
-        int islice, int lev); //, FIXME: beam disabled
-        // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+        int islice, int lev,
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
