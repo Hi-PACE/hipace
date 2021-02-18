@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - development
+      - dev_pipeline
 
 jobs:
 # enable again when we open-source (free core-hours for GH Actions)

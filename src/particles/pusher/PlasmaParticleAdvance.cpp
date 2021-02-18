@@ -103,10 +103,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const int depos_order_xy = Hipace::m_depos_order_xy;
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
+        using PTileType = PlasmaParticleContainer::ParticleTileType;
         const auto getPosition =
-            GetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+            GetParticlePosition<PTileType>(pti.GetParticleTile());
         const auto SetPosition =
-            SetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+            SetParticlePosition<PTileType>(pti.GetParticleTile());
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
@@ -211,9 +212,9 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         amrex::Real * const w0 = soa.GetRealData(PlasmaIdx::w0).data();
 
         const auto GetPosition =
-            GetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+            GetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
         const auto SetPosition =
-            SetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+            SetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {

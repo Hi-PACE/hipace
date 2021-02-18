@@ -64,7 +64,7 @@ AdaptiveTimeStep::PassTimeStepInfoFinish ()
 
 void
 AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
-                             PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z)
+                             PlasmaParticleContainer& plasma, int const /*lev*/, MPI_Comm a_comm_z)
 {
     HIPACE_PROFILE("CalculateAdaptiveTimeStep()");
 
@@ -120,18 +120,17 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
 #endif
 
     for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
-        // Loop over particle boxes
-        for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
-        {
-            // Extract particle properties
-            const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-            const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-            const auto wp = soa.GetRealData(BeamIdx::w).data();
+        const auto& beam = beams.getBeam(ibeam);
 
-            amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[WhichDouble::MinUz]);
-            amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
+        // Extract particle properties
+        const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
+        const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+        const auto wp = soa.GetRealData(BeamIdx::w).data();
 
-            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[WhichDouble::MinUz]);
+        amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
+
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
                 m_timestep_data[WhichDouble::SumWeights]);
             amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
 
@@ -144,7 +143,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
             amrex::Real* p_sum_weights_times_uz_squared =
                 gpu_sum_weights_times_uz_squared.dataPtr();
 
-            int const num_particles = pti.numParticles();
+            int const num_particles = beam.numParticles();
             amrex::ParallelFor(num_particles,
                 [=] AMREX_GPU_DEVICE (long ip) {
 
@@ -165,8 +164,6 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
                                                    gpu_sum_weights_times_uz_squared.dataValue();
             m_timestep_data[WhichDouble::MinUz] = std::min(m_timestep_data[WhichDouble::MinUz],
                                                    gpu_min_uz.dataValue());
-
-        }
     }
 
     if (my_rank_z == 0 )

@@ -85,7 +85,7 @@ void PlasmaParticlePush (
     const amrex::Real dz,
     const bool temp_slice,
     const long ip,
-    const SetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>& SetPosition
+    const SetParticlePosition<PlasmaParticleContainer::ParticleTileType>& SetPosition
     )
 
 {

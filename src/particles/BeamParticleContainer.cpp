@@ -31,9 +31,6 @@ BeamParticleContainer::ReadParameters ()
 void
 BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
-    reserveData();
-    resizeData();
-
     PhysConst phys_const = get_phys_const();
 
     if (m_injection_type == "fixed_ppc") {
@@ -127,6 +124,35 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     m_total_num_particles = TotalNumberOfParticles();
 }
 
+amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool only_local) const
+{
+    amrex::Long nparticles = 0;
+    if (only_valid) {
+        amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<unsigned long long> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        auto const& ptaos = this->GetArrayOfStructs();
+        ParticleType const* pp = ptaos().data();
+
+        reduce_op.eval(ptaos.numParticles(), reduce_data,
+                       [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
+                       {
+                           return (pp[i].id() > 0) ? 1 : 0;
+                       });
+        nparticles = static_cast<amrex::Long>(amrex::get<0>(reduce_data.value()));
+    }
+    else {
+        nparticles = this->numParticles();
+    }
+
+    if (!only_local) {
+        amrex::ParallelAllReduce::Sum(nparticles, amrex::ParallelContext::CommunicatorSub());
+    }
+
+    return nparticles;
+}
+
 #ifdef AMREX_USE_MPI
 void
 BeamParticleContainer::NotifyNumParticles (MPI_Comm a_comm_z)
@@ -184,27 +210,21 @@ BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
         }
     }
 
-    const int nLevels = finestLevel();
-    for (int lev=0; lev<=nLevels; lev++){
+    // - momenta are stored as a struct of array, in `attribs`
+    auto& soa = this->GetStructOfArrays();
+    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
+    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
+    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
 
-        for (BeamParticleIterator pti(*this, lev); pti.isValid(); ++pti)
-        {
-            // - momenta are stored as a struct of array, in `attribs`
-            auto& soa = pti.GetStructOfArrays();
-            const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-            const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-            const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+    // Loop over the particles and convert momentum
+    const long np = this->numParticles();
+    amrex::ParallelFor( np,
+                        [=] AMREX_GPU_DEVICE (long i) {
+                            uxp[i] *= factor;
+                            uyp[i] *= factor;
+                            uzp[i] *= factor;
+                        });
 
-            // Loop over the particles and convert momentum
-            const long np = pti.numParticles();
-            amrex::ParallelFor( np,
-                [=] AMREX_GPU_DEVICE (long i) {
-                    uxp[i] *= factor;
-                    uyp[i] *= factor;
-                    uzp[i] *= factor;
-                });
-        }
-    }
     return;
 }
 
@@ -214,36 +234,30 @@ BeamParticleContainer::RedistributeSlice (int const lev)
     HIPACE_PROFILE("BeamParticleContainer::RedistributeSlice()");
 
     using namespace amrex::literals;
-    const auto plo    = Geom(lev).ProbLoArray();
-    const auto phi    = Geom(lev).ProbHiArray();
-    const auto is_per = Geom(lev).isPeriodicArray();
+    const auto plo    = Hipace::GetInstance().Geom(lev).ProbLoArray();
+    const auto phi    = Hipace::GetInstance().Geom(lev).ProbHiArray();
+    const auto is_per = Hipace::GetInstance().Geom(lev).isPeriodicArray();
     AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
 
     amrex::GpuArray<int,AMREX_SPACEDIM> const periodicity = {true, true, false};
-    // Loop over particle boxes
-    for (BeamParticleIterator pti(*this, lev); pti.isValid(); ++pti)
-    {
 
-        // Extract particle properties
-        auto& aos = pti.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin();
-        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+    // Extract particle properties
+    auto& aos = this->GetArrayOfStructs(); // For positions
+    const auto& pos_structs = aos.begin();
+    auto& soa = this->GetStructOfArrays(); // For momenta and weights
+    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
 
-        // Loop over particles and handle particles outside of the box
-        amrex::ParallelFor(
-            pti.numParticles(),
-            [=] AMREX_GPU_DEVICE (long ip) {
-                // Set particle AoS
+    // Loop over particles and handle particles outside of the box
+    amrex::ParallelFor(
+        this->numParticles(),
+        [=] AMREX_GPU_DEVICE (long ip) {
+            // Set particle AoS
 
-                const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, periodicity);
+            const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, periodicity);
 
-                if (shifted && !is_per[0]) {
-                    wp[ip] = 0.0_rt;
-                    pos_structs[ip].id() = -1;
-                }
-
+            if (shifted && !is_per[0]) {
+                wp[ip] = 0.0_rt;
+                pos_structs[ip].id() = -1;
             }
-            );
-        }
+        });
 }
