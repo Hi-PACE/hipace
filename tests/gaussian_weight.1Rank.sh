@@ -14,30 +14,38 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/gaussian_weight
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
+
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
                     beam.dx_per_dzeta=0.1 \
                     beam.dy_per_dzeta=-0.2 \
-                    beam.position_std = 0.1 0.1 2.
+                    beam.position_std = 0.1 0.1 2. \
+                    hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units --tilted-beam
+$HIPACE_EXAMPLE_DIR/analysis.py \
+    --normalized-units \
+    --tilted-beam \
+    --output-dir=$TEST_NAME
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized
-
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        hipace.file_prefix=$TEST_NAME
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units
+$HIPACE_EXAMPLE_DIR/analysis.py --normalized-units --output-dir=$TEST_NAME
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+        hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py
+$HIPACE_EXAMPLE_DIR/analysis.py --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name diags/h5 \
     --rtol=.01 \
-    --test-name gaussian_weight.1Rank
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME

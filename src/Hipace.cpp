@@ -293,7 +293,7 @@ Hipace::Evolve ()
 #ifdef HIPACE_USE_OPENPMD
         if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
-        //WriteDiagnostics(0); FIXME: if we want to keep this, only the beam initializing rank may call this
+        WriteDiagnostics(0); // FIXME: if we want to keep this, only the beam initializing rank may call this
 
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
         // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
@@ -315,11 +315,11 @@ Hipace::Evolve ()
 
             const amrex::Box& bx = boxArray(lev)[it];
             // FIXME use amrex::FArrayBox::resize(bx) to re-use the same memory
-            // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins; FIXME: beam disabled
-            // bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
+            amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
+            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev); //, bins); FIXME: beam disabled
+                SolveOneSlice(isl, lev, bins); // FIXME: beam disabled
             };
 
             Notify(step);
@@ -350,14 +350,14 @@ Hipace::Evolve ()
     // the time stored in the output file is the time for the fields. The beam is one time step
     // ahead.
     m_physical_time -= m_dt;
-    // WriteDiagnostics(m_max_step, true);
+    WriteDiagnostics(m_max_step, true);
 #ifdef HIPACE_USE_OPENPMD
     if (m_output_period > 0) m_openpmd_writer.reset();
 #endif
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev) //, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins) FIXME: beam disabled
+Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
@@ -385,7 +385,7 @@ Hipace::SolveOneSlice (int islice, int lev) //, amrex::Vector<amrex::DenseBins<B
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    // m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins); FIXME: beam disabled
+    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -398,7 +398,7 @@ Hipace::SolveOneSlice (int islice, int lev) //, amrex::Vector<amrex::DenseBins<B
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    // m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins); FIXME: beam disabled
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
     m_fields.FillDiagnostics(lev, islice);
 

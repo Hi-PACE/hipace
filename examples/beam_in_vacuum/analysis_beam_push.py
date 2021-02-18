@@ -2,11 +2,19 @@
 
 import matplotlib.pyplot as plt
 import matplotlib
+import argparse
 import numpy as np
 import scipy.constants as scc
 from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = True
+
+parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
+parser.add_argument('--output-dir',
+                    dest='output_dir',
+                    default='diags/h5',
+                    help='Path to the directory containing output files')
+args = parser.parse_args()
 
 # Numerical parameters of the simulation
 field_strength = 0.5
@@ -15,7 +23,7 @@ x_std_initial = 1./2.
 omega_beta = np.sqrt(field_strength/gamma)
 
 # Load beam particle data
-ts = OpenPMDTimeSeries('./diags/h5/')
+ts = OpenPMDTimeSeries(args.output_dir)
 xp, yp, uzp, wp = ts.get_particle(species='beam', iteration=ts.iterations[-1],
                                   var_list=['x', 'y', 'uz', 'w'])
 
