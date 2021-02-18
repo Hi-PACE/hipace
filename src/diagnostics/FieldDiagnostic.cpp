@@ -51,24 +51,11 @@ void
 FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom)
 {
     m_nfields = nfields;
-    // Create a xz slice Box
-    amrex::Box slice_bx = bx;
-    if (m_slice_dir >= 0){
-            // Flatten the box down to 1 cell in the approprate direction.
-            slice_bx.setSmall(m_slice_dir, bx.length(m_slice_dir)/2);
-            slice_bx.setBig  (m_slice_dir, bx.length(m_slice_dir)/2);
-    }
-    // m_F is defined on F_bx, the full or the slice Box
-    amrex::Box F_bx = m_slice_dir >= 0 ? slice_bx : bx;
-    // Only xy slices need guard cells, there is no deposition to/gather from the output array F.
-    // amrex::IntVect nguards_F = amrex::IntVect(0,0,0);
-    // The Arena uses pinned memory.
-    amrex::AllPrint() << " m_nfields " << m_nfields << "\n";
-    m_F.push_back(amrex::FArrayBox(F_bx, m_nfields, amrex::The_Pinned_Arena()));
-    // m_F.push_back(fab); // = amrex::FArrayBox(F_bx, m_nfields, amrex::The_Pinned_Arena());
 
-    // m_F[lev].define(F_ba, dm, m_nfields, nguards_F,
-    //                 amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+    // trim the 3D box to slice box for slice IO
+    amrex::Box F_bx = redim_io(bx);
+
+    m_F.push_back(amrex::FArrayBox(F_bx, m_nfields, amrex::The_Pinned_Arena()));
 
     m_geom_io[lev] = geom;
     amrex::RealBox prob_domain = geom.ProbDomain();
@@ -80,4 +67,27 @@ FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::G
         domain.setBig(m_slice_dir, icenter);
         m_geom_io[lev] = amrex::Geometry(domain, &prob_domain, geom.Coord());
     }
+}
+
+void
+FieldDiagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
+{
+    amrex::Box io_box = redim_io(box);
+    m_F[lev].resize(io_box, m_nfields);
+ }
+
+amrex::Box
+FieldDiagnostic::redim_io(const amrex::Box box_3d)
+{
+    // Create a xz slice Box
+    amrex::Box slice_bx = box_3d;
+    if (m_slice_dir >= 0){
+            // Flatten the box down to 1 cell in the approprate direction.
+            slice_bx.setSmall(m_slice_dir, box_3d.length(m_slice_dir)/2);
+            slice_bx.setBig  (m_slice_dir, box_3d.length(m_slice_dir)/2);
+    }
+    // m_F is defined on F_bx, the full or the slice Box
+    amrex::Box F_bx = m_slice_dir >= 0 ? slice_bx : box_3d;
+
+    return F_bx;
 }

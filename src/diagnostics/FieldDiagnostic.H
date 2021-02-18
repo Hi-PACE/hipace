@@ -42,10 +42,18 @@ public:
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;};
 
-    void ResizeFDiagFAB (const amrex::Box box, const int lev) {
-        amrex::AllPrint() << " box before resizing " << m_F[lev].box() << "\n";
-        m_F[lev].resize(box, m_nfields);
-        amrex::AllPrint() << " box after resizing " << m_F[lev].box() << "\n"; };
+    /** \brief return box which possibly was trimmed in case of slice IO
+     *
+     * \param[in] box_3d box to be possibly trimmed to a slice box
+     */
+    amrex::Box redim_io(const amrex::Box box_3d);
+
+    /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
+     *
+     * \param[in] bx box to which the FArrayBox of the diagnostics will be resized to
+     * \param[in] lev MR level
+     */
+    void ResizeFDiagFAB (const amrex::Box box, const int lev);
 
 private:
 
