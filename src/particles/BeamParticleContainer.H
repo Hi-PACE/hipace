@@ -21,12 +21,12 @@ struct BeamIdx
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
-    : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
+    : public amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>
 {
 public:
     /** Constructor */
-    explicit BeamParticleContainer (amrex::AmrCore* amr_core, std::string name) :
-        amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB()),
+    explicit BeamParticleContainer (std::string name) :
+        amrex::ParticleTile<0,0,BeamIdx::nattribs,0>(),
         m_name(name)
     {
         ReadParameters();
@@ -118,6 +118,8 @@ public:
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;};
 
+    amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
+
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
      *
      * Particle momentum is defined as gamma*velocity, which is neither
@@ -150,15 +152,6 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name ; /**< the name of the particle species in the beam file */
-};
-
-/** \brief Iterator over boxes in a particle container */
-class BeamParticleIterator : public amrex::ParIter<0,0,BeamIdx::nattribs>
-{
-public:
-    using amrex::ParIter<0,0,BeamIdx::nattribs>::ParIter;
-    /** Constructor */
-    BeamParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
 };
 
 #endif

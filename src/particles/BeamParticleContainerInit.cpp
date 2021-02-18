@@ -67,8 +67,6 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
-    constexpr int lev = 0;
-
     const amrex::IntVect ncells = a_geom.Domain().length();
     amrex::Long ncells_total = (amrex::Long) ncells[0] * ncells[1] * ncells[2];
     if ( ncells_total / Hipace::m_beam_injection_cr / Hipace::m_beam_injection_cr
@@ -95,21 +93,19 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
     const amrex::Real scale_fac = Hipace::m_normalized_units ?
         1./num_ppc*cr[0]*cr[1]*cr[2] : dx[0]*dx[1]*dx[2]/num_ppc;
 
-    for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
-    {
-        // First: loop over all cells, and count the particles effectively injected.
-        amrex::Box tile_box  = mfi.tilebox();
-        tile_box.coarsen(cr);
-        const auto lo = amrex::lbound(tile_box);
-        const auto hi = amrex::ubound(tile_box);
+    // First: loop over all cells, and count the particles effectively injected.
+    amrex::Box domain_box = a_geom.Domain();
+    domain_box.coarsen(cr);
+    const auto lo = amrex::lbound(domain_box);
+    const auto hi = amrex::ubound(domain_box);
 
-        amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
-        unsigned int* pcount = counts.dataPtr();
+    amrex::Gpu::DeviceVector<unsigned int> counts(domain_box.numPts(), 0);
+    unsigned int* pcount = counts.dataPtr();
 
-        amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
-        unsigned int* poffset = offsets.dataPtr();
+    amrex::Gpu::DeviceVector<unsigned int> offsets(domain_box.numPts());
+    unsigned int* poffset = offsets.dataPtr();
 
-        amrex::ParallelFor(tile_box,
+    amrex::ParallelFor(domain_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
             for (int i_part=0; i_part<num_ppc;i_part++)
@@ -142,14 +138,13 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
         int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
         // Second: allocate the memory for these particles
-        auto& particles = GetParticles(lev);
-        auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+        auto& particle_tile = *this;
 
         auto old_size = particle_tile.GetArrayOfStructs().size();
         auto new_size = old_size + num_to_add;
         particle_tile.resize(new_size);
 
-        if (num_to_add == 0) continue;
+        if (num_to_add == 0) return;
 
         // Third: Actually initialize the particles at the right locations
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
@@ -163,7 +158,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
         PhysConst phys_const = get_phys_const();
 
-        amrex::ParallelFor(tile_box,
+        amrex::ParallelFor(domain_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
             int ix = i - lo.x;
@@ -202,8 +197,6 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                 ++pidx;
             }
         });
-    }
-    AMREX_ASSERT(OK());
 }
 
 void
@@ -219,8 +212,6 @@ InitBeamFixedWeight (int num_to_add,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
-    constexpr int lev = 0;
-
     if (num_to_add == 0) return;
     if (do_symmetrize) num_to_add /=4;
 
@@ -228,64 +219,57 @@ InitBeamFixedWeight (int num_to_add,
 
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
-        // WARNING Implemented for 1 box per MPI rank.
-        for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
-        {
-            // Allocate the memory for these particles
-            auto& particles = GetParticles(lev);
-            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
-            auto old_size = particle_tile.GetArrayOfStructs().size();
-            auto new_size = do_symmetrize? old_size + 4*num_to_add : old_size + num_to_add;
-            particle_tile.resize(new_size);
+        auto& particle_tile = *this;
+        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto new_size = do_symmetrize? old_size + 4*num_to_add : old_size + num_to_add;
+        particle_tile.resize(new_size);
 
-            // Access particles' AoS and SoA
-            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
-                particle_tile.GetStructOfArrays().realarray();
+        // Access particles' AoS and SoA
+        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+            particle_tile.GetStructOfArrays().realarray();
 
-            const int procID = amrex::ParallelDescriptor::MyProc();
-            const int pid = ParticleType::NextID();
-            ParticleType::NextID(pid + num_to_add);
+        const int procID = amrex::ParallelDescriptor::MyProc();
+        const int pid = ParticleType::NextID();
+        ParticleType::NextID(pid + num_to_add);
 
-            amrex::ParallelFor(
-                num_to_add,
-                [=] AMREX_GPU_DEVICE (int i) noexcept
+        amrex::ParallelFor(
+            num_to_add,
+            [=] AMREX_GPU_DEVICE (int i) noexcept
+            {
+                const amrex::Real x = amrex::RandomNormal(0, pos_std[0]);
+                const amrex::Real y = amrex::RandomNormal(0, pos_std[1]);
+                const amrex::Real z = amrex::RandomNormal(0, pos_std[2]);
+                amrex::Real u[3] = {0.,0.,0.};
+                get_momentum(u[0],u[1],u[2]);
+
+                const amrex::Real cental_x_pos = pos_mean[0] + z*dx_per_dzeta;
+                const amrex::Real cental_y_pos = pos_mean[1] + z*dy_per_dzeta;
+
+                amrex::Real weight = total_charge / num_to_add / phys_const.q_e;
+                if (!do_symmetrize)
                 {
-                    const amrex::Real x = amrex::RandomNormal(0, pos_std[0]);
-                    const amrex::Real y = amrex::RandomNormal(0, pos_std[1]);
-                    const amrex::Real z = amrex::RandomNormal(0, pos_std[2]);
-                    amrex::Real u[3] = {0.,0.,0.};
-                    get_momentum(u[0],u[1],u[2]);
-
-                    const amrex::Real cental_x_pos = pos_mean[0] + z*dx_per_dzeta;
-                    const amrex::Real cental_y_pos = pos_mean[1] + z*dy_per_dzeta;
-
-                    amrex::Real weight = total_charge / num_to_add / phys_const.q_e;
-                    if (!do_symmetrize)
-                    {
-                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
-                                           pos_mean[2]+z, u[0], u[1], u[2], weight,
-                                           pid, procID, i, phys_const.c);
-                    } else {
-                        weight /= 4;
-                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
-                                           pos_mean[2]+z, u[0], u[1], u[2], weight,
-                                           pid, procID, 4*i, phys_const.c);
-                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
-                                           pos_mean[2]+z, -u[0], u[1], u[2], weight,
-                                           pid, procID, 4*i+1, phys_const.c);
-                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
-                                           pos_mean[2]+z, u[0], -u[1], u[2], weight,
-                                           pid, procID, 4*i+2, phys_const.c);
-                        AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
-                                           pos_mean[2]+z, -u[0], -u[1], u[2], weight,
-                                           pid, procID, 4*i+3, phys_const.c);
-                    }
-                });
-        }
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                                       pos_mean[2]+z, u[0], u[1], u[2], weight,
+                                       pid, procID, i, phys_const.c);
+                } else {
+                    weight /= 4;
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                                       pos_mean[2]+z, u[0], u[1], u[2], weight,
+                                       pid, procID, 4*i, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
+                                       pos_mean[2]+z, -u[0], u[1], u[2], weight,
+                                       pid, procID, 4*i+1, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
+                                       pos_mean[2]+z, u[0], -u[1], u[2], weight,
+                                       pid, procID, 4*i+2, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
+                                       pos_mean[2]+z, -u[0], -u[1], u[2], weight,
+                                       pid, procID, 4*i+3, phys_const.c);
+                }
+            });
     }
-    Redistribute();
-    AMREX_ASSERT(OK());
+
     return;
 }
 
@@ -555,36 +539,31 @@ InitBeamFromFile (std::string input_file,
 
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
-        // WARNING Implemented for 1 box per MPI rank.
-        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi)
-        {
-            auto& particles = GetParticles(0);
-            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
-            auto old_size = particle_tile.GetArrayOfStructs().size();
-            auto new_size = old_size + num_to_add;
-            particle_tile.resize(new_size);
-            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
-                                                  particle_tile.GetStructOfArrays().realarray();
-            const int procID = amrex::ParallelDescriptor::MyProc();
-            const int pid = ParticleType::NextID();
-            ParticleType::NextID(pid + num_to_add);
+        auto& particle_tile = *this;
+        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto new_size = old_size + num_to_add;
+        particle_tile.resize(new_size);
+        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+            particle_tile.GetStructOfArrays().realarray();
+        const int procID = amrex::ParallelDescriptor::MyProc();
+        const int pid = ParticleType::NextID();
+        ParticleType::NextID(pid + num_to_add);
 
-            for( int i=0; i < num_to_add; ++i)
-            {
-                AddOneBeamParticle(pstruct, arrdata,
-                                  (amrex::Real)(r_x_data.get()[i] * unit_rx),
-                                  (amrex::Real)(r_y_data.get()[i] * unit_ry),
-                                  (amrex::Real)(r_z_data.get()[i] * unit_rz),
-                                  (amrex::Real)(u_x_data.get()[i] * unit_ux),
-                                  (amrex::Real)(u_y_data.get()[i] * unit_uy),
-                                  (amrex::Real)(u_z_data.get()[i] * unit_uz),
-                                  (amrex::Real)(q_q_data.get()[i] * unit_qq),
-                                  pid, procID, i, phys_const.c);
-            }
+        for( int i=0; i < num_to_add; ++i)
+        {
+            AddOneBeamParticle(pstruct, arrdata,
+                               (amrex::Real)(r_x_data.get()[i] * unit_rx),
+                               (amrex::Real)(r_y_data.get()[i] * unit_ry),
+                               (amrex::Real)(r_z_data.get()[i] * unit_rz),
+                               (amrex::Real)(u_x_data.get()[i] * unit_ux),
+                               (amrex::Real)(u_y_data.get()[i] * unit_uy),
+                               (amrex::Real)(u_z_data.get()[i] * unit_uz),
+                               (amrex::Real)(q_q_data.get()[i] * unit_qq),
+                               pid, procID, i, phys_const.c);
         }
     }
-    Redistribute();
+
     return;
 }
 
@@ -673,36 +652,30 @@ InitBeamRestart (std::string input_file,
 
     if (amrex::ParallelDescriptor::IOProcessor()) {
 
-        // WARNING Implemented for 1 box per MPI rank.
-        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi)
-        {
-            auto& particles = GetParticles(0);
-            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
-            auto old_size = particle_tile.GetArrayOfStructs().size();
-            auto new_size = old_size + num_to_add;
-            particle_tile.resize(new_size);
-            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
-                                                  particle_tile.GetStructOfArrays().realarray();
-            const int procID = amrex::ParallelDescriptor::MyProc();
-            const int pid = ParticleType::NextID();
-            ParticleType::NextID(pid + num_to_add);
+        auto& particle_tile = *this;
+        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto new_size = old_size + num_to_add;
+        particle_tile.resize(new_size);
+        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+            particle_tile.GetStructOfArrays().realarray();
+        const int procID = amrex::ParallelDescriptor::MyProc();
+        const int pid = ParticleType::NextID();
+        ParticleType::NextID(pid + num_to_add);
 
-            for( int i=0; i < num_to_add; ++i)
-            {
-                AddOneBeamParticle(pstruct, arrdata,
-                                  (amrex::Real)(rx_data.get()[i]),
-                                  (amrex::Real)(ry_data.get()[i]),
-                                  (amrex::Real)(rz_data.get()[i]),
-                                  (amrex::Real)(ux_data.get()[i]),
-                                  (amrex::Real)(uy_data.get()[i]),
-                                  (amrex::Real)(uz_data.get()[i]),
-                                  (amrex::Real)(m_data.get()[i]),
-                                  pid, procID, i, 1.);
-            }
+        for( int i=0; i < num_to_add; ++i)
+        {
+            AddOneBeamParticle(pstruct, arrdata,
+                               (amrex::Real)(rx_data.get()[i]),
+                               (amrex::Real)(ry_data.get()[i]),
+                               (amrex::Real)(rz_data.get()[i]),
+                               (amrex::Real)(ux_data.get()[i]),
+                               (amrex::Real)(uy_data.get()[i]),
+                               (amrex::Real)(uz_data.get()[i]),
+                               (amrex::Real)(m_data.get()[i]),
+                               pid, procID, i, 1.);
         }
     }
-    Redistribute();
 
     ConvertUnits(ConvertDirection::SI_to_HIPACE);
     return;
