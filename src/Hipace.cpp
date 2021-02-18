@@ -316,7 +316,7 @@ Hipace::Evolve ()
             const amrex::Box& bx = boxArray(lev)[it];
             // FIXME use amrex::FArrayBox::resize(bx) to re-use the same memory
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins; // FIXME: beam disabled
-            bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
+            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, bins); // FIXME: beam disabled
