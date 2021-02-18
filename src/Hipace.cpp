@@ -293,7 +293,6 @@ Hipace::Evolve ()
 #ifdef HIPACE_USE_OPENPMD
         if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
-        WriteDiagnostics(0); // FIXME: if we want to keep this, only the beam initializing rank may call this
 
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
         // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
@@ -315,12 +314,12 @@ Hipace::Evolve ()
 
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
-            // FIXME use amrex::FArrayBox::resize(bx) to re-use the same memory
+
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev, bins); // FIXME: beam disabled
+                SolveOneSlice(isl, lev, bins);
             };
 
             Notify(step);
