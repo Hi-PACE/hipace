@@ -29,6 +29,7 @@ Fields::AllocData (
 
     // The Arena uses pinned memory.
     m_F[lev].define(ba, dm, Comps[WhichSlice::This]["N"], nguards_F, amrex::MFInfo().SetAlloc(false));
+    // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
