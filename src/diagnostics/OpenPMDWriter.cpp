@@ -39,7 +39,7 @@ OpenPMDWriter::WriteDiagnostics (
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    WriteBeamParticleData(a_multi_beam, iteration);
+    WriteBeamParticleData(a_multi_beam, iteration, output_step);
 
     m_outputSeries->flush();
 
@@ -125,7 +125,8 @@ OpenPMDWriter::WriteFieldData (
 }
 
 void
-OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
+OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
+                                      const int output_step)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
@@ -135,8 +136,10 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
 
         const unsigned long long np = beams.get_total_num_particles(ibeam);
-        SetupPos(beam_species, np);
-        SetupRealProperties(beam_species, m_real_names, np);
+        if (m_last_output_dumped != output_step) {
+            SetupPos(beam_species, np);
+            SetupRealProperties(beam_species, m_real_names, np);
+        }
 
         uint64_t offset = static_cast<uint64_t>( beams.get_upstream_n_part(ibeam) );
         // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
@@ -144,6 +147,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         auto const numParticleOnTile = beam.numParticles();
         uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
+
+        if (numParticleOnTile == 0) return;
+
         // get position and particle ID from aos
         // note: this implementation iterates the AoS 4x...
         // if we flush late as we do now, we can also copy out the data in one go
@@ -152,6 +158,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         {
             // Save positions
             std::vector< std::string > const positionComponents{"x", "y", "z"};
+            amrex::Print() << " num particles on tile " << numParticleOnTile << "\n";
 
             for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
             {
@@ -170,6 +177,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             // save particle ID after converting it to a globally unique ID
             std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                                              [](uint64_t const *p){ delete[] p; } );
+            // amrex::Print() << " num particles on tile " << numParticleOnTile << "\n";
             for (auto i=0; i<numParticleOnTile; i++) {
                 ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
             }

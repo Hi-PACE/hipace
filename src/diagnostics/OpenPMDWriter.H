@@ -54,7 +54,7 @@ private:
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
-    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
+    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration, const int output_step);
 
     /** \brief writing openPMD field data
      *
