@@ -20,6 +20,7 @@ OpenPMDWriter::InitDiagnostics ()
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
 
     std::string filename = m_file_prefix + "/openpmd_%06T.h5"; // bp or h5
+
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
 
