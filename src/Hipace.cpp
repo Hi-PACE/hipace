@@ -293,7 +293,6 @@ Hipace::Evolve ()
 #ifdef HIPACE_USE_OPENPMD
         if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
-        WriteDiagnostics(0); // FIXME: if we want to keep this, only the beam initializing rank may call this
 
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
         // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
@@ -314,15 +313,21 @@ Hipace::Evolve ()
             if (step > 0) Wait();
 
             const amrex::Box& bx = boxArray(lev)[it];
-            // FIXME use amrex::FArrayBox::resize(bx) to re-use the same memory
+            m_fields.ResizeFDiagFAB(bx, lev);
+
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev, bins); // FIXME: beam disabled
+                SolveOneSlice(isl, lev, bins);
             };
 
             Notify(step);
+#ifdef HIPACE_USE_OPENPMD
+            WriteDiagnostics(step+1);
+#else
+            amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
+#endif
         }
 
         // FIXME: beam disabled
@@ -339,11 +344,6 @@ Hipace::Evolve ()
         // Slices have already been shifted, so send
         // slices {2,3} from upstream to {2,3} in downstream.
 
-#ifdef HIPACE_USE_OPENPMD
-        WriteDiagnostics(step+1);
-#else
-        amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
-#endif
         m_physical_time += m_dt;
     }
     // For consistency, decrement the physical time, so the last time step is like the others:
@@ -750,13 +750,9 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
-    // Dump before first and after last step, and every m_output_period steps in-between
+    // Dump every m_output_period steps and after last step
     if (m_output_period < 0 ||
-        (!force_output && output_step % m_output_period != 0) ||
-        output_step == m_last_output_dumped) return;
-
-    // Store this dump iteration
-    m_last_output_dumped = output_step;
+        (!force_output && output_step % m_output_period != 0) ) return;
 
     // Write fields
     const std::string filename = amrex::Concatenate("plt", output_step);

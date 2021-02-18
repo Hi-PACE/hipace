@@ -113,8 +113,8 @@ public:
      * \param[in] lev MR level
      */
     void SolveOneSlice (
-        int islice, int lev); //, FIXME: beam disabled
-        // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+                        int islice, int lev,
+                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -123,6 +123,14 @@ public:
      * \param[in] lev MR level
      */
     void ResetAllQuantities (int lev);
+
+    /**
+       \brief Returns true on the head rank, otherwise false.
+     */
+    static bool HeadRank ()
+    {
+        return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
+    }
 
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
@@ -163,9 +171,6 @@ public:
     /** Number of iterations between consecutive output dumps.
      * Default is -1, meaning no output */
     int m_output_period = -1;
-    /** Last iteration that was written to file.
-     * This is stored to make sure we don't write the last iteration multiple times. */
-    int m_last_output_dumped = -1;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     amrex::Real m_physical_time = 0.;

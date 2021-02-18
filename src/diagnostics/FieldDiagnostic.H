@@ -18,22 +18,20 @@ public:
     /** \brief allocate arrays of this MF
      *
      * \param[in] lev MR level
-     * \param[in] ba BoxArray of the full simulation domain
+     * \param[in] bx Box for initialization
      * \param[in] nfields number of field components
-     * \param[in] dm DistributionMapping of the full simulation domain
      * \param[in] geom geometry of the full simulation domain
      */
-    void AllocData (int lev, const amrex::BoxArray& ba, int nfields,
-                    const amrex::DistributionMapping& dm, amrex::Geometry const& geom);
+    void AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom);
 
     /** \brief return the main diagnostics multifab */
-    amrex::Vector<amrex::MultiFab>& getF () { return m_F; };
+    amrex::Vector<amrex::FArrayBox>& getF () { return m_F; };
 
     /** \brief return the main diagnostics multifab
      *
      * \param[in] lev MR level
      */
-    amrex::MultiFab& getF (int lev) {return m_F[lev];};
+    amrex::FArrayBox& getF (int lev) {return m_F[lev];};
 
     /** \brief return Component names of Fields to output */
     amrex::Vector<std::string>& getComps () { return m_comps_output; };
@@ -44,10 +42,23 @@ public:
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;};
 
+    /** \brief return box which possibly was trimmed in case of slice IO
+     *
+     * \param[in] box_3d box to be possibly trimmed to a slice box
+     */
+    amrex::Box redim_io(const amrex::Box box_3d);
+
+    /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
+     *
+     * \param[in] box box to which the FArrayBox of the diagnostics will be resized to
+     * \param[in] lev MR level
+     */
+    void ResizeFDiagFAB (const amrex::Box box, const int lev);
+
 private:
 
     /** Vector over levels, all fields */
-    amrex::Vector<amrex::MultiFab> m_F;
+    amrex::Vector<amrex::FArrayBox> m_F;
     DiagType m_diag_type; /**< Type of diagnostics (xyz xz yz) */
     int m_slice_dir; /**< Slicing direction */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */

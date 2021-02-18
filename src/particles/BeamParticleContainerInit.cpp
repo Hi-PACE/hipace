@@ -67,6 +67,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
+    if (!Hipace::HeadRank()) { return; }
+
     const amrex::IntVect ncells = a_geom.Domain().length();
     amrex::Long ncells_total = (amrex::Long) ncells[0] * ncells[1] * ncells[2];
     if ( ncells_total / Hipace::m_beam_injection_cr / Hipace::m_beam_injection_cr
@@ -217,7 +219,7 @@ InitBeamFixedWeight (int num_to_add,
 
     PhysConst phys_const = get_phys_const();
 
-    if (amrex::ParallelDescriptor::IOProcessor()) {
+    if (Hipace::HeadRank()) {
 
         auto& particle_tile = *this;
         auto old_size = particle_tile.GetArrayOfStructs().size();
@@ -537,7 +539,7 @@ InitBeamFromFile (std::string input_file,
     const int num_to_add = electrons[name_r][name_rx].getExtent()[0];
     const PhysConst phys_const = get_phys_const();
 
-    if (amrex::ParallelDescriptor::IOProcessor()) {
+    if (Hipace::HeadRank()) {
 
         auto& particle_tile = *this;
         auto old_size = particle_tile.GetArrayOfStructs().size();
@@ -650,7 +652,7 @@ InitBeamRestart (std::string input_file,
     // input data using AddOneBeamParticle function, make necessary variables and arrays
     const int num_to_add = electrons["position"]["x"].getExtent()[0];
 
-    if (amrex::ParallelDescriptor::IOProcessor()) {
+    if (Hipace::HeadRank()) {
 
         auto& particle_tile = *this;
         auto old_size = particle_tile.GetArrayOfStructs().size();
