@@ -357,7 +357,7 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev) //, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins) FIXME: beam disabled
+Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
@@ -385,7 +385,7 @@ Hipace::SolveOneSlice (int islice, int lev) //, amrex::Vector<amrex::DenseBins<B
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    // m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins); FIXME: beam disabled
+    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -398,7 +398,7 @@ Hipace::SolveOneSlice (int islice, int lev) //, amrex::Vector<amrex::DenseBins<B
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    // m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins); FIXME: beam disabled
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
     m_fields.FillDiagnostics(lev, islice);
 

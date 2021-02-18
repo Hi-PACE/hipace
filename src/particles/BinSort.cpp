@@ -1,5 +1,7 @@
 #include "BinSort.H"
 
+#include <AMReX_ParticleTransformation.H>
+
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
     int /*lev*/, int /*ibox*/, amrex::Box bx,
@@ -30,4 +32,20 @@ findParticlesInEachSlice (
         });
 
     return bins;
+}
+
+void
+reorderParticlesInEachSlice (
+    BeamParticleContainer& a_beam,
+    const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins)
+{
+    const auto perm_ptr = a_bins.permutationPtr();
+    int const np = a_beam.numParticles();
+
+    BeamParticleContainer tmp("tmp");
+    tmp.resize(np);
+
+    amrex::scatterParticles(tmp, a_beam, np, perm_ptr);
+
+    a_beam.swap(tmp);
 }

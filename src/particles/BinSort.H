@@ -20,4 +20,14 @@ findParticlesInEachSlice (
     int lev, int ibox, amrex::Box bx,
     BeamParticleContainer& beam, amrex::Geometry& geom);
 
+/** \brief Reorder particles such that those in the same slice are adjacent in memory.
+ *
+ * \param[in] a_beam Beam particle container
+ * \param[in] a_bins amrex::DenseBins object constructed with a_beam
+ */
+void
+reorderParticlesInEachSlice (
+    BeamParticleContainer& a_beam,
+    const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins);
+
 #endif // HIPACE_BinSort_H_

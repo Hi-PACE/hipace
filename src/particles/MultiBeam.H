@@ -39,6 +39,13 @@ public:
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom);
 
+    /** \brief Reorder particles such that those in the same slice are adjacent in memory.
+     * \param[in] a_bins Vector<amrex::DenseBins> objects for each beam
+     */
+    void
+    reorderParticlesInEachSlice (
+        const amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& a_bins);
+
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] gm Geometry object at level lev
