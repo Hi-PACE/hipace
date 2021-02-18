@@ -113,8 +113,8 @@ public:
      * \param[in] lev MR level
      */
     void SolveOneSlice (
-        int islice, int lev); //, FIXME: beam disabled
-        // amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+                        int islice, int lev,
+                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -123,6 +123,14 @@ public:
      * \param[in] lev MR level
      */
     void ResetAllQuantities (int lev);
+
+    /**
+       \brief Returns true on the head rank, otherwise false.
+     */
+    static bool HeadRank ()
+    {
+        return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
+    }
 
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
