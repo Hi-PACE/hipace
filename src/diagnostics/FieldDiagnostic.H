@@ -42,7 +42,10 @@ public:
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;};
 
-    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_F[lev].resize(box, m_nfields); };
+    void ResizeFDiagFAB (const amrex::Box box, const int lev) {
+        amrex::AllPrint() << " box before resizing " << m_F[lev].box() << "\n";
+        m_F[lev].resize(box, m_nfields);
+        amrex::AllPrint() << " box after resizing " << m_F[lev].box() << "\n"; };
 
 private:
 

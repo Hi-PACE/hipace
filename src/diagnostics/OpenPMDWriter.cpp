@@ -33,23 +33,25 @@ OpenPMDWriter::WriteDiagnostics (
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
-
-    WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration);
+    amrex::AllPrint() << "beginning of IO box " << a_mf[lev].box() << "\n";
+    WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    WriteBeamParticleData(a_multi_beam, iteration);
+    // WriteBeamParticleData(a_multi_beam, iteration);
 
     m_outputSeries->flush();
 
     // back conversion after the flush, to not change the data to be written to file
     a_multi_beam.ConvertUnits(ConvertDirection::SI_to_HIPACE);
+
+    m_last_output_dumped = output_step;
 }
 
 void
 OpenPMDWriter::WriteFieldData (
     amrex::FArrayBox const& fab, amrex::Geometry const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
-    openPMD::Iteration iteration)
+    openPMD::Iteration iteration, const int output_step)
 {
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
@@ -92,8 +94,10 @@ OpenPMDWriter::WriteFieldData (
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
-        openPMD::Dataset dataset(datatype, global_size);
-        field_comp.resetDataset(dataset);
+        if (m_last_output_dumped != output_step) {
+            openPMD::Dataset dataset(datatype, global_size);
+            field_comp.resetDataset(dataset);
+        }
 
         // Loop over longitudinal boxes on this rank, from head to tail:
         // Loop through the multifab and store each box as a chunk with openpmd
