@@ -35,11 +35,11 @@ OpenPMDWriter::WriteDiagnostics (
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
-    amrex::AllPrint() << "beginning of IO box " << a_mf[lev].box() << "\n";
+
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    // WriteBeamParticleData(a_multi_beam, iteration);
+    WriteBeamParticleData(a_multi_beam, iteration);
 
     m_outputSeries->flush();
 
@@ -113,7 +113,6 @@ OpenPMDWriter::WriteFieldData (
 
         // Determine the offset and size of this data chunk in the global output
         amrex::IntVect const box_offset = data_box.smallEnd();
-        amrex::AllPrint() << "box_offset " << box_offset[0] << " " << box_offset[1] << " " << box_offset[2] << "\n" ;
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
         openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
         if (slice_dir >= 0) { // remove Ny components
