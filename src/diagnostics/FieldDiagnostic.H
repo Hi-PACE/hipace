@@ -50,7 +50,7 @@ public:
 
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *
-     * \param[in] bx box to which the FArrayBox of the diagnostics will be resized to
+     * \param[in] box box to which the FArrayBox of the diagnostics will be resized to
      * \param[in] lev MR level
      */
     void ResizeFDiagFAB (const amrex::Box box, const int lev);
