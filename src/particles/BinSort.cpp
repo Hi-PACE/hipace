@@ -42,7 +42,7 @@ reorderParticlesBySlice (
     const auto perm_ptr = a_bins.permutationPtr();
     int const np = a_beam.numParticles();
 
-    BeamParticleContainer tmp("tmp");
+    BeamParticleContainer tmp(a_beam.get_name());
     tmp.resize(np);
 
     amrex::scatterParticles(tmp, a_beam, np, perm_ptr);
