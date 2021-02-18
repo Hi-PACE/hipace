@@ -43,7 +43,7 @@ public:
      * \param[in] a_bins Vector<amrex::DenseBins> objects for each beam
      */
     void
-    reorderParticlesInEachSlice (
+    reorderParticlesBySlice (
         const amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& a_bins);
 
     /** Loop over all beam species and advance slice islice of all beam species

@@ -26,7 +26,7 @@ findParticlesInEachSlice (
  * \param[in] a_bins amrex::DenseBins object constructed with a_beam
  */
 void
-reorderParticlesInEachSlice (
+reorderParticlesBySlice (
     BeamParticleContainer& a_beam,
     const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins);
 
