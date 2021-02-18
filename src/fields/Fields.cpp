@@ -150,7 +150,6 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         amrex::Box slice_box = slice_fab.box();
         slice_box.setSmall(Direction::z, i_slice);
         slice_box.setBig  (Direction::z, i_slice);
-        amrex::AllPrint() << " slice_fab.nComp() " << slice_fab.nComp() << "\n";
         slice_array = amrex::makeArray4(slice_fab.dataPtr(), slice_box, slice_fab.nComp());
         // slice_array's longitude index is i_slice.
     }
@@ -163,7 +162,7 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         amrex::Box copy_box = vbx;
         copy_box.setSmall(Direction::z, i_slice);
         copy_box.setBig  (Direction::z, i_slice);
-        amrex::Array4<amrex::Real> const& full_array = full_mf.array(0,3); // FIXME, I think this should be
+        amrex::Array4<amrex::Real> const& full_array = full_mf.array(); // FIXME, I think this should be
         if (copy_type == FieldCopyType::FtoS) {
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -171,9 +170,6 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
                 slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
             });
         } else {
-            amrex::AllPrint() << "vbx " << vbx << " copy_box " << copy_box << " ncomp " << ncomp <<"\n";
-            amrex::AllPrint() << "slice_array(i,j,k,n+slice_comp) " << slice_array(0,0,99,1) << "\n";
-            amrex::AllPrint() << "full_array(i,j,k,n+slice_comp) " << full_array(0,0,99,0) << "\n";
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {

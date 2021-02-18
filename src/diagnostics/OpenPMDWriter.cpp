@@ -107,6 +107,7 @@ OpenPMDWriter::WriteFieldData (
 
         // Determine the offset and size of this data chunk in the global output
         amrex::IntVect const box_offset = data_box.smallEnd();
+        amrex::AllPrint() << "box_offset " << box_offset[0] << " " << box_offset[1] << " " << box_offset[2] << "\n" ;
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
         openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
         if (slice_dir >= 0) { // remove Ny components
