@@ -1,5 +1,6 @@
 #include "FieldDiagnostic.H"
-
+#include "fields/Fields.H"
+#include "Hipace.H"
 #include <AMReX_ParmParse.H>
 
 FieldDiagnostic::FieldDiagnostic (int nlev)
@@ -20,6 +21,29 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
         m_slice_dir = 0;
     } else {
         amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
+    }
+
+    ppd.queryarr("field_data", m_comps_output);
+    const amrex::Vector<std::string> all_field_comps
+            {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
+    if(m_comps_output.empty()) {
+        m_comps_output = all_field_comps;
+    }
+    else {
+        for(std::string comp_name : m_comps_output) {
+            if(comp_name == "all" || comp_name == "All") {
+                m_comps_output = all_field_comps;
+                break;
+            }
+            if(comp_name == "none" || comp_name == "None") {
+                m_comps_output.clear();
+                break;
+            }
+            if(Comps[WhichSlice::This].count(comp_name) == 0 || comp_name == "N") {
+                amrex::Abort("Unknown field diagnostics component: " + comp_name + "\nmust be " +
+                "'all', 'none' or a subset of: ExmBy EypBx Ez Bx By Bz jx jy jz rho Psi" );
+            }
+        }
     }
 }
 
