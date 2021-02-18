@@ -53,21 +53,24 @@ private:
      *
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in,out] iteration openPMD iteration to which the data is written
+     * \param[in] output_step current time step to dump
      */
-    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration);
+    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
+                                const int output_step);
 
     /** \brief writing openPMD field data
      *
-     * \param[in] mf the MultiFab to dump
+     * \param[in] fab the FArrayBox to dump
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in,out] iteration openPMD iteration to which the data is written
+     * \param[in] output_step current time step to dump
      */
     void WriteFieldData (
-        amrex::MultiFab const& mf, amrex::Geometry const& geom,
+        amrex::FArrayBox const& fab, amrex::Geometry const& geom,
         const int slice_dir, const amrex::Vector< std::string > varnames,
-        openPMD::Iteration iteration);
+        openPMD::Iteration iteration, const int output_step);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
@@ -75,6 +78,10 @@ private:
 
     /** Parallel openPMD-api Series object for output */
     std::unique_ptr< openPMD::Series > m_outputSeries;
+
+    /** Last iteration that was written to file.
+     * This is stored to make sure we don't write the last iteration multiple times. */
+    int m_last_output_dumped = -1;
 public:
     /** Constructor */
     explicit OpenPMDWriter ();
@@ -85,7 +92,7 @@ public:
 
     /** \brief writing openPMD data
      *
-     * \param[in] a_mf Vector (levels) of multifabs
+     * \param[in] a_mf Vector (levels) of FArrayBoxes
      * \param[in] a_multi_beams multi beam container which is written to openPMD file
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] physical_time Physical time of the currenerationt it.
@@ -95,7 +102,7 @@ public:
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      */
     void WriteDiagnostics(
-        amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
+        amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int lev,
         const int slice_dir, const amrex::Vector< std::string > varnames);

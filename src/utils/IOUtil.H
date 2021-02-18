@@ -20,11 +20,11 @@ namespace utils
      * Translate the IndexType of a given MultiFab into a position relative to
      * the lower corner of a cell.
      *
-     * @param[in] mf the amrex::MultiFab to get relative cell positions for
+     * @param[in] fab the amrex::FArrayBox to get relative cell positions for
      * @return relative position to the lower corner, scaled to cell size [0.0:1.0)
      */
     std::vector< double >
-    getRelativeCellPosition (amrex::MultiFab const& mf);
+    getRelativeCellPosition (amrex::FArrayBox const& fab);
 
     /** \brief
      * Convert an IntVect to a std::vector<std::uint64_t>

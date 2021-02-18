@@ -28,7 +28,7 @@ OpenPMDWriter::InitDiagnostics ()
 
 void
 OpenPMDWriter::WriteDiagnostics (
-    amrex::Vector<amrex::MultiFab> const& a_mf, MultiBeam& a_multi_beam,
+    amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int lev,
     const int slice_dir, const amrex::Vector< std::string > varnames)
@@ -36,22 +36,24 @@ OpenPMDWriter::WriteDiagnostics (
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
 
-    WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration);
+    WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    WriteBeamParticleData(a_multi_beam, iteration);
+    WriteBeamParticleData(a_multi_beam, iteration, output_step);
 
     m_outputSeries->flush();
 
     // back conversion after the flush, to not change the data to be written to file
     a_multi_beam.ConvertUnits(ConvertDirection::SI_to_HIPACE);
+
+    m_last_output_dumped = output_step;
 }
 
 void
 OpenPMDWriter::WriteFieldData (
-    amrex::MultiFab const& mf, amrex::Geometry const& geom,
+    amrex::FArrayBox const& fab, amrex::Geometry const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
-    openPMD::Iteration iteration)
+    openPMD::Iteration iteration, const int output_step)
 {
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
@@ -68,7 +70,7 @@ OpenPMDWriter::WriteFieldData (
         // meta-data
         field.setDataOrder(openPMD::Mesh::DataOrder::C);
         //   node staggering
-        auto relative_cell_pos = utils::getRelativeCellPosition(mf);      // AMReX Fortran index order
+        auto relative_cell_pos = utils::getRelativeCellPosition(fab);      // AMReX Fortran index order
         std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
         //   labels, spacing and offsets
         std::vector< std::string > axisLabels {"z", "y", "x"};
@@ -93,42 +95,34 @@ OpenPMDWriter::WriteFieldData (
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
-        openPMD::Dataset dataset(datatype, global_size);
-        field_comp.resetDataset(dataset);
-
-        // Loop over longitudinal boxes on this rank, from head to tail:
-        // Loop through the multifab and store each box as a chunk with openpmd
-        for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi)
-        {
-            amrex::FArrayBox const& fab = mf[mfi]; // note: this might include guards
-            amrex::Box const data_box = mfi.validbox();  // w/o guards in all cases
-            std::shared_ptr< amrex::Real const > data;
-            if (mfi.validbox() == fab.box() ) {
-                data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
-            } else {
-                // copy data to cut away guards
-                amrex::FArrayBox io_fab(mfi.validbox(), 1, amrex::The_Pinned_Arena());
-                io_fab.copy< amrex::RunOn::Host >(fab, fab.box(), icomp, mfi.validbox(), 0, 1);
-                // move ownership into a shared pointer: openPMD-api will free the copy in flush()
-                data = std::move(io_fab.release()); // note: a move honors the custom array-deleter
-            }
-
-            // Determine the offset and size of this data chunk in the global output
-            amrex::IntVect const box_offset = data_box.smallEnd();
-            openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
-            openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
-            if (slice_dir >= 0) { // remove Ny components
-                chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
-                chunk_size.erase(chunk_size.begin() + 2-slice_dir);
-            }
-
-            field_comp.storeChunk(data, chunk_offset, chunk_size);
+        if (m_last_output_dumped != output_step) {
+            openPMD::Dataset dataset(datatype, global_size);
+            field_comp.resetDataset(dataset);
         }
+
+        // Store the provided box as a chunk with openpmd
+        amrex::Box const data_box = fab.box();
+        std::shared_ptr< amrex::Real const > data;
+
+        data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
+
+
+        // Determine the offset and size of this data chunk in the global output
+        amrex::IntVect const box_offset = data_box.smallEnd();
+        openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
+        openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
+        if (slice_dir >= 0) { // remove Ny components
+            chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
+            chunk_size.erase(chunk_size.begin() + 2-slice_dir);
+        }
+
+        field_comp.storeChunk(data, chunk_offset, chunk_size);
     }
 }
 
 void
-OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration)
+OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
+                                      const int output_step)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
@@ -138,8 +132,10 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
 
         const unsigned long long np = beams.get_total_num_particles(ibeam);
-        SetupPos(beam_species, np);
-        SetupRealProperties(beam_species, m_real_names, np);
+        if (m_last_output_dumped != output_step) {
+            SetupPos(beam_species, np);
+            SetupRealProperties(beam_species, m_real_names, np);
+        }
 
         uint64_t offset = static_cast<uint64_t>( beams.get_upstream_n_part(ibeam) );
         // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
@@ -147,6 +143,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         auto const numParticleOnTile = beam.numParticles();
         uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
+
+        if (numParticleOnTile == 0) return;
+
         // get position and particle ID from aos
         // note: this implementation iterates the AoS 4x...
         // if we flush late as we do now, we can also copy out the data in one go
@@ -173,6 +172,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             // save particle ID after converting it to a globally unique ID
             std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                                              [](uint64_t const *p){ delete[] p; } );
+
             for (auto i=0; i<numParticleOnTile; i++) {
                 ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
             }
