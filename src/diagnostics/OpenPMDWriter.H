@@ -103,7 +103,7 @@ public:
     void reset () {m_outputSeries.reset();};
 
     /** Prefix/path for the output files */
-    std::string m_file_prefix = "diag/h5";
+    std::string m_file_prefix = "diag/hdf5";
 };
 
 #endif // HIPACE_USE_OPENPMD
