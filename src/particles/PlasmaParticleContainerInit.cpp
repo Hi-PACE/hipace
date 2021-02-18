@@ -27,7 +27,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
     for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
     {
-        if (Hipace::GetInstance().m_rank_z == Hipace::GetInstance().m_numprocs_z-1) {
 
         const amrex::Box& tile_box  = mfi.tilebox();
 
@@ -172,7 +171,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 ++pidx;
             }
         });
-        }
     }
 
     AMREX_ASSERT(OK());
