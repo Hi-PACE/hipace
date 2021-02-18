@@ -14,16 +14,17 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
-rm -rf diags* REF*
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
-        beam.radius = 20.
-
-mv diags REF_diags
+        beam.radius = 20. \
+        hipace.file_prefix=REF_diags/h5
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
-        beam.radius = 20.
+        beam.radius = 20. \
+        hipace.file_prefix=$TEST_NAME        
 
-$HIPACE_EXAMPLE_DIR/analysis_2ranks.py
+$HIPACE_EXAMPLE_DIR/analysis_2ranks.py --output-dir=$TEST_NAME

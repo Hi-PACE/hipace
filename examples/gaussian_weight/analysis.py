@@ -22,10 +22,14 @@ parser.add_argument('--tilted-beam',
                     action='store_true',
                     default=False,
                     help='Run the analysis with a tilted beam')
+parser.add_argument('--output-dir',
+                    dest='output_dir',
+                    default='diags/h5',
+                    help='Path to the directory containing output files')
 args = parser.parse_args()
 
 # Load data with yt
-ts = OpenPMDTimeSeries('./diags/h5/')
+ts = OpenPMDTimeSeries(args.output_dir)
 
 if args.norm_units:
     x_avg = 0.
