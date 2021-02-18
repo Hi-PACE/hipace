@@ -117,7 +117,7 @@ public:
      * \param[in] i_slice z slice in which to write the data
      */
     void FillDiagnostics(int lev, int i_slice);
-    /** \brief Copy between the full MultiFab and slice MultiFab.
+    /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
      * \param[in] lev MR level
      * \param[in] i_slice z slice in which to write the data
@@ -125,11 +125,11 @@ public:
      * \param[in] slice_comp first component of the xy slice to copy from/to
      * \param[in] full_comp first component of the full array to copy from/to
      * \param[in] ncomp number of components to copy
-     * \param[in,out] full_mf full FArrayBox
+     * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
      */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp, amrex::FArrayBox& full_mf, int slice_dir); // FIXME name full_mf
+               int ncomp, amrex::FArrayBox& fab, int slice_dir);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *

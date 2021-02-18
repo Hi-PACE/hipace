@@ -101,11 +101,8 @@ OpenPMDWriter::WriteFieldData (
             field_comp.resetDataset(dataset);
         }
 
-        // Loop over longitudinal boxes on this rank, from head to tail:
-        // Loop through the multifab and store each box as a chunk with openpmd
-        // FIXME loop over multifab not needed anymore
-
-        amrex::Box const data_box = fab.box();  // w/o guards in all cases
+        // Store the provided box as a chunk with openpmd
+        amrex::Box const data_box = fab.box();
         std::shared_ptr< amrex::Real const > data;
 
         data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
@@ -158,7 +155,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         {
             // Save positions
             std::vector< std::string > const positionComponents{"x", "y", "z"};
-            amrex::Print() << " num particles on tile " << numParticleOnTile << "\n";
 
             for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
             {
@@ -177,7 +173,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             // save particle ID after converting it to a globally unique ID
             std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                                              [](uint64_t const *p){ delete[] p; } );
-            // amrex::Print() << " num particles on tile " << numParticleOnTile << "\n";
+
             for (auto i=0; i<numParticleOnTile; i++) {
                 ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
             }

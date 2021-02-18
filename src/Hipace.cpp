@@ -750,13 +750,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
-    // // Dump before first and after last step, and every m_output_period steps in-between
-    // if (m_output_period < 0 ||
-    //     (!force_output && output_step % m_output_period != 0) ||
-    //     output_step == m_last_output_dumped) return;
-
-    // Store this dump iteration
-    // m_last_output_dumped = output_step;
+    // Dump before every m_output_period steps and after last step
     if (m_output_period < 0 ||
         (!force_output && output_step % m_output_period != 0) ) return;
 

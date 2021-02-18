@@ -139,7 +139,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-              int ncomp, amrex::FArrayBox& full_mf, int slice_dir) //FIXME fix name full_mf
+              int ncomp, amrex::FArrayBox& fab, int slice_dir)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
@@ -155,14 +155,14 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
     }
 
 // FIXME remove loop over multifabs
-    amrex::Box const& vbx = full_mf.box();
+    amrex::Box const& vbx = fab.box();
     if (vbx.smallEnd(Direction::z) <= i_slice and
         vbx.bigEnd  (Direction::z) >= i_slice)
     {
         amrex::Box copy_box = vbx;
         copy_box.setSmall(Direction::z, i_slice);
         copy_box.setBig  (Direction::z, i_slice);
-        amrex::Array4<amrex::Real> const& full_array = full_mf.array(); // FIXME, I think this should be
+        amrex::Array4<amrex::Real> const& full_array = fab.array(); // FIXME, I think this should be
         if (copy_type == FieldCopyType::FtoS) {
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
