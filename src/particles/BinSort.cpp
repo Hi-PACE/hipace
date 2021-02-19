@@ -81,7 +81,7 @@ sortParticlesByBox (
         if (dst_box >= 0)  // what about ones that leave transversely?
         {
             unsigned int index = amrex::Gpu::Atomic::Inc(
-                &p_box_counts[index], max_unsigned_int);
+                &p_box_counts[dst_box], max_unsigned_int);
             p_dst_indices[i] = index;
         }
     });
