@@ -287,6 +287,8 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
 
+    m_multi_beam.sortParticlesByBox(boxArray(lev), geom[lev]);
+
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
     for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
     {
@@ -315,7 +317,7 @@ Hipace::Evolve ()
 
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
-            m_multi_beam.reorderParticlesBySlice(bins);
+//            m_multi_beam.reorderParticlesBySlice(bins);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, bins);

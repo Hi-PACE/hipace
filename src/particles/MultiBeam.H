@@ -46,6 +46,15 @@ public:
     reorderParticlesBySlice (
         const amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& a_bins);
 
+    /** \brief Loop over all beam species and sort particles by box
+     *
+     * \param[in] a_ba BoxArray object to put the particles into
+     * \param[in] a_geom Geometry object with the low corner of the domain
+     */
+    void
+    sortParticlesByBox (
+        const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
+
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] gm Geometry object at level lev
