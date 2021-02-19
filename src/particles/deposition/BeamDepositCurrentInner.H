@@ -84,12 +84,12 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be nodal in all directions."
         );
 
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
-        indices = nullptr;
+//    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+//        indices = nullptr;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
 
-    indices = bins.permutationPtr();
+//    indices = bins.permutationPtr();
     offsets = bins.offsetsPtr();
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]
@@ -102,8 +102,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
-            const int ip = indices[cell_start+idx];
-            //const int ip = cell_start+idx; // note, do not do indirection bc particles are sorted
+            //const int ip = indices[cell_start+idx];
+            const int ip = cell_start+idx; // note, do not do indirection bc particles are sorted
 
             if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 

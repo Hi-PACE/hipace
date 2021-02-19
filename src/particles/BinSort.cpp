@@ -39,13 +39,12 @@ reorderParticlesBySlice (
     BeamParticleContainer& a_beam,
     const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins)
 {
-    const auto perm_ptr = a_bins.permutationPtr();
     int const np = a_beam.numParticles();
 
     BeamParticleContainer tmp(a_beam.get_name());
     tmp.resize(np);
 
-    amrex::scatterParticles(tmp, a_beam, np, perm_ptr);
+    amrex::gatherParticles(tmp, a_beam, np, a_bins.permutationPtr());
 
     a_beam.swap(tmp);
 }
