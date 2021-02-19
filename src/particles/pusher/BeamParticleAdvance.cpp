@@ -69,11 +69,11 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
     const amrex::Real zmin = xyzmin[2];
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-//    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
-//        indices = nullptr;
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+        indices = nullptr;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const *
         offsets = nullptr;
-//    indices = bins.permutationPtr();
+    indices = bins.permutationPtr();
     offsets = bins.offsetsPtr();
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
         cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
@@ -90,8 +90,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
 
     amrex::ParallelFor(num_particles,
                        [=] AMREX_GPU_DEVICE (long idx) {
-            //            const int ip = indices[cell_start+idx];
-            const int ip = cell_start+idx; // note, do not do indirection bc particles are sorted
+                           const int ip = indices[cell_start+idx];
+//            const int ip = cell_start+idx; // note, do not do indirection bc particles are sorted
 
                 if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 

@@ -315,7 +315,7 @@ Hipace::Evolve ()
 
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
-            m_multi_beam.reorderParticlesBySlice(bins);
+            //            m_multi_beam.reorderParticlesBySlice(bins);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, bins);
