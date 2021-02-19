@@ -1,0 +1,34 @@
+#ifndef HIPACE_BoxSort_H_
+#define HIPACE_BoxSort_H_
+
+#include "BeamParticleContainer.H"
+
+#include <AMReX_MultiFab.H>
+
+class BoxSorter
+{
+public:
+    using index_type = unsigned int;
+
+    void sortParticlesByBox (BeamParticleContainer& a_beam,
+                             const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
+
+    //! \brief returns the pointer to the permutation array
+    index_type* boxCountsPtr () noexcept { return m_box_counts.dataPtr(); }
+
+    //! \brief returns the pointer to the offsets array
+    index_type* boxOffsetsPtr () noexcept { return m_box_offsets.dataPtr(); }
+
+    //! \brief returns the pointer to the permutation array
+    const index_type* boxCountsPtr () const noexcept { return m_box_counts.dataPtr(); }
+
+    //! \brief returns the pointer to the offsets array
+    const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets.dataPtr(); }
+
+private:
+    amrex::ParticleLocator<amrex::DenseBins<amrex::Box> > m_particle_locator;
+    amrex::Gpu::DeviceVector<index_type> m_box_counts;
+    amrex::Gpu::DeviceVector<index_type> m_box_offsets;
+};
+
+#endif // HIPACE_BoxSort_H_

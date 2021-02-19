@@ -54,10 +54,12 @@ MultiBeam::reorderParticlesBySlice (
 
 void
 MultiBeam::sortParticlesByBox (
+            amrex::Vector<BoxSorter>& a_box_sorter_vec,
             const amrex::BoxArray a_ba, const amrex::Geometry& a_geom)
 {
+    a_box_sorter_vec.resize(m_nbeams);
     for (int i=0; i<m_nbeams; i++) {
-        ::sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
+        a_box_sorter_vec[i].sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
     }
 }
 
