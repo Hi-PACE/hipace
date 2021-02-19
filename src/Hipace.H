@@ -179,6 +179,8 @@ public:
     static int m_verbose;
     /** Whether to use normalized units */
     static bool m_normalized_units;
+    /** Whether to run without a beam */
+    static bool m_no_beam;
     /** Struct containing physical constants (which values depends on the unit system, determined
      * at runtime): SI or normalized units. */
     PhysConst m_phys_const;

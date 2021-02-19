@@ -3,9 +3,13 @@
 #include "particles/BinSort.H"
 #include "pusher/BeamParticleAdvance.H"
 
+
 MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 {
-
+    amrex::ParmParse pph("hipace");
+    bool no_beam;
+    pph.query("no_beam", no_beam);
+    if (no_beam) return;
     amrex::ParmParse pp("beams");
     pp.getarr("names", m_names);
     m_nbeams = m_names.size();

@@ -3,6 +3,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
+#include "Hipace.H"
 
 #ifdef HIPACE_USE_OPENPMD
 
@@ -39,8 +40,10 @@ OpenPMDWriter::WriteDiagnostics (
 
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
-    a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    WriteBeamParticleData(a_multi_beam, iteration, output_step);
+    if (!Hipace::m_no_beam){
+        a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
+        WriteBeamParticleData(a_multi_beam, iteration, output_step);
+    }
 
     m_outputSeries->flush();
 

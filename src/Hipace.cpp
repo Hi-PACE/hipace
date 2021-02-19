@@ -26,6 +26,7 @@ Hipace* Hipace::m_instance = nullptr;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
 bool Hipace::m_normalized_units = false;
+bool Hipace::m_no_beam = false;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
@@ -63,6 +64,7 @@ Hipace::Hipace () :
     } else {
         m_phys_const = make_constants_SI();
     }
+    pph.query("no_beam", m_no_beam);
     pph.query("dt", m_dt);
     pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
@@ -187,7 +189,7 @@ Hipace::InitData ()
 
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
-    m_multi_beam.InitData(geom[0]);
+    if (!m_no_beam) m_multi_beam.InitData(geom[0]);
     m_plasma_container.SetParticleBoxArray(lev, m_slice_ba);
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
@@ -316,7 +318,7 @@ Hipace::Evolve ()
             m_fields.ResizeFDiagFAB(bx, lev);
 
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
+            if (!m_no_beam) bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, bins);
@@ -385,7 +387,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
+    if (!m_no_beam) m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -398,7 +400,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
+    if (!m_no_beam) m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
     m_fields.FillDiagnostics(lev, islice);
 
