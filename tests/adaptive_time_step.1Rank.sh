@@ -56,5 +56,5 @@ $HIPACE_EXAMPLE_DIR/analysis_adaptive_ts.py
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name diags/h5 \
+    --file_name diags/hdf5 \
     --test-name adaptive_time_step.1Rank

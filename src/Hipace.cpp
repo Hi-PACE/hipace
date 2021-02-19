@@ -302,10 +302,8 @@ Hipace::Evolve ()
         ResetAllQuantities(lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_rank_z == m_numprocs_z-1){
-            DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                           false, false, false, true, geom[lev], lev);
-        }
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
+                       false, false, false, true, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
@@ -351,7 +349,7 @@ Hipace::Evolve ()
     // the time stored in the output file is the time for the fields. The beam is one time step
     // ahead.
     m_physical_time -= m_dt;
-    WriteDiagnostics(m_max_step, true);
+
 #ifdef HIPACE_USE_OPENPMD
     if (m_output_period > 0) m_openpmd_writer.reset();
 #endif
@@ -747,13 +745,13 @@ Hipace::NotifyFinish ()
 }
 
 void
-Hipace::WriteDiagnostics (int output_step, bool force_output)
+Hipace::WriteDiagnostics (int output_step)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
     // Dump every m_output_period steps and after last step
     if (m_output_period < 0 ||
-        (!force_output && output_step % m_output_period != 0) ) return;
+        (!(output_step == m_max_step) && output_step % m_output_period != 0) ) return;
 
     // Write fields
     const std::string filename = amrex::Concatenate("plt", output_step);

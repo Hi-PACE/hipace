@@ -8,6 +8,7 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 
     amrex::ParmParse pp("beams");
     pp.getarr("names", m_names);
+    if (m_names[0] == "no_beam") return;
     m_nbeams = m_names.size();
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));

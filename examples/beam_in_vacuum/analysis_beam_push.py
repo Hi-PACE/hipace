@@ -12,7 +12,7 @@ do_plot = True
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--output-dir',
                     dest='output_dir',
-                    default='diags/h5',
+                    default='diags/hdf5',
                     help='Path to the directory containing output files')
 args = parser.parse_args()
 
