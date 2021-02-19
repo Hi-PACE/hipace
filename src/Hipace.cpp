@@ -302,10 +302,8 @@ Hipace::Evolve ()
         ResetAllQuantities(lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_rank_z == m_numprocs_z-1){
-            DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                           false, false, false, true, geom[lev], lev);
-        }
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
+                       false, false, false, true, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
