@@ -49,7 +49,7 @@ public:
 
     /** \brief Loop over all beam species and sort particles by box
      *
-     * \param[in] a_ba Vector of BoxSorter objects for each beam species
+     * \param[in] a_box_sorter_vec Vector of BoxSorter objects for each beam species
      * \param[in] a_ba BoxArray object to put the particles into
      * \param[in] a_geom Geometry object with the low corner of the domain
      */
