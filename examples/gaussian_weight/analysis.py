@@ -24,7 +24,7 @@ parser.add_argument('--tilted-beam',
                     help='Run the analysis with a tilted beam')
 parser.add_argument('--output-dir',
                     dest='output_dir',
-                    default='diags/h5',
+                    default='diags/hdf5',
                     help='Path to the directory containing output files')
 args = parser.parse_args()
 
