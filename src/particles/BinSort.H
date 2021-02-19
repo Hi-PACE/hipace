@@ -20,7 +20,7 @@ findParticlesInEachSlice (
     int lev, int ibox, amrex::Box bx,
     BeamParticleContainer& beam, amrex::Geometry& geom);
 
-/** \brief Reorder particles such that those in the same slice are adjacent in memory.
+/** \brief Actually reorder the particles in memory according to the permutation array in a_bins.
  *
  * \param[in] a_beam Beam particle container
  * \param[in] a_bins amrex::DenseBins object constructed with a_beam
@@ -29,5 +29,18 @@ void
 reorderParticlesBySlice (
     BeamParticleContainer& a_beam,
     const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins);
+
+
+/** \brief Sort beam particles into the boxes in BoxArray a_ba.
+ *
+ * \param[in] a_beam Beam particle container
+ * \param[in] a_ba BoxArray object to put the particles into
+ * \param[in] a_geom Geometry object with the low corner of the domain
+ */
+void
+sortParticlesByBox (
+    BeamParticleContainer& a_beam,
+    const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
+
 
 #endif // HIPACE_BinSort_H_
