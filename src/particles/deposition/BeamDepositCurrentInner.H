@@ -103,7 +103,6 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
             const int ip = indices[cell_start+idx];
-            //const int ip = cell_start+idx; // note, do not do indirection bc particles are sorted
 
             if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 

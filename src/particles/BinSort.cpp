@@ -33,18 +33,3 @@ findParticlesInEachSlice (
 
     return bins;
 }
-
-void
-reorderParticlesBySlice (
-    BeamParticleContainer& a_beam,
-    const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins)
-{
-    int const np = a_beam.numParticles();
-
-    BeamParticleContainer tmp(a_beam.get_name());
-    tmp.resize(np);
-
-    amrex::gatherParticles(tmp, a_beam, np, a_bins.permutationPtr());
-
-    a_beam.swap(tmp);
-}

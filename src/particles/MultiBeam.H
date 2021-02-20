@@ -40,13 +40,6 @@ public:
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom);
 
-    /** \brief Reorder particles such that those in the same slice are adjacent in memory.
-     * \param[in] a_bins Vector<amrex::DenseBins> objects for each beam
-     */
-    void
-    reorderParticlesBySlice (
-        const amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& a_bins);
-
     /** \brief Loop over all beam species and sort particles by box
      *
      * \param[in] a_box_sorter_vec Vector of BoxSorter objects for each beam species

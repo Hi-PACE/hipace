@@ -89,9 +89,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
     const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
 
     amrex::ParallelFor(num_particles,
-                       [=] AMREX_GPU_DEVICE (long idx) {
-                           const int ip = indices[cell_start+idx];
-                           //const int ip = cell_start+idx; // note, do not do indirection bc particles are sorted
+                [=] AMREX_GPU_DEVICE (long idx) {
+                const int ip = indices[cell_start+idx];
 
                 if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 

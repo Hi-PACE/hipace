@@ -20,14 +20,4 @@ findParticlesInEachSlice (
     int lev, int ibox, amrex::Box bx,
     BeamParticleContainer& beam, amrex::Geometry& geom);
 
-/** \brief Actually reorder the particles in memory according to the permutation array in a_bins.
- *
- * \param[in] a_beam Beam particle container
- * \param[in] a_bins amrex::DenseBins object constructed with a_beam
- */
-void
-reorderParticlesBySlice (
-    BeamParticleContainer& a_beam,
-    const amrex::DenseBins<BeamParticleContainer::ParticleType>& a_bins);
-
 #endif // HIPACE_BinSort_H_
