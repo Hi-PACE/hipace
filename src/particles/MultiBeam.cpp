@@ -44,6 +44,17 @@ MultiBeam::findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Ge
 }
 
 void
+MultiBeam::sortParticlesByBox (
+            amrex::Vector<BoxSorter>& a_box_sorter_vec,
+            const amrex::BoxArray a_ba, const amrex::Geometry& a_geom)
+{
+    a_box_sorter_vec.resize(m_nbeams);
+    for (int i=0; i<m_nbeams; i++) {
+        a_box_sorter_vec[i].sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
+    }
+}
+
+void
 MultiBeam::AdvanceBeamParticlesSlice (
     Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)

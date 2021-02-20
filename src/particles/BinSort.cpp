@@ -1,5 +1,7 @@
 #include "BinSort.H"
 
+#include <AMReX_ParticleTransformation.H>
+
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
     int /*lev*/, int /*ibox*/, amrex::Box bx,

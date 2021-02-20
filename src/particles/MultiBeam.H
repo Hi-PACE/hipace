@@ -4,6 +4,7 @@
 #include "BeamParticleContainer.H"
 #include "fields/Fields.H"
 #include "particles/BinSort.H"
+#include "particles/BoxSort.H"
 
 class MultiBeam
 {
@@ -38,6 +39,17 @@ public:
      */
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom);
+
+    /** \brief Loop over all beam species and sort particles by box
+     *
+     * \param[in] a_box_sorter_vec Vector of BoxSorter objects for each beam species
+     * \param[in] a_ba BoxArray object to put the particles into
+     * \param[in] a_geom Geometry object with the low corner of the domain
+     */
+    void
+    sortParticlesByBox (
+        amrex::Vector<BoxSorter>& a_box_sorter_vec,
+        const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
 
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
