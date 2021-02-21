@@ -5,6 +5,7 @@
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/BinSort.H"
+#include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
 
 #include <AMReX_PlotFileUtil.H>
@@ -287,6 +288,9 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
 
+    amrex::Vector<BoxSorter> box_sorters;
+    m_multi_beam.sortParticlesByBox(box_sorters, boxArray(lev), geom[lev]);
+
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
     for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
     {
@@ -315,6 +319,7 @@ Hipace::Evolve ()
 
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
+//            m_multi_beam.reorderParticlesBySlice(bins);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, bins);
