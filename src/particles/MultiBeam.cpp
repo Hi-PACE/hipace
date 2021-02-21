@@ -25,11 +25,11 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 
 void
 MultiBeam::DepositCurrentSlice (
-    Fields& fields, const amrex::Geometry& geom, const int lev, int islice,
+    Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bins[i]);
+        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bx, bins[i]);
     }
 }
 
@@ -56,11 +56,11 @@ MultiBeam::sortParticlesByBox (
 
 void
 MultiBeam::AdvanceBeamParticlesSlice (
-    Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
+    Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, lev, islice, bins[i]);
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, lev, islice, bx, bins[i]);
     }
 }
 
