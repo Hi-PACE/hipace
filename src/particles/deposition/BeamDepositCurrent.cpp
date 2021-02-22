@@ -9,8 +9,8 @@
 #include <AMReX_DenseBins.H>
 
 void
-DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
-                     amrex::Geometry const& gm, int const lev, const int islice,
+DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
+                     int const lev, const int islice, const amrex::Box bx,
                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
@@ -26,7 +26,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     int islice_local = islice - gm.Domain().smallEnd(2);
 
     // Extract properties associated with the extent of the current box
-    amrex::Box tilebox = gm.Domain();
+    amrex::Box tilebox = bx;
     tilebox.grow({Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, Hipace::m_depos_order_z});
 
     amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};

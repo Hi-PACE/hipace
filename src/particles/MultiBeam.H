@@ -25,10 +25,11 @@ public:
      * \param[in] geom Geometry object at level lev
      * \param[in] lev MR level
      * \param[in] islice slice index in which the current is stored
+     * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
      */
     void DepositCurrentSlice (
-        Fields& fields, const amrex::Geometry& geom, const int lev, int islice,
+        Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
@@ -56,10 +57,11 @@ public:
      * \param[in] gm Geometry object at level lev
      * \param[in] lev MR level
      * \param[in] islice slice index in which the current is stored
+     * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
      */
     void AdvanceBeamParticlesSlice (
-        Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
+        Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** Loop over species and dump them to plotfile

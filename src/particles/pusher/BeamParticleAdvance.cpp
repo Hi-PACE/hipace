@@ -6,8 +6,8 @@
 #include "utils/HipaceProfilerWrapper.H"
 
 void
-AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
-                           amrex::Geometry const& gm, int const lev, const int islice,
+AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
+                           int const lev, const int islice, const amrex::Box box,
                            amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
@@ -26,7 +26,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
 
     // Extract properties associated with the extent of the current box
     const int depos_order_xy = Hipace::m_depos_order_xy;
-    amrex::Box tilebox = gm.Domain();
+    amrex::Box tilebox = box;
     tilebox.grow({depos_order_xy, depos_order_xy, Hipace::m_depos_order_z});
 
     amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};

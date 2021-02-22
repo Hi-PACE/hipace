@@ -109,10 +109,10 @@ public:
     /** \brief Full evolve on 1 slice
      *
      * \param[in] islice slice number
+     * \param[in] bx current box to be calculated
      * \param[in] lev MR level
      */
-    void SolveOneSlice (
-                        int islice, int lev,
+    void SolveOneSlice (int islice, int lev, const amrex::Box bx,
                         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
