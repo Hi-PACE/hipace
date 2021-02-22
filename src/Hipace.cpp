@@ -322,7 +322,7 @@ Hipace::Evolve ()
 //            m_multi_beam.reorderParticlesBySlice(bins);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev, bins);
+                SolveOneSlice(isl, lev, bx, bins);
             };
 
             Notify(step);
@@ -360,7 +360,8 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
+Hipace::SolveOneSlice (int islice, int lev, const amrex::Box bx,
+                       amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
@@ -388,7 +389,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
+    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -401,7 +402,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins);
 
     m_fields.FillDiagnostics(lev, islice);
 
