@@ -31,7 +31,7 @@ void ApplyExternalField(
 
     ExmByp += ext_ExmBy_slope * xp;
     EypBxp += ext_ExmBy_slope * yp;
-    Ezp += ext_Ez + ext_Ez_uniform * zp;
+    Ezp += ext_Ez_uniform + ext_Ez_uniform * zp;
 
     return;
 }
