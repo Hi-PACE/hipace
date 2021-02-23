@@ -394,7 +394,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
      */
     SolveBxBy(islice, lev);
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
-    
+
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
