@@ -27,7 +27,7 @@ void ApplyExternalField(
     const amrex::Real ext_Ez_slope,
     const amrex::Real ext_Ez_uniform)
 {
-    if ((ext_ExmBy_slope == 0.) && (ext_Ez_slope == 0.) && ext_Ez_uniform) return;
+    if ((ext_ExmBy_slope == 0.) && (ext_Ez_slope == 0.) && (ext_Ez_uniform == 0.)) return;
 
     ExmByp += ext_ExmBy_slope * xp;
     EypBxp += ext_ExmBy_slope * yp;
