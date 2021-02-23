@@ -87,9 +87,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
 
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
         const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
-        const amrex::Real external_focusing_field_strength =
-             Hipace::m_external_focusing_field_strength;
-        const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
+        const amrex::Real external_ExmBy_slope = Hipace::m_external_ExmBy_slope;
+        const amrex::Real external_Ez_slope = Hipace::m_external_Ez_slope;
+        const amrex::Real external_Ez_uniform = Hipace::m_external_Ez_uniform;
 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (long idx) {
@@ -121,8 +121,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields,
                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
                 ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
-                                   external_focusing_field_strength,
-                                   external_accel_field_strength);
+                                   external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
                 const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
