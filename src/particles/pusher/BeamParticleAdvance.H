@@ -16,7 +16,7 @@
  */
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                      int const lev, const int islice, const amrex::Box box,
-                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
+                           int const lev, const int islice, const amrex::Box box, const int offset,
+                           amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
 
 #endif //  BEAMPARTICLEADVANCE_H_

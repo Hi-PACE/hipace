@@ -87,7 +87,7 @@ public:
      *
      * \param[in] step current time step
      */
-    void Notify (const int step);
+    void Notify (const int step, const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish ();
 
@@ -113,7 +113,7 @@ public:
      * \param[in] bx current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice, int lev, const amrex::Box bx,
+    void SolveOneSlice (int islice, int lev, const int ibox,
                         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
@@ -223,6 +223,9 @@ private:
     amrex::Geometry m_slice_geom;
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
+
+    /** Used to sort the beam particles into boxes for pipelining */
+    amrex::Vector<BoxSorter> m_box_sorters;
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

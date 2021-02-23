@@ -18,7 +18,7 @@
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                     int const lev, const int islice, const amrex::Box bx,
+                     int const lev, const int islice, const amrex::Box bx, int const offset,
                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
 
 

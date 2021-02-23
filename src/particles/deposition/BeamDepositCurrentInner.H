@@ -45,7 +45,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          int islice,
-                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                         int box_offset)
 {
     using namespace amrex::literals;
 
@@ -53,12 +54,12 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
 
     // Extract particle properties
     const auto& aos = ptile.GetArrayOfStructs(); // For positions
-    const auto& pos_structs = aos.begin();
+    const auto& pos_structs = aos.begin() + box_offset;
     const auto& soa = ptile.GetStructOfArrays(); // For momenta and weights
-    const auto  wp = soa.GetRealData(BeamIdx::w).data();
-    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+    const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+    const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
+    const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
+    const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];

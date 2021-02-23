@@ -2,6 +2,7 @@
 #define HIPACE_BinSort_H_
 
 #include "BeamParticleContainer.H"
+#include "BoxSort.H"
 
 #include <AMReX_MultiFab.H>
 
@@ -18,6 +19,7 @@
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
     int lev, int ibox, amrex::Box bx,
-    BeamParticleContainer& beam, amrex::Geometry& geom);
+    BeamParticleContainer& beam, amrex::Geometry& geom,
+    const BoxSorter& a_box_sorter);
 
 #endif // HIPACE_BinSort_H_

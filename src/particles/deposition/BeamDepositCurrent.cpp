@@ -10,7 +10,7 @@
 
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                     int const lev, const int islice, const amrex::Box bx,
+                     int const lev ,const int islice, const amrex::Box bx, int const offset,
                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
@@ -23,7 +23,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     PhysConst const phys_const = get_phys_const();
 
     // Assumes '2' == 'z' == 'the long dimension'.
-    int islice_local = islice - gm.Domain().smallEnd(2);
+    int islice_local = islice - bx.smallEnd(2);
 
     // Extract properties associated with the extent of the current box
     amrex::Box tilebox = bx;
@@ -52,16 +52,16 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){
         doDepositionShapeN<0, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins);
+                                  dx, xyzmin, lo, q, islice_local, bins, offset);
     } else if (Hipace::m_depos_order_xy == 1){
         doDepositionShapeN<1, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins);
+                                  dx, xyzmin, lo, q, islice_local, bins, offset);
     } else if (Hipace::m_depos_order_xy == 2){
         doDepositionShapeN<2, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins);
+                                  dx, xyzmin, lo, q, islice_local, bins, offset);
     } else if (Hipace::m_depos_order_xy == 3){
         doDepositionShapeN<3, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins);
+                                  dx, xyzmin, lo, q, islice_local, bins, offset);
     } else {
         amrex::Abort("unknown deposition order");
     }

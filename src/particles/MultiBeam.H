@@ -30,7 +30,8 @@ public:
      */
     void DepositCurrentSlice (
         Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins);
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] lev MR level
@@ -39,7 +40,8 @@ public:
      * \param[in] geom Geometry of the simulation domain
      */
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
-    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom);
+    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
+                              const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
     /** \brief Loop over all beam species and sort particles by box
      *
@@ -62,7 +64,8 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and dump them to plotfile
      * \param[in] filename name of the output file

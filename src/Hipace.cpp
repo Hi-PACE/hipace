@@ -18,7 +18,8 @@
 #ifdef AMREX_USE_MPI
 namespace {
     constexpr int comm_z_tag = 1000;
-    constexpr int pcomm_z_tag = 1001;
+    constexpr int ncomm_z_tag = 1001;
+    constexpr int pcomm_z_tag = 1002;
 }
 #endif
 
@@ -288,8 +289,8 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
 
-    amrex::Vector<BoxSorter> box_sorters;
-    m_multi_beam.sortParticlesByBox(box_sorters, boxArray(lev), geom[lev]);
+    m_box_sorters.clear();
+    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
     for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
@@ -318,13 +319,13 @@ Hipace::Evolve ()
             m_fields.ResizeFDiagFAB(bx, lev);
 
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev]);
+            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev, bx, bins);
+                SolveOneSlice(isl, lev, it, bins);
             };
 
-            Notify(step);
+            Notify(step, it);
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1);
 #else
@@ -359,13 +360,15 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev, const amrex::Box bx,
+Hipace::SolveOneSlice (int islice, int lev, const int ibox,
                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
     // for loop, the parallelcontext is the transverse communicator
     amrex::ParallelContext::push(m_comm_xy);
+
+    const amrex::Box& bx = boxArray(lev)[ibox];
 
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
@@ -388,7 +391,7 @@ Hipace::SolveOneSlice (int islice, int lev, const amrex::Box bx,
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins);
+    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -401,7 +404,7 @@ Hipace::SolveOneSlice (int islice, int lev, const amrex::Box bx,
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
 
     m_fields.FillDiagnostics(lev, islice);
 
@@ -561,20 +564,25 @@ Hipace::Wait ()
 {
     HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
-    int recv_buffer;
+
+    const int nbeams = m_multi_beam.get_nbeams();
+    amrex::Vector<int> np_rcv(nbeams);
+
     MPI_Status status;
 
     if (m_rank_z != m_numprocs_z-1) {
         // all ranks except the head rank receive from one rank upstream
-        MPI_Recv(&recv_buffer, 1,
+        MPI_Recv(np_rcv.dataPtr(), nbeams,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
+                 m_rank_z+1, ncomm_z_tag, m_comm_z, &status);
     } else {
         // the head rank receives the data from the tail rank
-        MPI_Recv(&recv_buffer, 1,
+        MPI_Recv(np_rcv.dataPtr(), nbeams,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 0, pcomm_z_tag, m_comm_z, &status);
+                 0, ncomm_z_tag, m_comm_z, &status);
     }
+
+    amrex::AllPrint() << "Rank " << amrex::ParallelDescriptor::MyProc() << " " << np_rcv[0] << "\n";
 // FIXME these should be beam particles
 //         // Same thing for the plasma particles. Currently only one tile.
 //         {
@@ -643,7 +651,7 @@ Hipace::Wait ()
 }
 
 void
-Hipace::Notify (const int step)
+Hipace::Notify (const int step, const int it)
 {
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
@@ -652,21 +660,29 @@ Hipace::Notify (const int step)
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
 
-    const int test_int = 1;
+    const int nbeams = m_multi_beam.get_nbeams();
+    amrex::Vector<int> np_snd(nbeams);
+
+    for (int ibeam = 0; ibeam < nbeams; ++ibeam)
+    {
+        np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
+    }
+
     if (m_rank_z != 0) {
         // all ranks except the tail rank send their data downstream
-        MPI_Isend(&test_int, 1,
+        MPI_Isend(np_snd.dataPtr(), nbeams,
                   amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
+                  m_rank_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
     } else {
         // the tail rank sends its beam data to the head rank,
         // if there are more time steps to calculate
         if (step < m_max_step -1 ) {
-            MPI_Isend(&test_int, 1,
+            MPI_Isend(np_snd.dataPtr(), nbeams,
                       amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                      m_numprocs_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
+                      m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
         }
     }
+
 // FIXME these should be beam particles
 //         // Same thing for the plasma particles. Currently only one tile.
 //         {
