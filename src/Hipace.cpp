@@ -392,8 +392,9 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     /* Modifies Bx and By in the current slice
      * and the force terms of the plasma particles
      */
+    // SolveBxBy(islice, lev);
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
-
+    
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
 
@@ -414,6 +415,27 @@ Hipace::ResetAllQuantities (int lev)
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
+}
+
+void
+Hipace::SolveBxBy (const int islice, const int lev)
+{
+    HIPACE_PROFILE("Hipace::ToSolveBxBy()");
+
+    amrex::MultiFab B(m_fields.getSlices(lev, WhichSlice::This),
+                       amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
+    amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This),
+                        amrex::make_alias, Comps[WhichSlice::This]["rho"], 1);
+    amrex::MultiFab jz(m_fields.getSlices(lev, WhichSlice::This),
+                       amrex::make_alias, Comps[WhichSlice::This]["jz"], 1);
+
+    // This is where we want to solve an equation of the form
+    // Delta B - A * B = S
+    // to calculate B. B, A and S are multifabs. You could use rho for the source terms.
+    // We will to solve two equations (of the exact same form): one for Bx, one for By.
+
+    // Reset to zero so fields don't diverge
+    B.setVal(0.);
 }
 
 void
