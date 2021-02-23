@@ -392,7 +392,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     /* Modifies Bx and By in the current slice
      * and the force terms of the plasma particles
      */
-    // SolveBxBy(islice, lev);
+    SolveBxBy(islice, lev);
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
     
     // Push beam particles
@@ -424,14 +424,14 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     amrex::MultiFab B(m_fields.getSlices(lev, WhichSlice::This),
                        amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
-    amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This),
-                        amrex::make_alias, Comps[WhichSlice::This]["rho"], 1);
     amrex::MultiFab jz(m_fields.getSlices(lev, WhichSlice::This),
                        amrex::make_alias, Comps[WhichSlice::This]["jz"], 1);
+    amrex::Print()<<"jz.min(0) "<<jz.min(0)<<", jz.max(0) "<<jz.max(0)<<'\n';
 
     // This is where we want to solve an equation of the form
     // Delta B - A * B = S
-    // to calculate B. B, A and S are multifabs. You could use rho for the source terms.
+    // to calculate B. B, A and S are multifabs. You could use jz for the source terms.
+    // Another non-zero MF (both >0 and <0 values) would be "ExmBy"
     // We will to solve two equations (of the exact same form): one for Bx, one for By.
 
     // Reset to zero so fields don't diverge
