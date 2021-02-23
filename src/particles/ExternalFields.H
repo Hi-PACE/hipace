@@ -11,9 +11,9 @@
  * \param[in,out] ExmByp Ex-By Field on particle
  * \param[in,out] EypBxp Ey+Bx Field on particle
  * \param[in,out] Ezp Ez Field on particle
- * \param[in] ext_ExmBy_strength strength of the external linear field: Ex += ext_ExmBy_strength * x
- * \param[in] ext_Ez_strength strength of the external linear field: Ez += ext_Ez_strength * z
- * \param[in] ext_Ez strength of the external uniform field: Ez += ext_Ez
+ * \param[in] ext_ExmBy_slope strength of the external linear field: Ex += ext_ExmBy_slope * x
+ * \param[in] ext_Ez_slope strength of the external linear field: Ez += ext_Ez_slope * z
+ * \param[in] ext_Ez_uniform strength of the external uniform field: Ez += ext_Ez_uniform
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void ApplyExternalField(
@@ -23,15 +23,15 @@ void ApplyExternalField(
     amrex::ParticleReal& ExmByp,
     amrex::ParticleReal& EypBxp,
     amrex::ParticleReal& Ezp,
-    const amrex::Real ext_ExmBy_strength,
-    const amrex::Real ext_Ez_strength,
-    const amrex::Real ext_Ez)
+    const amrex::Real ext_ExmBy_slope,
+    const amrex::Real ext_Ez_slope,
+    const amrex::Real ext_Ez_uniform)
 {
-    if ((ext_ExmBy_strength == 0.) && (ext_Ez_strength == 0.)) return;
+    if ((ext_ExmBy_slope == 0.) && (ext_Ez_slope == 0.) && ext_Ez_uniform) return;
 
-    ExmByp += ext_ExmBy_strength * xp;
-    EypBxp += ext_ExmBy_strength * yp;
-    Ezp += ext_Ez + ext_Ez_strength * zp;
+    ExmByp += ext_ExmBy_slope * xp;
+    EypBxp += ext_ExmBy_slope * yp;
+    Ezp += ext_Ez + ext_Ez_uniform * zp;
 
     return;
 }

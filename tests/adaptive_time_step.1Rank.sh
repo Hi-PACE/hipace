@@ -28,7 +28,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.density = 1.e-8 \
         beam.radius = 1. \
         beam.ppc = 4 4 1 \
-        hipace.external_Ez_strength = -.5 \
+        hipace.external_Ez_slope = -.5 \
         hipace.verbose=1\
         hipace.do_adaptive_time_step=1\
         plasma.density=1 \
@@ -44,7 +44,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.density = 1.e-8 \
         beam.radius = 1. \
         beam.ppc = 4 4 1 \
-        hipace.external_Ez_strength = .5 \
+        hipace.external_Ez_slope = .5 \
         hipace.verbose=1\
         hipace.do_adaptive_time_step=1\
         plasma.density=1 \

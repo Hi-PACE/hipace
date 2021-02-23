@@ -198,14 +198,14 @@ public:
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     static int m_beam_injection_cr;
-    /** Strength of external focusing fields applied to beam particles.
-     * The fields applied are ExmBy = m_external_ExmBy_strength*x, and same in y. */
-    static amrex::Real m_external_ExmBy_strength;
-    /** Strength of external accelerating fields applied to beam particles.
-     * The fields applied are Ez = m_external_Ez_strength*z. */
-    static amrex::Real m_external_Ez_strength;
+    /** Slope of external focusing fields applied to beam particles.
+     * The fields applied are ExmBy = m_external_ExmBy_slope*x, and same in y. */
+    static amrex::Real m_external_ExmBy_slope;
+    /** Slope of external accelerating fields applied to beam particles.
+     * The fields applied are Ez = m_external_Ez_slope*z. */
+    static amrex::Real m_external_Ez_slope;
     /** Uniform accelerating fields applied to beam particles. */
-    static amrex::Real m_external_Ez;
+    static amrex::Real m_external_Ez_uniform;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** GridCurrent instance */
