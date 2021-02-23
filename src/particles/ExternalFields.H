@@ -23,13 +23,14 @@ void ApplyExternalField(
     amrex::ParticleReal& EypBxp,
     amrex::ParticleReal& Ezp,
     const amrex::Real focusing_field_strength,
-    const amrex::Real accel_field_strength)
+    const amrex::Real accel_field_strength,
+    const amrex::Real accel_field)
 {
     if ((focusing_field_strength == 0.) && (accel_field_strength == 0.)) return;
 
     ExmByp += focusing_field_strength * xp;
     EypBxp += focusing_field_strength * yp;
-    Ezp += accel_field_strength * zp;
+    Ezp += accel_field + accel_field_strength * zp;
 
     return;
 }
