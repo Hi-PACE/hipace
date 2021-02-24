@@ -315,6 +315,9 @@ Hipace::Evolve ()
         {
             if (step > 0) Wait();
 
+            m_box_sorters.clear();
+            m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
 
@@ -655,9 +658,9 @@ Hipace::Wait ()
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
-    const int lev = 0;
-    m_box_sorters.clear();
-    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+//    const int lev = 0;
+//    m_box_sorters.clear();
+//    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 #endif
 }
 

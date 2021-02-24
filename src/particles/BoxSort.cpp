@@ -39,7 +39,17 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     BeamParticleContainer tmp(a_beam.get_name());
     tmp.resize(np);
 
-    amrex::gatherParticles(tmp, a_beam, np, dst_indices.dataPtr());
+    auto p_box_offsets = m_box_offsets.dataPtr();
+    AMREX_FOR_1D ( np, i,
+    {
+        int dst_box = assign_grid(particle_ptr[i]);
+        if (dst_box >= 0)
+        {
+            p_dst_indices[i] += p_box_offsets[dst_box];
+        }
+    });
+
+    amrex::scatterParticles(tmp, a_beam, np, dst_indices.dataPtr());
 
     a_beam.swap(tmp);
 }
