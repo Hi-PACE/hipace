@@ -27,6 +27,8 @@ public:
      * \param[in] islice slice index in which the current is stored
      * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] ibox index of the current box
      */
     void DepositCurrentSlice (
         Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
@@ -38,6 +40,7 @@ public:
      * \param[in] ibox box index
      * \param[in] bx 3D box on which per-slice sorting is done
      * \param[in] geom Geometry of the simulation domain
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
@@ -61,6 +64,8 @@ public:
      * \param[in] islice slice index in which the current is stored
      * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] ibox index of the current box
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
