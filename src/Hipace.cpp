@@ -568,85 +568,96 @@ Hipace::Wait ()
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_rcv(nbeams);
 
-    MPI_Status status;
-
-    if (m_rank_z != m_numprocs_z-1) {
-        // all ranks except the head rank receive from one rank upstream
-        MPI_Recv(np_rcv.dataPtr(), nbeams,
-                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 m_rank_z+1, ncomm_z_tag, m_comm_z, &status);
-    } else {
-        // the head rank receives the data from the tail rank
-        MPI_Recv(np_rcv.dataPtr(), nbeams,
-                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 0, ncomm_z_tag, m_comm_z, &status);
+    // Receive particle counts
+    {
+        MPI_Status status;
+        if (m_rank_z != m_numprocs_z-1) {
+            // all ranks except the head rank receive from one rank upstream
+            MPI_Recv(np_rcv.dataPtr(), nbeams,
+                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                     m_rank_z+1, ncomm_z_tag, m_comm_z, &status);
+        } else {
+            // the head rank receives the data from the tail rank
+            MPI_Recv(np_rcv.dataPtr(), nbeams,
+                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                     0, ncomm_z_tag, m_comm_z, &status);
+        }
     }
 
-    amrex::AllPrint() << "Rank " << amrex::ParallelDescriptor::MyProc() << " gets " << np_rcv[0] << "\n";
-// FIXME these should be beam particles
-//         // Same thing for the plasma particles. Currently only one tile.
-//         {
-//             const int lev = 0;
-//             const amrex::Long np = m_plasma_container.m_num_exchange;
-//             const amrex::Long psize = m_plasma_container.superParticleSize();
-//             const amrex::Long buffer_size = psize*np;
-//             auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
-//
-//             MPI_Status status;
-//             MPI_Recv(recv_buffer, buffer_size,
-//                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-//                      m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
-//
-//             auto& ptile = m_plasma_container.DefineAndReturnParticleTile(lev, 0, 0);
-//             ptile.resize(np);
-//             const auto ptd = ptile.getParticleTileData();
-//
-//             const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
-//             const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
-//             const auto p_comm_real = comm_real.data();
-//             const auto p_comm_int = comm_int.data();
-// #ifdef AMREX_USE_GPU
-//             if (amrex::Gpu::inLaunchRegion()) {
-//                 int const np_per_block = 128;
-//                 int const nblocks = (np+np_per_block-1)/np_per_block;
-//                 std::size_t const shared_mem_bytes = np_per_block * psize;
-//                 // NOTE - TODO DPC++
-//                 amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-//                 [=] AMREX_GPU_DEVICE () noexcept
-//                 {
-//                     amrex::Gpu::SharedMemory<char> gsm;
-//                     char* const shared = gsm.dataPtr();
-//
-//                     // Copy packed data from recv_buffer (in pinned memory) to shared memory
-//                     const int i = blockDim.x*blockIdx.x+threadIdx.x;
-//                     const unsigned int m = threadIdx.x;
-//                     const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
-//                     for (unsigned int index = m;
-//                          index < mend*psize/sizeof(double); index += blockDim.x) {
-//                         const double *csrc = (double *)(recv_buffer+blockDim.x*blockIdx.x*psize);
-//                         double *cdest = (double *)shared;
-//                         cdest[index] = csrc[index];
-//                     }
-//
-//                     __syncthreads();
-//                     // Unpack in shared memory, and move to device memory
-//                     if (i < np) {
-//                         ptd.unpackParticleData(shared, m*psize, i, p_comm_real, p_comm_int);
-//                     }
-//                 });
-//             } else
-// #endif
-//             {
-//                 for (int i = 0; i < np; ++i)
-//                 {
-//                     ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
-//                 }
-//             }
-//
-//             amrex::Gpu::Device::synchronize();
-//             amrex::The_Pinned_Arena()->free(recv_buffer);
-//         }
+    // Receive beam particles.
+    {
+        const amrex::Long np = np_rcv[0];
+        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long buffer_size = psize*np;
+        auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
+        MPI_Status status;
+        if (m_rank_z != m_numprocs_z-1) {
+            // all ranks except the head rank receive from one rank upstream
+            MPI_Recv(recv_buffer, buffer_size,
+                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                     m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
+        } else {
+            MPI_Recv(recv_buffer, buffer_size,
+                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                     0, pcomm_z_tag, m_comm_z, &status);
+        }
+
+        auto& ptile = m_multi_beam.getBeam(0);
+        auto old_size = ptile.numParticles();
+        auto new_size = old_size + np;
+        ptile.resize(new_size);
+        const auto ptd = ptile.getParticleTileData();
+
+        const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
+        const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+        const auto p_comm_real = comm_real.data();
+        const auto p_comm_int = comm_int.data();
+#ifdef AMREX_USE_GPU
+        if (amrex::Gpu::inLaunchRegion()) {
+            int const np_per_block = 128;
+            int const nblocks = (np+np_per_block-1)/np_per_block;
+            std::size_t const shared_mem_bytes = np_per_block * psize;
+            // NOTE - TODO DPC++
+            amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+            [=] AMREX_GPU_DEVICE () noexcept
+            {
+                amrex::Gpu::SharedMemory<char> gsm;
+                char* const shared = gsm.dataPtr();
+
+                // Copy packed data from recv_buffer (in pinned memory) to shared memory
+                const int i = blockDim.x*blockIdx.x+threadIdx.x;
+                const unsigned int m = threadIdx.x;
+                const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
+                for (unsigned int index = m;
+                     index < mend*psize/sizeof(double); index += blockDim.x) {
+                    const double *csrc = (double *)(recv_buffer+blockDim.x*blockIdx.x*psize);
+                    double *cdest = (double *)shared;
+                    cdest[index] = csrc[index];
+                }
+
+                __syncthreads();
+                // Unpack in shared memory, and move to device memory
+                if (i < np) {
+                    ptd.unpackParticleData(shared, m*psize, i+old_size, p_comm_real, p_comm_int);
+                }
+            });
+        } else
+#endif
+        {
+            for (int i = 0; i < np; ++i)
+            {
+                ptd.unpackParticleData(recv_buffer, i*psize, i+old_size, p_comm_real, p_comm_int);
+            }
+        }
+
+        amrex::Gpu::Device::synchronize();
+        amrex::The_Pinned_Arena()->free(recv_buffer);
+    }
+
+    const int lev = 0;
+    m_box_sorters.clear();
+    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 #endif
 }
 
@@ -683,67 +694,85 @@ Hipace::Notify (const int step, const int it)
         }
     }
 
-// FIXME these should be beam particles
-//         // Same thing for the plasma particles. Currently only one tile.
-//         {
-//             const int lev = 0;
-//             const amrex::Long np = m_plasma_container.m_num_exchange;
-//             const amrex::Long psize = m_plasma_container.superParticleSize();
-//             const amrex::Long bufNotifyFinish(); // finish the previous sendNotifyFinish(); // finish the previous sendfer_size = psize*np;
-//             m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
-//
-//             const auto& ptile = m_plasma_container.ParticlesAt(lev, 0, 0);
-//             const auto ptd = ptile.getConstParticleTileData();
-//
-//             const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
-//             const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
-//             const auto p_comm_real = comm_real.data();
-//             const auto p_comm_int = comm_int.data();
-//             const auto p_psend_buffer = m_psend_buffer;
-// #ifdef AMREX_USE_GPU
-//             if (amrex::Gpu::inLaunchRegion()) {
-//                 const int np_per_block = 128;
-//                 const int nblocks = (np+np_per_block-1)/np_per_block;
-//                 const std::size_t shared_mem_bytes = np_per_block * psize;
-//                 // NOTE - TODO DPC++
-//                 amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-//                 [=] AMREX_GPU_DEVICE () noexcept
-//                 {
-//                     amrex::Gpu::SharedMemory<char> gsm;
-//                     char* const shared = gsm.dataPtr();
-//
-//                     // Pack particles from device memory to shared memory
-//                     const int i = blockDim.x*blockIdx.x+threadIdx.x;
-//                     const unsigned int m = threadIdx.x;
-//                     const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
-//                     if (i < np) {
-//                         ptd.packParticleData(shared, i, m*psize, p_comm_real, p_comm_int);
-//                     }
-//
-//                     __syncthreads();
-//
-//                     // Copy packed particles from shared memory to psend_buffer in pinned memory
-//                     for (unsigned int index = m;
-//                          index < mend*psize/sizeof(double); index += blockDim.x) {
-//                         const double *csrc = (double *)shared;
-//                         double *cdest = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
-//                         cdest[index] = csrc[index];
-//                     }
-//                 });
-//             } else
-// #endif
-//             {
-//                 for (int i = 0; i < np; ++i)
-//                 {
-//                     ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
-//                 }
-//             }
-//
-//             amrex::Gpu::Device::synchronize();
-//             MPI_Isend(m_psend_buffer, buffer_size,
-//                       amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-//                       m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
-//         }
+    // Same thing for the beam particles. Currently only one tile.
+    {
+        const int ibeam = 0;
+        const int offset = m_box_sorters[ibeam].boxOffsetsPtr()[it];
+        const amrex::Long np = np_snd[ibeam];
+        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long buffer_size = psize*np;
+        m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+
+        auto& ptile = m_multi_beam.getBeam(ibeam);
+        const auto ptd = ptile.getConstParticleTileData();
+
+        const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
+        const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+        const auto p_comm_real = comm_real.data();
+        const auto p_comm_int = comm_int.data();
+        const auto p_psend_buffer = m_psend_buffer;
+#ifdef AMREX_USE_GPU
+        if (amrex::Gpu::inLaunchRegion()) {
+            const int np_per_block = 128;
+            const int nblocks = (np+np_per_block-1)/np_per_block;
+            const std::size_t shared_mem_bytes = np_per_block * psize;
+            // NOTE - TODO DPC++
+            amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+            [=] AMREX_GPU_DEVICE () noexcept
+            {
+                amrex::Gpu::SharedMemory<char> gsm;
+                char* const shared = gsm.dataPtr();
+
+                // Pack particles from device memory to shared memory
+                const int i = blockDim.x*blockIdx.x+threadIdx.x;
+                const unsigned int m = threadIdx.x;
+                const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
+                if (i < np) {
+                    ptd.packParticleData(shared, offset+i, m*psize, p_comm_real, p_comm_int);
+                }
+
+                __syncthreads();
+
+                // Copy packed particles from shared memory to psend_buffer in pinned memory
+                for (unsigned int index = m;
+                     index < mend*psize/sizeof(double); index += blockDim.x) {
+                    const double *csrc = (double *)shared;
+                    double *cdest = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
+                    cdest[index] = csrc[index];
+                }
+            });
+        } else
+#endif
+        {
+            for (int i = 0; i < np; ++i)
+            {
+                ptd.packParticleData(p_psend_buffer, offset+i, i*psize, p_comm_real, p_comm_int);
+            }
+        }
+        amrex::Gpu::Device::synchronize();
+
+        if (m_rank_z == m_numprocs_z-1) {
+            ptile.resize(offset);
+        }
+        else {
+            ptile.resize(0);
+        }
+
+        if (m_rank_z != 0) {
+            // all ranks except the tail rank send their data downstream
+            MPI_Isend(m_psend_buffer, buffer_size,
+                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                      m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
+        } else {
+            // the tail rank sends its beam data to the head rank,
+            // if there are more time steps to calculate
+            if (step < m_max_step -1 ) {
+                MPI_Isend(m_psend_buffer, buffer_size,
+                          amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                          m_numprocs_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
+            }
+        }
+    }
 
 #endif
 }
@@ -752,15 +781,12 @@ void
 Hipace::NotifyFinish ()
 {
 #ifdef AMREX_USE_MPI
-    // FIXME this will be needed for the beam particle communication
-    // if (m_rank_z != 0) {
-    //     if (m_psend_buffer) {
-    //         MPI_Status status;
-    //         MPI_Wait(&m_psend_request, &status);
-    //         amrex::The_Pinned_Arena()->free(m_psend_buffer);
-    //         m_psend_buffer = nullptr;
-    //     }
-    // }
+    if (m_psend_buffer) {
+        MPI_Status status;
+        MPI_Wait(&m_psend_request, &status);
+        amrex::The_Pinned_Arena()->free(m_psend_buffer);
+        m_psend_buffer = nullptr;
+    }
 #endif
 }
 

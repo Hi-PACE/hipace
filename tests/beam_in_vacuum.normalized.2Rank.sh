@@ -26,6 +26,5 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
         beam.radius = 20. \
         hipace.file_prefix=$TEST_NAME \
-        hipace.verbose=2
 
 $HIPACE_EXAMPLE_DIR/analysis_2ranks.py --output-dir=$TEST_NAME

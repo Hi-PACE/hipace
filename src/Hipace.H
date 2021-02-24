@@ -153,9 +153,8 @@ public:
     int m_rank_z = 0;
     /** Max number of grid size in the longitudinal direction */
     int m_grid_size_z = 0;
-    // FIXME: beam particle communication
-    // /** Send buffer for particle longitudinal parallelization (pipeline) */
-    // char* m_psend_buffer = nullptr;
+    /** Send buffer for particle longitudinal parallelization (pipeline) */
+    char* m_psend_buffer = nullptr;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
 
