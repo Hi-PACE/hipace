@@ -34,6 +34,7 @@
  * \param[in] q elementary charge
  * \param[in] islice Particles in slice islice will deposit
  * \param[in] bins Indices of particles arranged per slices.
+ * \param[in] box_offset offset to particles on this box.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
