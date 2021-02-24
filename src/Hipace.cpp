@@ -393,6 +393,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
      * and the force terms of the plasma particles
      */
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
+    // SolveBxBy(islice, lev);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
@@ -414,6 +415,12 @@ Hipace::ResetAllQuantities (int lev)
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
+}
+
+void
+Hipace::SolveBxBy (const int islice, const int lev)
+{
+    
 }
 
 void
