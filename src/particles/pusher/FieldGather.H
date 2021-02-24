@@ -40,7 +40,7 @@ template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::ParticleReal yp,
-                     const amrex::ParticleReal /*zp*/,
+                     const amrex::ParticleReal zp,
                      amrex::ParticleReal& ExmByp,
                      amrex::ParticleReal& EypBxp,
                      amrex::ParticleReal& Ezp,
@@ -58,6 +58,8 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::Dim3& lo)
 {
     using namespace amrex::literals;
+
+    amrex::ignore_unused(zp);
 
     const amrex::Real dxi = 1.0_rt/dx[0];
     const amrex::Real dyi = 1.0_rt/dx[1];
