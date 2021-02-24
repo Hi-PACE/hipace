@@ -86,6 +86,7 @@ public:
      * the rank downstream.
      *
      * \param[in] step current time step
+     * \param[in] it current box
      */
     void Notify (const int step, const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
