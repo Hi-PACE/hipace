@@ -582,7 +582,7 @@ Hipace::Wait ()
                  0, ncomm_z_tag, m_comm_z, &status);
     }
 
-    amrex::AllPrint() << "Rank " << amrex::ParallelDescriptor::MyProc() << " " << np_rcv[0] << "\n";
+    amrex::AllPrint() << "Rank " << amrex::ParallelDescriptor::MyProc() << " gets " << np_rcv[0] << "\n";
 // FIXME these should be beam particles
 //         // Same thing for the plasma particles. Currently only one tile.
 //         {
