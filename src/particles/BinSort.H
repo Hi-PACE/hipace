@@ -15,6 +15,7 @@
  * \param[in] bx 3d box in which particles are sorted per slice
  * \param[in] beam Beam particle container
  * \param[in] geom Geometry
+ * \param[in] a_box_sorter object that sorts particles by box
  */
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
