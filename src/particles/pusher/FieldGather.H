@@ -59,20 +59,18 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 {
     using namespace amrex::literals;
 
-    amrex::ignore_unused(zp);
-
     const amrex::Real dxi = 1.0_rt/dx[0];
     const amrex::Real dyi = 1.0_rt/dx[1];
-//    const amrex::Real dzi = 1.0_rt/dx[2];
+    const amrex::Real dzi = 1.0_rt/dx[2];
 
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
-//    const amrex::Real zmin = xyzmin[2];
+    const amrex::Real zmin = xyzmin[2];
 
     // x,y,z direction
     const amrex::Real x = (xp-xmin)*dxi;
     const amrex::Real y = (yp-ymin)*dyi;
-//    const amrex::Real z = (zp-zmin)*dzi;
+    const amrex::Real z = (zp-zmin)*dzi;
 
 
     // --- Compute shape factors
@@ -87,7 +85,8 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 
     // z direction;
     amrex::Real sz_cell[depos_order_z + 1];
-//    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
+    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
+    amrex::ignore_unused(l_cell);
 
     // Gather field on particle ExmByp from field on grid exmby_arr
     for (int iz=0; iz<=depos_order_z; iz++){
