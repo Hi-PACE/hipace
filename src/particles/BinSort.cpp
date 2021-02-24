@@ -23,8 +23,6 @@ findParticlesInEachSlice (
     const auto dxi = geom.InvCellSizeArray();
     const auto plo = geom.ProbLoArray();
 
-    amrex::AllPrint() << "calling build on rank " << amrex::ParallelDescriptor::MyProc() << " with np " << np << "\n";
-
     // Find the particles that are in each slice and return collections of indices per slice.
     amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
     bins.build(
@@ -36,8 +34,6 @@ findParticlesInEachSlice (
             return amrex::IntVect(
                 AMREX_D_DECL(0, 0, static_cast<int>((p.pos(2)-plo[2])*dxi[2]-lo.z)));
         });
-
-    amrex::AllPrint() << bins.numBins() << "\n";
 
     return bins;
 }

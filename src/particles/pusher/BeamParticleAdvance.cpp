@@ -88,7 +88,6 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
         Hipace::m_external_focusing_field_strength;
     const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
 
-    amrex::AllPrint() << num_particles << " in slice " << islice_local << "\n";
     amrex::ParallelFor(num_particles,
                 [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = indices[cell_start+idx];

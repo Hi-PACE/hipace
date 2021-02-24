@@ -39,7 +39,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     BeamParticleContainer tmp(a_beam.get_name());
     tmp.resize(np);
 
-    amrex::scatterParticles(tmp, a_beam, np, dst_indices.dataPtr());
+    amrex::gatherParticles(tmp, a_beam, np, dst_indices.dataPtr());
 
     a_beam.swap(tmp);
 }

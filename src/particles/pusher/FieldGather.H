@@ -40,7 +40,7 @@ template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::ParticleReal yp,
-                     const amrex::ParticleReal zp,
+                     const amrex::ParticleReal /*zp*/,
                      amrex::ParticleReal& ExmByp,
                      amrex::ParticleReal& EypBxp,
                      amrex::ParticleReal& Ezp,
@@ -61,16 +61,16 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 
     const amrex::Real dxi = 1.0_rt/dx[0];
     const amrex::Real dyi = 1.0_rt/dx[1];
-    const amrex::Real dzi = 1.0_rt/dx[2];
+//    const amrex::Real dzi = 1.0_rt/dx[2];
 
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
-    const amrex::Real zmin = xyzmin[2];
+//    const amrex::Real zmin = xyzmin[2];
 
     // x,y,z direction
     const amrex::Real x = (xp-xmin)*dxi;
     const amrex::Real y = (yp-ymin)*dyi;
-    const amrex::Real z = (zp-zmin)*dzi;
+//    const amrex::Real z = (zp-zmin)*dzi;
 
 
     // --- Compute shape factors
@@ -83,16 +83,16 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     amrex::Real sy_cell[depos_order_xy + 1];
     const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y - 0.5_rt);
 
-    // // z directioni;
+    // z direction;
     amrex::Real sz_cell[depos_order_z + 1];
-    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
+//    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
 
     // Gather field on particle ExmByp from field on grid exmby_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 ExmByp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    exmby_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                    exmby_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(exmby_arr).z);
             }
         }
     }
@@ -101,7 +101,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 EypBxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    eypbx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                    eypbx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(eypbx_arr).z);
             }
         }
     }
@@ -110,7 +110,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Ezp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    ez_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                    ez_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(ez_arr).z);
             }
         }
     }
@@ -119,7 +119,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Bxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    bx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                    bx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(bx_arr).z);
             }
         }
     }
@@ -128,7 +128,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Byp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    by_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                    by_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(by_arr).z);
             }
         }
     }
@@ -137,7 +137,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Bzp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    bz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz);
+                    bz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(bz_arr).z);
             }
         }
     }

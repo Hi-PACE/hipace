@@ -85,6 +85,13 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be nodal in all directions."
         );
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        jx_fab.box().length(2) == 1 &&
+        jy_fab.box().length(2) == 1 &&
+        jz_fab.box().length(2) == 1,
+        "jx, jy, and jz must be exactly one cell thick in the z direction."
+        );
+
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
         indices = nullptr;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
@@ -98,6 +105,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     cell_stop  = offsets[islice+1];
 
     int const num_particles = cell_stop-cell_start;
+
+    int z_slice = jx_fab.box().smallEnd(2);
 
     // Loop over particles and deposit into jx_fab, jy_fab, and jz_fab
     amrex::ParallelFor(
@@ -144,13 +153,13 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){
                         amrex::Gpu::Atomic::Add(
-                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
                         amrex::Gpu::Atomic::Add(
-                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         amrex::Gpu::Atomic::Add(
-                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
                     }
                 }
