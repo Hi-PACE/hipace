@@ -86,7 +86,7 @@ public:
      * the rank downstream.
      *
      * \param[in] step current time step
-     * \param[in] it current box
+     * \param[in] it current box number
      */
     void Notify (const int step, const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
@@ -111,7 +111,7 @@ public:
      *
      * \param[in] islice slice number
      * \param[in] lev MR level
-     * \param[in] bx current box to be calculated
+     * \param[in] ibox index of the current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
     void SolveOneSlice (int islice, int lev, const int ibox,
