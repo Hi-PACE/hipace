@@ -148,6 +148,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             amrex::Real sz_cell[depos_order_z + 1]; // depos_order_z MUST be 0.
             int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
             l_cell = 0;
+            amrex::ignore_unused(l_cell);
 
             // Deposit current into jx_arr, jy_arr, jz_arr
             for (int iz=0; iz<=depos_order_z; iz++){
