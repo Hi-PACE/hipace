@@ -17,10 +17,10 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
-# mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-#         amr.n_cell=128 256 30 \
-#         beam.radius = 20. \
-#         hipace.file_prefix=REF_diags/hdf5
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        amr.n_cell=128 256 30 \
+        beam.radius = 20. \
+        hipace.file_prefix=REF_diags/hdf5
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell=128 256 30 \
