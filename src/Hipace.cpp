@@ -313,7 +313,7 @@ Hipace::Evolve ()
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
         {
-            if (step > 0) Wait();
+            Wait(step);
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
@@ -563,11 +563,11 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 }
 
 void
-Hipace::Wait ()
+Hipace::Wait (const int step)
 {
     HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
-
+    if (step == 0) return;
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_rcv(nbeams);
 
@@ -674,6 +674,9 @@ Hipace::Notify (const int step, const int it)
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
 
+    // last step does not need to send anything
+    if (step == m_max_step -1 ) return;
+
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_snd(nbeams);
 
@@ -689,12 +692,9 @@ Hipace::Notify (const int step, const int it)
                   m_rank_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
     } else {
         // the tail rank sends its beam data to the head rank,
-        // if there are more time steps to calculate
-        if (step < m_max_step -1 ) {
-            MPI_Isend(np_snd.dataPtr(), nbeams,
-                      amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                      m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
-        }
+        MPI_Isend(np_snd.dataPtr(), nbeams,
+                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                  m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
     }
 
     // Same thing for the beam particles. Currently only one tile.
@@ -769,11 +769,10 @@ Hipace::Notify (const int step, const int it)
         } else {
             // the tail rank sends its beam data to the head rank,
             // if there are more time steps to calculate
-            if (step < m_max_step -1 ) {
-                MPI_Isend(m_psend_buffer, buffer_size,
-                          amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                          m_numprocs_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
-            }
+            MPI_Isend(m_psend_buffer, buffer_size,
+                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                      m_numprocs_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
+
         }
     }
 

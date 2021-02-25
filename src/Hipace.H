@@ -77,8 +77,10 @@ public:
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be received (2 and 3),
      * MPI_Recv slices from the upstream rank into this buffer and copy from the buffer to
      * slice multifabs of current rank.
+     *
+     * \param[in] step current time step
      */
-    void Wait ();
+    void Wait (const int step);
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
