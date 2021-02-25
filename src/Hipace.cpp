@@ -662,10 +662,10 @@ Hipace::Wait (const int step)
                 for (int i = 0; i < np; ++i)
                 {
                     ptd.unpackParticleData(
-                        recv_buffer+offset, i*psize, i+old_size, p_comm_real, p_comm_int);
+                        recv_buffer+offset_beam, i*psize, i+old_size, p_comm_real, p_comm_int);
                 }
             }
-            offset += np;
+            offset_beam += np;
         }
 
         amrex::Gpu::Device::synchronize();
