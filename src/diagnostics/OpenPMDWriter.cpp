@@ -193,8 +193,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});
         }
         //  save "extra" particle properties in SoA (momenta and weight)
-         SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, box_offset,
-                          numParticleOnTile);
+        SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, box_offset,
+                         numParticleOnTile);
 
          m_tmp_offset[ibeam] = numParticleOnTile64;
     }
