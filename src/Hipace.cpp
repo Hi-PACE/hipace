@@ -341,8 +341,6 @@ Hipace::Evolve ()
             Notify(step, it);
         }
 
-        }
-
         /* Passing the adaptive time step info */
         // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
         // Slices have already been shifted, so send
