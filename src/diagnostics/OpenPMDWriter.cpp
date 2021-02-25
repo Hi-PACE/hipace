@@ -32,7 +32,8 @@ OpenPMDWriter::WriteDiagnostics (
     amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int lev,
-    const int slice_dir, const amrex::Vector< std::string > varnames)
+    const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
+    const amrex::Vector<BoxSorter>& a_box_sorter_vec)
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
     iteration.setTime(physical_time);
@@ -40,7 +41,7 @@ OpenPMDWriter::WriteDiagnostics (
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
     a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
-    WriteBeamParticleData(a_multi_beam, iteration, output_step);
+    WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec);
 
     m_outputSeries->flush();
 
@@ -123,11 +124,15 @@ OpenPMDWriter::WriteFieldData (
 
 void
 OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
-                                      const int output_step)
+                                      const int output_step, const int it,
+                                      const amrex::Vector<BoxSorter>& a_box_sorter_vec)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
-    for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
+    const int nbeams = beams.get_nbeams();
+    m_offset.resize(nbeams);
+    m_tmp_offset.resize(nbeams);
+    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
@@ -138,11 +143,18 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             SetupRealProperties(beam_species, m_real_names, np);
         }
 
-        uint64_t offset = static_cast<uint64_t>( beams.get_upstream_n_part(ibeam) );
+        // if first box of loop over boxes, reset offset
+        if ( it == amrex::ParallelDescriptor::NProcs() -1 ) {
+            m_offset[ibeam] = 0;
+            m_tmp_offset[ibeam] = 0;
+        } else {
+            m_offset[ibeam] += m_tmp_offset[ibeam];
+        }
+        const uint64_t box_offset = a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
         // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
         auto& beam = beams.getBeam(ibeam);
 
-        auto const numParticleOnTile = beam.numParticles();
+        auto const numParticleOnTile = a_box_sorter_vec[ibeam].boxCountsPtr()[it];
         uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
 
         if (numParticleOnTile == 0) return;
@@ -151,7 +163,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         // note: this implementation iterates the AoS 4x...
         // if we flush late as we do now, we can also copy out the data in one go
         const auto& aos = beam.GetArrayOfStructs();  // size =  numParticlesOnTile
-        const auto& pos_structs = aos.begin();
+        const auto& pos_structs = aos.begin() + box_offset;
         {
             // Save positions
             std::vector< std::string > const positionComponents{"x", "y", "z"};
@@ -166,7 +178,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                     curr.get()[i] = pos_structs[i].pos(currDim);
                 }
                 std::string const positionComponent = positionComponents[currDim];
-                beam_species["position"][positionComponent].storeChunk(curr, {offset},
+                beam_species["position"][positionComponent].storeChunk(curr, {m_offset[ibeam]},
                                                                        {numParticleOnTile64});
             }
 
@@ -178,10 +190,13 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                 ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
             }
             auto const scalar = openPMD::RecordComponent::SCALAR;
-            beam_species["id"][scalar].storeChunk(ids, {offset}, {numParticleOnTile64});
+            beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});
         }
         //  save "extra" particle properties in SoA (momenta and weight)
-        SaveRealProperty(beam, beam_species, offset, m_real_names);
+         SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, box_offset,
+                          numParticleOnTile);
+
+         m_tmp_offset[ibeam] = numParticleOnTile64;
     }
 }
 
@@ -254,13 +269,14 @@ void
 OpenPMDWriter::SaveRealProperty(BeamParticleContainer& pc,
                                 openPMD::ParticleSpecies& currSpecies,
                                 unsigned long long const offset,
-                                amrex::Vector<std::string> const& real_comp_names)
+                                amrex::Vector<std::string> const& real_comp_names,
+                                unsigned long long const box_offset,
+                                const unsigned long long numParticleOnTile)
 
 {
     /* we have 4 SoA real attributes: weight, ux, uy, uz */
     int const NumSoARealAttributes = real_comp_names.size();
 
-    auto const numParticleOnTile = pc.numParticles();
     uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
     auto const& soa = pc.GetStructOfArrays();
     {
@@ -272,7 +288,7 @@ OpenPMDWriter::SaveRealProperty(BeamParticleContainer& pc,
             auto& currRecord = currSpecies[record_name];
             auto& currRecordComp = currRecord[component_name];
 
-            currRecordComp.storeChunk(openPMD::shareRaw(soa.GetRealData(idx)),
+            currRecordComp.storeChunk(openPMD::shareRaw(soa.GetRealData(idx).data()+box_offset),
                 {offset}, {numParticleOnTile64});
         } // end for NumSoARealAttributes
     }
