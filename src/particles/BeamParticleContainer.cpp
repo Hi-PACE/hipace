@@ -229,7 +229,7 @@ BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
 }
 
 void
-BeamParticleContainer::RedistributeSlice (int const lev)
+BeamParticleContainer::RedistributeSlice (int const lev, int const offset)
 {
     HIPACE_PROFILE("BeamParticleContainer::RedistributeSlice()");
 
@@ -243,9 +243,9 @@ BeamParticleContainer::RedistributeSlice (int const lev)
 
     // Extract particle properties
     auto& aos = this->GetArrayOfStructs(); // For positions
-    const auto& pos_structs = aos.begin();
+    const auto& pos_structs = aos.begin() + offset;
     auto& soa = this->GetStructOfArrays(); // For momenta and weights
-    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + offset;
 
     // Loop over particles and handle particles outside of the box
     amrex::ParallelFor(

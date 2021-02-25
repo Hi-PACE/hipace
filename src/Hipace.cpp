@@ -339,13 +339,9 @@ Hipace::Evolve ()
         }
 
         // FIXME: beam disabled
-        // if (amrex::ParallelDescriptor::NProcs() == 1) {
-        //     m_multi_beam.Redistribute();
-        // } else {
-        //     m_multi_beam.RedistributeSlice(lev);
-        //     amrex::Print()<<"WARNING: In parallel runs, beam particles are only redistributed "
-        //                     " transversely. \n";
-        // }
+        m_multi_beam.RedistributeSlice(lev);
+        amrex::Print()<<"WARNING: beam particles are only redistributed transversely yet. \n";
+
 
         /* Passing the adaptive time step info */
         // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
