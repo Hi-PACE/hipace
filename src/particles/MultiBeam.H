@@ -120,6 +120,14 @@ public:
 
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
     void ConvertUnits (ConvertDirection convert_dir);
+
+    /** \brief Check that all beams have the same number of Real components
+     * and return this number */
+    const int NumRealComps ();
+
+    /** \brief Check that all beams have the same number of Int components
+     * and return this number */
+    const int NumIntComps ();
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

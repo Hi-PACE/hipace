@@ -709,8 +709,8 @@ Hipace::Notify (const int step, const int it)
         auto& ptile = m_multi_beam.getBeam(ibeam);
         const auto ptd = ptile.getConstParticleTileData();
 
-        const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
-        const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+        const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
+        const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
         const auto p_comm_real = comm_real.data();
         const auto p_comm_int = comm_int.data();
         const auto p_psend_buffer = m_psend_buffer;
