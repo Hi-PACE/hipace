@@ -699,6 +699,8 @@ Hipace::Notify (const int step, const int it)
 
     // Same thing for the beam particles. Currently only one tile.
     {
+        // For now, assume there is only one beam (should only be required for Wait/Notify).
+        AMREX_ALWAYS_ASSERT(m_multi_beam.get_beams() <= 1);
         const int ibeam = 0;
         const int offset = m_box_sorters[ibeam].boxOffsetsPtr()[it];
         const amrex::Long np = np_snd[ibeam];
