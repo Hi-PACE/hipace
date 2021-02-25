@@ -612,8 +612,8 @@ Hipace::Wait ()
         ptile.resize(new_size);
         const auto ptd = ptile.getParticleTileData();
 
-        const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
-        const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+        const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
+        const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
         const auto p_comm_real = comm_real.data();
         const auto p_comm_int = comm_int.data();
 #ifdef AMREX_USE_GPU
