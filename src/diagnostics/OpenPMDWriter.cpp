@@ -246,18 +246,18 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     }
 
     // write SI conversion
-    currSpecies["position"]["x"].setUnitSI(hipace_to_SI_pos);
-    currSpecies["position"]["y"].setUnitSI(hipace_to_SI_pos);
-    currSpecies["position"]["z"].setUnitSI(hipace_to_SI_pos);
-    currSpecies["positionOffset"]["x"].setUnitSI(hipace_to_SI_pos); //posOffset allways 0
-    currSpecies["positionOffset"]["y"].setUnitSI(hipace_to_SI_pos);
-    currSpecies["positionOffset"]["z"].setUnitSI(hipace_to_SI_pos);
-    currSpecies["momentum"]["x"].setUnitSI(hipace_to_SI_momentum );
-    currSpecies["momentum"]["y"].setUnitSI(hipace_to_SI_momentum );
-    currSpecies["momentum"]["z"].setUnitSI(hipace_to_SI_momentum );
-    currSpecies["weighting"][scalar].setUnitSI(hipace_to_SI_weight);
-    currSpecies["charge"][scalar].setUnitSI(hipace_to_SI_charge);
-    currSpecies["mass"][scalar].setUnitSI(hipace_to_SI_mass);
+    currSpecies["position"]["x"].setUnitSI( hipace_to_SI_pos );
+    currSpecies["position"]["y"].setUnitSI( hipace_to_SI_pos );
+    currSpecies["position"]["z"].setUnitSI( hipace_to_SI_pos );
+    currSpecies["positionOffset"]["x"].setUnitSI( hipace_to_SI_pos ); //posOffset allways 0
+    currSpecies["positionOffset"]["y"].setUnitSI( hipace_to_SI_pos );
+    currSpecies["positionOffset"]["z"].setUnitSI( hipace_to_SI_pos );
+    currSpecies["momentum"]["x"].setUnitSI( hipace_to_SI_momentum );
+    currSpecies["momentum"]["y"].setUnitSI( hipace_to_SI_momentum );
+    currSpecies["momentum"]["z"].setUnitSI( hipace_to_SI_momentum );
+    currSpecies["weighting"][scalar].setUnitSI( hipace_to_SI_weight );
+    currSpecies["charge"][scalar].setUnitSI( hipace_to_SI_charge );
+    currSpecies["mass"][scalar].setUnitSI( hipace_to_SI_mass );
 }
 
 void
