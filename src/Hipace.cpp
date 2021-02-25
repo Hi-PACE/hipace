@@ -80,6 +80,8 @@ Hipace::Hipace () :
                                      "To avoid output, please use output_period = -1.");
     pph.query("beam_injection_cr", m_beam_injection_cr);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step,
+                                     "Please use more or equal time steps than number of ranks");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
