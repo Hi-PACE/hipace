@@ -199,6 +199,7 @@ void
 OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
          const unsigned long long& np, const amrex::Geometry& geom)
 {
+    const PhysConst phys_const_hipace = get_phys_const();
     const PhysConst phys_const_SI = make_constants_SI();
     auto const realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
     auto const idType = openPMD::Dataset(openPMD::determineDatatype< uint64_t >(), {np});
@@ -213,9 +214,9 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     auto const scalar = openPMD::RecordComponent::SCALAR;
     currSpecies["id"][scalar].resetDataset( idType );
     currSpecies["charge"][scalar].resetDataset( realType );
-    currSpecies["charge"][scalar].makeConstant( phys_const_SI.q_e );
+    currSpecies["charge"][scalar].makeConstant( phys_const_hipace.q_e );
     currSpecies["mass"][scalar].resetDataset( realType );
-    currSpecies["mass"][scalar].makeConstant( phys_const_SI.m_e );
+    currSpecies["mass"][scalar].makeConstant( phys_const_hipace.m_e );
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
@@ -227,6 +228,8 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
     double hipace_to_SI_momentum = phys_const_SI.m_e;
+    double hipace_to_SI_charge = 1.;
+    double hipace_to_SI_mass = 1.;
 
     if(Hipace::m_normalized_units) {
         const auto dx = geom.CellSizeArray();
@@ -238,6 +241,8 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
         hipace_to_SI_pos = kp_inv;
         hipace_to_SI_weight = n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
         hipace_to_SI_momentum *= phys_const_SI.c;
+        hipace_to_SI_charge = phys_const_SI.q_e;
+        hipace_to_SI_mass = phys_const_SI.m_e;
     }
 
     // write SI conversion
@@ -251,8 +256,8 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
     currSpecies["momentum"]["y"].setUnitSI(hipace_to_SI_momentum );
     currSpecies["momentum"]["z"].setUnitSI(hipace_to_SI_momentum );
     currSpecies["weighting"][scalar].setUnitSI(hipace_to_SI_weight);
-    currSpecies["charge"][scalar].setUnitSI(1.);
-    currSpecies["mass"][scalar].setUnitSI(1.);
+    currSpecies["charge"][scalar].setUnitSI(hipace_to_SI_charge);
+    currSpecies["mass"][scalar].setUnitSI(hipace_to_SI_mass);
 }
 
 void
