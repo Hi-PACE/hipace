@@ -123,11 +123,11 @@ public:
 
     /** \brief Check that all beams have the same number of Real components
      * and return this number */
-    const int NumRealComps ();
+    int NumRealComps ();
 
     /** \brief Check that all beams have the same number of Int components
      * and return this number */
-    const int NumIntComps ();
+    int NumIntComps ();
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

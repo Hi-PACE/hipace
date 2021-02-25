@@ -117,7 +117,7 @@ MultiBeam::ConvertUnits (ConvertDirection convert_direction)
     }
 }
 
-const int
+int
 MultiBeam::NumRealComps ()
 {
     int comps = 0;
@@ -130,7 +130,7 @@ MultiBeam::NumRealComps ()
     return comps;
 }
 
-const int
+int
 MultiBeam::NumIntComps ()
 {
     int comps = 0;
