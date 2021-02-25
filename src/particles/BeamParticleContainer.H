@@ -117,6 +117,7 @@ public:
 
     unsigned long long m_total_num_particles {0};
 
+    // FIXME not required in new pipeline
     int get_upstream_n_part () const {return m_num_particles_on_upstream_ranks;};
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;};
