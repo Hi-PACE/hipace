@@ -4,15 +4,20 @@
 
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
-    int /*lev*/, int /*ibox*/, amrex::Box bx,
-    BeamParticleContainer& beam, amrex::Geometry& geom)
+    int /*lev*/, int ibox, amrex::Box bx,
+    BeamParticleContainer& beam, amrex::Geometry& geom,
+    const BoxSorter& a_box_sorter)
 {
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     const amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
 
+    const int np = a_box_sorter.boxCountsPtr()[ibox];
+    const int offset = a_box_sorter.boxOffsetsPtr()[ibox];
+
     // Extract particle structures for this tile
-    int const np = beam.numParticles();
+    // int const np = beam.numParticles();
     BeamParticleContainer::ParticleType const* particle_ptr = beam.GetArrayOfStructs()().data();
+    particle_ptr += offset;
 
     // Extract box properties
     const auto lo = lbound(cbx);

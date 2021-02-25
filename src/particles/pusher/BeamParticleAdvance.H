@@ -12,11 +12,12 @@
  * \param[in] lev MR level
  * \param[in] islice index of the slice on which the beam particles are pushed
  * \param[in] box current box to calculate in loop over longutidinal boxes
+ * \param[in] offset offset to the current box
  * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
  */
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                      int const lev, const int islice, const amrex::Box box,
-                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
+                           int const lev, const int islice, const amrex::Box box, const int offset,
+                           amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
 
 #endif //  BEAMPARTICLEADVANCE_H_

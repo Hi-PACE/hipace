@@ -7,7 +7,7 @@
 
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                           int const lev, const int islice, const amrex::Box box,
+                           int const lev, const int islice, const amrex::Box box, const int offset,
                            amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
@@ -22,7 +22,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     const amrex::Real dt = Hipace::m_dt;
 
     // Assumes '2' == 'z' == 'the long dimension'.
-    int islice_local = islice - gm.Domain().smallEnd(2);
+    int islice_local = islice - box.smallEnd(2);
 
     // Extract properties associated with the extent of the current box
     const int depos_order_xy = Hipace::m_depos_order_xy;
@@ -57,15 +57,15 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
 
     // Extract particle properties
     auto& soa = beam.GetStructOfArrays(); // For momenta and weights
-    amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data();
-    amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data();
-    amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data();
-    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+    amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data() + offset;
+    amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data() + offset;
+    amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data() + offset;
+    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + offset;
 
     const auto getPosition =
-        GetParticlePosition<BeamParticleContainer>(beam);
+        GetParticlePosition<BeamParticleContainer>(beam, offset);
     const auto setPosition =
-        SetParticlePosition<BeamParticleContainer>(beam);
+        SetParticlePosition<BeamParticleContainer>(beam, offset);
     const amrex::Real zmin = xyzmin[2];
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.

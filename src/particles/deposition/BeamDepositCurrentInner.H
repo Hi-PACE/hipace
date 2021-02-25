@@ -34,6 +34,7 @@
  * \param[in] q elementary charge
  * \param[in] islice Particles in slice islice will deposit
  * \param[in] bins Indices of particles arranged per slices.
+ * \param[in] box_offset offset to particles on this box.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
@@ -45,7 +46,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          int islice,
-                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                         int box_offset)
 {
     using namespace amrex::literals;
 
@@ -53,12 +55,12 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
 
     // Extract particle properties
     const auto& aos = ptile.GetArrayOfStructs(); // For positions
-    const auto& pos_structs = aos.begin();
+    const auto& pos_structs = aos.begin() + box_offset;
     const auto& soa = ptile.GetStructOfArrays(); // For momenta and weights
-    const auto  wp = soa.GetRealData(BeamIdx::w).data();
-    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+    const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+    const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
+    const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
+    const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
 
     // Extract box properties
     const amrex::Real dxi = 1.0/dx[0];
@@ -84,6 +86,13 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be nodal in all directions."
         );
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        jx_fab.box().length(2) == 1 &&
+        jy_fab.box().length(2) == 1 &&
+        jz_fab.box().length(2) == 1,
+        "jx, jy, and jz must be exactly one cell thick in the z direction."
+        );
+
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
         indices = nullptr;
     amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
@@ -97,6 +106,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     cell_stop  = offsets[islice+1];
 
     int const num_particles = cell_stop-cell_start;
+
+    int z_slice = jx_fab.box().smallEnd(2);
 
     // Loop over particles and deposit into jx_fab, jy_fab, and jz_fab
     amrex::ParallelFor(
@@ -137,19 +148,20 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             amrex::Real sz_cell[depos_order_z + 1]; // depos_order_z MUST be 0.
             int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
             l_cell = 0;
+            amrex::ignore_unused(l_cell);
 
             // Deposit current into jx_arr, jy_arr, jz_arr
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){
                         amrex::Gpu::Atomic::Add(
-                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
                         amrex::Gpu::Atomic::Add(
-                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         amrex::Gpu::Atomic::Add(
-                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, lo.z+l_cell+iz),
+                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
                     }
                 }

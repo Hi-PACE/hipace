@@ -31,12 +31,12 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py \
-    --normalized-data normalized_data \
-    --si-data si_data \
-    --si-fixed-weight-data si_data_fixed_weight
+    --normalized-data normalized_data/h5 \
+    --si-data si_data/h5 \
+    --si-fixed-weight-data si_data_fixed_weight/h5
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name normalized_data \
+    --file_name normalized_data/h5 \
     --test-name blowout_wake.2Rank

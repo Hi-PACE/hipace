@@ -77,8 +77,10 @@ public:
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be received (2 and 3),
      * MPI_Recv slices from the upstream rank into this buffer and copy from the buffer to
      * slice multifabs of current rank.
+     *
+     * \param[in] step current time step
      */
-    void Wait ();
+    void Wait (const int step);
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
@@ -86,8 +88,9 @@ public:
      * the rank downstream.
      *
      * \param[in] step current time step
+     * \param[in] it current box number
      */
-    void Notify (const int step);
+    void Notify (const int step, const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish ();
 
@@ -110,10 +113,10 @@ public:
      *
      * \param[in] islice slice number
      * \param[in] lev MR level
-     * \param[in] bx current box to be calculated
+     * \param[in] ibox index of the current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice, int lev, const amrex::Box bx,
+    void SolveOneSlice (int islice, int lev, const int ibox,
                         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
@@ -152,9 +155,8 @@ public:
     int m_rank_z = 0;
     /** Max number of grid size in the longitudinal direction */
     int m_grid_size_z = 0;
-    // FIXME: beam particle communication
-    // /** Send buffer for particle longitudinal parallelization (pipeline) */
-    // char* m_psend_buffer = nullptr;
+    /** Send buffer for particle longitudinal parallelization (pipeline) */
+    char* m_psend_buffer = nullptr;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
 
@@ -223,6 +225,9 @@ private:
     amrex::Geometry m_slice_geom;
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
+
+    /** Used to sort the beam particles into boxes for pipelining */
+    amrex::Vector<BoxSorter> m_box_sorters;
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

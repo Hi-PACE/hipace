@@ -27,19 +27,24 @@ public:
      * \param[in] islice slice index in which the current is stored
      * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] ibox index of the current box
      */
     void DepositCurrentSlice (
         Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins);
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] lev MR level
      * \param[in] ibox box index
      * \param[in] bx 3D box on which per-slice sorting is done
      * \param[in] geom Geometry of the simulation domain
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
-    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom);
+    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
+                              const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
     /** \brief Loop over all beam species and sort particles by box
      *
@@ -59,10 +64,13 @@ public:
      * \param[in] islice slice index in which the current is stored
      * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] ibox index of the current box
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and dump them to plotfile
      * \param[in] filename name of the output file
@@ -112,6 +120,14 @@ public:
 
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
     void ConvertUnits (ConvertDirection convert_dir);
+
+    /** \brief Check that all beams have the same number of Real components
+     * and return this number */
+    int NumRealComps ();
+
+    /** \brief Check that all beams have the same number of Int components
+     * and return this number */
+    int NumIntComps ();
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
