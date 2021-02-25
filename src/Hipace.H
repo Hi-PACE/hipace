@@ -103,8 +103,9 @@ public:
     /** \brief Dump simulation data to file
      *
      * \param[in] output_step current iteration
+     * \param[in] it current box number
      */
-    void WriteDiagnostics (int output_step);
+    void WriteDiagnostics (int output_step, const int it);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};

@@ -44,19 +44,26 @@ private:
      * \param[in,out] currSpecies openPMD species to set up
      * \param[in] offset number of particles which have already been written
      * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
+     * \param[in] box_offset offset for the particles in the current box
+     * \param[in] numParticleOnTile number of particles in this box
      */
     void SaveRealProperty(BeamParticleContainer& pc, openPMD::ParticleSpecies& currSpecies,
                           unsigned long long const offset,
-                          amrex::Vector<std::string> const& real_comp_names);
+                          amrex::Vector<std::string> const& real_comp_names,
+                          unsigned long long const box_offset,
+                          const unsigned long long numParticleOnTile);
 
     /** \brief writing openPMD beam particle data
      *
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in,out] iteration openPMD iteration to which the data is written
      * \param[in] output_step current time step to dump
+     * \param[in] it current box number
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
-                                const int output_step);
+                                const int output_step, const int it,
+                                const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
     /** \brief writing openPMD field data
      *
@@ -82,6 +89,11 @@ private:
     /** Last iteration that was written to file.
      * This is stored to make sure we don't write the last iteration multiple times. */
     int m_last_output_dumped = -1;
+
+    /** vector of length nbeams with the numbers of particles already written to file */
+    amrex::Vector<uint64_t> m_offset;
+    /** vector of length nbeams with the temporary numbers of particles already written to file */
+    amrex::Vector<uint64_t> m_tmp_offset;
 public:
     /** Constructor */
     explicit OpenPMDWriter ();
@@ -100,12 +112,15 @@ public:
      * \param[in] lev MR level
      * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in] it current box number
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
     void WriteDiagnostics(
         amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int lev,
-        const int slice_dir, const amrex::Vector< std::string > varnames);
+        const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
     void reset () {m_outputSeries.reset();};
 

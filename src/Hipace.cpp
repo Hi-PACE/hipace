@@ -332,7 +332,7 @@ Hipace::Evolve ()
 
             Notify(step, it);
 #ifdef HIPACE_USE_OPENPMD
-            WriteDiagnostics(step+1);
+            WriteDiagnostics(step+1, it);
 #else
             amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
 #endif
@@ -797,7 +797,7 @@ Hipace::NotifyFinish ()
 }
 
 void
-Hipace::WriteDiagnostics (int output_step)
+Hipace::WriteDiagnostics (int output_step, const int it)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
@@ -815,7 +815,8 @@ Hipace::WriteDiagnostics (int output_step)
 #ifdef HIPACE_USE_OPENPMD
     constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
-                        m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames);
+                        m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
+                        it, m_box_sorters);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};

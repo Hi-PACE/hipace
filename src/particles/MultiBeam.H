@@ -101,6 +101,7 @@ public:
     unsigned long long get_total_num_particles (int i) const
         {return m_all_beams[i].get_total_num_particles();};
 
+    // FIXME not required in new pipeline
     /** returns the number of beam particles of the upstream ranks */
     int get_upstream_n_part (int i) const {return m_all_beams[i].get_upstream_n_part();};
 
