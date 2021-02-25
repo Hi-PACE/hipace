@@ -101,10 +101,13 @@ MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
 }
 
 void
-MultiBeam::RedistributeSlice (int const lev)
+MultiBeam::RedistributeSlice (int const lev, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                              const int ibox)
 {
-    for (auto& beam : m_all_beams) {
-        beam.RedistributeSlice(lev);
+    for (int i=0; i<m_nbeams; i++) {
+        auto beam = getBeam(i);
+        beam.RedistributeSlice(lev, a_box_sorter_vec[i].boxOffsetsPtr()[ibox],
+                               a_box_sorter_vec[i].boxCountsPtr()[ibox]);
     }
 }
 #endif

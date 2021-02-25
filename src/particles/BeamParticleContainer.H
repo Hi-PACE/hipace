@@ -103,8 +103,11 @@ public:
     /** Redistribute the particles on a slice, meaning particles, which left the box are returned
      * periodically and if peridicity = 0, their weight is set to 0
      * \param[in] lev MR level
+     * \param[in] offset offset for the particles in the current box
+     * \param[in] num_particles number of particles in this box
      */
-    void RedistributeSlice (int const lev);
+    void RedistributeSlice (int const lev, unsigned long long const offset,
+                            unsigned long long const num_particles);
 #endif
 
     std::string get_name () const {return m_name;};

@@ -330,18 +330,17 @@ Hipace::Evolve ()
                 SolveOneSlice(isl, lev, it, bins);
             };
 
+            m_multi_beam.RedistributeSlice(lev, m_box_sorters, it);
+            amrex::Print()<<"WARNING: beam particles are only redistributed transversely yet. \n";
+
             Notify(step, it);
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1);
 #else
             amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
 #endif
+
         }
-
-        // FIXME: beam disabled
-        m_multi_beam.RedistributeSlice(lev);
-        amrex::Print()<<"WARNING: beam particles are only redistributed transversely yet. \n";
-
 
         /* Passing the adaptive time step info */
         // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);

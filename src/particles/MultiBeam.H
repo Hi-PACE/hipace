@@ -114,8 +114,11 @@ public:
     /** Redistribute the particles on a slice, meaning particles, which left the box are returned
      * periodically and if peridicity = 0, their weight is set to 0
      * \param[in] lev MR level
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] ibox index of the current box
      */
-    void RedistributeSlice (int const lev);
+    void RedistributeSlice (int const lev, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                            const int ibox);
 #endif
 
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */

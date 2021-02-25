@@ -229,7 +229,8 @@ BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
 }
 
 void
-BeamParticleContainer::RedistributeSlice (int const lev, int const offset)
+BeamParticleContainer::RedistributeSlice (int const lev, unsigned long long const offset,
+                                          unsigned long long const num_particles)
 {
     HIPACE_PROFILE("BeamParticleContainer::RedistributeSlice()");
 
@@ -249,7 +250,7 @@ BeamParticleContainer::RedistributeSlice (int const lev, int const offset)
 
     // Loop over particles and handle particles outside of the box
     amrex::ParallelFor(
-        this->numParticles(),
+        num_particles,
         [=] AMREX_GPU_DEVICE (long ip) {
             // Set particle AoS
 
