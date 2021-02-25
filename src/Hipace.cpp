@@ -330,12 +330,12 @@ Hipace::Evolve ()
                 SolveOneSlice(isl, lev, it, bins);
             };
 
-            Notify(step, it);
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1);
 #else
             amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
 #endif
+            Notify(step, it);
         }
 
         // FIXME: beam disabled
@@ -662,7 +662,7 @@ Hipace::Wait (const int step)
                 for (int i = 0; i < np; ++i)
                 {
                     ptd.unpackParticleData(
-                        recv_buffer+offset_beam, i*psize, i+old_size, p_comm_real, p_comm_int);
+                        recv_buffer+offset_beam*psize, i*psize, i+old_size, p_comm_real, p_comm_int);
                 }
             }
             offset_beam += np;
@@ -713,7 +713,7 @@ Hipace::Notify (const int step, const int it)
 
     // Send beam particles. Currently only one tile.
     {
-        const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.end(), 0);;
+        const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.end(), 0);
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
@@ -730,7 +730,7 @@ Hipace::Notify (const int step, const int it)
             const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
-            const auto p_psend_buffer = m_psend_buffer + offset_beam;
+            const auto p_psend_buffer = m_psend_buffer + offset_beam*psize;
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion()) {
                 const int np_per_block = 128;
@@ -749,7 +749,7 @@ Hipace::Notify (const int step, const int it)
                         const unsigned int m = threadIdx.x;
                         const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
                         if (i < np) {
-                            ptd.packParticleData(shared, offset_boxe+i, m*psize, p_comm_real, p_comm_int);
+                            ptd.packParticleData(shared, offset_box+i, m*psize, p_comm_real, p_comm_int);
                         }
 
                         __syncthreads();
