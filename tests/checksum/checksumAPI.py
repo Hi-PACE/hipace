@@ -11,6 +11,7 @@ License: BSD-3-Clause-LBNL
 from checksum import Checksum
 from benchmark import Benchmark
 import argparse
+import ast
 import glob
 import sys
 import os
@@ -35,7 +36,7 @@ API for WarpX checksum tests. It can be used in two ways:
 
 
 def evaluate_checksum(test_name, file_name, rtol=1.e-9, atol=1.e-40,
-                      do_fields=True, do_particles=True):
+                      do_fields=True, do_particles=True, skip_dict={}):
     '''Compare IO file checksum with benchmark.
 
     Read checksum from input file_name, read benchmark
@@ -50,7 +51,7 @@ def evaluate_checksum(test_name, file_name, rtol=1.e-9, atol=1.e-40,
     '''
     test_checksum = Checksum(test_name, file_name, do_fields=do_fields,
                              do_particles=do_particles)
-    test_checksum.evaluate(rtol=rtol, atol=atol)
+    test_checksum.evaluate(rtol=rtol, atol=atol, skip_dict=skip_dict)
 
 
 def reset_benchmark(test_name, file_name, do_fields=True, do_particles=True):
@@ -115,6 +116,9 @@ if __name__ == '__main__':
     parser.add_argument('--skip-particles', dest='do_particles',
                         default=True, action='store_false',
                         help='If used, do not read/write particle checksums')
+    parser.add_argument('--skip', dest='skip_dict', default={},
+                        type=ast.literal_eval, help="Dictionary of a quantity \
+                        to skip, e.g., \"{'beam':['x', 'y']}\"")
 
     # Fields and/or particles are read from IO file/written to benchmark?
     parser.add_argument('--rtol', dest='rtol',
@@ -136,7 +140,7 @@ if __name__ == '__main__':
                         regression_testing/regtest.py')
 
     args = parser.parse_args()
-
+    
     if args.reset_benchmark:
         reset_benchmark(args.test_name, args.file_name,
                         do_fields=args.do_fields,
@@ -145,7 +149,8 @@ if __name__ == '__main__':
     if args.evaluate:
         evaluate_checksum(args.test_name, args.file_name, rtol=args.rtol,
                           atol=args.atol, do_fields=args.do_fields,
-                          do_particles=args.do_particles)
+                          do_particles=args.do_particles,
+                          skip_dict=args.skip_dict)
 
     if args.reset_all_benchmarks:
         # WARNING: this mode does not support skip-fields/particles
