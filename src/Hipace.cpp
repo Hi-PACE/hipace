@@ -35,8 +35,9 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_device_synchronize = false;
 int Hipace::m_beam_injection_cr = 1;
-amrex::Real Hipace::m_external_focusing_field_strength = 0.;
-amrex::Real Hipace::m_external_accel_field_strength = 0.;
+amrex::Real Hipace::m_external_ExmBy_slope = 0.;
+amrex::Real Hipace::m_external_Ez_slope = 0.;
+amrex::Real Hipace::m_external_Ez_uniform = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -83,8 +84,9 @@ Hipace::Hipace () :
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
-    pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
-    pph.query("external_accel_field_strength", m_external_accel_field_strength);
+    pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
+    pph.query("external_Ez_slope", m_external_Ez_slope);
+    pph.query("external_Ez_uniform", m_external_Ez_uniform);
 
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
@@ -355,6 +357,7 @@ Hipace::Evolve ()
 void
 Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
+    HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
     // for loop, the parallelcontext is the transverse communicator
     amrex::ParallelContext::push(m_comm_xy);
@@ -379,6 +382,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
     m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
@@ -821,8 +825,7 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
     // Write fields
     const std::string filename = amrex::Concatenate("plt", output_step);
     // assumption: same order as in struct enum Field Comps
-    const amrex::Vector< std::string > varnames
-        {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
+    const amrex::Vector< std::string > varnames = m_fields.getDiagComps();
 
     amrex::Vector<std::string> rfs;
 
