@@ -116,3 +116,29 @@ MultiBeam::ConvertUnits (ConvertDirection convert_direction)
         beam.ConvertUnits(convert_direction);
     }
 }
+
+const int
+MultiBeam::NumRealComps ()
+{
+    int comps = 0;
+    if (get_nbeams() > 0){
+        comps = m_all_beams[0].NumRealComps();
+        for (auto& beam : m_all_beams) {
+            AMREX_ALWAYS_ASSERT(beam.NumRealComps() == comps);
+        }
+    }
+    return comps;
+}
+
+const int
+MultiBeam::NumIntComps ()
+{
+    int comps = 0;
+    if (get_nbeams() > 0){
+        comps = m_all_beams[0].NumIntComps();
+        for (auto& beam : m_all_beams) {
+            AMREX_ALWAYS_ASSERT(beam.NumIntComps() == comps);
+        }
+    }
+    return comps;
+}
