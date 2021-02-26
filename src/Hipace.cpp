@@ -772,12 +772,7 @@ Hipace::Notify (const int step, const int it)
             }
             amrex::Gpu::Device::synchronize();
 
-            if (m_rank_z == m_numprocs_z-1) {
-                ptile.resize(offset_box);
-            }
-            else {
-                ptile.resize(0);
-            }
+            ptile.resize(offset_box);
             offset_beam += np;
         } // here
 
