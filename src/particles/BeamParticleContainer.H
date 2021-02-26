@@ -47,7 +47,8 @@ public:
         const amrex::Geometry& a_geom,
         const amrex::Real     a_zmin,
         const amrex::Real     a_zmax,
-        const amrex::Real     a_radius);
+        const amrex::Real     a_radius,
+        const amrex::Real     a_min_density);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
@@ -145,6 +146,7 @@ private:
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
+    amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Density of plasma to convert from_file beam to normalized units */
     amrex::Real m_plasma_density;

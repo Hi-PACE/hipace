@@ -39,9 +39,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.get("zmin", m_zmin);
         pp.get("zmax", m_zmax);
         pp.get("radius", m_radius);
+        pp.query("min_density", m_min_density);
         const GetInitialDensity get_density(m_name);
         const GetInitialMomentum get_momentum(m_name);
-        InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin, m_zmax, m_radius);
+        InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
+                         m_zmax, m_radius, m_min_density);
 
     } else if (m_injection_type == "fixed_weight") {
 
