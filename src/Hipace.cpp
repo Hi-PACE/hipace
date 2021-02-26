@@ -615,7 +615,7 @@ Hipace::Wait (const int step)
             const auto p_comm_int = comm_int.data();
 
 #ifdef AMREX_USE_GPU
-            if (amrex::Gpu::inLaunchRegion() and np > 0) {
+            if (amrex::Gpu::inLaunchRegion() && np > 0) {
                 int const np_per_block = 128;
                 int const nblocks = (np+np_per_block-1)/np_per_block;
                 std::size_t const shared_mem_bytes = np_per_block * psize;
