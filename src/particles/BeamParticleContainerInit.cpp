@@ -63,7 +63,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                   const amrex::Geometry& a_geom,
                   const amrex::Real a_zmin,
                   const amrex::Real a_zmax,
-                  const amrex::Real a_radius)
+                  const amrex::Real a_radius,
+                  const amrex::Real a_min_density)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -122,6 +123,9 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
+
+                const amrex::Real density = get_density(x, y, z);
+                if (density < a_min_density) continue;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -189,10 +193,13 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                 if (z >= a_zmax || z < a_zmin ||
                     (x*x+y*y) > a_radius*a_radius) continue;
 
+                const amrex::Real density = get_density(x, y, z);
+                if (density < a_min_density) continue;
+
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2]);
 
-                const amrex::Real weight = get_density(x, y, z) * scale_fac;
+                const amrex::Real weight =  density * scale_fac;
                 AddOneBeamParticle(pstruct, arrdata, x, y, z, u[0], u[1], u[2], weight,
                                    pid, procID, pidx, phys_const.c);
 
