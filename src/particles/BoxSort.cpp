@@ -29,7 +29,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
         if (dst_box < 0) {
             // particle has left domain transversely, stick it at the end and invalidate
             dst_box = num_boxes;
-            particle_ptr[i].id() = -particle_ptr[i].id();
+            particle_ptr[i].id() = -std::abs(particle_ptr[i].id());
         }
         unsigned int index = amrex::Gpu::Atomic::Inc(
             &p_box_counts[dst_box], max_unsigned_int);

@@ -109,4 +109,61 @@ struct SetParticlePosition
     }
 };
 
+/** \brief Functor that can be used to apply the boundary conditions to the macroparticles
+ *         inside a ParallelFor kernel
+ */
+template <class T_ParTile>
+struct EnforceBC
+{
+    using PType = typename T_ParTile::ParticleType;
+    using RType = amrex::ParticleReal;
+
+    PType* AMREX_RESTRICT m_structs;
+    RType* AMREX_RESTRICT m_weights;
+
+    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
+    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;
+    amrex::GpuArray<int,AMREX_SPACEDIM> m_is_per;
+    amrex::GpuArray<int,AMREX_SPACEDIM> m_periodicity;
+
+    /** Constructor.
+     * \param a_ptile tile containing the macroparticles
+     * \param lev level of MR
+     * \param a_offset offset to apply to the particle indices
+     */
+    EnforceBC (T_ParTile& a_ptile, const int lev, int a_offset = 0) noexcept
+    {
+
+        m_plo    = Hipace::GetInstance().Geom(lev).ProbLoArray();
+        m_phi    = Hipace::GetInstance().Geom(lev).ProbHiArray();
+        m_is_per = Hipace::GetInstance().Geom(lev).isPeriodicArray();
+        AMREX_ALWAYS_ASSERT(m_is_per[0] == m_is_per[1]);
+
+        m_periodicity = {true, true, false};
+
+        auto& aos = a_ptile.GetArrayOfStructs();
+        m_structs = aos().dataPtr() + a_offset;
+        auto& soa = a_ptile.GetStructOfArrays();
+        m_weights = soa.GetRealData(BeamIdx::w).data() + a_offset;
+    }
+
+    /** \brief enforces the boundary condition to the particle at index `i + a_offset`
+     * and returns if the particle is invalid
+     * \param[in] ip index of the particle
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    bool operator() (const int ip) const noexcept
+    {
+        using namespace amrex::literals;
+
+        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_periodicity);
+        const bool invalid = shifted + !m_is_per[0];
+        if (invalid) {
+            m_weights[ip] = 0.0_rt;
+            m_structs[ip].id() = -1;
+        }
+        return invalid;
+    }
+};
+
 #endif // HIPACE_GETANDSETPOSITION_H_

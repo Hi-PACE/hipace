@@ -66,7 +66,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
-        amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data();
 
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();

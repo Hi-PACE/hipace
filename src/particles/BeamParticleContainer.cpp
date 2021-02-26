@@ -228,7 +228,7 @@ BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
     return;
 }
 
-void
+void // FIXME this function is outdated and replaced by the EnforceBC functor
 BeamParticleContainer::RedistributeSlice (int const lev)
 {
     HIPACE_PROFILE("BeamParticleContainer::RedistributeSlice()");
