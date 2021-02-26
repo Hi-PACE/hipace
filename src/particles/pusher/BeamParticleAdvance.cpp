@@ -60,12 +60,11 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data() + offset;
     amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data() + offset;
     amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data() + offset;
-    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + offset;
 
-    const auto getPosition =
-        GetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto setPosition =
-        SetParticlePosition<BeamParticleContainer>(beam, offset);
+    const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
+    const auto setPosition = SetParticlePosition<BeamParticleContainer>(beam, offset);
+    const auto enforceBC = EnforceBC<BeamParticleContainer>(beam, lev, offset);
+
     const amrex::Real zmin = xyzmin[2];
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
@@ -106,6 +105,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
                 yp += dt * 0.5_rt * uyp[ip] / gammap;
 
                 setPosition(ip, xp, yp, zp);
+                if (enforceBC(ip)) return;
 
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
@@ -158,6 +158,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
                 yp += dt * 0.5_rt * uy_next  / gamma_next;
                 if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
                 setPosition(ip, xp, yp, zp);
+                enforceBC(ip);
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;
