@@ -227,37 +227,3 @@ BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
 
     return;
 }
-
-void // FIXME this function is outdated and replaced by the EnforceBC functor
-BeamParticleContainer::RedistributeSlice (int const lev)
-{
-    HIPACE_PROFILE("BeamParticleContainer::RedistributeSlice()");
-
-    using namespace amrex::literals;
-    const auto plo    = Hipace::GetInstance().Geom(lev).ProbLoArray();
-    const auto phi    = Hipace::GetInstance().Geom(lev).ProbHiArray();
-    const auto is_per = Hipace::GetInstance().Geom(lev).isPeriodicArray();
-    AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
-
-    amrex::GpuArray<int,AMREX_SPACEDIM> const periodicity = {true, true, false};
-
-    // Extract particle properties
-    auto& aos = this->GetArrayOfStructs(); // For positions
-    const auto& pos_structs = aos.begin();
-    auto& soa = this->GetStructOfArrays(); // For momenta and weights
-    amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
-
-    // Loop over particles and handle particles outside of the box
-    amrex::ParallelFor(
-        this->numParticles(),
-        [=] AMREX_GPU_DEVICE (long ip) {
-            // Set particle AoS
-
-            const bool shifted = enforcePeriodic(pos_structs[ip], plo, phi, periodicity);
-
-            if (shifted && !is_per[0]) {
-                wp[ip] = 0.0_rt;
-                pos_structs[ip].id() = -1;
-            }
-        });
-}
