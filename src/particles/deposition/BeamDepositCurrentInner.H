@@ -115,8 +115,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         [=] AMREX_GPU_DEVICE (long idx) {
             const int ip = indices[cell_start+idx];
 
-            if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
-
+            if (pos_structs[ip].id() < 0) return;
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq

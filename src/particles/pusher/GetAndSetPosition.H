@@ -53,6 +53,22 @@ struct GetParticlePosition
         y = m_structs[i].pos(1);
         z = m_structs[i].pos(2);
     }
+
+    /** \brief Get the position of the particle at index `i + a_offset`, and put it in x, y and z
+     * \param[in] i index of the particle
+     * \param[in,out] x x position of particle i, modified by this function
+     * \param[in,out] y y position of particle i, modified by this function
+     * \param[in,out] z z position of particle i, modified by this function
+     * \param[in,out] id id of particle i, modified by this function
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void operator() (const int i, RType& x, RType& y, RType& z, int& id) const noexcept
+    {
+        x = m_structs[i].pos(0);
+        y = m_structs[i].pos(1);
+        z = m_structs[i].pos(2);
+        id = m_structs[i].id();
+    }
 };
 
 /** \brief Functor that can be used to modify the positions of the macroparticles
