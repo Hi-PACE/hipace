@@ -158,6 +158,10 @@ public:
     int m_grid_size_z = 0;
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
+    /** Send buffer for the number of particles for each beam (pipeline) */
+    amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
+    /** status of the number of particles send request */
+    MPI_Request m_nsend_request = MPI_REQUEST_NULL;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
 
