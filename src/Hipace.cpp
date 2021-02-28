@@ -315,6 +315,7 @@ Hipace::Evolve ()
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
         {
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" START step "<<step<<" it "<<it<<'\n';
             Wait(step);
 
             m_box_sorters.clear();
@@ -559,24 +560,31 @@ void
 Hipace::Wait (const int step)
 {
     HIPACE_PROFILE("Hipace::Wait()");
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" w1 step "<<step<<'\n';
 #ifdef AMREX_USE_MPI
     if (step == 0) return;
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_rcv(nbeams);
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" w2 step "<<step<<'\n';
 
     // Receive particle counts
     {
         MPI_Status status;
-        if (m_rank_z != m_numprocs_z-1) {
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" w3 step "<<step<<'\n';
+        if (m_rank_z != (m_numprocs_z-1)) {
             // all ranks except the head rank receive from one rank upstream
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" w4 step "<<step<<'\n';
             MPI_Recv(np_rcv.dataPtr(), nbeams,
                      amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                      m_rank_z+1, ncomm_z_tag, m_comm_z, &status);
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" w5 step "<<step<<'\n';
         } else {
             // the head rank receives the data from the tail rank
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" w6 step "<<step<<'\n';
             MPI_Recv(np_rcv.dataPtr(), nbeams,
                      amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                      0, ncomm_z_tag, m_comm_z, &status);
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" w7 step "<<step<<'\n';
         }
     }
 
@@ -697,9 +705,11 @@ Hipace::Notify (const int step, const int it)
                   m_rank_z-1, ncomm_z_tag, m_comm_z, &m_nsend_request);
     } else {
         // the tail rank sends its beam data to the head rank,
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" sends to from N-1... "<<'\n';
         MPI_Isend(m_np_snd.dataPtr(), nbeams,
                   amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                   m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_nsend_request);
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" done send to from N-1. "<<'\n';
     }
 
     // Send beam particles. Currently only one tile.
@@ -789,7 +799,9 @@ Hipace::NotifyFinish ()
 #ifdef AMREX_USE_MPI
     if (m_np_snd.size() > 0) {
         MPI_Status status;
+        //amrex::AllPrint()<<"rank "<<m_rank_z<<" starts waiting... "<<'\n';
         MPI_Wait(&m_nsend_request, &status);
+        //amrex::AllPrint()<<"rank "<<m_rank_z<<" done waiting... "<<'\n';
         m_np_snd.resize(0);
     }
     if (m_psend_buffer) {
