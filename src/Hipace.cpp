@@ -583,6 +583,7 @@ Hipace::Wait (const int step)
     // Receive beam particles.
     {
         const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.end(), 0);
+        if (np_total > 0) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
@@ -705,6 +706,7 @@ Hipace::Notify (const int step, const int it)
     // Send beam particles. Currently only one tile.
     {
         const amrex::Long np_total = std::accumulate(m_np_snd.begin(), m_np_snd.end(), 0);
+        if (np_total > 0) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
