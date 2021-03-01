@@ -567,7 +567,7 @@ Hipace::Wait (const int step)
     // Receive particle counts
     {
         MPI_Status status;
-        if (m_rank_z != m_numprocs_z-1) {
+        if (m_rank_z != (m_numprocs_z-1)) {
             // all ranks except the head rank receive from one rank upstream
             MPI_Recv(np_rcv.dataPtr(), nbeams,
                      amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
@@ -683,28 +683,28 @@ Hipace::Notify (const int step, const int it)
     if (step == m_max_step -1 ) return;
 
     const int nbeams = m_multi_beam.get_nbeams();
-    amrex::Vector<int> np_snd(nbeams);
+    m_np_snd.resize(nbeams);
 
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
     {
-        np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
+        m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
     }
 
     if (m_rank_z != 0) {
         // all ranks except the tail rank send their data downstream
-        MPI_Isend(np_snd.dataPtr(), nbeams,
+        MPI_Isend(m_np_snd.dataPtr(), nbeams,
                   amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  m_rank_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
+                  m_rank_z-1, ncomm_z_tag, m_comm_z, &m_nsend_request);
     } else {
         // the tail rank sends its beam data to the head rank,
-        MPI_Isend(np_snd.dataPtr(), nbeams,
+        MPI_Isend(m_np_snd.dataPtr(), nbeams,
                   amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_psend_request);
+                  m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_nsend_request);
     }
 
     // Send beam particles. Currently only one tile.
     {
-        const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.end(), 0);
+        const amrex::Long np_total = std::accumulate(m_np_snd.begin(), m_np_snd.end(), 0);
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
@@ -712,7 +712,7 @@ Hipace::Notify (const int step, const int it)
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
             const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
-            const amrex::Long np = np_snd[ibeam];
+            const amrex::Long np = m_np_snd[ibeam];
 
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const auto ptd = ptile.getConstParticleTileData();
@@ -778,7 +778,6 @@ Hipace::Notify (const int step, const int it)
             MPI_Isend(m_psend_buffer, buffer_size,
                       amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       m_numprocs_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
-
         }
     }
 #endif
@@ -788,6 +787,11 @@ void
 Hipace::NotifyFinish ()
 {
 #ifdef AMREX_USE_MPI
+    if (m_np_snd.size() > 0) {
+        MPI_Status status;
+        MPI_Wait(&m_nsend_request, &status);
+        m_np_snd.resize(0);
+    }
     if (m_psend_buffer) {
         MPI_Status status;
         MPI_Wait(&m_psend_request, &status);
