@@ -220,11 +220,12 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
             [=] AMREX_GPU_DEVICE (long ip) {
 
                 amrex::ParticleReal xp, yp, zp;
-                GetPosition(ip, xp, yp, zp);
+                int pid;
+                GetPosition(ip, xp, yp, zp, pid);
                 if (initial == false){
                     SetPosition(ip, x_prev[ip], y_prev[ip], zp);
                 } else {
-                    SetPosition(ip, x0[ip], y0[ip], zp);
+                    SetPosition(ip, x0[ip], y0[ip], zp, std::abs(pid));
                     w[ip] = w0[ip];
                     uxp[ip] = 0._rt;
                     uyp[ip] = 0._rt;

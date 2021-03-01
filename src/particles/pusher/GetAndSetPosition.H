@@ -107,6 +107,24 @@ struct SetParticlePosition
         m_structs[i].pos(2) = z;
 
     }
+
+    /** \brief Set the position of the particle at index `i + a_offset` from values in x, y and z
+     * \param[in] i index of the particle
+     * \param[in] x new x position of particle i
+     * \param[in] y new x position of particle i
+     * \param[in] z new x position of particle i
+     * \param[in] id new id of particle i
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void operator() (const int i, RType x, RType y, RType z, int id) const noexcept
+    {
+
+        m_structs[i].pos(0) = x;
+        m_structs[i].pos(1) = y;
+        m_structs[i].pos(2) = z;
+        m_structs[i].id() = id;
+
+    }
 };
 
 /** \brief Functor that can be used to apply the boundary conditions to the macroparticles
@@ -160,7 +178,7 @@ struct EnforceBC
         const bool invalid = shifted + !m_is_per[0];
         if (invalid) {
             m_weights[ip] = 0.0_rt;
-            m_structs[ip].id() = -1;
+            m_structs[ip].id() = -std::abs(m_structs[ip].id());
         }
         return invalid;
     }
