@@ -158,7 +158,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
                 yp += dt * 0.5_rt * uy_next  / gamma_next;
                 if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
                 setPosition(ip, xp, yp, zp);
-                enforceBC(ip);
+                if (enforceBC(ip)) return;
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;

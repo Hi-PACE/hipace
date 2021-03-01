@@ -85,8 +85,8 @@ void PlasmaParticlePush (
     const amrex::Real dz,
     const bool temp_slice,
     const long ip,
-    const SetParticlePosition<PlasmaParticleContainer::ParticleTileType>& SetPosition
-    )
+    const SetParticlePosition<PlasmaParticleContainer::ParticleTileType>& SetPosition,
+    const EnforceBC<PlasmaParticleContainer::ParticleTileType>& enforceBC )
 
 {
     using namespace amrex::literals;
@@ -105,6 +105,7 @@ void PlasmaParticlePush (
             + a4_times_dz * Fy4 + a5_times_dz * Fy5;
 
         SetPosition(ip, xp, yp, zp);
+        if (enforceBC(ip)) return;
 
         x_prev = xp;
         y_prev = yp;
@@ -123,7 +124,7 @@ void PlasmaParticlePush (
                  + a4_times_dz * Fy4 + a5_times_dz * Fy5 );
 
         SetPosition(ip, xp, yp, zp);
-
+        if (enforceBC(ip)) return;
         ux_temp = uxp - ( a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
                   + a4_times_dz * Fux4 + a5_times_dz * Fux5 );
         uy_temp = uyp - ( a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
