@@ -112,7 +112,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         [=] AMREX_GPU_DEVICE (long ip) {
 
             if (pos_structs[ip].id() < 0) return;
-            
+
             const amrex::Real psi = psip[ip] *
                 phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c);
 
