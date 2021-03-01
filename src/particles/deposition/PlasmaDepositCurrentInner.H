@@ -128,6 +128,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                  // This particle violates the QSA, discard it and do not deposit its current
                  amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
                  wp[ip] = 0.0_rt;
+                 pos_structs[ip].id() = -std::abs(pos_structs[ip].id());
                  return;
             }
             // calculate plasma particle velocities
