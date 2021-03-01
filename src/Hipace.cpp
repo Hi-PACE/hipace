@@ -564,17 +564,10 @@ Hipace::Wait (const int step)
     // Receive particle counts
     {
         MPI_Status status;
-        if (m_rank_z != (m_numprocs_z-1)) {
-            // all ranks except the head rank receive from one rank upstream
-            MPI_Recv(np_rcv.dataPtr(), nbeams,
-                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                     m_rank_z+1, ncomm_z_tag, m_comm_z, &status);
-        } else {
-            // the head rank receives the data from the tail rank
-            MPI_Recv(np_rcv.dataPtr(), nbeams,
-                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                     0, ncomm_z_tag, m_comm_z, &status);
-        }
+        // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
+        MPI_Recv(np_rcv.dataPtr(), nbeams,
+                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                 (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
     }
 
     // Receive beam particles.
@@ -586,16 +579,10 @@ Hipace::Wait (const int step)
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
         MPI_Status status;
-        if (m_rank_z != m_numprocs_z-1) {
-            // all ranks except the head rank receive from one rank upstream
-            MPI_Recv(recv_buffer, buffer_size,
-                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                     m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
-        } else {
-            MPI_Recv(recv_buffer, buffer_size,
-                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                     0, pcomm_z_tag, m_comm_z, &status);
-        }
+        // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
+        MPI_Recv(recv_buffer, buffer_size,
+                 amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                 (m_rank_z+1)%m_numprocs_z, pcomm_z_tag, m_comm_z, &status);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -688,17 +675,9 @@ Hipace::Notify (const int step, const int it)
         m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
     }
 
-    if (m_rank_z != 0) {
-        // all ranks except the tail rank send their data downstream
-        MPI_Isend(m_np_snd.dataPtr(), nbeams,
-                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  m_rank_z-1, ncomm_z_tag, m_comm_z, &m_nsend_request);
-    } else {
-        // the tail rank sends its beam data to the head rank,
-        MPI_Isend(m_np_snd.dataPtr(), nbeams,
-                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  m_numprocs_z-1, ncomm_z_tag, m_comm_z, &m_nsend_request);
-    }
+    // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
+    MPI_Isend(m_np_snd.dataPtr(), nbeams, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
 
     // Send beam particles. Currently only one tile.
     {
@@ -765,19 +744,9 @@ Hipace::Notify (const int step, const int it)
             ptile.resize(offset_box);
             offset_beam += np;
         } // here
-
-        if (m_rank_z != 0) {
-            // all ranks except the tail rank send their data downstream
-            MPI_Isend(m_psend_buffer, buffer_size,
-                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
-        } else {
-            // the tail rank sends its beam data to the head rank,
-            // if there are more time steps to calculate
-            MPI_Isend(m_psend_buffer, buffer_size,
-                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      m_numprocs_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
-        }
+        // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
+        MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
     }
 #endif
 }
