@@ -620,7 +620,7 @@ Hipace::Wait (const int step)
                         for (unsigned int index = m;
                              index < mend*psize/sizeof(double); index += blockDim.x) {
                             const double *csrc = (double *)
-                                (recv_buffer+offset_beam+blockDim.x*blockIdx.x*psize);
+                                (recv_buffer+offset_beam*psize+blockDim.x*blockIdx.x*psize);
                             double *cdest = (double *)shared;
                             cdest[index] = csrc[index];
                         }
