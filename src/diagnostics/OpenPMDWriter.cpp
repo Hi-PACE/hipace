@@ -157,7 +157,10 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         auto const numParticleOnTile = a_box_sorter_vec[ibeam].boxCountsPtr()[it];
         uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
 
-        if (numParticleOnTile == 0) return;
+        if (numParticleOnTile == 0) {
+            m_tmp_offset[ibeam] = 0;
+            continue;
+        }
 
         // get position and particle ID from aos
         // note: this implementation iterates the AoS 4x...
