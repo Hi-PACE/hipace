@@ -50,6 +50,7 @@
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] ip index of the plasma particle
  * \param[in] SetPosition Functor for setting the particle position
+ * \param[in] enforceBC Functor for applying the boundary conditions to a single plasma particle
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void PlasmaParticlePush (
