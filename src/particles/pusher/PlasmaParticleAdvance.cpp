@@ -103,10 +103,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
         using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto getPosition =
-            GetParticlePosition<PTileType>(pti.GetParticleTile());
-        const auto SetPosition =
-            SetParticlePosition<PTileType>(pti.GetParticleTile());
+        const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
+        const auto SetPosition = SetParticlePosition<PTileType>(pti.GetParticleTile());
+        const auto enforceBC = EnforceBC<PTileType>(pti.GetParticleTile(), lev);
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
@@ -155,7 +154,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
                                        Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                                       dz, temp_slice, ip, SetPosition );
+                                       dz, temp_slice, ip, SetPosition, enforceBC );
                 }
                 return;
           }

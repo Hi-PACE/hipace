@@ -371,7 +371,6 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                            false, true, false, false, lev);
 
-    m_plasma_container.RedistributeSlice(lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
 
@@ -486,7 +485,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                true, true, false, false, lev);
-        m_plasma_container.RedistributeSlice(lev);
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
