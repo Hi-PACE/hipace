@@ -35,6 +35,14 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleCo
     // Extract properties associated with physical size of the box
     const PhysConst phys_const = get_phys_const();
 
+    // first box resets time step data
+    if (it == amrex::ParallelDescriptor::NProcs()-1) {
+        m_timestep_data[WhichDouble::SumWeights] = 0.;
+        m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
+        m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
+        m_timestep_data[WhichDouble::MinUz] = 1e30;
+    }
+
     for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
         const auto& beam = beams.getBeam(ibeam);
 
