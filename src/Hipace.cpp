@@ -329,6 +329,9 @@ Hipace::Evolve ()
                 SolveOneSlice(isl, lev, it, bins);
             };
 
+            m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container,
+                                           it, m_box_sorters);
+
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1, it);
 #else
@@ -336,11 +339,6 @@ Hipace::Evolve ()
 #endif
             Notify(step, it);
         }
-
-        /* Passing the adaptive time step info */
-        // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
-        // Slices have already been shifted, so send
-        // slices {2,3} from upstream to {2,3} in downstream.
 
         m_physical_time += m_dt;
     }
