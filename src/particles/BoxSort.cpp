@@ -61,6 +61,5 @@ BoxSorter::leftmostBoxWithParticles () const
     while (m_box_counts[boxid]==0 && boxid<amrex::ParallelDescriptor::NProcs()-1){
         boxid++;
     }
-    // std::cout<<"here boxid "<<boxid<<'\n';
     return boxid;
 }
