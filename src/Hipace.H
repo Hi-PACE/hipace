@@ -224,7 +224,7 @@ public:
 #endif
     int m_leftmost_box_snd = std::numeric_limits<int>::max();
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
-    int m_fixed_seed = 0;
+    int m_skip_empty_comms = false;
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;

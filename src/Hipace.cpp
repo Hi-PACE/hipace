@@ -87,8 +87,8 @@ Hipace::Hipace () :
     pph.query("do_device_synchronize", m_do_device_synchronize);
     pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
     pph.query("external_accel_field_strength", m_external_accel_field_strength);
-    pph.query("fixed_seed", m_fixed_seed);
 #ifdef AMREX_USE_MPI
+    pph.query("skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();
     m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_z, myproc, &m_comm_xy);
@@ -180,7 +180,6 @@ void
 Hipace::InitData ()
 {
     HIPACE_PROFILE("Hipace::InitData()");
-    if (m_fixed_seed > 0) amrex::ResetRandomSeed(m_fixed_seed);
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
@@ -562,7 +561,7 @@ Hipace::Wait (const int step, int it)
 
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_rcv(nbeams+1, 0);
-    if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1){
+    if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
         amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
         return;
     }
@@ -675,7 +674,7 @@ Hipace::Notify (const int step, const int it)
     if (step == m_max_step -1 ) return;
 
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
-    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1){
+    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1 && m_skip_empty_comms){
         amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP SEND!\n";
         return;
     }
