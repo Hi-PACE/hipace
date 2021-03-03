@@ -303,7 +303,7 @@ Hipace::Evolve ()
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
         // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
 
-        // if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
+        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
 
@@ -418,9 +418,6 @@ Hipace::ResetAllQuantities (int lev)
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
-
-    // m_leftmost_box_snd = amrex::ParallelDescriptor::NProcs()-1;
-    // m_leftmost_box_rcv = amrex::ParallelDescriptor::NProcs()-1;
 }
 
 void
@@ -579,7 +576,6 @@ Hipace::Wait (const int step, int it)
                  (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
     }
     m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
-    // m_leftmost_box_rcv = np_rcv[nbeams];
 
     // Receive beam particles.
     {
@@ -672,16 +668,17 @@ Hipace::Notify (const int step, const int it)
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
-    m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
-    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1){
-        amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP SEND!\n";
-        return;
-    }
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
 
     // last step does not need to send anything
     if (step == m_max_step -1 ) return;
+
+    m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
+    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1){
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP SEND!\n";
+        return;
+    }
 
     const int nbeams = m_multi_beam.get_nbeams();
     m_np_snd.resize(nbeams+1);
