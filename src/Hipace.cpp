@@ -565,7 +565,10 @@ Hipace::Wait (const int step, int it)
 
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_rcv(nbeams+1, 0);
-    if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1) return;
+    if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1){
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
+        return;
+    }
 
     // Receive particle counts
     {
@@ -576,6 +579,7 @@ Hipace::Wait (const int step, int it)
                  (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
     }
     m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
+    // m_leftmost_box_rcv = np_rcv[nbeams];
 
     // Receive beam particles.
     {
@@ -669,8 +673,10 @@ Hipace::Notify (const int step, const int it)
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
-    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1) return;
-
+    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1){
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP SEND!\n";
+        return;
+    }
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
 
@@ -819,9 +825,8 @@ int
 Hipace::leftmostBoxWithParticles () const
 {
     int boxid = m_numprocs_z;
-    for(const auto box_sorter : m_box_sorters){
+    for(const auto& box_sorter : m_box_sorters){
         boxid = std::min(box_sorter.leftmostBoxWithParticles(), boxid);
     }
-    // std::cout<<"here boxid2 "<<boxid<<'\n';
     return boxid;
 }
