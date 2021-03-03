@@ -25,6 +25,8 @@ public:
     //! \brief returns the pointer to the offsets array
     const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets.dataPtr(); }
 
+    /** Get the index of the most downstream box that has beam particles */
+    int leftmostBoxWithParticles () const;
 private:
     amrex::ParticleLocator<amrex::DenseBins<amrex::Box> > m_particle_locator;
     amrex::Gpu::DeviceVector<index_type> m_box_counts;

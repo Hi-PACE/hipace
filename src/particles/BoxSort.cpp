@@ -53,3 +53,14 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
 
     a_beam.swap(tmp);
 }
+
+int
+BoxSorter::leftmostBoxWithParticles () const
+{
+    int boxid = 0;
+    while (m_box_counts[boxid]==0 && boxid<amrex::ParallelDescriptor::NProcs()-1){
+        boxid++;
+    }
+    // std::cout<<"here boxid "<<boxid<<'\n';
+    return boxid;
+}

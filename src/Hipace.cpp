@@ -314,7 +314,7 @@ Hipace::Evolve ()
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
         {
-            Wait(step);
+            Wait(step, it);
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
@@ -417,6 +417,8 @@ Hipace::ResetAllQuantities (int lev)
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
+
+    m_leftmost_box_with_particles = amrex::ParallelDescriptor::NProcs()-1;
 }
 
 void
@@ -553,26 +555,31 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 }
 
 void
-Hipace::Wait (const int step)
+Hipace::Wait (const int step, int it)
 {
     HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
     if (step == 0) return;
-    const int nbeams = m_multi_beam.get_nbeams();
-    amrex::Vector<int> np_rcv(nbeams);
 
+    const int nbeams = m_multi_beam.get_nbeams();
+    amrex::Vector<int> np_rcv(nbeams+1, 0);
+    amrex::AllPrint()<<"Wait   rank "<<m_rank_z<<" it "<<it<<" m_leftmost_box_with_particles "<<m_leftmost_box_with_particles<<'\n';
+    if (it < m_leftmost_box_with_particles) return;
     // Receive particle counts
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" recv1\n";
     {
         MPI_Status status;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        MPI_Recv(np_rcv.dataPtr(), nbeams,
+        MPI_Recv(np_rcv.dataPtr(), nbeams+1,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                  (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
     }
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" recv2\n";
+    m_leftmost_box_with_particles = np_rcv[nbeams];
 
     // Receive beam particles.
     {
-        const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.end(), 0);
+        const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.begin()+nbeams, 0);
         if (np_total == 0) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
@@ -641,6 +648,7 @@ Hipace::Wait (const int step)
                         recv_buffer+offset_beam*psize, i*psize, i+old_size, p_comm_real, p_comm_int);
                 }
             }
+            
             offset_beam += np;
         }
 
@@ -662,26 +670,34 @@ Hipace::Notify (const int step, const int it)
     // and 3.
 
 #ifdef AMREX_USE_MPI
+    //amrex::AllPrint()<<"h1\n";
     NotifyFinish(); // finish the previous send
+    //amrex::AllPrint()<<"h2\n";
 
     // last step does not need to send anything
     if (step == m_max_step -1 ) return;
 
+    m_leftmost_box_with_particles = std::min(
+        leftmostBoxWithParticles(), m_leftmost_box_with_particles);
+    if (it < m_leftmost_box_with_particles) return;
+
     const int nbeams = m_multi_beam.get_nbeams();
-    m_np_snd.resize(nbeams);
+    m_np_snd.resize(nbeams+1);
 
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
     {
         m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
     }
+    m_np_snd[nbeams] = m_leftmost_box_with_particles;
+    amrex::AllPrint()<<"Notify rank "<<m_rank_z<<" it "<<it<<" m_leftmost_box_with_particles "<<m_leftmost_box_with_particles<<'\n';
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-    MPI_Isend(m_np_snd.dataPtr(), nbeams, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+    MPI_Isend(m_np_snd.dataPtr(), nbeams+1, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
               (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
 
     // Send beam particles. Currently only one tile.
     {
-        const amrex::Long np_total = std::accumulate(m_np_snd.begin(), m_np_snd.end(), 0);
+        const amrex::Long np_total = std::accumulate(m_np_snd.begin(), m_np_snd.begin()+nbeams, 0);
         if (np_total == 0) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
@@ -802,4 +818,15 @@ Hipace::WriteDiagnostics (int output_step, const int it)
     // Write beam particles
     m_multi_beam.WritePlotFile(filename);
 #endif
+}
+
+int
+Hipace::leftmostBoxWithParticles () const
+{
+    int boxid = m_numprocs_z;
+    for(const auto box_sorter : m_box_sorters){
+        boxid = std::min(box_sorter.leftmostBoxWithParticles(), boxid);
+    }
+    // std::cout<<"here boxid2 "<<boxid<<'\n';
+    return boxid;
 }

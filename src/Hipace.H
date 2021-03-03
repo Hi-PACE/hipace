@@ -80,7 +80,7 @@ public:
      *
      * \param[in] step current time step
      */
-    void Wait (const int step);
+    void Wait (const int step, int it);
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
@@ -222,6 +222,7 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+    int m_leftmost_box_with_particles = std::numeric_limits<int>::max();
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -257,6 +258,8 @@ private:
      * \param[in] dm DistributionMappint of the whole domain
      */
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+
+    int leftmostBoxWithParticles () const;
 };
 
 #endif
