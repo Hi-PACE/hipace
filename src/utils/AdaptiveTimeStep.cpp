@@ -21,14 +21,42 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
     ppa.query("nt_per_omega_betatron", m_nt_per_omega_betatron);
 }
 
+#ifdef AMREX_USE_MPI
+void
+AdaptiveTimeStep::NotifyTimeStep (amrex::Real dt, MPI_Comm a_comm_z)
+{
+    if (m_do_adaptive_time_step == 0) return;
+    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
+    if (my_rank_z >= 1)
+    {
+        MPI_Send(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 my_rank_z-1, comm_z_tag, a_comm_z);
+    }
+}
+
+void
+AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
+{
+    if (m_do_adaptive_time_step == 0) return;
+    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
+    if (!Hipace::HeadRank())
+    {
+        MPI_Status status;
+        MPI_Recv(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 my_rank_z+1, comm_z_tag, a_comm_z, &status);
+    }
+}
+#endif
+
 void
 AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleContainer& plasma,
-                             const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec)
+                             const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                             const bool initial)
 {
-    HIPACE_PROFILE("CalculateAdaptiveTimeStep()");
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
     if (m_do_adaptive_time_step == 0) return;
-
+    if (!Hipace::HeadRank() && initial) return;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma.m_density != 0,
         "A plasma density must be specified to use an adaptive time step.");
 
@@ -46,8 +74,9 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleCo
     for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
         const auto& beam = beams.getBeam(ibeam);
 
-        const uint64_t box_offset = a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
-        const uint64_t numParticleOnTile = a_box_sorter_vec[ibeam].boxCountsPtr()[it];
+        const uint64_t box_offset = initial ? 0 : a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
+        const uint64_t numParticleOnTile = initial ? beam.numParticles()
+                                                   : a_box_sorter_vec[ibeam].boxCountsPtr()[it];
 
 
         // Extract particle properties
@@ -93,8 +122,9 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleCo
                                                gpu_min_uz.dataValue());
     }
 
-    /* only the last box calculates the adaptive time step from the full beam information */
-    if (it == 0 )
+    // only the last box or at initialiyation the adaptive time step is calculated
+    // from the full beam information
+    if (it == 0 || initial)
     {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[WhichDouble::SumWeights] != 0,
             "The sum of all weights is 0! Probably no beam particles are initialized");

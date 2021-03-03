@@ -195,8 +195,10 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
-
+    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container);
 #ifdef AMREX_USE_MPI
+    m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
+    m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
     #ifdef HIPACE_USE_OPENPMD
     // receive and pass the number of beam particles to share the offset for openPMD IO
     // FIXME: sending the total number of particles will no longer be required.
@@ -330,7 +332,7 @@ Hipace::Evolve ()
             };
 
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container,
-                                           it, m_box_sorters);
+                                           it, m_box_sorters, false);
 
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1, it);
