@@ -25,6 +25,7 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
 void
 AdaptiveTimeStep::NotifyTimeStep (amrex::Real dt, MPI_Comm a_comm_z)
 {
+    if (m_do_adaptive_time_step == 0) return;
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     if (my_rank_z >= 1)
     {
@@ -36,6 +37,7 @@ AdaptiveTimeStep::NotifyTimeStep (amrex::Real dt, MPI_Comm a_comm_z)
 void
 AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
 {
+    if (m_do_adaptive_time_step == 0) return;
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
     if (!Hipace::HeadRank())
     {
@@ -51,7 +53,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleCo
                              const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                              const bool initial)
 {
-    HIPACE_PROFILE("CalculateAdaptiveTimeStep()");
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
     if (m_do_adaptive_time_step == 0) return;
     if (!Hipace::HeadRank() && initial) return;
