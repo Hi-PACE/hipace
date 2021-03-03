@@ -647,7 +647,7 @@ Hipace::Wait (const int step, int it)
                         recv_buffer+offset_beam*psize, i*psize, i+old_size, p_comm_real, p_comm_int);
                 }
             }
-            
+
             offset_beam += np;
         }
 
