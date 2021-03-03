@@ -222,8 +222,9 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
-    int m_leftmost_box_with_particles = std::numeric_limits<int>::max();
-
+    int m_leftmost_box_snd = std::numeric_limits<int>::max();
+    int m_leftmost_box_rcv = std::numeric_limits<int>::max();
+    int m_fixed_seed = 0;
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;

@@ -87,7 +87,7 @@ Hipace::Hipace () :
     pph.query("do_device_synchronize", m_do_device_synchronize);
     pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
     pph.query("external_accel_field_strength", m_external_accel_field_strength);
-
+    pph.query("fixed_seed", m_fixed_seed);
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
     m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
@@ -180,6 +180,7 @@ void
 Hipace::InitData ()
 {
     HIPACE_PROFILE("Hipace::InitData()");
+    if (m_fixed_seed > 0) amrex::ResetRandomSeed(m_fixed_seed);
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
@@ -195,7 +196,6 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
-
 #ifdef AMREX_USE_MPI
     #ifdef HIPACE_USE_OPENPMD
     // receive and pass the number of beam particles to share the offset for openPMD IO
@@ -303,7 +303,7 @@ Hipace::Evolve ()
         /* calculate the adaptive time step before printout, so the ranks already print their new dt */
         // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
 
-        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
+        // if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
 
@@ -318,6 +318,7 @@ Hipace::Evolve ()
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+            m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
@@ -418,7 +419,8 @@ Hipace::ResetAllQuantities (int lev)
         m_fields.getSlices(lev, islice).setVal(0.);
     }
 
-    m_leftmost_box_with_particles = amrex::ParallelDescriptor::NProcs()-1;
+    // m_leftmost_box_snd = amrex::ParallelDescriptor::NProcs()-1;
+    // m_leftmost_box_rcv = amrex::ParallelDescriptor::NProcs()-1;
 }
 
 void
@@ -563,10 +565,9 @@ Hipace::Wait (const int step, int it)
 
     const int nbeams = m_multi_beam.get_nbeams();
     amrex::Vector<int> np_rcv(nbeams+1, 0);
-    amrex::AllPrint()<<"Wait   rank "<<m_rank_z<<" it "<<it<<" m_leftmost_box_with_particles "<<m_leftmost_box_with_particles<<'\n';
-    if (it < m_leftmost_box_with_particles) return;
+    if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1) return;
+
     // Receive particle counts
-    amrex::AllPrint()<<"rank "<<m_rank_z<<" recv1\n";
     {
         MPI_Status status;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
@@ -574,8 +575,7 @@ Hipace::Wait (const int step, int it)
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                  (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
     }
-    amrex::AllPrint()<<"rank "<<m_rank_z<<" recv2\n";
-    m_leftmost_box_with_particles = np_rcv[nbeams];
+    m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
 
     // Receive beam particles.
     {
@@ -668,18 +668,14 @@ Hipace::Notify (const int step, const int it)
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
+    m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
+    if (it < m_leftmost_box_snd && it < m_numprocs_z - 1) return;
 
 #ifdef AMREX_USE_MPI
-    //amrex::AllPrint()<<"h1\n";
     NotifyFinish(); // finish the previous send
-    //amrex::AllPrint()<<"h2\n";
 
     // last step does not need to send anything
     if (step == m_max_step -1 ) return;
-
-    m_leftmost_box_with_particles = std::min(
-        leftmostBoxWithParticles(), m_leftmost_box_with_particles);
-    if (it < m_leftmost_box_with_particles) return;
 
     const int nbeams = m_multi_beam.get_nbeams();
     m_np_snd.resize(nbeams+1);
@@ -688,8 +684,7 @@ Hipace::Notify (const int step, const int it)
     {
         m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
     }
-    m_np_snd[nbeams] = m_leftmost_box_with_particles;
-    amrex::AllPrint()<<"Notify rank "<<m_rank_z<<" it "<<it<<" m_leftmost_box_with_particles "<<m_leftmost_box_with_particles<<'\n';
+    m_np_snd[nbeams] = m_leftmost_box_snd;
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
     MPI_Isend(m_np_snd.dataPtr(), nbeams+1, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
