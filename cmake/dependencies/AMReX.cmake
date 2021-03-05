@@ -45,6 +45,7 @@ macro(find_amrex)
             set(AMReX_PRECISION_PARTICLES "SINGLE" CACHE INTERNAL "")
         endif()
 
+        set(AMReX_AMRLEVEL OFF CACHE INTERNAL "")
         set(AMReX_ENABLE_TESTS OFF CACHE INTERNAL "")
         set(AMReX_FORTRAN OFF CACHE INTERNAL "")
         set(AMReX_FORTRAN_INTERFACES OFF CACHE INTERNAL "")
