@@ -639,9 +639,6 @@ Hipace::Wait (const int step)
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
-//    const int lev = 0;
-//    m_box_sorters.clear();
-//    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 #endif
 }
 
