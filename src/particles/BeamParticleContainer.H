@@ -94,24 +94,12 @@ public:
                           std::string species_name);
 #endif
 
-#ifdef AMREX_USE_MPI
-    /** Loop over beams and pass total number of beam particles on upstream ranks */
-    void NotifyNumParticles (MPI_Comm a_comm_z);
-
-    /** Loop over beams and receive total number of beam particles on upstream ranks */
-    void WaitNumParticles (MPI_Comm a_comm_z);
-
-#endif
-
     std::string get_name () const {return m_name;};
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     /** Number of particles on upstream rank (required for IO) */
     int m_num_particles_on_upstream_ranks {0};
 
     unsigned long long m_total_num_particles {0};
-
-    // FIXME not required in new pipeline
-    int get_upstream_n_part () const {return m_num_particles_on_upstream_ranks;};
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;};
 

@@ -83,24 +83,6 @@ MultiBeam::WritePlotFile (const std::string& /*filename*/)
     // }
 }
 
-#ifdef AMREX_USE_MPI
-void
-MultiBeam::NotifyNumParticles (MPI_Comm a_comm_z)
-{
-    for (auto& beam : m_all_beams) {
-        beam.NotifyNumParticles(a_comm_z);
-    }
-}
-
-void
-MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
-{
-    for (auto& beam : m_all_beams) {
-        beam.WaitNumParticles(a_comm_z);
-    }
-}
-#endif
-
 void
 MultiBeam::ConvertUnits (ConvertDirection convert_direction)
 {
