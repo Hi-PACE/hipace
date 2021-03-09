@@ -35,8 +35,9 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_device_synchronize = false;
 int Hipace::m_beam_injection_cr = 1;
-amrex::Real Hipace::m_external_focusing_field_strength = 0.;
-amrex::Real Hipace::m_external_accel_field_strength = 0.;
+amrex::Real Hipace::m_external_ExmBy_slope = 0.;
+amrex::Real Hipace::m_external_Ez_slope = 0.;
+amrex::Real Hipace::m_external_Ez_uniform = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -85,8 +86,10 @@ Hipace::Hipace () :
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
-    pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
-    pph.query("external_accel_field_strength", m_external_accel_field_strength);
+    pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
+    pph.query("external_Ez_slope", m_external_Ez_slope);
+    pph.query("external_Ez_uniform", m_external_Ez_uniform);
+
 #ifdef AMREX_USE_MPI
     pph.query("skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();
@@ -195,13 +198,10 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
+    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container);
 #ifdef AMREX_USE_MPI
-    #ifdef HIPACE_USE_OPENPMD
-    // receive and pass the number of beam particles to share the offset for openPMD IO
-    // FIXME: sending the total number of particles will no longer be required.
-    // m_multi_beam.WaitNumParticles(m_comm_z);
-    // m_multi_beam.NotifyNumParticles(m_comm_z);
-    #endif
+    m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
+    m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
 #endif
 }
 
@@ -299,9 +299,6 @@ Hipace::Evolve ()
         if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
 
-        /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
-
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
@@ -329,6 +326,9 @@ Hipace::Evolve ()
                 SolveOneSlice(isl, lev, it, bins);
             };
 
+            m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container,
+                                           it, m_box_sorters, false);
+
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1, it);
 #else
@@ -336,11 +336,6 @@ Hipace::Evolve ()
 #endif
             Notify(step, it);
         }
-
-        /* Passing the adaptive time step info */
-        // m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
-        // Slices have already been shifted, so send
-        // slices {2,3} from upstream to {2,3} in downstream.
 
         m_physical_time += m_dt;
     }
@@ -655,9 +650,6 @@ Hipace::Wait (const int step, int it)
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
-//    const int lev = 0;
-//    m_box_sorters.clear();
-//    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 #endif
 }
 

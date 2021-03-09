@@ -28,8 +28,11 @@ public:
     /** Get the index of the most downstream box that has beam particles */
     int leftmostBoxWithParticles () const;
 private:
+    /** Object to locate the box in which a particle is located */
     amrex::ParticleLocator<amrex::DenseBins<amrex::Box> > m_particle_locator;
+    /** Number of particles in each box */
     amrex::Gpu::DeviceVector<index_type> m_box_counts;
+    /** Index of the first particle in each box */
     amrex::Gpu::DeviceVector<index_type> m_box_offsets;
 };
 

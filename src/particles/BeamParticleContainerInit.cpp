@@ -199,7 +199,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2]);
 
-                const amrex::Real weight =  density * scale_fac;
+                const amrex::Real weight = density * scale_fac;
                 AddOneBeamParticle(pstruct, arrdata, x, y, z, u[0], u[1], u[2], weight,
                                    pid, procID, pidx, phys_const.c);
 

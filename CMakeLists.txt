@@ -210,9 +210,9 @@ if(BUILD_TESTING)
 
         configure_mpiexec(1)  # one rank in MPI_TEST_EXE
         add_test(NAME blowout_wake.2Rank
-                COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
-                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME beam_evolution.1Rank
@@ -221,11 +221,11 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        #add_test(NAME adaptive_time_step.1Rank
-        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/adaptive_time_step.1Rank.sh
-        #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-        #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        #)
+        add_test(NAME adaptive_time_step.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/adaptive_time_step.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
 
         add_test(NAME grid_current.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/grid_current.1Rank.sh
@@ -281,13 +281,11 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        # Deactivate for now, as it segfaults in BoxSort because some particles are initialized
-        # outside of the domain.
-        #add_test(NAME gaussian_weight.1Rank
-        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/gaussian_weight.1Rank.sh
-        #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-        #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        #)
+        add_test(NAME gaussian_weight.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/gaussian_weight.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
 
         add_test(NAME beam_in_vacuum.normalized.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.2Rank.sh

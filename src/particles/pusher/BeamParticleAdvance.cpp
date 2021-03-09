@@ -83,84 +83,85 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
-    const amrex::Real external_focusing_field_strength =
-        Hipace::m_external_focusing_field_strength;
-    const amrex::Real external_accel_field_strength = Hipace::m_external_accel_field_strength;
+    const amrex::Real external_ExmBy_slope = Hipace::m_external_ExmBy_slope;
+    const amrex::Real external_Ez_slope = Hipace::m_external_Ez_slope;
+    const amrex::Real external_Ez_uniform = Hipace::m_external_Ez_uniform;
 
-    amrex::ParallelFor(num_particles,
-                [=] AMREX_GPU_DEVICE (long idx) {
-                const int ip = indices[cell_start+idx];
+    amrex::ParallelFor(
+        num_particles,
+        [=] AMREX_GPU_DEVICE (long idx) {
+            const int ip = indices[cell_start+idx];
 
-                amrex::ParticleReal xp, yp, zp;
-                int pid;
-                getPosition(ip, xp, yp, zp, pid);
-                if (pid < 0) return;
+            amrex::ParticleReal xp, yp, zp;
+            int pid;
+            getPosition(ip, xp, yp, zp, pid);
+            if (pid < 0) return;
 
-                const amrex::ParticleReal gammap = sqrt( 1.0_rt + uxp[ip]*uxp[ip]*clightsq
-                                            + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
+            const amrex::ParticleReal gammap = sqrt(
+                1.0_rt + uxp[ip]*uxp[ip]*clightsq
+                + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
 
-                // first we do half a step in x,y
-                // This is not required in z, which is pushed in one step later
-                xp += dt * 0.5_rt * uxp[ip] / gammap;
-                yp += dt * 0.5_rt * uyp[ip] / gammap;
+            // first we do half a step in x,y
+            // This is not required in z, which is pushed in one step later
+            xp += dt * 0.5_rt * uxp[ip] / gammap;
+            yp += dt * 0.5_rt * uyp[ip] / gammap;
 
-                setPosition(ip, xp, yp, zp);
-                if (enforceBC(ip)) return;
+            setPosition(ip, xp, yp, zp);
+            if (enforceBC(ip)) return;
 
-                // define field at particle position reals
-                amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-                amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+            // define field at particle position reals
+            amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+            amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
-                // field gather for a single particle
-                doGatherShapeN(xp, yp, zmin,
-                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                               exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                               dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+            // field gather for a single particle
+            doGatherShapeN(xp, yp, zmin,
+                           ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                           exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                           dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-                ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
-                                   external_focusing_field_strength,
-                                   external_accel_field_strength);
+            ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
+                               external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
 
-                // use intermediate fields to calculate next (n+1) transverse momenta
-                const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
-                            * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
-                const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
-                            * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
+            // use intermediate fields to calculate next (n+1) transverse momenta
+            const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
+                * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
+            const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
+                * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
 
-                // Now computing new longitudinal momentum
-                const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
-                const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
-                const amrex::ParticleReal uz_intermediate = uzp[ip]
-                                                      + dt * 0.5_rt * charge_mass_ratio * Ezp;
+            // Now computing new longitudinal momentum
+            const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
+            const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
+            const amrex::ParticleReal uz_intermediate = uzp[ip]
+                + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
-                const amrex::ParticleReal gamma_intermediate = sqrt( 1.0_rt
-                                        + ux_intermediate*ux_intermediate*clightsq
-                                        + uy_intermediate*uy_intermediate*clightsq
-                                        + uz_intermediate*uz_intermediate*clightsq );
+            const amrex::ParticleReal gamma_intermediate = sqrt(
+                1.0_rt + ux_intermediate*ux_intermediate*clightsq +
+                uy_intermediate*uy_intermediate*clightsq +
+                uz_intermediate*uz_intermediate*clightsq );
 
-                const amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
-                          * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
-                              / gamma_intermediate );
+            const amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
+                * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
+                    / gamma_intermediate );
 
-                /* computing next gamma value */
-                const amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
-                                                 + ux_next*ux_next*clightsq
-                                                 + uy_next*uy_next*clightsq );
+            /* computing next gamma value */
+            const amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
+                                                         + ux_next*ux_next*clightsq
+                                                         + uy_next*uy_next*clightsq );
 
-                /*
-                 * computing positions and setting momenta for the next timestep
-                 *(n+1)
-                 * The longitudinal position is updated here as well, but in
-                 * first-order (i.e. without the intermediary half-step) using
-                 * a simple Galilean transformation
-                 */
-                xp += dt * 0.5_rt * ux_next  / gamma_next;
-                yp += dt * 0.5_rt * uy_next  / gamma_next;
-                if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
-                setPosition(ip, xp, yp, zp);
-                if (enforceBC(ip)) return;
-                uxp[ip] = ux_next;
-                uyp[ip] = uy_next;
-                uzp[ip] = uz_next;
-    });
+            /*
+             * computing positions and setting momenta for the next timestep
+             *(n+1)
+             * The longitudinal position is updated here as well, but in
+             * first-order (i.e. without the intermediary half-step) using
+             * a simple Galilean transformation
+             */
+            xp += dt * 0.5_rt * ux_next  / gamma_next;
+            yp += dt * 0.5_rt * uy_next  / gamma_next;
+            if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
+            setPosition(ip, xp, yp, zp);
+            if (enforceBC(ip)) return;
+            uxp[ip] = ux_next;
+            uyp[ip] = uy_next;
+            uzp[ip] = uz_next;
+        });
 }
