@@ -77,7 +77,7 @@ FieldDiagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
  }
 
 amrex::Box
-FieldDiagnostic::TrimIOBox(const amrex::Box box_3d)
+FieldDiagnostic::TrimIOBox (const amrex::Box box_3d)
 {
     // Create a xz slice Box
     amrex::Box slice_bx = box_3d;
