@@ -14,14 +14,19 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
+
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI hipace.depos_order_xy=0
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+        hipace.depos_order_xy=0 \
+        hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --do-plot
+$HIPACE_EXAMPLE_DIR/analysis.py --do-plot --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name diags/h5 \
-    --test-name beam_in_vacuum.SI.1Rank
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME

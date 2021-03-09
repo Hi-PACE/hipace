@@ -14,6 +14,9 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
+
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell = 32 32 10 \
@@ -25,13 +28,14 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.density = 1.e-8 \
         beam.radius = 1. \
         beam.ppc = 4 4 1 \
-        hipace.external_ExmBy_slope = .5
+        hipace.external_ExmBy_slope = .5 \
+        hipace.file_prefix = $TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_beam_push.py
+$HIPACE_EXAMPLE_DIR/analysis_beam_push.py --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name 'diags/h5' \
-    --test-name beam_evolution.1Rank
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME

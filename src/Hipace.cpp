@@ -5,6 +5,7 @@
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/BinSort.H"
+#include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
 
 #include <AMReX_PlotFileUtil.H>
@@ -16,8 +17,8 @@
 
 #ifdef AMREX_USE_MPI
 namespace {
-    constexpr int comm_z_tag = 1000;
-    constexpr int pcomm_z_tag = 1001;
+    constexpr int ncomm_z_tag = 1001;
+    constexpr int pcomm_z_tag = 1002;
 }
 #endif
 
@@ -79,6 +80,8 @@ Hipace::Hipace () :
                                      "To avoid output, please use output_period = -1.");
     pph.query("beam_injection_cr", m_beam_injection_cr);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step,
+                                     "Please use more or equal time steps than number of ranks");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
@@ -194,13 +197,10 @@ Hipace::InitData ()
     m_plasma_container.SetParticleDistributionMap(lev, m_slice_dm);
     m_plasma_container.SetParticleGeometry(lev, m_slice_geom);
     m_plasma_container.InitData();
-
+    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container);
 #ifdef AMREX_USE_MPI
-    #ifdef HIPACE_USE_OPENPMD
-    // receive and pass the number of beam particles to share the offset for openPMD IO
-    m_multi_beam.WaitNumParticles(m_comm_z);
-    m_multi_beam.NotifyNumParticles(m_comm_z);
-    #endif
+    m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
+    m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
 #endif
 }
 
@@ -287,86 +287,82 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
-#ifdef HIPACE_USE_OPENPMD
-    if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
-#endif
-    WriteDiagnostics(0);
-    for (int step = 0; step < m_max_step; ++step)
+
+    m_box_sorters.clear();
+    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+
+    // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
+    for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
     {
-        /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
+#ifdef HIPACE_USE_OPENPMD
+        if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
+#endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities(lev);
 
-        Wait();
-
-        amrex::MultiFab& fields = m_fields.getF(lev);
-
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_rank_z == m_numprocs_z-1){
-            DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                           false, false, false, true, geom[lev], lev);
-        }
+        DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
+                       false, false, false, true, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
-        const amrex::Vector<int> index_array = fields.IndexArray();
-        for (auto it = index_array.rbegin(); it != index_array.rend(); ++it)
+        for (int it = m_numprocs_z-1; it >= 0; --it)
         {
-            const amrex::Box& bx = boxArray(lev)[*it];
+            Wait(step);
+
+            m_box_sorters.clear();
+            m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+
+            const amrex::Box& bx = boxArray(lev)[it];
+            m_fields.ResizeFDiagFAB(bx, lev);
+
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(lev, *it, bx, geom[lev]);
+            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev, bins);
+                SolveOneSlice(isl, lev, it, bins);
             };
-        }
-        if (amrex::ParallelDescriptor::NProcs() == 1) {
-            m_multi_beam.Redistribute();
-        } else {
-            m_multi_beam.RedistributeSlice(lev);
-            amrex::Print()<<"WARNING: In parallel runs, beam particles are only redistributed "
-                            " transversely. \n";
-        }
 
-        /* Passing the adaptive time step info */
-        m_adaptive_time_step.PassTimeStepInfo(step, m_comm_z);
-        // Slices have already been shifted, so send
-        // slices {2,3} from upstream to {2,3} in downstream.
-        Notify();
+            m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container,
+                                           it, m_box_sorters, false);
 
 #ifdef HIPACE_USE_OPENPMD
-        WriteDiagnostics(step+1);
+            WriteDiagnostics(step+1, it);
 #else
-        amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
+            amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
 #endif
+            Notify(step, it);
+        }
+
         m_physical_time += m_dt;
     }
     // For consistency, decrement the physical time, so the last time step is like the others:
     // the time stored in the output file is the time for the fields. The beam is one time step
     // ahead.
     m_physical_time -= m_dt;
-    WriteDiagnostics(m_max_step, true);
+
 #ifdef HIPACE_USE_OPENPMD
     if (m_output_period > 0) m_openpmd_writer.reset();
 #endif
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
+Hipace::SolveOneSlice (int islice, int lev, const int ibox,
+                       amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
     // for loop, the parallelcontext is the transverse communicator
     amrex::ParallelContext::push(m_comm_xy);
 
+    const amrex::Box& bx = boxArray(lev)[ibox];
+
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
     AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                            false, true, false, false, lev);
 
-    m_plasma_container.RedistributeSlice(lev);
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
 
@@ -382,7 +378,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bins);
+    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -395,7 +391,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bins);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
 
     m_fields.FillDiagnostics(lev, islice);
 
@@ -481,7 +477,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                true, true, false, false, lev);
-        m_plasma_container.RedistributeSlice(lev);
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
@@ -551,238 +546,197 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 }
 
 void
-Hipace::Wait ()
+Hipace::Wait (const int step)
 {
     HIPACE_PROFILE("Hipace::Wait()");
 #ifdef AMREX_USE_MPI
-    if (m_rank_z != m_numprocs_z-1) {
-        {
-        const int lev = 0;
-        amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
-        amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
-        amrex::MultiFab& slice4 = m_fields.getSlices(lev, WhichSlice::RhoIons);
-        // Note that there is only one local Box in slice multifab's boxarray.
-        const int box_index = slice2.IndexArray()[0];
-        amrex::Array4<amrex::Real> const& slice_fab2 = slice2.array(box_index);
-        amrex::Array4<amrex::Real> const& slice_fab3 = slice3.array(box_index);
-        amrex::Array4<amrex::Real> const& slice_fab4 = slice4.array(box_index);
-        const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
-        const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
-        const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
-        const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
-        const std::size_t nreals_total =
-            nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
-        auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-            (sizeof(amrex::Real)*nreals_total);
-        auto const buf2 = amrex::makeArray4(recv_buffer,
-                                            bx, slice_fab2.nComp());
-        auto const buf3 = amrex::makeArray4(recv_buffer+nreals_valid_slice2,
-                                            bx, slice_fab3.nComp());
-        auto const buf4 = amrex::makeArray4(recv_buffer+nreals_valid_slice2+nreals_valid_slice3,
-                                            bx, slice_fab4.nComp());
+    if (step == 0) return;
+    const int nbeams = m_multi_beam.get_nbeams();
+    amrex::Vector<int> np_rcv(nbeams);
+
+    // Receive particle counts
+    {
         MPI_Status status;
-        MPI_Recv(recv_buffer, nreals_total,
-                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 m_rank_z+1, comm_z_tag, m_comm_z, &status);
-        amrex::ParallelFor
-            (bx, slice_fab2.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-             {
-                 slice_fab2(i,j,k,n) = buf2(i,j,k,n);
-             },
-             bx, slice_fab3.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-             {
-                 slice_fab3(i,j,k,n) = buf3(i,j,k,n);
-             },
-             bx, slice_fab4.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-             {
-                 slice_fab4(i,j,k,n) = buf4(i,j,k,n);
-             });
+        // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
+        MPI_Recv(np_rcv.dataPtr(), nbeams,
+                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                 (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
+    }
 
-        amrex::Gpu::Device::synchronize();
-        amrex::The_Pinned_Arena()->free(recv_buffer);
-        }
+    // Receive beam particles.
+    {
+        const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.end(), 0);
+        if (np_total == 0) return;
+        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long buffer_size = psize*np_total;
+        auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
-        // Same thing for the plasma particles. Currently only one tile.
-        {
-            const int lev = 0;
-            const amrex::Long np = m_plasma_container.m_num_exchange;
-            const amrex::Long psize = m_plasma_container.superParticleSize();
-            const amrex::Long buffer_size = psize*np;
-            auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+        MPI_Status status;
+        // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
+        MPI_Recv(recv_buffer, buffer_size,
+                 amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                 (m_rank_z+1)%m_numprocs_z, pcomm_z_tag, m_comm_z, &status);
 
-            MPI_Status status;
-            MPI_Recv(recv_buffer, buffer_size,
-                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                     m_rank_z+1, pcomm_z_tag, m_comm_z, &status);
+        int offset_beam = 0;
+        for (int ibeam = 0; ibeam < nbeams; ibeam++){
+            auto& ptile = m_multi_beam.getBeam(ibeam);
+            const int np = np_rcv[ibeam];
 
-            auto& ptile = m_plasma_container.DefineAndReturnParticleTile(lev, 0, 0);
-            ptile.resize(np);
+            auto old_size = ptile.numParticles();
+            auto new_size = old_size + np;
+            ptile.resize(new_size);
             const auto ptd = ptile.getParticleTileData();
 
-            const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
-            const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+            const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
+            const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
+
 #ifdef AMREX_USE_GPU
-            if (amrex::Gpu::inLaunchRegion()) {
+            if (amrex::Gpu::inLaunchRegion() && np > 0) {
                 int const np_per_block = 128;
                 int const nblocks = (np+np_per_block-1)/np_per_block;
                 std::size_t const shared_mem_bytes = np_per_block * psize;
                 // NOTE - TODO DPC++
-                amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-                [=] AMREX_GPU_DEVICE () noexcept
-                {
-                    amrex::Gpu::SharedMemory<char> gsm;
-                    char* const shared = gsm.dataPtr();
+                amrex::launch(
+                    nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+                    [=] AMREX_GPU_DEVICE () noexcept
+                    {
+                        amrex::Gpu::SharedMemory<char> gsm;
+                        char* const shared = gsm.dataPtr();
 
-                    // Copy packed data from recv_buffer (in pinned memory) to shared memory
-                    const int i = blockDim.x*blockIdx.x+threadIdx.x;
-                    const unsigned int m = threadIdx.x;
-                    const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
-                    for (unsigned int index = m;
-                         index < mend*psize/sizeof(double); index += blockDim.x) {
-                        const double *csrc = (double *)(recv_buffer+blockDim.x*blockIdx.x*psize);
-                        double *cdest = (double *)shared;
-                        cdest[index] = csrc[index];
-                    }
+                        // Copy packed data from recv_buffer (in pinned memory) to shared memory
+                        const int i = blockDim.x*blockIdx.x+threadIdx.x;
+                        const unsigned int m = threadIdx.x;
+                        const unsigned int mend = amrex::min<unsigned int>
+                            (blockDim.x, np-blockDim.x*blockIdx.x);
+                        for (unsigned int index = m;
+                             index < mend*psize/sizeof(double); index += blockDim.x) {
+                            const double *csrc = (double *)
+                                (recv_buffer+offset_beam*psize+blockDim.x*blockIdx.x*psize);
+                            double *cdest = (double *)shared;
+                            cdest[index] = csrc[index];
+                        }
 
-                    __syncthreads();
-                    // Unpack in shared memory, and move to device memory
-                    if (i < np) {
-                        ptd.unpackParticleData(shared, m*psize, i, p_comm_real, p_comm_int);
-                    }
-                });
+                        __syncthreads();
+                        // Unpack in shared memory, and move to device memory
+                        if (i < np) {
+                            ptd.unpackParticleData(
+                                shared, m*psize, i+old_size, p_comm_real, p_comm_int);
+                        }
+                    });
             } else
 #endif
             {
                 for (int i = 0; i < np; ++i)
                 {
-                    ptd.unpackParticleData(recv_buffer, i*psize, i, p_comm_real, p_comm_int);
+                    ptd.unpackParticleData(
+                        recv_buffer+offset_beam*psize, i*psize, i+old_size, p_comm_real, p_comm_int);
                 }
             }
-
-            amrex::Gpu::Device::synchronize();
-            amrex::The_Pinned_Arena()->free(recv_buffer);
+            offset_beam += np;
         }
+
+        amrex::Gpu::Device::synchronize();
+        amrex::The_Pinned_Arena()->free(recv_buffer);
     }
+
 #endif
 }
 
 void
-Hipace::Notify ()
+Hipace::Notify (const int step, const int it)
 {
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3.
 
 #ifdef AMREX_USE_MPI
-    if (m_rank_z != 0) {
-        NotifyFinish(); // finish the previous send
+    NotifyFinish(); // finish the previous send
 
-        {
-        const int lev = 0;
-        const amrex::MultiFab& slice2 = m_fields.getSlices(lev, WhichSlice::Previous1);
-        const amrex::MultiFab& slice3 = m_fields.getSlices(lev, WhichSlice::Previous2);
-        const amrex::MultiFab& slice4 = m_fields.getSlices(lev, WhichSlice::RhoIons);
-        // Note that there is only one local Box in slice multifab's boxarray.
-        const int box_index = slice2.IndexArray()[0];
-        amrex::Array4<amrex::Real const> const& slice_fab2 = slice2.array(box_index);
-        amrex::Array4<amrex::Real const> const& slice_fab3 = slice3.array(box_index);
-        amrex::Array4<amrex::Real const> const& slice_fab4 = slice4.array(box_index);
-        const amrex::Box& bx = slice2.boxArray()[box_index]; // does not include ghost cells
-        const std::size_t nreals_valid_slice2 = bx.numPts()*slice_fab2.nComp();
-        const std::size_t nreals_valid_slice3 = bx.numPts()*slice_fab3.nComp();
-        const std::size_t nreals_valid_slice4 = bx.numPts()*slice_fab4.nComp();
-        const std::size_t nreals_total =
-            nreals_valid_slice2 + nreals_valid_slice3 + nreals_valid_slice4;
-        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-            (sizeof(amrex::Real)*nreals_total);
-        auto const buf2 = amrex::makeArray4(m_send_buffer,
-                                            bx, slice_fab2.nComp());
-        auto const buf3 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2,
-                                            bx, slice_fab3.nComp());
-        auto const buf4 = amrex::makeArray4(m_send_buffer+nreals_valid_slice2+nreals_valid_slice3,
-                                            bx, slice_fab4.nComp());
-        amrex::ParallelFor
-            (bx, slice_fab2.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-             {
-                 buf2(i,j,k,n) = slice_fab2(i,j,k,n);
-             },
-             bx, slice_fab3.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-             {
-                 buf3(i,j,k,n) = slice_fab3(i,j,k,n);
-             },
-             bx, slice_fab4.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-             {
-                 buf4(i,j,k,n) = slice_fab4(i,j,k,n);
-             });
+    // last step does not need to send anything
+    if (step == m_max_step -1 ) return;
 
-        amrex::Gpu::Device::synchronize();
-        MPI_Isend(m_send_buffer, nreals_total,
-                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                  m_rank_z-1, comm_z_tag, m_comm_z, &m_send_request);
-        }
+    const int nbeams = m_multi_beam.get_nbeams();
+    m_np_snd.resize(nbeams);
 
-        // Same thing for the plasma particles. Currently only one tile.
-        {
-            const int lev = 0;
-            const amrex::Long np = m_plasma_container.m_num_exchange;
-            const amrex::Long psize = m_plasma_container.superParticleSize();
-            const amrex::Long buffer_size = psize*np;
-            m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+    for (int ibeam = 0; ibeam < nbeams; ++ibeam)
+    {
+        m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
+    }
 
-            const auto& ptile = m_plasma_container.ParticlesAt(lev, 0, 0);
+    // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
+    MPI_Isend(m_np_snd.dataPtr(), nbeams, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
+
+    // Send beam particles. Currently only one tile.
+    {
+        const amrex::Long np_total = std::accumulate(m_np_snd.begin(), m_np_snd.end(), 0);
+        if (np_total == 0) return;
+        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long buffer_size = psize*np_total;
+        m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+
+        int offset_beam = 0;
+        for (int ibeam = 0; ibeam < nbeams; ibeam++){
+            const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
+            const amrex::Long np = m_np_snd[ibeam];
+
+            auto& ptile = m_multi_beam.getBeam(ibeam);
             const auto ptd = ptile.getConstParticleTileData();
 
-            const amrex::Gpu::DeviceVector<int> comm_real(m_plasma_container.NumRealComps(), 1);
-            const amrex::Gpu::DeviceVector<int> comm_int (m_plasma_container.NumIntComps(),  1);
+            const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
+            const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
-            const auto p_psend_buffer = m_psend_buffer;
+            const auto p_psend_buffer = m_psend_buffer + offset_beam*psize;
 #ifdef AMREX_USE_GPU
-            if (amrex::Gpu::inLaunchRegion()) {
+            if (amrex::Gpu::inLaunchRegion() && np > 0) {
                 const int np_per_block = 128;
                 const int nblocks = (np+np_per_block-1)/np_per_block;
                 const std::size_t shared_mem_bytes = np_per_block * psize;
                 // NOTE - TODO DPC++
-                amrex::launch(nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-                [=] AMREX_GPU_DEVICE () noexcept
-                {
-                    amrex::Gpu::SharedMemory<char> gsm;
-                    char* const shared = gsm.dataPtr();
+                amrex::launch(
+                    nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+                    [=] AMREX_GPU_DEVICE () noexcept
+                    {
+                        amrex::Gpu::SharedMemory<char> gsm;
+                        char* const shared = gsm.dataPtr();
 
-                    // Pack particles from device memory to shared memory
-                    const int i = blockDim.x*blockIdx.x+threadIdx.x;
-                    const unsigned int m = threadIdx.x;
-                    const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
-                    if (i < np) {
-                        ptd.packParticleData(shared, i, m*psize, p_comm_real, p_comm_int);
-                    }
+                        // Pack particles from device memory to shared memory
+                        const int i = blockDim.x*blockIdx.x+threadIdx.x;
+                        const unsigned int m = threadIdx.x;
+                        const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
+                        if (i < np) {
+                            ptd.packParticleData(shared, offset_box+i, m*psize, p_comm_real, p_comm_int);
+                        }
 
-                    __syncthreads();
+                        __syncthreads();
 
-                    // Copy packed particles from shared memory to psend_buffer in pinned memory
-                    for (unsigned int index = m;
-                         index < mend*psize/sizeof(double); index += blockDim.x) {
-                        const double *csrc = (double *)shared;
-                        double *cdest = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
-                        cdest[index] = csrc[index];
-                    }
-                });
+                        // Copy packed particles from shared memory to psend_buffer in pinned memory
+                        for (unsigned int index = m;
+                             index < mend*psize/sizeof(double); index += blockDim.x) {
+                            const double *csrc = (double *)shared;
+                            double *cdest = (double *)(p_psend_buffer+blockDim.x*blockIdx.x*psize);
+                            cdest[index] = csrc[index];
+                        }
+                    });
             } else
 #endif
             {
                 for (int i = 0; i < np; ++i)
                 {
-                    ptd.packParticleData(p_psend_buffer, i, i*psize, p_comm_real, p_comm_int);
+                    ptd.packParticleData(p_psend_buffer, offset_box+i, i*psize, p_comm_real, p_comm_int);
                 }
             }
-
             amrex::Gpu::Device::synchronize();
-            MPI_Isend(m_psend_buffer, buffer_size,
-                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      m_rank_z-1, pcomm_z_tag, m_comm_z, &m_psend_request);
-        }
+
+            ptile.resize(offset_box);
+            offset_beam += np;
+        } // here
+        // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
+        MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
     }
 #endif
 }
@@ -791,35 +745,28 @@ void
 Hipace::NotifyFinish ()
 {
 #ifdef AMREX_USE_MPI
-    if (m_rank_z != 0) {
-        if (m_send_buffer) {
-            MPI_Status status;
-            MPI_Wait(&m_send_request, &status);
-            amrex::The_Pinned_Arena()->free(m_send_buffer);
-            m_send_buffer = nullptr;
-        }
-        if (m_psend_buffer) {
-            MPI_Status status;
-            MPI_Wait(&m_psend_request, &status);
-            amrex::The_Pinned_Arena()->free(m_psend_buffer);
-            m_psend_buffer = nullptr;
-        }
+    if (m_np_snd.size() > 0) {
+        MPI_Status status;
+        MPI_Wait(&m_nsend_request, &status);
+        m_np_snd.resize(0);
+    }
+    if (m_psend_buffer) {
+        MPI_Status status;
+        MPI_Wait(&m_psend_request, &status);
+        amrex::The_Pinned_Arena()->free(m_psend_buffer);
+        m_psend_buffer = nullptr;
     }
 #endif
 }
 
 void
-Hipace::WriteDiagnostics (int output_step, bool force_output)
+Hipace::WriteDiagnostics (int output_step, const int it)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
-    // Dump before first and after last step, and every m_output_period steps in-between
+    // Dump every m_output_period steps and after last step
     if (m_output_period < 0 ||
-        (!force_output && output_step % m_output_period != 0) ||
-        output_step == m_last_output_dumped) return;
-
-    // Store this dump iteration
-    m_last_output_dumped = output_step;
+        (!(output_step == m_max_step) && output_step % m_output_period != 0) ) return;
 
     // Write fields
     const std::string filename = amrex::Concatenate("plt", output_step);
@@ -831,7 +778,8 @@ Hipace::WriteDiagnostics (int output_step, bool force_output)
 #ifdef HIPACE_USE_OPENPMD
     constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
-                        m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames);
+                        m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
+                        it, m_box_sorters);
 #else
     constexpr int nlev = 1;
     const amrex::IntVect local_ref_ratio {1, 1, 1};

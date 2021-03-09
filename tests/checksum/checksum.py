@@ -69,7 +69,7 @@ class Checksum:
 
         return data
 
-    def evaluate(self, rtol=1.e-9, atol=1.e-40):
+    def evaluate(self, rtol=1.e-9, atol=1.e-40, skip_dict={}):
         '''Compare IO file checksum with benchmark.
 
         Read checksum from IO file, read benchmark
@@ -110,6 +110,8 @@ class Checksum:
         checksums_differ = False
         for key1 in ref_benchmark.data.keys():
             for key2 in ref_benchmark.data[key1].keys():
+                if key1 in skip_dict.keys() and key2 in skip_dict[key1]:
+                    continue
                 passed = np.isclose(self.data[key1][key2],
                                     ref_benchmark.data[key1][key2],
                                     rtol=rtol, atol=atol)

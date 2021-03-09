@@ -31,10 +31,13 @@ parser.add_argument('--do-plot',
                     action='store_true',
                     default=False,
                     help='Plot figures and save them to file')
-
+parser.add_argument('--output-dir',
+                    dest='output_dir',
+                    default='diags/hdf5',
+                    help='Path to the directory containing output files')
 args = parser.parse_args()
 
-ts = OpenPMDTimeSeries('./diags/h5/')
+ts = OpenPMDTimeSeries(args.output_dir)
 
 if args.norm_units:
     c = 1.
