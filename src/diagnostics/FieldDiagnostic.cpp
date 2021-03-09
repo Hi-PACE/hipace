@@ -53,7 +53,7 @@ FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::G
     m_nfields = nfields;
 
     // trim the 3D box to slice box for slice IO
-    amrex::Box F_bx = redim_io(bx);
+    amrex::Box F_bx = TrimIOBox(bx);
 
     m_F.push_back(amrex::FArrayBox(F_bx, m_nfields, amrex::The_Pinned_Arena()));
 
@@ -72,12 +72,12 @@ FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::G
 void
 FieldDiagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
 {
-    amrex::Box io_box = redim_io(box);
+    amrex::Box io_box = TrimIOBox(box);
     m_F[lev].resize(io_box, m_nfields);
  }
 
 amrex::Box
-FieldDiagnostic::redim_io(const amrex::Box box_3d)
+FieldDiagnostic::TrimIOBox(const amrex::Box box_3d)
 {
     // Create a xz slice Box
     amrex::Box slice_bx = box_3d;
