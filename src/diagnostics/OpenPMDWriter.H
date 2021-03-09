@@ -25,8 +25,8 @@ private:
      * \param[in,out] currSpecies openPMD species to set up
      * \param[in] np total number of particles in the bunch
      */
-    void SetupPos(openPMD::ParticleSpecies& currSpecies,
-                  const unsigned long long& np);
+    void SetupPos (openPMD::ParticleSpecies& currSpecies,
+                   const unsigned long long& np);
 
     /** \brief setup the openPMD parameters do dump the SoA beam data
      *
@@ -34,9 +34,9 @@ private:
      * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
      * \param[in] np total number of particles in the bunch
      */
-    void SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
-                             const amrex::Vector<std::string>& real_comp_names,
-                             const unsigned long long np);
+    void SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
+                              const amrex::Vector<std::string>& real_comp_names,
+                              const unsigned long long np);
 
     /** \brief save the SoA beam data to openPMD
      *
@@ -47,11 +47,11 @@ private:
      * \param[in] box_offset offset for the particles in the current box
      * \param[in] numParticleOnTile number of particles in this box
      */
-    void SaveRealProperty(BeamParticleContainer& pc, openPMD::ParticleSpecies& currSpecies,
-                          unsigned long long const offset,
-                          amrex::Vector<std::string> const& real_comp_names,
-                          unsigned long long const box_offset,
-                          const unsigned long long numParticleOnTile);
+    void SaveRealProperty (BeamParticleContainer& pc, openPMD::ParticleSpecies& currSpecies,
+                           unsigned long long const offset,
+                           amrex::Vector<std::string> const& real_comp_names,
+                           unsigned long long const box_offset,
+                           const unsigned long long numParticleOnTile);
 
     /** \brief writing openPMD beam particle data
      *
@@ -74,10 +74,9 @@ private:
      * \param[in,out] iteration openPMD iteration to which the data is written
      * \param[in] output_step current time step to dump
      */
-    void WriteFieldData (
-        amrex::FArrayBox const& fab, amrex::Geometry const& geom,
-        const int slice_dir, const amrex::Vector< std::string > varnames,
-        openPMD::Iteration iteration, const int output_step);
+    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
+                         const int slice_dir, const amrex::Vector< std::string > varnames,
+                         openPMD::Iteration iteration, const int output_step);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */

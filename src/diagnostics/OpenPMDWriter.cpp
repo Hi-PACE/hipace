@@ -204,8 +204,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 }
 
 void
-OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
-         const unsigned long long& np)
+OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
+                         const unsigned long long& np)
 {
     PhysConst const phys_const = get_phys_const();
     auto const realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
@@ -233,9 +233,9 @@ OpenPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
 }
 
 void
-OpenPMDWriter::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
-                      const amrex::Vector<std::string>& real_comp_names,
-                      const unsigned long long np)
+OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
+                                    const amrex::Vector<std::string>& real_comp_names,
+                                    const unsigned long long np)
 {
     auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
 
@@ -269,13 +269,12 @@ OpenPMDWriter::SetupRealProperties(openPMD::ParticleSpecies& currSpecies,
 }
 
 void
-OpenPMDWriter::SaveRealProperty(BeamParticleContainer& pc,
-                                openPMD::ParticleSpecies& currSpecies,
-                                unsigned long long const offset,
-                                amrex::Vector<std::string> const& real_comp_names,
-                                unsigned long long const box_offset,
-                                const unsigned long long numParticleOnTile)
-
+OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
+                                 openPMD::ParticleSpecies& currSpecies,
+                                 unsigned long long const offset,
+                                 amrex::Vector<std::string> const& real_comp_names,
+                                 unsigned long long const box_offset,
+                                 const unsigned long long numParticleOnTile)
 {
     /* we have 4 SoA real attributes: weight, ux, uy, uz */
     int const NumSoARealAttributes = real_comp_names.size();
