@@ -10,7 +10,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
                const amrex::Real a_density,
-               const amrex::Real a_radius)
+               const amrex::Real a_radius,
+               const amrex::Real a_parabolic_curvature)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
 
@@ -120,9 +121,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     x*x + y*y > a_radius*a_radius ) continue;
 
+                const amrex::Real radius = std::sqrt(x*x + y*y);
+                const amrex::Real parabolic_factor = a_parabolic_curvature * radius * radius;
+
                 amrex::Real u[3] = {0.,0.,0.};
-                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
-                                                           a_u_std);
+                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std);
 
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;
@@ -131,8 +134,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                arrdata[PlasmaIdx::w        ][pidx] = a_density * scale_fac;
-                arrdata[PlasmaIdx::w0       ][pidx] = a_density * scale_fac;;
+                arrdata[PlasmaIdx::w        ][pidx] = (a_density + parabolic_factor) * scale_fac;
+                arrdata[PlasmaIdx::w0       ][pidx] = (a_density + parabolic_factor) * scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
                 arrdata[PlasmaIdx::psi      ][pidx] = 0.;
