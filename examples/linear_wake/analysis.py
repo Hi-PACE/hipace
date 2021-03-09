@@ -14,6 +14,7 @@
 
 import matplotlib.pyplot as plt
 import scipy.constants as scc
+from scipy.stats import norm
 import matplotlib
 import sys
 import numpy as np
@@ -70,24 +71,22 @@ beam_length_i = np.int(beam_length / dzeta)
 if (args.gaussian_beam):
     sigma_z = 1.41 / kp
     peak_density = 0.01*ne
-    for i in range( int(nz/2) -1):
-        nb_array[int(nz/2)-i ] = peak_density * np.exp(-0.5*((i*dzeta)/sigma_z)**2 )
-        nb_array[int(nz/2)+i ] = peak_density * np.exp(-0.5*((i*dzeta)/sigma_z)**2 )
+    nb_array = peak_density*np.sqrt(2*np.pi)*norm.pdf(np.linspace(-nz/2,nz/2,nz)*dzeta/sigma_z)
 else:
     nb_array[nz-index_beam_head-beam_length_i:nz-index_beam_head] = 0.01 * ne
 
 # calculating the second derivative of the beam density array
 nb_dzdz = np.zeros(nz)
-for i in range(nz-1):
-    nb_dzdz[i] = (nb_array[i-1] -2*nb_array[i] + nb_array[i+1]  )/dzeta**2
+nb_dzdz[1:nz-1] = (nb_array[0:nz-2] - 2*nb_array[1:nz-1] + nb_array[2:nz])/dzeta**2
 
 # calculating the theoretical plasma density (see Timon Mehrling's thesis page 41)
 n_th = np.zeros(nz)
+tmp  = np.zeros([nz,nz],dtype=float)
 for i in np.arange(nz-1,-1,-1):
-    tmp = 0.
     for j in range(nz-i):
-        tmp += 1./kp*math.sin(kp*dzeta*(i-(nz-1-j)))*nb_dzdz[nz-1-j]
-    n_th[i] = tmp*dzeta + nb_array[i]
+        tmp[i,j]= i-(nz-1-j)
+tmp = (dzeta/kp*np.sin(kp*dzeta*tmp) * np.full([nz,nz],1) * nb_dzdz[np.linspace(nz-1,0,nz,dtype=int)])
+n_th = np.sum(tmp,axis = 1) + nb_array
 rho_th = n_th * q_e
 
 if args.do_plot:

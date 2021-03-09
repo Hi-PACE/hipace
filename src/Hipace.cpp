@@ -35,8 +35,9 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_device_synchronize = false;
 int Hipace::m_beam_injection_cr = 1;
-amrex::Real Hipace::m_external_focusing_field_strength = 0.;
-amrex::Real Hipace::m_external_accel_field_strength = 0.;
+amrex::Real Hipace::m_external_ExmBy_slope = 0.;
+amrex::Real Hipace::m_external_Ez_slope = 0.;
+amrex::Real Hipace::m_external_Ez_uniform = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -85,8 +86,9 @@ Hipace::Hipace () :
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_device_synchronize", m_do_device_synchronize);
-    pph.query("external_focusing_field_strength", m_external_focusing_field_strength);
-    pph.query("external_accel_field_strength", m_external_accel_field_strength);
+    pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
+    pph.query("external_Ez_slope", m_external_Ez_slope);
+    pph.query("external_Ez_uniform", m_external_Ez_uniform);
 
 #ifdef AMREX_USE_MPI
     int myproc = amrex::ParallelDescriptor::MyProc();
