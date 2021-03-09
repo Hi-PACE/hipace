@@ -199,12 +199,6 @@ Hipace::InitData ()
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
     m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
-    #ifdef HIPACE_USE_OPENPMD
-    // receive and pass the number of beam particles to share the offset for openPMD IO
-    // FIXME: sending the total number of particles will no longer be required.
-    // m_multi_beam.WaitNumParticles(m_comm_z);
-    // m_multi_beam.NotifyNumParticles(m_comm_z);
-    #endif
 #endif
 }
 
@@ -301,9 +295,6 @@ Hipace::Evolve ()
 #ifdef HIPACE_USE_OPENPMD
         if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
 #endif
-
-        /* calculate the adaptive time step before printout, so the ranks already print their new dt */
-        // m_adaptive_time_step.Calculate(m_dt, step, m_multi_beam, m_plasma_container, lev, m_comm_z);
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
@@ -648,9 +639,6 @@ Hipace::Wait (const int step)
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
-//    const int lev = 0;
-//    m_box_sorters.clear();
-//    m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 #endif
 }
 
