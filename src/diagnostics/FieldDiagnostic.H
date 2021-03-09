@@ -46,7 +46,7 @@ public:
      *
      * \param[in] box_3d box to be possibly trimmed to a slice box
      */
-    amrex::Box redim_io(const amrex::Box box_3d);
+    amrex::Box TrimIOBox (const amrex::Box box_3d);
 
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *

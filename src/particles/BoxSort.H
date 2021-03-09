@@ -26,8 +26,11 @@ public:
     const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets.dataPtr(); }
 
 private:
+    /** Object to locate the box in which a particle is located */
     amrex::ParticleLocator<amrex::DenseBins<amrex::Box> > m_particle_locator;
+    /** Number of particles in each box */
     amrex::Gpu::DeviceVector<index_type> m_box_counts;
+    /** Index of the first particle in each box */
     amrex::Gpu::DeviceVector<index_type> m_box_offsets;
 };
 

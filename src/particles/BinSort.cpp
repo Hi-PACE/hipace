@@ -15,7 +15,6 @@ findParticlesInEachSlice (
     const int offset = a_box_sorter.boxOffsetsPtr()[ibox];
 
     // Extract particle structures for this tile
-    // int const np = beam.numParticles();
     BeamParticleContainer::ParticleType const* particle_ptr = beam.GetArrayOfStructs()().data();
     particle_ptr += offset;
 
