@@ -210,9 +210,9 @@ if(BUILD_TESTING)
 
         configure_mpiexec(1)  # one rank in MPI_TEST_EXE
         add_test(NAME blowout_wake.2Rank
-                COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
-                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME beam_evolution.1Rank
