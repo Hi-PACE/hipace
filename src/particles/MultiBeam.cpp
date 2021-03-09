@@ -78,9 +78,6 @@ MultiBeam::WritePlotFile (const std::string& /*filename*/)
     amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
     AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
     amrex::Vector<std::string> int_names {};
-    // for (auto& beam : m_all_beams){
-    //     beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
-    // }
 }
 
 void
