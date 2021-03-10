@@ -647,7 +647,7 @@ InitBeamFromFile (const std::string input_file,
                                (amrex::Real)(u_x_data.get()[i] * unit_ux),
                                (amrex::Real)(u_y_data.get()[i] * unit_uy),
                                (amrex::Real)(u_z_data.get()[i] * unit_uz),
-                               (amrex::Real)(q_q_data.get()[i] * unit_qq),
+                               (amrex::Real)(w_w_data.get()[i] * unit_ww),
                                pid, procID, i, phys_const.c);
         }
     }

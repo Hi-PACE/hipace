@@ -12,6 +12,10 @@ OpenPMDWriter::OpenPMDWriter ()
         "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
     amrex::ParmParse pp("hipace");
     pp.query("file_prefix", m_file_prefix);
+
+    // temporary workaround until openPMD-viewer gets fixed
+    amrex::ParmParse ppd("diagnostic");
+    ppd.query("beam_with_units_SI", m_proper_beam_SI_units);
 }
 
 void
@@ -174,7 +178,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                     new amrex::ParticleReal[numParticleOnTile],
                     [](amrex::ParticleReal const *p){ delete[] p; } );
 
-                for (auto i=0; i<numParticleOnTile; i++) {
+                for (uint64_t i=0; i<numParticleOnTile; i++) {
                     curr.get()[i] = pos_structs[i].pos(currDim);
                 }
                 std::string const positionComponent = positionComponents[currDim];
@@ -186,7 +190,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                                              [](uint64_t const *p){ delete[] p; } );
 
-            for (auto i=0; i<numParticleOnTile; i++) {
+            for (uint64_t i=0; i<numParticleOnTile; i++) {
                 ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
             }
             auto const scalar = openPMD::RecordComponent::SCALAR;
@@ -237,7 +241,14 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 
-    if(Hipace::m_normalized_units) {
+    // temporary workaround until openPMD-viewer gets fixed
+    if(!m_proper_beam_SI_units) {
+        if(Hipace::m_normalized_units){
+            hipace_to_SI_momentum = phys_const_SI.c;
+        }
+    }
+
+    else if(Hipace::m_normalized_units) {
         const auto dx = geom.CellSizeArray();
         const double n_0 = 1.;
         currSpecies.setAttribute("Hipace++_Plasma_Density", n_0);
@@ -252,15 +263,11 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
     }
 
     // write SI conversion
-    currSpecies["position"]["x"].setUnitSI( hipace_to_SI_pos );
-    currSpecies["position"]["y"].setUnitSI( hipace_to_SI_pos );
-    currSpecies["position"]["z"].setUnitSI( hipace_to_SI_pos );
-    currSpecies["positionOffset"]["x"].setUnitSI( hipace_to_SI_pos ); //posOffset allways 0
-    currSpecies["positionOffset"]["y"].setUnitSI( hipace_to_SI_pos );
-    currSpecies["positionOffset"]["z"].setUnitSI( hipace_to_SI_pos );
-    currSpecies["momentum"]["x"].setUnitSI( hipace_to_SI_momentum );
-    currSpecies["momentum"]["y"].setUnitSI( hipace_to_SI_momentum );
-    currSpecies["momentum"]["z"].setUnitSI( hipace_to_SI_momentum );
+    for( auto const& comp : positionComponents ) {
+        currSpecies["position"][comp].setUnitSI( hipace_to_SI_pos );
+        currSpecies["positionOffset"][comp].setUnitSI( hipace_to_SI_pos ); //posOffset allways 0
+        currSpecies["momentum"][comp].setUnitSI( hipace_to_SI_momentum );
+    }
     currSpecies["weighting"][scalar].setUnitSI( hipace_to_SI_weight );
     currSpecies["charge"][scalar].setUnitSI( hipace_to_SI_charge );
     currSpecies["mass"][scalar].setUnitSI( hipace_to_SI_mass );

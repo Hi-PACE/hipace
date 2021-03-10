@@ -111,23 +111,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
-
-    if(Hipace::m_verbose >= 4) {
-        for(amrex::MFIter mfi = MakeMFIter(0); mfi.isValid(); ++mfi){
-            auto& particles = GetParticles(0);
-            auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
-            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-            amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
-                                                  particle_tile.GetStructOfArrays().realarray();
-            amrex::Print() << "Internal Beam particle data of the first 100 particles of Beam: "
-                           << m_name << "\nid cpu pos_x pos_y pos_z   u_x u_y u_z   weight\n";
-            for(int i=0; i<std::min((int)m_total_num_particles, 100);i++){
-                amrex::Print() << pstruct[i] << "  " << arrdata[BeamIdx::ux][i] << " "
-                               << arrdata[BeamIdx::uy][i] << " " << arrdata[BeamIdx::uz][i] << "   "
-                               << arrdata[BeamIdx::w][i] << std::endl;
-            }
-        }
-    }
+    
 }
 
 amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool only_local) const

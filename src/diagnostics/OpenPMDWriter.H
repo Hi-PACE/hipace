@@ -130,6 +130,9 @@ public:
 
     /** Prefix/path for the output files */
     std::string m_file_prefix = "diags/hdf5";
+
+    /** Temporary workaround until openPMD-viewer gets fixed */
+    bool m_proper_beam_SI_units = false;
 };
 
 #endif // HIPACE_USE_OPENPMD
