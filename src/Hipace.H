@@ -180,7 +180,7 @@ public:
     int m_output_period = -1;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
-    amrex::Real m_physical_time = 0.;
+    static amrex::Real m_physical_time;
     /** Level of verbosity */
     static int m_verbose;
     /** Whether to use normalized units */

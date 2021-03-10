@@ -24,9 +24,11 @@ private:
      *
      * \param[in,out] currSpecies openPMD species to set up
      * \param[in] np total number of particles in the bunch
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
      */
-    void SetupPos (openPMD::ParticleSpecies& currSpecies,
-                   const unsigned long long& np);
+    void SetupPos(openPMD::ParticleSpecies& currSpecies,
+                  const unsigned long long& np,
+                  const amrex::Geometry& geom);
 
     /** \brief setup the openPMD parameters do dump the SoA beam data
      *
@@ -60,10 +62,12 @@ private:
      * \param[in] output_step current time step to dump
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
                                 const int output_step, const int it,
-                                const amrex::Vector<BoxSorter>& a_box_sorter_vec);
+                                const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                                const amrex::Geometry& geom);
 
     /** \brief writing openPMD field data
      *
@@ -113,13 +117,14 @@ public:
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
      */
     void WriteDiagnostics(
         amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int lev,
         const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
-        const amrex::Vector<BoxSorter>& a_box_sorter_vec);
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D);
 
     void reset () {m_outputSeries.reset();};
 

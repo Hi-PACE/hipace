@@ -39,6 +39,8 @@ if args.norm_units:
     y_std = 4.
     z_std = 5.
     charge = 1.*3.*4.*5.*(2.*np.pi)**(3/2)/(40./64.)**3
+    plasma_density = 1.
+    kp_inv = scc.c / scc.e * np.sqrt(scc.epsilon_0 * scc.m_e / plasma_density)
 else:
     x_avg =  0.e-6
     y_avg = 10.e-6
@@ -64,6 +66,12 @@ uy_std = 4.
 xp, yp, zp, uxp, uyp, uzp, wp = ts.get_particle(
     species='beam', iteration=ts.iterations[0],
     var_list=['x', 'y', 'z', 'ux', 'uy', 'uz', 'w'])
+
+if args.norm_units:
+    xp /= kp_inv
+    yp /= kp_inv
+    zp /= kp_inv
+    wp /= kp_inv**3 * (40./64.)**3
 
 if args.do_plot:
     Hx, bins = np.histogram(xp, weights=wp, range=[-200.e-6, 200.e-6], bins=100)

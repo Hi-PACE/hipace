@@ -101,9 +101,6 @@ public:
     unsigned long long get_total_num_particles (int i) const
         {return m_all_beams[i].get_total_num_particles();};
 
-    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
-    void ConvertUnits (ConvertDirection convert_dir);
-
     /** \brief Check that all beams have the same number of Real components
      * and return this number */
     int NumRealComps ();
