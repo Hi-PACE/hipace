@@ -21,16 +21,11 @@ field_strength = 0.5
 gamma = 1000.
 x_std_initial = 1./2.
 omega_beta = np.sqrt(field_strength/gamma)
-plasma_density = 1.
-kp_inv = scc.c / scc.e * np.sqrt(scc.epsilon_0 * scc.m_e / plasma_density)
 
 # Load beam particle data
 ts = OpenPMDTimeSeries(args.output_dir)
 xp, yp, uzp, wp = ts.get_particle(species='beam', iteration=ts.iterations[-1],
                                   var_list=['x', 'y', 'uz', 'w'])
-
-xp /= kp_inv
-yp /= kp_inv
 
 std_theory = x_std_initial * np.abs(np.cos(omega_beta * ts.current_t))
 std_sim_x = np.sqrt(np.sum(xp**2*wp)/np.sum(wp))
