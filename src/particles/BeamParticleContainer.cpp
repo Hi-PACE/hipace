@@ -111,7 +111,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
-    
+
 }
 
 amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool only_local) const
