@@ -40,7 +40,6 @@ OpenPMDWriter::WriteDiagnostics (
 
     WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
 
-    a_multi_beam.ConvertUnits(ConvertDirection::HIPACE_to_SI);
     WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D);
 
     m_outputSeries->flush();

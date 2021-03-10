@@ -80,13 +80,6 @@ MultiBeam::WritePlotFile (const std::string& /*filename*/)
     amrex::Vector<std::string> int_names {};
 }
 
-void
-MultiBeam::ConvertUnits (ConvertDirection convert_direction)
-{
-    for (auto& beam : m_all_beams) {
-        beam.ConvertUnits(convert_direction);
-    }
-}
 
 int
 MultiBeam::NumRealComps ()

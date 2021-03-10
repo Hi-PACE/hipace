@@ -7,8 +7,6 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
-enum struct ConvertDirection{HIPACE_to_SI, SI_to_HIPACE};
-
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
