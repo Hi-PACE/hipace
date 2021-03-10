@@ -167,31 +167,6 @@ function(set_hipace_binary_name)
 endfunction()
 
 
-# Set an MPI_TEST_EXE variable for test runs which runs num_ranks
-# ranks. On some systems, you might need to use the a specific
-# mpiexec wrapper, e.g. on Summit (ORNL) pass the hint
-# -DMPIEXEC_EXECUTABLE=$(which jsrun) to run ctest.
-#
-function(configure_mpiexec num_ranks)
-    # OpenMPI root guard: https://github.com/open-mpi/ompi/issues/4451
-    if("$ENV{USER}" STREQUAL "root")
-        # calling even --help as root will abort and warn on stderr
-        execute_process(COMMAND ${MPIEXEC_EXECUTABLE} --help
-            ERROR_VARIABLE MPIEXEC_HELP_TEXT
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-            if(${MPIEXEC_HELP_TEXT} MATCHES "^.*allow-run-as-root.*$")
-                set(MPI_ALLOW_ROOT --allow-run-as-root)
-            endif()
-    endif()
-    set(MPI_TEST_EXE
-        ${MPIEXEC_EXECUTABLE}
-        ${MPI_ALLOW_ROOT}
-        ${MPIEXEC_NUMPROC_FLAG} ${num_ranks}
-        PARENT_SCOPE
-    )
-endfunction()
-
-
 # Prints a summary of HiPACE options at the end of the CMake configuration
 #
 function(hipace_print_summary)
