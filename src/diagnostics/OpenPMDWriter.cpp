@@ -15,7 +15,7 @@ OpenPMDWriter::OpenPMDWriter ()
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");
-    ppd.query("beam_with_units_SI", m_proper_beam_SI_units);
+    ppd.query("openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
 }
 
 void
@@ -238,17 +238,11 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
     double hipace_to_SI_momentum = phys_const_SI.m_e;
+    double hipace_to_unitSI_momentum = phys_const_SI.m_e;
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 
-    // temporary workaround until openPMD-viewer gets fixed
-    if(!m_proper_beam_SI_units) {
-        if(Hipace::m_normalized_units){
-            hipace_to_SI_momentum = phys_const_SI.c;
-        }
-    }
-
-    else if(Hipace::m_normalized_units) {
+    if(Hipace::m_normalized_units) {
         const auto dx = geom.CellSizeArray();
         const double n_0 = 1.;
         currSpecies.setAttribute("Hipace++_Plasma_Density", n_0);
@@ -257,20 +251,32 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
         const double kp_inv = (double)phys_const_SI.c / omega_p;
         hipace_to_SI_pos = kp_inv;
         hipace_to_SI_weight = n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
-        hipace_to_SI_momentum *= phys_const_SI.c;
+        hipace_to_SI_momentum = phys_const_SI.m_e * phys_const_SI.c;
+        hipace_to_unitSI_momentum = 1.;
         hipace_to_SI_charge = phys_const_SI.q_e;
         hipace_to_SI_mass = phys_const_SI.m_e;
     }
 
-    // write SI conversion
-    for( auto const& comp : positionComponents ) {
-        currSpecies["position"][comp].setUnitSI( hipace_to_SI_pos );
-        currSpecies["positionOffset"][comp].setUnitSI( hipace_to_SI_pos ); //posOffset allways 0
-        currSpecies["momentum"][comp].setUnitSI( hipace_to_SI_momentum );
+    // temporary workaround until openPMD-viewer does not autonormalize momentum
+    if(m_openpmd_viewer_workaround) {
+        if(Hipace::m_normalized_units){
+            hipace_to_unitSI_momentum = phys_const_SI.c;
+        }
     }
-    currSpecies["weighting"][scalar].setUnitSI( hipace_to_SI_weight );
-    currSpecies["charge"][scalar].setUnitSI( hipace_to_SI_charge );
-    currSpecies["mass"][scalar].setUnitSI( hipace_to_SI_mass );
+
+    // write SI conversion
+    currSpecies.setAttribute("Hipace++_use_reverence_unitSI", true);
+    const std::string attr = "Hipace++_reverence_unitSI";
+    for( auto const& comp : positionComponents ) {
+        currSpecies["position"][comp].setAttribute( attr, hipace_to_SI_pos );
+        //posOffset allways 0
+        currSpecies["positionOffset"][comp].setAttribute( attr, hipace_to_SI_pos );
+        currSpecies["momentum"][comp].setAttribute( attr, hipace_to_SI_momentum );
+        currSpecies["momentum"][comp].setUnitSI( hipace_to_unitSI_momentum );
+    }
+    currSpecies["weighting"][scalar].setAttribute( attr, hipace_to_SI_weight );
+    currSpecies["charge"][scalar].setAttribute( attr, hipace_to_SI_charge );
+    currSpecies["mass"][scalar].setAttribute( attr, hipace_to_SI_mass );
 }
 
 void
@@ -278,7 +284,7 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
                                     const amrex::Vector<std::string>& real_comp_names,
                                     const unsigned long long np)
 {
-    auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
+    auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(),{np});
 
     /* we have 4 SoA real attributes: weight, ux, uy, uz */
     int const NumSoARealAttributes = real_comp_names.size();

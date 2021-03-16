@@ -371,20 +371,11 @@ InitBeamFromFile (const std::string input_file,
 
     // Initialize variables to translate between names from the file and names in Hipace
     std::string name_particle ="";
-    std::string name_r ="";
-    std::string name_rx ="";
-    std::string name_ry ="";
-    std::string name_rz ="";
-    std::string name_u ="";
-    std::string name_ux ="";
-    std::string name_uy ="";
-    std::string name_uz ="";
-    std::string name_m ="";
-    std::string name_mm ="";
-    std::string name_q ="";
-    std::string name_qq ="";
-    std::string name_g ="";
-    std::string name_gg ="";
+    std::string name_r ="", name_rx ="", name_ry ="", name_rz ="";
+    std::string name_u ="", name_ux ="", name_uy ="", name_uz ="";
+    std::string name_m ="", name_mm ="";
+    std::string name_q ="", name_qq ="";
+    std::string name_g ="", name_gg ="";
     bool u_is_momentum = false;
 
     // Iterate through all matadata in file, search for unit combination for Distance, Velocity,
@@ -394,12 +385,9 @@ InitBeamFromFile (const std::string input_file,
             name_particle = particle_type.first;
             for( auto const& physical_quantity : particle_type.second ) {
 
-                std::string units = "";
-                for( auto const& unit_dimension : physical_quantity.second.unitDimension()) {
-                    units += std::to_string(unit_dimension) + ",";
-                }
+                std::array<double,7> units = physical_quantity.second.unitDimension();
 
-                if(units=="1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+                if(units == std::array<double,7> {1., 0., 0., 0., 0., 0., 0.}) {
                     if( (!particle_type.second.contains("position")) ||
                                                       (physical_quantity.first == "position")) {
                         name_r = physical_quantity.first;
@@ -416,7 +404,7 @@ InitBeamFromFile (const std::string input_file,
                         }
                     }
                 }
-                else if(units=="1.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,") {
+                else if(units == std::array<double,7> {1., 0., -1., 0., 0., 0., 0.}) {
                     name_u = physical_quantity.first;
                     u_is_momentum = false;
                     for( auto const& axes_direction : physical_quantity.second ) {
@@ -431,7 +419,7 @@ InitBeamFromFile (const std::string input_file,
                         }
                     }
                 }
-                else if(units=="1.000000,1.000000,-1.000000,0.000000,0.000000,0.000000,0.000000,") {
+                else if(units == std::array<double,7> {1., 1., -1., 0., 0., 0., 0.}) {
                     name_u = physical_quantity.first;
                     u_is_momentum = true;
                     for( auto const& axes_direction : physical_quantity.second ) {
@@ -446,19 +434,19 @@ InitBeamFromFile (const std::string input_file,
                         }
                     }
                 }
-                else if(units=="0.000000,1.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+                else if(units == std::array<double,7> {0., 1., 0., 0., 0., 0., 0.}) {
                     name_m = physical_quantity.first;
                     for( auto const& axes_direction : physical_quantity.second ) {
                         name_mm = axes_direction.first;
                     }
                 }
-                else if(units=="0.000000,0.000000,1.000000,1.000000,0.000000,0.000000,0.000000,") {
+                else if(units == std::array<double,7> {0., 0., 1., 1., 0., 0., 0.}) {
                     name_q = physical_quantity.first;
                     for( auto const& axes_direction : physical_quantity.second ) {
                         name_qq = axes_direction.first;
                     }
                 }
-                else if(units=="0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,") {
+                else if(units == std::array<double,7> {0., 0., 0., 0., 0., 0., 0.}) {
                     if(physical_quantity.first == "weighting") {
                         name_g = physical_quantity.first;
                         for( auto const& axes_direction : physical_quantity.second ) {
@@ -481,8 +469,7 @@ InitBeamFromFile (const std::string input_file,
     // set conversion factor appropriately
     const PhysConst phys_const_SI = make_constants_SI();
 
-    std::string name_w = "";
-    std::string name_ww = "";
+    std::string name_w = "", name_ww = "";
     std::string weighting_type = "";
     std::string momentum_type = "Normalized momentum";
 
@@ -515,6 +502,7 @@ InitBeamFromFile (const std::string input_file,
     else {
         amrex::Abort("Could not find Charge of dimension I * T in file\n");
     }
+
     // Abort if file necessary information couldn't be found in file
     if(name_r == "") {
         amrex::Abort("Could not find Position of dimension L in file\n");
@@ -588,22 +576,50 @@ InitBeamFromFile (const std::string input_file,
         si_to_norm_weight *= (input_type)( n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv );
     }
 
-    const input_type unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
-    const input_type unit_ry = electrons[name_r][name_ry].unitSI() / si_to_norm_pos;
-    const input_type unit_rz = electrons[name_r][name_rz].unitSI() / si_to_norm_pos;
-    const input_type unit_ux = electrons[name_u][name_ux].unitSI() / si_to_norm_momentum;
-    const input_type unit_uy = electrons[name_u][name_uy].unitSI() / si_to_norm_momentum;
-    const input_type unit_uz = electrons[name_u][name_uz].unitSI() / si_to_norm_momentum;
-    const input_type unit_ww = electrons[name_w][name_ww].unitSI() / si_to_norm_weight;
+    input_type unit_rx, unit_ry, unit_rz, unit_ux, unit_uy, unit_uz, unit_ww;
+    bool hipace_restart = false;
+    const std::string attr = "Hipace++_reverence_unitSI";
+    if(electrons.containsAttribute("Hipace++_use_reverence_unitSI")) {
+        if(electrons.getAttribute("Hipace++_use_reverence_unitSI").get<bool>() == true) {
+            hipace_restart = true;
+        }
+    }
+
+    if(hipace_restart) {
+        unit_rx = electrons[name_r][name_rx].getAttribute(attr).get<double>() / si_to_norm_pos;
+        unit_ry = electrons[name_r][name_ry].getAttribute(attr).get<double>() / si_to_norm_pos;
+        unit_rz = electrons[name_r][name_rz].getAttribute(attr).get<double>() / si_to_norm_pos;
+        unit_ux = electrons[name_u][name_ux].getAttribute(attr).get<double>() / si_to_norm_momentum;
+        unit_uy = electrons[name_u][name_uy].getAttribute(attr).get<double>() / si_to_norm_momentum;
+        unit_uz = electrons[name_u][name_uz].getAttribute(attr).get<double>() / si_to_norm_momentum;
+        unit_ww = electrons[name_w][name_ww].getAttribute(attr).get<double>() / si_to_norm_weight;
+    }
+    else {
+        unit_rx = electrons[name_r][name_rx].unitSI() / si_to_norm_pos;
+        unit_ry = electrons[name_r][name_ry].unitSI() / si_to_norm_pos;
+        unit_rz = electrons[name_r][name_rz].unitSI() / si_to_norm_pos;
+        unit_ux = electrons[name_u][name_ux].unitSI() / si_to_norm_momentum;
+        unit_uy = electrons[name_u][name_uy].unitSI() / si_to_norm_momentum;
+        unit_uz = electrons[name_u][name_uz].unitSI() / si_to_norm_momentum;
+        unit_ww = electrons[name_w][name_ww].unitSI() / si_to_norm_weight;
+    }
 
     // Check if q/m matches that of electrons
     if((name_mm != "") && (name_qq != "")) {
-        const input_type unit_qq = electrons[name_q][name_qq].unitSI();
+        input_type unit_qq, unit_mm;
         const std::shared_ptr< input_type > q_q_data = electrons[name_q][
                                                        name_qq].loadChunk< input_type >();
-        const input_type unit_mm = electrons[name_m][name_mm].unitSI();
         const std::shared_ptr< input_type > m_m_data = electrons[name_m][
                                                        name_mm].loadChunk< input_type >();
+
+        if(hipace_restart) {
+            unit_qq = electrons[name_q][name_qq].getAttribute(attr).get<double>();
+            unit_mm = electrons[name_m][name_mm].getAttribute(attr).get<double>();
+        }
+        else {
+            unit_qq = electrons[name_q][name_qq].unitSI();
+            unit_mm = electrons[name_m][name_mm].unitSI();
+        }
 
         series.flush();
 
