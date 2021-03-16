@@ -3,12 +3,6 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-#ifdef AMREX_USE_MPI
-namespace {
-    constexpr int comm_z_tag = 3000;
-}
-#endif
-
 void
 BeamParticleContainer::ReadParameters ()
 {
