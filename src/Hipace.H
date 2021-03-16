@@ -200,6 +200,12 @@ public:
     /** Maximum number of iterations in the predictor corrector loop
      */
     static int m_predcorr_max_iterations;
+    /** Average number of iterations in the predictor corrector loop
+     */
+    amrex::Real m_predcorr_avg_iterations = 0.;
+    /** Average transverse B field error in the predictor corrector loop
+     */
+    amrex::Real m_predcorr_avg_B_error = 0.;
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_mixing_factor;
