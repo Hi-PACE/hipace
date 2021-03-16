@@ -420,7 +420,132 @@ Hipace::ResetAllQuantities (int lev)
 void
 Hipace::SolveBxBy (const int islice, const int lev)
 {
+    HIPACE_PROFILE("Hipace::SolveBxBy()");
+
+    // These names are provisional
+
+    amrex::MultiFab Denom(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
+                            m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                            m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    // Better to use the constructor without the alias:
+
+    Denom.setVal(1.0);
+
+    // 1+Psi -> Denominator
+    amrex::MultiFab::Add(Denom, getSlices(lev, WhichSlice::This),
+                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    // Plasma density: rho
+
+    amrex::MultiFab First_Term(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
+                            m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                            m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    amrex::MultiFab::Copy(First_Term, m_fields.getSlices(lev, WhichSlice::This),
+                          Comps[WhichSlice::This]["rho"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    // ne - jz -> Numerator
+
+    amrex::MultiFab::Subtract(First_Term, getSlices(lev, WhichSlice::This),
+                         Comps[WhichSlice::This]["jz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    // (ne - jz) / (1 + Psi) -> First_Term / Denom
     
+    amrex::MultiFab::Divide(First_Term, Denom,
+                         0, 0, 1, 0);
+
+    // To-Do: Calculate entire First Term and then do the skeleton of the 18-b equation.
+
+    // First: Declaration of Sx and Sy
+
+    amrex::MultiFab Sx(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
+                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    amrex::MultiFab Sy(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
+                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    Denom.setVal(1.0);
+    Sx.setVal(1.0);
+    Sy.setVal(1.0);
+
+    // 1+Psi -> Denominator
+    amrex::MultiFab::Add(Denom, getSlices(lev, WhichSlice::This),
+                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+
+    // 1/1+Psi -> For first term of Sx and Sy
+    amrex::MultiFab::Divide(Sx, Denom,
+                         0, 0, 1, 0);
+    amrex::MultiFab::Divide(Sy, Denom,
+                         0, 0, 1, 0);
+
+    // First Term of Sx and Sy
+    amrex::MultiFab Sx_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
+                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    amrex::MultiFab Sy_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
+                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
+                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    /*
+
+    // TO-DO: Calculate First Term of Sx and Sy
+    
+    */
+
+    amrex::MultiFab::Multiply(Sx, Sx_comp,
+                         0, 0, 1, 0);
+    amrex::MultiFab::Multiply(Sy, Sy_comp,
+                         0, 0, 1, 0);
+
+    /*
+
+    TO-DO: Calculate Second Term With the same name (Sx_comp, as it's
+        the same for both of them), in order to avoid creating so many MultiFabs
+
+    */
+
+    amrex::MultiFab::Add(Sx, Sx_comp
+                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sx_comp
+                        0, 0, 1, 0);
+
+    /*
+
+    TO-DO: Calculate Third Term With the same name, 
+        in order to avoid creating so many MultiFabs
+
+    */
+
+    amrex::MultiFab::Add(Sx, Sx_comp
+                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sy_comp
+                        0, 0, 1, 0);
+
+    /*
+
+    TO-DO: Calculate Forth Term With the same name, 
+        in order to avoid creating so many MultiFabs
+
+    */
+
+    amrex::MultiFab::Add(Sx, Sx_comp
+                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sy_comp
+                        0, 0, 1, 0);
+
+    /*
+
+    TO-DO: Calculate Fifth Term With the same name, 
+        in order to avoid creating so many MultiFabs
+
+    */
+
+    amrex::MultiFab::Add(Sx, Sx_comp
+                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sy_comp
+                        0, 0, 1, 0);
+
 }
 
 void

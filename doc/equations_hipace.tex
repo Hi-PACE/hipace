@@ -207,9 +207,27 @@ n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\
 \end{align}
 \end{subequations}
 
-where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is the longitudinal current density. All densities are only plasma densities (charge and current), except when $total$ is specified in subscript, in that case it is the full density (plasma + beam). The notations used here are from the WAND-PIC paper.
+where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is the longitudinal current density. All densities are only plasma densities (charge and current), except when $total$ is specified in subscript, in that case it is the full density (plasma + beam). The following sets of equations are for the independent calculation of $B_x$ and $B_y$
 
-The correspondance between quantities Hipace++ and WAND-PIC is:
+\begin{subequations}
+	\begin{align}
+	\Delta_x \bm{B_x} &= \frac{n_*}{1+\psi} \bm{B_x} - \bm{e_z} \times \bm{S} \\
+	\bm{S}_x &= \frac{1}{1+\psi} B_z \left( \bm{e_z} \times n_* \langle\bm{v_x}\rangle \right) + n_* \langle \bm{\tilde{a}} \rangle - \partial_x\left( n_*\langle v_x^2 \rangle \right) - \partial_y\left( n_*\langle v_y\bm{v_x} \rangle \right) + \bm{\nabla_x}j_z^{total} \\
+	n_* \langle \bm{\tilde{a}} \rangle &= \frac{1}{1+\psi} \left(  \frac{n_*\langle\gamma\rangle}{1+\psi}\bm{\nabla_x}\psi - n_* \langle \bm{v_x} \rangle E_z - n_* \langle v_x^2\rangle \partial_x\psi - n_* \langle v_y\bm{v_x}\rangle \partial_y\psi \right) \\
+	n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\langle v_y^2\rangle + n_*\right) + \frac{n_*}{2(1+\psi)}
+	\end{align}
+\end{subequations}
+
+\begin{subequations}
+	\begin{align}
+	\Delta_y \bm{B_y} &= \frac{n_*}{1+\psi} \bm{B_y} - \bm{e_z} \times \bm{S} \\
+	\bm{S}_y &= \frac{1}{1+\psi} B_z \left( \bm{e_z} \times n_* \langle\bm{v_y}\rangle \right) + n_* \langle \bm{\tilde{a}} \rangle - \partial_x\left( n_*\langle v_x\bm{v_y} \rangle \right) - \partial_y\left( n_*\langle v_y^2 \rangle \right) + \bm{\nabla_y}j_z^{total} \\
+	n_* \langle \bm{\tilde{a}} \rangle &= \frac{1}{1+\psi} \left(  \frac{n_*\langle\gamma\rangle}{1+\psi}\bm{\nabla_y}\psi - n_* \langle \bm{v_y} \rangle E_z - n_* \langle v_x\bm{v_y}\rangle \partial_x\psi - n_* \langle v_y^2\rangle \partial_y\psi \right) \\
+	n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\langle v_y^2\rangle + n_*\right) + \frac{n_*}{2(1+\psi)}
+	\end{align}
+\end{subequations}
+
+The notations used here are from the WAND-PIC paper, the correspondance between quantities Hipace++ and WAND-PIC is:
 \begin{subequations}
 \begin{align}
 \text{WAND-PIC} &\leftrightarrow \text{Hipace++} \\
