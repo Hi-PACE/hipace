@@ -11,7 +11,8 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                      int const lev ,const int islice, const amrex::Box bx, int const offset,
-                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                     const bool do_beam_jx_jy_deposition)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
     // Extract properties associated with physical size of the box
@@ -51,17 +52,17 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
 
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){
-        doDepositionShapeN<0, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins, offset);
+        doDepositionShapeN<0, 0>( beam, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, islice_local,
+                                  bins, offset, do_beam_jx_jy_deposition);
     } else if (Hipace::m_depos_order_xy == 1){
-        doDepositionShapeN<1, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins, offset);
+        doDepositionShapeN<1, 0>( beam, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, islice_local,
+                                  bins, offset, do_beam_jx_jy_deposition);
     } else if (Hipace::m_depos_order_xy == 2){
-        doDepositionShapeN<2, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins, offset);
+        doDepositionShapeN<2, 0>( beam, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, islice_local,
+                                  bins, offset, do_beam_jx_jy_deposition);
     } else if (Hipace::m_depos_order_xy == 3){
-        doDepositionShapeN<3, 0>( beam, jx_fab, jy_fab, jz_fab,
-                                  dx, xyzmin, lo, q, islice_local, bins, offset);
+        doDepositionShapeN<3, 0>( beam, jx_fab, jy_fab, jz_fab, dx, xyzmin, lo, q, islice_local,
+                                  bins, offset, do_beam_jx_jy_deposition);
     } else {
         amrex::Abort("unknown deposition order");
     }
