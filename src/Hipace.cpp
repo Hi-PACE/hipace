@@ -450,7 +450,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
                          Comps[WhichSlice::This]["jz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
 
     // (ne - jz) / (1 + Psi) -> First_Term / Denom
-    
+
     amrex::MultiFab::Divide(First_Term, Denom,
                          0, 0, 1, 0);
 
@@ -490,7 +490,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
     /*
 
     // TO-DO: Calculate First Term of Sx and Sy
-    
+
     */
 
     amrex::MultiFab::Multiply(Sx, Sx_comp, 0, 0, 1, 0);
@@ -508,7 +508,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     /*
 
-    TO-DO: Calculate Third Term With the same name, 
+    TO-DO: Calculate Third Term With the same name,
         in order to avoid creating so many MultiFabs
 
     */
@@ -518,7 +518,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     /*
 
-    TO-DO: Calculate Forth Term With the same name, 
+    TO-DO: Calculate Forth Term With the same name,
         in order to avoid creating so many MultiFabs
 
     */
@@ -528,7 +528,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     /*
 
-    TO-DO: Calculate Fifth Term With the same name, 
+    TO-DO: Calculate Fifth Term With the same name,
         in order to avoid creating so many MultiFabs
 
     */

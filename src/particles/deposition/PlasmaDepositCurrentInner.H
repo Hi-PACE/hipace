@@ -32,6 +32,9 @@
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
  * \param[in,out] rho_fab array of charge density rho, on the box corresponding to pti
+ * \param[in,out] jxx_fab array of current density jxx, on the box corresponding to pti
+ * \param[in,out] jxy_fab array of current density jxy, on the box corresponding to pti
+ * \param[in,out] jyy_fab array of current density jyy, on the box corresponding to pti
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
@@ -39,6 +42,7 @@
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
+ * \param[in] deposit_j_squared if true, deposit jxx, jxy and jyy
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  */
