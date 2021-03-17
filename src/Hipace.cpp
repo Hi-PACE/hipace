@@ -327,6 +327,9 @@ Hipace::Evolve ()
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container,
                                            it, m_box_sorters, false);
 
+           // averaging predictor corrector loop diagnostics
+           m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
+           m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
 #ifdef HIPACE_USE_OPENPMD
             WriteDiagnostics(step+1, it);
 #else
@@ -334,6 +337,13 @@ Hipace::Evolve ()
 #endif
             Notify(step, it);
         }
+
+        // printing and resetting predictor corrector loop diagnostics
+        if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
+                                   << m_predcorr_avg_iterations << " avg. transverse B field error "
+                                   << m_predcorr_avg_B_error << "\n";
+        m_predcorr_avg_iterations = 0.;
+        m_predcorr_avg_B_error = 0.;
 
         m_physical_time += m_dt;
     }
@@ -474,6 +484,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
            && ( i_iter < m_predcorr_max_iterations ))
     {
         i_iter++;
+        m_predcorr_avg_iterations += 1.0;
+
         /* Push particles to the next slice */
         AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
                                true, true, false, false, lev);
@@ -541,6 +553,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
                      "hipace.predcorr_max_iterations (hidden default: 5)\n"
                      "- higher longitudinal resolution");
     }
+
+    // adding relative B field error for diagnostic
+    m_predcorr_avg_B_error += relative_Bfield_error;
     if (m_verbose >= 2) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
                             " relative B field error: "<<relative_Bfield_error<< "\n";
 }
