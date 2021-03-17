@@ -511,11 +511,11 @@ Fields::ComputeRelBFieldError (
         amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
         {
-            amrex::Gpu::deviceReduceSum(p_norm_B, sqrt(
+            amrex::Gpu::deviceReduceSum(p_norm_B, std::sqrt(
                                         Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
                                         By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp)),
                                         handler);
-            amrex::Gpu::deviceReduceSum(p_norm_Bdiff, sqrt(
+            amrex::Gpu::deviceReduceSum(p_norm_Bdiff, std::sqrt(
                             ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
                             ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
                             ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
@@ -524,6 +524,7 @@ Fields::ComputeRelBFieldError (
         }
         );
     }
+    // no cudaDeviceSynchronize required here, as there is one in the MFIter destructor called above.
     norm_Bdiff = gpu_norm_Bdiff.dataValue();
     norm_B = gpu_norm_B.dataValue();
 
