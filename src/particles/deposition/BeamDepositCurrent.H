@@ -16,11 +16,13 @@
  * \param[in] bx current box to calculate in loop over longutidinal boxes
  * \param[in] offset offset to the particles on the current box
  * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
+ * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                      int const lev, const int islice, const amrex::Box bx, int const offset,
-                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
+                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                     const bool do_beam_jx_jy_deposition);
 
 
 #endif //  BEAMDEPOSITCURRENT_H_

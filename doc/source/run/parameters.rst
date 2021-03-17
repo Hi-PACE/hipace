@@ -47,6 +47,10 @@ General parameters
       requires
     | `hipace.beam_injection_cr = 8`.
 
+* ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
+    Using the default, the beam deposits all currents `Jx`, `Jy`, `Jz`. Using
+    `hipace.do_beam_jx_jy_deposition = 0` disables the transverse current deposition of the beams.
+
 Predictor-corrector loop parameters
 -----------------------------------
 
