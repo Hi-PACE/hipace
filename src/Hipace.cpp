@@ -307,7 +307,7 @@ Hipace::Evolve ()
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_rank_z == m_numprocs_z-1){
             DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                           false, false, false, true, geom[lev], lev);
+                           false, false, false, true, false, geom[lev], lev);
         }
 
         // Loop over longitudinal boxes on this rank, from head to tail
@@ -371,7 +371,7 @@ Hipace::SolveOneSlice (int islice, int lev, amrex::Vector<amrex::DenseBins<BeamP
                         Comps[WhichSlice::This]["rho"], 1);
 
     DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
-                   true, true, geom[lev], lev);
+                   true, true, false, geom[lev], lev);
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
@@ -432,7 +432,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
     Denom.setVal(1.0);
 
     // 1+Psi -> Denominator
-    amrex::MultiFab::Add(Denom, getSlices(lev, WhichSlice::This),
+    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
                          Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
 
     // Plasma density: rho
@@ -446,7 +446,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     // ne - jz -> Numerator
 
-    amrex::MultiFab::Subtract(First_Term, getSlices(lev, WhichSlice::This),
+    amrex::MultiFab::Subtract(First_Term, m_fields.getSlices(lev, WhichSlice::This),
                          Comps[WhichSlice::This]["jz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
 
     // (ne - jz) / (1 + Psi) -> First_Term / Denom
@@ -471,7 +471,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
     Sy.setVal(1.0);
 
     // 1+Psi -> Denominator
-    amrex::MultiFab::Add(Denom, getSlices(lev, WhichSlice::This),
+    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
                          Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
 
     // 1/1+Psi -> For first term of Sx and Sy
@@ -493,10 +493,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
     
     */
 
-    amrex::MultiFab::Multiply(Sx, Sx_comp,
-                         0, 0, 1, 0);
-    amrex::MultiFab::Multiply(Sy, Sy_comp,
-                         0, 0, 1, 0);
+    amrex::MultiFab::Multiply(Sx, Sx_comp, 0, 0, 1, 0);
+    amrex::MultiFab::Multiply(Sy, Sy_comp, 0, 0, 1, 0);
 
     /*
 
@@ -505,10 +503,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     */
 
-    amrex::MultiFab::Add(Sx, Sx_comp
-                        0, 0, 1, 0);
-    amrex::MultiFab::Add(Sy, Sx_comp
-                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sx, Sx_comp, 0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sx_comp, 0, 0, 1, 0);
 
     /*
 
@@ -517,10 +513,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     */
 
-    amrex::MultiFab::Add(Sx, Sx_comp
-                        0, 0, 1, 0);
-    amrex::MultiFab::Add(Sy, Sy_comp
-                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sx, Sx_comp, 0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sy_comp, 0, 0, 1, 0);
 
     /*
 
@@ -529,10 +523,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     */
 
-    amrex::MultiFab::Add(Sx, Sx_comp
-                        0, 0, 1, 0);
-    amrex::MultiFab::Add(Sy, Sy_comp
-                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sx, Sx_comp, 0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sy_comp, 0, 0, 1, 0);
 
     /*
 
@@ -541,10 +533,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     */
 
-    amrex::MultiFab::Add(Sx, Sx_comp
-                        0, 0, 1, 0);
-    amrex::MultiFab::Add(Sy, Sy_comp
-                        0, 0, 1, 0);
+    amrex::MultiFab::Add(Sx, Sx_comp, 0, 0, 1, 0);
+    amrex::MultiFab::Add(Sy, Sy_comp, 0, 0, 1, 0);
 
 }
 
@@ -617,7 +607,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
         /* deposit current to next slice */
         DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
-                       true, false, false, geom[lev], lev);
+                       true, false, false, false, geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),

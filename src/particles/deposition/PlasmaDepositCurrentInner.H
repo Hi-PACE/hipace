@@ -48,13 +48,16 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
                          amrex::FArrayBox& rho_fab,
+                         amrex::FArrayBox& jxx_fab,
+                         amrex::FArrayBox& jxy_fab,
+                         amrex::FArrayBox& jyy_fab,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const amrex::Real max_qsa_weighting_factor)
+                         const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor)
 {
     using namespace amrex::literals;
 
@@ -91,6 +94,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
     amrex::Array4<amrex::Real> const& rho_arr = rho_fab.array();
+    amrex::Array4<amrex::Real> const& jxx_arr = jxx_fab.array();
+    amrex::Array4<amrex::Real> const& jxy_arr = jxy_fab.array();
+    amrex::Array4<amrex::Real> const& jyy_arr = jyy_fab.array();
 
     constexpr int CELL = amrex::IndexType::CELL;
 
@@ -98,7 +104,10 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         jx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
-        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
+        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jxx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jxy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jyy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
         "jx, jy, jz, and rho must be nodal in all directions."
         );
 
@@ -140,6 +149,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             const amrex::Real wqx = wq*vx;
             const amrex::Real wqy = wq*vy;
             const amrex::Real wqz = wq*vz;
+            const amrex::Real wqxx = wq*vx*vx;
+            const amrex::Real wqxy = wq*vx*vy;
+            const amrex::Real wqyy = wq*vy*vy;
 
             // --- Compute shape factors
             // x direction
@@ -173,6 +185,17 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                         amrex::Gpu::Atomic::Add(
                             &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
                             sx_cell[ix]*sy_cell[iy]*wq);
+                    }
+                    if (deposit_j_squared) {
+                        amrex::Gpu::Atomic::Add(
+                            &jxx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                            sx_cell[ix]*sy_cell[iy]*wqxx);
+                        amrex::Gpu::Atomic::Add(
+                            &jxy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                            sx_cell[ix]*sy_cell[iy]*wqxy);
+                        amrex::Gpu::Atomic::Add(
+                            &jyy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                            sx_cell[ix]*sy_cell[iy]*wqyy);
                     }
                 }
             }
