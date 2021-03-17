@@ -425,7 +425,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_fields.getSlices(lev, WhichSlice::Previous2),
         Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
         Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
-        Geom(lev), lev);
+        Geom(lev));
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
@@ -497,7 +497,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
             m_fields.getSlices(lev, WhichSlice::This),
             Bx_iter, By_iter,
             Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::This]["By"],
-            0, 0, Geom(lev), lev);
+            0, 0, Geom(lev));
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 

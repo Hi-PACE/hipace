@@ -242,8 +242,7 @@ public:
                                        const amrex::MultiFab& Bx_iter,
                                        const amrex::MultiFab& By_iter, const int Bx_comp,
                                        const int By_comp, const int Bx_iter_comp,
-                                       const int By_iter_comp, const amrex::Geometry& geom,
-                                       const int lev);
+                                       const int By_iter_comp, const amrex::Geometry& geom);
 
 private:
     /** Vector over levels, all fields */

@@ -487,7 +487,7 @@ amrex::Real
 Fields::ComputeRelBFieldError (
     const amrex::MultiFab& Bx, const amrex::MultiFab& By, const amrex::MultiFab& Bx_iter,
     const amrex::MultiFab& By_iter, const int Bx_comp, const int By_comp, const int Bx_iter_comp,
-    const int By_iter_comp, const amrex::Geometry& geom, const int lev)
+    const int By_iter_comp, const amrex::Geometry& geom)
 {
     // calculates the relative B field error between two B fields
     // for both Bx and By simultaneously
