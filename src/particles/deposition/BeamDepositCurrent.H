@@ -21,12 +21,8 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                      int const lev, const int islice, const amrex::Box bx, int const offset,
-<<<<<<< HEAD
-                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins);
-=======
                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
                      const bool do_beam_jx_jy_deposition);
->>>>>>> development
 
 
 #endif //  BEAMDEPOSITCURRENT_H_
