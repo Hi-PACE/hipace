@@ -236,7 +236,6 @@ public:
      * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
      *            (usually either By or 0)
      * \param[in] geom Geometry of the problem
-     * \param[in] lev current level
      */
     amrex::Real ComputeRelBFieldError (const amrex::MultiFab& Bx, const amrex::MultiFab& By,
                                        const amrex::MultiFab& Bx_iter,
