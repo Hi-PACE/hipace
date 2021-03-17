@@ -573,9 +573,12 @@ Hipace::Wait (const int step, int it)
     if (step == 0) return;
 
     const int nbeams = m_multi_beam.get_nbeams();
+    // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
     amrex::Vector<int> np_rcv(nbeams+1, 0);
     if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
-        amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
+        if (m_verbose >= 2){
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
+        }
         return;
     }
 
@@ -684,11 +687,14 @@ Hipace::Notify (const int step, const int it)
 
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
     if (it < m_leftmost_box_snd && it < m_numprocs_z - 1 && m_skip_empty_comms){
-        amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP SEND!\n";
+        if (m_verbose >= 2){
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP SEND!\n";
+        }
         return;
     }
 
     const int nbeams = m_multi_beam.get_nbeams();
+    // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
     m_np_snd.resize(nbeams+1);
 
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
