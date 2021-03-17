@@ -135,7 +135,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/beam_evolution.1Rank/ \
                      --test-name beam_evolution.1Rank
 fi
 
@@ -159,7 +159,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/grid_current.1Rank \
                      --test-name grid_current.1Rank
 fi
 
@@ -171,7 +171,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/reset.2Rank \
                      --test-name reset.2Rank
 fi
 
@@ -183,7 +183,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/linear_wake.normalized.1Rank \
                      --test-name linear_wake.normalized.1Rank
 fi
 
@@ -195,7 +195,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/linear_wake.SI.1Rank \
                      --test-name linear_wake.SI.1Rank
 fi
 
@@ -207,7 +207,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/gaussian_linear_wake.normalized.1Rank \
                      --test-name gaussian_linear_wake.normalized.1Rank
 fi
 
@@ -219,7 +219,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/gaussian_linear_wake.SI.1Rank \
                      --test-name gaussian_linear_wake.SI.1Rank
 fi
 
@@ -231,7 +231,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/beam_in_vacuum.SI.1Rank \
                      --test-name beam_in_vacuum.SI.1Rank
 fi
 
@@ -243,7 +243,7 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/beam_in_vacuum.normalized.1Rank \
                      --test-name beam_in_vacuum.normalized.1Rank
 fi
 
@@ -255,6 +255,6 @@ then
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --file_name ${build_dir}/bin/gaussian_weight.1Rank \
                      --test-name gaussian_weight.1Rank
 fi
