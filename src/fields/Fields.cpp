@@ -501,8 +501,8 @@ Fields::ComputeRelBFieldError (
     // /* calculating sqrt( |Bx|^2 + |By|^2 ) */
     // amrex::Real const norm_B = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
     //                            + amrex::MultiFab::Dot(By, By_comp, 1, 0));
-
-    /* calculating sqrt( |Bx - Bx_prev_iter|^2 + |By - By_prev_iter|^2 ) */
+    //
+    // /* calculating sqrt( |Bx - Bx_prev_iter|^2 + |By - By_prev_iter|^2 ) */
     // amrex::MultiFab::Copy(temp, Bx, Bx_comp, 0, 1, 0);
     // amrex::MultiFab::Subtract(temp, Bx_iter, Bx_iter_comp, 0, 1, 0);
     // amrex::Real norm_Bdiff = amrex::MultiFab::Dot(temp, 0, 1, 0);
@@ -525,25 +525,77 @@ Fields::ComputeRelBFieldError (
         amrex::Array4<amrex::Real const> const & Bx_iter_array = Bx_iter.array(mfi);
         amrex::Array4<amrex::Real const> const & By_array = By.array(mfi);
         amrex::Array4<amrex::Real const> const & By_iter_array = By_iter.array(mfi);
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+        // amrex::ParallelFor(
+        //     bx,
+        //     [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
             {
-                amrex::Gpu::Atomic::Add(p_norm_B,
-                     Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
-                     By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp) 
-                  );
-                amrex::Gpu::Atomic::Add(p_norm_Bdiff,
-                    ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, 0) ) *
-                    ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, 0) ) +
-                    ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, 0) ) *
-                    ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, 0) )
-                  );
+                        amrex::Gpu::deviceReduceSum(p_norm_B,
+                            sqrt(Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
+                                 By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp)), handler);
+                        amrex::Gpu::deviceReduceSum(p_norm_Bdiff,
+                            sqrt(( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
+                                 ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
+                                 ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
+                                 ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) )), handler);
+                // amrex::Gpu::Atomic::Add(p_norm_B,
+                //      sqrt(Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
+                //           By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp))
+                //   );
+                // amrex::Gpu::Atomic::Add(p_norm_Bdiff,
+                //     sqrt(( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
+                //          ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
+                //          ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
+                //          ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ))
+                //   );
             }
             );
     }
-    norm_Bdiff = sqrt(gpu_norm_Bdiff.dataValue() );
-    norm_B = sqrt(gpu_norm_B.dataValue() );
+    norm_Bdiff = gpu_norm_Bdiff.dataValue();
+    norm_B = gpu_norm_B.dataValue();
+
+
+    // amrex::Gpu::Buffer<amrex::Real> b_norm_B({0.0});
+    // amrex::Real* p_norm_B = b_norm_B.data();
+    // amrex::Gpu::Buffer<amrex::Real> b_norm_Bdiff({0.0});
+    // amrex::Real* p_norm_Bdiff = b_norm_Bdiff.data();
+    // amrex::Real norm_Bdiff = 0;
+    // amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_Bdiff(norm_Bdiff);
+    // amrex::Real* p_norm_Bdiff = gpu_norm_Bdiff.dataPtr();
+    //
+    // amrex::Real norm_B = 0;
+    // amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_B(norm_B);
+    // amrex::Real* p_norm_B = gpu_norm_B.dataPtr();
+    // for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    // {
+    //     const amrex::Box& bx = mfi.fabbox();
+    //     amrex::Array4<amrex::Real const> const & Bx_array = Bx.array(mfi);
+    //     amrex::Array4<amrex::Real const> const & Bx_iter_array = Bx_iter.array(mfi);
+    //     amrex::Array4<amrex::Real const> const & By_array = By.array(mfi);
+    //     amrex::Array4<amrex::Real const> const & By_iter_array = By_iter.array(mfi);
+    //
+    //     amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
+    //     [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
+    //     {
+    //         amrex::Gpu::deviceReduceSum(p_norm_B,
+    //             sqrt(Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
+    //                  By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp)), handler);
+    //         amrex::Gpu::deviceReduceSum(p_norm_Bdiff,
+    //             sqrt(( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
+    //                  ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
+    //                  ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
+    //                  ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) )), handler);
+    //     });
+    // }
+    // norm_Bdiff = gpu_norm_Bdiff.dataValue();
+    // norm_B = gpu_norm_B.dataValue();
+    // amrex::Real* norm_B = b_norm_B.copyToHost();
+    // amrex::ParallelDescriptor::ReduceRealSum(norm_B[0]);
+    // amrex::Real* norm_Bdiff = b_norm_Bdiff.copyToHost();
+    // amrex::ParallelDescriptor::ReduceRealSum(norm_Bdiff[0]);
+
+
 
 
     const int numPts_transverse = geom.Domain().length(0) * geom.Domain().length(1);
