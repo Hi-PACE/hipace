@@ -35,6 +35,7 @@
  * \param[in] islice Particles in slice islice will deposit
  * \param[in] bins Indices of particles arranged per slices.
  * \param[in] box_offset offset to particles on this box.
+ * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
@@ -47,7 +48,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::Real const q,
                          int islice,
                          amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
-                         int box_offset)
+                         int box_offset,
+                         const bool do_beam_jx_jy_deposition)
 {
     using namespace amrex::literals;
 
@@ -153,12 +155,14 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){
-                        amrex::Gpu::Atomic::Add(
-                            &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
-                        amrex::Gpu::Atomic::Add(
-                            &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
+                        if (do_beam_jx_jy_deposition) {
+                            amrex::Gpu::Atomic::Add(
+                                &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
+                            amrex::Gpu::Atomic::Add(
+                                &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
+                        }
                         amrex::Gpu::Atomic::Add(
                             &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                             sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
