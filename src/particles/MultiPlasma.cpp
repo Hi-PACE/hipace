@@ -13,7 +13,6 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     for (int i = 0; i < m_nplasmas; ++i) {
         m_all_plasmas.emplace_back(PlasmaParticleContainer(amr_core, m_names[i]));
     }
-    amrex::Print()<<"m_nplasmas "<<m_nplasmas<<"\n";
 }
 
 void

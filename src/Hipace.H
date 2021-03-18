@@ -3,7 +3,6 @@
 
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
-// #include "particles/PlasmaParticleContainer.H"
 #include "particles/MultiPlasma.H"
 #include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"

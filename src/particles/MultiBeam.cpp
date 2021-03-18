@@ -13,7 +13,6 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
-    amrex::Print()<<"m_nbeams "<<m_nbeams<<"\n";
 }
 
 void

@@ -1,9 +1,5 @@
 #include "Hipace.H"
-// #include "particles/deposition/BeamDepositCurrent.H"
-// #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "utils/HipaceProfilerWrapper.H"
-// #include "particles/pusher/PlasmaParticleAdvance.H"
-// #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/BinSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
@@ -302,11 +298,7 @@ Hipace::Evolve ()
         ResetAllQuantities(lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        //DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-        //               false, false, false, true, geom[lev], lev);
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev], lev);
-        //m_multi_plasma.DepositCurrent(m_fields, WhichSlice::RhoIons,
-        //               false, false, false, true, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
@@ -326,8 +318,6 @@ Hipace::Evolve ()
                 SolveOneSlice(isl, lev, it, bins);
             };
 
-            //m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_plasma_container,
-            //                               it, m_box_sorters, false);
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
                                            it, m_box_sorters, false);
 
@@ -374,15 +364,11 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
-    //AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-    //                       false, true, false, false, lev);
     m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
 
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
 
-    //DepositCurrent(m_plasma_container, m_fields, WhichSlice::This, false, true,
-    //               true, true, geom[lev], lev);
     m_multi_plasma.DepositCurrent(
         m_fields, WhichSlice::This, false, true, true, true, geom[lev], lev);
     m_fields.AddRhoIons(lev);
@@ -423,7 +409,6 @@ void
 Hipace::ResetAllQuantities (int lev)
 {
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
-    // ResetPlasmaParticles(m_plasma_container, lev, true);
     m_multi_plasma.ResetParticles(lev, true);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
@@ -482,8 +467,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
 
     /* shift force terms, update force terms using guessed Bx and By */
-    //AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-    //                       false, false, true, true, lev);
     m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
 
     /* Begin of predictor corrector loop  */
@@ -497,13 +480,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_predcorr_avg_iterations += 1.0;
 
         /* Push particles to the next slice */
-        //AdvancePlasmaParticles(m_plasma_container, m_fields, geom[lev],
-        //                       true, true, false, false, lev);
         m_multi_plasma.AdvanceParticles(m_fields, geom[lev], true, true, false, false, lev);
 
         /* deposit current to next slice */
-        //DepositCurrent(m_plasma_container, m_fields, WhichSlice::Next, true,
-        //               true, false, false, geom[lev], lev);
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, geom[lev], lev);
         amrex::ParallelContext::push(m_comm_xy);
@@ -551,7 +530,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     } /* end of predictor corrector loop */
 
     /* resetting the particle position after they have been pushed to the next slice */
-    // ResetPlasmaParticles(m_plasma_container, lev);
     m_multi_plasma.ResetParticles(lev);
 
     if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
