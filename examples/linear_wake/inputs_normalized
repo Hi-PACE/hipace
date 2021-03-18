@@ -30,8 +30,10 @@ beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
 beam.ppc = 1 1 1
 
+plasmas.names = no_plasma # plasma
 plasma.density = 1.
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
+plasma.neutralize_background = 1
 
 diagnostic.diag_type = xyz
