@@ -20,7 +20,7 @@ namespace
             } else {
                 amrex::Abort("unknown plasma species. Options are: electron and H.");
             }
-	}
+    }
         return element_is_specified;
     }
 }
