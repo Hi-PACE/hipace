@@ -2,10 +2,38 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
-    : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
+namespace
 {
-    amrex::ParmParse pp("plasma");
+    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real mass)
+    {
+        const PhysConst phys_const = get_phys_const();
+        std::string element;
+        bool element_is_specified = pp.query("element", element);
+        if (element_is_specified){
+            if (element == "electron"){
+                charge = -phys_const.q_e;
+                mass = phys_const.m_e;
+            } else if (element == "H"){
+                charge = phys_const.q_e;
+                mass = phys_const.m_p;
+            } else {
+                amrex::Abort("unknown plasma species. Options are: electron and H.");
+            }
+	}
+        return element_is_specified;
+    }
+}
+
+//PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
+//    : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
+void
+PlasmaParticleContainer::ReadParameters ()
+{
+    amrex::ParmParse pp(m_name);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        QueryElementSetChargeMass(pp, m_charge, m_mass) ^
+        (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
+        "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
     pp.query("density", m_density);
     pp.query("radius", m_radius);
     pp.query("max_qsa_weighting_factor", m_max_qsa_weighting_factor);
