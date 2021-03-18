@@ -28,6 +28,6 @@ beam.u_mean = 0. 0. 1.e3
 beam.u_std = 0. 0. 0.
 beam.ppc = 2 2 1
 
-plasma.names = no_plasma
+plasmas.names = no_plasma
 
 diagnostic.diag_type = xyz

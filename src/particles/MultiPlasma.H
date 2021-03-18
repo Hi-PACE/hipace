@@ -35,7 +35,8 @@ private:
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     amrex::Vector<std::string> m_names; /**< names of all plasma containers */
     int m_nplasmas; /**< number of plasma containers */
-
+    /** Background (hypothetical) density, used to compute the adaptive time step */
+    amrex::Real m_adaptive_density;
 };
 
 #endif // MULTIPLASMA_H_

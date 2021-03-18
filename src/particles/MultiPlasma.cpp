@@ -7,6 +7,7 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 
     amrex::ParmParse pp("plasmas");
     pp.getarr("names", m_names);
+    pp.query("adaptive_density", m_adaptive_density);
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
@@ -34,7 +35,7 @@ MultiPlasma::maxDensity ()
     for (auto& plasma : m_all_plasmas) {
         max_density = amrex::max(max_density, plasma.m_density);
     }
-    return max_density;
+    return amrex::max(max_density, m_adaptive_density);
 }
 
 void
