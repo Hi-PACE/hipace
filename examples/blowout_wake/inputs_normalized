@@ -34,8 +34,10 @@ beam.position_mean = 0. 0. 0
 beam.position_std = 0.3 0.3 1.41
 beam.ppc = 1 1 1
 
+plasmas.names = plasma
 plasma.density = 1.
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
+plasma.neutralize_background = 1
 
 diagnostic.diag_type = xyz
