@@ -58,7 +58,7 @@ public:
      * \param[in] do_update boolean to define if the force terms are updated
      * \param[in] do_shift boolean to define if the force terms are shifted
      * \param[in] lev MR level
-     */    
+     */
     void AdvanceParticles (
         Fields & fields, amrex::Geometry const& gm, bool temp_slice, bool do_push,
         bool do_update, bool do_shift, int lev);
