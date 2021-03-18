@@ -32,7 +32,6 @@ class PlasmaParticleContainer
 {
 public:
     /** Constructor */
-    // explicit PlasmaParticleContainer (amrex::AmrCore* amr_core);
     explicit PlasmaParticleContainer (amrex::AmrCore* amr_core, std::string name) :
         amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB()),
         m_name(name)
@@ -40,7 +39,8 @@ public:
         ReadParameters();
     }
 
-    /** Read parameters in the input file */
+    /** Read parameters from the input file
+     */
     void ReadParameters ();
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile

@@ -25,14 +25,13 @@ namespace
     }
 }
 
-//PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
-//    : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
 void
 PlasmaParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
     pp.query("charge", m_charge); // TODO this should be pp.get
     pp.query("mass", m_mass); // TODO this should be pp.get
+
     // Below is the right way to specify charge+mass OR chemical element, but it currently does not
     // work because it uses Hipace::m_phys_const before it is initialized, resulting in random
     // segfault error.
@@ -41,6 +40,7 @@ PlasmaParticleContainer::ReadParameters ()
     //     QueryElementSetChargeMass(pp, m_charge, m_mass) ^
     //     (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
     //     "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
+
     pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
