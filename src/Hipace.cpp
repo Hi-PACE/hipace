@@ -440,7 +440,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         m_fields.getSlices(lev, WhichSlice::Previous2),
         Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
         Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
-        Geom(lev), lev);
+        Geom(lev));
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
@@ -514,7 +514,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
             m_fields.getSlices(lev, WhichSlice::This),
             Bx_iter, By_iter,
             Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::This]["By"],
-            0, 0, Geom(lev), lev);
+            0, 0, Geom(lev));
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 
@@ -682,8 +682,18 @@ Hipace::Notify (const int step, const int it)
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
 
-    // last step does not need to send anything
-    if (step == m_max_step -1 ) return;
+    const int nbeams = m_multi_beam.get_nbeams();
+
+    // last step does not need to send anything, but needs to resize to remove slipped particles
+    if (step == m_max_step -1 )
+    {
+        for (int ibeam = 0; ibeam < nbeams; ibeam++){
+            const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
+            auto& ptile = m_multi_beam.getBeam(ibeam);
+            ptile.resize(offset_box);
+        }
+        return;
+    }
 
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
     if (it < m_leftmost_box_snd && it < m_numprocs_z - 1 && m_skip_empty_comms){
@@ -693,7 +703,6 @@ Hipace::Notify (const int step, const int it)
         return;
     }
 
-    const int nbeams = m_multi_beam.get_nbeams();
     // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
     m_np_snd.resize(nbeams+1);
 
