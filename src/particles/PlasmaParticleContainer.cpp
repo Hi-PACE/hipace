@@ -29,8 +29,8 @@ void
 PlasmaParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
-    pp.query("charge", m_charge); // TODO this should be pp.get
-    pp.query("mass", m_mass); // TODO this should be pp.get
+    pp.query("charge", m_charge);
+    pp.query("mass", m_mass);
 
     // Below is the right way to specify charge+mass OR chemical element, but it currently does not
     // work because it uses Hipace::m_phys_const before it is initialized, resulting in random

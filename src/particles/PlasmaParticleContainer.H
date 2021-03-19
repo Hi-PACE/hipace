@@ -72,7 +72,7 @@ public:
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
     /** whether to add a neutralizing background of immobile particles of opposite charge */
-    bool m_neutralize_background = false;
+    bool m_neutralize_background = true;
 
 private:
     std::string m_name; /**< name of the species */
