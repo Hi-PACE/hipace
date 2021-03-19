@@ -672,10 +672,19 @@ Hipace::Notify (const int step, const int it)
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
 
-    // last step does not need to send anything
-    if (step == m_max_step -1 ) return;
-
     const int nbeams = m_multi_beam.get_nbeams();
+
+    // last step does not need to send anything, but needs to resize to remove slipped particles
+    if (step == m_max_step -1 )
+    {
+        for (int ibeam = 0; ibeam < nbeams; ibeam++){
+            const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
+            auto& ptile = m_multi_beam.getBeam(ibeam);
+            ptile.resize(offset_box);
+        }
+        return;
+    }
+
     m_np_snd.resize(nbeams);
 
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
