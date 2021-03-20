@@ -167,12 +167,40 @@ function(set_hipace_binary_name)
 endfunction()
 
 
+# FUNCTION: get_source_version
+#
+# Retrieves source version info and sets internal cache variables
+# ${NAME}_GIT_VERSION and ${NAME}_PKG_VERSION
+#
+function(get_source_version NAME SOURCE_DIR)
+    find_package(Git QUIET)
+    set(_tmp "")
+
+    # Try to inquire software version from git
+    if(EXISTS ${SOURCE_DIR}/.git AND ${GIT_FOUND})
+        execute_process(COMMAND git describe --abbrev=12 --dirty --always --tags
+                WORKING_DIRECTORY ${SOURCE_DIR}
+                OUTPUT_VARIABLE _tmp)
+        string( STRIP ${_tmp} _tmp)
+    endif()
+
+    # Is there a CMake project version?
+    # For deployed releases that build from tarballs, this is what we want to pick
+    if(NOT _tmp AND ${NAME}_VERSION)
+        set(_tmp "${${NAME}_VERSION}-nogit")
+    endif()
+
+    set(${NAME}_GIT_VERSION "${_tmp}" CACHE INTERNAL "")
+    unset(_tmp)
+endfunction ()
+
+
 # Prints a summary of HiPACE options at the end of the CMake configuration
 #
 function(hipace_print_summary)
     message("")
     message("HiPACE build configuration:")
-    message("  Version: ${HiPACE_VERSION}")
+    message("  Version: ${HiPACE_VERSION} (${HiPACE_GIT_VERSION})")
     message("  C++ Compiler: ${CMAKE_CXX_COMPILER_ID} "
                             "${CMAKE_CXX_COMPILER_VERSION} "
                             "${CMAKE_CXX_COMPILER_WRAPPER}")
