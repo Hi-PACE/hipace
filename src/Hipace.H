@@ -79,8 +79,9 @@ public:
      * slice multifabs of current rank.
      *
      * \param[in] step current time step
+     * \param[in] it index of the box for which data is received
      */
-    void Wait (const int step);
+    void Wait (const int step, int it);
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
@@ -238,6 +239,14 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+    /** index of the most downstream box to send that contains beam particles.
+     * Used to avoid send/recv for empty data */
+    int m_leftmost_box_snd = std::numeric_limits<int>::max();
+    /** index of the most downstream box to be received that contains beam particles.
+     * Used to avoid send/recv for empty data */
+    int m_leftmost_box_rcv = std::numeric_limits<int>::max();
+    /** Whether to skip communications of boxes that contain no beam particles */
+    int m_skip_empty_comms = true;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -273,6 +282,8 @@ private:
      * \param[in] dm DistributionMappint of the whole domain
      */
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+
+    int leftmostBoxWithParticles () const;
 };
 
 #endif
