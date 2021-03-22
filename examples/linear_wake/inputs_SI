@@ -31,5 +31,6 @@ plasmas.names = plasma
 plasma.density =  2.8239587008591567e23 # at this density, 1/kp = 10um
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
+plasma.element = electron
 
 diagnostic.diag_type = xyz

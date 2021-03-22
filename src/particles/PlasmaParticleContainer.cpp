@@ -4,10 +4,16 @@
 
 namespace
 {
-    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real mass)
+    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real charge, amrex::Real mass)
     {
-        amrex::Abort("This function cannot be called before Hipace::m_phys_const is initialized");
-        const PhysConst phys_const = get_phys_const();
+        // normalized_units is directly queried here so we can defined the appropriate PhysConst
+        // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
+        // PlasmaParticleContainer constructor is called.
+        amrex::ParmParse pph("hipace");
+        bool normalized_units;
+        pph.query("normalized_units", normalized_units);
+        PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
+
         std::string element;
         bool element_is_specified = pp.query("element", element);
         if (element_is_specified){
@@ -32,14 +38,10 @@ PlasmaParticleContainer::ReadParameters ()
     pp.query("charge", m_charge);
     pp.query("mass", m_mass);
 
-    // Below is the right way to specify charge+mass OR chemical element, but it currently does not
-    // work because it uses Hipace::m_phys_const before it is initialized, resulting in random
-    // segfault error.
-    //
-    // AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-    //     QueryElementSetChargeMass(pp, m_charge, m_mass) ^
-    //     (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
-    //     "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        QueryElementSetChargeMass(pp, m_charge, m_mass) ^
+        (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
+        "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
 
     pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
