@@ -246,7 +246,7 @@ public:
      * Used to avoid send/recv for empty data */
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
-    int m_skip_empty_comms = false;
+    int m_skip_empty_comms = true;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
