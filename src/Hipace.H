@@ -136,6 +136,12 @@ public:
         return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
     }
 
+    /** Version of the HiPACE executable
+     *
+     * @return detailed version string
+     */
+    static std::string Version ();
+
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
      */

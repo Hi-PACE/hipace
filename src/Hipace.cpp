@@ -184,6 +184,8 @@ void
 Hipace::InitData ()
 {
     HIPACE_PROFILE("Hipace::InitData()");
+    amrex::Print() << "HiPACE++ (" << Hipace::Version() << ")\n";
+
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
@@ -818,5 +820,15 @@ Hipace::WriteDiagnostics (int output_step, const int it)
 
     // Write beam particles
     m_multi_beam.WritePlotFile(filename);
+#endif
+}
+
+std::string
+Hipace::Version ()
+{
+#ifdef HIPACE_GIT_VERSION
+    return std::string(HIPACE_GIT_VERSION);
+#else
+    return std::string("Unknown");
 #endif
 }

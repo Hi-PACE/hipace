@@ -106,6 +106,7 @@ target_include_directories(HiPACE PRIVATE
 # if we include <AMReX_buildInfo.H> we will need to call:
 #include(AMReXBuildInfo)
 #generate_buildinfo(HiPACE "${HiPACE_SOURCE_DIR}")
+#target_link_libraries(HiPACE PRIVATE buildInfo::HiPACE)
 
 # add sources
 add_subdirectory(src)
@@ -155,7 +156,8 @@ set_hipace_binary_name()
 # Defines #####################################################################
 #
 # Let's use them as sparsely as possible to avoid MxNxOxP... binary variants.
-#target_compile_definitions(HiPACE PRIVATE -DHiPACE_FFTW)
+get_source_version(HiPACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(HiPACE PUBLIC HIPACE_GIT_VERSION="${HiPACE_GIT_VERSION}")
 
 
 # Warnings ####################################################################
