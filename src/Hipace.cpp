@@ -431,10 +431,10 @@ Hipace::SolveBxBy (const int lev)
     HIPACE_PROFILE("Hipace::SolveBxBy()");
 
     const int isl = WhichSlice::This;
-    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
-    amrex::BoxArray ba = slicemf.boxArray();
-    amrex::DistributionMapping dm = slicemf.DistributionMap();
-    amrex::IntVect ngv = slicemf.nGrowVect();
+    const amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    const amrex::BoxArray ba = slicemf.boxArray();
+    const amrex::DistributionMapping dm = slicemf.DistributionMap();
+    const amrex::IntVect ngv = slicemf.nGrowVect();
     // These names are provisional
 
     amrex::MultiFab Denom(ba, dm, 1, ngv);
