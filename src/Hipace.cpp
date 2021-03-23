@@ -459,8 +459,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     // (ne - jz) / (1 + Psi) -> First_Term / Denom
 
-    amrex::MultiFab::Divide(First_Term, Denom,
-                         0, 0, 1, 0);
+    amrex::MultiFab::Divide(First_Term, Denom, 0, 0, 1, 0);
 
     //################################### EQUATION 18-B ####################################################
 
@@ -485,10 +484,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
                          Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
 
     // 1/1+Psi -> For first term of Sx and Sy
-    amrex::MultiFab::Divide(Sx, Denom,
-                         0, 0, 1, 0);
-    amrex::MultiFab::Divide(Sy, Denom,
-                         0, 0, 1, 0);
+    amrex::MultiFab::Divide(Sx, Denom, 0, 0, 1, 0);
+    amrex::MultiFab::Divide(Sy, Denom, 0, 0, 1, 0);
 
     // First Term of Sx and Sy
     amrex::MultiFab Sx_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
@@ -510,9 +507,9 @@ Hipace::SolveBxBy (const int islice, const int lev)
     amrex::MultiFab::Copy(Sy_comp, m_fields.getSlices(lev, WhichSlice::This),
                          Comps[WhichSlice::This]["jx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Multiply(Sx_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Bx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+                         Comps[WhichSlice::This]["Bz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Multiply(Sy_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Bx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+                         Comps[WhichSlice::This]["Bz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
 
     amrex::MultiFab::Multiply(Sx, Sx_comp, 0, 0, 1, 0);
     amrex::MultiFab::Multiply(Sy, Sy_comp, 0, 0, 1, 0);
@@ -534,8 +531,8 @@ Hipace::SolveBxBy (const int islice, const int lev)
     n_star_gamma.setVal(1.0);
     amrex::MultiFab::Add(n_star_gamma, m_fields.getSlices(lev, WhichSlice::This),
                          Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Divide(n_star_gamma, Denom,
-                         0, 0, 1, 0);
+    amrex::MultiFab::Divide(n_star_gamma, Denom, 0, 0, 1, 0);
+
     // Calculation of the sums part
     amrex::MultiFab n_star_gamma_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
                         m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
