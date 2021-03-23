@@ -302,8 +302,8 @@ Hipace::Evolve ()
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_rank_z == m_numprocs_z-1){
-            DepositCurrent(m_plasma_container, m_fields, WhichSlice::RhoIons,
-                           false, false, false, true, false, geom[lev], lev);
+            m_multi_plasma.DepositCurrent(m_fields, WhichSlice::RhoIons, false,
+                                          false, false, true, false, geom[lev], lev);
         }
 
         // Loop over longitudinal boxes on this rank, from head to tail
@@ -401,7 +401,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
      * and the force terms of the plasma particles
      */
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
-    // SolveBxBy(islice, lev);
+    SolveBxBy(islice, lev);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
@@ -426,7 +426,7 @@ Hipace::ResetAllQuantities (int lev)
 }
 
 void
-Hipace::SolveBxBy (const int islice, const int lev, amrex::Geometry const& geom)
+Hipace::SolveBxBy (const int islice, const int lev)
 {
     HIPACE_PROFILE("Hipace::SolveBxBy()");
 
@@ -588,13 +588,13 @@ Hipace::SolveBxBy (const int islice, const int lev, amrex::Geometry const& geom)
                         m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), dx_psi,
                                Direction::x, 
-                               geom.CellSize(Direction::x),
+                               m_slice_geom.CellSize(Direction::x),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["Psi"], 0);
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), dy_psi,
                                Direction::y, 
-                               geom.CellSize(Direction::y),
+                               m_slice_geom.CellSize(Direction::y),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["Psi"], 0);
@@ -648,13 +648,13 @@ Hipace::SolveBxBy (const int islice, const int lev, amrex::Geometry const& geom)
     */
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sx_comp,
                                Direction::x,
-                               geom.CellSize(Direction::x),
+                               m_slice_geom.CellSize(Direction::x),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["jxx"], 0);
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sy_comp,
                                Direction::x,
-                               geom.CellSize(Direction::x),
+                               m_slice_geom.CellSize(Direction::x),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["jxy"], 0);
@@ -671,13 +671,13 @@ Hipace::SolveBxBy (const int islice, const int lev, amrex::Geometry const& geom)
 
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sx_comp,
                                Direction::y,
-                               geom.CellSize(Direction::y),
+                               m_slice_geom.CellSize(Direction::y),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["jxy"], 0);
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sy_comp,
                                Direction::y,
-                               geom.CellSize(Direction::y),
+                               m_slice_geom.CellSize(Direction::y),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["jyy"], 0);
@@ -694,13 +694,13 @@ Hipace::SolveBxBy (const int islice, const int lev, amrex::Geometry const& geom)
 
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sx_comp,
                                Direction::x,
-                               geom.CellSize(Direction::x),
+                               m_slice_geom.CellSize(Direction::x),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["jz"], 0);
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sy_comp,
                                Direction::y,
-                               geom.CellSize(Direction::y),
+                               m_slice_geom.CellSize(Direction::y),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["jz"], 0);
