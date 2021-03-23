@@ -550,7 +550,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
     if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
     {
-        amrex::Abort("Predictor corrector loop diverged!\n"
+        amrex::Print() << "WARNING: Predictor corrector loop may have diverged!\n"
                      "Re-try by adjusting the following paramters in the input script:\n"
                      "- lower mixing factor: hipace.predcorr_B_mixing_factor "
                      "(hidden default: 0.1) \n"
@@ -558,7 +558,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
                      " (hidden default: 0.04)\n"
                      "- higher number of iterations in the pred. cor. loop:"
                      "hipace.predcorr_max_iterations (hidden default: 5)\n"
-                     "- higher longitudinal resolution");
+                     "- higher longitudinal resolution";
     }
 
     // adding relative B field error for diagnostic
