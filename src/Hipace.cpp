@@ -497,7 +497,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
     amrex::MultiFab Sy_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
                         m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                         m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    
+
     /*
 
     // TO-DO: Calculate First Term of Sx and Sy
@@ -524,7 +524,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     */
 
-    
+
     // ########################### EQUATION 18-d (y) ###########################
 
     amrex::MultiFab n_star_gamma(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
@@ -587,13 +587,13 @@ Hipace::SolveBxBy (const int islice, const int lev)
                         m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                         m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), dx_psi,
-                               Direction::x, 
+                               Direction::x,
                                m_slice_geom.CellSize(Direction::x),
                                1.,
                                SliceOperatorType::Assign,
                                Comps[WhichSlice::This]["Psi"], 0);
     m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), dy_psi,
-                               Direction::y, 
+                               Direction::y,
                                m_slice_geom.CellSize(Direction::y),
                                1.,
                                SliceOperatorType::Assign,
