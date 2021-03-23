@@ -2,12 +2,20 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import argparse
 from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = False
 
-ts_ref = OpenPMDTimeSeries('./REF_diags/h5/')
-ts = OpenPMDTimeSeries('./diags/h5/')
+parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
+parser.add_argument('--output-dir',
+                    dest='output_dir',
+                    default='diags/hdf5',
+                    help='Path to the directory containing output files')
+args = parser.parse_args()
+
+ts_ref = OpenPMDTimeSeries('./REF_diags/hdf5/')
+ts = OpenPMDTimeSeries(args.output_dir)
 
 if do_plot:
 

@@ -29,7 +29,8 @@ Fields::AllocData (
 
     // The Arena uses pinned memory.
     m_F[lev].define(ba, dm, Comps[WhichSlice::This]["N"], nguards_F, amrex::MFInfo().SetAlloc(false));
-    m_diags.AllocData(lev, ba, Comps[WhichSlice::This]["N"], dm, geom);
+    // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
+    m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -139,7 +140,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-              int ncomp, amrex::MultiFab& full_mf, int slice_dir)
+              int ncomp, amrex::FArrayBox& fab, int slice_dir)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
@@ -154,36 +155,34 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         // slice_array's longitude index is i_slice.
     }
 
-    for (amrex::MFIter mfi(full_mf); mfi.isValid(); ++mfi) {
-        amrex::Box const& vbx = mfi.validbox();
-        if (vbx.smallEnd(Direction::z) <= i_slice and
-            vbx.bigEnd  (Direction::z) >= i_slice)
-        {
-            amrex::Box copy_box = vbx;
-            copy_box.setSmall(Direction::z, i_slice);
-            copy_box.setBig  (Direction::z, i_slice);
-            auto const& full_array = full_mf.array(mfi);
-            if (copy_type == FieldCopyType::FtoS) {
-                amrex::ParallelFor(copy_box, ncomp,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-                {
-                    slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
-                });
-            } else {
-                amrex::ParallelFor(copy_box, ncomp,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-                {
-                    if        (slice_dir ==-1 /* 3D data */){
-                        full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
-                    } else if (slice_dir == 0 /* yz slice */){
-                        full_array(i,j,k,n+full_comp) = 0.5_rt *
-                            (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
-                    } else /* slice_dir == 1, xz slice */{
-                        full_array(i,j,k,n+full_comp) = 0.5_rt *
-                            (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
-                    }
-                });
-            }
+    amrex::Box const& vbx = fab.box();
+    if (vbx.smallEnd(Direction::z) <= i_slice and
+        vbx.bigEnd  (Direction::z) >= i_slice)
+    {
+        amrex::Box copy_box = vbx;
+        copy_box.setSmall(Direction::z, i_slice);
+        copy_box.setBig  (Direction::z, i_slice);
+        amrex::Array4<amrex::Real> const& full_array = fab.array();
+        if (copy_type == FieldCopyType::FtoS) {
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
+            });
+        } else {
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                if        (slice_dir ==-1 /* 3D data */){
+                    full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+                } else if (slice_dir == 0 /* yz slice */){
+                    full_array(i,j,k,n+full_comp) = 0.5_rt *
+                        (slice_array(i-1,j,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                } else /* slice_dir == 1, xz slice */{
+                    full_array(i,j,k,n+full_comp) = 0.5_rt *
+                        (slice_array(i,j-1,k,n+slice_comp)+slice_array(i,j,k,n+slice_comp));
+                }
+            });
         }
     }
 }
@@ -488,36 +487,53 @@ amrex::Real
 Fields::ComputeRelBFieldError (
     const amrex::MultiFab& Bx, const amrex::MultiFab& By, const amrex::MultiFab& Bx_iter,
     const amrex::MultiFab& By_iter, const int Bx_comp, const int By_comp, const int Bx_iter_comp,
-    const int By_iter_comp, const amrex::Geometry& geom, const int lev)
+    const int By_iter_comp, const amrex::Geometry& geom)
 {
-    /* calculates the relative B field error between two B fields
-     * for both Bx and By simultaneously */
+    // calculates the relative B field error between two B fields
+    // for both Bx and By simultaneously
     HIPACE_PROFILE("Fields::ComputeRelBFieldError()");
 
-    /* one temporary array is needed to store the difference of B fields
-     * between previous and current iteration */
-    amrex::MultiFab temp(getSlices(lev, WhichSlice::This).boxArray(),
-                         getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                         getSlices(lev, WhichSlice::This).nGrowVect());
-    /* calculating sqrt( |Bx|^2 + |By|^2 ) */
-    amrex::Real const norm_B = sqrt(amrex::MultiFab::Dot(Bx, Bx_comp, 1, 0)
-                               + amrex::MultiFab::Dot(By, By_comp, 1, 0));
+    amrex::Real norm_Bdiff = 0;
+    amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_Bdiff(norm_Bdiff);
+    amrex::Real* p_norm_Bdiff = gpu_norm_Bdiff.dataPtr();
 
-    /* calculating sqrt( |Bx - Bx_prev_iter|^2 + |By - By_prev_iter|^2 ) */
-    amrex::MultiFab::Copy(temp, Bx, Bx_comp, 0, 1, 0);
-    amrex::MultiFab::Subtract(temp, Bx_iter, Bx_iter_comp, 0, 1, 0);
-    amrex::Real norm_Bdiff = amrex::MultiFab::Dot(temp, 0, 1, 0);
-    amrex::MultiFab::Copy(temp, By, By_comp, 0, 1, 0);
-    amrex::MultiFab::Subtract(temp, By_iter, By_iter_comp, 0, 1, 0);
-    norm_Bdiff += amrex::MultiFab::Dot(temp, 0, 1, 0);
-    norm_Bdiff = sqrt(norm_Bdiff);
+    amrex::Real norm_B = 0;
+    amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_B(norm_B);
+    amrex::Real* p_norm_B = gpu_norm_B.dataPtr();
+
+    for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+        amrex::Array4<amrex::Real const> const & Bx_array = Bx.array(mfi);
+        amrex::Array4<amrex::Real const> const & Bx_iter_array = Bx_iter.array(mfi);
+        amrex::Array4<amrex::Real const> const & By_array = By.array(mfi);
+        amrex::Array4<amrex::Real const> const & By_iter_array = By_iter.array(mfi);
+
+        amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
+        {
+            amrex::Gpu::deviceReduceSum(p_norm_B, std::sqrt(
+                                        Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
+                                        By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp)),
+                                        handler);
+            amrex::Gpu::deviceReduceSum(p_norm_Bdiff, std::sqrt(
+                            ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
+                            ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
+                            ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
+                            ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) )),
+                            handler);
+        }
+        );
+    }
+    // no cudaDeviceSynchronize required here, as there is one in the MFIter destructor called above.
+    norm_Bdiff = gpu_norm_Bdiff.dataValue();
+    norm_B = gpu_norm_B.dataValue();
 
     const int numPts_transverse = geom.Domain().length(0) * geom.Domain().length(1);
 
-    /* calculating the relative error
-     * Warning: this test might be not working in SI units! */
-     const amrex::Real relative_Bfield_error = (norm_B/numPts_transverse > 1e-10)
-                                                ? norm_Bdiff/norm_B : 0.;
+    // calculating the relative error
+    // Warning: this test might be not working in SI units!
+    const amrex::Real relative_Bfield_error = (norm_B/numPts_transverse > 1e-10)
+                                               ? norm_Bdiff/norm_B : 0.;
 
     return relative_Bfield_error;
 }

@@ -21,12 +21,12 @@ struct BeamIdx
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
-    : public amrex::ParticleContainer<0, 0, BeamIdx::nattribs>
+    : public amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>
 {
 public:
     /** Constructor */
-    explicit BeamParticleContainer (amrex::AmrCore* amr_core, std::string name) :
-        amrex::ParticleContainer<0,0,BeamIdx::nattribs>(amr_core->GetParGDB()),
+    explicit BeamParticleContainer (std::string name) :
+        amrex::ParticleTile<0,0,BeamIdx::nattribs,0>(),
         m_name(name)
     {
         ReadParameters();
@@ -47,7 +47,8 @@ public:
         const amrex::Geometry& a_geom,
         const amrex::Real     a_zmin,
         const amrex::Real     a_zmax,
-        const amrex::Real     a_radius);
+        const amrex::Real     a_radius,
+        const amrex::Real     a_min_density);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
@@ -93,20 +94,6 @@ public:
                           std::string species_name);
 #endif
 
-#ifdef AMREX_USE_MPI
-    /** Loop over beams and pass total number of beam particles on upstream ranks */
-    void NotifyNumParticles (MPI_Comm a_comm_z);
-
-    /** Loop over beams and receive total number of beam particles on upstream ranks */
-    void WaitNumParticles (MPI_Comm a_comm_z);
-
-    /** Redistribute the particles on a slice, meaning particles, which left the box are returned
-     * periodically and if peridicity = 0, their weight is set to 0
-     * \param[in] lev MR level
-     */
-    void RedistributeSlice (int const lev);
-#endif
-
     std::string get_name () const {return m_name;};
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     /** Number of particles on upstream rank (required for IO) */
@@ -114,9 +101,9 @@ public:
 
     unsigned long long m_total_num_particles {0};
 
-    int get_upstream_n_part () const {return m_num_particles_on_upstream_ranks;};
-
     unsigned long long get_total_num_particles () const {return m_total_num_particles;};
+
+    amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
 
     /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa.
      *
@@ -142,6 +129,7 @@ private:
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
+    amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Density of plasma to convert from_file beam to normalized units */
     amrex::Real m_plasma_density;
@@ -150,15 +138,6 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name ; /**< the name of the particle species in the beam file */
-};
-
-/** \brief Iterator over boxes in a particle container */
-class BeamParticleIterator : public amrex::ParIter<0,0,BeamIdx::nattribs>
-{
-public:
-    using amrex::ParIter<0,0,BeamIdx::nattribs>::ParIter;
-    /** Constructor */
-    BeamParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
 };
 
 #endif

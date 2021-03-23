@@ -7,9 +7,10 @@
 
 
 std::vector< double >
-utils::getRelativeCellPosition(amrex::MultiFab const& mf)
+utils::getRelativeCellPosition(amrex::FArrayBox const& fab)
 {
-    amrex::IndexType const idx_type = mf.ixType();
+    amrex::Box const box = fab.box();
+    amrex::IndexType const idx_type = box.ixType();
     std::vector< double > relative_position(AMREX_SPACEDIM, 0.0);
     // amrex::CellIndex::CELL means: 0.5 from lower corner for that index/direction
     // amrex::CellIndex::NODE means: at corner for that index/direction

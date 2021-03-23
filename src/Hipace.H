@@ -3,7 +3,7 @@
 
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
-#include "particles/PlasmaParticleContainer.H"
+#include "particles/MultiPlasma.H"
 #include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
@@ -77,15 +77,21 @@ public:
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be received (2 and 3),
      * MPI_Recv slices from the upstream rank into this buffer and copy from the buffer to
      * slice multifabs of current rank.
+     *
+     * \param[in] step current time step
+     * \param[in] it index of the box for which data is received
      */
-    void Wait ();
+    void Wait (const int step, int it);
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
      * copy from slice multifabs of current rank to the buffer, MPI_Isend the buffer to
      * the rank downstream.
+     *
+     * \param[in] step current time step
+     * \param[in] it current box number
      */
-    void Notify ();
+    void Notify (const int step, const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish ();
 
@@ -98,9 +104,9 @@ public:
     /** \brief Dump simulation data to file
      *
      * \param[in] output_step current iteration
-     * \param[in] force_output if true, dump output regardless of output_period
+     * \param[in] it current box number
      */
-    void WriteDiagnostics (int output_step, bool force_output=false);
+    void WriteDiagnostics (int output_step, const int it);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};
@@ -109,11 +115,11 @@ public:
      *
      * \param[in] islice slice number
      * \param[in] lev MR level
-     * \param[in] bins collections of beam particle indices sorted per slice
+     * \param[in] ibox index of the current box to be calculated
+     * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (
-        int islice, int lev,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+    void SolveOneSlice (int islice, int lev, const int ibox,
+                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -122,6 +128,20 @@ public:
      * \param[in] lev MR level
      */
     void ResetAllQuantities (int lev);
+
+    /**
+       \brief Returns true on the head rank, otherwise false.
+     */
+    static bool HeadRank ()
+    {
+        return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
+    }
+
+    /** Version of the HiPACE executable
+     *
+     * @return detailed version string
+     */
+    static std::string Version ();
 
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
@@ -143,21 +163,21 @@ public:
     int m_rank_z = 0;
     /** Max number of grid size in the longitudinal direction */
     int m_grid_size_z = 0;
-    /** Send buffer for longitudinal parallelization (pipeline) */
-    amrex::Real* m_send_buffer = nullptr;
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
-    /** status of the send request */
-    MPI_Request m_send_request = MPI_REQUEST_NULL;
+    /** Send buffer for the number of particles for each beam (pipeline) */
+    amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
+    /** status of the number of particles send request */
+    MPI_Request m_nsend_request = MPI_REQUEST_NULL;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
-    /** Particle container for a beam */
+    /** Contains all beam species */
     MultiBeam m_multi_beam;
-    /** Particle container for the plasma */
-    PlasmaParticleContainer m_plasma_container;
+    /** Contains all plasma species */
+    MultiPlasma m_multi_plasma;
     /** Number of time iterations */
     static int m_max_step;
     /** Time step for the beam evolution */
@@ -165,9 +185,6 @@ public:
     /** Number of iterations between consecutive output dumps.
      * Default is -1, meaning no output */
     int m_output_period = -1;
-    /** Last iteration that was written to file.
-     * This is stored to make sure we don't write the last iteration multiple times. */
-    int m_last_output_dumped = -1;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     amrex::Real m_physical_time = 0.;
@@ -190,9 +207,17 @@ public:
     /** Maximum number of iterations in the predictor corrector loop
      */
     static int m_predcorr_max_iterations;
+    /** Average number of iterations in the predictor corrector loop
+     */
+    amrex::Real m_predcorr_avg_iterations = 0.;
+    /** Average transverse B field error in the predictor corrector loop
+     */
+    amrex::Real m_predcorr_avg_B_error = 0.;
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_mixing_factor;
+    /** Whether the beams deposit Jx and Jy */
+    static bool m_do_beam_jx_jy_deposition;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
@@ -214,6 +239,14 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+    /** index of the most downstream box to send that contains beam particles.
+     * Used to avoid send/recv for empty data */
+    int m_leftmost_box_snd = std::numeric_limits<int>::max();
+    /** index of the most downstream box to be received that contains beam particles.
+     * Used to avoid send/recv for empty data */
+    int m_leftmost_box_rcv = std::numeric_limits<int>::max();
+    /** Whether to skip communications of boxes that contain no beam particles */
+    int m_skip_empty_comms = false;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -222,6 +255,9 @@ private:
     amrex::Geometry m_slice_geom;
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
+
+    /** Used to sort the beam particles into boxes for pipelining */
+    amrex::Vector<BoxSorter> m_box_sorters;
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
@@ -247,6 +283,8 @@ private:
      * \param[in] dm DistributionMappint of the whole domain
      */
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+
+    int leftmostBoxWithParticles () const;
 };
 
 #endif

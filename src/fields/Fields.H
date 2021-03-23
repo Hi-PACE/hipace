@@ -83,6 +83,8 @@ public:
         amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm);
 
+    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
+
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
     /** get function for the main 3D array F */
@@ -104,7 +106,7 @@ public:
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
     /** \brief get diagnostics multifab */
-    amrex::Vector<amrex::MultiFab>& getDiagF () { return m_diags.getF(); };
+    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); };
     /** \brief get diagnostics geometry */
     amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
     /** \brief get slicing direction of the diagnostics */
@@ -115,7 +117,7 @@ public:
      * \param[in] i_slice z slice in which to write the data
      */
     void FillDiagnostics(int lev, int i_slice);
-    /** \brief Copy between the full MultiFab and slice MultiFab.
+    /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
      * \param[in] lev MR level
      * \param[in] i_slice z slice in which to write the data
@@ -123,11 +125,11 @@ public:
      * \param[in] slice_comp first component of the xy slice to copy from/to
      * \param[in] full_comp first component of the full array to copy from/to
      * \param[in] ncomp number of components to copy
-     * \param[in,out] full_mf full MultiFab
+     * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
      */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp, amrex::MultiFab& full_mf, int slice_dir);
+               int ncomp, amrex::FArrayBox& fab, int slice_dir);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
@@ -234,14 +236,12 @@ public:
      * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
      *            (usually either By or 0)
      * \param[in] geom Geometry of the problem
-     * \param[in] lev current level
      */
     amrex::Real ComputeRelBFieldError (const amrex::MultiFab& Bx, const amrex::MultiFab& By,
                                        const amrex::MultiFab& Bx_iter,
                                        const amrex::MultiFab& By_iter, const int Bx_comp,
                                        const int By_comp, const int Bx_iter_comp,
-                                       const int By_iter_comp, const amrex::Geometry& geom,
-                                       const int lev);
+                                       const int By_iter_comp, const amrex::Geometry& geom);
 
 private:
     /** Vector over levels, all fields */
