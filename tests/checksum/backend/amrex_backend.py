@@ -46,23 +46,14 @@ class Backend:
         ''' Calculate the checksum for a given field at a given level in the dataset
         '''
 
-        # Boolean variable parsed from test name needed for workaround below
-        galilean = True if re.search('galilean', test_name) else False
-
         lev_grids = [grid for grid in self.dataset.index.grids if grid.Level == lev]
-        if not (galilean):
-            # Warning: For now, we assume all levels are rectangular
-            LeftEdge = np.min(
-                np.array([grid.LeftEdge.v for grid in lev_grids]), axis=0)
-            all_data_level = self.dataset.covering_grid(
-                level=lev, left_edge=LeftEdge, dims=self.dataset.domain_dimensions)
-            Q = all_data_level[('boxlib', field)].v.squeeze()
-            return np.sum(np.abs(Q))
-        # Workaround for Galilean tests: the standard procedure above
-        # does not seem to read 2D fields data correctly
-        elif (galilean):
-            Q = self.dataset.index.grids[lev][('boxlib', field)].v.squeeze()
-            return np.sum(np.abs(Q))
+        # Warning: For now, we assume all levels are rectangular
+        LeftEdge = np.min(
+            np.array([grid.LeftEdge.v for grid in lev_grids]), axis=0)
+        all_data_level = self.dataset.covering_grid(
+            level=lev, left_edge=LeftEdge, dims=self.dataset.domain_dimensions)
+        Q = all_data_level[('boxlib', field)].v.squeeze()
+        return np.sum(np.abs(Q))
 
     def get_species_attributes(self, species):
         ''' Return the list of attributes for a given species in the dataset

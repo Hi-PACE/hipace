@@ -3,14 +3,15 @@
 #include "particles/BinSort.H"
 #include "pusher/BeamParticleAdvance.H"
 
-MultiBeam::MultiBeam (amrex::AmrCore* amr_core)
+MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 {
 
     amrex::ParmParse pp("beams");
     pp.getarr("names", m_names);
+    if (m_names[0] == "no_beam") return;
     m_nbeams = m_names.size();
     for (int i = 0; i < m_nbeams; ++i) {
-        m_all_beams.emplace_back(BeamParticleContainer(amr_core, m_names[i]));
+        m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
 }
 
@@ -24,80 +25,62 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 
 void
 MultiBeam::DepositCurrentSlice (
-    Fields& fields, const amrex::Geometry& geom, const int lev, int islice,
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins)
+    Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
+    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
+    const bool do_beam_jx_jy_deposition)
+
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bins[i]);
+        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bx,
+                              a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
+                              do_beam_jx_jy_deposition);
     }
 }
 
 amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
-MultiBeam::findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom)
+MultiBeam::findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
+                                     const amrex::Vector<BoxSorter>& a_box_sorter_vec)
 {
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
-    for (auto& beam : m_all_beams) {
-        bins.emplace_back(::findParticlesInEachSlice(lev, ibox, bx, beam, geom));
+    for (int i=0; i<m_nbeams; i++) {
+        bins.emplace_back(::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i], geom, a_box_sorter_vec[i]));
     }
     return bins;
 }
 
 void
-MultiBeam::Redistribute ()
+MultiBeam::sortParticlesByBox (
+            amrex::Vector<BoxSorter>& a_box_sorter_vec,
+            const amrex::BoxArray a_ba, const amrex::Geometry& a_geom)
 {
-    for (auto& beam : m_all_beams) {
-        beam.Redistribute();
+    a_box_sorter_vec.resize(m_nbeams);
+    for (int i=0; i<m_nbeams; i++) {
+        a_box_sorter_vec[i].sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
     }
 }
 
 void
 MultiBeam::AdvanceBeamParticlesSlice (
-    Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
+    Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
+    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
+    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, lev, islice, bins[i]);
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, lev, islice, bx,
+                                    a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i]);
     }
 }
 
 void
-MultiBeam::WritePlotFile (const std::string& filename)
+MultiBeam::WritePlotFile (const std::string& /*filename*/)
 {
     amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
     amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
     amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
     AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
     amrex::Vector<std::string> int_names {};
-    for (auto& beam : m_all_beams){
-        beam.WritePlotFile(filename, beam.get_name(), plot_flags, int_flags, real_names, int_names);
-    }
 }
-
-#ifdef AMREX_USE_MPI
-void
-MultiBeam::NotifyNumParticles (MPI_Comm a_comm_z)
-{
-    for (auto& beam : m_all_beams) {
-        beam.NotifyNumParticles(a_comm_z);
-    }
-}
-
-void
-MultiBeam::WaitNumParticles (MPI_Comm a_comm_z)
-{
-    for (auto& beam : m_all_beams) {
-        beam.WaitNumParticles(a_comm_z);
-    }
-}
-
-void
-MultiBeam::RedistributeSlice (int const lev)
-{
-    for (auto& beam : m_all_beams) {
-        beam.RedistributeSlice(lev);
-    }
-}
-#endif
 
 void
 MultiBeam::ConvertUnits (ConvertDirection convert_direction)
@@ -105,4 +88,30 @@ MultiBeam::ConvertUnits (ConvertDirection convert_direction)
     for (auto& beam : m_all_beams) {
         beam.ConvertUnits(convert_direction);
     }
+}
+
+int
+MultiBeam::NumRealComps ()
+{
+    int comps = 0;
+    if (get_nbeams() > 0){
+        comps = m_all_beams[0].NumRealComps();
+        for (auto& beam : m_all_beams) {
+            AMREX_ALWAYS_ASSERT(beam.NumRealComps() == comps);
+        }
+    }
+    return comps;
+}
+
+int
+MultiBeam::NumIntComps ()
+{
+    int comps = 0;
+    if (get_nbeams() > 0){
+        comps = m_all_beams[0].NumIntComps();
+        for (auto& beam : m_all_beams) {
+            AMREX_ALWAYS_ASSERT(beam.NumIntComps() == comps);
+        }
+    }
+    return comps;
 }

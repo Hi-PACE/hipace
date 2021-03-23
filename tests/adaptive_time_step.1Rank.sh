@@ -31,7 +31,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.external_Ez_slope = -.5 \
         hipace.verbose=1\
         hipace.do_adaptive_time_step=1\
-        plasma.density=1 \
+        plasmas.adaptive_density=1 \
         > negative_gradient.txt
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
@@ -47,7 +47,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.external_Ez_slope = .5 \
         hipace.verbose=1\
         hipace.do_adaptive_time_step=1\
-        plasma.density=1 \
+        plasmas.adaptive_density=1 \
         > positive_gradient.txt
 
 # Compare the result with theory
@@ -56,5 +56,5 @@ $HIPACE_EXAMPLE_DIR/analysis_adaptive_ts.py
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name diags/h5 \
+    --file_name diags/hdf5 \
     --test-name adaptive_time_step.1Rank

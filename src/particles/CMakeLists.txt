@@ -5,7 +5,9 @@ target_sources(HiPACE
     PlasmaParticleContainer.cpp
     PlasmaParticleContainerInit.cpp
     BinSort.cpp
+    BoxSort.cpp
     MultiBeam.cpp
+    MultiPlasma.cpp
 )
 
 add_subdirectory(deposition)

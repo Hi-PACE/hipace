@@ -19,10 +19,13 @@ GetInitialMomentum::GetInitialMomentum (const std::string& name)
                 m_u_std[idim] = loc_array[idim];
             }
         }
-        bool do_symmetrize;
+        bool do_symmetrize = false;
         pp.query("do_symmetrize", do_symmetrize);
-        if (do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_u_mean[0]+m_u_mean[1] < 1e-12,
+        if (do_symmetrize) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( std::fabs(m_u_mean[0]) +std::fabs(m_u_mean[1])
+                                               < std::numeric_limits<amrex::Real>::epsilon(),
             "Symmetrizing the beam is only implemented for no mean momentum in x and y");
+        }
     } else {
         amrex::Abort("Unknown beam momentum profile!");
     }

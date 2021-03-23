@@ -21,155 +21,110 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
     ppa.query("nt_per_omega_betatron", m_nt_per_omega_betatron);
 }
 
-void
-AdaptiveTimeStep::PassTimeStepInfo (const int nt, MPI_Comm a_comm_z)
-{
-    HIPACE_PROFILE("SetTimeStep()");
 #ifdef AMREX_USE_MPI
+void
+AdaptiveTimeStep::NotifyTimeStep (amrex::Real dt, MPI_Comm a_comm_z)
+{
     if (m_do_adaptive_time_step == 0) return;
-
     const int my_rank_z = amrex::ParallelDescriptor::MyProc();
-    const int numprocs_z = amrex::ParallelDescriptor::NProcs();
-    if (numprocs_z == 0) return;
-
-    if ((nt % numprocs_z == 0) && (my_rank_z >= 1))
+    if (my_rank_z >= 1)
     {
-        PassTimeStepInfoFinish();
-        m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
-            sizeof(amrex::Real)*WhichDouble::N);
-        for (int idouble=0; idouble<WhichDouble::N; idouble++) {
-            m_send_buffer[idouble] = m_timestep_data[idouble];
-        }
-
-        MPI_Isend(m_send_buffer, WhichDouble::N,
-                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 my_rank_z-1, comm_z_tag, a_comm_z, &m_send_request);
-
+        MPI_Send(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 my_rank_z-1, comm_z_tag, a_comm_z);
     }
-#endif
 }
 
 void
-AdaptiveTimeStep::PassTimeStepInfoFinish ()
+AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
 {
-#ifdef AMREX_USE_MPI
-    if (m_send_buffer) {
+    if (m_do_adaptive_time_step == 0) return;
+    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
+    if (!Hipace::HeadRank())
+    {
         MPI_Status status;
-        MPI_Wait(&m_send_request, &status);
-        amrex::The_Pinned_Arena()->free(m_send_buffer);
-        m_send_buffer = nullptr;
+        MPI_Recv(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 my_rank_z+1, comm_z_tag, a_comm_z, &status);
     }
-#endif
 }
+#endif
 
 void
-AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
-                             PlasmaParticleContainer& plasma, int const lev, MPI_Comm a_comm_z)
+AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density,
+                             const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                             const bool initial)
 {
-    HIPACE_PROFILE("CalculateAdaptiveTimeStep()");
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
     if (m_do_adaptive_time_step == 0) return;
+    if (!Hipace::HeadRank() && initial) return;
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density != 0.,
+        "A >0 plasma density must be specified to use an adaptive time step.");
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma.m_density != 0,
-        "A plasma density must be specified to use an adaptive time step.");
-
-    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
-    const int numprocs_z = amrex::ParallelDescriptor::NProcs();
-
-    if (nt % numprocs_z != 0) return;
     // Extract properties associated with physical size of the box
     const PhysConst phys_const = get_phys_const();
 
-#ifdef AMREX_USE_MPI
-    if (numprocs_z > 1) {
-        if (my_rank_z == numprocs_z-1) {
-            m_timestep_data[WhichDouble::SumWeights] = 0.;
-            m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
-            m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
-            m_timestep_data[WhichDouble::MinUz] = 1e30;
-            if (nt > 0){
-                // first rank receives the new dt from last rank
-                auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(
-                    sizeof(amrex::Real));
-                MPI_Status status;
-                MPI_Recv(recv_buffer, 1,
-                         amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                         0, comm_z_tag, a_comm_z, &status);
-                dt = recv_buffer[WhichDouble::Dt];
-                amrex::The_Pinned_Arena()->free(recv_buffer);
-            }
-            /* always set time step, because it will be passed */
-            m_timestep_data[WhichDouble::Dt] = dt;
-        } else {
-            /* lower ranks receive all time step data from the upper rank */
-            auto recv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-                (sizeof(amrex::Real)*WhichDouble::N);
-            MPI_Status status;
-            MPI_Recv(recv_buffer, WhichDouble::N,
-                     amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                     my_rank_z+1, comm_z_tag, a_comm_z, &status);
-
-            for (int idouble=0; idouble<WhichDouble::N; idouble++) {
-                m_timestep_data[idouble] = recv_buffer[idouble];
-            }
-            /* setting dt, so it can be used in the beam pusher */
-            dt = recv_buffer[WhichDouble::Dt];
-            amrex::The_Pinned_Arena()->free(recv_buffer);
-        }
+    // first box resets time step data
+    if (it == amrex::ParallelDescriptor::NProcs()-1) {
+        m_timestep_data[WhichDouble::SumWeights] = 0.;
+        m_timestep_data[WhichDouble::SumWeightsTimesUz] = 0.;
+        m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] = 0.;
+        m_timestep_data[WhichDouble::MinUz] = 1e30;
     }
-#endif
 
     for (int ibeam = 0; ibeam < beams.get_nbeams(); ibeam++) {
-        // Loop over particle boxes
-        for (BeamParticleIterator pti(beams.getBeam(ibeam), lev); pti.isValid(); ++pti)
-        {
-            // Extract particle properties
-            const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-            const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-            const auto wp = soa.GetRealData(BeamIdx::w).data();
+        const auto& beam = beams.getBeam(ibeam);
 
-            amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[WhichDouble::MinUz]);
-            amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
+        const uint64_t box_offset = initial ? 0 : a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
+        const uint64_t numParticleOnTile = initial ? beam.numParticles()
+                                                   : a_box_sorter_vec[ibeam].boxCountsPtr()[it];
 
-            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
+
+        // Extract particle properties
+        const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
+        const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
+        const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[WhichDouble::MinUz]);
+        amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
+
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
                 m_timestep_data[WhichDouble::SumWeights]);
-            amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
+        amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
 
-            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz(
-                m_timestep_data[WhichDouble::SumWeightsTimesUz]);
-            amrex::Real* p_sum_weights_times_uz = gpu_sum_weights_times_uz.dataPtr();
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz(
+            m_timestep_data[WhichDouble::SumWeightsTimesUz]);
+        amrex::Real* p_sum_weights_times_uz = gpu_sum_weights_times_uz.dataPtr();
 
-            amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz_squared(
-                m_timestep_data[WhichDouble::SumWeightsTimesUzSquared]);
-            amrex::Real* p_sum_weights_times_uz_squared =
-                gpu_sum_weights_times_uz_squared.dataPtr();
+        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz_squared(
+            m_timestep_data[WhichDouble::SumWeightsTimesUzSquared]);
+        amrex::Real* p_sum_weights_times_uz_squared =
+            gpu_sum_weights_times_uz_squared.dataPtr();
 
-            int const num_particles = pti.numParticles();
-            amrex::ParallelFor(num_particles,
-                [=] AMREX_GPU_DEVICE (long ip) {
+        amrex::ParallelFor(numParticleOnTile,
+            [=] AMREX_GPU_DEVICE (long ip) {
 
-                    if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
+                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
 
-                    amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
-                    amrex::Gpu::Atomic::Add(p_sum_weights_times_uz, wp[ip]*uzp[ip]/phys_const.c);
-                    amrex::Gpu::Atomic::Add(p_sum_weights_times_uz_squared, wp[ip]*uzp[ip]*uzp[ip]
-                                            /phys_const.c/phys_const.c);
-                    amrex::Gpu::Atomic::Min(p_min_uz, uzp[ip]/phys_const.c);
-
-            }
-            );
-            /* adding beam particle information to time step info */
-            m_timestep_data[WhichDouble::SumWeights] = gpu_sum_weights.dataValue();
-            m_timestep_data[WhichDouble::SumWeightsTimesUz] = gpu_sum_weights_times_uz.dataValue();
-            m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] =
-                                                   gpu_sum_weights_times_uz_squared.dataValue();
-            m_timestep_data[WhichDouble::MinUz] = std::min(m_timestep_data[WhichDouble::MinUz],
-                                                   gpu_min_uz.dataValue());
+                amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
+                amrex::Gpu::Atomic::Add(p_sum_weights_times_uz, wp[ip]*uzp[ip]/phys_const.c);
+                amrex::Gpu::Atomic::Add(p_sum_weights_times_uz_squared, wp[ip]*uzp[ip]*uzp[ip]
+                                        /phys_const.c/phys_const.c);
+                amrex::Gpu::Atomic::Min(p_min_uz, uzp[ip]/phys_const.c);
 
         }
+        );
+        /* adding beam particle information to time step info */
+        m_timestep_data[WhichDouble::SumWeights] = gpu_sum_weights.dataValue();
+        m_timestep_data[WhichDouble::SumWeightsTimesUz] = gpu_sum_weights_times_uz.dataValue();
+        m_timestep_data[WhichDouble::SumWeightsTimesUzSquared] =
+                                               gpu_sum_weights_times_uz_squared.dataValue();
+        m_timestep_data[WhichDouble::MinUz] = std::min(m_timestep_data[WhichDouble::MinUz],
+                                               gpu_min_uz.dataValue());
     }
 
-    if (my_rank_z == 0 )
+    // only the last box or at initialiyation the adaptive time step is calculated
+    // from the full beam information
+    if (it == 0 || initial)
     {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[WhichDouble::SumWeights] != 0,
             "The sum of all weights is 0! Probably no beam particles are initialized");
@@ -193,24 +148,13 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, const int nt, MultiBeam& beams,
         amrex::Real new_dt = dt;
         if (chosen_min_uz > 1) // and density above min density
         {
-            const amrex::Real omega_p = sqrt(plasma.m_density * phys_const.q_e*phys_const.q_e
+            const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
                                           / ( phys_const.ep0*phys_const.m_e ));
             new_dt = sqrt(2.*chosen_min_uz)/omega_p * m_nt_per_omega_betatron;
         }
 
-        /* For serial runs, set adaptive time step right away */
-        if (numprocs_z == 1) dt = new_dt;
+        /* set the new time step */
+        dt = new_dt;
 
-#ifdef AMREX_USE_MPI
-        if (numprocs_z > 1) {
-            PassTimeStepInfoFinish();
-            if (nt < Hipace::m_max_step -numprocs_z -1 ) {
-                m_send_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc(sizeof(amrex::Real));
-                m_send_buffer[WhichDouble::Dt] = new_dt;
-                MPI_Isend(m_send_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                     numprocs_z-1, comm_z_tag, a_comm_z, &m_send_request);
-            }
-        }
-#endif
     }
 }

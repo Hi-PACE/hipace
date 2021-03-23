@@ -66,7 +66,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
-        amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data();
 
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
@@ -103,19 +102,21 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const int depos_order_xy = Hipace::m_depos_order_xy;
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
-        const auto getPosition =
-            GetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
-        const auto SetPosition =
-            SetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+        using PTileType = PlasmaParticleContainer::ParticleTileType;
+        const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
+        const auto SetPosition = SetParticlePosition<PTileType>(pti.GetParticleTile());
+        const auto enforceBC = EnforceBC<PTileType>(pti.GetParticleTile(), lev);
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
-
-                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
                 amrex::ParticleReal xp, yp, zp;
-                getPosition(ip, xp, yp, zp);
+                int pid;
+                getPosition(ip, xp, yp, zp, pid);
+
+                if (pid < 0) return;
+
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
@@ -153,7 +154,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
                                        Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                                       dz, temp_slice, ip, SetPosition );
+                                       dz, temp_slice, ip, SetPosition, enforceBC );
                 }
                 return;
           }
@@ -211,19 +212,20 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         amrex::Real * const w0 = soa.GetRealData(PlasmaIdx::w0).data();
 
         const auto GetPosition =
-            GetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+            GetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
         const auto SetPosition =
-            SetParticlePosition<PlasmaParticleContainer, PlasmaParticleIterator>(pti);
+            SetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
                 amrex::ParticleReal xp, yp, zp;
-                GetPosition(ip, xp, yp, zp);
+                int pid;
+                GetPosition(ip, xp, yp, zp, pid);
                 if (initial == false){
                     SetPosition(ip, x_prev[ip], y_prev[ip], zp);
                 } else {
-                    SetPosition(ip, x0[ip], y0[ip], zp);
+                    SetPosition(ip, x0[ip], y0[ip], zp, std::abs(pid));
                     w[ip] = w0[ip];
                     uxp[ip] = 0._rt;
                     uyp[ip] = 0._rt;
