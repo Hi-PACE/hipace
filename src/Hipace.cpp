@@ -7,6 +7,7 @@
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_MLALaplacian.H>
 
 #include <algorithm>
 #include <memory>
@@ -426,11 +427,50 @@ Hipace::SolveBxBy (const int islice, const int lev)
 {
     HIPACE_PROFILE("Hipace::ToSolveBxBy()");
 
+    // Let's not worry about MPI for now
+    // With MPI, we need to create a subcommunicator of a single processor and 
+    // then push it to amrex::ParallelContext
+
+    // Get MultiFab BxBy, 2 comps
+    // Get MulitFab A (one comp only) and S (2 comps)
+
     amrex::MultiFab B(m_fields.getSlices(lev, WhichSlice::This),
                        amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
     amrex::MultiFab jz(m_fields.getSlices(lev, WhichSlice::This),
                        amrex::make_alias, Comps[WhichSlice::This]["jz"], 1);
     amrex::Print()<<"jz.min(0) "<<jz.min(0)<<", jz.max(0) "<<jz.max(0)<<'\n';
+
+    // For now, we construct the solver locally.  Later, we want to move it to the hipace class as 
+    // a member so that we can reuse it.
+    LpInfo lpinfo{};
+    lpinfo.setHiddenDirection(2);
+
+    MLALaplacian mlalaplacian({m_slice_geom}, {S.boxArray()}, {S.DistributionMap()},
+                              lpinfo);
+
+    mlalaplacian.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
+                                           LinOpBCType::Dirichlet,
+                                           LinOpBCType::Dirichlet)},
+                             {AMREX_D_DECL(LinOpBCType::Dirichlet,
+                                           LinOpBCType::Dirichlet,
+                                           LinOpBCType::Dirichlet)});
+
+    // BxBy is assumed to have at least one ghost cell in x and y.
+    // The ghost cells outside the domain should contain Dirichlet BC values.
+    BxBy.setDomainBndry(0.0); // Set Dirichlet BC to zero
+    mlalaplacian.setLevelBC(0, &BxBy);
+
+    // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
+    // So we solve Delta BxBy - A * BxBy = S
+    mlalaplacian.setScalars(-1.0, -1.0);
+
+    mlalaplacian.setACoeffs(0, A);
+
+    MLMG mlmg(mlalaplacian);
+
+    const Real tol_rel = 1.e-10;
+    const Real tol_abs = 0.0;
+    mlmg.solve({&BxBy}, {&S}, tol_rel, tol_abs);
 
     // This is where we want to solve an equation of the form
     // Delta B - A * B = S
@@ -440,6 +480,9 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     // Reset to zero so fields don't diverge
     B.setVal(0.);
+
+
+    // Don't forget to pop the mpi subcommunicator from ParallelContext
 }
 
 void
