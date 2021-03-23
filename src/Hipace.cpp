@@ -401,7 +401,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
      * and the force terms of the plasma particles
      */
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
-    SolveBxBy(islice, lev);
+    SolveBxBy(lev);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
@@ -426,22 +426,24 @@ Hipace::ResetAllQuantities (int lev)
 }
 
 void
-Hipace::SolveBxBy (const int islice, const int lev)
+Hipace::SolveBxBy (const int lev)
 {
     HIPACE_PROFILE("Hipace::SolveBxBy()");
 
+    const int isl = WhichSlice::This;
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    amrex::BoxArray ba = slicemf.boxArray();
+    amrex::DistributionMapping dm = slicemf.DistributionMap();
+    amrex::IntVect ngv = slicemf.nGrowVect();
     // These names are provisional
 
-    amrex::MultiFab Denom(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                            m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                            m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    amrex::MultiFab Denom(ba, dm, 1, ngv);
     // Better to use the constructor without the alias:
 
     Denom.setVal(1.0);
 
     // 1+Psi -> Denominator
-    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    amrex::MultiFab::Add(Denom, slicemf, Comps[isl]["Psi"], 0, 1, ngv);
 
     // Plasma density: rho
 
