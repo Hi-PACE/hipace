@@ -431,7 +431,7 @@ Hipace::SolveBxBy (const int lev)
     HIPACE_PROFILE("Hipace::SolveBxBy()");
 
     const int isl = WhichSlice::This;
-    const amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+   amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
     const amrex::BoxArray ba = slicemf.boxArray();
     const amrex::DistributionMapping dm = slicemf.DistributionMap();
     const amrex::IntVect ngv = slicemf.nGrowVect();
