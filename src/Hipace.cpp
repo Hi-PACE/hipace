@@ -8,6 +8,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
 #include <AMReX_MLALaplacian.H>
+#include <AMReX_MLMG.H>
 
 #include <algorithm>
 #include <memory>
@@ -427,25 +428,37 @@ Hipace::SolveBxBy (const int islice, const int lev)
 {
     HIPACE_PROFILE("Hipace::ToSolveBxBy()");
 
+    using namespace amrex;
+
+    amrex::Geometry slice_geom = m_slice_geom;
+    slice_geom.setPeriodicity({0,0,0});
+    
     // Let's not worry about MPI for now
     // With MPI, we need to create a subcommunicator of a single processor and 
     // then push it to amrex::ParallelContext
 
     // Get MultiFab BxBy, 2 comps
+    // The 2 in ncomps is for Bx abd By.
+    // This contains at least one guard cell
+    amrex::MultiFab BxBy(m_fields.getSlices(lev, WhichSlice::This),
+                       amrex::make_alias, Comps[WhichSlice::This]["Bx"], 2);
     // Get MulitFab A (one comp only) and S (2 comps)
+    // Later this should have only 1 component, but we have 2 for now, with always the same values.
+    amrex::MultiFab A(m_fields.getSlices(lev, WhichSlice::This),
+                       amrex::make_alias, Comps[WhichSlice::This]["jz"], 2);
+    A.setVal(1.);
+    amrex::Print()<<"A.min(0) "<<A.min(0)<<", A.max(0) "<<A.max(0)<<'\n';
 
-    amrex::MultiFab B(m_fields.getSlices(lev, WhichSlice::This),
-                       amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
-    amrex::MultiFab jz(m_fields.getSlices(lev, WhichSlice::This),
-                       amrex::make_alias, Comps[WhichSlice::This]["jz"], 1);
-    amrex::Print()<<"jz.min(0) "<<jz.min(0)<<", jz.max(0) "<<jz.max(0)<<'\n';
-
-    // For now, we construct the solver locally.  Later, we want to move it to the hipace class as 
+    // Needs to components, there are different for Bx and By
+    amrex::MultiFab S(m_fields.getSlices(lev, WhichSlice::This),
+                      amrex::make_alias, Comps[WhichSlice::This]["jz"], 2);
+    
+    // For now, we construct the solver locally. Later, we want to move it to the hipace class as 
     // a member so that we can reuse it.
-    LpInfo lpinfo{};
+    LPInfo lpinfo{};
     lpinfo.setHiddenDirection(2);
 
-    MLALaplacian mlalaplacian({m_slice_geom}, {S.boxArray()}, {S.DistributionMap()},
+    MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()},
                               lpinfo);
 
     mlalaplacian.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
@@ -457,7 +470,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
 
     // BxBy is assumed to have at least one ghost cell in x and y.
     // The ghost cells outside the domain should contain Dirichlet BC values.
-    BxBy.setDomainBndry(0.0); // Set Dirichlet BC to zero
+    BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
     mlalaplacian.setLevelBC(0, &BxBy);
 
     // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
@@ -479,8 +492,7 @@ Hipace::SolveBxBy (const int islice, const int lev)
     // We will to solve two equations (of the exact same form): one for Bx, one for By.
 
     // Reset to zero so fields don't diverge
-    B.setVal(0.);
-
+    BxBy.setVal(0.);
 
     // Don't forget to pop the mpi subcommunicator from ParallelContext
 }
