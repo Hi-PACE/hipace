@@ -32,7 +32,16 @@ class PlasmaParticleContainer
 {
 public:
     /** Constructor */
-    explicit PlasmaParticleContainer (amrex::AmrCore* amr_core);
+    explicit PlasmaParticleContainer (amrex::AmrCore* amr_core, std::string name) :
+        amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB()),
+        m_name(name)
+    {
+        ReadParameters();
+    }
+
+    /** Read parameters from the input file
+     */
+    void ReadParameters ();
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
      */
@@ -61,9 +70,15 @@ public:
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
-
     amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
-  };
+    /** whether to add a neutralizing background of immobile particles of opposite charge */
+    bool m_neutralize_background = true;
+
+private:
+    std::string m_name; /**< name of the species */
+    amrex::Real m_mass; /**< mass of each particle of this species */
+    amrex::Real m_charge; /**< charge of each particle of this species */
+};
 
 /** \brief Iterator over boxes in a particle container */
 class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs>

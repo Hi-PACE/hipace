@@ -1,11 +1,49 @@
-#include "PlasmaParticleContainer.H"
 #include "Hipace.H"
+#include "PlasmaParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-PlasmaParticleContainer::PlasmaParticleContainer (amrex::AmrCore* amr_core)
-    : amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB())
+namespace
 {
-    amrex::ParmParse pp("plasma");
+    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real charge, amrex::Real mass)
+    {
+        // normalized_units is directly queried here so we can defined the appropriate PhysConst
+        // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
+        // PlasmaParticleContainer constructor is called.
+        amrex::ParmParse pph("hipace");
+        bool normalized_units;
+        pph.query("normalized_units", normalized_units);
+        PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
+
+        std::string element;
+        bool element_is_specified = pp.query("element", element);
+        if (element_is_specified){
+            if (element == "electron"){
+                charge = -phys_const.q_e;
+                mass = phys_const.m_e;
+            } else if (element == "H"){
+                charge = phys_const.q_e;
+                mass = phys_const.m_p;
+            } else {
+                amrex::Abort("unknown plasma species. Options are: electron and H.");
+            }
+    }
+        return element_is_specified;
+    }
+}
+
+void
+PlasmaParticleContainer::ReadParameters ()
+{
+    amrex::ParmParse pp(m_name);
+    pp.query("charge", m_charge);
+    pp.query("mass", m_mass);
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        QueryElementSetChargeMass(pp, m_charge, m_mass) ^
+        (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
+        "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
+
+    pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
     pp.query("max_qsa_weighting_factor", m_max_qsa_weighting_factor);

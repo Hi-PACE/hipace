@@ -49,7 +49,7 @@ AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
 #endif
 
 void
-AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleContainer& plasma,
+AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density,
                              const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                              const bool initial)
 {
@@ -57,8 +57,8 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleCo
 
     if (m_do_adaptive_time_step == 0) return;
     if (!Hipace::HeadRank() && initial) return;
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma.m_density != 0,
-        "A plasma density must be specified to use an adaptive time step.");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density != 0.,
+        "A >0 plasma density must be specified to use an adaptive time step.");
 
     // Extract properties associated with physical size of the box
     const PhysConst phys_const = get_phys_const();
@@ -148,7 +148,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, PlasmaParticleCo
         amrex::Real new_dt = dt;
         if (chosen_min_uz > 1) // and density above min density
         {
-            const amrex::Real omega_p = sqrt(plasma.m_density * phys_const.q_e*phys_const.q_e
+            const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
                                           / ( phys_const.ep0*phys_const.m_e ));
             new_dt = sqrt(2.*chosen_min_uz)/omega_p * m_nt_per_omega_betatron;
         }

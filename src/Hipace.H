@@ -3,7 +3,7 @@
 
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
-#include "particles/PlasmaParticleContainer.H"
+#include "particles/MultiPlasma.H"
 #include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
@@ -174,10 +174,10 @@ public:
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
-    /** Particle container for a beam */
+    /** Contains all beam species */
     MultiBeam m_multi_beam;
-    /** Particle container for the plasma */
-    PlasmaParticleContainer m_plasma_container;
+    /** Contains all plasma species */
+    MultiPlasma m_multi_plasma;
     /** Number of time iterations */
     static int m_max_step;
     /** Time step for the beam evolution */
