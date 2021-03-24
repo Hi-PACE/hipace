@@ -20,7 +20,7 @@ namespace
             if (element == "electron"){
                 charge = -phys_const.q_e;
                 mass = phys_const.m_e;
-            } else if (element == "H"){
+            } else if (element == "proton"){
                 charge = phys_const.q_e;
                 mass = phys_const.m_p;
             } else {
