@@ -61,6 +61,7 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
     /* Change for psi along zeta */
     Fpsi1 = -charge_mass_ratio * (1.0_rt / phys_const.c * ( uxp * ExmByp + uyp * EypBxp ) / (psip + 1.0_rt) - Ezp );
 
+
 }
 
 /** \brief Shifting the force term coefficients
