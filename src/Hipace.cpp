@@ -4,6 +4,8 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
+#include "particles/pusher/FieldGather.H"
+#include "particles/pusher/GetAndSetPosition.H"
 #include "particles/BinSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
@@ -397,6 +399,8 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_fields.ShiftSlices(lev);
 
+    Ionisation(lev);
+
     // After this, the parallel context is the full 3D communicator again
     amrex::ParallelContext::pop();
 }
@@ -543,6 +547,98 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
     }
     if (m_verbose >= 2) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
                             " relative B field error: "<<relative_Bfield_error<< "\n";
+}
+
+void
+Hipace::IonisationInit (const int lev)
+{
+
+    omaga_a = 4.13e16;
+    U_ion = 13.6;
+    U_ion_h = U_ion / 13.6;
+    Z = new_charge_number;
+    ns = Z * std::sqrt( 1. / U_ion_h );
+    ls =  ns0 - 1;
+    W_dc = omega_a * C_ns_ls_2 * B_l_n * 0.5 * U_ion_h * std::pow( 2 * E_a / E_dc
+        * std::pow( U_ion_h , 1.5 ) , 2 * ns - std::abs(m) - 1 )
+        * std::exp( -2./3. * E_a / E_dc * std::pow( U_ion_h , 1.5 ) );
+
+
+}
+
+
+void
+Hipace::Ionisation (const int lev)
+{
+    // Extract properties associated with physical size of the box
+    amrex::Real const * AMREX_RESTRICT dx = geom[lev].CellSize();
+    const PhysConst phys_const = make_constants_SI();
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(m_plasma_container, lev); pti.isValid(); ++pti)
+    {
+        // Extract properties associated with the extent of the current box
+        // Grow to capture the extent of the particle shape
+        amrex::Box tilebox = pti.tilebox().grow(
+            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+
+        amrex::RealBox const grid_box{tilebox, geom[lev].CellSize(), geom[lev].ProbLo()};
+        amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
+        amrex::Dim3 const lo = amrex::lbound(tilebox);
+
+        // Extract the fields
+        const amrex::MultiFab& S = m_fields.getSlices(lev, WhichSlice::This);
+        const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
+        const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
+        const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
+        const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
+        const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
+        const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
+        // Extract FabArray for this box
+        const amrex::FArrayBox& exmby_fab = exmby[pti];
+        const amrex::FArrayBox& eypbx_fab = eypbx[pti];
+        const amrex::FArrayBox& ez_fab = ez[pti];
+        const amrex::FArrayBox& bx_fab = bx[pti];
+        const amrex::FArrayBox& by_fab = by[pti];
+        const amrex::FArrayBox& bz_fab = bz[pti];
+        // Extract field array from FabArray
+        amrex::Array4<const amrex::Real> const& exmby_arr = exmby_fab.array();
+        amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx_fab.array();
+        amrex::Array4<const amrex::Real> const& ez_arr = ez_fab.array();
+        amrex::Array4<const amrex::Real> const& bx_arr = bx_fab.array();
+        amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
+        amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
+
+        const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+        const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+        const int depos_order_xy = Hipace::m_depos_order_xy;
+
+        using PTileType = PlasmaParticleContainer::ParticleTileType;
+        const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
+        const amrex::Real zmin = xyzmin[2];
+
+        amrex::ParallelFor(pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (long ip) {
+            amrex::ParticleReal xp, yp, zp;
+            int pid;
+            getPosition(ip, xp, yp, zp, pid);
+
+            if (pid < 0) return;
+
+            // define field at particle position reals
+            amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
+            amrex::ParticleReal Bxp = 0., Byp = 0., Bzp = 0.;
+
+            doGatherShapeN(xp, yp, zmin,
+                           ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                           exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                           dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+
+            amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
+            amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
+            amrex::ParticleReal Ep = std::hypot( Exp , Eyp , Ezp );
+        });
+    }
 }
 
 void
