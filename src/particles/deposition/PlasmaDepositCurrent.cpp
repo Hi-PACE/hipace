@@ -24,8 +24,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
-    PhysConst phys_const = get_phys_const();
-
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
 
     // Loop over particle boxes
@@ -53,8 +51,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         // For now: fix the value of the charge
         amrex::Real q =(which_slice == WhichSlice::RhoIons ) ? -plasma.m_charge : plasma.m_charge;
-
-        amrex::AllPrint() << " charge " << plasma.m_charge << " mass " << plasma.m_mass << "\n";
 
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
