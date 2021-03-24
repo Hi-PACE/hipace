@@ -578,9 +578,9 @@ InitBeamFromFile (const std::string input_file,
 
     input_type unit_rx, unit_ry, unit_rz, unit_ux, unit_uy, unit_uz, unit_ww;
     bool hipace_restart = false;
-    const std::string attr = "Hipace++_reverence_unitSI";
-    if(electrons.containsAttribute("Hipace++_use_reverence_unitSI")) {
-        if(electrons.getAttribute("Hipace++_use_reverence_unitSI").get<bool>() == true) {
+    const std::string attr = "Hipace++_reference_unitSI";
+    if(electrons.containsAttribute("Hipace++_use_reference_unitSI")) {
+        if(electrons.getAttribute("Hipace++_use_reference_unitSI").get<bool>() == true) {
             hipace_restart = true;
         }
     }

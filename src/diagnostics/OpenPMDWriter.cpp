@@ -265,8 +265,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
     }
 
     // write SI conversion
-    currSpecies.setAttribute("Hipace++_use_reverence_unitSI", true);
-    const std::string attr = "Hipace++_reverence_unitSI";
+    currSpecies.setAttribute("Hipace++_use_reference_unitSI", true);
+    const std::string attr = "Hipace++_reference_unitSI";
     for( auto const& comp : positionComponents ) {
         currSpecies["position"][comp].setAttribute( attr, hipace_to_SI_pos );
         //posOffset allways 0
