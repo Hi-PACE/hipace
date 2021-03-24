@@ -31,7 +31,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.external_Ez_slope = -.5 \
         hipace.verbose=1\
         hipace.do_adaptive_time_step=1\
-        plasma.density=1 \
+        plasmas.adaptive_density=1 \
         > negative_gradient.txt
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
@@ -47,7 +47,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.external_Ez_slope = .5 \
         hipace.verbose=1\
         hipace.do_adaptive_time_step=1\
-        plasma.density=1 \
+        plasmas.adaptive_density=1 \
         > positive_gradient.txt
 
 # Compare the result with theory

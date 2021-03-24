@@ -7,6 +7,7 @@ target_sources(HiPACE
     BinSort.cpp
     BoxSort.cpp
     MultiBeam.cpp
+    MultiPlasma.cpp
 )
 
 add_subdirectory(deposition)

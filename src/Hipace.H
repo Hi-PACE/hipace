@@ -3,7 +3,7 @@
 
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
-#include "particles/PlasmaParticleContainer.H"
+#include "particles/MultiPlasma.H"
 #include "particles/MultiBeam.H"
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
@@ -79,8 +79,9 @@ public:
      * slice multifabs of current rank.
      *
      * \param[in] step current time step
+     * \param[in] it index of the box for which data is received
      */
-    void Wait (const int step);
+    void Wait (const int step, int it);
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
@@ -136,6 +137,12 @@ public:
         return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
     }
 
+    /** Version of the HiPACE executable
+     *
+     * @return detailed version string
+     */
+    static std::string Version ();
+
     /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
      * transverse parallelization)
      */
@@ -167,10 +174,10 @@ public:
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
-    /** Particle container for a beam */
+    /** Contains all beam species */
     MultiBeam m_multi_beam;
-    /** Particle container for the plasma */
-    PlasmaParticleContainer m_plasma_container;
+    /** Contains all plasma species */
+    MultiPlasma m_multi_plasma;
     /** Number of time iterations */
     static int m_max_step;
     /** Time step for the beam evolution */
@@ -200,9 +207,17 @@ public:
     /** Maximum number of iterations in the predictor corrector loop
      */
     static int m_predcorr_max_iterations;
+    /** Average number of iterations in the predictor corrector loop
+     */
+    amrex::Real m_predcorr_avg_iterations = 0.;
+    /** Average transverse B field error in the predictor corrector loop
+     */
+    amrex::Real m_predcorr_avg_B_error = 0.;
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_mixing_factor;
+    /** Whether the beams deposit Jx and Jy */
+    static bool m_do_beam_jx_jy_deposition;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
@@ -224,6 +239,14 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+    /** index of the most downstream box to send that contains beam particles.
+     * Used to avoid send/recv for empty data */
+    int m_leftmost_box_snd = std::numeric_limits<int>::max();
+    /** index of the most downstream box to be received that contains beam particles.
+     * Used to avoid send/recv for empty data */
+    int m_leftmost_box_rcv = std::numeric_limits<int>::max();
+    /** Whether to skip communications of boxes that contain no beam particles */
+    int m_skip_empty_comms = false;
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -261,6 +284,8 @@ private:
      * \param[in] dm DistributionMappint of the whole domain
      */
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+
+    int leftmostBoxWithParticles () const;
 };
 
 #endif
