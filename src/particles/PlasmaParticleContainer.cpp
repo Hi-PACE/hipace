@@ -4,7 +4,7 @@
 
 namespace
 {
-    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real charge, amrex::Real mass)
+    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real& mass)
     {
         // normalized_units is directly queried here so we can defined the appropriate PhysConst
         // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
