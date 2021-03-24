@@ -109,6 +109,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
+        const amrex::Real charge = plasma.m_charge;
+        const amrex::Real mass = plasma.m_mass;
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
                 amrex::ParticleReal xp, yp, zp;
@@ -141,7 +143,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
                     UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
                                      Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                     Fpsi1[ip], clightsq, phys_const);
+                                     Fpsi1[ip], clightsq, phys_const, charge, mass);
                 }
 
                 if (do_push)
