@@ -4,7 +4,7 @@
 
 namespace
 {
-    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real charge, amrex::Real mass)
+    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real& mass)
     {
         // normalized_units is directly queried here so we can defined the appropriate PhysConst
         // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
@@ -26,6 +26,7 @@ namespace
             } else {
                 amrex::Abort("unknown plasma species. Options are: electron and H.");
             }
+            amrex::AllPrint() << "charge " << charge << " mass " << mass << "\n";
     }
         return element_is_specified;
     }
@@ -37,7 +38,7 @@ PlasmaParticleContainer::ReadParameters ()
     amrex::ParmParse pp(m_name);
     pp.query("charge", m_charge);
     pp.query("mass", m_mass);
-
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must not be 0");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         QueryElementSetChargeMass(pp, m_charge, m_mass) ^
         (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
