@@ -73,11 +73,11 @@ public:
     amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
+    amrex::Real m_mass; /**< mass of each particle of this species */
+    amrex::Real m_charge; /**< charge of each particle of this species */
 
 private:
     std::string m_name; /**< name of the species */
-    amrex::Real m_mass; /**< mass of each particle of this species */
-    amrex::Real m_charge; /**< charge of each particle of this species */
 };
 
 /** \brief Iterator over boxes in a particle container */
