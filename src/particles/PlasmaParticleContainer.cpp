@@ -26,7 +26,6 @@ namespace
             } else {
                 amrex::Abort("unknown plasma species. Options are: electron and H.");
             }
-            amrex::AllPrint() << "charge " << charge << " mass " << mass << "\n";
     }
         return element_is_specified;
     }
