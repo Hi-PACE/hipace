@@ -19,7 +19,6 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-            hipace.verbose=2 \
             beam.profile = gaussian \
             beam.zmin = -59.e-6 \
             beam.zmax = 59.e-6 \

@@ -37,11 +37,11 @@ PlasmaParticleContainer::ReadParameters ()
     amrex::ParmParse pp(m_name);
     pp.query("charge", m_charge);
     pp.query("mass", m_mass);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must not be 0");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         QueryElementSetChargeMass(pp, m_charge, m_mass) ^
         (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
         "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must not be 0");
 
     pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
