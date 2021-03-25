@@ -102,3 +102,31 @@ Plasma parameters
 
 Beam parameters
 ---------------
+
+For the beam parameters, first the names of the beams need to be specified. Afterwards, the beam
+parameters for each beam are specified via `beam_name.beam_property = ...`
+
+* ``beams.names`` (`string`)
+    The names of the particle beams, separated by a space.
+
+* ``beam_name.injection_type`` (`string`)
+    The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
+    and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
+    varying weights. `fixed_weight` generates a beam with a fixed number of particles with a
+    constant weight. `from_file` reads a beam from openPMD files.
+
+**from_file**
+
+* ``beam_name.input_file`` (`string`)
+    Name of the input file. **Note:** Reading in files with digits in their names (e.g.
+    `openpmd_002135.h5`) can be problematic, it is advised to read them via `openpmd_%T.h5` and then
+    specify the iteration via `beam_name.iteration = 2135`.
+
+* ``beam_name.iteration`` (`integer`) optional (default `0`)
+    Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
+    or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
+    time of the simulation is set to the time of the given iteration (if available).
+
+* ``beam_name.openPMD_species_name`` (`string`) optional
+    Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
+    needs to be specified.
