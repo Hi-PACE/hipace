@@ -94,7 +94,7 @@ Plasma parameters
 
 * ``plasma.channel_radius`` (`float`) optional (default `0.`)
     Channel radius of a parabolic plasma profile. The plasma density is set to
-    :math:`\mathrm{plasma.density} * (1 + r^2/\mathrm{plasma.channel\radius}^2)`.
+    :math:`\mathrm{plasma.density} * (1 + r^2/\mathrm{plasma.channel\_radius}^2)`.
 
 * ``plasma.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
