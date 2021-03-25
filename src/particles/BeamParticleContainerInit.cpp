@@ -465,7 +465,7 @@ InitBeamFromFile (const std::string input_file,
         name_rz = name_uz = file_coordinates_xyz[2];
     }
 
-    // Determine whether to use momentum or normalized momentum aswell as weight, charge or mass
+    // Determine whether to use momentum or normalized momentum as well as weight, charge or mass
     // set conversion factor appropriately
     const PhysConst phys_const_SI = make_constants_SI();
 
