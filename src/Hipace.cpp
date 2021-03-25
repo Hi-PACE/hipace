@@ -821,6 +821,8 @@ Hipace::WriteDiagnostics (int output_step, const int it)
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
                         m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
                         it, m_box_sorters, geom[lev]);
+#else
+    amrex::Print()<<"WARNING: hipace++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
 }
 
