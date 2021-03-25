@@ -495,7 +495,7 @@ InitBeamFromFile (const std::string input_file,
     }
     else if(name_mm != "") {
         name_w = name_m;
-        name_ww = name_ww;
+        name_ww = name_mm;
         si_to_norm_weight = phys_const_SI.m_e;
         weighting_type = "Mass";
     }
