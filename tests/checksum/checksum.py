@@ -55,7 +55,7 @@ class Checksum:
             for lev in range(ds.n_levels()):
                 data_lev = {}
                 for field in grid_fields:
-                    data_lev[field] = ds.get_field_checksum(lev, field, self.test_name)
+                    data_lev[field] = self.trim_digits(ds.get_field_checksum(lev, field, self.test_name))
                 data['lev=' + str(lev)] = data_lev
 
         # Compute checksum for particle quantities
@@ -64,7 +64,7 @@ class Checksum:
                 part_fields = ds.get_species_attributes(species)
                 data_species = {}
                 for field in part_fields:
-                    data_species[field] = ds.get_species_checksum(species, field)
+                    data_species[field] = self.trim_digits(ds.get_species_checksum(species, field))
                 data[species] = data_species
 
         return data
@@ -126,3 +126,12 @@ class Checksum:
         if checksums_differ:
             sys.exit(1)
         print("Checksum evaluation passed.")
+
+    def trim_digits(self, x):
+        '''
+        Trim the number of signigicant digits
+
+        @param x number to trim
+        '''
+
+        return float('%s' % float('%.14g' % x))
