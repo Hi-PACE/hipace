@@ -92,9 +92,9 @@ Plasma parameters
 * ``plasma.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
-* ``plasma.parabolic_curvature`` (`float`) optional (default `0.`)
-    Curvature of a parabolic plasma profile. The plasma density is set to
-    :math:`\mathrm{plasma.parabolic\_curvature}*r^2 + \mathrm{plasma.density}`.
+* ``plasma.channel_radius`` (`float`) optional (default `0.`)
+    Channel radius of a parabolic plasma profile. The plasma density is set to
+    :math:`\mathrm{plasma.density} * (1 + r^2/\mathrm{plasma.channel\radius}^2)`.
 
 * ``plasma.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered

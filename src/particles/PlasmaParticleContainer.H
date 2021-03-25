@@ -45,24 +45,21 @@ public:
      * \param[in] a_thermal_momentum_mean average momentum (3d)
      * \param[in] a_density plasma density (SI)
      * \param[in] a_radius plasma radius. Only particles with x**2+y**2<a_radius**2 are injected
-     * \param[in] a_parabolic_curvature defines the curvature of a transerse plasma profile with
-     *            a_parabolic_curvature*r^2 + a_density
      */
     void InitParticles (
         const amrex::IntVect& a_num_particles_per_cell,
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_density,
-        const amrex::Real a_radius,
-        const amrex::Real a_parabolic_curvature);
+        const amrex::Real a_radius);
 
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
-    /** defines the parabolic curvature of a plasma profile m_parabolic_curvature*r^2 + m_density */
-    amrex::Real m_parabolic_curvature {0.};
+    /** defines the channel radius of a parabolic plasma profile */
+    amrex::Real m_channel_radius {std::numeric_limits<amrex::Real>::infinity()};
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
