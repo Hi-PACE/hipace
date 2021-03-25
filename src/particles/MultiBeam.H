@@ -74,11 +74,6 @@ public:
         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
-    /** Loop over species and dump them to plotfile
-     * \param[in] filename name of the output file
-     */
-    void WritePlotFile (const std::string& filename);
-
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      */
