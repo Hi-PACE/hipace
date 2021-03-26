@@ -91,6 +91,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         PhysConst phys_const = get_phys_const();
 
+        const amrex::Real channel_radius = m_channel_radius;
+
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -121,9 +123,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     x*x + y*y > a_radius*a_radius ) continue;
 
+                const amrex::Real rp = std::sqrt(x*x + y*y);
+
                 amrex::Real u[3] = {0.,0.,0.};
-                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean,
-                                                           a_u_std);
+                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std);
 
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;
@@ -132,8 +135,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                arrdata[PlasmaIdx::w        ][pidx] = a_density * scale_fac;
-                arrdata[PlasmaIdx::w0       ][pidx] = a_density * scale_fac;;
+                arrdata[PlasmaIdx::w        ][pidx] =
+                        a_density*(1. + rp*rp/(channel_radius*channel_radius)) * scale_fac;
+                arrdata[PlasmaIdx::w0       ][pidx] =
+                        a_density*(1. + rp*rp/(channel_radius*channel_radius)) * scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
                 arrdata[PlasmaIdx::psi      ][pidx] = 0.;

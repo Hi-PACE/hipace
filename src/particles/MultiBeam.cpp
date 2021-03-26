@@ -72,24 +72,6 @@ MultiBeam::AdvanceBeamParticlesSlice (
     }
 }
 
-void
-MultiBeam::WritePlotFile (const std::string& /*filename*/)
-{
-    amrex::Vector<int> plot_flags(BeamIdx::nattribs, 1);
-    amrex::Vector<int> int_flags(BeamIdx::nattribs, 1);
-    amrex::Vector<std::string> real_names {"w","ux","uy","uz"};
-    AMREX_ALWAYS_ASSERT(real_names.size() == BeamIdx::nattribs);
-    amrex::Vector<std::string> int_names {};
-}
-
-void
-MultiBeam::ConvertUnits (ConvertDirection convert_direction)
-{
-    for (auto& beam : m_all_beams) {
-        beam.ConvertUnits(convert_direction);
-    }
-}
-
 int
 MultiBeam::NumRealComps ()
 {

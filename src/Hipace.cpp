@@ -8,7 +8,6 @@
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
 
-#include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
 
@@ -27,6 +26,7 @@ Hipace* Hipace::m_instance = nullptr;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
 bool Hipace::m_normalized_units = false;
+amrex::Real Hipace::m_physical_time = 0.0;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
@@ -918,18 +918,9 @@ Hipace::WriteDiagnostics (int output_step, const int it)
     constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
                         m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
-                        it, m_box_sorters);
+                        it, m_box_sorters, geom[lev]);
 #else
-    constexpr int nlev = 1;
-    const amrex::IntVect local_ref_ratio {1, 1, 1};
-
-    amrex::WriteMultiLevelPlotfile(
-        filename, nlev, amrex::GetVecOfConstPtrs(m_fields.getDiagF()), varnames,
-        m_fields.getDiagGeom(), m_physical_time, {output_step}, {local_ref_ratio},
-        "HyperCLaw-V1.1", "Level_", "Cell", rfs);
-
-    // Write beam particles
-    m_multi_beam.WritePlotFile(filename);
+    amrex::Print()<<"WARNING: hipace++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
 }
 
