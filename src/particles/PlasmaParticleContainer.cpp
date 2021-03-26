@@ -26,6 +26,10 @@ namespace
             } else {
                 amrex::Abort("unknown plasma species. Options are: electron and H.");
             }
+
+        if( mass != phys_const.m_e ) {
+            m_can_ionize = true;
+        }
     }
         return element_is_specified;
     }
@@ -73,6 +77,10 @@ PlasmaParticleContainer::InitData ()
     resizeData();
 
     InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius);
+
+    if(m_can_ionize) {
+        InitIonizationModule();
+    }
 
     m_num_exchange = TotalNumberOfParticles();
 }

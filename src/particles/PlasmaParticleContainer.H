@@ -62,6 +62,10 @@ public:
         const amrex::Real a_density,
         const amrex::Real a_radius);
 
+    void InitIonizationModule ();
+
+    void IonizationModule ();
+
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
@@ -75,6 +79,7 @@ public:
     bool m_neutralize_background = true;
     amrex::Real m_mass; /**< mass of each particle of this species */
     amrex::Real m_charge; /**< charge of each particle of this species */
+    bool m_can_ionize = false;
 
 private:
     std::string m_name; /**< name of the species */

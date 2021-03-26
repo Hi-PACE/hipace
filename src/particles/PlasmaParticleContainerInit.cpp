@@ -3,6 +3,7 @@
 #include "ParticleUtil.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/IonizationEnergiesTable.H"
 
 void
 PlasmaParticleContainer::
@@ -174,4 +175,64 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     }
 
     AMREX_ASSERT(OK());
+}
+
+void
+Ionization::InitIonizationModule ()
+{
+    using namespace amrex::literals;
+
+    if (!do_field_ionization) return;
+    amrex::ParmParse pp(m_name);
+    pp.get("physical_element", physical_element);
+    //pp.query("ionization_initial_level", ionization_initial_level);
+    //pp.get("ionization_product_species", ionization_product_name);
+    // Add runtime integer component for ionization level
+    AddIntComp("ionization_level");
+    // Get atomic number and ionization energies from file
+    int ion_element_id = ion_map_ids[physical_element];
+    int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+    Vector<Real> h_ionization_energies(ion_atomic_number);
+    int offset = ion_energy_offsets[ion_element_id];
+    for(int i=0; i<ion_atomic_number; i++){
+        h_ionization_energies[i] = table_ionization_energies[i+offset];
+    }
+    // Compute ADK prefactors (See Chen, JCP 236 (2013), equation (2))
+    // For now, we assume l=0 and m=0.
+    // The approximate expressions are used,
+    // without Gamma function
+    constexpr auto a3 = PhysConst::alpha*PhysConst::alpha*PhysConst::alpha;
+    constexpr auto a4 = a3 * PhysConst::alpha;
+    amrex::Real wa = 4.13e16_rt;
+    amrex::Real Ea = 5.1e11_rt;
+    amrex::Real UH = table_ionization_energies[0];
+    amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
+
+    const amrex::Real dt = HIPACE::m_dt / geom[lev][0];
+
+    ionization_energies.resize(ion_atomic_number);
+    adk_power.resize(ion_atomic_number);
+    adk_prefactor.resize(ion_atomic_number);
+    adk_exp_prefactor.resize(ion_atomic_number);
+
+    Gpu::copyAsync(Gpu::hostToDevice,
+                   h_ionization_energies.begin(), h_ionization_energies.end(),
+                   ionization_energies.begin());
+
+    amrex::Real const* AMREX_RESTRICT p_ionization_energies = ionization_energies.data();
+    amrex::Real * AMREX_RESTRICT p_adk_power = adk_power.data();
+    amrex::Real * AMREX_RESTRICT p_adk_prefactor = adk_prefactor.data();
+    amrex::Real * AMREX_RESTRICT p_adk_exp_prefactor = adk_exp_prefactor.data();
+    amrex::ParallelFor(ion_atomic_number, [=] AMREX_GPU_DEVICE (int i) noexcept
+    {
+        amrex::Real n_eff = (i+1) * std::sqrt(UH/p_ionization_energies[i]);
+        amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*tgamma(n_eff+l_eff+1)*tgamma(n_eff-l_eff));
+        p_adk_power[i] = -(2*n_eff - 1);
+        amrex::Real Uion = p_ionization_energies[i];
+        p_adk_prefactor[i] = dt * wa * C2 * ( Uion/(2*UH) )
+            * std::pow(2*std::pow((Uion/UH),3./2)*Ea,2*n_eff - 1);
+        p_adk_exp_prefactor[i] = -2./3 * std::pow( Uion/UH,3./2) * Ea;
+    });
+
+    Gpu::synchronize();
 }
