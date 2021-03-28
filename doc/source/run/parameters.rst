@@ -122,7 +122,9 @@ parameters for each beam are specified via `beam_name.beam_property = ...`
 **fixed_weight**
 
 * ``beam_name.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
-    Relative correlated energy spread per :math:`\zeta`.
+    Relative correlated energy spread per :math:`\zeta`. The correlated energy spread is
+    calculated with respect to the mean longitudinal position of the beam, so the mean position in z
+    has the mean energy.
 
 **from_file**
 
