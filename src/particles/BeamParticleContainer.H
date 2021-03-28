@@ -104,6 +104,7 @@ private:
     amrex::RealVect m_position_std {0., 0., 0.};
     amrex::Real m_dx_per_dzeta {0.}; /**< tilt in x direction */
     amrex::Real m_dy_per_dzeta {0.}; /**< tilt in y direction */
+    amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
