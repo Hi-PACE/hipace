@@ -119,6 +119,14 @@ parameters for each beam are specified via `beam_name.beam_property = ...`
     varying weights. `fixed_weight` generates a beam with a fixed number of particles with a
     constant weight. `from_file` reads a beam from openPMD files.
 
+**fixed_weight**
+
+* ``beam_name.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
+    Relative correlated energy spread per :math:`\zeta`.
+    Thereby, `duz_per_uz0_dzeta *` :math:`\zeta` `* uz_mean` is added to `uz` of the each particle.
+    :math:`\zeta` is hereby the particle position relative to the mean
+    longitudinal position of the beam.
+
 **from_file**
 
 * ``beam_name.input_file`` (`string`)

@@ -242,6 +242,7 @@ InitBeamFixedWeight (int num_to_add,
         const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
+        const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
         amrex::ParallelFor(
             num_to_add,
             [=] AMREX_GPU_DEVICE (int i) noexcept
@@ -250,7 +251,7 @@ InitBeamFixedWeight (int num_to_add,
                 const amrex::Real y = amrex::RandomNormal(0, pos_std[1]);
                 const amrex::Real z = amrex::RandomNormal(0, pos_std[2]);
                 amrex::Real u[3] = {0.,0.,0.};
-                get_momentum(u[0],u[1],u[2]);
+                get_momentum(u[0],u[1],u[2], z, duz_per_uz0_dzeta);
 
                 const amrex::Real cental_x_pos = pos_mean[0] + z*dx_per_dzeta;
                 const amrex::Real cental_y_pos = pos_mean[1] + z*dy_per_dzeta;
