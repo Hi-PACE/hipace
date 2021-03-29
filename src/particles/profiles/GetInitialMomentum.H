@@ -21,27 +21,11 @@ struct GetInitialMomentum
      * \param[in,out] ux momentum in x, modified by this function
      * \param[in,out] uy momentum in y, modified by this function
      * \param[in,out] uz momentum in z, modified by this function
-     */
-    void operator() (amrex::Real& ux, amrex::Real& uy, amrex::Real& uz ) const
-    {
-        amrex::Real u[3] = {ux,uy,uz};
-        if (m_momentum_profile == BeamMomentumType::Gaussian){
-            ParticleUtil::get_gaussian_random_momentum(u, m_u_mean, m_u_std);
-        }
-        ux = u[0];
-        uy = u[1];
-        uz = u[2];
-    }
-
-    /** \brief Get the momentum for a beam particle
-     * \param[in,out] ux momentum in x, modified by this function
-     * \param[in,out] uy momentum in y, modified by this function
-     * \param[in,out] uz momentum in z, modified by this function
      * \param[in] z position in z
      * \param[in] duz_per_uz0_dzeta correlated energy spread
      */
-    void operator() (amrex::Real& ux, amrex::Real& uy, amrex::Real& uz, const amrex::Real z,
-                     const amrex::Real duz_per_uz0_dzeta) const
+    void operator() (amrex::Real& ux, amrex::Real& uy, amrex::Real& uz, const amrex::Real z=0.,
+                     const amrex::Real duz_per_uz0_dzeta=0.) const
     {
         amrex::Real u[3] = {ux,uy,uz};
         if (m_momentum_profile == BeamMomentumType::Gaussian){
