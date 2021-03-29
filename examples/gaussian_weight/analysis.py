@@ -90,10 +90,10 @@ if args.tilted_beam:
     x_tilt_error = np.abs(np.average(x_tilt_at_1-dx_per_dzeta)/dx_per_dzeta)
     y_tilt_error = np.abs(np.average(y_tilt_at_1-dy_per_dzeta-y_avg)/dy_per_dzeta)
     uz_error = np.abs(np.average( (uz_at_1 - (uz_avg + 1*uz_avg*duz_per_uz0_dzeta) )/
-                                  (uz_avg + 1*duz_per_uz0_dzeta ) ))
+                                  (uz_avg + 1*uz_avg*duz_per_uz0_dzeta ) ))
     assert(x_tilt_error < 5e-3)
     assert(y_tilt_error < 5e-3)
-    assert(uz_error < 5e-3)
+    assert(uz_error < 5e-4)
 else:
     if args.norm_units:
         charge_sim = np.sum(wp)
