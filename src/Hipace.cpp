@@ -436,7 +436,7 @@ Hipace::SolveBxBy (const int lev)
 {
     HIPACE_PROFILE("Hipace::SolveBxBy()");
     amrex::ParallelContext::push(m_comm_xy);
-    using namespace amrex;
+    using namespace amrex::literals;
 
     const int isl = WhichSlice::This;
     amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
@@ -460,12 +460,13 @@ Hipace::SolveBxBy (const int lev)
     const amrex::MultiFab Psi(slicemf, amrex::make_alias, Comps[isl]["Psi"], 1);
     const amrex::MultiFab Bz (slicemf, amrex::make_alias, Comps[isl]["Bz" ], 1);
     const amrex::MultiFab Ez (slicemf, amrex::make_alias, Comps[isl]["Ez" ], 1);
-    const Real dx = m_slice_geom.CellSize(0);
-    const Real dy = m_slice_geom.CellSize(1);
+    const amrex::Real dx = m_slice_geom.CellSize(0);
+    const amrex::Real dy = m_slice_geom.CellSize(1);
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
-        const amrex::Box& bx = mfi.tilebox();
+        amrex::Box bx = mfi.tilebox();
+        bx.grow({1,1,0}); // add enough guard cells to enable transverse derivatives
 
         amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
         amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
@@ -486,48 +487,58 @@ Hipace::SolveBxBy (const int lev)
             {
                 AMREX_ASSERT(k == 0);
 
-                const Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
-                const Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
-                const Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
-                const Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
 
-                const Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
-                const Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
-                const Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
-                const Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
 
-                // nstar = ne - jz = - rho - jz
-                const Real nstar = - rho(i,j,k) - jz(i,j,k);
+                // Store (i,j,k) cell value in local variable.
+                // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
+                // WAND-PIC and hipace++: n* and j are defined from ne in WAND-PIC and
+                // from rho in hipace++
+                const amrex::Real crho    = - rho(i,j,k);
+                const amrex::Real cjz     = - jz (i,j,k);
+                const amrex::Real cpsi    =   psi(i,j,k);
+                const amrex::Real cjx     = - jx (i,j,k);
+                const amrex::Real cjy     = - jy (i,j,k);
+                const amrex::Real cjxx    = - jxx(i,j,k);
+                const amrex::Real cjxy    = - jxy(i,j,k);
+                const amrex::Real cjyy    = - jyy(i,j,k);
+                const amrex::Real cdx_jxx = - dx_jxx;
+                const amrex::Real cdx_jxy = - dx_jxy;
+                const amrex::Real cdx_jz  = - dx_jz;
+                const amrex::Real cdx_psi =   dx_psi;
+                const amrex::Real cdy_jyy = - dy_jyy;
+                const amrex::Real cdy_jxy = - dy_jxy;
+                const amrex::Real cdy_jz  = - dy_jz;
+                const amrex::Real cdy_psi =   dy_psi;
+                const amrex::Real cez     =   ez(i,j,k);
+                const amrex::Real cbz     =   bz(i,j,k);
+
+                const amrex::Real nstar = crho - cjz;
+
+                const amrex::Real nstar_gamma = (1._rt+cpsi)/2._rt *
+                    (cjxx + cjyy + nstar) + nstar / (2._rt * (1._rt+cpsi));
+
+                const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
+                    (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjx*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+
+                const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
+                    (nstar_gamma*cdy_psi/(1._rt+cpsi) - cjy*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
-                mult(i,j,k,0) = nstar / (1._rt + psi(i,j,k));
-                mult(i,j,k,1) = nstar / (1._rt + psi(i,j,k));
-
-                const Real nstar_gamma = (1._rt+psi(i,j,k))/2._rt *
-                    (jxx(i,j,k) + jyy(i,j,k) + nstar) +
-                    nstar / (2._rt * (1._rt+psi(i,j,k)));
-
-                const Real nstar_ax =
-                    ( nstar_gamma * dx_psi / (1._rt + psi(i,j,k))
-                      - jx(i,j,k) * ez(i,j,k)
-                      - jxx(i,j,k) * dx_psi - jxy(i,j,k) * dy_psi )
-                    / (1._rt + psi(i,j,k));
-
-                const Real nstar_ay =
-                    ( nstar_gamma * dy_psi / (1._rt + psi(i,j,k))
-                      - jy(i,j,k) * ez(i,j,k)
-                      - jxy(i,j,k) * dx_psi - jyy(i,j,k) * dy_psi )
-                    / (1._rt + psi(i,j,k));
-
+                mult(i,j,k,0) = nstar / (1._rt + cpsi);
+                mult(i,j,k,1) = nstar / (1._rt + cpsi);
                 // sy, used to compute bx
-                s(i,j,k,0) =
-                    bz(i,j,k) * jx(i,j,k) / (1._rt+psi(i,j,k))
-                    + nstar_ay - dx_jxy - dy_jyy + dy_jz;
-
+                s(i,j,k,0) = + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz;
                 // sx, used to compute by
-                s(i,j,k,1) =
-                    - bz(i,j,k) * jy(i,j,k) / (1._rt+psi(i,j,k))
-                    + nstar_ax - dx_jxx - dy_jxy + dx_jz;
+                s(i,j,k,1) = - cbz * cjy / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz;
+                s(i,j,k,1) *= -1;
             }
             );
     }
@@ -550,17 +561,18 @@ Hipace::SolveBxBy (const int lev)
 
     // For now, we construct the solver locally. Later, we want to move it to the hipace class as
     // a member so that we can reuse it.
-    LPInfo lpinfo{};
+    amrex::LPInfo lpinfo{};
     lpinfo.setHiddenDirection(2);
 
-    MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo);
+    amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo);
 
-    mlalaplacian.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
-                                           LinOpBCType::Dirichlet,
-                                           LinOpBCType::Dirichlet)},
-        {AMREX_D_DECL(LinOpBCType::Dirichlet,
-                      LinOpBCType::Dirichlet,
-                      LinOpBCType::Dirichlet)});
+    mlalaplacian.setDomainBC(
+        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet)},
+        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet)});
 
     // BxBy is assumed to have at least one ghost cell in x and y.
     // The ghost cells outside the domain should contain Dirichlet BC values.
@@ -573,15 +585,14 @@ Hipace::SolveBxBy (const int lev)
 
     mlalaplacian.setACoeffs(0, Mult);
 
-    MLMG mlmg(mlalaplacian);
+    amrex::MLMG mlmg(mlalaplacian);
 
-    const Real tol_rel = 1.e-10;
-    const Real tol_abs = 0.0;
+    const amrex::Real tol_rel = 1.e-10;
+    const amrex::Real tol_abs = 0.0;
 
-    Print()<<"Mult x min and max: "<<Mult.min(0)<<' '<<Mult.max(0)<<'\n';
-    Print()<<"Mult y min and max: "<<Mult.min(1)<<' '<<Mult.max(1)<<'\n';
-    Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
-    Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
+    amrex::Print()<<"Mult min and max: "<<Mult.min(0)<<' '<<Mult.max(0)<<'\n';
+    amrex::Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
+    amrex::Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
 
     mlmg.solve({&BxBy}, {&S}, tol_rel, tol_abs);
 
