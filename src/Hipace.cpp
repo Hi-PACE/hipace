@@ -6,6 +6,8 @@
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_MLALaplacian.H>
+#include <AMReX_MLMG.H>
 
 #include <algorithm>
 #include <memory>
@@ -400,8 +402,8 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     /* Modifies Bx and By in the current slice
      * and the force terms of the plasma particles
      */
-    PredictorCorrectorLoopToSolveBxBy(islice, lev);
-    SolveBxBy(lev);
+    //PredictorCorrectorLoopToSolveBxBy(islice, lev);
+    // SolveBxBy(lev);
     SolveBxBy2(lev);
 
     // Push beam particles
@@ -438,12 +440,11 @@ Hipace::SolveBxBy2 (const int lev)
     const amrex::DistributionMapping dm = slicemf.DistributionMap();
     const amrex::IntVect ngv = slicemf.nGrowVect();
 
-    amrex::MultiFab Mult(ba, dm, 1, ngv);
-    amrex::MultiFab Sx(ba, dm, 1, ngv);
-    amrex::MultiFab Sy(ba, dm, 1, ngv);
+    // Later this should have only 1 component, but we have 2 for now, with always the same values.
+    amrex::MultiFab Mult(ba, dm, 2, ngv);
+    amrex::MultiFab S(ba, dm, 2, ngv);
     Mult.setVal(0.);
-    Sx.setVal(0.);
-    Sy.setVal(0.);
+    S.setVal(0.);
 
     const amrex::MultiFab Rho(slicemf, amrex::make_alias, Comps[isl]["rho"], 1);
     const amrex::MultiFab Jx (slicemf, amrex::make_alias, Comps[isl]["jx" ], 1);
@@ -453,14 +454,13 @@ Hipace::SolveBxBy2 (const int lev)
     const amrex::MultiFab Jyy(slicemf, amrex::make_alias, Comps[isl]["jyy"], 1);
     const amrex::MultiFab Jz (slicemf, amrex::make_alias, Comps[isl]["jz" ], 1);
     const amrex::MultiFab Psi(slicemf, amrex::make_alias, Comps[isl]["Psi"], 1);
-    const amrex::MultiFab Bx (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 1);
-    const amrex::MultiFab By (slicemf, amrex::make_alias, Comps[isl]["By" ], 1);
+    //const amrex::MultiFab By (slicemf, amrex::make_alias, Comps[isl]["By" ], 1);
     const amrex::MultiFab Bz (slicemf, amrex::make_alias, Comps[isl]["Bz" ], 1);
     const amrex::MultiFab Ez (slicemf, amrex::make_alias, Comps[isl]["Ez" ], 1);
     const Real dx = m_slice_geom.CellSize(0);
     const Real dy = m_slice_geom.CellSize(1);
 
-    for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
 
         amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
@@ -471,11 +471,10 @@ Hipace::SolveBxBy2 (const int lev)
         amrex::Array4<amrex::Real const> const & jyy = Jyy.array(mfi);
         amrex::Array4<amrex::Real const> const & jz  = Jz .array(mfi);
         amrex::Array4<amrex::Real const> const & psi = Psi.array(mfi);
-        amrex::Array4<amrex::Real const> const & bz = Bz.array(mfi);
-        amrex::Array4<amrex::Real const> const & ez = Bz.array(mfi);
+        amrex::Array4<amrex::Real const> const & bz  = Bz.array(mfi);
+        amrex::Array4<amrex::Real const> const & ez  = Bz.array(mfi);
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
-        amrex::Array4<amrex::Real> const & sx = Sx.array(mfi);
-        amrex::Array4<amrex::Real> const & sy = Sy.array(mfi);
+        amrex::Array4<amrex::Real> const & s = S.array(mfi);
 
         amrex::ParallelFor(
             amrex::Gpu::KernelInfo().setReduction(true), bx,
@@ -495,7 +494,9 @@ Hipace::SolveBxBy2 (const int lev)
 
                 const Real nstar = rho(i,j,k) - jz(i,j,k);
 
-                mult(i,j,k) = nstar / (1._rt + psi(i,j,k));
+                // Should only have 1 component, but not supported yet by the AMReX MG solver
+                mult(i,j,k,0) = nstar / (1._rt + psi(i,j,k));
+                mult(i,j,k,1) = nstar / (1._rt + psi(i,j,k));
 
                 const Real nstar_gamma = (1._rt+psi(i,j,k))/2._rt *
                     (jxx(i,j,k) + jyy(i,j,k) + nstar) +
@@ -513,16 +514,81 @@ Hipace::SolveBxBy2 (const int lev)
                       - jxy(i,j,k) * dx_psi - jyy(i,j,k) * dy_psi )
                     / (1._rt + psi(i,j,k));
 
-                sy(i,j,k) =
+                // sy, used to compute bx
+                s(i,j,k,0) =
                     bz(i,j,k) * jx(i,j,k) / (1._rt+psi(i,j,k))
                     + nstar_ay - dx_jxy - dy_jyy + dy_jz;
 
-                sx(i,j,k) =
+                // sx, used to compute by
+                s(i,j,k,1) =
                     - bz(i,j,k) * jy(i,j,k) / (1._rt+psi(i,j,k))
                     + nstar_ax - dx_jxx - dy_jxy + dx_jz;
             }
             );
     }
+
+    amrex::Geometry slice_geom = m_slice_geom;
+    slice_geom.setPeriodicity({0,0,0});
+
+    // Let's not worry about MPI for now
+    // With MPI, we need to create a subcommunicator of a single processor and
+    // then push it to amrex::ParallelContext
+
+    // Get MultiFab BxBy, 2 comps
+    // The 2 in ncomps is for Bx abd By.
+    // This contains at least one guard cell
+    amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
+
+    // Needs to components, there are different for Bx and By
+    //amrex::MultiFab S(m_fields.getSlices(lev, WhichSlice::This),
+    //                  amrex::make_alias, Comps[WhichSlice::This]["jz"], 2);
+
+    // For now, we construct the solver locally. Later, we want to move it to the hipace class as
+    // a member so that we can reuse it.
+    LPInfo lpinfo{};
+    lpinfo.setHiddenDirection(2);
+
+    MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo);
+
+    mlalaplacian.setDomainBC({AMREX_D_DECL(LinOpBCType::Dirichlet,
+                                           LinOpBCType::Dirichlet,
+                                           LinOpBCType::Dirichlet)},
+        {AMREX_D_DECL(LinOpBCType::Dirichlet,
+                      LinOpBCType::Dirichlet,
+                      LinOpBCType::Dirichlet)});
+
+    // BxBy is assumed to have at least one ghost cell in x and y.
+    // The ghost cells outside the domain should contain Dirichlet BC values.
+    BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
+    mlalaplacian.setLevelBC(0, &BxBy);
+
+    // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
+    // So we solve Delta BxBy - A * BxBy = S
+    mlalaplacian.setScalars(-1.0, -1.0);
+
+    mlalaplacian.setACoeffs(0, Mult);
+
+    MLMG mlmg(mlalaplacian);
+
+    const Real tol_rel = 1.e-10;
+    const Real tol_abs = 0.0;
+
+    Print()<<"Mult x min and max: "<<Mult.min(0)<<' '<<Mult.max(0)<<'\n';
+    Print()<<"Mult y min and max: "<<Mult.min(1)<<' '<<Mult.max(1)<<'\n';
+    Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
+    Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
+    mlmg.solve({&BxBy}, {&S}, tol_rel, tol_abs);
+
+    // This is where we want to solve an equation of the form
+    // Delta B - A * B = S
+    // to calculate B. B, A and S are multifabs. You could use jz for the source terms.
+    // Another non-zero MF (both >0 and <0 values) would be "ExmBy"
+    // We will to solve two equations (of the exact same form): one for Bx, one for By.
+
+    // Reset to zero so fields don't diverge
+    // BxBy.setVal(0.);
+
+    // Don't forget to pop the mpi subcommunicator from ParallelContext
 }
 
 void
