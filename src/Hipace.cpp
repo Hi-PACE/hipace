@@ -399,7 +399,12 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     // Modifies Bx and By in the current slice and the force terms of the plasma particles
     if (m_wandpic){
+        amrex::Print()<<"rho.min() and max() "<<rho.min(0)<<" "<<rho.max(0)<<'\n';
+        m_fields.AddRhoIons(lev, true);
+        amrex::Print()<<"rho.min() and max() "<<rho.min(0)<<" "<<rho.max(0)<<'\n';
         SolveBxBy(lev);
+        m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
+        m_fields.AddRhoIons(lev);
     } else {
         PredictorCorrectorLoopToSolveBxBy(islice, lev);
     }
@@ -491,7 +496,8 @@ Hipace::SolveBxBy (const int lev)
                 const Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
                 const Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
 
-                const Real nstar = rho(i,j,k) - jz(i,j,k);
+                // nstar = ne - jz = - rho - jz
+                const Real nstar = - rho(i,j,k) - jz(i,j,k);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
                 mult(i,j,k,0) = nstar / (1._rt + psi(i,j,k));
