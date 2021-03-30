@@ -96,9 +96,49 @@ Plasma parameters
 * ``plasma.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
+* ``plasma.channel_radius`` (`float`) optional (default `0.`)
+    Channel radius of a parabolic plasma profile. The plasma density is set to
+    :math:`\mathrm{plasma.density} * (1 + r^2/\mathrm{plasma.channel\_radius}^2)`.
+
 * ``plasma.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
     as violating the quasi-static approximation and are removed from the simulation.
 
 Beam parameters
 ---------------
+
+For the beam parameters, first the names of the beams need to be specified. Afterwards, the beam
+parameters for each beam are specified via `beam_name.beam_property = ...`
+
+* ``beams.names`` (`string`)
+    The names of the particle beams, separated by a space.
+
+* ``beam_name.injection_type`` (`string`)
+    The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
+    and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
+    varying weights. `fixed_weight` generates a beam with a fixed number of particles with a
+    constant weight. `from_file` reads a beam from openPMD files.
+
+**fixed_weight**
+
+* ``beam_name.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
+    Relative correlated energy spread per :math:`\zeta`.
+    Thereby, `duz_per_uz0_dzeta *` :math:`\zeta` `* uz_mean` is added to `uz` of the each particle.
+    :math:`\zeta` is hereby the particle position relative to the mean
+    longitudinal position of the beam.
+
+**from_file**
+
+* ``beam_name.input_file`` (`string`)
+    Name of the input file. **Note:** Reading in files with digits in their names (e.g.
+    `openpmd_002135.h5`) can be problematic, it is advised to read them via `openpmd_%T.h5` and then
+    specify the iteration via `beam_name.iteration = 2135`.
+
+* ``beam_name.iteration`` (`integer`) optional (default `0`)
+    Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
+    or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
+    time of the simulation is set to the time of the given iteration (if available).
+
+* ``beam_name.openPMD_species_name`` (`string`) optional
+    Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
+    needs to be specified.

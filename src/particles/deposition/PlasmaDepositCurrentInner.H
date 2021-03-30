@@ -38,7 +38,7 @@
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
- * \param[in] q elementary charge
+ * \param[in] q charge
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz

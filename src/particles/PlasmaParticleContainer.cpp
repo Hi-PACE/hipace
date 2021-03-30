@@ -4,13 +4,13 @@
 
 namespace
 {
-    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real charge, amrex::Real mass)
+    bool QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real& mass)
     {
         // normalized_units is directly queried here so we can defined the appropriate PhysConst
         // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
         // PlasmaParticleContainer constructor is called.
         amrex::ParmParse pph("hipace");
-        bool normalized_units;
+        bool normalized_units = false;
         pph.query("normalized_units", normalized_units);
         PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
 
@@ -20,7 +20,7 @@ namespace
             if (element == "electron"){
                 charge = -phys_const.q_e;
                 mass = phys_const.m_e;
-            } else if (element == "H"){
+            } else if (element == "proton"){
                 charge = phys_const.q_e;
                 mass = phys_const.m_p;
             } else {
@@ -37,15 +37,18 @@ PlasmaParticleContainer::ReadParameters ()
     amrex::ParmParse pp(m_name);
     pp.query("charge", m_charge);
     pp.query("mass", m_mass);
-
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         QueryElementSetChargeMass(pp, m_charge, m_mass) ^
         (pp.query("charge", m_charge) && pp.query("mass", m_mass)),
         "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must not be 0");
 
     pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
+    pp.query("channel_radius", m_channel_radius);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_channel_radius != 0,
+                                     "The plasma channel radius must not be 0");
     pp.query("max_qsa_weighting_factor", m_max_qsa_weighting_factor);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
@@ -72,7 +75,7 @@ PlasmaParticleContainer::InitData ()
     reserveData();
     resizeData();
 
-    InitParticles(m_ppc,m_u_std, m_u_mean, m_density, m_radius);
+    InitParticles(m_ppc, m_u_std, m_u_mean, m_density, m_radius);
 
     m_num_exchange = TotalNumberOfParticles();
 }
