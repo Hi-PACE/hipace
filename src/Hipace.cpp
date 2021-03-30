@@ -399,8 +399,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     // Modifies Bx and By in the current slice and the force terms of the plasma particles
     if (m_wandpic){
-        SolveBxBy2(lev);
-        // SolveBxBy(lev);
+        SolveBxBy(lev);
     } else {
         PredictorCorrectorLoopToSolveBxBy(islice, lev);
     }
@@ -428,9 +427,10 @@ Hipace::ResetAllQuantities (int lev)
 }
 
 void
-Hipace::SolveBxBy2 (const int lev)
+Hipace::SolveBxBy (const int lev)
 {
     HIPACE_PROFILE("Hipace::SolveBxBy()");
+    amrex::ParallelContext::push(m_comm_xy);
     using namespace amrex;
 
     const int isl = WhichSlice::This;
@@ -453,13 +453,13 @@ Hipace::SolveBxBy2 (const int lev)
     const amrex::MultiFab Jyy(slicemf, amrex::make_alias, Comps[isl]["jyy"], 1);
     const amrex::MultiFab Jz (slicemf, amrex::make_alias, Comps[isl]["jz" ], 1);
     const amrex::MultiFab Psi(slicemf, amrex::make_alias, Comps[isl]["Psi"], 1);
-    //const amrex::MultiFab By (slicemf, amrex::make_alias, Comps[isl]["By" ], 1);
     const amrex::MultiFab Bz (slicemf, amrex::make_alias, Comps[isl]["Bz" ], 1);
     const amrex::MultiFab Ez (slicemf, amrex::make_alias, Comps[isl]["Ez" ], 1);
     const Real dx = m_slice_geom.CellSize(0);
     const Real dy = m_slice_geom.CellSize(1);
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+
         const amrex::Box& bx = mfi.tilebox();
 
         amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
@@ -576,6 +576,7 @@ Hipace::SolveBxBy2 (const int lev)
     Print()<<"Mult y min and max: "<<Mult.min(1)<<' '<<Mult.max(1)<<'\n';
     Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
     Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
+
     mlmg.solve({&BxBy}, {&S}, tol_rel, tol_abs);
 
     // This is where we want to solve an equation of the form
@@ -588,290 +589,7 @@ Hipace::SolveBxBy2 (const int lev)
     // BxBy.setVal(0.);
 
     // Don't forget to pop the mpi subcommunicator from ParallelContext
-}
-
-void
-Hipace::SolveBxBy (const int lev)
-{
-    HIPACE_PROFILE("Hipace::SolveBxBy()");
-
-    const int isl = WhichSlice::This;
-   amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
-    const amrex::BoxArray ba = slicemf.boxArray();
-    const amrex::DistributionMapping dm = slicemf.DistributionMap();
-    const amrex::IntVect ngv = slicemf.nGrowVect();
-    // These names are provisional
-
-    amrex::MultiFab Denom(ba, dm, 1, ngv);
-    // Better to use the constructor without the alias:
-
-    Denom.setVal(1.0);
-
-    // 1+Psi -> Denominator
-    amrex::MultiFab::Add(Denom, slicemf, Comps[isl]["Psi"], 0, 1, ngv);
-
-    // Plasma density: rho
-
-    amrex::MultiFab First_Term(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                            m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                            m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    amrex::MultiFab::Copy(First_Term, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["rho"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    // ne - jz -> Numerator
-
-    amrex::MultiFab::Subtract(First_Term, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    // (ne - jz) / (1 + Psi) -> First_Term / Denom
-
-    amrex::MultiFab::Divide(First_Term, Denom, 0, 0, 1, 0);
-
-    //################################### EQUATION 18-B ####################################################
-
-    // To-Do: Calculate entire First Term and then do the skeleton of the 18-b equation.
-
-    // First: Declaration of Sx and Sy
-
-    amrex::MultiFab Sx(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    amrex::MultiFab Sy(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    Denom.setVal(1.0);
-    Sx.setVal(1.0);
-    Sy.setVal(1.0);
-
-    // 1+Psi -> Denominator
-    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    // 1/1+Psi -> For first term of Sx and Sy
-    amrex::MultiFab::Divide(Sx, Denom, 0, 0, 1, 0);
-    amrex::MultiFab::Divide(Sy, Denom, 0, 0, 1, 0);
-
-    // First Term of Sx and Sy
-    amrex::MultiFab Sx_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab Sy_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    /*
-
-    // TO-DO: Calculate First Term of Sx and Sy
-
-    */
-
-    Sx_comp.setVal(0.0);
-    amrex::MultiFab::Subtract(Sx_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jy"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Copy(Sy_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(Sx_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Bz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(Sy_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Bz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-
-    amrex::MultiFab::Multiply(Sx, Sx_comp, 0, 0, 1, 0);
-    amrex::MultiFab::Multiply(Sy, Sy_comp, 0, 0, 1, 0);
-
-    /* ########################## EQUATION 18-c (x) ############################
-
-    TO-DO: Calculate Second Term With the same name,
-        in order to avoid creating so many MultiFabs
-
-    */
-
-
-    // ########################### EQUATION 18-d (y) ###########################
-
-    amrex::MultiFab n_star_gamma(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    Denom.setVal(2.0);
-    n_star_gamma.setVal(1.0);
-    amrex::MultiFab::Add(n_star_gamma, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Divide(n_star_gamma, Denom, 0, 0, 1, 0);
-
-    // Calculation of the sums part
-    amrex::MultiFab n_star_gamma_comp(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Copy(n_star_gamma_comp, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["jxx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Add(n_star_gamma_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jyy"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Add(n_star_gamma_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["rho"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Subtract(n_star_gamma_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(n_star_gamma, n_star_gamma_comp, 0, 0, 1, 0);
-    // Calculation of the last term
-    amrex::MultiFab::Copy(n_star_gamma_comp, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["rho"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Subtract(n_star_gamma_comp, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jz"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    Denom.setVal(1.0);
-    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab aux(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    aux.setVal(2.0);
-    amrex::MultiFab::Multiply(Denom, aux, 0, 0, 1, 0);
-    amrex::MultiFab::Divide(n_star_gamma_comp, Denom,
-                         0, 0, 1, 0);
-    // Addition of the last term
-    amrex::MultiFab::Add(n_star_gamma, n_star_gamma_comp,
-                         0, 0, 1, 0);
-    // #####################################################################
-
-    amrex::MultiFab::Copy(Sx_comp, n_star_gamma,
-                         0, 0, 1, 0);
-    amrex::MultiFab::Copy(Sy_comp, n_star_gamma,
-                         0, 0, 1, 0);
-    Denom.setVal(1.0);
-    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Divide(Sx_comp, Denom,
-                         0, 0, 1, 0);
-    amrex::MultiFab::Divide(Sy_comp, Denom,
-                         0, 0, 1, 0);
-    amrex::MultiFab dx_psi(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab dy_psi(m_fields.getSlices(lev, WhichSlice::This).boxArray(),        // Declaration of the MultiFab
-                        m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                        m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), dx_psi,
-                               Direction::x,
-                               m_slice_geom.CellSize(Direction::x),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["Psi"], 0);
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), dy_psi,
-                               Direction::y,
-                               m_slice_geom.CellSize(Direction::y),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["Psi"], 0);
-    amrex::MultiFab::Multiply(Sx_comp, dx_psi, 0, 0, 1, 0);
-    amrex::MultiFab::Multiply(Sy_comp, dy_psi, 0, 0, 1, 0);
-    amrex::MultiFab::Copy(aux, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["Ez"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(aux, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Subtract(Sx_comp, aux, 0, 0, 1, 0);
-    amrex::MultiFab::Copy(aux, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["Ez"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(aux, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["jy"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Subtract(Sy_comp, aux, 0, 0, 1, 0);
-    amrex::MultiFab::Copy(aux, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["jxx"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(aux, dx_psi, 0, 0, 1, 0);
-    amrex::MultiFab::Subtract(Sx_comp, aux, 0, 0, 1, 0);
-    amrex::MultiFab::Copy(aux, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["jxy"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(aux, dx_psi, 0, 0, 1, 0);
-    amrex::MultiFab::Subtract(Sy_comp, aux, 0, 0, 1, 0);
-    amrex::MultiFab::Copy(aux, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["jxy"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(aux, dy_psi, 0, 0, 1, 0);
-    amrex::MultiFab::Subtract(Sx_comp, aux, 0, 0, 1, 0);
-    amrex::MultiFab::Copy(aux, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["jyy"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Multiply(aux, dy_psi, 0, 0, 1, 0);
-    amrex::MultiFab::Subtract(Sy_comp, aux, 0, 0, 1, 0);
-
-    Denom.setVal(1.0);
-    amrex::MultiFab::Add(Denom, m_fields.getSlices(lev, WhichSlice::This),
-                         Comps[WhichSlice::This]["Psi"], 0, 1, m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Divide(Sx_comp, Denom,
-                         0, 0, 1, 0);
-    amrex::MultiFab::Divide(Sy_comp, Denom,
-                         0, 0, 1, 0);
-
-    // ###################################################################
-
-    amrex::MultiFab::Add(Sx, Sx_comp, 0, 0, 1, 0);
-    amrex::MultiFab::Add(Sy, Sy_comp, 0, 0, 1, 0);
-
-    /*
-
-    TO-DO: Calculate Third Term With the same name,
-        in order to avoid creating so many MultiFabs
-
-    */
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sx_comp,
-                               Direction::x,
-                               m_slice_geom.CellSize(Direction::x),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["jxx"], 0);
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sy_comp,
-                               Direction::x,
-                               m_slice_geom.CellSize(Direction::x),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["jxy"], 0);
-
-    amrex::MultiFab::Subtract(Sx, Sx_comp, 0, 0, 1, 0);
-    amrex::MultiFab::Subtract(Sy, Sy_comp, 0, 0, 1, 0);
-
-    /*
-
-    TO-DO: Calculate Forth Term With the same name,
-        in order to avoid creating so many MultiFabs
-
-    */
-
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sx_comp,
-                               Direction::y,
-                               m_slice_geom.CellSize(Direction::y),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["jxy"], 0);
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sy_comp,
-                               Direction::y,
-                               m_slice_geom.CellSize(Direction::y),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["jyy"], 0);
-
-    amrex::MultiFab::Subtract(Sx, Sx_comp, 0, 0, 1, 0);
-    amrex::MultiFab::Subtract(Sy, Sy_comp, 0, 0, 1, 0);
-
-    /*
-
-    TO-DO: Calculate Fifth Term With the same name,
-        in order to avoid creating so many MultiFabs
-
-    */
-
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sx_comp,
-                               Direction::x,
-                               m_slice_geom.CellSize(Direction::x),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["jz"], 0);
-    m_fields.TransverseDerivative(m_fields.getSlices(lev, WhichSlice::This), Sy_comp,
-                               Direction::y,
-                               m_slice_geom.CellSize(Direction::y),
-                               1.,
-                               SliceOperatorType::Assign,
-                               Comps[WhichSlice::This]["jz"], 0);
-
-    amrex::MultiFab::Add(Sx, Sx_comp, 0, 0, 1, 0);
-    amrex::MultiFab::Add(Sy, Sy_comp, 0, 0, 1, 0);
-
+    amrex::ParallelContext::pop();
 }
 
 void
