@@ -72,7 +72,9 @@ MultiPlasma::DepositNeutralizingBackground (
 {
     for (auto& plasma : m_all_plasmas) {
         if (plasma.m_neutralize_background){
-            ::DepositCurrent(plasma, fields, which_slice, false, false, false, true, false, gm, lev);
+            // current of ions is zero, so they are not deposited.
+            ::DepositCurrent(plasma, fields, which_slice, false,
+                             false, false, true, false, gm, lev);
         }
     }
 }

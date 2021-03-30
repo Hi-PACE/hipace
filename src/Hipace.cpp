@@ -89,6 +89,7 @@ Hipace::Hipace () :
     pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
     pph.query("external_Ez_slope", m_external_Ez_slope);
     pph.query("external_Ez_uniform", m_external_Ez_uniform);
+    pph.query("wandpic", m_wandpic);
 
 #ifdef AMREX_USE_MPI
     pph.query("skip_empty_comms", m_skip_empty_comms);
@@ -303,10 +304,7 @@ Hipace::Evolve ()
         ResetAllQuantities(lev);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_rank_z == m_numprocs_z-1){
-            m_multi_plasma.DepositCurrent(m_fields, WhichSlice::RhoIons, false,
-                                          false, false, true, false, geom[lev], lev);
-        }
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         for (int it = m_numprocs_z-1; it >= 0; --it)
@@ -379,7 +377,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
                         Comps[WhichSlice::This]["rho"], 1);
 
     m_multi_plasma.DepositCurrent(
-        m_fields, WhichSlice::This, false, true, true, true, false, geom[lev], lev);
+        m_fields, WhichSlice::This, false, true, true, true, m_wandpic, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 
@@ -399,12 +397,13 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_fields.SolvePoissonEz(Geom(lev),lev);
     m_fields.SolvePoissonBz(Geom(lev), lev);
 
-    /* Modifies Bx and By in the current slice
-     * and the force terms of the plasma particles
-     */
-    PredictorCorrectorLoopToSolveBxBy(islice, lev);
-    // SolveBxBy(lev);
-    // SolveBxBy2(lev);
+    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    if (m_wandpic){
+        SolveBxBy2(lev);
+        // SolveBxBy(lev);
+    } else {
+        PredictorCorrectorLoopToSolveBxBy(islice, lev);
+    }
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);

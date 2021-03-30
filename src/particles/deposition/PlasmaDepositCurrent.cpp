@@ -46,6 +46,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::MultiFab jxx(S, amrex::make_alias, Comps[which_slice]["jxx"], 1);
         amrex::MultiFab jxy(S, amrex::make_alias, Comps[which_slice]["jxy"], 1);
         amrex::MultiFab jyy(S, amrex::make_alias, Comps[which_slice]["jyy"], 1);
+
         // Extract FabArray for this box
         amrex::FArrayBox& jx_fab = jx[pti];
         amrex::FArrayBox& jy_fab = jy[pti];
