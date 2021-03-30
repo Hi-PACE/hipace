@@ -275,6 +275,7 @@ private:
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev);
     void SolveBxBy (const int lev);
+    void SolveBxBy2 (const int lev);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.

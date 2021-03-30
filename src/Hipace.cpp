@@ -402,6 +402,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
      */
     PredictorCorrectorLoopToSolveBxBy(islice, lev);
     SolveBxBy(lev);
+    SolveBxBy2(lev);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
@@ -422,6 +423,105 @@ Hipace::ResetAllQuantities (int lev)
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
+    }
+}
+
+void
+Hipace::SolveBxBy2 (const int lev)
+{
+    HIPACE_PROFILE("Hipace::SolveBxBy()");
+    using namespace amrex;
+
+    const int isl = WhichSlice::This;
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    const amrex::BoxArray ba = slicemf.boxArray();
+    const amrex::DistributionMapping dm = slicemf.DistributionMap();
+    const amrex::IntVect ngv = slicemf.nGrowVect();
+
+    amrex::MultiFab Mult(ba, dm, 1, ngv);
+    amrex::MultiFab Sx(ba, dm, 1, ngv);
+    amrex::MultiFab Sy(ba, dm, 1, ngv);
+    Mult.setVal(0.);
+    Sx.setVal(0.);
+    Sy.setVal(0.);
+
+    const amrex::MultiFab Rho(slicemf, amrex::make_alias, Comps[isl]["rho"], 1);
+    const amrex::MultiFab Jx (slicemf, amrex::make_alias, Comps[isl]["jx" ], 1);
+    const amrex::MultiFab Jy (slicemf, amrex::make_alias, Comps[isl]["jy" ], 1);
+    const amrex::MultiFab Jxx(slicemf, amrex::make_alias, Comps[isl]["jxx"], 1);
+    const amrex::MultiFab Jxy(slicemf, amrex::make_alias, Comps[isl]["jxy"], 1);
+    const amrex::MultiFab Jyy(slicemf, amrex::make_alias, Comps[isl]["jyy"], 1);
+    const amrex::MultiFab Jz (slicemf, amrex::make_alias, Comps[isl]["jz" ], 1);
+    const amrex::MultiFab Psi(slicemf, amrex::make_alias, Comps[isl]["Psi"], 1);
+    const amrex::MultiFab Bx (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 1);
+    const amrex::MultiFab By (slicemf, amrex::make_alias, Comps[isl]["By" ], 1);
+    const amrex::MultiFab Bz (slicemf, amrex::make_alias, Comps[isl]["Bz" ], 1);
+    const amrex::MultiFab Ez (slicemf, amrex::make_alias, Comps[isl]["Ez" ], 1);
+    const Real dx = m_slice_geom.CellSize(0);
+    const Real dy = m_slice_geom.CellSize(1);
+
+    for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+
+        amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
+        amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
+        amrex::Array4<amrex::Real const> const & jy  = Jy .array(mfi);
+        amrex::Array4<amrex::Real const> const & jxx = Jxx.array(mfi);
+        amrex::Array4<amrex::Real const> const & jxy = Jxy.array(mfi);
+        amrex::Array4<amrex::Real const> const & jyy = Jyy.array(mfi);
+        amrex::Array4<amrex::Real const> const & jz  = Jz .array(mfi);
+        amrex::Array4<amrex::Real const> const & psi = Psi.array(mfi);
+        amrex::Array4<amrex::Real const> const & bz = Bz.array(mfi);
+        amrex::Array4<amrex::Real const> const & ez = Bz.array(mfi);
+        amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
+        amrex::Array4<amrex::Real> const & sx = Sx.array(mfi);
+        amrex::Array4<amrex::Real> const & sy = Sy.array(mfi);
+
+        amrex::ParallelFor(
+            amrex::Gpu::KernelInfo().setReduction(true), bx,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
+            {
+                AMREX_ASSERT(k == 0);
+
+                const Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
+                const Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
+                const Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
+                const Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
+
+                const Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
+                const Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
+                const Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
+                const Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
+
+                const Real nstar = rho(i,j,k) - jz(i,j,k);
+
+                mult(i,j,k) = nstar / (1._rt + psi(i,j,k));
+
+                const Real nstar_gamma = (1._rt+psi(i,j,k))/2._rt *
+                    (jxx(i,j,k) + jyy(i,j,k) + nstar) +
+                    nstar / (2._rt * (1._rt+psi(i,j,k)));
+
+                const Real nstar_ax =
+                    ( nstar_gamma * dx_psi / (1._rt + psi(i,j,k))
+                      - jx(i,j,k) * ez(i,j,k)
+                      - jxx(i,j,k) * dx_psi - jxy(i,j,k) * dy_psi )
+                    / (1._rt + psi(i,j,k));
+
+                const Real nstar_ay =
+                    ( nstar_gamma * dy_psi / (1._rt + psi(i,j,k))
+                      - jy(i,j,k) * ez(i,j,k)
+                      - jxy(i,j,k) * dx_psi - jyy(i,j,k) * dy_psi )
+                    / (1._rt + psi(i,j,k));
+
+                sy(i,j,k) =
+                    bz(i,j,k) * jx(i,j,k) / (1._rt+psi(i,j,k))
+                    + nstar_ay - dx_jxy - dy_jyy + dy_jz;
+
+                sx(i,j,k) =
+                    - bz(i,j,k) * jy(i,j,k) / (1._rt+psi(i,j,k))
+                    + nstar_ax - dx_jxx - dy_jxy + dx_jz;
+            }
+            );
     }
 }
 
