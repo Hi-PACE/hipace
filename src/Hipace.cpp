@@ -543,29 +543,15 @@ Hipace::SolveBxBy (const int lev)
             );
     }
 
-    amrex::Geometry slice_geom = m_slice_geom;
-    slice_geom.setPeriodicity({0,0,0});
-
-    // Let's not worry about MPI for now
-    // With MPI, we need to create a subcommunicator of a single processor and
-    // then push it to amrex::ParallelContext
-
-    // Get MultiFab BxBy, 2 comps
-    // The 2 in ncomps is for Bx abd By.
-    // This contains at least one guard cell
-    amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
-
-    // Needs to components, there are different for Bx and By
-    //amrex::MultiFab S(m_fields.getSlices(lev, WhichSlice::This),
-    //                  amrex::make_alias, Comps[WhichSlice::This]["jz"], 2);
-
     // For now, we construct the solver locally. Later, we want to move it to the hipace class as
     // a member so that we can reuse it.
+/*
+    amrex::Geometry slice_geom = m_slice_geom;
+    slice_geom.setPeriodicity({0,0,0});
+    amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
     amrex::LPInfo lpinfo{};
     lpinfo.setHiddenDirection(2);
-
     amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo);
-
     mlalaplacian.setDomainBC(
         {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
                       amrex::LinOpBCType::Dirichlet,
@@ -595,17 +581,45 @@ Hipace::SolveBxBy (const int lev)
     amrex::Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
 
     mlmg.solve({&BxBy}, {&S}, tol_rel, tol_abs);
+*/
 
-    // This is where we want to solve an equation of the form
-    // Delta B - A * B = S
-    // to calculate B. B, A and S are multifabs. You could use jz for the source terms.
-    // Another non-zero MF (both >0 and <0 values) would be "ExmBy"
-    // We will to solve two equations (of the exact same form): one for Bx, one for By.
+    amrex::Geometry slice_geom = m_slice_geom;
+    slice_geom.setPeriodicity({0,0,0});
+    amrex::LPInfo lpinfo{};
+    lpinfo.setHiddenDirection(2);
+    amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo);
+    mlalaplacian.setDomainBC(
+        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet)},
+        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet)});
 
-    // Reset to zero so fields don't diverge
-    // BxBy.setVal(0.);
+    // solve Bx
+    amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 1);
+    amrex::MultiFab SxSy (S, amrex::make_alias, 0, 1);
+    BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
+    mlalaplacian.setLevelBC(0, &BxBy);
+    mlalaplacian.setScalars(-1.0, -1.0);
+    mlalaplacian.setACoeffs(0, Mult);
+    amrex::MLMG mlmg(mlalaplacian);
+    const amrex::Real tol_rel = 1.e-10;
+    const amrex::Real tol_abs = 0.0;
+    amrex::Print()<<"Mult min and max: "<<Mult.min(0)<<' '<<Mult.max(0)<<'\n';
+    amrex::Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
+    amrex::Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
+    mlmg.solve({&BxBy}, {&SxSy}, tol_rel, tol_abs);
 
-    // Don't forget to pop the mpi subcommunicator from ParallelContext
+    // solve By
+    BxBy = amrex::MultiFab(slicemf, amrex::make_alias, Comps[isl]["By" ], 1);
+    SxSy = amrex::MultiFab(S, amrex::make_alias, 1, 1);
+    BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
+    amrex::Print()<<"Mult min and max: "<<Mult.min(0)<<' '<<Mult.max(0)<<'\n';
+    amrex::Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
+    amrex::Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
+    mlmg.solve({&BxBy}, {&SxSy}, tol_rel, tol_abs);
+
     amrex::ParallelContext::pop();
 }
 
