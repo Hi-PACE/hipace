@@ -156,9 +156,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             const amrex::Real wqx = wq*vx;
             const amrex::Real wqy = wq*vy;
             const amrex::Real wqz = wq*vz;
-            const amrex::Real wqxx = wq*vx*vx;
-            const amrex::Real wqxy = wq*vx*vy;
-            const amrex::Real wqyy = wq*vy*vy;
+            const amrex::Real wqxx = wq*vx*vx*gaminv/(1._rt+psi);
+            const amrex::Real wqxy = wq*vx*vy*gaminv/(1._rt+psi);
+            const amrex::Real wqyy = wq*vy*vy*gaminv/(1._rt+psi);
 
             // --- Compute shape factors
             // x direction
