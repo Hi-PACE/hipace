@@ -248,6 +248,7 @@ public:
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
     bool m_wandpic = false;
+    void SolveBxBy (const int lev);
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -275,7 +276,6 @@ private:
      * \param[in] lev current level
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev);
-    void SolveBxBy (const int lev);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.
