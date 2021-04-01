@@ -482,7 +482,7 @@ Hipace::SolveBxBy (const int lev)
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
 
         amrex::ParallelFor(
-            amrex::Gpu::KernelInfo().setReduction(true), bx,
+            bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
             {
                 AMREX_ASSERT(k == 0);
