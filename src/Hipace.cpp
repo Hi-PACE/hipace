@@ -538,7 +538,7 @@ Hipace::SolveBxBy (const int lev)
                 s(i,j,k,0) = + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz;
                 // sx, used to compute by
                 s(i,j,k,1) = - cbz * cjy / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz;
-                s(i,j,k,1) *= -1;
+                s(i,j,k,0) *= -1;
             }
             );
     }
