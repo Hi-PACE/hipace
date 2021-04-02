@@ -96,7 +96,7 @@ IonizationModule (const int lev,
                   const amrex::Geometry& geom,
                   Fields& fields)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule");
+    HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 
     using namespace amrex::literals;
 
@@ -159,16 +159,17 @@ IonizationModule (const int lev,
         const amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
 
-        amrex::Vector<int8_t> IonMask(pti.numParticles(), 0);
+        amrex::Gpu::DeviceVector<int8_t> IonMask(pti.numParticles(), 0);
         int8_t* AMREX_RESTRICT p_IonMask = IonMask.data();
-        long num_new_electrons = 0;
-        long* AMREX_RESTRICT p_num_new_electrons = &num_new_electrons;
+        amrex::Gpu::DeviceScalar<long> num_new_electrons(0);
+        long* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
         amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
+
             amrex::ParticleReal xp, yp, zp;
             int pid;
             getPosition(ip, xp, yp, zp, pid);
@@ -210,20 +211,21 @@ IonizationModule (const int lev,
         amrex::Gpu::synchronize();
 
         if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of ionized Plasma Particles: " << num_new_electrons <<"\n";
+            amrex::Print() << "Number of ionized Plasma Particles: "
+            << num_new_electrons.dataValue() <<"\n";
         }
 
         auto old_size = soa.size();
-        auto new_size = old_size + num_new_electrons;
+        auto new_size = old_size + num_new_electrons.dataValue();
         soa_p.resize(new_size);
         aos_p.resize(new_size);
 
         ParticleType* pstruct = aos_p().data();
         int procID = amrex::ParallelDescriptor::MyProc();
-        long ip_p = 0;
-        long* AMREX_RESTRICT p_ip_p = &ip_p;
+        amrex::Gpu::DeviceScalar<long> ip_p(0);
+        long* AMREX_RESTRICT p_ip_p = ip_p.dataPtr();
         long pid_start = ParticleType::NextID();
-        ParticleType::NextID(pid_start + num_new_electrons);
+        ParticleType::NextID(pid_start + num_new_electrons.dataValue());
 
         auto arrdata = soa.realarray();
         auto arrdata_p = soa_p.realarray();
@@ -235,7 +237,7 @@ IonizationModule (const int lev,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             if(p_IonMask[ip]) {
-                long pid = (*p_ip_p)++;
+                long pid = (* p_ip_p)++;
                 long pidx = pid + old_size;
 
                 amrex::ParticleReal xp, yp, zp;

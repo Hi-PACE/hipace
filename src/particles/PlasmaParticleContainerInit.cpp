@@ -192,7 +192,7 @@ PlasmaParticleContainer::
 InitIonizationModule (const amrex::Geometry& geom,
                       PlasmaParticleContainer* product_pc)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::InitIonizationModule");
+    HIPACE_PROFILE("PlasmaParticleContainer::InitIonizationModule()");
 
     using namespace amrex::literals;
 
