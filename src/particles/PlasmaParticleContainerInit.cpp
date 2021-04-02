@@ -4,6 +4,7 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/IonizationEnergiesTable.H"
+#include <cmath>
 
 void
 PlasmaParticleContainer::
@@ -84,6 +85,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
 
         auto arrdata = particle_tile.GetStructOfArrays().realarray();
+        auto int_arrdata = particle_tile.GetStructOfArrays().intarray();
 
         int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
@@ -92,6 +94,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         PhysConst phys_const = get_phys_const();
 
         const amrex::Real channel_radius = m_channel_radius;
+
+        int charge_number = m_charge_number;
 
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -174,6 +178,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::Fpsi5    ][pidx] = 0.;
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
+                int_arrdata[PlasmaIdx::q_z  ][pidx] = charge_number;
                 ++pidx;
             }
         });
@@ -183,21 +188,25 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 }
 
 void
-Ionization::InitIonizationModule ()
+PlasmaParticleContainer::
+InitIonizationModule (const amrex::Geometry& geom,
+                      PlasmaParticleContainer* product_pc)
 {
+    HIPACE_PROFILE("PlasmaParticleContainer::InitIonizationModule");
+
     using namespace amrex::literals;
 
-    if (!do_field_ionization) return;
+    if (!m_can_ionize) return;
+    m_product_pc = product_pc;
+    m_neutralize_background = false;
+    m_product_pc->m_neutralize_background =false;
     amrex::ParmParse pp(m_name);
+    std::string physical_element;
     pp.get("physical_element", physical_element);
-    //pp.query("ionization_initial_level", ionization_initial_level);
-    //pp.get("ionization_product_species", ionization_product_name);
-    // Add runtime integer component for ionization level
-    AddIntComp("ionization_level");
     // Get atomic number and ionization energies from file
     int ion_element_id = ion_map_ids[physical_element];
     int ion_atomic_number = ion_atomic_numbers[ion_element_id];
-    Vector<Real> h_ionization_energies(ion_atomic_number);
+    amrex::Vector<amrex::Real> h_ionization_energies(ion_atomic_number);
     int offset = ion_energy_offsets[ion_element_id];
     for(int i=0; i<ion_atomic_number; i++){
         h_ionization_energies[i] = table_ionization_energies[i+offset];
@@ -206,38 +215,45 @@ Ionization::InitIonizationModule ()
     // For now, we assume l=0 and m=0.
     // The approximate expressions are used,
     // without Gamma function
-    constexpr auto a3 = PhysConst::alpha*PhysConst::alpha*PhysConst::alpha;
-    constexpr auto a4 = a3 * PhysConst::alpha;
-    amrex::Real wa = 4.13e16_rt;
-    amrex::Real Ea = 5.1e11_rt;
+    const PhysConst phys_const = make_constants_SI();
+    amrex::Real alpha = 0.0072973525693_rt;
+    amrex::Real r_e = 2.8179403227e-15_rt;
+    amrex::Real a3 = alpha * alpha * alpha;
+    amrex::Real a4 = a3 * alpha;
+    amrex::Real wa = a3 * phys_const.c / r_e;
+    amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
     amrex::Real UH = table_ionization_energies[0];
     amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
 
-    const amrex::Real dt = HIPACE::m_dt / geom[lev][0];
+    auto dx = geom.CellSizeArray();
+    const double omega_p = (double)phys_const.q_e * sqrt( (double)m_density /
+                           ( (double)phys_const.ep0 * (double)phys_const.m_e ) );
+    const amrex::Real dt = dx[2] / (amrex::Real)omega_p;
 
-    ionization_energies.resize(ion_atomic_number);
-    adk_power.resize(ion_atomic_number);
-    adk_prefactor.resize(ion_atomic_number);
-    adk_exp_prefactor.resize(ion_atomic_number);
+    amrex::Vector<amrex::Real> adk_power(ion_atomic_number);
+    amrex::Vector<amrex::Real> adk_prefactor(ion_atomic_number);
+    amrex::Vector<amrex::Real> adk_exp_prefactor(ion_atomic_number);
 
-    Gpu::copyAsync(Gpu::hostToDevice,
-                   h_ionization_energies.begin(), h_ionization_energies.end(),
-                   ionization_energies.begin());
+    amrex::Real* AMREX_RESTRICT ionization_energies = h_ionization_energies.data();
+    amrex::Real* AMREX_RESTRICT p_adk_power = adk_power.data();
+    amrex::Real* AMREX_RESTRICT p_adk_prefactor = adk_prefactor.data();
+    amrex::Real* AMREX_RESTRICT p_adk_exp_prefactor = adk_exp_prefactor.data();
 
-    amrex::Real const* AMREX_RESTRICT p_ionization_energies = ionization_energies.data();
-    amrex::Real * AMREX_RESTRICT p_adk_power = adk_power.data();
-    amrex::Real * AMREX_RESTRICT p_adk_prefactor = adk_prefactor.data();
-    amrex::Real * AMREX_RESTRICT p_adk_exp_prefactor = adk_exp_prefactor.data();
     amrex::ParallelFor(ion_atomic_number, [=] AMREX_GPU_DEVICE (int i) noexcept
     {
-        amrex::Real n_eff = (i+1) * std::sqrt(UH/p_ionization_energies[i]);
-        amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*tgamma(n_eff+l_eff+1)*tgamma(n_eff-l_eff));
+        amrex::Real n_eff = (i+1) * std::sqrt(UH/ionization_energies[i]);
+        amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
+                         * std::tgamma(n_eff-l_eff));
         p_adk_power[i] = -(2*n_eff - 1);
-        amrex::Real Uion = p_ionization_energies[i];
+        amrex::Real Uion = ionization_energies[i];
         p_adk_prefactor[i] = dt * wa * C2 * ( Uion/(2*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2)*Ea,2*n_eff - 1);
         p_adk_exp_prefactor[i] = -2./3 * std::pow( Uion/UH,3./2) * Ea;
     });
 
-    Gpu::synchronize();
+    amrex::Gpu::synchronize();
+
+    m_adk_prefactor = p_adk_prefactor;
+    m_adk_exp_prefactor = p_adk_exp_prefactor;
+    m_adk_power = p_adk_power;
 }

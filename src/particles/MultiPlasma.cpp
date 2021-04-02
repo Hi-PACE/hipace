@@ -17,13 +17,24 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 
 void
 MultiPlasma::InitData (int lev, amrex::BoxArray slice_ba,
-                       amrex::DistributionMapping slice_dm, amrex::Geometry slice_gm)
+                       amrex::DistributionMapping slice_dm, amrex::Geometry slice_gm,
+                       amrex::Geometry gm)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.SetParticleBoxArray(lev, slice_ba);
         plasma.SetParticleDistributionMap(lev, slice_dm);
         plasma.SetParticleGeometry(lev, slice_gm);
         plasma.InitData();
+
+        if(plasma.m_can_ionize) {
+            PlasmaParticleContainer* plasma_product = nullptr;
+            for (int i=0; i<m_names.size(); ++i) {
+                if(m_names[i] == plasma.m_product_name) {
+                    plasma_product = &m_all_plasmas[i];
+                }
+            }
+            plasma.InitIonizationModule(gm, plasma_product);
+        }
     }
 }
 
@@ -74,4 +85,14 @@ MultiPlasma::DepositNeutralizingBackground (
             ::DepositCurrent(plasma, fields, which_slice, false, false, false, true, gm, lev);
         }
     }
+}
+
+void
+MultiPlasma::DoFieldIonization (
+    const int lev, const amrex::Geometry& geom, Fields& fields)
+{
+    for (auto& plasma : m_all_plasmas) {
+        plasma.IonizationModule(lev, geom, fields);
+    }
+
 }

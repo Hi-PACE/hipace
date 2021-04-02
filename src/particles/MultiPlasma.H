@@ -24,7 +24,8 @@ public:
      * \param[in] slice_dm DistributionMapping of the transverse slice domain
      * \param[in] slice_gm slice geometry
      */
-    void InitData (int lev, amrex::BoxArray slice_ba, amrex::DistributionMapping slice_dm, amrex::Geometry slice_gm);
+    void InitData (int lev, amrex::BoxArray slice_ba, amrex::DistributionMapping slice_dm,
+                   amrex::Geometry slice_gm, amrex::Geometry gm);
 
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
@@ -79,6 +80,8 @@ public:
      */
     void DepositNeutralizingBackground (
         Fields & fields, int which_slice, amrex::Geometry const& gm, int const lev);
+
+    void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
 
 private:
 

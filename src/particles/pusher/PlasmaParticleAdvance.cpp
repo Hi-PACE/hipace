@@ -98,6 +98,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const Fux5 = soa.GetRealData(PlasmaIdx::Fux5).data();
         amrex::Real * const Fuy5 = soa.GetRealData(PlasmaIdx::Fuy5).data();
         amrex::Real * const Fpsi5 = soa.GetRealData(PlasmaIdx::Fpsi5).data();
+        int * const q_z = soa.GetIntData(PlasmaIdx::q_z).data();
 
         const int depos_order_xy = Hipace::m_depos_order_xy;
         const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
@@ -109,7 +110,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
-        const amrex::Real charge = plasma.m_charge;
         const amrex::Real mass = plasma.m_mass;
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
@@ -143,7 +143,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
                     UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
                                      Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                     Fpsi1[ip], clightsq, phys_const, charge, mass);
+                                     Fpsi1[ip], clightsq, phys_const, q_z[ip], mass);
                 }
 
                 if (do_push)
@@ -170,6 +170,8 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
     HIPACE_PROFILE("ResetPlasmaParticles()");
 
     using namespace amrex::literals;
+
+    int charge_number = plasma.m_charge_number;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
@@ -212,6 +214,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         amrex::Real * const y0 = soa.GetRealData(PlasmaIdx::y0).data();
         amrex::Real * const w = soa.GetRealData(PlasmaIdx::w).data();
         amrex::Real * const w0 = soa.GetRealData(PlasmaIdx::w0).data();
+        int * const q_z = soa.GetIntData(PlasmaIdx::q_z).data();
 
         const auto GetPosition =
             GetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
@@ -262,6 +265,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     Fux5[ip] = 0._rt;
                     Fuy5[ip] = 0._rt;
                     Fpsi5[ip] = 0._rt;
+                    q_z[ip] = charge_number;
                 }
         }
         );

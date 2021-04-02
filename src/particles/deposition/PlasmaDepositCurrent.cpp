@@ -49,27 +49,24 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::FArrayBox& jz_fab = jz[pti];
         amrex::FArrayBox& rho_fab = rho[pti];
 
-        // For now: fix the value of the charge
-        amrex::Real q =(which_slice == WhichSlice::RhoIons ) ? -plasma.m_charge : plasma.m_charge;
-
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, temp_slice,
+                                          dx, xyzmin, lo, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
                                           max_qsa_weighting_factor);
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, temp_slice,
+                                          dx, xyzmin, lo, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
                                           max_qsa_weighting_factor);
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, temp_slice,
+                                          dx, xyzmin, lo, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
                                           max_qsa_weighting_factor);
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          dx, xyzmin, lo, q, temp_slice,
+                                          dx, xyzmin, lo, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
                                           max_qsa_weighting_factor);
         } else {
