@@ -163,9 +163,9 @@ IonizationModule (const int lev,
         int8_t* AMREX_RESTRICT p_IonMask = IonMask.data();
         long num_new_electrons = 0;
         long* AMREX_RESTRICT p_num_new_electrons = &num_new_electrons;
-        amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor;
-        amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor;
-        amrex::Real* AMREX_RESTRICT adk_power = m_adk_power;
+        amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
+        amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
+        amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {

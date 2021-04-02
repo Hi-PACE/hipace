@@ -230,16 +230,16 @@ InitIonizationModule (const amrex::Geometry& geom,
                            ( (double)phys_const.ep0 * (double)phys_const.m_e ) );
     const amrex::Real dt = dx[2] / (amrex::Real)omega_p;
 
-    amrex::Vector<amrex::Real> adk_power(ion_atomic_number);
-    amrex::Vector<amrex::Real> adk_prefactor(ion_atomic_number);
-    amrex::Vector<amrex::Real> adk_exp_prefactor(ion_atomic_number);
+    m_adk_power.resize(ion_atomic_number);
+    m_adk_prefactor.resize(ion_atomic_number);
+    m_adk_exp_prefactor.resize(ion_atomic_number);
 
     amrex::Real* AMREX_RESTRICT ionization_energies = h_ionization_energies.data();
-    amrex::Real* AMREX_RESTRICT p_adk_power = adk_power.data();
-    amrex::Real* AMREX_RESTRICT p_adk_prefactor = adk_prefactor.data();
-    amrex::Real* AMREX_RESTRICT p_adk_exp_prefactor = adk_exp_prefactor.data();
+    amrex::Real* AMREX_RESTRICT p_adk_power = m_adk_power.data();
+    amrex::Real* AMREX_RESTRICT p_adk_prefactor = m_adk_prefactor.data();
+    amrex::Real* AMREX_RESTRICT p_adk_exp_prefactor = m_adk_exp_prefactor.data();
 
-    amrex::ParallelFor(ion_atomic_number, [=] AMREX_GPU_DEVICE (int i) noexcept
+    for (int i=0; i<ion_atomic_number; ++i)
     {
         amrex::Real n_eff = (i+1) * std::sqrt(UH/ionization_energies[i]);
         amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
@@ -249,11 +249,5 @@ InitIonizationModule (const amrex::Geometry& geom,
         p_adk_prefactor[i] = dt * wa * C2 * ( Uion/(2*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2)*Ea,2*n_eff - 1);
         p_adk_exp_prefactor[i] = -2./3 * std::pow( Uion/UH,3./2) * Ea;
-    });
-
-    amrex::Gpu::synchronize();
-
-    m_adk_prefactor = p_adk_prefactor;
-    m_adk_exp_prefactor = p_adk_exp_prefactor;
-    m_adk_power = p_adk_power;
+    }
 }

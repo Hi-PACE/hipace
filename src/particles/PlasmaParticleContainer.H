@@ -92,9 +92,9 @@ public:
     bool m_can_ionize = false;
     std::string m_product_name = "";
     PlasmaParticleContainer* m_product_pc = nullptr;
-    amrex::Real* AMREX_RESTRICT m_adk_prefactor;
-    amrex::Real* AMREX_RESTRICT m_adk_exp_prefactor;
-    amrex::Real* AMREX_RESTRICT m_adk_power;
+    amrex::Vector<amrex::Real> m_adk_prefactor;
+    amrex::Vector<amrex::Real> m_adk_exp_prefactor;
+    amrex::Vector<amrex::Real> m_adk_power;
 
 private:
     std::string m_name; /**< name of the species */
