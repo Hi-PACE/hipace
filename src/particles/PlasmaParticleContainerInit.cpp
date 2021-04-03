@@ -226,9 +226,7 @@ InitIonizationModule (const amrex::Geometry& geom,
     amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
 
     auto dx = geom.CellSizeArray();
-    const double omega_p = (double)phys_const.q_e * sqrt( (double)m_density /
-                           ( (double)phys_const.ep0 * (double)phys_const.m_e ) );
-    const amrex::Real dt = dx[2] / (amrex::Real)omega_p;
+    const amrex::Real dt = dx[2] / phys_const.c;
 
     m_adk_power.resize(ion_atomic_number);
     m_adk_prefactor.resize(ion_atomic_number);
