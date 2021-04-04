@@ -152,7 +152,7 @@ IonizationModule (const int lev,
         const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
 
         const amrex::Real zmin = xyzmin[2];
-        const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
+        const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
         int * const q_z = soa.GetIntData(PlasmaIdx::q_z).data();
         const amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
@@ -190,12 +190,13 @@ IonizationModule (const int lev,
             amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
 
             // Compute probability of ionization p
-            const amrex::Real psi = psip[ip] *  //is m_e correct here?
-                phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c);
-            const amrex::Real ga = (1.0_rt+ uxp[ip]*uxp[ip]*clightsq + uyp[ip]*uyp[ip]*clightsq
-                                   + (psi+1.0_rt)*(psi+1.0_rt))/(2.0_rt); //check math for gamma
+            const amrex::Real psi_1 = ( psip[ip] *  //is m_e correct here?
+                phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c) ) + 1._rt;
+            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
+                                               + uyp[ip] * uyp[ip] * clightsq
+                                               + psi_1 * psi_1 ) / ( 2.0_rt * psi_1 );
             const int ion_lev = q_z[ip];
-            amrex::Real w_dtau = ga * adk_prefactor[ion_lev] *
+            amrex::Real w_dtau = gammap / psi_1 * adk_prefactor[ion_lev] *
                 std::pow(Ep, adk_power[ion_lev]) *
                 std::exp( adk_exp_prefactor[ion_lev]/Ep );
             amrex::Real p = 1._rt - std::exp( - w_dtau );

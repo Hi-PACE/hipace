@@ -198,8 +198,8 @@ InitIonizationModule (const amrex::Geometry& geom,
 
     if (!m_can_ionize) return;
     m_product_pc = product_pc;
-    m_neutralize_background = false;
-    m_product_pc->m_neutralize_background =false;
+    //m_neutralize_background = false;
+    //m_product_pc->m_neutralize_background = false;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
     pp.get("physical_element", physical_element);
