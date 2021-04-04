@@ -227,14 +227,14 @@ where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is t
     \end{align}
 \end{subequations}
 
-The notations used here are from the WAND-PIC paper, the correspondance between quantities Hipace++ and WAND-PIC is:
+The notations used here are from the WAND-PIC paper, the correspondance between quantities Hipace++ and WAND-PIC is (superscript H means hipace++):
 \begin{subequations}
 \begin{align}
 \text{WAND-PIC} &\leftrightarrow \text{Hipace++} \\
-n_* &\leftrightarrow \rho - j_z \text{ (+ ions)} \\
-n_e &\leftrightarrow \rho \text{ (+ ions)}  \\
-n_*\langle \bm{v_\perp}\rangle &\leftrightarrow \bm{J_\perp} (J_x \text{ and } J_y) \\
-n_*\langle v_x \bm{v_\perp}\rangle \text{ and } n_*\langle v_y \bm{v_\perp}\rangle &\leftrightarrow \text{does not exist } (J_{xx}, J_{yy}, J_{xy})
+n_e &\leftrightarrow -(\rho^H-\rho_{ions}^H) \\
+n_*\langle \bm{v_\alpha}\rangle &\leftrightarrow -\bm{j_\alpha^H} (\alpha = x \text{ or } y) \\
+n_*\langle \bm{v_\alpha v_\beta}\rangle &\leftrightarrow -\bm{j_{\alpha\beta}^H} (\alpha, \beta = x \text{ or } y) \\
+\bm{j_z} &\leftrightarrow \bm{j_z^H}
 \end{align}
 \end{subequations}
 
