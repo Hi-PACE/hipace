@@ -501,7 +501,7 @@ Hipace::SolveBxBy (const int lev)
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and hipace++: n* and j are defined from ne in WAND-PIC and
                 // from rho in hipace++
-                const amrex::Real crho    = - rho(i,j,k);
+                const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjz     =   jz (i,j,k);
                 const amrex::Real cpsi    =   psi(i,j,k);
                 const amrex::Real cjx     = - jx (i,j,k);
@@ -520,10 +520,11 @@ Hipace::SolveBxBy (const int lev)
                 const amrex::Real cez     =   ez(i,j,k);
                 const amrex::Real cbz     =   bz(i,j,k);
 
-                const amrex::Real nstar = crho - cjz;
+                const amrex::Real nstar = cne - cjz;
 
-                const amrex::Real nstar_gamma = (1._rt+cpsi)/2._rt *
-                    (cjxx + cjyy + nstar) + nstar / (2._rt * (1._rt+cpsi));
+                //const amrex::Real nstar_gamma = (1._rt+cpsi)/2._rt *
+                //    (cjxx + cjyy + nstar) + nstar / (2._rt * (1._rt+cpsi));
+                const amrex::Real nstar_gamma = cne * (1._rt+cpsi);
 
                 const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
                     (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjx*cez - cjxx*cdx_psi - cjxy*cdy_psi);
@@ -534,11 +535,17 @@ Hipace::SolveBxBy (const int lev)
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
                 mult(i,j,k,0) = nstar / (1._rt + cpsi);
                 mult(i,j,k,1) = nstar / (1._rt + cpsi);
-                // sy, used to compute bx
+
+                // What I believe should be correct
+                // sy, to compute Bx
                 s(i,j,k,0) = + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz;
-                // sx, used to compute by
+                // sx, to compute By
                 s(i,j,k,1) = - cbz * cjy / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz;
+                // for now I see NO REASON to do that, but it gives results closer to PC.
                 s(i,j,k,0) *= -1;
+
+                // LINEAR:
+                // main ones: cdx_jz and nstar, so we can assume that they are correct and the issue in blowout comes from other terms.
             }
             );
     }
@@ -615,7 +622,6 @@ Hipace::SolveBxBy (const int lev)
     BxBy = amrex::MultiFab(slicemf, amrex::make_alias, Comps[isl]["By" ], 1);
     SxSy = amrex::MultiFab(S, amrex::make_alias, 1, 1);
     BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
-    amrex::Print()<<"Mult min and max: "<<Mult.min(0)<<' '<<Mult.max(0)<<'\n';
     amrex::Print()<<"S x min and max: "<<S.min(0)<<' '<<S.max(0)<<'\n';
     amrex::Print()<<"S y min and max: "<<S.min(1)<<' '<<S.max(1)<<'\n';
     mlmg.solve({&BxBy}, {&SxSy}, tol_rel, tol_abs);
