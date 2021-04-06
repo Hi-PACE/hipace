@@ -102,8 +102,12 @@ public:
     explicit OpenPMDWriter ();
 
     /** \brief Initialize diagnostics (collective operation)
+     *
+     * \param[in] output_step current iteration
+     * \param[in] output_period output period
+     * \param[in] max_step maximum time step of the simulation
      */
-    void InitDiagnostics ();
+    void InitDiagnostics (const int output_step, const int output_period, const int max_step);
 
     /** \brief writing openPMD data
      *

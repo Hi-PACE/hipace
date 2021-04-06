@@ -293,7 +293,8 @@ Hipace::Evolve ()
     for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        if (m_output_period > 0) m_openpmd_writer.InitDiagnostics();
+        if (m_output_period > 0) m_openpmd_writer.InitDiagnostics(step+1, m_output_period,
+                                                                  m_max_step);
 #endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
