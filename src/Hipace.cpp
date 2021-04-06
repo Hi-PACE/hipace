@@ -371,7 +371,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
-    m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
+    if (!m_wandpic) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
 
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
@@ -403,7 +403,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
         m_fields.AddRhoIons(lev, true);
         amrex::Print()<<"rho.min() and max() "<<rho.min(0)<<" "<<rho.max(0)<<'\n';
         SolveBxBy(lev);
-        m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
+        m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
     } else {
         PredictorCorrectorLoopToSolveBxBy(islice, lev);
