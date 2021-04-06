@@ -477,7 +477,7 @@ Hipace::SolveBxBy (const int lev)
         amrex::Array4<amrex::Real const> const & jz  = Jz .array(mfi);
         amrex::Array4<amrex::Real const> const & psi = Psi.array(mfi);
         amrex::Array4<amrex::Real const> const & bz  = Bz.array(mfi);
-        amrex::Array4<amrex::Real const> const & ez  = Bz.array(mfi);
+        amrex::Array4<amrex::Real const> const & ez  = Ez.array(mfi);
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
 
