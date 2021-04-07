@@ -465,8 +465,8 @@ Hipace::SolveBxBy (const int lev)
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
-        amrex::Box bx = mfi.tilebox();
-        bx.grow({1,1,0}); // add enough guard cells to enable transverse derivatives
+        // add enough guard cells to enable transverse derivatives
+        amrex::Box const& bx = mfi.growntilebox({1,1,0});
 
         amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
         amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
