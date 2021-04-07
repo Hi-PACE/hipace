@@ -1,7 +1,6 @@
 #include "Hipace.H"
 #include "PlasmaParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include "utils/IonizationEnergiesTable.H"
 #include "pusher/PlasmaParticleAdvance.H"
 #include "pusher/BeamParticleAdvance.H"
 #include "pusher/FieldGather.H"
@@ -30,9 +29,7 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge_number = 1;
         m_mass = phys_const.m_e;
     }
-    else if (ion_map_ids.count(element) == 0) {
-        amrex::Abort("Unknown Element\n");
-    }
+
     pp.query("charge", m_charge_number);
     amrex::Real mass_Da;
     bool mass_in_Da = false;
@@ -269,6 +266,31 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::ux_temp  ][pidx] = arrdata_ion[PlasmaIdx::ux_temp  ][ip];
                 arrdata_elec[PlasmaIdx::uy_temp  ][pidx] = arrdata_ion[PlasmaIdx::uy_temp  ][ip];
                 arrdata_elec[PlasmaIdx::psi_temp ][pidx] = arrdata_ion[PlasmaIdx::psi_temp ][ip];
+                arrdata_elec[PlasmaIdx::Fx1      ][pidx] = arrdata_ion[PlasmaIdx::Fx1      ][ip];
+                arrdata_elec[PlasmaIdx::Fx2      ][pidx] = arrdata_ion[PlasmaIdx::Fx2      ][ip];
+                arrdata_elec[PlasmaIdx::Fx3      ][pidx] = arrdata_ion[PlasmaIdx::Fx3      ][ip];
+                arrdata_elec[PlasmaIdx::Fx4      ][pidx] = arrdata_ion[PlasmaIdx::Fx4      ][ip];
+                arrdata_elec[PlasmaIdx::Fx5      ][pidx] = arrdata_ion[PlasmaIdx::Fx5      ][ip];
+                arrdata_elec[PlasmaIdx::Fy1      ][pidx] = arrdata_ion[PlasmaIdx::Fy1      ][ip];
+                arrdata_elec[PlasmaIdx::Fy2      ][pidx] = arrdata_ion[PlasmaIdx::Fy2      ][ip];
+                arrdata_elec[PlasmaIdx::Fy3      ][pidx] = arrdata_ion[PlasmaIdx::Fy3      ][ip];
+                arrdata_elec[PlasmaIdx::Fy4      ][pidx] = arrdata_ion[PlasmaIdx::Fy4      ][ip];
+                arrdata_elec[PlasmaIdx::Fy5      ][pidx] = arrdata_ion[PlasmaIdx::Fy5      ][ip];
+                arrdata_elec[PlasmaIdx::Fux1     ][pidx] = arrdata_ion[PlasmaIdx::Fux1     ][ip];
+                arrdata_elec[PlasmaIdx::Fux2     ][pidx] = arrdata_ion[PlasmaIdx::Fux2     ][ip];
+                arrdata_elec[PlasmaIdx::Fux3     ][pidx] = arrdata_ion[PlasmaIdx::Fux3     ][ip];
+                arrdata_elec[PlasmaIdx::Fux4     ][pidx] = arrdata_ion[PlasmaIdx::Fux4     ][ip];
+                arrdata_elec[PlasmaIdx::Fux5     ][pidx] = arrdata_ion[PlasmaIdx::Fux5     ][ip];
+                arrdata_elec[PlasmaIdx::Fuy1     ][pidx] = arrdata_ion[PlasmaIdx::Fuy1     ][ip];
+                arrdata_elec[PlasmaIdx::Fuy2     ][pidx] = arrdata_ion[PlasmaIdx::Fuy2     ][ip];
+                arrdata_elec[PlasmaIdx::Fuy3     ][pidx] = arrdata_ion[PlasmaIdx::Fuy3     ][ip];
+                arrdata_elec[PlasmaIdx::Fuy4     ][pidx] = arrdata_ion[PlasmaIdx::Fuy4     ][ip];
+                arrdata_elec[PlasmaIdx::Fuy5     ][pidx] = arrdata_ion[PlasmaIdx::Fuy5     ][ip];
+                arrdata_elec[PlasmaIdx::Fpsi1    ][pidx] = arrdata_ion[PlasmaIdx::Fpsi1    ][ip];
+                arrdata_elec[PlasmaIdx::Fpsi2    ][pidx] = arrdata_ion[PlasmaIdx::Fpsi2    ][ip];
+                arrdata_elec[PlasmaIdx::Fpsi3    ][pidx] = arrdata_ion[PlasmaIdx::Fpsi3    ][ip];
+                arrdata_elec[PlasmaIdx::Fpsi4    ][pidx] = arrdata_ion[PlasmaIdx::Fpsi4    ][ip];
+                arrdata_elec[PlasmaIdx::Fpsi5    ][pidx] = arrdata_ion[PlasmaIdx::Fpsi5    ][ip];
                 arrdata_elec[PlasmaIdx::x0       ][pidx] = arrdata_ion[PlasmaIdx::x0       ][ip];
                 arrdata_elec[PlasmaIdx::y0       ][pidx] = arrdata_ion[PlasmaIdx::y0       ][ip];
                 int_arrdata_elec[PlasmaIdx::q_z  ][pidx] = charge_number;

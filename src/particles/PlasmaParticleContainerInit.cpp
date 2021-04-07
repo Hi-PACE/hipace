@@ -203,7 +203,8 @@ InitIonizationModule (const amrex::Geometry& geom,
     // m_product_pc->m_neutralize_background = false;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
-    pp.get("physical_element", physical_element);
+    pp.get("element", physical_element);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0, "Unknown Element");
     // Get atomic number and ionization energies from file
     int ion_element_id = ion_map_ids[physical_element];
     int ion_atomic_number = ion_atomic_numbers[ion_element_id];
