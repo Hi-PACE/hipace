@@ -19,9 +19,13 @@ OpenPMDWriter::OpenPMDWriter ()
 }
 
 void
-OpenPMDWriter::InitDiagnostics ()
+OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, const int max_step)
 {
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
+
+    // Dump every m_output_period steps and after last step
+    if (output_period < 0 ||
+       (!(output_step == max_step) && output_step % output_period != 0)) return;
 
     std::string filename = m_file_prefix + "/openpmd_%06T.h5"; // bp or h5
 
