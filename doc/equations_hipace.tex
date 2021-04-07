@@ -213,8 +213,7 @@ where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is t
     \begin{align}
     \Delta B_x &= \frac{n_*}{1+\psi} B_x + S_y \\
     S_y &= \frac{1}{1+\psi} B_z \left(n_* \langle v_x\rangle \right) + n_* \langle \tilde{a}_y \rangle - \partial_x\left( n_*\langle v_x v_y \rangle \right) - \partial_y\left( n_*\langle v_y^2 \rangle \right) + \partial_y j_z^{total} \\
-    n_* \langle \tilde{a}_y \rangle &= \frac{1}{1+\psi} \left(  \frac{n_*\langle\gamma\rangle}{1+\psi}\partial_y\psi - n_* \langle v_y \rangle E_z - n_* \langle v_x v_y\rangle \partial_x\psi - n_* \langle v_y^2 \rangle \partial_y\psi \right) \\
-    n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\langle v_y^2\rangle + n_*\right) + \frac{n_*}{2(1+\psi)}
+    n_* \langle \tilde{a}_y \rangle &= \frac{1}{1+\psi} \left( \red{-} \frac{n_*\langle\gamma\rangle}{1+\psi}\partial_y\psi - n_* \langle v_y \rangle E_z \red{+} n_* \langle v_x v_y\rangle \partial_x\psi \red{+} n_* \langle v_y^2 \rangle \partial_y\psi \right) \\
     \end{align}
 \end{subequations}
 
@@ -222,12 +221,11 @@ where $n_* = n_e - j_z$ where $n_e$ is the plasma electron density and $jz$ is t
     \begin{align}
     \Delta B_y &= \frac{n_*}{1+\psi} B_y - S_x \\
     S_x &= \frac{1}{1+\psi} B_z \left(-n_* \langle v_y\rangle \right) + n_* \langle \tilde{a}_x \rangle - \partial_x\left( n_*\langle v_x^2 \rangle \right) - \partial_y\left( n_*\langle v_x v_y \rangle \right) + \partial_x j_z^{total} \\
-    n_* \langle \tilde{a}_x \rangle &= \frac{1}{1+\psi} \left(  \frac{n_*\langle\gamma\rangle}{1+\psi}\partial_x\psi - n_* \langle v_x \rangle E_z - n_* \langle v_x^2\rangle \partial_x\psi - n_* \langle v_x v_y \rangle \partial_y\psi \right) \\
-    n_*\langle \gamma\rangle &= \frac{1+\psi}{2}\left(n_*\langle v_x^2\rangle + n_*\langle v_y^2\rangle + n_*\right) + \frac{n_*}{2(1+\psi)}
+    n_* \langle \tilde{a}_x \rangle &= \frac{1}{1+\psi} \left( \red{-}\frac{n_*\langle\gamma\rangle}{1+\psi}\partial_x\psi - n_* \langle v_x \rangle E_z \red{+} n_* \langle v_x^2\rangle \partial_x\psi \red{+} n_* \langle v_x v_y \rangle \partial_y\psi \right) \\
     \end{align}
 \end{subequations}
 
-The notations used here are from the WAND-PIC paper, the correspondance between quantities Hipace++ and WAND-PIC is (superscript H means hipace++):
+Signs in red differ from the WAND-PIC paper, but seem to be correct. The notations used here are from the WAND-PIC paper, the correspondance between quantities Hipace++ and WAND-PIC is (superscript H means hipace++):
 \begin{subequations}
 \begin{align}
 \text{WAND-PIC} &\leftrightarrow \text{Hipace++} \\
