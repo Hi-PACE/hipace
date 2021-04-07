@@ -37,7 +37,7 @@ int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
-amrex::Real Hipace::m_MG_tolerance_rel = 1.e-10;
+amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 
 Hipace&
@@ -91,7 +91,7 @@ Hipace::Hipace () :
     pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
     pph.query("external_Ez_slope", m_external_Ez_slope);
     pph.query("external_Ez_uniform", m_external_Ez_uniform);
-    pph.query("wandpic", m_wandpic);
+    pph.query("explicit", m_explicit);
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
 
@@ -375,13 +375,13 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
-    if (!m_wandpic) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
+    if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
 
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
 
     m_multi_plasma.DepositCurrent(
-        m_fields, WhichSlice::This, false, true, true, true, m_wandpic, geom[lev], lev);
+        m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 
@@ -402,11 +402,9 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_fields.SolvePoissonBz(Geom(lev), lev);
 
     // Modifies Bx and By in the current slice and the force terms of the plasma particles
-    if (m_wandpic){
-        amrex::Print()<<"rho.min() and max() "<<rho.min(0)<<" "<<rho.max(0)<<'\n';
+    if (m_explicit){
         m_fields.AddRhoIons(lev, true);
-        amrex::Print()<<"rho.min() and max() "<<rho.min(0)<<" "<<rho.max(0)<<'\n';
-        SolveBxBy(lev);
+        ExplicitSolveBxBy(lev);
         m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
     } else {
@@ -436,9 +434,9 @@ Hipace::ResetAllQuantities (int lev)
 }
 
 void
-Hipace::SolveBxBy (const int lev)
+Hipace::ExplicitSolveBxBy (const int lev)
 {
-    HIPACE_PROFILE("Hipace::SolveBxBy()");
+    HIPACE_PROFILE("Hipace::ExplicitSolveBxBy()");
     amrex::ParallelContext::push(m_comm_xy);
     using namespace amrex::literals;
 
@@ -503,8 +501,9 @@ Hipace::SolveBxBy (const int lev)
 
                 // Store (i,j,k) cell value in local variable.
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
-                // WAND-PIC and hipace++: n* and j are defined from ne in WAND-PIC and
-                // from rho in hipace++. psi in hipace++ has the wrong sign, it is actually -psi.
+                // WAND-PIC and hipace++:
+                // - n* and j are defined from ne in WAND-PIC and from rho in hipace++.
+                // - psi in hipace++ has the wrong sign, it is actually -psi.
                 const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjz     =   jz (i,j,k);
                 const amrex::Real cpsi    = - psi(i,j,k);
