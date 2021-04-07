@@ -558,7 +558,7 @@ Hipace::SolveBxBy (const int lev)
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
     amrex::LPInfo lpinfo{};
     lpinfo.setHiddenDirection(2);
-    amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo);
+    amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo, {}, 2);
     mlalaplacian.setDomainBC(
         {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
                       amrex::LinOpBCType::Dirichlet,
