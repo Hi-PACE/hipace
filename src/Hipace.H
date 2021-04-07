@@ -231,9 +231,9 @@ public:
     static amrex::Real m_external_Ez_slope;
     /** Uniform accelerating fields applied to beam particles. */
     static amrex::Real m_external_Ez_uniform;
-    /** Relative tolerance for the multigrid solver, when using the WAND-PIC method */
+    /** Relative tolerance for the multigrid solver, when using the explicit solver */
     static amrex::Real m_MG_tolerance_rel;
-    /** Absolute tolerance for the multigrid solver, when using the WAND-PIC method */
+    /** Absolute tolerance for the multigrid solver, when using the explicit solver */
     static amrex::Real m_MG_tolerance_abs;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;

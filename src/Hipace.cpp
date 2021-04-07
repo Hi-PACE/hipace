@@ -502,8 +502,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 // Store (i,j,k) cell value in local variable.
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and hipace++:
-                // - n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                // - psi in hipace++ has the wrong sign, it is actually -psi.
+                //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
+                //   psi in hipace++ has the wrong sign, it is actually -psi.
                 const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjz     =   jz (i,j,k);
                 const amrex::Real cpsi    = - psi(i,j,k);
