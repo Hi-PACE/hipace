@@ -483,7 +483,7 @@ Hipace::SolveBxBy (const int lev)
 
         amrex::ParallelFor(
             bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
             {
                 AMREX_ASSERT(k == 0);
 
