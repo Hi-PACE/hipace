@@ -551,31 +551,43 @@ Hipace::ExplicitSolveBxBy (const int lev)
     amrex::Geometry slice_geom = m_slice_geom;
     slice_geom.setPeriodicity({0,0,0});
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
-    amrex::LPInfo lpinfo{};
-    lpinfo.setHiddenDirection(2);
-    amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo, {}, 2);
-    mlalaplacian.setDomainBC(
-        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
-                      amrex::LinOpBCType::Dirichlet,
-                      amrex::LinOpBCType::Dirichlet)},
-        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
-                      amrex::LinOpBCType::Dirichlet,
-                      amrex::LinOpBCType::Dirichlet)});
+
+    if (!m_mlalaplacian){
+        // If first call, initialize the MG solver
+        amrex::LPInfo lpinfo{};
+        lpinfo.setHiddenDirection(2);
+
+        // make_unique requires explicit types
+        m_mlalaplacian = std::make_unique<amrex::MLALaplacian>(
+            amrex::Vector<amrex::Geometry>{slice_geom},
+            amrex::Vector<amrex::BoxArray>{S.boxArray()},
+            amrex::Vector<amrex::DistributionMapping>{S.DistributionMap()},
+            amrex::LPInfo{lpinfo},
+            amrex::Vector<amrex::FabFactory<amrex::FArrayBox> const*>{}, 2);
+
+        m_mlalaplacian->setDomainBC(
+            {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                          amrex::LinOpBCType::Dirichlet,
+                          amrex::LinOpBCType::Dirichlet)},
+            {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                          amrex::LinOpBCType::Dirichlet,
+                          amrex::LinOpBCType::Dirichlet)});
+
+        m_mlmg = std::make_unique<amrex::MLMG>(*m_mlalaplacian);
+    }
 
     // BxBy is assumed to have at least one ghost cell in x and y.
     // The ghost cells outside the domain should contain Dirichlet BC values.
     BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
-    mlalaplacian.setLevelBC(0, &BxBy);
+    m_mlalaplacian->setLevelBC(0, &BxBy);
+
+    m_mlalaplacian->setACoeffs(0, Mult);
 
     // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
     // So we solve Delta BxBy - A * BxBy = S
-    mlalaplacian.setScalars(-1.0, -1.0);
+    m_mlalaplacian->setScalars(-1.0, -1.0);
 
-    mlalaplacian.setACoeffs(0, Mult);
-
-    amrex::MLMG mlmg(mlalaplacian);
-
-    mlmg.solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
+    m_mlmg->solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
 
     amrex::ParallelContext::pop();
 }
