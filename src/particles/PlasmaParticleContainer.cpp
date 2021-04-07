@@ -1,62 +1,65 @@
 #include "Hipace.H"
 #include "PlasmaParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/IonizationEnergiesTable.H"
 #include "pusher/PlasmaParticleAdvance.H"
 #include "pusher/BeamParticleAdvance.H"
 #include "pusher/FieldGather.H"
 #include "pusher/GetAndSetPosition.H"
 #include <cmath>
 
-namespace
-{
-    bool QueryElementSetChargeMass (amrex::ParmParse& pp, int& charge, amrex::Real& mass)
-    {
-        // normalized_units is directly queried here so we can defined the appropriate PhysConst
-        // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
-        // PlasmaParticleContainer constructor is called.
-        amrex::ParmParse pph("hipace");
-        bool normalized_units = false;
-        pph.query("normalized_units", normalized_units);
-        PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
-
-        std::string element;
-        bool element_is_specified = pp.query("element", element);
-        if (element_is_specified){
-            if (element == "electron"){
-                charge = -1;
-                mass = phys_const.m_e;
-            } else if (element == "proton"){
-                charge = 1;
-                mass = phys_const.m_p;
-            } else {
-                amrex::Abort("unknown plasma species. Options are: electron and H.");
-            }
-
-    }
-        return element_is_specified;
-    }
-}
-
 void
 PlasmaParticleContainer::ReadParameters ()
 {
-    amrex::ParmParse pp(m_name);
-    pp.query("charge", m_charge_number);
-    pp.query("mass", m_mass);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        QueryElementSetChargeMass(pp, m_charge_number, m_mass) ^
-        (pp.query("charge", m_charge_number) && pp.query("mass", m_mass)),
-        "Plasma: must specify EITHER <species>.element OR <species>.charge and <species>.mass");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must not be 0");
+    // normalized_units is directly queried here so we can defined the appropriate PhysConst
+    // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
+    // PlasmaParticleContainer constructor is called.
+    amrex::ParmParse pph("hipace");
+    bool normalized_units = false;
+    pph.query("normalized_units", normalized_units);
+    PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
 
-    pp.query("neutralize_background", m_neutralize_background);
+    amrex::ParmParse pp(m_name);
+    std::string element;
+    pp.query("element", element);
+    if (element == "electron") {
+        m_charge_number = -1;
+        m_mass = phys_const.m_e;
+    }
+    else if (element == "positron") {
+        m_charge_number = 1;
+        m_mass = phys_const.m_e;
+    }
+    else if (ion_map_ids.count(element) == 0) {
+        amrex::Abort("Unknown Element\n");
+    }
+    pp.query("charge", m_charge_number);
+    amrex::Real mass_Da;
+    bool mass_in_Da = false;
+    mass_in_Da = pp.query("mass_Da", mass_Da);
+    if(mass_in_Da) {
+        m_mass = 1.007276466621 * phys_const.m_p * mass_Da;
+    }
+    pp.query("mass", m_mass);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge_number != -1024,
+        "The plasma particle charge must be specified");
+
     pp.query("can_ionize", m_can_ionize);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !normalized_units,
+        "Cannot use Ionization Module in normalized units");
+    if(m_can_ionize) {
+        // change default value
+        m_neutralize_background = false;
+    }
+    pp.query("neutralize_background", m_neutralize_background);
+
     pp.query("ionization_product", m_product_name);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
     pp.query("channel_radius", m_channel_radius);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_channel_radius != 0,
-                                     "The plasma channel radius must not be 0");
+        "The plasma channel radius must not be 0");
     pp.query("max_qsa_weighting_factor", m_max_qsa_weighting_factor);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
@@ -105,14 +108,15 @@ IonizationModule (const int lev,
     amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();
     const PhysConst phys_const = make_constants_SI();
 
-    // Loop over particle boxes
+    // Loop over particle boxes with both ion and electron Particle Containers at the same time
     PlasmaParticleIterator::allowMultipleMFIters(true);
-    PlasmaParticleIterator pti_p(*m_product_pc, lev);
-    for (PlasmaParticleIterator pti(*this, lev); pti.isValid(); ++pti)
+    PlasmaParticleIterator pti_ion(*this, lev);
+    PlasmaParticleIterator pti_elec(*m_product_pc, lev);
+    while (pti_ion.isValid())
     {
         // Extract properties associated with the extent of the current box
         // Grow to capture the extent of the particle shape
-        amrex::Box tilebox = pti.tilebox().grow(
+        amrex::Box tilebox = pti_ion.tilebox().grow(
             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
 
         amrex::RealBox const grid_box{tilebox, geom.CellSize(), geom.ProbLo()};
@@ -128,12 +132,12 @@ IonizationModule (const int lev,
         const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
         const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
         // Extract FabArray for this box
-        const amrex::FArrayBox& exmby_fab = exmby[pti];
-        const amrex::FArrayBox& eypbx_fab = eypbx[pti];
-        const amrex::FArrayBox& ez_fab = ez[pti];
-        const amrex::FArrayBox& bx_fab = bx[pti];
-        const amrex::FArrayBox& by_fab = by[pti];
-        const amrex::FArrayBox& bz_fab = bz[pti];
+        const amrex::FArrayBox& exmby_fab = exmby[pti_ion];
+        const amrex::FArrayBox& eypbx_fab = eypbx[pti_ion];
+        const amrex::FArrayBox& ez_fab = ez[pti_ion];
+        const amrex::FArrayBox& bx_fab = bx[pti_ion];
+        const amrex::FArrayBox& by_fab = by[pti_ion];
+        const amrex::FArrayBox& bz_fab = bz[pti_ion];
         // Extract field array from FabArray
         amrex::Array4<const amrex::Real> const& exmby_arr = exmby_fab.array();
         amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx_fab.array();
@@ -141,33 +145,35 @@ IonizationModule (const int lev,
         amrex::Array4<const amrex::Real> const& bx_arr = bx_fab.array();
         amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
-
+        // Extract particle data
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
         const int depos_order_xy = Hipace::m_depos_order_xy;
-        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        auto& soa_p = pti_p.GetStructOfArrays();
-        auto& aos_p = pti_p.GetArrayOfStructs();
+        auto& soa_ion = pti_ion.GetStructOfArrays(); // For momenta and weights
+        auto& soa_elec = pti_elec.GetStructOfArrays();
+        auto& aos_elec = pti_elec.GetArrayOfStructs();
         using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
+        const auto getPosition = GetParticlePosition<PTileType>(pti_ion.GetParticleTile());
 
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
-        int * const q_z = soa.GetIntData(PlasmaIdx::q_z).data();
-        const amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
-        const amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
-        const amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
+        int * const q_z = soa_ion.GetIntData(PlasmaIdx::q_z).data();
+        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
+        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
+        const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
 
-        amrex::Gpu::DeviceVector<int8_t> IonMask(pti.numParticles(), 0);
-        int8_t* AMREX_RESTRICT p_IonMask = IonMask.data();
+        // Make Ion Mask and load ADK prefactors
+        // Ion Mask is necessary to only resize electron soa and aos once
+        amrex::Gpu::DeviceVector<int8_t> ion_mask(pti_ion.numParticles(), 0);
+        int8_t* AMREX_RESTRICT p_ion_mask = ion_mask.data();
         amrex::Gpu::DeviceScalar<long> num_new_electrons(0);
         long* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
         amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
 
-        amrex::ParallelFor(pti.numParticles(),
+        amrex::ParallelFor(pti_ion.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
             amrex::ParticleReal xp, yp, zp;
@@ -196,6 +202,7 @@ IonizationModule (const int lev,
                                                + uyp[ip] * uyp[ip] * clightsq
                                                + psi_1 * psi_1 ) / ( 2.0_rt * psi_1 );
             const int ion_lev = q_z[ip];
+            // gamma / (psi + 1) to complete dt for QSA
             amrex::Real w_dtau = gammap / psi_1 * adk_prefactor[ion_lev] *
                 std::pow(Ep, adk_power[ion_lev]) *
                 std::exp( adk_exp_prefactor[ion_lev]/Ep );
@@ -205,7 +212,7 @@ IonizationModule (const int lev,
             if (random_draw < p)
             {
                 q_z[ip] += 1;
-                p_IonMask[ip] = 1;
+                p_ion_mask[ip] = 1;
                 ++(*p_num_new_electrons);
             }
         });
@@ -213,60 +220,64 @@ IonizationModule (const int lev,
 
         if(Hipace::m_verbose >= 3) {
             amrex::Print() << "Number of ionized Plasma Particles: "
-            << num_new_electrons.dataValue() <<"\n";
+            << num_new_electrons.dataValue() << "\n";
         }
 
-        auto old_size = soa.size();
+        auto old_size = soa_elec.size();
         auto new_size = old_size + num_new_electrons.dataValue();
-        soa_p.resize(new_size);
-        aos_p.resize(new_size);
+        soa_elec.resize(new_size);
+        aos_elec.resize(new_size);
 
-        ParticleType* pstruct = aos_p().data();
+        // Load electron soa and aos after resize
+        ParticleType* pstruct_elec = aos_elec().data();
         int procID = amrex::ParallelDescriptor::MyProc();
-        amrex::Gpu::DeviceScalar<long> ip_p(0);
-        long* AMREX_RESTRICT p_ip_p = ip_p.dataPtr();
+        amrex::Gpu::DeviceScalar<long> ip_elec(0);
+        long* AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
         long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons.dataValue());
 
-        auto arrdata = soa.realarray();
-        auto arrdata_p = soa_p.realarray();
-        auto int_arrdata_p = soa_p.intarray();
+        auto arrdata_ion = soa_ion.realarray();
+        auto arrdata_elec = soa_elec.realarray();
+        auto int_arrdata_elec = soa_elec.intarray();
 
         int charge_number = m_product_pc->m_charge_number;
 
-        amrex::ParallelFor(pti.numParticles(),
+        amrex::ParallelFor(pti_ion.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
-            if(p_IonMask[ip]) {
-                long pid = (* p_ip_p)++;
+            if(p_ion_mask[ip]) {
+                long pid = (* p_ip_elec)++;
                 long pidx = pid + old_size;
 
+                // Copy ion data to new electron
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 
-                pstruct[pidx].id()   = pid_start + pid;
-                pstruct[pidx].cpu()  = procID;
-                pstruct[pidx].pos(0) = xp;
-                pstruct[pidx].pos(1) = yp;
-                pstruct[pidx].pos(2) = zp;
+                pstruct_elec[pidx].id()   = pid_start + pid;
+                pstruct_elec[pidx].cpu()  = procID;
+                pstruct_elec[pidx].pos(0) = xp;
+                pstruct_elec[pidx].pos(1) = yp;
+                pstruct_elec[pidx].pos(2) = zp;
 
-                arrdata_p[PlasmaIdx::w        ][pidx] = arrdata[PlasmaIdx::w        ][ip];
-                arrdata_p[PlasmaIdx::w0       ][pidx] = arrdata[PlasmaIdx::w0       ][ip];
-                arrdata_p[PlasmaIdx::ux       ][pidx] = arrdata[PlasmaIdx::ux       ][ip];
-                arrdata_p[PlasmaIdx::uy       ][pidx] = arrdata[PlasmaIdx::uy       ][ip];
-                arrdata_p[PlasmaIdx::psi      ][pidx] = arrdata[PlasmaIdx::psi      ][ip];
-                arrdata_p[PlasmaIdx::x_prev   ][pidx] = arrdata[PlasmaIdx::x_prev   ][ip];
-                arrdata_p[PlasmaIdx::y_prev   ][pidx] = arrdata[PlasmaIdx::y_prev   ][ip];
-                arrdata_p[PlasmaIdx::ux_temp  ][pidx] = arrdata[PlasmaIdx::ux_temp  ][ip];
-                arrdata_p[PlasmaIdx::uy_temp  ][pidx] = arrdata[PlasmaIdx::uy_temp  ][ip];
-                arrdata_p[PlasmaIdx::psi_temp ][pidx] = arrdata[PlasmaIdx::psi_temp ][ip];
-                arrdata_p[PlasmaIdx::x0       ][pidx] = arrdata[PlasmaIdx::x0       ][ip];
-                arrdata_p[PlasmaIdx::y0       ][pidx] = arrdata[PlasmaIdx::y0       ][ip];
-                int_arrdata_p[PlasmaIdx::q_z  ][pidx] = charge_number;
+                arrdata_elec[PlasmaIdx::w        ][pidx] = arrdata_ion[PlasmaIdx::w        ][ip];
+                arrdata_elec[PlasmaIdx::w0       ][pidx] = arrdata_ion[PlasmaIdx::w0       ][ip];
+                arrdata_elec[PlasmaIdx::ux       ][pidx] = arrdata_ion[PlasmaIdx::ux       ][ip];
+                arrdata_elec[PlasmaIdx::uy       ][pidx] = arrdata_ion[PlasmaIdx::uy       ][ip];
+                arrdata_elec[PlasmaIdx::psi      ][pidx] = arrdata_ion[PlasmaIdx::psi      ][ip];
+                arrdata_elec[PlasmaIdx::x_prev   ][pidx] = arrdata_ion[PlasmaIdx::x_prev   ][ip];
+                arrdata_elec[PlasmaIdx::y_prev   ][pidx] = arrdata_ion[PlasmaIdx::y_prev   ][ip];
+                arrdata_elec[PlasmaIdx::ux_temp  ][pidx] = arrdata_ion[PlasmaIdx::ux_temp  ][ip];
+                arrdata_elec[PlasmaIdx::uy_temp  ][pidx] = arrdata_ion[PlasmaIdx::uy_temp  ][ip];
+                arrdata_elec[PlasmaIdx::psi_temp ][pidx] = arrdata_ion[PlasmaIdx::psi_temp ][ip];
+                arrdata_elec[PlasmaIdx::x0       ][pidx] = arrdata_ion[PlasmaIdx::x0       ][ip];
+                arrdata_elec[PlasmaIdx::y0       ][pidx] = arrdata_ion[PlasmaIdx::y0       ][ip];
+                int_arrdata_elec[PlasmaIdx::q_z  ][pidx] = charge_number;
             }
         });
         amrex::Gpu::synchronize();
 
-        ++pti_p;
+        ++pti_ion;
+        ++pti_elec;
     }
+    PlasmaParticleIterator::allowMultipleMFIters(false);
 }

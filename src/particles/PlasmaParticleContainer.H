@@ -87,8 +87,8 @@ public:
     amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
-    amrex::Real m_mass; /**< mass of each particle of this species */
-    int m_charge_number; /**< initial charge number of each particle of this species */
+    amrex::Real m_mass = 0; /**< mass of each particle of this species */
+    int m_charge_number = -1024; /**< initial charge number of each particle of this species */
     bool m_can_ionize = false;
     std::string m_product_name = "";
     PlasmaParticleContainer* m_product_pc = nullptr;

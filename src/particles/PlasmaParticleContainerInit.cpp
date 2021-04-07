@@ -198,8 +198,9 @@ InitIonizationModule (const amrex::Geometry& geom,
 
     if (!m_can_ionize) return;
     m_product_pc = product_pc;
-    //m_neutralize_background = false;
-    //m_product_pc->m_neutralize_background = false;
+    // since charge is variable neutralize_background is not applicable
+    // m_neutralize_background = false;
+    // m_product_pc->m_neutralize_background = false;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
     pp.get("physical_element", physical_element);
@@ -224,7 +225,7 @@ InitIonizationModule (const amrex::Geometry& geom,
     amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
     amrex::Real UH = table_ionization_energies[0];
     amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
-
+    // partial dx calculation for QSA
     auto dx = geom.CellSizeArray();
     const amrex::Real dt = dx[2] / phys_const.c;
 
