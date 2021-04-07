@@ -6,6 +6,8 @@
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_MLALaplacian.H>
+#include <AMReX_MLMG.H>
 
 #include <algorithm>
 #include <memory>
@@ -35,6 +37,8 @@ int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
+amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
+amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -87,6 +91,9 @@ Hipace::Hipace () :
     pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
     pph.query("external_Ez_slope", m_external_Ez_slope);
     pph.query("external_Ez_uniform", m_external_Ez_uniform);
+    pph.query("explicit", m_explicit);
+    pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
+    pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
 
 #ifdef AMREX_USE_MPI
     pph.query("skip_empty_comms", m_skip_empty_comms);
@@ -368,13 +375,14 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
 
-    m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
+    if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
 
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
 
     m_multi_plasma.DepositCurrent(
-        m_fields, WhichSlice::This, false, true, true, true, geom[lev], lev);
+        m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
@@ -393,10 +401,15 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_fields.SolvePoissonEz(Geom(lev),lev);
     m_fields.SolvePoissonBz(Geom(lev), lev);
 
-    /* Modifies Bx and By in the current slice
-     * and the force terms of the plasma particles
-     */
-    PredictorCorrectorLoopToSolveBxBy(islice, lev);
+    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    if (m_explicit){
+        m_fields.AddRhoIons(lev, true);
+        ExplicitSolveBxBy(lev);
+        m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
+        m_fields.AddRhoIons(lev);
+    } else {
+        PredictorCorrectorLoopToSolveBxBy(islice, lev);
+    }
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
@@ -418,6 +431,153 @@ Hipace::ResetAllQuantities (int lev)
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_fields.getSlices(lev, islice).setVal(0.);
     }
+}
+
+void
+Hipace::ExplicitSolveBxBy (const int lev)
+{
+    HIPACE_PROFILE("Hipace::ExplicitSolveBxBy()");
+    amrex::ParallelContext::push(m_comm_xy);
+    using namespace amrex::literals;
+
+    const int isl = WhichSlice::This;
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    const amrex::BoxArray ba = slicemf.boxArray();
+    const amrex::DistributionMapping dm = slicemf.DistributionMap();
+    const amrex::IntVect ngv = slicemf.nGrowVect();
+
+    // Later this should have only 1 component, but we have 2 for now, with always the same values.
+    amrex::MultiFab Mult(ba, dm, 2, ngv);
+    amrex::MultiFab S(ba, dm, 2, ngv);
+    Mult.setVal(0.);
+    S.setVal(0.);
+
+    const amrex::MultiFab Rho(slicemf, amrex::make_alias, Comps[isl]["rho"], 1);
+    const amrex::MultiFab Jx (slicemf, amrex::make_alias, Comps[isl]["jx" ], 1);
+    const amrex::MultiFab Jy (slicemf, amrex::make_alias, Comps[isl]["jy" ], 1);
+    const amrex::MultiFab Jxx(slicemf, amrex::make_alias, Comps[isl]["jxx"], 1);
+    const amrex::MultiFab Jxy(slicemf, amrex::make_alias, Comps[isl]["jxy"], 1);
+    const amrex::MultiFab Jyy(slicemf, amrex::make_alias, Comps[isl]["jyy"], 1);
+    const amrex::MultiFab Jz (slicemf, amrex::make_alias, Comps[isl]["jz" ], 1);
+    const amrex::MultiFab Psi(slicemf, amrex::make_alias, Comps[isl]["Psi"], 1);
+    const amrex::MultiFab Bz (slicemf, amrex::make_alias, Comps[isl]["Bz" ], 1);
+    const amrex::MultiFab Ez (slicemf, amrex::make_alias, Comps[isl]["Ez" ], 1);
+    const amrex::Real dx = m_slice_geom.CellSize(0);
+    const amrex::Real dy = m_slice_geom.CellSize(1);
+
+    for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+
+        // add enough guard cells to enable transverse derivatives
+        amrex::Box const& bx = mfi.growntilebox({1,1,0});
+
+        amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
+        amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
+        amrex::Array4<amrex::Real const> const & jy  = Jy .array(mfi);
+        amrex::Array4<amrex::Real const> const & jxx = Jxx.array(mfi);
+        amrex::Array4<amrex::Real const> const & jxy = Jxy.array(mfi);
+        amrex::Array4<amrex::Real const> const & jyy = Jyy.array(mfi);
+        amrex::Array4<amrex::Real const> const & jz  = Jz .array(mfi);
+        amrex::Array4<amrex::Real const> const & psi = Psi.array(mfi);
+        amrex::Array4<amrex::Real const> const & bz  = Bz.array(mfi);
+        amrex::Array4<amrex::Real const> const & ez  = Ez.array(mfi);
+        amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
+        amrex::Array4<amrex::Real> const & s = S.array(mfi);
+
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+            {
+                AMREX_ASSERT(k == 0);
+
+                const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
+
+                const amrex::Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
+
+                // Store (i,j,k) cell value in local variable.
+                // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
+                // WAND-PIC and hipace++:
+                //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
+                //   psi in hipace++ has the wrong sign, it is actually -psi.
+                const amrex::Real cne     = - rho(i,j,k);
+                const amrex::Real cjz     =   jz (i,j,k);
+                const amrex::Real cpsi    = - psi(i,j,k);
+                const amrex::Real cjx     = - jx (i,j,k);
+                const amrex::Real cjy     = - jy (i,j,k);
+                const amrex::Real cjxx    = - jxx(i,j,k);
+                const amrex::Real cjxy    = - jxy(i,j,k);
+                const amrex::Real cjyy    = - jyy(i,j,k);
+                const amrex::Real cdx_jxx = - dx_jxx;
+                const amrex::Real cdx_jxy = - dx_jxy;
+                const amrex::Real cdx_jz  =   dx_jz;
+                const amrex::Real cdx_psi = - dx_psi;
+                const amrex::Real cdy_jyy = - dy_jyy;
+                const amrex::Real cdy_jxy = - dy_jxy;
+                const amrex::Real cdy_jz  =   dy_jz;
+                const amrex::Real cdy_psi = - dy_psi;
+                const amrex::Real cez     =   ez(i,j,k);
+                const amrex::Real cbz     =   bz(i,j,k);
+
+                const amrex::Real nstar = cne - cjz;
+
+                const amrex::Real nstar_gamma = cne * (1._rt+cpsi);
+
+                const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
+                    (-nstar_gamma*cdx_psi/(1._rt+cpsi) - cjx*cez + cjxx*cdx_psi + cjxy*cdy_psi);
+
+                const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
+                    (-nstar_gamma*cdy_psi/(1._rt+cpsi) - cjy*cez + cjxy*cdx_psi + cjyy*cdy_psi);
+
+                // Should only have 1 component, but not supported yet by the AMReX MG solver
+                mult(i,j,k,0) = nstar / (1._rt + cpsi);
+                mult(i,j,k,1) = nstar / (1._rt + cpsi);
+
+                // sy, to compute Bx
+                s(i,j,k,0) = + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz;
+                // sx, to compute By
+                s(i,j,k,1) = - cbz * cjy / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz;
+                s(i,j,k,0) *= -1;
+            }
+            );
+    }
+
+    // For now, we construct the solver locally. Later, we want to move it to the hipace class as
+    // a member so that we can reuse it.
+    amrex::Geometry slice_geom = m_slice_geom;
+    slice_geom.setPeriodicity({0,0,0});
+    amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
+    amrex::LPInfo lpinfo{};
+    lpinfo.setHiddenDirection(2);
+    amrex::MLALaplacian mlalaplacian({slice_geom}, {S.boxArray()}, {S.DistributionMap()}, lpinfo, {}, 2);
+    mlalaplacian.setDomainBC(
+        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet)},
+        {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet,
+                      amrex::LinOpBCType::Dirichlet)});
+
+    // BxBy is assumed to have at least one ghost cell in x and y.
+    // The ghost cells outside the domain should contain Dirichlet BC values.
+    BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
+    mlalaplacian.setLevelBC(0, &BxBy);
+
+    // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
+    // So we solve Delta BxBy - A * BxBy = S
+    mlalaplacian.setScalars(-1.0, -1.0);
+
+    mlalaplacian.setACoeffs(0, Mult);
+
+    amrex::MLMG mlmg(mlalaplacian);
+
+    mlmg.solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
+
+    amrex::ParallelContext::pop();
 }
 
 void
@@ -488,7 +648,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
 
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
-            m_fields, WhichSlice::Next, true, true, false, false, geom[lev], lev);
+            m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
+
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),

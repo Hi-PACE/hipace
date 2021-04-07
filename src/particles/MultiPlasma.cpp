@@ -40,10 +40,11 @@ MultiPlasma::maxDensity ()
 void
 MultiPlasma::DepositCurrent (
     Fields & fields, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
-    bool deposit_rho, amrex::Geometry const& gm, int const lev)
+    bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm, int const lev)
 {
     for (auto& plasma : m_all_plasmas) {
-        ::DepositCurrent(plasma, fields, which_slice, temp_slice, deposit_jx_jy, deposit_jz, deposit_rho, gm, lev);
+        ::DepositCurrent(plasma, fields, which_slice, temp_slice, deposit_jx_jy, deposit_jz,
+                         deposit_rho, deposit_j_squared, gm, lev);
     }
 }
 
@@ -71,7 +72,9 @@ MultiPlasma::DepositNeutralizingBackground (
 {
     for (auto& plasma : m_all_plasmas) {
         if (plasma.m_neutralize_background){
-            ::DepositCurrent(plasma, fields, which_slice, false, false, false, true, gm, lev);
+            // current of ions is zero, so they are not deposited.
+            ::DepositCurrent(plasma, fields, which_slice, false,
+                             false, false, true, false, gm, lev);
         }
     }
 }

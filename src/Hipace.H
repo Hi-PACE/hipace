@@ -231,6 +231,10 @@ public:
     static amrex::Real m_external_Ez_slope;
     /** Uniform accelerating fields applied to beam particles. */
     static amrex::Real m_external_Ez_uniform;
+    /** Relative tolerance for the multigrid solver, when using the explicit solver */
+    static amrex::Real m_MG_tolerance_rel;
+    /** Absolute tolerance for the multigrid solver, when using the explicit solver */
+    static amrex::Real m_MG_tolerance_abs;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** GridCurrent instance */
@@ -247,6 +251,16 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
+    bool m_explicit = false;
+    /**
+     * \brief Solve for Bx an By in slice MF using the explicit solver
+     *
+     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
+     * it is implemented in the WAND-PIC quasistatic PIC code.
+     *
+     * \param[lev] MR level
+     */
+    void ExplicitSolveBxBy (const int lev);
 
 private:
     /** Pointer to current (and only) instance of class Hipace */

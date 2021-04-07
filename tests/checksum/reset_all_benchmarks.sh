@@ -127,6 +127,18 @@ then
                      --test-name blowout_wake.2Rank
 fi
 
+#blowout_wake_explicit.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake_explicit.2Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R blowout_wake_explicit.2Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/blowout_wake_explicit.2Rank/ \
+                     --test-name blowout_wake_explicit.2Rank
+fi
+
 # beam_evolution.1Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "beam_evolution.1Rank" ]]
 then

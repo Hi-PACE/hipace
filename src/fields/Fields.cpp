@@ -213,12 +213,16 @@ Fields::ShiftSlices (int lev)
 }
 
 void
-Fields::AddRhoIons (const int lev)
+Fields::AddRhoIons (const int lev, bool inverse)
 {
     HIPACE_PROFILE("Fields::AddRhoIons()");
-
-    amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-                         Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, 0);
+    if (!inverse){
+        amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
+                             Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, 0);
+    } else {
+        amrex::MultiFab::Subtract(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
+                                  Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, 0);
+    }
 }
 
 void
