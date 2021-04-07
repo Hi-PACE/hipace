@@ -37,6 +37,8 @@ int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
+amrex::Real Hipace::m_MG_tolerance_rel = 1.e-10;
+amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 
 Hipace&
 Hipace::GetInstance ()
@@ -90,6 +92,8 @@ Hipace::Hipace () :
     pph.query("external_Ez_slope", m_external_Ez_slope);
     pph.query("external_Ez_uniform", m_external_Ez_uniform);
     pph.query("wandpic", m_wandpic);
+    pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
+    pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
 
 #ifdef AMREX_USE_MPI
     pph.query("skip_empty_comms", m_skip_empty_comms);
@@ -500,7 +504,7 @@ Hipace::SolveBxBy (const int lev)
                 // Store (i,j,k) cell value in local variable.
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and hipace++: n* and j are defined from ne in WAND-PIC and
-                // from rho in hipace++
+                // from rho in hipace++. psi in hipace++ has the wrong sign, it is actually -psi.
                 const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjz     =   jz (i,j,k);
                 const amrex::Real cpsi    = - psi(i,j,k);
@@ -572,10 +576,7 @@ Hipace::SolveBxBy (const int lev)
 
     amrex::MLMG mlmg(mlalaplacian);
 
-    const amrex::Real tol_rel = 1.e-10;
-    const amrex::Real tol_abs = 0.0;
-
-    mlmg.solve({&BxBy}, {&S}, tol_rel, tol_abs);
+    mlmg.solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
 
     amrex::ParallelContext::pop();
 }
