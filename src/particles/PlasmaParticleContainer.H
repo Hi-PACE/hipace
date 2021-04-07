@@ -67,9 +67,20 @@ public:
         const amrex::Real a_density,
         const amrex::Real a_radius);
 
+    /** Initialize ADK perfectors of ionizable plasmas
+     *
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] product_pc The electron PPC that this Ion Plasma ionizes to
+     */
     void InitIonizationModule (const amrex::Geometry& geom,
                                PlasmaParticleContainer* product_pc);
 
+    /** Calculates Ionization Probability and makes new Plasma Particles
+     *
+     * \param[in] lev MR level
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] fields the general field class
+     */
     void IonizationModule (const int lev,
                            const amrex::Geometry& geom,
                            Fields& fields);
