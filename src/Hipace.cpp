@@ -555,14 +555,14 @@ Hipace::ExplicitSolveBxBy (const int lev)
     if (!m_mlalaplacian){
         // If first call, initialize the MG solver
         amrex::LPInfo lpinfo{};
-        lpinfo.setHiddenDirection(2);
+        lpinfo.setHiddenDirection(2).setAgglomeration(false).setConsolidation(false);
 
         // make_unique requires explicit types
         m_mlalaplacian = std::make_unique<amrex::MLALaplacian>(
             amrex::Vector<amrex::Geometry>{slice_geom},
             amrex::Vector<amrex::BoxArray>{S.boxArray()},
             amrex::Vector<amrex::DistributionMapping>{S.DistributionMap()},
-            amrex::LPInfo{lpinfo},
+            lpinfo,
             amrex::Vector<amrex::FabFactory<amrex::FArrayBox> const*>{}, 2);
 
         m_mlalaplacian->setDomainBC(
