@@ -11,6 +11,8 @@
 #include "utils/Constants.H"
 
 #include <AMReX_AmrCore.H>
+#include <AMReX_MLALaplacian.H>
+#include <AMReX_MLMG.H>
 
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
@@ -270,6 +272,10 @@ private:
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
 
+    /** Linear operator for the explicit Bx and By solver */
+    std::unique_ptr<amrex::MLALaplacian> m_mlalaplacian;
+    /** Geometric multigrid solver class, for the explicit Bx and By solver */
+    std::unique_ptr<amrex::MLMG> m_mlmg;
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
 
