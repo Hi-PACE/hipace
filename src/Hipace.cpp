@@ -373,9 +373,20 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     const amrex::Box& bx = boxArray(lev)[ibox];
 
-    m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+    if (m_explicit) {
+        // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
+        const int ibx = Comps[WhichSlice::This]["Bx"];
+        const int iby = Comps[WhichSlice::This]["By"];
+        const int nc = Comps[WhichSlice::This]["N"];
+        AMREX_ALWAYS_ASSERT( iby == ibx+1 );
+        m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx);
+        m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1);
+    } else {
+        m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+    }
 
-    if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, true, false, false, lev);
+    if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
+                                                     true, false, false, lev);
 
     amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["rho"], 1);
