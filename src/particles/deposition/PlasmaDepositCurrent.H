@@ -14,6 +14,7 @@
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
  * \param[in] deposit_rho if true, deposit to rho
+ * \param[in] deposit_j_squared if true, deposit jxx, jxy, jyy
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  */
@@ -21,7 +22,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                amrex::Geometry const& gm, int const lev);
+                bool deposit_j_squared, amrex::Geometry const& gm, int const lev);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_

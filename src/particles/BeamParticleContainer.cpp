@@ -15,10 +15,12 @@ BeamParticleContainer::ReadParameters ()
     }
     pp.query("dx_per_dzeta", m_dx_per_dzeta);
     pp.query("dy_per_dzeta", m_dy_per_dzeta);
+    pp.query("duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     pp.query("do_z_push", m_do_z_push);
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.),
-            "Tilted beams are not yet implemented for fixed ppc beams or beams from file");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.)
+                                           && (m_duz_per_uz0_dzeta == 0.),
+        "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
 }
 
@@ -83,6 +85,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool n_0_specified = pp.query("plasma_density", m_plasma_density);
         pp.query("iteration", m_num_iteration);
         bool species_specified = pp.query("openPMD_species_name", m_species_name);
+        if(!species_specified) {
+            m_species_name = m_name;
+        }
 
         if(!n_0_specified) {
             m_plasma_density = 0;
@@ -90,22 +95,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,
                           m_plasma_density, m_num_iteration, m_species_name, species_specified);
-#else
-        amrex::Abort("beam particle injection via external_file requires openPMD support: "
-                     "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
-#endif  // HIPACE_USE_OPENPMD
-} else if (m_injection_type == "restart") {
-#ifdef HIPACE_USE_OPENPMD
-        amrex::ParmParse pp(m_name);
-        pp.get("input_file", m_input_file);
-        pp.query("iteration", m_num_iteration);
-        bool species_specified = pp.query("openPMD_species_name", m_species_name);
-        if(!species_specified) {
-            m_species_name = m_name;
-        }
-
-        InitBeamRestartHelper(m_input_file, m_num_iteration, m_species_name);
-
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
@@ -118,6 +107,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
+
 }
 
 amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool only_local) const
@@ -147,48 +137,4 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
     }
 
     return nparticles;
-}
-
-void
-BeamParticleContainer::ConvertUnits (ConvertDirection convert_direction)
-{
-    HIPACE_PROFILE("BeamParticleContainer::ConvertUnits()");
-    using namespace amrex::literals;
-
-    const PhysConst phys_const_SI = make_constants_SI();
-
-    // Compute conversion factor
-    amrex::ParticleReal factor = 1_rt;
-
-    if(Hipace::m_normalized_units){
-        if (convert_direction == ConvertDirection::HIPACE_to_SI){
-            factor = phys_const_SI.c;
-        } else if (convert_direction == ConvertDirection::SI_to_HIPACE){
-            factor = 1._rt/phys_const_SI.c;
-        }
-    }
-    else {
-        if (convert_direction == ConvertDirection::HIPACE_to_SI){
-            factor = phys_const_SI.m_e;
-        } else if (convert_direction == ConvertDirection::SI_to_HIPACE){
-            factor = 1._rt/phys_const_SI.m_e;
-        }
-    }
-
-    // - momenta are stored as a struct of array, in `attribs`
-    auto& soa = this->GetStructOfArrays();
-    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-
-    // Loop over the particles and convert momentum
-    const long np = this->numParticles();
-    amrex::ParallelFor( np,
-                        [=] AMREX_GPU_DEVICE (long i) {
-                            uxp[i] *= factor;
-                            uyp[i] *= factor;
-                            uzp[i] *= factor;
-                        });
-
-    return;
 }

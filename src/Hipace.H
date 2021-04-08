@@ -11,6 +11,8 @@
 #include "utils/Constants.H"
 
 #include <AMReX_AmrCore.H>
+#include <AMReX_MLALaplacian.H>
+#include <AMReX_MLMG.H>
 
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
@@ -187,7 +189,7 @@ public:
     int m_output_period = -1;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
-    amrex::Real m_physical_time = 0.;
+    static amrex::Real m_physical_time;
     /** Level of verbosity */
     static int m_verbose;
     /** Whether to use normalized units */
@@ -231,6 +233,10 @@ public:
     static amrex::Real m_external_Ez_slope;
     /** Uniform accelerating fields applied to beam particles. */
     static amrex::Real m_external_Ez_uniform;
+    /** Relative tolerance for the multigrid solver, when using the explicit solver */
+    static amrex::Real m_MG_tolerance_rel;
+    /** Absolute tolerance for the multigrid solver, when using the explicit solver */
+    static amrex::Real m_MG_tolerance_abs;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** GridCurrent instance */
@@ -247,6 +253,16 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
+    bool m_explicit = false;
+    /**
+     * \brief Solve for Bx an By in slice MF using the explicit solver
+     *
+     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
+     * it is implemented in the WAND-PIC quasistatic PIC code.
+     *
+     * \param[lev] MR level
+     */
+    void ExplicitSolveBxBy (const int lev);
 
 private:
     /** Pointer to current (and only) instance of class Hipace */
@@ -256,6 +272,10 @@ private:
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
 
+    /** Linear operator for the explicit Bx and By solver */
+    std::unique_ptr<amrex::MLALaplacian> m_mlalaplacian;
+    /** Geometric multigrid solver class, for the explicit Bx and By solver */
+    std::unique_ptr<amrex::MLMG> m_mlmg;
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
 

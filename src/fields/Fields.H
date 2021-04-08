@@ -28,7 +28,9 @@ static std::array<std::map<std::string, int>, 5> Comps
             }},
         /* WhichSlice::This */
         {{
-                {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6}, {"jy", 7}, {"jz", 8}, {"rho", 9}, {"Psi", 10}, {"N", 11}
+                {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6},
+                {"jy", 7}, {"jz", 8}, {"rho", 9}, {"Psi", 10}, {"jxx", 11}, {"jxy", 12},
+                {"jyy", 13}, {"N", 14}
             }},
         /* WhichSlice::Previous1 */
         {{
@@ -142,7 +144,7 @@ public:
     void ShiftSlices (int lev);
 
     /** add rho of the ions to rho (this slice) */
-    void AddRhoIons (const int lev);
+    void AddRhoIons (const int lev, bool inverse=false);
 
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,

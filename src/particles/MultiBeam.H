@@ -74,11 +74,6 @@ public:
         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
-    /** Loop over species and dump them to plotfile
-     * \param[in] filename name of the output file
-     */
-    void WritePlotFile (const std::string& filename);
-
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      */
@@ -102,9 +97,6 @@ public:
     /** returns the local number of particles of a beam */
     unsigned long long get_total_num_particles (int i) const
         {return m_all_beams[i].get_total_num_particles();};
-
-    /** \brief Converts momenta from code convention (gamma * v) to SI (m * gamma * v) and vice-versa. */
-    void ConvertUnits (ConvertDirection convert_dir);
 
     /** \brief Check that all beams have the same number of Real components
      * and return this number */

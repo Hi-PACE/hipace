@@ -11,7 +11,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                amrex::Geometry const& gm, int const lev)
+                bool deposit_j_squared, amrex::Geometry const& gm, int const lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
@@ -43,35 +43,46 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::MultiFab jy(S, amrex::make_alias, Comps[which_slice]["jy"], 1);
         amrex::MultiFab jz(S, amrex::make_alias, Comps[which_slice]["jz"], 1);
         amrex::MultiFab rho(S, amrex::make_alias, Comps[which_slice]["rho"], 1);
+        amrex::MultiFab jxx(S, amrex::make_alias, Comps[which_slice]["jxx"], 1);
+        amrex::MultiFab jxy(S, amrex::make_alias, Comps[which_slice]["jxy"], 1);
+        amrex::MultiFab jyy(S, amrex::make_alias, Comps[which_slice]["jyy"], 1);
+
         // Extract FabArray for this box
         amrex::FArrayBox& jx_fab = jx[pti];
         amrex::FArrayBox& jy_fab = jy[pti];
         amrex::FArrayBox& jz_fab = jz[pti];
         amrex::FArrayBox& rho_fab = rho[pti];
+        amrex::FArrayBox& jxx_fab = jxx[pti];
+        amrex::FArrayBox& jxy_fab = jxy[pti];
+        amrex::FArrayBox& jyy_fab = jyy[pti];
 
         // For now: fix the value of the charge
         amrex::Real q =(which_slice == WhichSlice::RhoIons ) ? -plasma.m_charge : plasma.m_charge;
 
         if        (Hipace::m_depos_order_xy == 0){
                 doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                          jxx_fab, jxy_fab, jyy_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          deposit_j_squared, max_qsa_weighting_factor);
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                          jxx_fab, jxy_fab, jyy_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          deposit_j_squared, max_qsa_weighting_factor);
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                          jxx_fab, jxy_fab, jyy_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          deposit_j_squared, max_qsa_weighting_factor);
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
+                                          jxx_fab, jxy_fab, jyy_fab,
                                           dx, xyzmin, lo, q, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          max_qsa_weighting_factor);
+                                          deposit_j_squared, max_qsa_weighting_factor);
         } else {
             amrex::Abort("unknow deposition order");
         }
