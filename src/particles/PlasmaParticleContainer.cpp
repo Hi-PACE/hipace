@@ -167,15 +167,15 @@ IonizationModule (const int lev,
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron soa and aos once
-        amrex::Gpu::DeviceVector<int8_t> ion_mask(ptile_ion.numParticles(), 0);
-        int8_t* AMREX_RESTRICT p_ion_mask = ion_mask.data();
-        amrex::Gpu::DeviceScalar<long> num_new_electrons(0);
-        long* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
+        amrex::Gpu::DeviceVector<uint32_t> ion_mask(ptile_ion.numParticles(), 0);
+        uint32_t* AMREX_RESTRICT p_ion_mask = ion_mask.data();
         amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
 
-        amrex::ParallelFor(ptile_ion.numParticles(),
+        long num_ions = ptile_ion.numParticles();
+
+        amrex::ParallelFor(num_ions,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             amrex::ParticleReal xp, yp, zp;
@@ -215,28 +215,34 @@ IonizationModule (const int lev,
             {
                 q_z[ip] += 1;
                 p_ion_mask[ip] = 1;
-                ++(*p_num_new_electrons);
+                //++(*p_num_new_electrons);
             }
         });
         amrex::Gpu::synchronize();
 
+        uint32_t num_new_electrons = 0;
+        for (uint32_t i=0; i<num_ions; ++i) {
+            if(ion_mask[i]==1) {
+                ++num_new_electrons;
+                ion_mask[i] = num_new_electrons;
+            }
+        }
+
         if(Hipace::m_verbose >= 3) {
             amrex::Print() << "Number of ionized Plasma Particles: "
-            << num_new_electrons.dataValue() << "\n";
+            << num_new_electrons <<"\n";
         }
 
         auto old_size = soa_elec.size();
-        auto new_size = old_size + num_new_electrons.dataValue();
+        auto new_size = old_size + num_new_electrons;
         soa_elec.resize(new_size);
         aos_elec.resize(new_size);
 
         // Load electron soa and aos after resize
         ParticleType* pstruct_elec = aos_elec().data();
         int procID = amrex::ParallelDescriptor::MyProc();
-        amrex::Gpu::DeviceScalar<long> ip_elec(0);
-        long* AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
         long pid_start = ParticleType::NextID();
-        ParticleType::NextID(pid_start + num_new_electrons.dataValue());
+        ParticleType::NextID(pid_start + num_new_electrons);
 
         auto arrdata_ion = ptile_ion.GetStructOfArrays().realarray();
         auto arrdata_elec = ptile_elec.GetStructOfArrays().realarray();
@@ -244,11 +250,11 @@ IonizationModule (const int lev,
 
         int charge_number = m_product_pc->m_charge_number;
 
-        amrex::ParallelFor(ptile_ion.numParticles(),
+        amrex::ParallelFor(num_ions,
             [=] AMREX_GPU_DEVICE (long ip) {
 
-            if(p_ion_mask[ip]) {
-                long pid = (* p_ip_elec)++;
+            if(p_ion_mask[ip] != 0) {
+                long pid = p_ion_mask[ip];
                 long pidx = pid + old_size;
 
                 // Copy ion data to new electron
@@ -302,7 +308,7 @@ IonizationModule (const int lev,
             }
         });
         amrex::Gpu::synchronize();
-        amrex::Print() << "Number of new Electrons: " << ip_elec.dataValue() << "\n";
     }
     //m_product_pc->Redistribute();
+    std::cout << "Ionization done\n";
 }
