@@ -598,6 +598,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // So we solve Delta BxBy - A * BxBy = S
     m_mlalaplacian->setScalars(-1.0, -1.0);
 
+    // Here you should call m_fields.InitialBfieldGuess and related functions as done in
+    // Hipace::PredictorCorrectorLoopToSolveBxBy below
+
     m_mlmg->solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
 
     amrex::ParallelContext::pop();
