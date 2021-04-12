@@ -498,8 +498,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
             bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
             {
-                AMREX_ASSERT(k == 0);
-
                 const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
                 const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
                 const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
