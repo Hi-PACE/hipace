@@ -107,6 +107,7 @@ public:
      *
      * \param[in] output_step current iteration
      * \param[in] it current box number
+     * \param[in] call_type whether the beams or the fields should be written to file
      */
     void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
 
