@@ -28,7 +28,6 @@ xp, yp, uzp, wp = ts.get_particle(species='beam', iteration=ts.iterations[-1],
                                   var_list=['x', 'y', 'uz', 'w'])
 
 std_theory = x_std_initial * np.abs(np.cos(omega_beta * ts.current_t))
-print(" current dt ", ts.current_t)
 std_sim_x = np.sqrt(np.sum(xp**2*wp)/np.sum(wp))
 std_sim_y = np.sqrt(np.sum(yp**2*wp)/np.sum(wp))
 
