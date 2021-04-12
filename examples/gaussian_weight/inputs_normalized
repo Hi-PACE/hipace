@@ -3,7 +3,7 @@ amr.n_cell = 64 64 64
 amr.blocking_factor = 2
 amr.max_level = 0
 
-max_step = 1
+max_step = 0
 hipace.output_period = 1
 hipace.normalized_units = 1
 hipace.numprocs_x = 1

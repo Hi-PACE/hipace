@@ -16,6 +16,9 @@
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
 
+/** \brief Whether the beam, the field data is written, or if it is just flushing the stored data */
+enum struct OpenPMDWriterCallType { beams, fields };
+
 /** \brief class handling the IO with openPMD */
 class OpenPMDWriter
 {
@@ -122,13 +125,15 @@ public:
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
+     * \param[in] call_type whether the beams or the fields should be written to file
      */
     void WriteDiagnostics(
         amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int lev,
         const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
-        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D);
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D,
+        const OpenPMDWriterCallType call_type);
 
     void reset () {m_outputSeries.reset();};
 

@@ -108,7 +108,7 @@ public:
      * \param[in] output_step current iteration
      * \param[in] it current box number
      */
-    void WriteDiagnostics (int output_step, const int it);
+    void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};
