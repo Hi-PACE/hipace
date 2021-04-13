@@ -30,12 +30,13 @@ public:
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] ibox index of the current box
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
+     * \param[in] which_slice defines if this or the next slice is handled
      */
     void DepositCurrentSlice (
         Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-        const bool do_beam_jx_jy_deposition);
+        const bool do_beam_jx_jy_deposition, const int which_slice);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] lev MR level
