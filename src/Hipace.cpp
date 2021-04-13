@@ -401,7 +401,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
     m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
-                                     ibox, m_do_beam_jx_jy_deposition);
+                                     ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -415,7 +415,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
         m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
     } else {
-        PredictorCorrectorLoopToSolveBxBy(islice, lev);
+        PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);
     }
 
     // Push beam particles
@@ -600,7 +600,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
 }
 
 void
-Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
+Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, const amrex::Box bx,
+                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+                        const int ibox)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -668,6 +670,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev)
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
+
+        m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
+                                         ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
 
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jz rho
