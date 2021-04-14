@@ -164,7 +164,7 @@ IonizationModule (const int lev,
         const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
 
         // Make Ion Mask and load ADK prefactors
-        // Ion Mask is necessary to only resize electron soa and aos once
+        // Ion Mask is necessary to only resize electron particle tile once
         amrex::Gpu::DeviceVector<uint32_t> ion_mask(ptile_ion.numParticles(), 0);
         uint32_t* AMREX_RESTRICT p_ion_mask = ion_mask.data();
         amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
@@ -196,7 +196,7 @@ IonizationModule (const int lev,
             amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
 
             // Compute probability of ionization p
-            const amrex::Real psi_1 = ( psip[ip] *  //is m_e correct here?
+            const amrex::Real psi_1 = ( psip[ip] *
                 phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c) ) + 1._rt;
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
                                                + uyp[ip] * uyp[ip] * clightsq
@@ -213,11 +213,11 @@ IonizationModule (const int lev,
             {
                 q_z[ip] += 1;
                 p_ion_mask[ip] = 1;
-                //++(*p_num_new_electrons);
             }
         });
         amrex::Gpu::synchronize();
 
+        // prepare new electron IDs in serial
         uint32_t num_new_electrons = 0;
         for (uint32_t i=0; i<num_ions; ++i) {
             if(ion_mask[i]==1) {
@@ -228,9 +228,10 @@ IonizationModule (const int lev,
 
         if(Hipace::m_verbose >= 3) {
             amrex::Print() << "Number of ionized Plasma Particles: "
-            << num_new_electrons <<"\n";
+            << num_new_electrons << "\n";
         }
 
+        // resize electron particle tile
         auto old_size = ptile_elec.numParticles();
         auto new_size = old_size + num_new_electrons;
         ptile_elec.resize(new_size);
@@ -251,8 +252,8 @@ IonizationModule (const int lev,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             if(p_ion_mask[ip] != 0) {
-                long pid = p_ion_mask[ip];
-                long pidx = pid + old_size - 1;
+                long pid = p_ion_mask[ip] - 1;
+                long pidx = pid + old_size;
 
                 // Copy ion data to new electron
                 amrex::ParticleReal xp, yp, zp;
@@ -305,14 +306,5 @@ IonizationModule (const int lev,
             }
         });
         amrex::Gpu::synchronize();
-        //if(num_new_electrons != 0) {
-        //    amrex::Print() << old_size << " Weights: ";
-        //    for(int i = old_size; i < new_size; ++i ) {
-        //        amrex::Print() << arrdata_elec[PlasmaIdx::w][i] << " ";
-        //    }
-        //    amrex ::Print() << std::endl;
-        //}
     }
-    //m_product_pc->Redistribute();
-    std::cout << "Ionization done\n";
 }
