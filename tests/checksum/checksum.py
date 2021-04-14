@@ -14,7 +14,7 @@ class Checksum:
     '''Class for checksum comparison of one test.
     '''
 
-    def __init__(self, test_name, file_name, do_fields=True, do_particles=True):
+    def __init__(self, test_name, file_name, do_fields=True, do_particles=True, ndigit=14):
         '''Constructor
 
         Store test_name and file_name name, and compute checksum
@@ -25,10 +25,12 @@ class Checksum:
         @param file_name IO file from which the checksum is computed.
         @param do_fields Whether to compare fields in the checksum.
         @param do_particles Whether to compare particles in the checksum.
+        @param ndigit Number of digits stored in benchmarks.
         '''
 
         self.test_name = test_name
         self.file_name = file_name
+        self.ndigit = ndigit
         self.data = self.read_output_file(do_fields=do_fields,
                                    do_particles=do_particles)
 
@@ -55,7 +57,7 @@ class Checksum:
             for lev in range(ds.n_levels()):
                 data_lev = {}
                 for field in grid_fields:
-                    data_lev[field] = ds.get_field_checksum(lev, field, self.test_name)
+                    data_lev[field] = self.trim_digits(ds.get_field_checksum(lev, field, self.test_name))
                 data['lev=' + str(lev)] = data_lev
 
         # Compute checksum for particle quantities
@@ -64,7 +66,7 @@ class Checksum:
                 part_fields = ds.get_species_attributes(species)
                 data_species = {}
                 for field in part_fields:
-                    data_species[field] = ds.get_species_checksum(species, field)
+                    data_species[field] = self.trim_digits(ds.get_species_checksum(species, field))
                 data[species] = data_species
 
         return data
@@ -126,3 +128,16 @@ class Checksum:
         if checksums_differ:
             sys.exit(1)
         print("Checksum evaluation passed.")
+
+    def trim_digits(self, x):
+        '''
+        Trim the number of signigicant digits
+
+        @param x number to trim
+        '''
+
+        if (isinstance(x, int)):
+            return x
+        else:
+            ndigit = self.ndigit
+            return float('%s' % float(f'%.{ndigit}g' % x))

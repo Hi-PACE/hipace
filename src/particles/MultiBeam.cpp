@@ -28,13 +28,13 @@ MultiBeam::DepositCurrentSlice (
     Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
     amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-    const bool do_beam_jx_jy_deposition)
+    const bool do_beam_jx_jy_deposition, const int which_slice)
 
 {
     for (int i=0; i<m_nbeams; i++) {
         ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bx,
                               a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
-                              do_beam_jx_jy_deposition);
+                              do_beam_jx_jy_deposition, which_slice);
     }
 }
 

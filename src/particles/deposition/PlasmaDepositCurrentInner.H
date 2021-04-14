@@ -32,12 +32,16 @@
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to pti
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to pti
  * \param[in,out] rho_fab array of charge density rho, on the box corresponding to pti
+ * \param[in,out] jxx_fab array of current density jxx, on the box corresponding to pti
+ * \param[in,out] jxy_fab array of current density jxy, on the box corresponding to pti
+ * \param[in,out] jyy_fab array of current density jyy, on the box corresponding to pti
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
+ * \param[in] deposit_j_squared if true, deposit jxx, jxy and jyy
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  */
@@ -47,12 +51,15 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
                          amrex::FArrayBox& rho_fab,
+                         amrex::FArrayBox& jxx_fab,
+                         amrex::FArrayBox& jxy_fab,
+                         amrex::FArrayBox& jyy_fab,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const amrex::Real max_qsa_weighting_factor)
+                         const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor)
 {
     using namespace amrex::literals;
 
@@ -90,6 +97,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
     amrex::Array4<amrex::Real> const& rho_arr = rho_fab.array();
+    amrex::Array4<amrex::Real> const& jxx_arr = jxx_fab.array();
+    amrex::Array4<amrex::Real> const& jxy_arr = jxy_fab.array();
+    amrex::Array4<amrex::Real> const& jyy_arr = jyy_fab.array();
 
     constexpr int CELL = amrex::IndexType::CELL;
 
@@ -97,7 +107,10 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         jx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
-        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
+        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jxx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jxy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        jyy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
         "jx, jy, jz, and rho must be nodal in all directions."
         );
 
@@ -142,6 +155,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             const amrex::Real wqx = wq*vx;
             const amrex::Real wqy = wq*vy;
             const amrex::Real wqz = wq*vz;
+            const amrex::Real wqxx = q * wp[ip] * uxp[ip] * uxp[ip] / ((1._rt+psi)*(1._rt+psi));
+            const amrex::Real wqxy = q * wp[ip] * uxp[ip] * uyp[ip] / ((1._rt+psi)*(1._rt+psi));
+            const amrex::Real wqyy = q * wp[ip] * uyp[ip] * uyp[ip] / ((1._rt+psi)*(1._rt+psi));
 
             // --- Compute shape factors
             // x direction
@@ -175,6 +191,17 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                         amrex::Gpu::Atomic::Add(
                             &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
                             sx_cell[ix]*sy_cell[iy]*wq);
+                    }
+                    if (deposit_j_squared) {
+                        amrex::Gpu::Atomic::Add(
+                            &jxx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                            sx_cell[ix]*sy_cell[iy]*wqxx);
+                        amrex::Gpu::Atomic::Add(
+                            &jxy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                            sx_cell[ix]*sy_cell[iy]*wqxy);
+                        amrex::Gpu::Atomic::Add(
+                            &jyy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                            sx_cell[ix]*sy_cell[iy]*wqyy);
                     }
                 }
             }
