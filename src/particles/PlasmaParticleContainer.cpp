@@ -152,8 +152,6 @@ IonizationModule (const int lev,
         auto& ptile_ion = plevel_ion.at(index);
 
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
-        auto& soa_elec = ptile_elec.GetStructOfArrays();
-        auto& aos_elec = ptile_elec.GetArrayOfStructs();
         using PTileType = PlasmaParticleContainer::ParticleTileType;
         const auto getPosition = GetParticlePosition<PTileType>(ptile_ion);
 
@@ -233,13 +231,12 @@ IonizationModule (const int lev,
             << num_new_electrons <<"\n";
         }
 
-        auto old_size = soa_elec.size();
+        auto old_size = ptile_elec.numParticles();
         auto new_size = old_size + num_new_electrons;
-        soa_elec.resize(new_size);
-        aos_elec.resize(new_size);
+        ptile_elec.resize(new_size);
 
         // Load electron soa and aos after resize
-        ParticleType* pstruct_elec = aos_elec().data();
+        ParticleType* pstruct_elec = ptile_elec.GetArrayOfStructs()().data();
         int procID = amrex::ParallelDescriptor::MyProc();
         long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons);
@@ -255,7 +252,7 @@ IonizationModule (const int lev,
 
             if(p_ion_mask[ip] != 0) {
                 long pid = p_ion_mask[ip];
-                long pidx = pid + old_size;
+                long pidx = pid + old_size - 1;
 
                 // Copy ion data to new electron
                 amrex::ParticleReal xp, yp, zp;
@@ -308,6 +305,13 @@ IonizationModule (const int lev,
             }
         });
         amrex::Gpu::synchronize();
+        //if(num_new_electrons != 0) {
+        //    amrex::Print() << old_size << " Weights: ";
+        //    for(int i = old_size; i < new_size; ++i ) {
+        //        amrex::Print() << arrdata_elec[PlasmaIdx::w][i] << " ";
+        //    }
+        //    amrex ::Print() << std::endl;
+        //}
     }
     //m_product_pc->Redistribute();
     std::cout << "Ionization done\n";
