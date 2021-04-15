@@ -26,7 +26,7 @@ struct PlasmaIdx
         nattribs
     };
     enum {
-        q_z,                                 // charge number
+        q_z = 0,                             // charge number
         int_nattribs
     };
 };
@@ -100,11 +100,14 @@ public:
     bool m_neutralize_background = true;
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
     int m_charge_number = -1024; /**< initial charge number of each particle of this species */
-    bool m_can_ionize = false;
-    std::string m_product_name = "";
-    PlasmaParticleContainer* m_product_pc = nullptr;
+    bool m_can_ionize = false; /**< whether this plasma can ionize */
+    std::string m_product_name = ""; /**< name of Ionization product plasma */
+    PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
+    /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_prefactor;
+    /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
+    /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
 
 private:

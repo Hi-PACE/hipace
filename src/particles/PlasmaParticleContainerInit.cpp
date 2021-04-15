@@ -198,9 +198,6 @@ InitIonizationModule (const amrex::Geometry& geom,
 
     if (!m_can_ionize) return;
     m_product_pc = product_pc;
-    // since charge is variable neutralize_background is not applicable
-    // m_neutralize_background = false;
-    // m_product_pc->m_neutralize_background = false;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
     pp.get("element", physical_element);

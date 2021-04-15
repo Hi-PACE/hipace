@@ -45,12 +45,8 @@ PlasmaParticleContainer::ReadParameters ()
     pp.query("can_ionize", m_can_ionize);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !normalized_units,
         "Cannot use Ionization Module in normalized units");
-    if(m_can_ionize) {
-        // change default value
-        m_neutralize_background = false;
-    }
-    pp.query("neutralize_background", m_neutralize_background);
 
+    pp.query("neutralize_background", m_neutralize_background);
     pp.query("ionization_product", m_product_name);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
