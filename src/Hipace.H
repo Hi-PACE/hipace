@@ -107,8 +107,9 @@ public:
      *
      * \param[in] output_step current iteration
      * \param[in] it current box number
+     * \param[in] call_type whether the beams or the fields should be written to file
      */
-    void WriteDiagnostics (int output_step, const int it);
+    void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};

@@ -41,18 +41,21 @@ OpenPMDWriter::WriteDiagnostics (
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int lev,
     const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
-    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D)
+    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D,
+    const OpenPMDWriterCallType call_type)
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
-    iteration.setTime(physical_time);
 
-    WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
+    if (call_type == OpenPMDWriterCallType::beams ) {
+        iteration.setTime(physical_time);
+        WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D);
 
-    WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D);
+    } else if (call_type == OpenPMDWriterCallType::fields ) {
+        WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
+        m_outputSeries->flush();
+        m_last_output_dumped = output_step;
+    }
 
-    m_outputSeries->flush();
-
-    m_last_output_dumped = output_step;
 }
 
 void

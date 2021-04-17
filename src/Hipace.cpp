@@ -81,7 +81,7 @@ Hipace::Hipace () :
                                      "To avoid output, please use output_period = -1.");
     pph.query("beam_injection_cr", m_beam_injection_cr);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step,
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step+1,
                                      "Please use more or equal time steps than number of ranks");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
@@ -297,10 +297,10 @@ Hipace::Evolve ()
     m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
-    for (int step = m_numprocs_z - 1 - m_rank_z; step < m_max_step; step += m_numprocs_z)
+    for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.InitDiagnostics(step+1, m_output_period, m_max_step);
+        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step);
 #endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
@@ -319,6 +319,8 @@ Hipace::Evolve ()
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
+            WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
+
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
 
@@ -332,14 +334,12 @@ Hipace::Evolve ()
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
                                            it, m_box_sorters, false);
 
-           // averaging predictor corrector loop diagnostics
-           m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
-           m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
-#ifdef HIPACE_USE_OPENPMD
-            WriteDiagnostics(step+1, it);
-#else
-            amrex::Print()<<"WARNING: In parallel runs, only openPMD supports dumping all time steps. \n";
-#endif
+            // averaging predictor corrector loop diagnostics
+            m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
+            m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
+
+            WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
+
             Notify(step, it);
         }
 
@@ -352,10 +352,6 @@ Hipace::Evolve ()
 
         m_physical_time += m_dt;
     }
-    // For consistency, decrement the physical time, so the last time step is like the others:
-    // the time stored in the output file is the time for the fields. The beam is one time step
-    // ahead.
-    m_physical_time -= m_dt;
 
 #ifdef HIPACE_USE_OPENPMD
     if (m_output_period > 0) m_openpmd_writer.reset();
@@ -868,7 +864,7 @@ Hipace::Notify (const int step, const int it)
     const int nint = nbeams + 1;
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
-    if (step == m_max_step -1 )
+    if (step == m_max_step)
     {
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
             const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
@@ -990,7 +986,7 @@ Hipace::NotifyFinish ()
 }
 
 void
-Hipace::WriteDiagnostics (int output_step, const int it)
+Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
@@ -998,18 +994,15 @@ Hipace::WriteDiagnostics (int output_step, const int it)
     if (m_output_period < 0 ||
         (!(output_step == m_max_step) && output_step % m_output_period != 0) ) return;
 
-    // Write fields
-    const std::string filename = amrex::Concatenate("plt", output_step);
     // assumption: same order as in struct enum Field Comps
     const amrex::Vector< std::string > varnames = m_fields.getDiagComps();
 
-    amrex::Vector<std::string> rfs;
 
 #ifdef HIPACE_USE_OPENPMD
     constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
                         m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
-                        it, m_box_sorters, geom[lev]);
+                        it, m_box_sorters, geom[lev], call_type);
 #else
     amrex::Print()<<"WARNING: hipace++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
