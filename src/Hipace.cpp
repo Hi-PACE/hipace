@@ -390,11 +390,16 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_multi_plasma.DepositCurrent(
         m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
+        if (m_explicit){
+            m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
+                                             ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
+        }
+
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz rho
     amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
-                            amrex::make_alias, Comps[WhichSlice::This]["jx"], 4);
+                            amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
     j_slice.FillBoundary(Geom(lev).periodicity());
 
     m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
@@ -411,9 +416,8 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     // Modifies Bx and By in the current slice and the force terms of the plasma particles
     if (m_explicit){
         m_fields.AddRhoIons(lev, true);
-        m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
-                                         ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
-        j_slice.FillBoundary(Geom(lev).periodicity());
+        // m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
+        //                                  ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         ExplicitSolveBxBy(lev);
         m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
@@ -568,7 +572,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 mult(i,j,k,0) = nstar / (1._rt + cpsi);
                 mult(i,j,k,1) = nstar / (1._rt + cpsi);
 
-amrex::Print() << "i,j,k " << i << " " << j << " " << k << " cne " << cne << " cjz " << cjz << " nstar " << nstar << " nstar_gamma " << nstar_gamma << " cdy_jz " << cdy_jz << " cdx_jz " << cdx_jz << "\n";
+//amrex::Print() << "i,j,k " << i << " " << j << " " << k << " cne " << cne << " cjz " << cjz << " nstar " << nstar << " nstar_gamma " << nstar_gamma << " cdy_jz " << cdy_jz << " cdx_jz " << cdx_jz << " cdz_jy " << cdz_jy << " cdz_jx " << cdz_jx << "\n";
+amrex::Print() << "i,j,k " << i << " " << j << " " << k << " source y " <<  + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz + cdz_jy << "\n";
                 // sy, to compute Bx
                 s(i,j,k,0) = + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
                              + cdz_jy;
