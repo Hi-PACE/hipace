@@ -889,6 +889,8 @@ Hipace::Notify (const int step, const int it)
 
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
     {
+        // make sure that we have a function that return ONLY the physical particles
+        // (NOT the ghost particles)
         m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
     }
     m_np_snd[nbeams] = m_leftmost_box_snd;
