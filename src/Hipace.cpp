@@ -416,8 +416,6 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     // Modifies Bx and By in the current slice and the force terms of the plasma particles
     if (m_explicit){
         m_fields.AddRhoIons(lev, true);
-        // m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
-        //                                  ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         ExplicitSolveBxBy(lev);
         m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
