@@ -530,7 +530,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
                 const amrex::Real nstar = cne - cjz;
 
-                const amrex::Real nstar_gamma = cne * (1._rt+cpsi);
+                const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
+                                                + 0.5_rt * nstar/(1._rt+cpsi);
 
                 const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
                     (-nstar_gamma*cdx_psi/(1._rt+cpsi) - cjx*cez + cjxx*cdx_psi + cjxy*cdy_psi);
