@@ -24,17 +24,17 @@ static std::array<std::map<std::string, int>, 5> Comps
 {{
         /* WhichSlice::Next */
         {{
-                {"jx", 0}, {"jy", 1}, {"jz", 2}, {"rho", 3}, {"N", 4}
+                {"jx", 0}, {"jx_beam", 1}, {"jy", 2}, {"jy_beam", 3}, {"N", 4}
             }},
         /* WhichSlice::This */
         {{
                 {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6},
-                {"jy", 7}, {"jz", 8}, {"rho", 9}, {"Psi", 10}, {"jxx", 11}, {"jxy", 12},
-                {"jyy", 13}, {"N", 14}
+                {"jx_beam", 7}, {"jy", 8}, {"jy_beam", 9}, {"jz", 10}, {"jz_beam", 11}, {"rho", 12},
+                {"Psi", 13}, {"jxx", 14}, {"jxy", 15}, {"jyy", 16}, {"N", 17}
             }},
         /* WhichSlice::Previous1 */
         {{
-                {"Bx", 0}, {"By", 1}, {"jx", 2}, {"jy", 3}, {"N", 4}
+                {"Bx", 0}, {"By", 1}, {"jx", 2}, {"jx_beam", 3}, {"jy", 4}, {"jy_beam", 5}, {"N", 6}
             }},
         /* WhichSlice::Previous2 */
         {{
