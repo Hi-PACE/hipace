@@ -8,6 +8,9 @@ findParticlesInEachSlice (
     BeamParticleContainer& beam, amrex::Geometry& geom,
     const BoxSorter& a_box_sorter)
 {
+    // This function must also take the index of first particle to start from
+    // and the number of particles to operate on.
+
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     const amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
 

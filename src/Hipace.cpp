@@ -328,7 +328,9 @@ Hipace::Evolve ()
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
 
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
+                if (isl==bx.smallEnd(Direction::z) && it<m_numprocs_z-1) WaitGhostSlice(step, it);
                 SolveOneSlice(isl, lev, it, bins);
+                if (isl==bx.bigEnd(Direction::z) && it>0) NotifyGhostSlice(step, it);
             };
 
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
@@ -669,6 +671,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
+        // - if slice>0, do as usual. If slice==0, deposit our ghost particles.
         m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
 
@@ -785,8 +788,8 @@ Hipace::Wait (const int step, int it)
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const int np = np_rcv[ibeam];
-
             auto old_size = ptile.numParticles();
+            amrex::Print()<<"old_size "<<old_size<<'\n';
             auto new_size = old_size + np;
             ptile.resize(new_size);
             const auto ptd = ptile.getParticleTileData();
@@ -844,6 +847,7 @@ Hipace::Wait (const int step, int it)
         amrex::Gpu::Device::synchronize();
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
+    // Store the number of physical (i.e. NOT ghost) particles as a member of m_multi_beam
 
 #endif
 }
@@ -981,6 +985,35 @@ Hipace::NotifyFinish ()
         m_psend_buffer = nullptr;
     }
 #endif
+}
+
+void
+Hipace::WaitGhostSlice (const int step, const int it)
+{
+    // - Receive number of ghost particles. They will be added at the end of the particle data
+    // - Resize beam array with with auto& ptile = m_multi_beam.getBeam(ibeam);
+    // - Unpack ghost particles at the end of the particle array. That way we can use its
+    //   functions (e.g. to slice the beam)
+    // NOTE: the three points above are VERY similar to Wait.
+    // - Append all particles in box it-1 to the end of the particle array.
+    //   In the middle of the simulation, this should be just a few slippped particles.
+    //   At the beginning of the run, for rank N-1, this will cause a lot of useless copy.
+    //   But we can hope that this is not significant, as it happens only once.
+    //   An easy optimization would then to also slice it-1 after Wait, so we only copy
+    //   required particles
+    // - Slice ghost particles to only keep those actually in the -1 ghost slice.
+    //   This is mandatory in any case, as the particles just received might believe to
+    //   several slices in the presence of slippage.
+    //   Let's be smart and append this slicing information to the existing bins object
+    //   (just add one element to the vector of DenseBins, containg indices of ghost particles.
+}
+
+void
+Hipace::NotifyGhostSlice (const int step, const int it)
+{
+    // - Pack particles in the head slice into the buffer.
+    // - Send those particles to next rank.
+    // NOTE: this is VERY similar to Notify
 }
 
 void
