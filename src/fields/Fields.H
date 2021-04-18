@@ -29,7 +29,7 @@ static std::array<std::map<std::string, int>, 5> Comps
         /* WhichSlice::This */
         {{
                 {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6},
-                {"jx_beam", 7}, {"jy", 8}, {"jy_beam", 9}, {"jz", 10}, {"jz_beam", 11}, {"rho", 12},
+                {"jy", 7}, {"jz", 8}, {"jx_beam", 9}, {"jy_beam", 10}, {"jz_beam", 11}, {"rho", 12},
                 {"Psi", 13}, {"jxx", 14}, {"jxy", 15}, {"jyy", 16}, {"N", 17}
             }},
         /* WhichSlice::Previous1 */

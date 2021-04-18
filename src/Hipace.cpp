@@ -397,7 +397,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_fields.AddRhoIons(lev);
 
-    // need to exchange jx jy jz rho
+    // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
     amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                             amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
     j_slice.FillBoundary(Geom(lev).periodicity());
@@ -706,7 +706,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
 
         amrex::ParallelContext::push(m_comm_xy);
-        // need to exchange jx jy jz rho
+        // need to exchange jx jy jx_beam jy_beam
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                      amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
         j_slice_next.FillBoundary(Geom(lev).periodicity());
