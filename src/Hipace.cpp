@@ -413,6 +413,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
         m_fields.AddRhoIons(lev, true);
         m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
+        j_slice.FillBoundary(Geom(lev).periodicity());
         ExplicitSolveBxBy(lev);
         m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
@@ -567,8 +568,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 mult(i,j,k,0) = nstar / (1._rt + cpsi);
                 mult(i,j,k,1) = nstar / (1._rt + cpsi);
 
-amrex::Print() << " nstar " << nstar << " nstar_gamma " << nstar_gamma << " cdy_jz " << cdy_jz << " cdx_jz " << cdx_jz << " cdz_jy " << cdz_jy << " cdz_jx " << cdz_jx << "\n";
-
+amrex::Print() << "i,j,k " << i << " " << j << " " << k << " cne " << cne << " cjz " << cjz << " nstar " << nstar << " nstar_gamma " << nstar_gamma << " cdy_jz " << cdy_jz << " cdx_jz " << cdx_jz << "\n";
                 // sy, to compute Bx
                 s(i,j,k,0) = + cbz * cjx / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
                              + cdz_jy;

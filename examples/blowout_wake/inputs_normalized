@@ -1,10 +1,10 @@
-amr.n_cell = 64 64 100
+amr.n_cell = 8 8 16
 
 hipace.normalized_units=1
-hipace.predcorr_max_iterations = 1
-hipace.predcorr_B_mixing_factor = 0.12
-hipace.predcorr_B_error_tolerance = -1
-
+hipace.predcorr_max_iterations = 30
+hipace.predcorr_B_mixing_factor = 0.05
+hipace.predcorr_B_error_tolerance = 4e-2
+hipace.MG_tolerance_rel = 1e-10
 amr.blocking_factor = 2
 amr.max_level = 0
 
@@ -18,16 +18,17 @@ hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     0      # Is periodic?
-geometry.prob_lo     = -8.   -8.   -6    # physical domain
+geometry.prob_lo     = -8.   -8.   -8    # physical domain
 geometry.prob_hi     =  8.    8.    6
 
 beams.names = beam
-beam.injection_type = fixed_ppc
+beam.injection_type = fixed_weight
+beam.num_particles = 1000000
 beam.profile = gaussian
 beam.zmin = -5.9
 beam.zmax = 5.9
 beam.radius = 1.2
-beam.density = 3.
+beam.density = 10.
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
 beam.position_mean = 0. 0. 0
@@ -40,4 +41,4 @@ plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
 plasma.element = electron
 
-diagnostic.diag_type = xyz
+diagnostic.diag_type = xz
