@@ -25,7 +25,8 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
 
     ppd.queryarr("field_data", m_comps_output);
     const amrex::Vector<std::string> all_field_comps
-            {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi"};
+            {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "jx_beam", "jy_beam",
+             "jz_beam", "rho", "Psi"};
     if(m_comps_output.empty()) {
         m_comps_output = all_field_comps;
     }
@@ -41,7 +42,8 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
             }
             if(Comps[WhichSlice::This].count(comp_name) == 0 || comp_name == "N") {
                 amrex::Abort("Unknown field diagnostics component: " + comp_name + "\nmust be " +
-                "'all', 'none' or a subset of: ExmBy EypBx Ez Bx By Bz jx jy jz rho Psi" );
+                "'all', 'none' or a subset of: ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam " +
+                "jz_beam rho Psi" );
             }
         }
     }

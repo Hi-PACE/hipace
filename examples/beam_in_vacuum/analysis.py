@@ -59,12 +59,12 @@ else:
     R = 10.e-6
 
 # Load Hipace data for By in SI units
-Bx_sim, Bx_meta = ts.get_field(field='Bx', iteration=1, slice_across=['x','z'], slice_relative_position=[0,0])
-By_sim, By_meta = ts.get_field(field='By', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])
-jz_sim = ts.get_field(field='jz', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0]
-rho_sim = ts.get_field(field='rho', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0]
-Ex_sim = ts.get_field(field='ExmBy', iteration=1, slice_across=['y','z'], slice_relative_position=[0,0])[0] + c*By_sim
-Ey_sim = ts.get_field(field='EypBx', iteration=1, slice_across=['x','z'], slice_relative_position=[0,0])[0] - c*Bx_sim
+Bx_sim, Bx_meta = ts.get_field(field='Bx', iteration=0, slice_across=['x','z'], slice_relative_position=[0,0])
+By_sim, By_meta = ts.get_field(field='By', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])
+jz_sim = ts.get_field(field='jz_beam', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0]
+rho_sim = ts.get_field(field='rho', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0]
+Ex_sim = ts.get_field(field='ExmBy', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0] + c*By_sim
+Ey_sim = ts.get_field(field='EypBx', iteration=0, slice_across=['x','z'], slice_relative_position=[0,0])[0] - c*Bx_sim
 y = Bx_meta.y
 x = By_meta.x
 
