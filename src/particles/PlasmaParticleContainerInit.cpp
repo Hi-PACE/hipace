@@ -80,6 +80,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         auto new_size = old_size + num_to_add;
         particle_tile.resize(new_size);
 
+        m_init_num_par[mfi.tileIndex()] = new_size;
+
         if (num_to_add == 0) continue;
 
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();

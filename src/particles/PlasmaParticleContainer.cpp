@@ -215,17 +215,23 @@ IonizationModule (const int lev,
 
         // prepare new electron IDs in serial
         uint32_t num_new_electrons = 0;
+        {
+        HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule::CPUCopy()");
         for (uint32_t i=0; i<num_ions; ++i) {
             if(ion_mask[i]==1) {
                 ++num_new_electrons;
                 ion_mask[i] = num_new_electrons;
             }
         }
+        }
+
+        if (num_new_electrons == 0) continue;
 
         if(Hipace::m_verbose >= 3) {
             amrex::Print() << "Number of ionized Plasma Particles: "
             << num_new_electrons << "\n";
         }
+
 
         // resize electron particle tile
         auto old_size = ptile_elec.numParticles();

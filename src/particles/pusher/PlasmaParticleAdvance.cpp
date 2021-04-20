@@ -176,6 +176,12 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
+        if(initial) {
+            // reset size to initial value
+            unsigned long num_initial_particles = plasma.m_init_num_par[pti.tileIndex()];
+            pti.GetParticleTile().resize(num_initial_particles);
+        }
+
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
