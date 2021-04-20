@@ -537,8 +537,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjz     = - jz (i,j,k);
                 const amrex::Real cpsi    =   psi(i,j,k);
-                const amrex::Real cjx     =  jx (i,j,k);
-                const amrex::Real cjy     =  jy (i,j,k);
+                const amrex::Real cjx     =   jx (i,j,k);
+                const amrex::Real cjy     =   jy (i,j,k);
                 const amrex::Real cjxx    = - jxx(i,j,k);
                 const amrex::Real cjxy    = - jxy(i,j,k);
                 const amrex::Real cjyy    = - jyy(i,j,k);
