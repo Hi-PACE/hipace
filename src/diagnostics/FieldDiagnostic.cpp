@@ -25,7 +25,7 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
 
     ppd.queryarr("field_data", m_comps_output);
     const amrex::Vector<std::string> all_field_comps
-            {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "jx_beam", "jy_beam",
+            {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam", "jz",
              "jz_beam", "rho", "Psi"};
     if(m_comps_output.empty()) {
         m_comps_output = all_field_comps;
