@@ -398,6 +398,18 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_fields.AddRhoIons(lev);
 
     // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
+    // Assert that the order of the transverse currents and charge density is correct. This order is
+    // also required in the FillBoundary call on the next slice in the predictor-corrector loop, as
+    // well as in the shift slices.
+    const int ijx = Comps[WhichSlice::This]["jx"];
+    const int ijx_beam = Comps[WhichSlice::This]["jx_beam"];
+    const int ijy = Comps[WhichSlice::This]["jy"];
+    const int ijy_beam = Comps[WhichSlice::This]["jy_beam"];
+    const int ijz = Comps[WhichSlice::This]["jz"];
+    const int ijz_beam = Comps[WhichSlice::This]["jz_beam"];
+    const int irho = Comps[WhichSlice::This]["rho"];
+    AMREX_ALWAYS_ASSERT( ijx_beam == ijx+1 && ij y== ijx+2 && ijy_beam == ijx+3 && ijz == ijx+4 &&
+                         ijz_beam == ijx+5 && irho == ijx+6 );
     amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                             amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
     j_slice.FillBoundary(Geom(lev).periodicity());
