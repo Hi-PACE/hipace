@@ -151,7 +151,7 @@ public:
      * \param[in] lev current level
      * \param[in] which_slice current slice, either WhichSlice::This or WhichSlice::Next.
      */
-    void AddBeamCurrents (const int lev, const int which_slice)
+    void AddBeamCurrents (const int lev, const int which_slice);
 
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
