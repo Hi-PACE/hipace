@@ -38,7 +38,8 @@
  * \param[in] dx cell size in each dimension
  * \param[in] xyzmin lower corner of the box, in physical space
  * \param[in] lo lower corner of the box, in index space
- * \param[in] q_fac charge factor, 1 or -1 depending on slice
+ * \param[in] charge of a particle
+ * \param[in] can_ionize whether charge needs to be multiplied by ion_lev
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
@@ -58,7 +59,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
-                         const int q_fac,
+                         amrex::Real const charge,
+                         const bool can_ionize,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor)
@@ -73,7 +75,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
     amrex::Real * const wp = soa.GetRealData(PlasmaIdx::w).data();
-    int * const q_z = soa.GetIntData(PlasmaIdx::q_z).data();
+    int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
     const amrex::Real * const uxp = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::ux).data() : soa.GetRealData(PlasmaIdx::ux_temp).data();
     const amrex::Real * const uyp = (!temp_slice) ?
@@ -151,7 +153,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             const amrex::Real vz = phys_const.c*(1.0_rt -(psi + 1.0_rt)*gaminv);
 
             // calculate charge of the plasma particles
-            const amrex::Real q = phys_const.q_e * q_z[ip] * q_fac;
+            const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
             const amrex::Real wq = q * wp[ip]/(gaminv * (psi + 1.0_rt))*invvol;
 
             // wqx, wqy wqz are particle current in each direction

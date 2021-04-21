@@ -22,35 +22,40 @@ PlasmaParticleContainer::ReadParameters ()
     std::string element;
     pp.query("element", element);
     if (element == "electron") {
-        m_charge_number = -1;
+        m_charge = -phys_const.q_e;
         m_mass = phys_const.m_e;
-    }
-    else if (element == "positron") {
-        m_charge_number = 1;
+    } else if (element == "positron") {
+        m_charge = phys_const.q_e;
         m_mass = phys_const.m_e;
     }
 
-    pp.query("charge", m_charge_number);
     amrex::Real mass_Da;
-    bool mass_in_Da = false;
-    mass_in_Da = pp.query("mass_Da", mass_Da);
-    if(mass_in_Da) {
+    if(pp.query("mass_Da", mass_Da)) {
         m_mass = 1.007276466621 * phys_const.m_p * mass_Da;
     }
     pp.query("mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge_number != -1024,
-        "The plasma particle charge must be specified");
+
+    pp.query("initial_ion_level", m_init_ion_lev);
+    m_can_ionize = (m_init_ion_lev >= 0);
 
     pp.query("can_ionize", m_can_ionize);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !normalized_units,
-        "Cannot use Ionization Module in normalized units");
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
+        m_charge = phys_const.q_e;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!normalized_units,
+            "Cannot use Ionization Module in normalized units");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
+            "The initial Ion level must be specified");
     }
     pp.query("neutralize_background", m_neutralize_background);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
         "Cannot use neutralize_background for Ion plasma");
+
+    if(!pp.query("charge", m_charge)) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge != 0,
+            "The plasma particle charge must be specified");
+    }
     pp.query("ionization_product", m_product_name);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
@@ -158,7 +163,7 @@ IonizationModule (const int lev,
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
-        int * const q_z = soa_ion.GetIntData(PlasmaIdx::q_z).data();
+        int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
@@ -203,17 +208,17 @@ IonizationModule (const int lev,
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
                                                + uyp[ip] * uyp[ip] * clightsq
                                                + psi_1 * psi_1 ) / ( 2.0_rt * psi_1 );
-            const int ion_lev = q_z[ip];
+            const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
-            amrex::Real w_dtau = gammap / psi_1 * adk_prefactor[ion_lev] *
-                std::pow(Ep, adk_power[ion_lev]) *
-                std::exp( adk_exp_prefactor[ion_lev]/Ep );
+            amrex::Real w_dtau = gammap / psi_1 * adk_prefactor[ion_lev_loc] *
+                std::pow(Ep, adk_power[ion_lev_loc]) *
+                std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
             amrex::Real p = 1._rt - std::exp( - w_dtau );
 
             amrex::Real random_draw = amrex::Random();
             if (random_draw < p)
             {
-                q_z[ip] += 1;
+                ion_lev[ip] += 1;
                 p_ion_mask[ip] = 1;
                 amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
             }
@@ -243,7 +248,7 @@ IonizationModule (const int lev,
         auto arrdata_elec = ptile_elec.GetStructOfArrays().realarray();
         auto int_arrdata_elec = ptile_elec.GetStructOfArrays().intarray();
 
-        int charge_number = m_product_pc->m_charge_number;
+        int init_ion_lev = m_product_pc->m_init_ion_lev;
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t* AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
@@ -302,7 +307,7 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::Fpsi5    ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::x0       ][pidx] = arrdata_ion[PlasmaIdx::x0       ][ip];
                 arrdata_elec[PlasmaIdx::y0       ][pidx] = arrdata_ion[PlasmaIdx::y0       ][ip];
-                int_arrdata_elec[PlasmaIdx::q_z  ][pidx] = charge_number;
+                int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });
         amrex::Gpu::synchronize();

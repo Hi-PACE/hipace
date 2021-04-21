@@ -1,11 +1,11 @@
 #ifndef HIPACE_PlasmaParticleContainer_H_
 #define HIPACE_PlasmaParticleContainer_H_
 
+#include "fields/Fields.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 #include <map>
-#include "fields/Fields.H"
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
@@ -27,7 +27,7 @@ struct PlasmaIdx
         nattribs
     };
     enum {
-        q_z = 0,                             // charge number
+        ion_lev = 0,                         // ionization level
         int_nattribs
     };
 };
@@ -68,15 +68,15 @@ public:
         const amrex::Real a_density,
         const amrex::Real a_radius);
 
-    /** Initialize ADK perfectors of ionizable plasmas
+    /** Initialize ADK prefactors of ionizable plasmas
      *
      * \param[in] geom Geometry of the simulation, to get the cell size
-     * \param[in] product_pc The electron PPC that this Ion Plasma ionizes to
+     * \param[in] product_pc The electron plasma PC that this Ion Plasma ionizes to
      */
     void InitIonizationModule (const amrex::Geometry& geom,
                                PlasmaParticleContainer* product_pc);
 
-    /** Calculates Ionization Probability and makes new Plasma Particles
+    /** Calculates Ionization Probability and generates new Plasma Particles
      *
      * \param[in] lev MR level
      * \param[in] geom Geometry of the simulation, to get the cell size
@@ -100,7 +100,8 @@ public:
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
-    int m_charge_number = -1024; /**< initial charge number of each particle of this species */
+    amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
+    int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     bool m_can_ionize = false; /**< whether this plasma can ionize */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */

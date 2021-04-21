@@ -97,7 +97,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         const amrex::Real channel_radius = m_channel_radius;
 
-        int charge_number = m_charge_number;
+        int init_ion_lev = m_init_ion_lev;
 
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -180,7 +180,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::Fpsi5    ][pidx] = 0.;
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
-                int_arrdata[PlasmaIdx::q_z  ][pidx] = charge_number;
+                int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
                 ++pidx;
             }
         });
@@ -204,6 +204,8 @@ InitIonizationModule (const amrex::Geometry& geom,
     std::string physical_element;
     pp.get("element", physical_element);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0, "Unknown Element");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(product_pc->m_charge / m_charge +1) < 1e-3),
+        "Ion and Ionization product charges have to be opposite");
     // Get atomic number and ionization energies from file
     int ion_element_id = ion_map_ids[physical_element];
     int ion_atomic_number = ion_atomic_numbers[ion_element_id];
