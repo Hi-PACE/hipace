@@ -33,6 +33,8 @@ MultiPlasma::InitData (int lev, amrex::BoxArray slice_ba,
                     plasma_product = &m_all_plasmas[i];
                 }
             }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
+                "Must specify a valid product plasma for Ionization using ionization_product");
             plasma.InitIonizationModule(gm, plasma_product);
         }
     }
