@@ -4,8 +4,8 @@
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
-#include "fields/Fields.H"
 #include <map>
+#include "fields/Fields.H"
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
