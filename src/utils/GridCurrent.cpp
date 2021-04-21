@@ -35,7 +35,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
                                                      m_position_std[2]};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
-    // Extract the fields currents
+    // Extract the longitudinal beam current
     amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
     amrex::MultiFab jz(S, amrex::make_alias, Comps[WhichSlice::This]["jz_beam"], 1);
 
@@ -65,4 +65,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
             jz_arr(i, j, k) += loc_peak_current_density*trans_pos_factor*long_pos_factor;
         });
     }
+    // copy current to full currents
+    amrex::MultiFab::Add(S, S, Comps[WhichSlice::This]["jz_beam"], Comps[WhichSlice::This]["jz"],
+                         1, 0);
 }

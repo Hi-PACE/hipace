@@ -302,29 +302,11 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
         m_poisson_solver->StagingArea(),
-        Direction::x,
-        geom.CellSize(Direction::x),
-        1./(phys_const.ep0*phys_const.c),
-        SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jx_beam"]);
-
-    TransverseDerivative(
-        getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         1./(phys_const.ep0*phys_const.c),
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"]);
-
-    TransverseDerivative(
-        getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
-        Direction::y,
-        geom.CellSize(Direction::y),
-        1./(phys_const.ep0*phys_const.c),
-        SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jy_beam"]);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -349,15 +331,6 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["jz"]);
 
-    TransverseDerivative(
-        getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
-        Direction::y,
-        geom.CellSize(Direction::y),
-        -phys_const.mu0,
-        SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jz_beam"]);
-
     LongitudinalDerivative(
         getSlices(lev, WhichSlice::Previous1),
         getSlices(lev, WhichSlice::Next),
@@ -367,16 +340,6 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
         SliceOperatorType::Add,
         Comps[WhichSlice::Previous1]["jy"],
         Comps[WhichSlice::Next]["jy"]);
-
-    LongitudinalDerivative(
-        getSlices(lev, WhichSlice::Previous1),
-        getSlices(lev, WhichSlice::Next),
-        m_poisson_solver->StagingArea(),
-        geom.CellSize(Direction::z),
-        phys_const.mu0,
-        SliceOperatorType::Add,
-        Comps[WhichSlice::Previous1]["jy_beam"],
-        Comps[WhichSlice::Next]["jy_beam"]);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -401,15 +364,6 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["jz"]);
 
-    TransverseDerivative(
-        getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
-        Direction::x,
-        geom.CellSize(Direction::x),
-        phys_const.mu0,
-        SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jz_beam"]);
-
     LongitudinalDerivative(
         getSlices(lev, WhichSlice::Previous1),
         getSlices(lev, WhichSlice::Next),
@@ -419,16 +373,6 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
         SliceOperatorType::Add,
         Comps[WhichSlice::Previous1]["jx"],
         Comps[WhichSlice::Next]["jx"]);
-
-    LongitudinalDerivative(
-        getSlices(lev, WhichSlice::Previous1),
-        getSlices(lev, WhichSlice::Next),
-        m_poisson_solver->StagingArea(),
-        geom.CellSize(Direction::z),
-        -phys_const.mu0,
-        SliceOperatorType::Add,
-        Comps[WhichSlice::Previous1]["jx_beam"],
-        Comps[WhichSlice::Next]["jx_beam"]);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -459,29 +403,11 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
         m_poisson_solver->StagingArea(),
-        Direction::y,
-        geom.CellSize(Direction::y),
-        phys_const.mu0,
-        SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jx_beam"]);
-
-    TransverseDerivative(
-        getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         -phys_const.mu0,
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"]);
-
-    TransverseDerivative(
-        getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
-        Direction::x,
-        geom.CellSize(Direction::x),
-        -phys_const.mu0,
-        SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jy_beam"]);
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.

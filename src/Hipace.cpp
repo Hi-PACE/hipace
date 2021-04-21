@@ -408,7 +408,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     const int ijz = Comps[WhichSlice::This]["jz"];
     const int ijz_beam = Comps[WhichSlice::This]["jz_beam"];
     const int irho = Comps[WhichSlice::This]["rho"];
-    AMREX_ALWAYS_ASSERT( ijx_beam == ijx+1 && ij y== ijx+2 && ijy_beam == ijx+3 && ijz == ijx+4 &&
+    AMREX_ALWAYS_ASSERT( ijx_beam == ijx+1 && ijy == ijx+2 && ijy_beam == ijx+3 && ijz == ijx+4 &&
                          ijz_beam == ijx+5 && irho == ijx+6 );
     amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                             amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
@@ -528,14 +528,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
             {
                 const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
                 const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
-                const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k) +
-                                            jzb(i+1,j,k)-jzb(i-1,j,k))/(2._rt*dx);
+                const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
                 const amrex::Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
 
                 const amrex::Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
                 const amrex::Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
-                const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k) +
-                                            jzb(i,j+1,k)-jzb(i,j-1,k))/(2._rt*dy);
+                const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
                 const amrex::Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
 
                 const amrex::Real dz_jx  = (prev_jxb(i,j,k)-next_jxb(i,j,k))/(2._rt*dz);
@@ -548,6 +546,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 //   psi in hipace++ has the wrong sign, it is actually -psi.
                 const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjz     = - jz (i,j,k);
+                const amrex::Real cjzb    = - jzb(i,j,k);
                 const amrex::Real cpsi    =   psi(i,j,k);
                 const amrex::Real cjx     =   jx (i,j,k);
                 const amrex::Real cjy     =   jy (i,j,k);
@@ -567,8 +566,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cez     =   ez(i,j,k);
                 const amrex::Real cbz     =   bz(i,j,k);
 
-                const amrex::Real nstar = cne - cjz; // to calculate nstar, only the plasma density
-                                                     // and current is needed
+                // to calculate nstar, only the plasma current density is needed
+                const amrex::Real nstar = cne - (cjz - cjzb);
 
                 const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
                                                 + 0.5_rt * nstar/(1._rt+cpsi);
