@@ -419,6 +419,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
     m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
                                      ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
+    m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
     j_slice.FillBoundary(Geom(lev).periodicity());
 
@@ -713,6 +714,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
 
         m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
+        m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 
         amrex::ParallelContext::push(m_comm_xy);
         // need to exchange jx jy jx_beam jy_beam

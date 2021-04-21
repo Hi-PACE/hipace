@@ -146,6 +146,13 @@ public:
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev, bool inverse=false);
 
+    /** \brief Adds the beam currents jx_beam, jy_beam, jz_beam to the general currents jx, jy, jz
+     *
+     * \param[in] lev current level
+     * \param[in] which_slice current slice, either WhichSlice::This or WhichSlice::Next.
+     */
+    void AddBeamCurrents (const int lev, const int which_slice)
+
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
                                const int direction, const amrex::Real dx,

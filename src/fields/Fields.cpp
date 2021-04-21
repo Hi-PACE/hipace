@@ -226,6 +226,22 @@ Fields::AddRhoIons (const int lev, bool inverse)
 }
 
 void
+Fields::AddBeamCurrents (const int lev, const int which_slice)
+{
+    HIPACE_PROFILE("Fields::AddBeamCurrents()");
+    amrex::MultiFab& S = getSlices(lev, which_slice);
+    // we add the beam currents to the full currents, as mostly the full currents are needed
+    amrex::MultiFab::Add(S, S, Comps[which_slice]["jx_beam"], Comps[which_slice]["jx"], 1,
+                         {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+    amrex::MultiFab::Add(S, S, Comps[which_slice]["jy_beam"], Comps[which_slice]["jy"], 1,
+                         {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+    if (which_slice == WhichSlice::This) {
+        amrex::MultiFab::Add(S, S, Comps[which_slice]["jz_beam"], Comps[which_slice]["jz"], 1,
+                             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+    }
+}
+
+void
 Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
                                    const int lev)
 {

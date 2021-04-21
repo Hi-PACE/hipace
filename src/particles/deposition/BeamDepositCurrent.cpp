@@ -56,7 +56,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
 
     // For now: fix the value of the charge
     const amrex::Real q = - phys_const.q_e;
-amrex::Print() << "islice " << islice << " whichslice " << which_slice << " norm before depo jz beam " << jz_beam.norm2() << "\n";
+
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){
         doDepositionShapeN<0, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice_local,
@@ -72,14 +72,6 @@ amrex::Print() << "islice " << islice << " whichslice " << which_slice << " norm
                                   bins, offset, do_beam_jx_jy_deposition, which_slice);
     } else {
         amrex::Abort("unknown deposition order");
-    }
-
-amrex::Print() << "islice " << islice  << " whichslice " << which_slice << " norm after depo jz beam " << jz_beam.norm2() << "\n";
-    // we add the beam currents to the full currents, as mostly the full currents are needed
-    amrex::MultiFab::Add(S, S, Comps[which_slice]["jx_beam"], Comps[which_slice]["jx"], 1, {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-    amrex::MultiFab::Add(S, S, Comps[which_slice]["jy_beam"], Comps[which_slice]["jy"], 1, {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-    if (which_slice == WhichSlice::This) {
-        amrex::MultiFab::Add(S, S, Comps[which_slice]["jz_beam"], Comps[which_slice]["jz"], 1, {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
     }
 
 }
