@@ -25,8 +25,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
-    const amrex::Real charge = plasma.m_charge;
-    const amrex::Real q = (which_slice == WhichSlice::RhoIons ) ? -charge : charge;
+    const amrex::Real q = (which_slice == WhichSlice::RhoIons) ? -plasma.m_charge : plasma.m_charge;
     const bool can_ionize = plasma.m_can_ionize;
 
     // Loop over particle boxes

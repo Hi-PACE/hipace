@@ -110,8 +110,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
-        const amrex::Real mass = plasma.m_mass;
         const amrex::Real charge = plasma.m_charge;
+        const amrex::Real mass = plasma.m_mass;
         const bool can_ionize = plasma.m_can_ionize;
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
@@ -174,7 +174,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
 
     using namespace amrex::literals;
 
-    int init_ion_lev = plasma.m_init_ion_lev;
+    const int init_ion_lev = plasma.m_init_ion_lev;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)

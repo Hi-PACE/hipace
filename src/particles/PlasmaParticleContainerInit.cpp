@@ -97,7 +97,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         const amrex::Real channel_radius = m_channel_radius;
 
-        int init_ion_lev = m_init_ion_lev;
+        const int init_ion_lev = m_init_ion_lev;
 
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
