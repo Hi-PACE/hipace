@@ -46,9 +46,7 @@ PlasmaParticleContainer::ReadParameters ()
     pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
-    pp.query("channel_radius", m_channel_radius);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_channel_radius != 0,
-                                     "The plasma channel radius must not be 0");
+    pp.query("parabolic_curvature", m_parabolic_curvature);
     pp.query("max_qsa_weighting_factor", m_max_qsa_weighting_factor);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){
