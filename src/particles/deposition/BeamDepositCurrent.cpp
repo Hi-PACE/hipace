@@ -53,7 +53,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     amrex::FArrayBox& jz_fab = jz[0];
 
     // For now: fix the value of the charge
-    const amrex::Real q = - phys_const.q_e;
+    const amrex::Real q = beam.m_charge;
 
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){

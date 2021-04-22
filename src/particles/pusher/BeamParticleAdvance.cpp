@@ -82,7 +82,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     int const num_particles = cell_stop-cell_start;
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
-    const amrex::Real charge_mass_ratio = - phys_const.q_e / phys_const.m_e;
+    const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
     const amrex::Real external_ExmBy_slope = Hipace::m_external_ExmBy_slope;
     const amrex::Real external_Ez_slope = Hipace::m_external_Ez_slope;
     const amrex::Real external_Ez_uniform = Hipace::m_external_Ez_uniform;

@@ -624,11 +624,9 @@ InitBeamFromFile (const std::string input_file,
 
         series.flush();
 
-        const input_type file_e_m = q_q_data.get()[0] * unit_qq / (m_m_data.get()[0] * unit_mm);
-        if( std::abs(file_e_m - ( phys_const_SI.q_e / phys_const_SI.m_e ) ) > 1e9) {
-            amrex::Abort("Charge / Mass of Beam Particle from file "
-                         "does not match electrons (1.7588e11)\n");
-        }
+        m_charge = (Hipace::m_normalized_units) ? q_q_data.get()[0] : q_q_data.get()[0] * unit_qq;
+        m_mass = (Hipace::m_normalized_units) ? m_m_data.get()[0] : m_m_data.get()[0] * unit_mm;
+
     }
     else {
         series.flush();

@@ -145,9 +145,11 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         std::string name = beams.get_name(ibeam);
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
 
+        auto& beam = beams.getBeam(ibeam);
+
         const unsigned long long np = beams.get_total_num_particles(ibeam);
         if (m_last_output_dumped != output_step) {
-            SetupPos(beam_species, np, geom);
+            SetupPos(beam_species, beam, np, geom);
             SetupRealProperties(beam_species, m_real_names, np);
         }
 
@@ -159,8 +161,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             m_offset[ibeam] += m_tmp_offset[ibeam];
         }
         const uint64_t box_offset = a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
-        // Loop over particle boxes NOTE: Only 1 particle box allowed at the moment
-        auto& beam = beams.getBeam(ibeam);
 
         auto const numParticleOnTile = a_box_sorter_vec[ibeam].boxCountsPtr()[it];
         uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
@@ -212,9 +212,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 }
 
 void
-OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
-                         const unsigned long long& np,
-                         const amrex::Geometry& geom)
+OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleContainer& beam,
+                         const unsigned long long& np, const amrex::Geometry& geom)
 {
     const PhysConst phys_const_hipace = get_phys_const();
     const PhysConst phys_const_SI = make_constants_SI();
@@ -231,9 +230,9 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies,
     auto const scalar = openPMD::RecordComponent::SCALAR;
     currSpecies["id"][scalar].resetDataset( idType );
     currSpecies["charge"][scalar].resetDataset( realType );
-    currSpecies["charge"][scalar].makeConstant( phys_const_hipace.q_e );
+    currSpecies["charge"][scalar].makeConstant( beam.m_charge );
     currSpecies["mass"][scalar].resetDataset( realType );
-    currSpecies["mass"][scalar].makeConstant( phys_const_hipace.m_e );
+    currSpecies["mass"][scalar].makeConstant( beam.m_mass );
 
     // meta data
     currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
