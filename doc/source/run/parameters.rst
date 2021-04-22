@@ -102,6 +102,10 @@ plasma parameters for each plasma are specified via `plasma_name.plasma_property
 * ``plasma_name.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
+* ``plasma_name.hollow_core_radius`` (`float`) optional (default `0.`)
+    Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
+    radius itself.
+
 * ``plasma_name.channel_radius`` (`float`) optional (default `0.`)
     Channel radius of a parabolic plasma profile. The plasma density is set to
     :math:`\mathrm{plasma.density} * (1 + r^2/\mathrm{plasma.channel\_radius}^2)`.

@@ -46,6 +46,10 @@ PlasmaParticleContainer::ReadParameters ()
     pp.query("neutralize_background", m_neutralize_background);
     pp.query("density", m_density);
     pp.query("radius", m_radius);
+    pp.query("hollow_core_radius", m_hollow_core_radius);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
+                                     "The hollow core plasma radius must not be smaller than the "
+                                     "plasma radius itself");
     pp.query("channel_radius", m_channel_radius);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_channel_radius != 0,
                                      "The plasma channel radius must not be 0");
@@ -75,7 +79,7 @@ PlasmaParticleContainer::InitData ()
     reserveData();
     resizeData();
 
-    InitParticles(m_ppc, m_u_std, m_u_mean, m_density, m_radius);
+    InitParticles(m_ppc, m_u_std, m_u_mean, m_density, m_radius, m_hollow_core_radius);
 
     m_num_exchange = TotalNumberOfParticles();
 }
