@@ -106,9 +106,9 @@ plasma parameters for each plasma are specified via `plasma_name.plasma_property
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
 
-* ``plasma_name.channel_radius`` (`float`) optional (default `0.`)
-    Channel radius of a parabolic plasma profile. The plasma density is set to
-    :math:`\mathrm{plasma.density} * (1 + r^2/\mathrm{plasma.channel\_radius}^2)`.
+* ``plasma_name.parabolic_curvature`` (`float`) optional (default `0.`)
+    Curvature of a parabolic plasma profile. The plasma density is set to
+    :math:`\mathrm{plasma.density} * (1 + \mathrm{plasma.parabolic\_curvature}*r^2)`.
 
 * ``plasma_name.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
