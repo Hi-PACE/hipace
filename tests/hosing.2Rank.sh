@@ -19,6 +19,7 @@ rm -rf hosing_data
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.dt = 20 \
+        hipace.output_period = 10 \
         beam.injection_type = fixed_weight \
         beam.num_particles = 1000000 \
         beam.density = 200 \
