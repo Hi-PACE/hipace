@@ -690,6 +690,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
                             amrex::make_alias, Comps[WhichSlice::Next]["jx"], 1);
     amrex::MultiFab jy_next(m_fields.getSlices(lev, WhichSlice::Next),
                             amrex::make_alias, Comps[WhichSlice::Next]["jy"], 1);
+    amrex::MultiFab jx_beam_next(m_fields.getSlices(lev, WhichSlice::Next),
+                            amrex::make_alias, Comps[WhichSlice::Next]["jx_beam"], 1);
+    amrex::MultiFab jy_beam_next(m_fields.getSlices(lev, WhichSlice::Next),
+                            amrex::make_alias, Comps[WhichSlice::Next]["jy_beam"], 1);
 
 
     /* shift force terms, update force terms using guessed Bx and By */
@@ -747,6 +751,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         /* resetting current in the next slice to clean temporarily used current*/
         jx_next.setVal(0.);
         jy_next.setVal(0.);
+        jx_beam_next.setVal(0.);
+        jy_beam_next.setVal(0.);
 
         amrex::ParallelContext::push(m_comm_xy);
          // exchange Bx By
