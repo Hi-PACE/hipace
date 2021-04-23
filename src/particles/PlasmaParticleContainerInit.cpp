@@ -90,7 +90,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         PhysConst phys_const = get_phys_const();
 
-        const amrex::Real channel_radius = m_channel_radius;
+        const amrex::Real parabolic_curvature = m_parabolic_curvature;
 
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -135,9 +135,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(2) = z;
 
                 arrdata[PlasmaIdx::w        ][pidx] =
-                        a_density*(1. + rp*rp/(channel_radius*channel_radius)) * scale_fac;
+                        a_density*(1. + parabolic_curvature*rp*rp) * scale_fac;
                 arrdata[PlasmaIdx::w0       ][pidx] =
-                        a_density*(1. + rp*rp/(channel_radius*channel_radius)) * scale_fac;
+                        a_density*(1. + parabolic_curvature*rp*rp) * scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
                 arrdata[PlasmaIdx::psi      ][pidx] = 0.;
