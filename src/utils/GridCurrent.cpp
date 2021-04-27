@@ -65,7 +65,4 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
             jz_arr(i, j, k) += loc_peak_current_density*trans_pos_factor*long_pos_factor;
         });
     }
-    // copy current to full currents
-    amrex::MultiFab::Add(S, S, Comps[WhichSlice::This]["jz_beam"], Comps[WhichSlice::This]["jz"],
-                         1, 0);
 }
