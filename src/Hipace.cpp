@@ -391,8 +391,14 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
         m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
         if (m_explicit){
+            amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
+                                         amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
+            j_slice_next.setVal(0.);
             m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
                                              ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
+            m_fields.AddBeamCurrents(lev, WhichSlice::Next);
+            // need to exchange jx jy jx_beam jy_beam
+            j_slice_next.FillBoundary(Geom(lev).periodicity());
         }
 
     m_fields.AddRhoIons(lev);
