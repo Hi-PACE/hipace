@@ -12,7 +12,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
                const amrex::Real a_density,
-               const amrex::Real a_radius)
+               const amrex::Real a_radius,
+               const amrex::Real a_hollow_core_radius)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
 
@@ -53,9 +54,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
 
+                const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    x*x + y*y > a_radius*a_radius ) continue;
+                    rsq > a_radius*a_radius ||
+                    rsq < a_hollow_core_radius*a_hollow_core_radius) continue;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -95,7 +98,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         PhysConst phys_const = get_phys_const();
 
-        const amrex::Real channel_radius = m_channel_radius;
+        const amrex::Real parabolic_curvature = m_parabolic_curvature;
 
         const int init_ion_lev = m_init_ion_lev;
 
@@ -125,9 +128,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
                 amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
+                const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    x*x + y*y > a_radius*a_radius ) continue;
+                    rsq > a_radius*a_radius ||
+                    rsq < a_hollow_core_radius*a_hollow_core_radius) continue;
 
                 const amrex::Real rp = std::sqrt(x*x + y*y);
 
@@ -142,9 +147,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(2) = z;
 
                 arrdata[PlasmaIdx::w        ][pidx] =
-                        a_density*(1. + rp*rp/(channel_radius*channel_radius)) * scale_fac;
+                        a_density*(1. + parabolic_curvature*rp*rp) * scale_fac;
                 arrdata[PlasmaIdx::w0       ][pidx] =
-                        a_density*(1. + rp*rp/(channel_radius*channel_radius)) * scale_fac;
+                        a_density*(1. + parabolic_curvature*rp*rp) * scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
                 arrdata[PlasmaIdx::psi      ][pidx] = 0.;
