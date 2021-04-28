@@ -317,6 +317,7 @@ Hipace::Evolve ()
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+            if (step == 0) PrepareGhostSlice(it);
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
@@ -1075,6 +1076,17 @@ Hipace::NotifyGhostSlice (const int step, const int it)
     // - Pack particles in the head slice into the buffer.
     // - Send those particles to next rank.
     // NOTE: this is VERY similar to Notify
+}
+
+void
+Hipace::PrepareGhostSlice (const int it)
+{
+    // The head rank does not receive ghost particles from anyone, but still has to handle them.
+    // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
+    // That way, the rest of the code can be the same for everyone, no need to do special cases
+    // for the head rank.
+    // - Slice-sort box it-1
+    // - copy the last slice of box it-1 at the end of the particle array
 }
 
 void

@@ -96,6 +96,7 @@ public:
     void Notify (const int step, const int it);
     void WaitGhostSlice (const int step, int it);
     void NotifyGhostSlice (const int step, const int it);
+    void PrepareGhostSlice (const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish ();
 
