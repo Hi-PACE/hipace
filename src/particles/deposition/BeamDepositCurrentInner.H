@@ -175,9 +175,11 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                                 &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         }
-                        amrex::Gpu::Atomic::Add(
-                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
+                        if (which_slice == WhichSlice::This) {
+                            amrex::Gpu::Atomic::Add(
+                                &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
+                        }
                     }
                 }
             }

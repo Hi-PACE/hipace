@@ -3,6 +3,9 @@
 
 #include <cufft.h>
 
+#include <string>
+
+
 namespace CuFFTUtils
 {
     /** \brief This method converts a cufftResult
