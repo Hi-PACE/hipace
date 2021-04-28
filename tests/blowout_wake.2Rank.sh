@@ -20,17 +20,17 @@ rm -rf normalized_data
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         hipace.file_prefix=si_data/ \
-        max_step=2
+        max_step=1
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         beam.injection_type=fixed_weight \
         beam.num_particles=1000000 \
         hipace.file_prefix=si_data_fixed_weight/ \
-        max_step=2
+        max_step=1
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=normalized_data/ \
-        max_step=2
+        max_step=1
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py \

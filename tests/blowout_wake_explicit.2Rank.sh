@@ -21,7 +21,7 @@ TEST_NAME="${FILE_NAME%.*}"
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=$TEST_NAME \
         hipace.explicit=1 \
-        max_step=2
+        max_step=1
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \

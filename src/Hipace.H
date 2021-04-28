@@ -107,8 +107,9 @@ public:
      *
      * \param[in] output_step current iteration
      * \param[in] it current box number
+     * \param[in] call_type whether the beams or the fields should be written to file
      */
-    void WriteDiagnostics (int output_step, const int it);
+    void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;};
@@ -292,8 +293,13 @@ private:
      *
      * \param[in] islice index of calculated slice
      * \param[in] lev current level
+     * \param[in] bx current box to calculate in loop over longutidinal boxes
+     * \param[in] bins Vector (over species) of particles sorted by slices
+     * \param[in] ibox index of the current box
      */
-    void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev);
+    void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, const amrex::Box bx,
+                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+                        const int ibox);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.

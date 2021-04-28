@@ -209,7 +209,7 @@ Fields::ShiftSlices (int lev)
     amrex::MultiFab::Copy(
         getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
         Comps[WhichSlice::This]["jx"], Comps[WhichSlice::Previous1]["jx"],
-        2, m_slices_nguards);
+        4, m_slices_nguards);
 }
 
 void
@@ -226,10 +226,26 @@ Fields::AddRhoIons (const int lev, bool inverse)
 }
 
 void
+Fields::AddBeamCurrents (const int lev, const int which_slice)
+{
+    HIPACE_PROFILE("Fields::AddBeamCurrents()");
+    amrex::MultiFab& S = getSlices(lev, which_slice);
+    // we add the beam currents to the full currents, as mostly the full currents are needed
+    amrex::MultiFab::Add(S, S, Comps[which_slice]["jx_beam"], Comps[which_slice]["jx"], 1,
+                         {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+    amrex::MultiFab::Add(S, S, Comps[which_slice]["jy_beam"], Comps[which_slice]["jy"], 1,
+                         {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+    if (which_slice == WhichSlice::This) {
+        amrex::MultiFab::Add(S, S, Comps[which_slice]["jz_beam"], Comps[which_slice]["jz"], 1,
+                             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+    }
+}
+
+void
 Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
                                    const int lev)
 {
-    /* Solves Laplacian(-Psi) =  1/episilon0 * (rho-Jz/c) and
+    /* Solves Laplacian(Psi) =  1/episilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
      */
     HIPACE_PROFILE("Fields::SolveExmByAndEypBx()");
@@ -240,13 +256,13 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
     amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["Psi"], 1);
 
-    // calculating the right-hand side 1/episilon0 * (rho-Jz/c)
+    // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     amrex::MultiFab::Copy(m_poisson_solver->StagingArea(), getSlices(lev, WhichSlice::This),
                               Comps[WhichSlice::This]["jz"], 0, 1, 0);
     m_poisson_solver->StagingArea().mult(-1./phys_const.c);
     amrex::MultiFab::Add(m_poisson_solver->StagingArea(), getSlices(lev, WhichSlice::This),
                           Comps[WhichSlice::This]["rho"], 0, 1, 0);
-    m_poisson_solver->StagingArea().mult(1./phys_const.ep0);
+    m_poisson_solver->StagingArea().mult(-1./phys_const.ep0);
 
     m_poisson_solver->SolvePoissonEquation(lhs);
 
@@ -261,7 +277,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
         getSlices(lev, WhichSlice::This),
         Direction::x,
         geom.CellSize(Direction::x),
-        1.,
+        -1.,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["Psi"],
         Comps[WhichSlice::This]["ExmBy"]);
@@ -271,7 +287,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
         getSlices(lev, WhichSlice::This),
         Direction::y,
         geom.CellSize(Direction::y),
-        1.,
+        -1.,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["Psi"],
         Comps[WhichSlice::This]["EypBx"]);
@@ -371,7 +387,8 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
         geom.CellSize(Direction::z),
         -phys_const.mu0,
         SliceOperatorType::Add,
-        Comps[WhichSlice::Previous1]["jx"], Comps[WhichSlice::Next]["jx"]);
+        Comps[WhichSlice::Previous1]["jx"],
+        Comps[WhichSlice::Next]["jx"]);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.

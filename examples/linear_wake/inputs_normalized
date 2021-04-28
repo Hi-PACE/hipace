@@ -7,7 +7,7 @@ hipace.output_period = 1
 amr.blocking_factor = 2
 amr.max_level = 0
 
-max_step = 1
+max_step = 0
 
 hipace.numprocs_x = 1
 hipace.numprocs_y = 1

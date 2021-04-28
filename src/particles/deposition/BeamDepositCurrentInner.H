@@ -36,6 +36,7 @@
  * \param[in] bins Indices of particles arranged per slices.
  * \param[in] box_offset offset to particles on this box.
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
+ * \param[in] which_slice defines if this or the next slice is handled
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
@@ -49,7 +50,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          int islice,
                          amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
                          int box_offset,
-                         const bool do_beam_jx_jy_deposition)
+                         const bool do_beam_jx_jy_deposition,
+                         const int which_slice)
 {
     using namespace amrex::literals;
 
@@ -104,8 +106,18 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     offsets = bins.offsetsPtr();
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]
-    cell_start = offsets[islice];
-    cell_stop  = offsets[islice+1];
+    if (which_slice == WhichSlice::This) {
+        cell_start = offsets[islice];
+        cell_stop  = offsets[islice+1];
+    } else {
+        if (islice > 0) {
+            cell_start = offsets[islice-1];
+            cell_stop  = offsets[islice];
+        } else {
+            cell_start = 0;
+            cell_stop  = 0;
+        }
+    }
 
     int const num_particles = cell_stop-cell_start;
 
@@ -163,9 +175,11 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                                 &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         }
-                        amrex::Gpu::Atomic::Add(
-                            &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
-                            sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
+                        if (which_slice == WhichSlice::This) {
+                            amrex::Gpu::Atomic::Add(
+                                &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
+                        }
                     }
                 }
             }
