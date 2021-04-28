@@ -139,6 +139,18 @@ then
                      --test-name hosing.2Rank
 fi
 
+#ionization.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "ionization.2Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R ionization.2Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/ionization_data \
+                     --test-name ionization.2Rank
+fi
+
 #blowout_wake_explicit.2Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake_explicit.2Rank" ]]
 then
