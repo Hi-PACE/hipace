@@ -212,10 +212,10 @@ InitIonizationModule (const amrex::Geometry& geom,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(product_pc->m_charge / m_charge +1) < 1e-3),
         "Ion and Ionization product charges have to be opposite");
     // Get atomic number and ionization energies from file
-    int ion_element_id = ion_map_ids[physical_element];
-    int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+    const int ion_element_id = ion_map_ids[physical_element];
+    const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
     amrex::Vector<amrex::Real> h_ionization_energies(ion_atomic_number);
-    int offset = ion_energy_offsets[ion_element_id];
+    const int offset = ion_energy_offsets[ion_element_id];
     for(int i=0; i<ion_atomic_number; i++){
         h_ionization_energies[i] = table_ionization_energies[i+offset];
     }
@@ -224,14 +224,14 @@ InitIonizationModule (const amrex::Geometry& geom,
     // The approximate expressions are used,
     // without Gamma function
     const PhysConst phys_const = make_constants_SI();
-    amrex::Real alpha = 0.0072973525693_rt;
-    amrex::Real r_e = 2.8179403227e-15_rt;
-    amrex::Real a3 = alpha * alpha * alpha;
-    amrex::Real a4 = a3 * alpha;
-    amrex::Real wa = a3 * phys_const.c / r_e;
-    amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
-    amrex::Real UH = table_ionization_energies[0];
-    amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
+    const amrex::Real alpha = 0.0072973525693_rt;
+    const amrex::Real r_e = 2.8179403227e-15_rt;
+    const amrex::Real a3 = alpha * alpha * alpha;
+    const amrex::Real a4 = a3 * alpha;
+    const amrex::Real wa = a3 * phys_const.c / r_e;
+    const amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
+    const amrex::Real UH = table_ionization_energies[0];
+    const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
     // partial dx calculation for QSA
     auto dx = geom.CellSizeArray();
     const amrex::Real dt = dx[2] / phys_const.c;
@@ -247,11 +247,11 @@ InitIonizationModule (const amrex::Geometry& geom,
 
     for (int i=0; i<ion_atomic_number; ++i)
     {
-        amrex::Real n_eff = (i+1) * std::sqrt(UH/ionization_energies[i]);
-        amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
+        const amrex::Real n_eff = (i+1) * std::sqrt(UH/ionization_energies[i]);
+        const amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
                          * std::tgamma(n_eff-l_eff));
         p_adk_power[i] = -(2*n_eff - 1);
-        amrex::Real Uion = ionization_energies[i];
+        const amrex::Real Uion = ionization_energies[i];
         p_adk_prefactor[i] = dt * wa * C2 * ( Uion/(2*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2)*Ea,2*n_eff - 1);
         p_adk_exp_prefactor[i] = -2./3 * std::pow( Uion/UH,3./2) * Ea;

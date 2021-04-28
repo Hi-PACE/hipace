@@ -200,9 +200,9 @@ IonizationModule (const int lev,
                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                            dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-            amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
-            amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
-            amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
+            const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
+            const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
+            const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
 
             // Compute probability of ionization p
             const amrex::Real psi_1 = ( psip[ip] *
@@ -236,14 +236,14 @@ IonizationModule (const int lev,
 
 
         // resize electron particle tile
-        auto old_size = ptile_elec.numParticles();
-        auto new_size = old_size + num_new_electrons.dataValue();
+        const auto old_size = ptile_elec.numParticles();
+        const auto new_size = old_size + num_new_electrons.dataValue();
         ptile_elec.resize(new_size);
 
         // Load electron soa and aos after resize
         ParticleType* pstruct_elec = ptile_elec.GetArrayOfStructs()().data();
-        int procID = amrex::ParallelDescriptor::MyProc();
-        long pid_start = ParticleType::NextID();
+        const int procID = amrex::ParallelDescriptor::MyProc();
+        const long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons.dataValue());
 
         auto arrdata_ion = ptile_ion.GetStructOfArrays().realarray();
@@ -253,14 +253,14 @@ IonizationModule (const int lev,
         const int init_ion_lev = m_product_pc->m_init_ion_lev;
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
-        uint32_t* AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
+        uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
 
         amrex::ParallelFor(num_ions,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             if(p_ion_mask[ip] != 0) {
-                long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
-                long pidx = pid + old_size;
+                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
+                const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
                 amrex::ParticleReal xp, yp, zp;
