@@ -83,7 +83,8 @@ public:
      * \param[in] step current time step
      * \param[in] it index of the box for which data is received
      */
-    void Wait (const int step, int it);
+    void Wait (const int step, int it, bool only_ghost=false);
+
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),

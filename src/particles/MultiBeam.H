@@ -106,11 +106,16 @@ public:
     /** \brief Check that all beams have the same number of Int components
      * and return this number */
     int NumIntComps ();
+
+    void StoreNRealParticles ();
+    void RemoveGhosts ();
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
     amrex::Vector<std::string> m_names; /**< names of all beam containers */
     int m_nbeams {0}; /**< number of beam containers */
+    /** number of real particles per beam, as opposed to ghost particles */
+    amrex::Vector<amrex::Long> m_n_real_particles;
 };
 
 #endif // MULTIBEAM_H_

@@ -16,6 +16,8 @@
 namespace {
     constexpr int ncomm_z_tag = 1001;
     constexpr int pcomm_z_tag = 1002;
+    constexpr int ncomm_z_tag_ghost = 1003;
+    constexpr int pcomm_z_tag_ghost = 1004;
 }
 #endif
 
@@ -317,6 +319,7 @@ Hipace::Evolve ()
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+            m_multi_beam.StoreNRealParticles();
             if (step == 0) PrepareGhostSlice(it);
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
@@ -328,11 +331,21 @@ Hipace::Evolve ()
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
 
-            for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-                if (isl==bx.smallEnd(Direction::z) && it<m_numprocs_z-1) WaitGhostSlice(step, it);
+            AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );            
+            // Solve head slice
+            SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
+            // Notify ghost slice
+            if (it>0) NotifyGhostSlice(step, it);
+            // Solve central slices
+            for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, it, bins);
-                if (isl==bx.bigEnd(Direction::z) && it>0) NotifyGhostSlice(step, it);
             };
+            // Receive ghost slice
+            if (it<m_numprocs_z-1) WaitGhostSlice(step, it);
+            // Solve tail slice. Consume ghost particles.
+            SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
+            // Delete ghost particles
+            if (it<m_numprocs_z-1) m_multi_beam.RemoveGhosts();
 
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
                                            it, m_box_sorters, false);
@@ -340,6 +353,8 @@ Hipace::Evolve ()
             // averaging predictor corrector loop diagnostics
             m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
             m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
+
+            // Resize particle array to valid particles
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
 
@@ -802,9 +817,13 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
 }
 
 void
-Hipace::Wait (const int step, int it)
+Hipace::Wait (const int step, int it, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Wait()");
+
+    const int n_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
+    const int p_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
+
 #ifdef AMREX_USE_MPI
     if (step == 0) return;
 
@@ -826,7 +845,7 @@ Hipace::Wait (const int step, int it)
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
         MPI_Recv(np_rcv.dataPtr(), nint,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
+                 (m_rank_z+1)%m_numprocs_z, n_z_tag, m_comm_z, &status);
     }
     m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
 
@@ -842,7 +861,7 @@ Hipace::Wait (const int step, int it)
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
         MPI_Recv(recv_buffer, buffer_size,
                  amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                 (m_rank_z+1)%m_numprocs_z, pcomm_z_tag, m_comm_z, &status);
+                 (m_rank_z+1)%m_numprocs_z, p_z_tag, m_comm_z, &status);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -907,7 +926,6 @@ Hipace::Wait (const int step, int it)
         amrex::Gpu::Device::synchronize();
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
-    // Store the number of physical (i.e. NOT ghost) particles as a member of m_multi_beam
 
 #endif
 }
@@ -1052,6 +1070,7 @@ Hipace::NotifyFinish ()
 void
 Hipace::WaitGhostSlice (const int step, const int it)
 {
+    Wait();
     // - Receive number of ghost particles. They will be added at the end of the particle data
     // - Resize beam array with with auto& ptile = m_multi_beam.getBeam(ibeam);
     // - Unpack ghost particles at the end of the particle array. That way we can use its
@@ -1084,6 +1103,10 @@ Hipace::PrepareGhostSlice (const int it)
     // The head rank does not receive ghost particles from anyone, but still has to handle them.
     // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
     // That way, the rest of the code can be the same for everyone, no need to do special cases
+
+    // - copy box it-1 at the end of the particle array
+
+    // OR, if we want the optimization version:
     // for the head rank.
     // - Slice-sort box it-1
     // - copy the last slice of box it-1 at the end of the particle array

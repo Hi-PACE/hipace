@@ -13,6 +13,7 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
+    m_n_real_particles.resize(m_nbeams, 0);
 }
 
 void
@@ -96,4 +97,20 @@ MultiBeam::NumIntComps ()
         }
     }
     return comps;
+}
+
+void
+MultiBeam::StoreNRealParticles ()
+{
+    for (int i=0; i<m_nbeams; i++) {
+        m_n_real_particles[i] = m_all_beams[i].numParticles();
+    }
+}
+
+void
+MultiBeam::RemoveGhosts ()
+{
+    for (int i=0; i<m_nbeams; i++){
+        m_all_beams[i].resize(m_n_real_particles[i]);
+    }
 }
