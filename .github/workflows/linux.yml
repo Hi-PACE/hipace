@@ -1,9 +1,9 @@
 name: linux
 
-on:
-  pull_request:
-    branches:
-      - development
+# on:
+#   pull_request:
+#     branches:
+#       - development
 
 jobs:
 # enable again when we open-source (free core-hours for GH Actions)
