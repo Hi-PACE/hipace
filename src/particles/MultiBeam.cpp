@@ -107,10 +107,31 @@ MultiBeam::StoreNRealParticles ()
     }
 }
 
+int
+MultiBeam::NGhostParticles (int ibeam, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, amrex::Box bx)
+{
+    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = bins[ibeam].offsetsPtr();
+    return offsets[bx.bigEnd(Direction::z)+1] - offsets[bx.bigEnd(Direction::z)];
+}
+
 void
 MultiBeam::RemoveGhosts ()
 {
     for (int i=0; i<m_nbeams; i++){
         m_all_beams[i].resize(m_n_real_particles[i]);
     }
+}
+
+void
+MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom)
+{
+    constexpr int lev = 0;
+    for (int ibeam=0; ibeam<m_nbeams; ibeam++){
+        // sort particles in box it, effectively the one directly downstream current box
+        amrex::DenseBins<BeamParticleContainer::ParticleType> bins =
+            ::findParticlesInEachSlice(lev, it, bx, m_all_beams[ibeam], geom, box_sorters[ibeam]);
+        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = bins.offsetsPtr();
+        const int nghost = offsets[bx.bigEnd(Direction::z)+1] - offsets[bx.bigEnd(Direction::z)];
+        
+    }    
 }

@@ -97,7 +97,7 @@ public:
     void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
     void WaitGhostSlice (const int step, int it);
     void NotifyGhostSlice (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
-    void PrepareGhostSlice (const int it);
+    void PrepareGhostSlice (const int it, const amrex::Box bx);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
     void NotifyFinish (bool only_ghost=false);
 

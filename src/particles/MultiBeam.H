@@ -108,7 +108,11 @@ public:
     int NumIntComps ();
 
     void StoreNRealParticles ();
+    int NGhostParticles (int ibeam, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, amrex::Box bx);
     void RemoveGhosts ();
+    int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();};
+    void PrepareGhostSlice (int it, const amrex::Box& bx,
+                            const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom);
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

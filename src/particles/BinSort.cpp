@@ -5,7 +5,7 @@
 amrex::DenseBins<BeamParticleContainer::ParticleType>
 findParticlesInEachSlice (
     int /*lev*/, int ibox, amrex::Box bx,
-    BeamParticleContainer& beam, amrex::Geometry& geom,
+    BeamParticleContainer& beam, const amrex::Geometry& geom,
     const BoxSorter& a_box_sorter)
 {
     // This function must also take the index of first particle to start from

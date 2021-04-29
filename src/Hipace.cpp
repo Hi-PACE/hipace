@@ -321,11 +321,12 @@ Hipace::Evolve ()
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
-            m_multi_beam.StoreNRealParticles();
-            if (step == 0) PrepareGhostSlice(it);
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
+
+            m_multi_beam.StoreNRealParticles();
+            if (step == 0 && it>0) PrepareGhostSlice(it-1, boxArray(lev)[it-1]);
 
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
@@ -346,7 +347,9 @@ Hipace::Evolve ()
             };
             // Receive ghost slice
             amrex::AllPrint()<<"rank "<<m_rank_z<<" Receive ghost\n";
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" npart before wait "<<m_multi_beam.Npart(0)<<"\n";
             if (it>0) WaitGhostSlice(step, it);
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" npart after  wait "<<m_multi_beam.Npart(0)<<"\n";
             // Solve tail slice. Consume ghost particles.
             amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute tail\n";
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
@@ -858,7 +861,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         }
     }
     if (!only_ghost) m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
-    if (only_ghost) return;
 
     // Receive beam particles.
     {
@@ -952,6 +954,8 @@ Hipace::Notify (const int step, const int it,
                 amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Notify()");
+
+    constexpr int lev = 0;
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
     // and 3. <-- that's BS.
 
@@ -987,11 +991,13 @@ Hipace::Notify (const int step, const int it,
     amrex::Vector<int>& np_snd = only_ghost ? m_np_snd_ghost : m_np_snd;
     np_snd.resize(nint);
 
+    const amrex::Box& bx = boxArray(lev)[it];
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
     {
         // make sure that we have a function that return ONLY the physical particles
         // (NOT the ghost particles)
-        np_snd[ibeam] = only_ghost ? 0 : m_box_sorters[ibeam].boxCountsPtr()[it];
+        np_snd[ibeam] = only_ghost ? m_multi_beam.NGhostParticles(ibeam, bins, bx)
+            : m_box_sorters[ibeam].boxCountsPtr()[it];
     }
     np_snd[nbeams] = m_leftmost_box_snd;
 
@@ -1003,7 +1009,6 @@ Hipace::Notify (const int step, const int it,
         MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
     }
-    if (only_ghost) return;
 
     // Send beam particles. Currently only one tile.
     {
@@ -1026,6 +1031,19 @@ Hipace::Notify (const int step, const int it,
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
             const auto p_psend_buffer = m_psend_buffer + offset_beam*psize;
+
+            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type* indices = nullptr;
+            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
+            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
+            
+            indices = bins[ibeam].permutationPtr();
+            offsets = bins[ibeam].offsetsPtr();
+
+            // The particles that are in the last slice (sent as ghost particles) are
+            // given by the indices[cell_start:cell_stop]
+            cell_start = offsets[bx.bigEnd(Direction::z)];
+            cell_stop  = offsets[bx.bigEnd(Direction::z)+1];
+        
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion() && np > 0) {
                 const int np_per_block = 128;
@@ -1062,12 +1080,14 @@ Hipace::Notify (const int step, const int it,
             {
                 for (int i = 0; i < np; ++i)
                 {
-                    ptd.packParticleData(p_psend_buffer, offset_box+i, i*psize, p_comm_real, p_comm_int);
+                    const int src_idx = only_ghost ? indices[cell_start+i] : offset_box+i;
+                    ptd.packParticleData(p_psend_buffer, src_idx, i*psize, p_comm_real, p_comm_int);
                 }
             }
             amrex::Gpu::Device::synchronize();
 
-            ptile.resize(offset_box);
+            // Delete beam particles that we just sent from the particle array
+            if (!only_ghost) ptile.resize(offset_box);
             offset_beam += np;
         } // here
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
@@ -1141,12 +1161,13 @@ Hipace::NotifyGhostSlice (const int step, const int it,
 }
 
 void
-Hipace::PrepareGhostSlice (const int it)
+Hipace::PrepareGhostSlice (const int it, const amrex::Box bx)
 {
     // The head rank does not receive ghost particles from anyone, but still has to handle them.
     // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
     // That way, the rest of the code can be the same for everyone, no need to do special cases
-
+    constexpr int lev = 0;
+    m_multi_beam.PrepareGhostSlice(it, bx, m_box_sorters, geom[lev]);
     // - copy box it-1 at the end of the particle array
 
     // OR, if we want the optimization version:
