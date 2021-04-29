@@ -86,62 +86,62 @@ Plasma parameters
 -----------------
 
 For the plasma parameters, first the names of the plasmas need to be specified. Afterwards, the
-plasma parameters for each plasma are specified via `<plasma_name>.plasma_property = ...`
+plasma parameters for each plasma are specified via `<plasma name>.plasma_property = ...`
 
 * ``plasmas.names`` (`string`)
     The names of the plasmas, separated by a space.
 
-* ``<plasma_name>.density`` (`float`) optional (default `0.`)
+* ``<plasma name>.density`` (`float`) optional (default `0.`)
     The plasma density.
 
-* ``<plasma_name>.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name>.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
 
-* ``<plasma_name>.radius`` (`float`) optional (default `infinity`)
+* ``<plasma name>.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
-* ``<plasma_name>.hollow_core_radius`` (`float`) optional (default `0.`)
+* ``<plasma name>.hollow_core_radius`` (`float`) optional (default `0.`)
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
 
-* ``<plasma_name>.parabolic_curvature`` (`float`) optional (default `0.`)
+* ``<plasma name>.parabolic_curvature`` (`float`) optional (default `0.`)
     Curvature of a parabolic plasma profile. The plasma density is set to
     :math:`\mathrm{plasma.density} * (1 + \mathrm{plasma.parabolic\_curvature}*r^2)`.
 
-* ``<plasma_name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
+* ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
     as violating the quasi-static approximation and are removed from the simulation.
 
-* ``<plasma_name>.mass`` (`float`) optional (default `0.`)
+* ``<plasma name>.mass`` (`float`) optional (default `0.`)
     The mass of plasma particle in SI units. Use `plasma_name.mass_Da` for Dalton.
     Can also be set with `plasma_name.element`. Must be `>0`.
 
-* ``<plasma_name>.mass_Da`` (`float`) optional (default `0.`)
+* ``<plasma name>.mass_Da`` (`float`) optional (default `0.`)
     The mass of plasma particle in Dalton. Use `plasma_name.mass` for SI units.
     Can also be set with `plasma_name.element`. Must be `>0`.
 
-* ``<plasma_name>.charge`` (`float`) optional (default `0.`)
+* ``<plasma name>.charge`` (`float`) optional (default `0.`)
     The charge of a plasma particle. Can also be set with `plasma_name.element`
     or if the plasma is ionizable the default becomes :math:`+ q_e`.
     If the plasma is ionizable, the charge gets multiplied by the current
     ionization level.
 
-* ``<plasma_name>.element`` (`string`) optional (default "")
+* ``<plasma name>.element`` (`string`) optional (default "")
     The Physical Element of the plasma. For `electron` and `positron` the charge
     and mass are set accordingly. For common Elements like `H`, `He`, `Li`, ...
     the element is used to get the specific Ionization Energy of each state.
 
-* ``<plasma_name>.can_ionize`` (`bool`) optional (default `0`)
+* ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set by specifying
     `plasma_name.initial_ion_level` `>= 0`.
 
-* ``<plasma_name>.initial_ion_level`` (`int`) optional (default `-1`)
+* ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial Ionization state of the plasma. `-1` for non-ionizable plasmas,
     `0` for neutral, ionizable gasses and `1`, `2`, `3`, ... for ionizable plasmas.
 
-* ``<plasma_name>.ionization_product`` (`string`) optional (default "")
+* ``<plasma name>.ionization_product`` (`string`) optional (default "")
     The `plasma_name` of the plasma that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
 
@@ -149,12 +149,12 @@ Beam parameters
 ---------------
 
 For the beam parameters, first the names of the beams need to be specified. Afterwards, the beam
-parameters for each beam are specified via `<beam_name>.beam_property = ...`
+parameters for each beam are specified via `<beam name>.beam_property = ...`
 
 * ``beams.names`` (`string`)
     The names of the particle beams, separated by a space.
 
-* ``<beam_name>.injection_type`` (`string`)
+* ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
     and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
     varying weights. `fixed_weight` generates a beam with a fixed number of particles with a
@@ -162,16 +162,16 @@ parameters for each beam are specified via `<beam_name>.beam_property = ...`
 
 **fixed_weight**
 
-* ``<beam_name>.num_particles`` (`int`)
+* ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
-* ``<beam_name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
+* ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
     Thereby, `duz_per_uz0_dzeta *` :math:`\zeta` `* uz_mean` is added to `uz` of the each particle.
     :math:`\zeta` is hereby the particle position relative to the mean
     longitudinal position of the beam.
 
-* ``<beam_name>.do_symmetrize`` (`bool`) optional (default `0`)
+* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
     `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
@@ -180,17 +180,17 @@ parameters for each beam are specified via `<beam_name>.beam_property = ...`
 
 **from_file**
 
-* ``<beam_name>.input_file`` (`string`)
+* ``<beam name>.input_file`` (`string`)
     Name of the input file. **Note:** Reading in files with digits in their names (e.g.
     `openpmd_002135.h5`) can be problematic, it is advised to read them via `openpmd_%T.h5` and then
     specify the iteration via `beam_name.iteration = 2135`.
 
-* ``<beam_name>.iteration`` (`integer`) optional (default `0`)
+* ``<beam name>.iteration`` (`integer`) optional (default `0`)
     Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
     or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
     time of the simulation is set to the time of the given iteration (if available).
 
-* ``<beam_name>.openPMD_species_name`` (`string`) optional
+* ``<beam name>.openPMD_species_name`` (`string`) optional
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
 
