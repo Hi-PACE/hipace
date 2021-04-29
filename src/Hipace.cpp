@@ -317,7 +317,6 @@ Hipace::Evolve ()
         for (int it = m_numprocs_z-1; it >= 0; --it)
         {
             Wait(step, it);
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" Wait done\n";
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
@@ -334,24 +333,18 @@ Hipace::Evolve ()
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
 
-            AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );            
+            AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute head\n";
             SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
             // Notify ghost slice
             if (it<m_numprocs_z-1) NotifyGhostSlice(step, it, bins);
             // Solve central slices
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute all\n";
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, it, bins);
             };
             // Receive ghost slice
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" Receive ghost\n";
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" npart before wait "<<m_multi_beam.Npart(0)<<"\n";
             if (it>0) WaitGhostSlice(step, it);
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" npart after  wait "<<m_multi_beam.Npart(0)<<"\n";
             // Solve tail slice. Consume ghost particles.
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute tail\n";
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
             // Delete ghost particles
             if (it<m_numprocs_z-1) m_multi_beam.RemoveGhosts();
@@ -844,7 +837,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         }
         return;
     }
-    amrex::AllPrint()<<"rank "<<m_rank_z<<" Wait   it "<<it<<" only_ghost "<<only_ghost<<"\n";
 
     // Receive particle counts
     {
@@ -985,7 +977,6 @@ Hipace::Notify (const int step, const int it,
         }
         return;
     }
-    amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify it "<<it<<" only_ghost "<<only_ghost<<"\n";
 
     // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
     amrex::Vector<int>& np_snd = only_ghost ? m_np_snd_ghost : m_np_snd;
@@ -1035,7 +1026,7 @@ Hipace::Notify (const int step, const int it,
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type* indices = nullptr;
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
-            
+
             indices = bins[ibeam].permutationPtr();
             offsets = bins[ibeam].offsetsPtr();
 
@@ -1043,7 +1034,7 @@ Hipace::Notify (const int step, const int it,
             // given by the indices[cell_start:cell_stop]
             cell_start = offsets[bx.bigEnd(Direction::z)];
             cell_stop  = offsets[bx.bigEnd(Direction::z)+1];
-        
+
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion() && np > 0) {
                 const int np_per_block = 128;

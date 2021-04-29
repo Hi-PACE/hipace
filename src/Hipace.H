@@ -93,6 +93,8 @@ public:
      *
      * \param[in] step current time step
      * \param[in] it current box number
+     * \param[in] bins slice indexing
+     * \param[in] only_ghost whether to send only ghost particles
      */
     void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
     void WaitGhostSlice (const int step, int it);
