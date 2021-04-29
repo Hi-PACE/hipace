@@ -1066,7 +1066,7 @@ Hipace::Notify (const int step, const int it,
                       (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &m_psend_request_ghost);
         } else {
             MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z_ghost, &m_psend_request);
+                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
         }
     }
 #endif
