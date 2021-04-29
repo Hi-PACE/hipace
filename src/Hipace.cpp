@@ -111,6 +111,7 @@ Hipace::~Hipace ()
 {
 #ifdef AMREX_USE_MPI
     NotifyFinish();
+    NotifyFinish(true);
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
@@ -316,6 +317,7 @@ Hipace::Evolve ()
         for (int it = m_numprocs_z-1; it >= 0; --it)
         {
             Wait(step, it);
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" Wait done\n";
 
             m_box_sorters.clear();
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
@@ -333,16 +335,20 @@ Hipace::Evolve ()
 
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );            
             // Solve head slice
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute head\n";
             SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
             // Notify ghost slice
-            // if (it>0) NotifyGhostSlice(step, it);
+            if (it<m_numprocs_z-1) NotifyGhostSlice(step, it, bins);
             // Solve central slices
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute all\n";
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, it, bins);
             };
             // Receive ghost slice
-            // if (it<m_numprocs_z-1) WaitGhostSlice(step, it);
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" Receive ghost\n";
+            if (it>0) WaitGhostSlice(step, it);
             // Solve tail slice. Consume ghost particles.
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" Compute tail\n";
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
             // Delete ghost particles
             if (it<m_numprocs_z-1) m_multi_beam.RemoveGhosts();
@@ -835,6 +841,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         }
         return;
     }
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" Wait   it "<<it<<" only_ghost "<<only_ghost<<"\n";
 
     // Receive particle counts
     {
@@ -843,7 +850,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         if (only_ghost) {
             MPI_Recv(np_rcv.dataPtr(), nint,
                      amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                     (m_rank_z+1)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z_ghost, &status);
+                     (m_rank_z+1)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z, &status);
         } else {
             MPI_Recv(np_rcv.dataPtr(), nint,
                      amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
@@ -866,7 +873,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         if (only_ghost) {
             MPI_Recv(recv_buffer, buffer_size,
                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                     (m_rank_z+1)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &status);
+                     (m_rank_z+1)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z, &status);
         } else {
             MPI_Recv(recv_buffer, buffer_size,
                      amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
@@ -949,18 +956,20 @@ Hipace::Notify (const int step, const int it,
     // and 3. <-- that's BS.
 
 #ifdef AMREX_USE_MPI
-    NotifyFinish(); // finish the previous send
+    NotifyFinish(only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
     const int nint = nbeams + 1;
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
-    if (step == m_max_step && !only_ghost)
+    if (step == m_max_step)
     {
-        for (int ibeam = 0; ibeam < nbeams; ibeam++){
-            const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
-            auto& ptile = m_multi_beam.getBeam(ibeam);
-            ptile.resize(offset_box);
+        if (!only_ghost) {
+            for (int ibeam = 0; ibeam < nbeams; ibeam++){
+                const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
+                auto& ptile = m_multi_beam.getBeam(ibeam);
+                ptile.resize(offset_box);
+            }
         }
         return;
     }
@@ -972,6 +981,7 @@ Hipace::Notify (const int step, const int it,
         }
         return;
     }
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify it "<<it<<" only_ghost "<<only_ghost<<"\n";
 
     // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
     amrex::Vector<int>& np_snd = only_ghost ? m_np_snd_ghost : m_np_snd;
@@ -988,7 +998,7 @@ Hipace::Notify (const int step, const int it,
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
     if (only_ghost) {
         MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z_ghost, &m_nsend_request_ghost);
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z, &m_nsend_request_ghost);
     } else {
         MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
@@ -1063,7 +1073,7 @@ Hipace::Notify (const int step, const int it,
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
         if (only_ghost) {
             MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &m_psend_request_ghost);
+                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z, &m_psend_request_ghost);
         } else {
             MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
@@ -1073,24 +1083,27 @@ Hipace::Notify (const int step, const int it,
 }
 
 void
-Hipace::NotifyFinish ()
+Hipace::NotifyFinish (bool only_ghost)
 {
 #ifdef AMREX_USE_MPI
-    if (m_np_snd.size() > 0) {
-        MPI_Status status;
-        MPI_Wait(&m_nsend_request, &status);
-        m_np_snd.resize(0);
-    }
-    if (m_np_snd_ghost.size() > 0) {
-        MPI_Status status;
-        MPI_Wait(&m_nsend_request_ghost, &status);
-        m_np_snd_ghost.resize(0);
-    }
-    if (m_psend_buffer) {
-        MPI_Status status;
-        MPI_Wait(&m_psend_request, &status);
-        amrex::The_Pinned_Arena()->free(m_psend_buffer);
-        m_psend_buffer = nullptr;
+    if (only_ghost) {
+        if (m_np_snd_ghost.size() > 0) {
+            MPI_Status status;
+            MPI_Wait(&m_nsend_request_ghost, &status);
+            m_np_snd_ghost.resize(0);
+        }
+    } else {
+        if (m_np_snd.size() > 0) {
+            MPI_Status status;
+            MPI_Wait(&m_nsend_request, &status);
+            m_np_snd.resize(0);
+        }
+        if (m_psend_buffer) {
+            MPI_Status status;
+            MPI_Wait(&m_psend_request, &status);
+            amrex::The_Pinned_Arena()->free(m_psend_buffer);
+            m_psend_buffer = nullptr;
+        }
     }
 #endif
 }
@@ -1098,7 +1111,7 @@ Hipace::NotifyFinish ()
 void
 Hipace::WaitGhostSlice (const int step, const int it)
 {
-    // Wait(step, it);
+    Wait(step, it, true);
     // - Receive number of ghost particles. They will be added at the end of the particle data
     // - Resize beam array with with auto& ptile = m_multi_beam.getBeam(ibeam);
     // - Unpack ghost particles at the end of the particle array. That way we can use its
@@ -1118,8 +1131,10 @@ Hipace::WaitGhostSlice (const int step, const int it)
 }
 
 void
-Hipace::NotifyGhostSlice (const int step, const int it)
+Hipace::NotifyGhostSlice (const int step, const int it,
+                          amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
+    Notify(step, it, bins, true);
     // - Pack particles in the head slice into the buffer.
     // - Send those particles to next rank.
     // NOTE: this is VERY similar to Notify

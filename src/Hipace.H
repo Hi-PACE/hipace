@@ -96,10 +96,10 @@ public:
      */
     void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
     void WaitGhostSlice (const int step, int it);
-    void NotifyGhostSlice (const int step, const int it);
+    void NotifyGhostSlice (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
     void PrepareGhostSlice (const int it);
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
-    void NotifyFinish ();
+    void NotifyFinish (bool only_ghost=false);
 
     /** \brief return whether rank is in the same transverse communicator w/ me
      *
@@ -158,7 +158,6 @@ public:
      * longitudinal parallelization)
      */
     MPI_Comm m_comm_z = MPI_COMM_NULL;
-    MPI_Comm m_comm_z_ghost = MPI_COMM_NULL;
     /** Number of processors in the transverse x direction */
     int m_numprocs_x = 1;
     /** Number of processors in the transverse y direction */
