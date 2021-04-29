@@ -1,9 +1,11 @@
 #ifndef HIPACE_PlasmaParticleContainer_H_
 #define HIPACE_PlasmaParticleContainer_H_
 
+#include "fields/Fields.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
+#include <map>
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
@@ -24,16 +26,20 @@ struct PlasmaIdx
         x0, y0,                              // initial positions
         nattribs
     };
+    enum {
+        ion_lev = 0,                         // ionization level
+        int_nattribs
+    };
 };
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs>
+    : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs, PlasmaIdx::int_nattribs>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (amrex::AmrCore* amr_core, std::string name) :
-        amrex::ParticleContainer<0,0,PlasmaIdx::nattribs>(amr_core->GetParGDB()),
+        amrex::ParticleContainer<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(amr_core->GetParGDB()),
         m_name(name)
     {
         ReadParameters();
@@ -65,6 +71,24 @@ public:
         const amrex::Real a_radius,
         const amrex::Real a_hollow_core_radius);
 
+    /** Initialize ADK prefactors of ionizable plasmas
+     *
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] product_pc The electron plasma PC that this Ion Plasma ionizes to
+     */
+    void InitIonizationModule (const amrex::Geometry& geom,
+                               PlasmaParticleContainer* product_pc);
+
+    /** Calculates Ionization Probability and generates new Plasma Particles
+     *
+     * \param[in] lev MR level
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] fields the general field class
+     */
+    void IonizationModule (const int lev,
+                           const amrex::Geometry& geom,
+                           Fields& fields);
+
     amrex::Real m_density {0}; /**< Density of the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
@@ -79,18 +103,30 @@ public:
     amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
-    amrex::Real m_mass; /**< mass of each particle of this species */
-    amrex::Real m_charge; /**< charge of each particle of this species */
+    amrex::Real m_mass = 0; /**< mass of each particle of this species */
+    amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
+    int m_init_ion_lev = -1; /**< initial Ion level of each particle */
+    bool m_can_ionize = false; /**< whether this plasma can ionize */
+    std::string m_product_name = ""; /**< name of Ionization product plasma */
+    PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
+    /** to calculate Ionization probability with ADK formula */
+    amrex::Gpu::DeviceVector<amrex::Real> m_adk_prefactor;
+    /** to calculate Ionization probability with ADK formula */
+    amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
+    /** to calculate Ionization probability with ADK formula */
+    amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
+    /** initial number of particles before ones are added through ionization */
+    std::map<int,unsigned long> m_init_num_par;
 
 private:
     std::string m_name; /**< name of the species */
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs>
+class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>
 {
 public:
-    using amrex::ParIter<0,0,PlasmaIdx::nattribs>::ParIter;
+    using amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>::ParIter;
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
 };

@@ -23,8 +23,10 @@ public:
      * \param[in] slice_ba slice boxarray, on which plasma particles are defined
      * \param[in] slice_dm DistributionMapping of the transverse slice domain
      * \param[in] slice_gm slice geometry
+     * \param[in] gm Geometry of the simulation, to get the cell size
      */
-    void InitData (int lev, amrex::BoxArray slice_ba, amrex::DistributionMapping slice_dm, amrex::Geometry slice_gm);
+    void InitData (int lev, amrex::BoxArray slice_ba, amrex::DistributionMapping slice_dm,
+                   amrex::Geometry slice_gm, amrex::Geometry gm);
 
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
@@ -80,6 +82,14 @@ public:
      */
     void DepositNeutralizingBackground (
         Fields & fields, int which_slice, amrex::Geometry const& gm, int const lev);
+
+    /** Calculates Ionization Probability and makes new Plasma Particles
+     *
+     * \param[in] lev MR level
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] fields the general field class
+     */
+    void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
 
 private:
 

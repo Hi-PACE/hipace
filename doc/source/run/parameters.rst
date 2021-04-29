@@ -114,6 +114,37 @@ plasma parameters for each plasma are specified via `plasma_name.plasma_property
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
     as violating the quasi-static approximation and are removed from the simulation.
 
+* ``plasma_name.mass`` (`float`) optional (default `0.`)
+    The mass of plasma particle in SI units. Use `plasma_name.mass_Da` for Dalton.
+    Can also be set with `plasma_name.element`. Must be `>0`.
+
+* ``plasma_name.mass_Da`` (`float`) optional (default `0.`)
+    The mass of plasma particle in Dalton. Use `plasma_name.mass` for SI units.
+    Can also be set with `plasma_name.element`. Must be `>0`.
+
+* ``plasma_name.charge`` (`float`) optional (default `0.`)
+    The charge of a plasma particle. Can also be set with `plasma_name.element`
+    or if the plasma is Ionizable the default becomes :math:`+ q_e`.
+    If the plasma is Ionizable, the charge gets multiplied by the current
+    Ionization level.
+
+* ``plasma_name.element`` (`string`) optional (default "")
+    The Physical Element of the plasma. For `electron` and `positron` the charge
+    and mass are set accordingly. For common Elements like `H`, `He`, `Li`, ...
+    the element is used to get the specific Ionization Energy of each state.
+
+* ``plasma_name.can_ionize`` (`bool`) optional (default `0`)
+    Whether this plasma can ionize. Can also be set by specifying
+    `plasma_name.initial_ion_level` `>= 0`.
+
+* ``plasma_name.initial_ion_level`` (`int`) optional (default `-1`)
+    The initial Ionization state of the plasma. `-1` for non-ionizable plasmas,
+    `0` for neutral, ionizable gasses and `1`, `2`, `3`, ... for ionizable plasmas.
+
+* ``plasma_name.ionization_product`` (`string`) optional (default "")
+    The `plasma_name` of the plasma that contains the new electrons that are produced
+    when this plasma gets ionized. Only needed if this plasma is ionizable.
+
 Beam parameters
 ---------------
 

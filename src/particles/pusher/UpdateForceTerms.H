@@ -51,7 +51,7 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
                                        + uyp*uyp*clightsq
                                        + (psip+1.0_rt)*(psip+1.0_rt))/(2.0_rt * (psip + 1.0_rt) );
 
-    const amrex::Real charge_mass_ratio = charge/mass;
+    const amrex::Real charge_mass_ratio = charge / mass;
     /* Change for x-position along zeta */
     Fx1 = -uxp / (psip + 1.0_rt) / phys_const.c;
     /* Change for y-position along zeta */

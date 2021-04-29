@@ -1,0 +1,51 @@
+
+amr.n_cell = 64 64 100
+
+hipace.predcorr_max_iterations = 1
+hipace.predcorr_B_mixing_factor = 0.12
+hipace.predcorr_B_error_tolerance = -1
+
+amr.blocking_factor = 2
+amr.max_level = 0
+
+max_step = 2
+hipace.output_period = 1
+
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
+hipace.depos_order_xy = 2
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = 1     1     0      # Is periodic?
+geometry.prob_lo     = -20.e-6   -20.e-6   -30.e-6    # physical domain
+geometry.prob_hi     =  20.e-6    20.e-6    30.e-6
+
+beams.names = beam
+beam.injection_type = fixed_ppc
+beam.profile = flattop
+beam.zmin = 15.493860918e-6
+beam.zmax = 25e-6
+beam.radius = 2.376534771e-6
+beam.density = 5e24
+beam.u_mean = 0. 0. 2000
+beam.u_std = 0. 0. 0.
+beam.ppc = 1 1 1
+
+plasmas.names = elec ion
+
+elec.density = 1.25e24 # at this density, 1/kp = 4.753069541um
+elec.ppc = 0 0
+elec.u_mean = 0.0 0.0 0.0
+elec.element = electron
+elec.neutralize_background = 0
+
+ion.density = 1.25e24 # at this density, 1/kp = 4.753069541um
+ion.ppc = 1 1
+ion.u_mean = 0.0 0.0 0.0
+ion.element = H
+ion.mass_Da = 1.008
+ion.initial_ion_level = 0
+ion.ionization_product = elec
+
+diagnostic.diag_type = xyz

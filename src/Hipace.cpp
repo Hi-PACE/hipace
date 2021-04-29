@@ -201,7 +201,7 @@ Hipace::InitData ()
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
     m_multi_beam.InitData(geom[0]);
-    m_multi_plasma.InitData(lev, m_slice_ba, m_slice_dm, m_slice_geom);
+    m_multi_plasma.InitData(lev, m_slice_ba, m_slice_dm, m_slice_geom, geom[0]);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
@@ -448,6 +448,8 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     m_fields.FillDiagnostics(lev, islice);
 
     m_fields.ShiftSlices(lev);
+
+    m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
 
     // After this, the parallel context is the full 3D communicator again
     amrex::ParallelContext::pop();

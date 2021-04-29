@@ -301,6 +301,8 @@ private:
                         amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
                         const int ibox);
 
+    void Ionisation (const int lev);
+
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.
      *
