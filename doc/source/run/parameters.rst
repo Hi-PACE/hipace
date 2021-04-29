@@ -128,7 +128,7 @@ plasma parameters for each plasma are specified via `plasma_name.plasma_property
     If the plasma is Ionizable, the charge gets multiplied by the current
     Ionization level.
 
-* ``plasna_name.element`` (`string`) optional (default "")
+* ``plasma_name.element`` (`string`) optional (default "")
     The Physical Element of the plasma. For `electron` and `positron` the charge
     and mass are set accordingly. For common Elements like `H`, `He`, `Li`, ...
     the element is used to get the specific Ionization Energy of each state.
