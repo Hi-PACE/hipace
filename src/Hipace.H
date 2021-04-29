@@ -320,6 +320,8 @@ private:
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
 
     int leftmostBoxWithParticles () const;
+
+    void CheckGhostSlice (int it);
 };
 
 #endif

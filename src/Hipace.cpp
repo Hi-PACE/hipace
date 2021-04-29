@@ -3,6 +3,7 @@
 #include "particles/BinSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
+#include "particles/pusher/GetAndSetPosition.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
@@ -345,6 +346,7 @@ Hipace::Evolve ()
             // Receive ghost slice
             if (it>0) WaitGhostSlice(step, it);
             // Solve tail slice. Consume ghost particles.
+            CheckGhostSlice(it);
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
             // Delete ghost particles
             if (it<m_numprocs_z-1) m_multi_beam.RemoveGhosts();
@@ -947,8 +949,6 @@ Hipace::Notify (const int step, const int it,
     HIPACE_PROFILE("Hipace::Notify()");
 
     constexpr int lev = 0;
-    // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
-    // and 3. <-- that's BS.
 
 #ifdef AMREX_USE_MPI
     NotifyFinish(only_ghost); // finish the previous send
@@ -1207,4 +1207,33 @@ Hipace::leftmostBoxWithParticles () const
         boxid = std::min(box_sorter.leftmostBoxWithParticles(), boxid);
     }
     return boxid;
+}
+
+void
+Hipace::CheckGhostSlice (int it)
+{
+    if (m_multi_beam.get_nbeams() == 0) return;
+    if (m_verbose < 1) return;
+
+    const int nreal = m_multi_beam.m_n_real_particles[0];
+    const int nghost = m_multi_beam.Npart(0) - nreal;
+
+    amrex::AllPrint()<<"rank "<<m_rank_z<<" it "<<it<<" npart "<<m_multi_beam.Npart(0)<<" nreal "
+                     <<nreal<<" nghost "<<nghost<<"\n";
+
+
+    const auto getPosition = GetParticlePosition<BeamParticleContainer>
+        (m_multi_beam.getBeam(0), m_multi_beam.m_n_real_particles[0]);
+
+    if (m_verbose < 3) return;
+    amrex::ParallelFor(
+        nghost,
+        [=] AMREX_GPU_DEVICE (long idx) {
+            amrex::ParticleReal xp, yp, zp;
+            int pid;
+            getPosition(idx+nreal, xp, yp, zp, pid);
+            if (pid < 0) return;
+            std::cout<<"zp "<<zp<<'\n';
+        }
+        );
 }

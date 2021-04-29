@@ -113,13 +113,13 @@ public:
     int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();};
     void PrepareGhostSlice (int it, const amrex::Box& bx,
                             const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom);
+    /** number of real particles per beam, as opposed to ghost particles */
+    amrex::Vector<amrex::Long> m_n_real_particles;
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
     amrex::Vector<std::string> m_names; /**< names of all beam containers */
     int m_nbeams {0}; /**< number of beam containers */
-    /** number of real particles per beam, as opposed to ghost particles */
-    amrex::Vector<amrex::Long> m_n_real_particles;
 };
 
 #endif // MULTIBEAM_H_

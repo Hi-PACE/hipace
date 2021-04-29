@@ -126,12 +126,53 @@ void
 MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom)
 {
     constexpr int lev = 0;
+    char * psend_buffer = nullptr;
     for (int ibeam=0; ibeam<m_nbeams; ibeam++){
-        // sort particles in box it, effectively the one directly downstream current box
+        // sort particles in box it, effectively the one directly left of the current box
         amrex::DenseBins<BeamParticleContainer::ParticleType> bins =
             ::findParticlesInEachSlice(lev, it, bx, m_all_beams[ibeam], geom, box_sorters[ibeam]);
-        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = bins.offsetsPtr();
-        const int nghost = offsets[bx.bigEnd(Direction::z)+1] - offsets[bx.bigEnd(Direction::z)];
 
+        // Get mapping of particles in the last slice of this box.
+        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = bins.offsetsPtr();
+        amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type* indices = bins.permutationPtr();
+        const int cell_start = offsets[bx.bigEnd(Direction::z)];
+        const int cell_stop  = offsets[bx.bigEnd(Direction::z)+1];
+        const int nghost = cell_stop - cell_start;
+
+        // Prepare memory to copy ghost particles and append them to the end of the array.
+        // For convenience, we do it the same way as in Wait/Notify: pack into a buffer,
+        // unpack in the position of ghost particles.
+        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long buffer_size = psize*nghost;
+        psend_buffer = (char*) amrex::The_Pinned_Arena()->alloc(buffer_size);
+        const amrex::Gpu::DeviceVector<int> comm_real(NumRealComps(), 1);
+        const amrex::Gpu::DeviceVector<int> comm_int (NumIntComps(),  1);
+        const auto p_comm_real = comm_real.data();
+        const auto p_comm_int = comm_int.data();
+
+        {
+            auto& ptile = getBeam(ibeam);
+            auto ptd = ptile.getParticleTileData();
+
+            // Copy from last slice to buffer
+            for (int i = 0; i < nghost; ++i) {
+                ptd.packParticleData(psend_buffer, indices[cell_start+i], i*psize, p_comm_real, p_comm_int);
+            }
+        }
+
+        {
+            auto& ptile = getBeam(ibeam);
+            auto old_size = ptile.numParticles();
+            auto new_size = old_size + nghost;
+            // Allocate memory in the particle array for the ghost particles
+            ptile.resize(new_size);
+            auto ptd = ptile.getParticleTileData();
+
+            // Copy from buffer to ghost particles
+            for (int i = 0; i < nghost; ++i) {
+                ptd.unpackParticleData(
+                    psend_buffer, i*psize, i+old_size, p_comm_real, p_comm_int);
+            }
+        }
     }
 }
