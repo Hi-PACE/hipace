@@ -94,7 +94,7 @@ public:
      * \param[in] step current time step
      * \param[in] it current box number
      */
-    void Notify (const int step, const int it);
+    void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
     void WaitGhostSlice (const int step, int it);
     void NotifyGhostSlice (const int step, const int it);
     void PrepareGhostSlice (const int it);
@@ -158,6 +158,7 @@ public:
      * longitudinal parallelization)
      */
     MPI_Comm m_comm_z = MPI_COMM_NULL;
+    MPI_Comm m_comm_z_ghost = MPI_COMM_NULL;
     /** Number of processors in the transverse x direction */
     int m_numprocs_x = 1;
     /** Number of processors in the transverse y direction */

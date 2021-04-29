@@ -358,7 +358,7 @@ Hipace::Evolve ()
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
 
-            Notify(step, it);
+            Notify(step, it, bins);
         }
 
         // printing and resetting predictor corrector loop diagnostics
@@ -821,9 +821,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Wait()");
 
-    const int n_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
-    const int p_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
-
 #ifdef AMREX_USE_MPI
     if (step == 0) return;
 
@@ -843,11 +840,18 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     {
         MPI_Status status;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        MPI_Recv(np_rcv.dataPtr(), nint,
-                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 (m_rank_z+1)%m_numprocs_z, n_z_tag, m_comm_z, &status);
+        if (only_ghost) {
+            MPI_Recv(np_rcv.dataPtr(), nint,
+                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                     (m_rank_z+1)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z_ghost, &status);
+        } else {
+            MPI_Recv(np_rcv.dataPtr(), nint,
+                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                     (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
+        }
     }
-    m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
+    if (!only_ghost) m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
+    if (only_ghost) return;
 
     // Receive beam particles.
     {
@@ -859,9 +863,15 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
         MPI_Status status;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        MPI_Recv(recv_buffer, buffer_size,
-                 amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                 (m_rank_z+1)%m_numprocs_z, p_z_tag, m_comm_z, &status);
+        if (only_ghost) {
+            MPI_Recv(recv_buffer, buffer_size,
+                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                     (m_rank_z+1)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &status);
+        } else {
+            MPI_Recv(recv_buffer, buffer_size,
+                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                     (m_rank_z+1)%m_numprocs_z, pcomm_z_tag, m_comm_z, &status);
+        }
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -931,11 +941,12 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 }
 
 void
-Hipace::Notify (const int step, const int it)
+Hipace::Notify (const int step, const int it,
+                amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Notify()");
     // Send from slices 2 and 3 (or main MultiFab's first two valid slabs) to receiver's slices 2
-    // and 3.
+    // and 3. <-- that's BS.
 
 #ifdef AMREX_USE_MPI
     NotifyFinish(); // finish the previous send
@@ -944,7 +955,7 @@ Hipace::Notify (const int step, const int it)
     const int nint = nbeams + 1;
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
-    if (step == m_max_step)
+    if (step == m_max_step && !only_ghost)
     {
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
             const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
@@ -969,13 +980,19 @@ Hipace::Notify (const int step, const int it)
     {
         // make sure that we have a function that return ONLY the physical particles
         // (NOT the ghost particles)
-        m_np_snd[ibeam] = m_box_sorters[ibeam].boxCountsPtr()[it];
+        m_np_snd[ibeam] = only_ghost ? 0 : m_box_sorters[ibeam].boxCountsPtr()[it];
     }
     m_np_snd[nbeams] = m_leftmost_box_snd;
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-    MPI_Isend(m_np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
+    if (only_ghost) {
+        MPI_Isend(m_np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z_ghost, &m_nsend_request);
+    } else {
+        MPI_Isend(m_np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
+    }
+    if (only_ghost) return;
 
     // Send beam particles. Currently only one tile.
     {
@@ -1043,8 +1060,13 @@ Hipace::Notify (const int step, const int it)
             offset_beam += np;
         } // here
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-        MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
+        if (only_ghost) {
+            MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &m_psend_request);
+        } else {
+            MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z_ghost, &m_psend_request);
+        }
     }
 #endif
 }
@@ -1070,7 +1092,7 @@ Hipace::NotifyFinish ()
 void
 Hipace::WaitGhostSlice (const int step, const int it)
 {
-    Wait();
+    // Wait(step, it);
     // - Receive number of ghost particles. They will be added at the end of the particle data
     // - Resize beam array with with auto& ptile = m_multi_beam.getBeam(ibeam);
     // - Unpack ghost particles at the end of the particle array. That way we can use its
