@@ -879,7 +879,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const int np = np_rcv[ibeam];
             auto old_size = ptile.numParticles();
-            amrex::Print()<<"old_size "<<old_size<<'\n';
             auto new_size = old_size + np;
             ptile.resize(new_size);
             const auto ptd = ptile.getParticleTileData();

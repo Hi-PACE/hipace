@@ -82,6 +82,7 @@ public:
      *
      * \param[in] step current time step
      * \param[in] it index of the box for which data is received
+     * \param[in] only_ghost whether to recv only ghost particles
      */
     void Wait (const int step, int it, bool only_ghost=false);
 

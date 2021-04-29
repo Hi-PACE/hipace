@@ -132,6 +132,6 @@ MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<
             ::findParticlesInEachSlice(lev, it, bx, m_all_beams[ibeam], geom, box_sorters[ibeam]);
         amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = bins.offsetsPtr();
         const int nghost = offsets[bx.bigEnd(Direction::z)+1] - offsets[bx.bigEnd(Direction::z)];
-        
-    }    
+
+    }
 }
