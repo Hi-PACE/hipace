@@ -175,10 +175,13 @@ public:
     char* m_psend_buffer = nullptr;
     /** Send buffer for the number of particles for each beam (pipeline) */
     amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
+    amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
     /** status of the number of particles send request */
     MPI_Request m_nsend_request = MPI_REQUEST_NULL;
+    MPI_Request m_nsend_request_ghost = MPI_REQUEST_NULL;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
+    MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;

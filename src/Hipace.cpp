@@ -335,13 +335,13 @@ Hipace::Evolve ()
             // Solve head slice
             SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
             // Notify ghost slice
-            if (it>0) NotifyGhostSlice(step, it);
+            // if (it>0) NotifyGhostSlice(step, it);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, it, bins);
             };
             // Receive ghost slice
-            if (it<m_numprocs_z-1) WaitGhostSlice(step, it);
+            // if (it<m_numprocs_z-1) WaitGhostSlice(step, it);
             // Solve tail slice. Consume ghost particles.
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
             // Delete ghost particles
@@ -974,29 +974,30 @@ Hipace::Notify (const int step, const int it,
     }
 
     // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
-    m_np_snd.resize(nint);
+    amrex::Vector<int>& np_snd = only_ghost ? m_np_snd_ghost : m_np_snd;
+    np_snd.resize(nint);
 
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
     {
         // make sure that we have a function that return ONLY the physical particles
         // (NOT the ghost particles)
-        m_np_snd[ibeam] = only_ghost ? 0 : m_box_sorters[ibeam].boxCountsPtr()[it];
+        np_snd[ibeam] = only_ghost ? 0 : m_box_sorters[ibeam].boxCountsPtr()[it];
     }
-    m_np_snd[nbeams] = m_leftmost_box_snd;
+    np_snd[nbeams] = m_leftmost_box_snd;
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
     if (only_ghost) {
-        MPI_Isend(m_np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z_ghost, &m_nsend_request);
+        MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z_ghost, &m_nsend_request_ghost);
     } else {
-        MPI_Isend(m_np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+        MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
     }
     if (only_ghost) return;
 
     // Send beam particles. Currently only one tile.
     {
-        const amrex::Long np_total = std::accumulate(m_np_snd.begin(), m_np_snd.begin()+nbeams, 0);
+        const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.begin()+nbeams, 0);
         if (np_total == 0) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
@@ -1005,7 +1006,7 @@ Hipace::Notify (const int step, const int it,
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
             const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
-            const amrex::Long np = m_np_snd[ibeam];
+            const amrex::Long np = np_snd[ibeam];
 
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const auto ptd = ptile.getConstParticleTileData();
@@ -1062,7 +1063,7 @@ Hipace::Notify (const int step, const int it,
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
         if (only_ghost) {
             MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &m_psend_request);
+                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z_ghost, &m_psend_request_ghost);
         } else {
             MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z_ghost, &m_psend_request);
@@ -1079,6 +1080,11 @@ Hipace::NotifyFinish ()
         MPI_Status status;
         MPI_Wait(&m_nsend_request, &status);
         m_np_snd.resize(0);
+    }
+    if (m_np_snd_ghost.size() > 0) {
+        MPI_Status status;
+        MPI_Wait(&m_nsend_request_ghost, &status);
+        m_np_snd_ghost.resize(0);
     }
     if (m_psend_buffer) {
         MPI_Status status;
