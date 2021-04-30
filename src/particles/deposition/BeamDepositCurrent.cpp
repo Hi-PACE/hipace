@@ -26,7 +26,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
         "Only order 0 deposition is allowed for beam per-slice deposition");
 
-    Physconst const phys_const = get_phys_const();
+    PhysConst const phys_const = get_phys_const();
 
     // Assumes '2' == 'z' == 'the long dimension'.
     int islice_local = islice - bx.smallEnd(2);

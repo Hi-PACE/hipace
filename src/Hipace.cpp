@@ -359,8 +359,6 @@ Hipace::Evolve ()
             m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
             m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
 
-            // Resize particle array to valid particles
-
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
 
             Notify(step, it, bins);
@@ -1221,7 +1219,9 @@ Hipace::leftmostBoxWithParticles () const
 void
 Hipace::CheckGhostSlice (int it)
 {
+    constexpr int lev = 0;
     if (m_multi_beam.get_nbeams() == 0) return;
+    if (it == 0) return;
     // if (m_verbose < 1) return;
 
     const int nreal = m_multi_beam.m_n_real_particles[0];
@@ -1233,6 +1233,11 @@ Hipace::CheckGhostSlice (int it)
     const auto getPosition = GetParticlePosition<BeamParticleContainer>
         (m_multi_beam.getBeam(0), m_multi_beam.m_n_real_particles[0]);
 
+    bool lastrank = (m_rank_z == amrex::ParallelDescriptor::NProcs());
+    const amrex::Box& bx = boxArray(lev)[it-1];
+    //amrex::Real zmin = bx.lo(Direction::z);
+    //amrex::Real zmax = bx.hi(Direction::z);
+
     // if (m_verbose < 3) return;
     amrex::ParallelFor(
         nghost,
@@ -1240,6 +1245,8 @@ Hipace::CheckGhostSlice (int it)
             amrex::ParticleReal xp, yp, zp;
             int pid;
             getPosition(idx+nreal, xp, yp, zp, pid);
+            // std::cout<<"zp "<<zp<<'\n';
+            // if (lastrank) AMREX_ASSERT();
             if (pid < 0) return;
         }
         );
