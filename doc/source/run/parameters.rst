@@ -10,7 +10,8 @@ General parameters
     Number of cells in x, y and z.
 
 * ``max_step`` (`integer`) optional (default `0`)
-    Maximum number of time steps.
+    Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
+    fields of the initial beams.
 
 * ``hipace.dt`` (`float`) optional (default `0.`)
     Time step to advance the particle beam.
@@ -27,7 +28,9 @@ General parameters
         predictor-corrector loop, as well as the B-Field error at each slice.
 
       * `verbose = 3` also prints the number of particles, which violate the quasi-static
-        approximation and were neglected at each slice.
+        approximation and were neglected at each slice. It prints the number of ionized particles,
+        if ionization occurred. It also adds additional information if beams
+        are read in from file.
 
 * ``hipace.depos_order_xy`` (`int`) optional (default `2`)
     Transverse particle shape order. Currently, `0,1,2,3` are implemented.
@@ -50,6 +53,16 @@ General parameters
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
     Using the default, the beam deposits all currents `Jx`, `Jy`, `Jz`. Using
     `hipace.do_beam_jx_jy_deposition = 0` disables the transverse current deposition of the beams.
+
+Field solver parameters
+-----------------------
+
+Two different field solvers are available to calculate the transverse magnetic fields `Bx`
+and `By`. An FFT-based predictor-corrector loop and an analytic integration. In the analytic
+integration the longitudinal derivative of the transverse currents is calculated explicitly, which
+results in a Helmholtz equation, which is solved with the AMReX multigrid solver.
+Currently, the default is to use the predictor-corrector loop.
+Modeling ion motion is not yet supported by the explicit solver
 
 Predictor-corrector loop parameters
 -----------------------------------
@@ -76,11 +89,24 @@ Predictor-corrector loop parameters
 
    Second, a fixed (low) number of iterations. This is usually much faster than the fixed B-field
    error, but can loose significant accuracy in special physical simulation settings. For most
-   settings (e.g. a standard PWFA simulation the mild blowout regime at a reasonable resolution) it
-   reproduces the same results as the fixed B-field error tolerance setting.
+   settings (e.g. a standard PWFA simulation the blowout regime at a reasonable resolution) it
+   reproduces the same results as the fixed B-field error tolerance setting. It works very well at
+   high longitudinal resolution.
    A good setting for the fixed number of iterations is usually given by
    `hipace.predcorr_B_error_tolerance = -1.`, `hipace.predcorr_max_iterations = 1`,
    `hipace.predcorr_B_mixing_factor = 0.15`. The B-field error tolerance must be negative.
+
+Explicit solver parameters
+--------------------------
+
+* ``hipace.explicit`` (`bool`) optional (default `0`)
+    Using the explicit field solver.
+
+* ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+    Relative error tolerance of the AMReX multigrid solver.
+
+* ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
+    Absolute error tolerance of the AMReX multigrid solver.
 
 Plasma parameters
 -----------------
@@ -157,10 +183,17 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
 * ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
     and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
-    varying weights. `fixed_weight` generates a beam with a fixed number of particles with a
-    constant weight. `from_file` reads a beam from openPMD files.
+    varying weights. It can be either a Gaussian or a flattop beam. `fixed_weight` generates a
+    Gaussian beam with a fixed number of particles with a constant weight.
+    `from_file` reads a beam from openPMD files.
 
 **fixed_weight**
+
+* ``<beam name>.position_mean`` (3 `float`)
+    The mean position of the beam in `x, y, z`, separated by a space.
+
+* ``<beam name>.position_std`` (3 `float`)
+    The rms size of the of the beam in `x, y, z`, separated by a space.
 
 * ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
