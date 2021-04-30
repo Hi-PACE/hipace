@@ -105,8 +105,6 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     indices = bins.permutationPtr();
     offsets = bins.offsetsPtr();
 
-    std::cout<<"DEPO offsets "<<islice<<' '<<offsets[islice]<<'\n';
-
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]
     if (which_slice == WhichSlice::This) {
