@@ -34,9 +34,10 @@ MultiBeam::DepositCurrentSlice (
 
 {
     for (int i=0; i<m_nbeams; i++) {
+        const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
         ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bx,
                               a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
-                              do_beam_jx_jy_deposition, which_slice);
+                              do_beam_jx_jy_deposition, which_slice, nghost);
     }
 }
 
@@ -142,13 +143,32 @@ MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<
         ptile.resize(new_size);
 
         // Copy particles in box it to ghost particles
+        // Access AoS particle data
         auto& aos = ptile.GetArrayOfStructs();
         const auto& pos_structs_src = aos.begin() + offset_box_left;
         const auto& pos_structs_dst = aos.begin() + old_size;
+        // Access SoA particle data
+        auto& soa = ptile.GetStructOfArrays(); // For momenta and weights
+        const auto  wp_src = soa.GetRealData(BeamIdx::w).data()  + offset_box_left;
+        const auto uxp_src = soa.GetRealData(BeamIdx::ux).data() + offset_box_left;
+        const auto uyp_src = soa.GetRealData(BeamIdx::uy).data() + offset_box_left;
+        const auto uzp_src = soa.GetRealData(BeamIdx::uz).data() + offset_box_left;
+        const auto  wp_dst = soa.GetRealData(BeamIdx::w).data()  + old_size;
+        const auto uxp_dst = soa.GetRealData(BeamIdx::ux).data() + old_size;
+        const auto uyp_dst = soa.GetRealData(BeamIdx::uy).data() + old_size;
+        const auto uzp_dst = soa.GetRealData(BeamIdx::uz).data() + old_size;
+
         amrex::ParallelFor(
             nghost,
             [=] AMREX_GPU_DEVICE (long idx) {
+                pos_structs_dst[idx].id() = pos_structs_src[idx].id();
+                pos_structs_dst[idx].pos(0) = pos_structs_src[idx].pos(0);
+                pos_structs_dst[idx].pos(1) = pos_structs_src[idx].pos(1);
                 pos_structs_dst[idx].pos(2) = pos_structs_src[idx].pos(2);
+                wp_dst[idx] = wp_src[idx];
+                uxp_dst[idx] = uxp_src[idx];
+                uyp_dst[idx] = uyp_src[idx];
+                uzp_dst[idx] = uzp_src[idx];
             }
             );
     }

@@ -51,9 +51,13 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
                          int box_offset,
                          const bool do_beam_jx_jy_deposition,
-                         const int which_slice)
+                         const int which_slice,
+                         int nghost=0)
 {
     using namespace amrex::literals;
+
+    const bool deposit_ghost = which_slice==WhichSlice::Next && islice == 0;
+    AMREX_ALWAYS_ASSERT( !(deposit_ghost && !do_beam_jx_jy_deposition) );
 
     PhysConst const phys_const = get_phys_const();
 
@@ -115,8 +119,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             cell_start = offsets[islice-1];
             cell_stop  = offsets[islice];
         } else {
-            cell_start = 0;
-            cell_stop  = 0;
+            cell_start = 0; // ptile.numParticles();
+            cell_stop  = 0; // ptile.numParticles() + nghost;
         }
     }
 
@@ -128,7 +132,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
-            const int ip = indices[cell_start+idx];
+            const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 
             if (pos_structs[ip].id() < 0) return;
             // --- Get particle quantities
@@ -144,6 +148,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             const amrex::Real wqx = wq*vx;
             const amrex::Real wqy = wq*vy;
             const amrex::Real wqz = wq*vz;
+
+            if (islice==0) std::cout<<"pos_structs[ip].pos "<<pos_structs[ip].pos(0)<<' '<<pos_structs[ip].pos(1)<<' '<<pos_structs[ip].pos(0)<<'\n';
 
             // --- Compute shape factors
             // x direction

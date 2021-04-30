@@ -23,7 +23,8 @@ void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                      int const lev, const int islice, const amrex::Box bx, int const offset,
                      amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
-                     const bool do_beam_jx_jy_deposition, const int which_slice);
+                     const bool do_beam_jx_jy_deposition, const int which_slice,
+                     int nghost=0);
 
 
 #endif //  BEAMDEPOSITCURRENT_H_
