@@ -129,38 +129,26 @@ void
 MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom)
 {
     constexpr int lev = 0;
-    char * psend_buffer = nullptr;
     for (int ibeam=0; ibeam<m_nbeams; ibeam++){
 
         const int offset_box_left = box_sorters[ibeam].boxOffsetsPtr()[it];
         const int offset_box_curr = box_sorters[ibeam].boxOffsetsPtr()[it+1];
         const int nghost = offset_box_curr - offset_box_left;
 
-        int old_size;
-        {
-            // Resize particle array
-            auto& ptile = getBeam(ibeam);
-            old_size = ptile.numParticles();
-            auto new_size = old_size + nghost;
-            ptile.resize(new_size);
-        }
-
+        // Resize particle array
         auto& ptile = getBeam(ibeam);
-        auto ptd = ptile.getParticleTileData();
-        const auto getPosition = GetParticlePosition<BeamParticleContainer>
-            (getBeam(ibeam), m_n_real_particles[ibeam]);
-        const auto setPosition = SetParticlePosition<BeamParticleContainer>
-            (getBeam(ibeam), m_n_real_particles[ibeam]);
+        int old_size = ptile.numParticles();
+        auto new_size = old_size + nghost;
+        ptile.resize(new_size);
 
+        // Copy particles in box it to ghost particles
+        auto& aos = ptile.GetArrayOfStructs();
+        const auto& pos_structs_src = aos.begin() + offset_box_left;
+        const auto& pos_structs_dst = aos.begin() + old_size;
         amrex::ParallelFor(
             nghost,
             [=] AMREX_GPU_DEVICE (long idx) {
-                amrex::ParticleReal xp, yp, zp;
-                int pid;
-                const int src_idx = offset_box_left;
-                const int dst_idx = old_size+idx;
-                getPosition(src_idx, xp, yp, zp, pid);
-                setPosition(dst_idx, xp, yp, zp, pid);
+                pos_structs_dst[idx].pos(2) = pos_structs_src[idx].pos(2);
             }
             );
     }

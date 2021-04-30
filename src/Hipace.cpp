@@ -1070,8 +1070,8 @@ Hipace::Notify (const int step, const int it,
             {
                 for (int i = 0; i < np; ++i)
                 {
-                    const int src_idx = only_ghost ? indices[cell_start+i] : offset_box+i;
-                    ptd.packParticleData(p_psend_buffer, src_idx, i*psize, p_comm_real, p_comm_int);
+                    const int src_i = only_ghost ? indices[cell_start+i] : i;
+                    ptd.packParticleData(p_psend_buffer, offset_box+src_i, i*psize, p_comm_real, p_comm_int);
                 }
             }
             amrex::Gpu::Device::synchronize();
@@ -1220,34 +1220,57 @@ void
 Hipace::CheckGhostSlice (int it)
 {
     constexpr int lev = 0;
+    constexpr int ibeam = 0;
+
     if (m_multi_beam.get_nbeams() == 0) return;
     if (it == 0) return;
     // if (m_verbose < 1) return;
 
-    const int nreal = m_multi_beam.m_n_real_particles[0];
-    const int nghost = m_multi_beam.Npart(0) - nreal;
+    const int nreal = m_multi_beam.m_n_real_particles[ibeam];
+    const int nghost = m_multi_beam.Npart(ibeam) - nreal;
 
-    amrex::AllPrint()<<"rank "<<m_rank_z<<" it "<<it<<" npart "<<m_multi_beam.Npart(0)<<" nreal "
+    amrex::AllPrint()<<"CheckGhostSlice rank "<<m_rank_z<<" it "<<it<<" npart "<<m_multi_beam.Npart(ibeam)<<" nreal "
                      <<nreal<<" nghost "<<nghost<<"\n";
 
     const auto getPosition = GetParticlePosition<BeamParticleContainer>
-        (m_multi_beam.getBeam(0), m_multi_beam.m_n_real_particles[0]);
+        (m_multi_beam.getBeam(ibeam), m_multi_beam.m_n_real_particles[ibeam]);
 
-    bool lastrank = (m_rank_z == amrex::ParallelDescriptor::NProcs());
-    const amrex::Box& bx = boxArray(lev)[it-1];
-    //amrex::Real zmin = bx.lo(Direction::z);
-    //amrex::Real zmax = bx.hi(Direction::z);
+    // Get lo and hi indices of relevant boxes
+    const amrex::Box& bxleft = boxArray(lev)[it-1];
+    const amrex::Box& bx = boxArray(lev)[it];
+    const int ilo = bx.smallEnd(Direction::z);
+    const int ihi = bx.bigEnd(Direction::z);
+    const int iloleft = bxleft.smallEnd(Direction::z);
+    const int ihileft = bxleft.bigEnd(Direction::z);
 
-    // if (m_verbose < 3) return;
+    // Get domain size in physical space
+    const amrex::Real dz = Geom(lev).CellSize(Direction::z);
+    const amrex::Real dom_lo = Geom(lev).ProbLo(Direction::z);
+    const amrex::Real dom_hi = Geom(lev).ProbHi(Direction::z);
+
+    // Compute bounds of ghost cell, and of left box
+    const amrex::Real zmin_leftcell = dom_lo + dz*(ilo-1);
+    const amrex::Real zmax_leftcell = dom_lo + dz*ilo;
+    const amrex::Real zmin_leftbox = dom_lo + dz*iloleft;
+    const amrex::Real zmax_leftbox = dom_lo + dz*(ihileft+1);
+
+    // Get pointers to ghost particles
+    auto& ptile = m_multi_beam.getBeam(ibeam);
+    auto& aos = ptile.GetArrayOfStructs();
+    const auto& pos_structs = aos.begin() + nreal;
+
+    // Invalidate particles out of the ghost slice
     amrex::ParallelFor(
         nghost,
         [=] AMREX_GPU_DEVICE (long idx) {
-            amrex::ParticleReal xp, yp, zp;
-            int pid;
-            getPosition(idx+nreal, xp, yp, zp, pid);
-            // std::cout<<"zp "<<zp<<'\n';
-            // if (lastrank) AMREX_ASSERT();
-            if (pid < 0) return;
+            // Get zp of ghost particle
+            const amrex::Real zp = pos_structs[idx].pos(2);
+            // Make sure ghost particle is in the box directly left of the current box
+            AMREX_ASSERT(zp > zmin_leftbox && zp < zmax_leftbox);
+            // Invalidate ghost particle if not in the ghost slice
+            if ( zp < zmin_leftcell || zp > zmax_leftcell ) {
+                pos_structs[idx].id() = -1;
+            }
         }
         );
 }
