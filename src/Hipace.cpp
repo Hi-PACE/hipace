@@ -345,12 +345,16 @@ Hipace::Evolve ()
             };
             // Receive ghost slice
             if (it>0) WaitGhostSlice(step, it);
-            // Solve tail slice. Consume ghost particles.
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" it "<<it<<" before consumption\n";
             CheckGhostSlice(it);
+            // Solve tail slice. Consume ghost particles.
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
             // Delete ghost particles
-            if (it<m_numprocs_z-1) m_multi_beam.RemoveGhosts();
-
+            // if (it<m_numprocs_z-1) m_multi_beam.RemoveGhosts();
+            m_multi_beam.RemoveGhosts();
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" it "<<it<<" after removal\n";
+            CheckGhostSlice(it);
+            
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
                                            it, m_box_sorters, false);
 
@@ -384,6 +388,7 @@ void
 Hipace::SolveOneSlice (int islice, int lev, const int ibox,
                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
+    std::cout<<"SolveOneSlice "<<islice<<'\n';
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
     // for loop, the parallelcontext is the transverse communicator
@@ -840,6 +845,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         return;
     }
 
+    if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Wait   Ghost\n";
+
     // Receive particle counts
     {
         MPI_Status status;
@@ -977,6 +984,8 @@ Hipace::Notify (const int step, const int it,
         return;
     }
 
+    if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost start -------------\n";
+
     // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
     amrex::Vector<int>& np_snd = only_ghost ? m_np_snd_ghost : m_np_snd;
     np_snd.resize(nint);
@@ -988,8 +997,10 @@ Hipace::Notify (const int step, const int it,
         // (NOT the ghost particles)
         np_snd[ibeam] = only_ghost ? m_multi_beam.NGhostParticles(ibeam, bins, bx)
             : m_box_sorters[ibeam].boxCountsPtr()[it];
+        if (only_ghost) std::cout<<"np init = "<<m_multi_beam.NGhostParticles(ibeam, bins, bx)<<'\n';
     }
     np_snd[nbeams] = m_leftmost_box_snd;
+    if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: beamN ready\n";
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
     if (only_ghost) {
@@ -999,6 +1010,7 @@ Hipace::Notify (const int step, const int it,
         MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
     }
+    if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: beamN sent\n";
 
     // Send beam particles. Currently only one tile.
     {
@@ -1006,12 +1018,15 @@ Hipace::Notify (const int step, const int it,
         if (np_total == 0) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
-        m_psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+        char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
+        psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
+            if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: pack beam "<<ibeam<<"\n";
             const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
             const amrex::Long np = np_snd[ibeam];
+            if (only_ghost) std::cout<<"np = "<<np<<'\n';
 
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const auto ptd = ptile.getConstParticleTileData();
@@ -1020,7 +1035,7 @@ Hipace::Notify (const int step, const int it,
             const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
-            const auto p_psend_buffer = m_psend_buffer + offset_beam*psize;
+            const auto p_psend_buffer = psend_buffer + offset_beam*psize;
 
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type* indices = nullptr;
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
@@ -1031,8 +1046,9 @@ Hipace::Notify (const int step, const int it,
 
             // The particles that are in the last slice (sent as ghost particles) are
             // given by the indices[cell_start:cell_stop]
-            cell_start = offsets[bx.bigEnd(Direction::z)];
-            cell_stop  = offsets[bx.bigEnd(Direction::z)+1];
+            cell_start = offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
+            cell_stop  = offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)];
+            if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: meta-stuff done\n";
 
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion() && np > 0) {
@@ -1068,11 +1084,14 @@ Hipace::Notify (const int step, const int it,
             } else
 #endif
             {
+                if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: start pack\n";
                 for (int i = 0; i < np; ++i)
                 {
                     const int src_idx = only_ghost ? indices[cell_start+i] : offset_box+i;
+                    if (only_ghost) std::cout<<i<<' '<<cell_start<<' '<<offset_box<<' '<<indices[cell_start+i]<<'\n';
                     ptd.packParticleData(p_psend_buffer, src_idx, i*psize, p_comm_real, p_comm_int);
                 }
+                if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: beam pack done\n";
             }
             amrex::Gpu::Device::synchronize();
 
@@ -1080,14 +1099,17 @@ Hipace::Notify (const int step, const int it,
             if (!only_ghost) ptile.resize(offset_box);
             offset_beam += np;
         } // here
+        if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: pack done\n";
+
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
         if (only_ghost) {
-            MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+            MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z, &m_psend_request_ghost);
         } else {
-            MPI_Isend(m_psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+            MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                       (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
         }
+        if (only_ghost) amrex::AllPrint()<<"rank "<<m_rank_z<<" Notify Ghost: beam sent\n";
     }
 #endif
 }
@@ -1101,6 +1123,12 @@ Hipace::NotifyFinish (bool only_ghost)
             MPI_Status status;
             MPI_Wait(&m_nsend_request_ghost, &status);
             m_np_snd_ghost.resize(0);
+        }
+        if (m_psend_buffer_ghost) {
+            MPI_Status status;
+            MPI_Wait(&m_psend_request_ghost, &status);
+            amrex::The_Pinned_Arena()->free(m_psend_buffer_ghost);
+            m_psend_buffer_ghost = nullptr;
         }
     } else {
         if (m_np_snd.size() > 0) {
@@ -1153,6 +1181,7 @@ Hipace::NotifyGhostSlice (const int step, const int it,
 void
 Hipace::PrepareGhostSlice (const int it, const amrex::Box bx)
 {
+    amrex::AllPrint()<<"in Hipace::PrepareGhostSlice\n";
     // The head rank does not receive ghost particles from anyone, but still has to handle them.
     // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
     // That way, the rest of the code can be the same for everyone, no need to do special cases
@@ -1164,6 +1193,7 @@ Hipace::PrepareGhostSlice (const int it, const amrex::Box bx)
     // for the head rank.
     // - Slice-sort box it-1
     // - copy the last slice of box it-1 at the end of the particle array
+    amrex::AllPrint()<<"   Hipace::PrepareGhostSlice done\n";
 }
 
 void
@@ -1213,7 +1243,7 @@ void
 Hipace::CheckGhostSlice (int it)
 {
     if (m_multi_beam.get_nbeams() == 0) return;
-    if (m_verbose < 1) return;
+    // if (m_verbose < 1) return;
 
     const int nreal = m_multi_beam.m_n_real_particles[0];
     const int nghost = m_multi_beam.Npart(0) - nreal;
@@ -1221,11 +1251,10 @@ Hipace::CheckGhostSlice (int it)
     amrex::AllPrint()<<"rank "<<m_rank_z<<" it "<<it<<" npart "<<m_multi_beam.Npart(0)<<" nreal "
                      <<nreal<<" nghost "<<nghost<<"\n";
 
-
     const auto getPosition = GetParticlePosition<BeamParticleContainer>
         (m_multi_beam.getBeam(0), m_multi_beam.m_n_real_particles[0]);
 
-    if (m_verbose < 3) return;
+    // if (m_verbose < 3) return;
     amrex::ParallelFor(
         nghost,
         [=] AMREX_GPU_DEVICE (long idx) {
@@ -1233,7 +1262,7 @@ Hipace::CheckGhostSlice (int it)
             int pid;
             getPosition(idx+nreal, xp, yp, zp, pid);
             if (pid < 0) return;
-            std::cout<<"zp "<<zp<<'\n';
+            if (idx==0) std::cout<<"zp "<<zp<<'\n';
         }
         );
 }

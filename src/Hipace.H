@@ -175,6 +175,7 @@ public:
     int m_grid_size_z = 0;
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
+    char* m_psend_buffer_ghost = nullptr;
     /** Send buffer for the number of particles for each beam (pipeline) */
     amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
     amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
