@@ -1,0 +1,35 @@
+amr.n_cell = 16 16 100
+
+hipace.normalized_units = 1
+hipace.verbose = 1
+hipace.output_period = 1
+
+amr.blocking_factor = 2
+amr.max_level = 1
+
+max_step = 9
+
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+hipace.dt=1.
+
+hipace.depos_order_xy = 2
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = 1     1     0      # Is periodic?
+geometry.prob_lo     = -10.   -10.   -10.    # physical domain
+geometry.prob_hi     =  10.    10.    10.
+
+beams.names = beam
+beam.injection_type = fixed_ppc
+beam.profile = flattop
+beam.zmin = -9.
+beam.zmax = 9.
+beam.radius = 3.
+beam.density = 0.01
+beam.u_mean = 20. 20. 2000
+beam.u_std = 0. 0. 0.
+beam.ppc = 1 1 1
+
+plasmas.names = no_plasma
+diagnostic.diag_type = xz
