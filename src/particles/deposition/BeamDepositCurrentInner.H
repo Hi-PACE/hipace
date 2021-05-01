@@ -37,6 +37,9 @@
  * \param[in] box_offset offset to particles on this box.
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] nghost number of ghost particles, all at the end of the particle array.
+ *            Use for depositing transverse currents in the Next slice when processing
+ *            islice = 0.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,

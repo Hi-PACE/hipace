@@ -18,6 +18,9 @@
  * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] nghost number of ghost particles, all at the end of the particle array.
+ *            Use for depositing transverse currents in the Next slice when processing
+ *            islice = 0.
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
