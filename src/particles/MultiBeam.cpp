@@ -129,7 +129,6 @@ MultiBeam::RemoveGhosts ()
 void
 MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom)
 {
-    constexpr int lev = 0;
     for (int ibeam=0; ibeam<m_nbeams; ibeam++){
 
         const int offset_box_left = box_sorters[ibeam].boxOffsetsPtr()[it];

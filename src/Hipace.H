@@ -284,6 +284,13 @@ public:
      */
     void ExplicitSolveBxBy (const int lev);
 
+    /** \brief Check that the ghost beam particles are in the proper box, and invalidate
+     * those not in the right slice.
+     *
+     * \param[in] it Current box, the ghost slice of particles should be in the cell downstream.
+     */
+    void CheckGhostSlice (int it);
+
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
@@ -329,8 +336,6 @@ private:
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
 
     int leftmostBoxWithParticles () const;
-
-    void CheckGhostSlice (int it);
 };
 
 #endif

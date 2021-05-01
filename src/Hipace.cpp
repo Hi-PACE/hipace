@@ -1021,7 +1021,7 @@ Hipace::Notify (const int step, const int it,
 
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type* indices = nullptr;
             amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
-            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
+            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0;
 
             indices = bins[ibeam].permutationPtr();
             offsets = bins[ibeam].offsetsPtr();
@@ -1029,7 +1029,6 @@ Hipace::Notify (const int step, const int it,
             // The particles that are in the last slice (sent as ghost particles) are
             // given by the indices[cell_start:cell_stop-1]
             cell_start = offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
-            cell_stop  = offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)];
 
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion() && np > 0) {
