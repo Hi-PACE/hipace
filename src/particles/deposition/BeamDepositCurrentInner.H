@@ -138,7 +138,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
-            // Particles in the same slice must be access through the bin sorter.
+            // Particles in the same slice must be accessed through the bin sorter.
             // Ghost particles are simply contiguous in memory.
             const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 

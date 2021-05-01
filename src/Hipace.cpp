@@ -746,7 +746,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
-        // - if slice>0, do as usual. If slice==0, deposit our ghost particles.
         m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         m_fields.AddBeamCurrents(lev, WhichSlice::Next);
@@ -983,9 +982,8 @@ Hipace::Notify (const int step, const int it,
     const amrex::Box& bx = boxArray(lev)[it];
     for (int ibeam = 0; ibeam < nbeams; ++ibeam)
     {
-        // make sure that we have a function that return ONLY the physical particles
-        // (NOT the ghost particles)
-        np_snd[ibeam] = only_ghost ? m_multi_beam.NGhostParticles(ibeam, bins, bx)
+        np_snd[ibeam] = only_ghost ?
+            m_multi_beam.NGhostParticles(ibeam, bins, bx)
             : m_box_sorters[ibeam].boxCountsPtr()[it];
     }
     np_snd[nbeams] = m_leftmost_box_snd;
@@ -1030,7 +1028,7 @@ Hipace::Notify (const int step, const int it,
             offsets = bins[ibeam].offsetsPtr();
 
             // The particles that are in the last slice (sent as ghost particles) are
-            // given by the indices[cell_start:cell_stop]
+            // given by the indices[cell_start:cell_stop-1]
             cell_start = offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
             cell_stop  = offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)];
 
@@ -1129,22 +1127,6 @@ void
 Hipace::WaitGhostSlice (const int step, const int it)
 {
     Wait(step, it, true);
-    // - Receive number of ghost particles. They will be added at the end of the particle data
-    // - Resize beam array with with auto& ptile = m_multi_beam.getBeam(ibeam);
-    // - Unpack ghost particles at the end of the particle array. That way we can use its
-    //   functions (e.g. to slice the beam)
-    // NOTE: the three points above are VERY similar to Wait.
-    // - Append all particles in box it-1 to the end of the particle array.
-    //   In the middle of the simulation, this should be just a few slippped particles.
-    //   At the beginning of the run, for rank N-1, this will cause a lot of useless copy.
-    //   But we can hope that this is not significant, as it happens only once.
-    //   An easy optimization would then to also slice it-1 after Wait, so we only copy
-    //   required particles
-    // - Slice ghost particles to only keep those actually in the -1 ghost slice.
-    //   This is mandatory in any case, as the particles just received might believe to
-    //   several slices in the presence of slippage.
-    //   Let's be smart and append this slicing information to the existing bins object
-    //   (just add one element to the vector of DenseBins, containg indices of ghost particles.
 }
 
 void
@@ -1152,9 +1134,6 @@ Hipace::NotifyGhostSlice (const int step, const int it,
                           amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
 {
     Notify(step, it, bins, true);
-    // - Pack particles in the head slice into the buffer.
-    // - Send those particles to next rank.
-    // NOTE: this is VERY similar to Notify
 }
 
 void
@@ -1162,15 +1141,10 @@ Hipace::PrepareGhostSlice (const int it, const amrex::Box bx)
 {
     // The head rank does not receive ghost particles from anyone, but still has to handle them.
     // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
-    // That way, the rest of the code can be the same for everyone, no need to do special cases
+    // That way, the rest of the code can be the same for everyone, no need to do a special cases.
     constexpr int lev = 0;
+    // copy box it-1 at the end of the particle array
     m_multi_beam.PrepareGhostSlice(it, bx, m_box_sorters, geom[lev]);
-    // - copy box it-1 at the end of the particle array
-
-    // OR, if we want the optimization version:
-    // for the head rank.
-    // - Slice-sort box it-1
-    // - copy the last slice of box it-1 at the end of the particle array
 }
 
 void
@@ -1224,13 +1198,15 @@ Hipace::CheckGhostSlice (int it)
 
     if (m_multi_beam.get_nbeams() == 0) return;
     if (it == 0) return;
-    // if (m_verbose < 1) return;
-
+    
     const int nreal = m_multi_beam.m_n_real_particles[ibeam];
     const int nghost = m_multi_beam.Npart(ibeam) - nreal;
 
-    amrex::AllPrint()<<"CheckGhostSlice rank "<<m_rank_z<<" it "<<it<<" npart "<<m_multi_beam.Npart(ibeam)<<" nreal "
-                     <<nreal<<" nghost "<<nghost<<"\n";
+    if (m_verbose >= 1) {
+        amrex::AllPrint()<<"CheckGhostSlice rank "<<m_rank_z<<" it "<<it
+                         <<" npart "<<m_multi_beam.Npart(ibeam)<<" nreal "
+                         <<nreal<<" nghost "<<nghost<<"\n";
+    }
 
     const auto getPosition = GetParticlePosition<BeamParticleContainer>
         (m_multi_beam.getBeam(ibeam), m_multi_beam.m_n_real_particles[ibeam]);
