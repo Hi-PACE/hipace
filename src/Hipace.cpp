@@ -338,19 +338,18 @@ Hipace::Evolve ()
             // Solve head slice
             SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
             // Notify ghost slice
-            if (it<m_numprocs_z-1) NotifyGhostSlice(step, it, bins);
+            if (it<m_numprocs_z-1) Notify(step, it, bins, true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, lev, it, bins);
             };
             // Receive ghost slice
-            if (it>0) WaitGhostSlice(step, it);
+            if (it>0) Wait(step, it, true);
             CheckGhostSlice(it);
             // Solve tail slice. Consume ghost particles.
             SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
-            CheckGhostSlice(it);
 
             m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
                                            it, m_box_sorters, false);
@@ -1121,19 +1120,6 @@ Hipace::NotifyFinish (bool only_ghost)
         }
     }
 #endif
-}
-
-void
-Hipace::WaitGhostSlice (const int step, const int it)
-{
-    Wait(step, it, true);
-}
-
-void
-Hipace::NotifyGhostSlice (const int step, const int it,
-                          amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
-{
-    Notify(step, it, bins, true);
 }
 
 void

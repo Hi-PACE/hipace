@@ -98,10 +98,18 @@ public:
      * \param[in] only_ghost whether to send only ghost particles
      */
     void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
-    void WaitGhostSlice (const int step, int it);
-    void NotifyGhostSlice (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+
+    /** \brief Prepare ghost particles: pack particles in it at the end of the particle array
+     *
+     * \param[in] it index of the box the particles of which will be copied as ghost particles
+     * \param[in] bx corresonding box object
+     */
     void PrepareGhostSlice (const int it, const amrex::Box bx);
-    /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
+
+    /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
+     *
+     * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)
+     */
     void NotifyFinish (bool only_ghost=false);
 
     /** \brief return whether rank is in the same transverse communicator w/ me
