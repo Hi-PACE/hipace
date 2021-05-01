@@ -1185,7 +1185,7 @@ Hipace::CheckGhostSlice (int it)
 
     if (m_multi_beam.get_nbeams() == 0) return;
     if (it == 0) return;
-    
+
     const int nreal = m_multi_beam.m_n_real_particles[ibeam];
     const int nghost = m_multi_beam.Npart(ibeam) - nreal;
 
