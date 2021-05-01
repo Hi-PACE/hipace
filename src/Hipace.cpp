@@ -1049,7 +1049,8 @@ Hipace::Notify (const int step, const int it,
                         const unsigned int m = threadIdx.x;
                         const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
                         if (i < np) {
-                            ptd.packParticleData(shared, offset_box+i, m*psize, p_comm_real, p_comm_int);
+                            const int src_i = only_ghost ? indices[cell_start+i] : i;
+                            ptd.packParticleData(shared, offset_box+src_i, m*psize, p_comm_real, p_comm_int);
                         }
 
                         __syncthreads();
