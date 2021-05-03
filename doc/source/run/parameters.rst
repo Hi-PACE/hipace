@@ -115,7 +115,8 @@ For the plasma parameters, first the names of the plasmas need to be specified. 
 plasma parameters for each plasma are specified via `<plasma name>.plasma_property = ...`
 
 * ``plasmas.names`` (`string`)
-    The names of the plasmas, separated by a space.
+    The names of the plasmas, separated by a space. **Note:** This parameter is mandatory.
+    To run without plasma, choose the name `no_plasma`.
 
 * ``<plasma name>.density`` (`float`) optional (default `0.`)
     The plasma density.
@@ -178,7 +179,8 @@ For the beam parameters, first the names of the beams need to be specified. Afte
 parameters for each beam are specified via `<beam name>.beam_property = ...`
 
 * ``beams.names`` (`string`)
-    The names of the particle beams, separated by a space.
+    The names of the particle beams, separated by a space. **Note:** This parameter is mandatory.
+    To run without beams, choose the name `no_beam`.
 
 * ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
@@ -198,6 +200,20 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
 * ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
+* ``<beam name>.total_charge`` (`float`)
+    Total charge of the beam. Note: Either `total_charge` or `density` must be specified.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam. Note: Either `total_charge` or `density` must be specified. 
+
+* ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
+    Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the 
+    beam.
+
+* ``<beam name>.dy_per_dzeta`` (`float`)  optional (default `0.`)
+    Tilt of the beam in the y direction. The tilt is introduced with respect to the center of the 
+    beam.
+
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
     Thereby, `duz_per_uz0_dzeta *` :math:`\zeta` `* uz_mean` is added to `uz` of the each particle.
@@ -210,6 +226,10 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     `beam_name.num_particles`, therefore this option requires that the beam particle number must be
     divisible by 4.
+    
+* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
+    Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
+    Note: using `do_z_push = 0` results in unphysical behavior.
 
 **from_file**
 
@@ -223,7 +243,7 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
     time of the simulation is set to the time of the given iteration (if available).
 
-* ``<beam name>.openPMD_species_name`` (`string`) optional
+* ``<beam name>.openPMD_species_name`` (`string`) optional (default `<beam name>`)
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
 
