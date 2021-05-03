@@ -326,7 +326,7 @@ Hipace::Evolve ()
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
 
             m_multi_beam.StoreNRealParticles();
-            if (step == 0 && it>0) PrepareGhostSlice(it-1, boxArray(lev)[it-1]);
+            if (step == 0 && it>0) PrepareGhostSlice(it-1);
 
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
@@ -1123,14 +1123,14 @@ Hipace::NotifyFinish (bool only_ghost)
 }
 
 void
-Hipace::PrepareGhostSlice (const int it, const amrex::Box bx)
+Hipace::PrepareGhostSlice (const int it)
 {
     // The head rank does not receive ghost particles from anyone, but still has to handle them.
     // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
     // That way, the rest of the code can be the same for everyone, no need to do a special cases.
     constexpr int lev = 0;
     // copy box it-1 at the end of the particle array
-    m_multi_beam.PrepareGhostSlice(it, bx, m_box_sorters, geom[lev]);
+    m_multi_beam.PrepareGhostSlice(it, m_box_sorters);
 }
 
 void
@@ -1201,14 +1201,12 @@ Hipace::CheckGhostSlice (int it)
     const amrex::Box& bxleft = boxArray(lev)[it-1];
     const amrex::Box& bx = boxArray(lev)[it];
     const int ilo = bx.smallEnd(Direction::z);
-    const int ihi = bx.bigEnd(Direction::z);
     const int iloleft = bxleft.smallEnd(Direction::z);
     const int ihileft = bxleft.bigEnd(Direction::z);
 
     // Get domain size in physical space
     const amrex::Real dz = Geom(lev).CellSize(Direction::z);
     const amrex::Real dom_lo = Geom(lev).ProbLo(Direction::z);
-    const amrex::Real dom_hi = Geom(lev).ProbHi(Direction::z);
 
     // Compute bounds of ghost cell, and of left box
     const amrex::Real zmin_leftcell = dom_lo + dz*(ilo-1);

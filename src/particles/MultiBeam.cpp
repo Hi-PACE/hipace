@@ -127,7 +127,7 @@ MultiBeam::RemoveGhosts ()
 }
 
 void
-MultiBeam::PrepareGhostSlice (int it, const amrex::Box& bx, const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom)
+MultiBeam::PrepareGhostSlice (int it, const amrex::Vector<BoxSorter>& box_sorters)
 {
     for (int ibeam=0; ibeam<m_nbeams; ibeam++){
 

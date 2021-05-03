@@ -111,8 +111,7 @@ public:
     int NGhostParticles (int ibeam, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, amrex::Box bx);
     void RemoveGhosts ();
     int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();};
-    void PrepareGhostSlice (int it, const amrex::Box& bx,
-                            const amrex::Vector<BoxSorter>& box_sorters, const amrex::Geometry& geom);
+    void PrepareGhostSlice (int it, const amrex::Vector<BoxSorter>& box_sorters);
     /** number of real particles per beam, as opposed to ghost particles */
     amrex::Vector<amrex::Long> m_n_real_particles;
 private:

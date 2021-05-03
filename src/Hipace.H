@@ -102,9 +102,8 @@ public:
     /** \brief Prepare ghost particles: pack particles in it at the end of the particle array
      *
      * \param[in] it index of the box the particles of which will be copied as ghost particles
-     * \param[in] bx corresonding box object
      */
-    void PrepareGhostSlice (const int it, const amrex::Box bx);
+    void PrepareGhostSlice (const int it);
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
