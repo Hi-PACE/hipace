@@ -1128,7 +1128,7 @@ Hipace::PrepareGhostSlice (const int it)
     // The head rank does not receive ghost particles from anyone, but still has to handle them.
     // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
     // That way, the rest of the code can be the same for everyone, no need to do a special cases.
-    constexpr int lev = 0;
+
     // copy box it-1 at the end of the particle array
     m_multi_beam.PrepareGhostSlice(it, m_box_sorters);
 }
@@ -1180,9 +1180,7 @@ void
 Hipace::CheckGhostSlice (int it)
 {
     constexpr int lev = 0;
-    constexpr int ibeam = 0;
 
-    if (m_multi_beam.get_nbeams() == 0) return;
     if (it == 0) return;
 
     for (int ibeam=0; ibeam<m_multi_beam.get_nbeams(); ibeam++) {
