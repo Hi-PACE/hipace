@@ -135,7 +135,7 @@ public:
      * This function performs both of these tasks.
      *
      * \param[in] it index of the box from which we copy particles to the ghost buffer
-     * \param[in] box_sorter BoxSorter object to access the indices of particles in box it
+     * \param[in] box_sorters BoxSorter object to access the indices of particles in box it
      */
     void PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_sorters);
 
