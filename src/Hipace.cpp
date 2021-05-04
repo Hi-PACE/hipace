@@ -319,21 +319,24 @@ Hipace::Evolve ()
         {
             Wait(step, it);
 
+            std::cout<<"rank "<<m_rank_z<<" step "<<step<<" it "<<it<<" npart sort before "<<m_box_sorters[0].boxCountsPtr()[it]<<'\n';
             m_box_sorters.clear();
+
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
+            std::cout<<"rank "<<m_rank_z<<" step "<<step<<" it "<<it<<" npart sort after  "<<m_box_sorters[0].boxCountsPtr()[it]<<'\n';
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
 
             m_multi_beam.StoreNRealParticles();
-            if (step == 0 && it>0) PrepareGhostSlice(it-1);
+            // if (step == 0 && it>0) PrepareGhostSlice(it-1);
+            if (it>0) PrepareGhostSlice(it-1);
 
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
 
             amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
-
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
             SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
@@ -1229,6 +1232,7 @@ Hipace::CheckGhostSlice (int it)
                 // Invalidate ghost particle if not in the ghost slice
                 if ( zp < zmin_leftcell || zp > zmax_leftcell ) {
                     pos_structs[idx].id() = -1;
+                    // if (m_rank_z == amrex::ParallelDescriptor::NProcs()) AMREX_ALWAYS_ASSERT(false);
                 }
             }
             );
