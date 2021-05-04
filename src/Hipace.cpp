@@ -1159,6 +1159,8 @@ Hipace::leftmostBoxWithParticles () const
 void
 Hipace::CheckGhostSlice (int it)
 {
+    HIPACE_PROFILE("Hipace::CheckGhostSlice()");
+
     constexpr int lev = 0;
 
     if (it == 0) return;

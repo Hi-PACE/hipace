@@ -2,6 +2,7 @@
 #include "deposition/BeamDepositCurrent.H"
 #include "particles/BinSort.H"
 #include "pusher/BeamParticleAdvance.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 {
@@ -128,6 +129,7 @@ MultiBeam::RemoveGhosts ()
 void
 MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_sorters)
 {
+    HIPACE_PROFILE("MultiBeam::PackLocalGhostParticles()");
     for (int ibeam=0; ibeam<m_nbeams; ibeam++){
 
         const int offset_box_left = box_sorters[ibeam].boxOffsetsPtr()[it];
