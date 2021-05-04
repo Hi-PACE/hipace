@@ -204,14 +204,14 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Total charge of the beam. Note: Either `total_charge` or `density` must be specified.
 
 * ``<beam name>.density`` (`float`)
-    Peak density of the beam. Note: Either `total_charge` or `density` must be specified. 
+    Peak density of the beam. Note: Either `total_charge` or `density` must be specified.
 
 * ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
-    Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the 
+    Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
     beam.
 
 * ``<beam name>.dy_per_dzeta`` (`float`)  optional (default `0.`)
-    Tilt of the beam in the y direction. The tilt is introduced with respect to the center of the 
+    Tilt of the beam in the y direction. The tilt is introduced with respect to the center of the
     beam.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
@@ -226,7 +226,7 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     `beam_name.num_particles`, therefore this option requires that the beam particle number must be
     divisible by 4.
-    
+
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using `do_z_push = 0` results in unphysical behavior.
