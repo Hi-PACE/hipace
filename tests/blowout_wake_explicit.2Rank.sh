@@ -20,7 +20,7 @@ TEST_NAME="${FILE_NAME%.*}"
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=$TEST_NAME \
-        hipace.explicit=1 \
+        hipace.bxby_solver=explicit \
         max_step=1
 
 # Compare the results with checksum benchmark

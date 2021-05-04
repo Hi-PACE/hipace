@@ -91,7 +91,10 @@ Hipace::Hipace () :
     pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
     pph.query("external_Ez_slope", m_external_Ez_slope);
     pph.query("external_Ez_uniform", m_external_Ez_uniform);
-    pph.query("explicit", m_explicit);
+    std::string solver = "predictor-corrector";
+    pph.query("bxby_solver", solver);
+    if (solver == "explicit") m_explicit = true;
+
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
 
