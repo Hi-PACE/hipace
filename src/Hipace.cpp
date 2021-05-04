@@ -61,6 +61,7 @@ Hipace::Hipace () :
 
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
+
     int seed;
     if (pp.query("random_seed", seed)) amrex::ResetRandomSeed(seed);
 
@@ -321,18 +322,15 @@ Hipace::Evolve ()
         {
             Wait(step, it);
 
-            std::cout<<"rank "<<m_rank_z<<" step "<<step<<" it "<<it<<" npart sort before "<<m_box_sorters[0].boxCountsPtr()[it]<<'\n';
             m_box_sorters.clear();
 
             m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
-            std::cout<<"rank "<<m_rank_z<<" step "<<step<<" it "<<it<<" npart sort after  "<<m_box_sorters[0].boxCountsPtr()[it]<<'\n';
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
 
             m_multi_beam.StoreNRealParticles();
-            // if (step == 0 && it>0) PrepareGhostSlice(it-1);
-            if (it>0) PrepareGhostSlice(it-1);
+            if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
@@ -1128,17 +1126,6 @@ Hipace::NotifyFinish (bool only_ghost)
 }
 
 void
-Hipace::PrepareGhostSlice (const int it)
-{
-    // The head rank does not receive ghost particles from anyone, but still has to handle them.
-    // For convenience, this function packs the ghost particles in the same way as WaitGhostSlice.
-    // That way, the rest of the code can be the same for everyone, no need to do a special cases.
-
-    // copy box it-1 at the end of the particle array
-    m_multi_beam.PrepareGhostSlice(it, m_box_sorters);
-}
-
-void
 Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
@@ -1189,7 +1176,7 @@ Hipace::CheckGhostSlice (int it)
     if (it == 0) return;
 
     for (int ibeam=0; ibeam<m_multi_beam.get_nbeams(); ibeam++) {
-        const int nreal = m_multi_beam.m_n_real_particles[ibeam];
+        const int nreal = m_multi_beam.getNRealParticles(ibeam);
         const int nghost = m_multi_beam.Npart(ibeam) - nreal;
 
         if (m_verbose >= 1) {
@@ -1199,7 +1186,7 @@ Hipace::CheckGhostSlice (int it)
         }
 
         const auto getPosition = GetParticlePosition<BeamParticleContainer>
-            (m_multi_beam.getBeam(ibeam), m_multi_beam.m_n_real_particles[ibeam]);
+            (m_multi_beam.getBeam(ibeam), m_multi_beam.getNRealParticles(ibeam));
 
         // Get lo and hi indices of relevant boxes
         const amrex::Box& bxleft = boxArray(lev)[it-1];

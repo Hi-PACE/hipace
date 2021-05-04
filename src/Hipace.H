@@ -99,12 +99,6 @@ public:
      */
     void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
 
-    /** \brief Prepare ghost particles: pack particles in it at the end of the particle array
-     *
-     * \param[in] it index of the box the particles of which will be copied as ghost particles
-     */
-    void PrepareGhostSlice (const int it);
-
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
      * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)

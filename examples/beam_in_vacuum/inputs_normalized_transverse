@@ -3,7 +3,7 @@ amr.n_cell = 16 16 100
 hipace.normalized_units = 1
 hipace.verbose = 1
 hipace.output_period = 1
-
+random_seed = 4
 amr.blocking_factor = 2
 amr.max_level = 1
 
@@ -20,16 +20,24 @@ geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -10.   -10.   -10.    # physical domain
 geometry.prob_hi     =  10.    10.    10.
 
-beams.names = beam
-beam.injection_type = fixed_ppc
-beam.profile = flattop
-beam.zmin = -9.
-beam.zmax = 9.
-beam.radius = 3.
-beam.density = 0.01
-beam.u_mean = 20. 20. 2000
-beam.u_std = 0. 0. 0.
-beam.ppc = 1 1 1
+beams.names = beam beam2
+
+beam.injection_type = fixed_weight
+beam.num_particles = 10000
+beam.density = 200.
+beam.u_mean = 20. 10. 20
+beam.u_std = 100. 100. 15.
+beam.position_mean = 0. 0. 0
+beam.position_std = 0.1 0.1 1.41
+beam.dx_per_dzeta = 0.2
+
+beam2.injection_type = fixed_weight
+beam2.num_particles = 3000
+beam2.density = 200.
+beam2.u_mean = 8. 23. 21
+beam2.u_std = 80. 120. 14.
+beam2.position_mean = 0. 0. 0
+beam2.position_std = 8. 0.3 1.41
 
 plasmas.names = no_plasma
 diagnostic.diag_type = xz
