@@ -34,7 +34,7 @@ public:
      */
     void DepositCurrentSlice (
         Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+        amrex::Vector<BeamBins> bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
         const bool do_beam_jx_jy_deposition, const int which_slice);
 
@@ -45,7 +45,7 @@ public:
      * \param[in] geom Geometry of the simulation domain
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
+    amrex::Vector<BeamBins>
     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
                               const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
@@ -72,7 +72,7 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
+        amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and init them
@@ -117,7 +117,7 @@ public:
      * \param[in] bins bins object to access particles per slice
      * \param[in] bx box in which we want to acce particles
      */
-    int NGhostParticles (int ibeam, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, amrex::Box bx);
+    int NGhostParticles (int ibeam, amrex::Vector<BeamBins>& bins, amrex::Box bx);
 
     /** \brief remove ghost particles, in practice those after the last slice. */
     void RemoveGhosts ();

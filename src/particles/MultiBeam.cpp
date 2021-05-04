@@ -28,7 +28,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+    amrex::Vector<BeamBins> bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
     const bool do_beam_jx_jy_deposition, const int which_slice)
 
@@ -41,11 +41,11 @@ MultiBeam::DepositCurrentSlice (
     }
 }
 
-amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
+amrex::Vector<BeamBins>
 MultiBeam::findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
                                      const amrex::Vector<BoxSorter>& a_box_sorter_vec)
 {
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
+    amrex::Vector<BeamBins> bins;
     for (int i=0; i<m_nbeams; i++) {
         bins.emplace_back(::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i], geom, a_box_sorter_vec[i]));
     }
@@ -66,7 +66,7 @@ MultiBeam::sortParticlesByBox (
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
+    amrex::Vector<BeamBins>& bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -110,9 +110,9 @@ MultiBeam::StoreNRealParticles ()
 }
 
 int
-MultiBeam::NGhostParticles (int ibeam, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, amrex::Box bx)
+MultiBeam::NGhostParticles (int ibeam, amrex::Vector<BeamBins>& bins, amrex::Box bx)
 {
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
+    BeamBins::index_type const * offsets = 0;
     offsets = bins[ibeam].offsetsPtr();
     return offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)]
         - offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];

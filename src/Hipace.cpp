@@ -337,7 +337,7 @@ Hipace::Evolve ()
             const amrex::Box& bx = boxArray(lev)[it];
             m_fields.ResizeFDiagFAB(bx, lev);
 
-            amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins;
+            amrex::Vector<BeamBins> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
@@ -385,7 +385,7 @@ Hipace::Evolve ()
 
 void
 Hipace::SolveOneSlice (int islice, int lev, const int ibox,
-                       amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins)
+                       amrex::Vector<BeamBins>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
     // Between this push and the corresponding pop at the end of this
@@ -676,7 +676,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 void
 Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, const amrex::Box bx,
-                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+                        amrex::Vector<BeamBins> bins,
                         const int ibox)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
@@ -936,7 +936,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
 void
 Hipace::Notify (const int step, const int it,
-                amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost)
+                amrex::Vector<BeamBins>& bins, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
@@ -1010,9 +1010,9 @@ Hipace::Notify (const int step, const int it,
             const auto p_comm_int = comm_int.data();
             const auto p_psend_buffer = psend_buffer + offset_beam*psize;
 
-            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type* indices = nullptr;
-            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
-            amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0;
+            BeamBins::index_type* indices = nullptr;
+            BeamBins::index_type const * offsets = 0;
+            BeamBins::index_type cell_start = 0;
 
             indices = bins[ibeam].permutationPtr();
             offsets = bins[ibeam].offsetsPtr();

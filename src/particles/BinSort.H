@@ -6,6 +6,8 @@
 
 #include <AMReX_MultiFab.H>
 
+using BeamBins = amrex::DenseBins<BeamParticleContainer::ParticleType>;
+
 /** \brief Find particles that are in each slice, and return collections of indices per slice.
  *
  * Note that this does *not* rearrange particle arrays
@@ -17,7 +19,7 @@
  * \param[in] geom Geometry
  * \param[in] a_box_sorter object that sorts particles by box
  */
-amrex::DenseBins<BeamParticleContainer::ParticleType>
+BeamBins
 findParticlesInEachSlice (
     int lev, int ibox, amrex::Box bx,
     BeamParticleContainer& beam, const amrex::Geometry& geom,

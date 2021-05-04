@@ -97,7 +97,7 @@ public:
      * \param[in] bins slice indexing
      * \param[in] only_ghost whether to send only ghost particles
      */
-    void Notify (const int step, const int it, amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins, bool only_ghost=false);
+    void Notify (const int step, const int it, amrex::Vector<BeamBins>& bins, bool only_ghost=false);
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
@@ -130,7 +130,7 @@ public:
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
     void SolveOneSlice (int islice, int lev, const int ibox,
-                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+                        amrex::Vector<BeamBins>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -317,7 +317,7 @@ private:
      * \param[in] ibox index of the current box
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, const amrex::Box bx,
-                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+                        amrex::Vector<BeamBins> bins,
                         const int ibox);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.

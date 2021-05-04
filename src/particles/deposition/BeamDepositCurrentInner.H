@@ -51,7 +51,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          int islice,
-                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                         BeamBins& bins,
                          int box_offset,
                          const bool do_beam_jx_jy_deposition,
                          const int which_slice,
@@ -108,10 +108,10 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be exactly one cell thick in the z direction."
         );
 
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+    BeamBins::index_type*
         indices = nullptr;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
+    BeamBins::index_type const * offsets = 0;
+    BeamBins::index_type cell_start = 0, cell_stop = 0;
 
     indices = bins.permutationPtr();
     offsets = bins.offsetsPtr();

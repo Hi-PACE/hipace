@@ -4,8 +4,7 @@
 #include "particles/BeamParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-
-#include <AMReX_DenseBins.H>
+#include "particles/BinSort.H"
 
 /** Depose current of beam particles on a single slice
  * \param[in] beam species of which the current is deposited
@@ -25,7 +24,7 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                      int const lev, const int islice, const amrex::Box bx, int const offset,
-                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                     BeamBins& bins,
                      const bool do_beam_jx_jy_deposition, const int which_slice,
                      int nghost=0);
 
