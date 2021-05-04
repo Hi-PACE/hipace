@@ -61,7 +61,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
 
     // Whether the ghost slice has to be deposited
     const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice == 0));
-    AMREX_ALWAYS_ASSERT( !(deposit_ghost && !do_beam_jx_jy_deposition) );
+    if (deposit_ghost && !do_beam_jx_jy_deposition) return;
 
     // Ghost particles are indexed [ptile.numParticles()-nghost, ptile.numParticles()-1]
     if (deposit_ghost) box_offset = ptile.numParticles()-nghost;
