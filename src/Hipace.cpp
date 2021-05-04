@@ -93,6 +93,10 @@ Hipace::Hipace () :
     pph.query("external_Ez_uniform", m_external_Ez_uniform);
     std::string solver = "predictor-corrector";
     pph.query("bxby_solver", solver);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        solver == "predictor-corrector" ||
+        solver == "explicit",
+        "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
 
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
