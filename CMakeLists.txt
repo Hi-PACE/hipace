@@ -149,6 +149,10 @@ if(HiPACE_OPENPMD)
     target_link_libraries(HiPACE PUBLIC openPMD::openPMD)
 endif()
 
+if(AMReX_LINEAR_SOLVERS)
+    target_compile_definitions(HiPACE PUBLIC AMREX_USE_LINEAR_SOLVERS)
+endif()
+
 # fancy binary name for build variants
 set_hipace_binary_name()
 

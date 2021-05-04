@@ -11,7 +11,7 @@
 #include "utils/Constants.H"
 
 #include <AMReX_AmrCore.H>
-#ifdef AMReX_LINEAR_SOLVERS
+#ifdef AMREX_USE_LINEAR_SOLVERS
 #  include <AMReX_MLALaplacian.H>
 #  include <AMReX_MLMG.H>
 #endif
@@ -275,7 +275,7 @@ private:
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
 
-#ifdef AMReX_LINEAR_SOLVERS
+#ifdef AMREX_USE_LINEAR_SOLVERS
     /** Linear operator for the explicit Bx and By solver */
     std::unique_ptr<amrex::MLALaplacian> m_mlalaplacian;
     /** Geometric multigrid solver class, for the explicit Bx and By solver */

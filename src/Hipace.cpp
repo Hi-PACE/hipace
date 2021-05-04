@@ -6,7 +6,7 @@
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
-#ifdef AMReX_LINEAR_SOLVERS
+#ifdef AMREX_USE_LINEAR_SOLVERS
 #  include <AMReX_MLALaplacian.H>
 #  include <AMReX_MLMG.H>
 #endif
@@ -607,7 +607,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
             );
     }
 
-#ifdef AMReX_LINEAR_SOLVERS
+#ifdef AMREX_USE_LINEAR_SOLVERS
     // For now, we construct the solver locally. Later, we want to move it to the hipace class as
     // a member so that we can reuse it.
     amrex::Geometry slice_geom = m_slice_geom;
