@@ -115,7 +115,7 @@ For the plasma parameters, first the names of the plasmas need to be specified. 
 plasma parameters for each plasma are specified via `<plasma name>.plasma_property = ...`
 
 * ``plasmas.names`` (`string`)
-    The names of the plasmas, separated by a space. **Note:** This parameter is mandatory.
+    The names of the plasmas, separated by a space.
     To run without plasma, choose the name `no_plasma`.
 
 * ``<plasma name>.density`` (`float`) optional (default `0.`)
@@ -179,7 +179,7 @@ For the beam parameters, first the names of the beams need to be specified. Afte
 parameters for each beam are specified via `<beam name>.beam_property = ...`
 
 * ``beams.names`` (`string`)
-    The names of the particle beams, separated by a space. **Note:** This parameter is mandatory.
+    The names of the particle beams, separated by a space.
     To run without beams, choose the name `no_beam`.
 
 * ``<beam name>.injection_type`` (`string`)
