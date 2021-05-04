@@ -843,16 +843,11 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     // Receive particle counts
     {
         MPI_Status status;
+        const int loc_comm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        if (only_ghost) {
-            MPI_Recv(np_rcv.dataPtr(), nint,
-                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                     (m_rank_z+1)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z, &status);
-        } else {
-            MPI_Recv(np_rcv.dataPtr(), nint,
-                     amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                     (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
-        }
+        MPI_Recv(np_rcv.dataPtr(), nint,
+                 amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+                 (m_rank_z+1)%m_numprocs_z, loc_comm_z_tag, m_comm_z, &status);
     }
     if (!only_ghost) m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
 
@@ -865,16 +860,11 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
         MPI_Status status;
+        const int loc_comm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        if (only_ghost) {
-            MPI_Recv(recv_buffer, buffer_size,
-                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                     (m_rank_z+1)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z, &status);
-        } else {
-            MPI_Recv(recv_buffer, buffer_size,
-                     amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                     (m_rank_z+1)%m_numprocs_z, pcomm_z_tag, m_comm_z, &status);
-        }
+        MPI_Recv(recv_buffer, buffer_size,
+                 amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                 (m_rank_z+1)%m_numprocs_z, loc_comm_z_tag, m_comm_z, &status);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -990,14 +980,10 @@ Hipace::Notify (const int step, const int it,
     }
     np_snd[nbeams] = m_leftmost_box_snd;
 
-    // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-    if (only_ghost) {
-        MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag_ghost, m_comm_z, &m_nsend_request_ghost);
-    } else {
-        MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, &m_nsend_request);
-    }
+    const int loc_comm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
+    MPI_Request* loc_send_request = only_ghost ? &m_nsend_request_ghost : &m_nsend_request;
+    MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
+              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_comm_z_tag, m_comm_z, loc_send_request);
 
     // Send beam particles. Currently only one tile.
     {
@@ -1081,14 +1067,11 @@ Hipace::Notify (const int step, const int it,
             offset_beam += np;
         } // here
 
+        const int loc_comm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
+        MPI_Request* loc_send_request = only_ghost ? &m_psend_request_ghost : &m_psend_request;
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-        if (only_ghost) {
-            MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag_ghost, m_comm_z, &m_psend_request_ghost);
-        } else {
-            MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                      (m_rank_z-1+m_numprocs_z)%m_numprocs_z, pcomm_z_tag, m_comm_z, &m_psend_request);
-        }
+        MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_comm_z_tag, m_comm_z, loc_send_request);
     }
 #endif
 }
@@ -1179,7 +1162,7 @@ Hipace::CheckGhostSlice (int it)
         const int nreal = m_multi_beam.getNRealParticles(ibeam);
         const int nghost = m_multi_beam.Npart(ibeam) - nreal;
 
-        if (m_verbose >= 1) {
+        if (m_verbose >= 3) {
             amrex::AllPrint()<<"CheckGhostSlice rank "<<m_rank_z<<" it "<<it
                              <<" npart "<<m_multi_beam.Npart(ibeam)<<" nreal "
                              <<nreal<<" nghost "<<nghost<<"\n";
