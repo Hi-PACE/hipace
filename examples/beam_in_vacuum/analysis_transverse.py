@@ -34,7 +34,7 @@ tss = OpenPMDTimeSeries(args.serial)
 tsp = OpenPMDTimeSeries(args.parallel)
 
 iteration = 8
-field = 'Bx'
+field = 'By'
 Fs, ms = tss.get_field(iteration=iteration, field=field)
 Fp, mp = tsp.get_field(iteration=iteration, field=field)
 

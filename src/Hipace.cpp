@@ -984,6 +984,7 @@ Hipace::Notify (const int step, const int it,
     }
     np_snd[nbeams] = m_leftmost_box_snd;
 
+    // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
     const int loc_comm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
     MPI_Request* loc_send_request = only_ghost ? &m_nsend_request_ghost : &m_nsend_request;
     MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),

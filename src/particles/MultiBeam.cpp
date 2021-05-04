@@ -2,7 +2,6 @@
 #include "deposition/BeamDepositCurrent.H"
 #include "particles/BinSort.H"
 #include "pusher/BeamParticleAdvance.H"
-#include "pusher/GetAndSetPosition.H"
 
 MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 {
