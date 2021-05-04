@@ -61,6 +61,8 @@ Hipace::Hipace () :
 
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
+    int seed;
+    if (pp.query("random_seed", seed)) amrex::ResetRandomSeed(seed);
 
     amrex::ParmParse pph("hipace");
     pph.query("normalized_units", m_normalized_units);
