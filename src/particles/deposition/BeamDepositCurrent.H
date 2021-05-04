@@ -4,8 +4,7 @@
 #include "particles/BeamParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-
-#include <AMReX_DenseBins.H>
+#include "particles/BinSort.H"
 
 /** Depose current of beam particles on a single slice
  * \param[in] beam species of which the current is deposited
@@ -18,12 +17,16 @@
  * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] nghost number of ghost particles, all at the end of the particle array.
+ *            Use for depositing transverse currents in the Next slice when processing
+ *            islice = 0.
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                      int const lev, const int islice, const amrex::Box bx, int const offset,
-                     amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
-                     const bool do_beam_jx_jy_deposition, const int which_slice);
+                     BeamBins& bins,
+                     const bool do_beam_jx_jy_deposition, const int which_slice,
+                     int nghost=0);
 
 
 #endif //  BEAMDEPOSITCURRENT_H_

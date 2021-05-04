@@ -216,11 +216,11 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        add_test(NAME hosing.2Rank
-                 COMMAND ${HiPACE_SOURCE_DIR}/tests/hosing.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
+        #add_test(NAME hosing.2Rank
+        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/hosing.2Rank.sh
+        #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+        #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        #)
 
         add_test(NAME ionization.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/ionization.2Rank.sh
@@ -290,6 +290,12 @@ if(BUILD_TESTING)
 
         add_test(NAME beam_in_vacuum.normalized.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME next_deposition_beam.2Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/next_deposition_beam.2Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )

@@ -37,6 +37,9 @@
  * \param[in] box_offset offset to particles on this box.
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] which_slice defines if this or the next slice is handled
+ * \param[in] nghost number of ghost particles, all at the end of the particle array.
+ *            Use for depositing transverse currents in the Next slice when processing
+ *            islice = 0.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
@@ -48,12 +51,20 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::Dim3 const lo,
                          amrex::Real const q,
                          int islice,
-                         amrex::DenseBins<BeamParticleContainer::ParticleType>& bins,
+                         BeamBins& bins,
                          int box_offset,
                          const bool do_beam_jx_jy_deposition,
-                         const int which_slice)
+                         const int which_slice,
+                         int nghost=0)
 {
     using namespace amrex::literals;
+
+    // Whether the ghost slice has to be deposited
+    const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice == 0));
+    if (deposit_ghost && !do_beam_jx_jy_deposition) return;
+
+    // Ghost particles are indexed [ptile.numParticles()-nghost, ptile.numParticles()-1]
+    if (deposit_ghost) box_offset = ptile.numParticles()-nghost;
 
     PhysConst const phys_const = get_phys_const();
 
@@ -97,13 +108,14 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be exactly one cell thick in the z direction."
         );
 
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+    BeamBins::index_type*
         indices = nullptr;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const * offsets = 0;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type cell_start = 0, cell_stop = 0;
+    BeamBins::index_type const * offsets = 0;
+    BeamBins::index_type cell_start = 0, cell_stop = 0;
 
     indices = bins.permutationPtr();
     offsets = bins.offsetsPtr();
+
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]
     if (which_slice == WhichSlice::This) {
@@ -115,10 +127,9 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             cell_stop  = offsets[islice];
         } else {
             cell_start = 0;
-            cell_stop  = 0;
+            cell_stop  = nghost;
         }
     }
-
     int const num_particles = cell_stop-cell_start;
 
     int z_slice = jx_fab.box().smallEnd(2);
@@ -127,8 +138,11 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     amrex::ParallelFor(
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
-            const int ip = indices[cell_start+idx];
+            // Particles in the same slice must be accessed through the bin sorter.
+            // Ghost particles are simply contiguous in memory.
+            const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 
+            // Skip invalid particles and ghost particles not in the last slice
             if (pos_structs[ip].id() < 0) return;
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
