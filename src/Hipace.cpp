@@ -330,6 +330,8 @@ Hipace::Evolve ()
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
 
             m_multi_beam.StoreNRealParticles();
+            // Copy particles in box it-1 in the ghost buffer.
+            // This handles both beam initialization and particle slippage.
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
             const amrex::Box& bx = boxArray(lev)[it];
@@ -1204,7 +1206,6 @@ Hipace::CheckGhostSlice (int it)
                 // Invalidate ghost particle if not in the ghost slice
                 if ( zp < zmin_leftcell || zp > zmax_leftcell ) {
                     pos_structs[idx].id() = -1;
-                    // if (m_rank_z == amrex::ParallelDescriptor::NProcs()) AMREX_ALWAYS_ASSERT(false);
                 }
             }
             );
