@@ -1,0 +1,37 @@
+amr.n_cell = 64 64 100
+
+hipace.normalized_units=1
+hipace.predcorr_max_iterations = 1
+hipace.predcorr_B_mixing_factor = 0.12
+hipace.predcorr_B_error_tolerance = -1
+
+amr.blocking_factor = 2
+amr.max_level = 0
+
+max_step = 5
+hipace.output_period = 1
+
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
+hipace.depos_order_xy = 2
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = 1     1     0      # Is periodic?
+geometry.prob_lo     = -8.   -8.   -8.    # physical domain
+geometry.prob_hi     =  8.    8.    8.
+
+beams.names = beam
+beam.injection_type = from_file
+beam.input_file = beam_%T.h5
+beam.iteration = 0
+beam.openPMD_species_name = Electrons
+beam.plasma_density = 2.8239587008591567e23 # to convert beam to normalized units
+
+plasmas.names = plasma
+plasma.density = 1.
+plasma.ppc = 1 1
+plasma.u_mean = 0.0 0.0 0.
+plasma.element = electron
+
+diagnostic.diag_type = xyz
