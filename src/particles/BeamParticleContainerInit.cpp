@@ -605,8 +605,6 @@ InitBeamFromFile (const std::string input_file,
         unit_ww = electrons[name_w][name_ww].unitSI() / si_to_norm_weight;
     }
 
-    std::cout << "Debug: " << unit_rx << " " << r_x_data.get()[5] << " " << si_to_norm_pos << std::endl;
-
     // Check if q/m matches that of electrons
     if((name_mm != "") && (name_qq != "")) {
         input_type unit_qq, unit_mm;
