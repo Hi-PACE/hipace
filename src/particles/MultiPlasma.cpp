@@ -101,3 +101,13 @@ MultiPlasma::DoFieldIonization (
     }
 
 }
+
+bool
+MultiPlasma::AllSpeciesNeutralizeBackground () const
+{
+    bool all_species_neutralize = true;
+    for (auto& plasma : m_all_plasmas) {
+        if (!plasma.m_neutralize_background) all_species_neutralize = false;
+    }
+    return all_species_neutralize;
+}

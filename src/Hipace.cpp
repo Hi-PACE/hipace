@@ -108,6 +108,9 @@ Hipace::Hipace () :
         solver == "explicit",
         "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
+        "Ion motion with explicit solver is not implemented, need to use neutralize_background");
 
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);

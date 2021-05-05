@@ -91,6 +91,8 @@ public:
      */
     void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
 
+    /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
+    bool AllSpeciesNeutralizeBackground () const;
 private:
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
