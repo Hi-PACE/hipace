@@ -25,7 +25,6 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=${TEST_NAME}_1 \
         hipace.dt = 0 \
         max_step = 0 \
-        hipace.verbose = 3 \
         plasmas.names = no_plasma
 
 # Restart the simulation with previous beam output
@@ -33,7 +32,6 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=${TEST_NAME}_2 \
         hipace.dt = 0 \
         max_step = 0 \
-        hipace.verbose = 3 \
         plasmas.names = no_plasma \
         beam.input_file = ${TEST_NAME}_1/openpmd_%T.h5 \
         beam.openPMD_species_name = beam \
