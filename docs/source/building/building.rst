@@ -156,6 +156,19 @@ Relative paths are also supported, e.g. ``-DHiPACE_amrex_src=../amrex``.
 Or build against an AMReX feature branch of a colleague.
 Assuming your colleague pushed AMReX to ``https://github.com/WeiqunZhang/amrex/`` in a branch ``new-feature`` then pass to ``cmake`` the arguments: ``-DHiPACE_amrex_repo=https://github.com/WeiqunZhang/amrex.git -DHiPACE_amrex_branch=new-feature``.
 
-You can speed up the install further if you pre-install these dependencies, e.g. with a package manager.
+vYou can speed up the install further if you pre-install these dependencies, e.g. with a package manager.
 Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`.
 Please see the [short CMake tutorial that we linked above](#Developers) if this sounds new to you.
+
+Documentation
+-------------
+
+The documentation is written at the `RST <https://sphinx-tutorial.readthedocs.io/step-1/>`__ format, to compile the documentation locally use
+
+.. code-block::
+
+   cd docs
+   pip install -r requirements.txt # only the first time
+   make html
+   open build/html/index.html # or any way to open this HTML file.
+
