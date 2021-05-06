@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace
+# This Python analysis script is part of the code Hipace++
 #
 # It is used in the beam from_file test and compares three beams,
 # one from the write_beam script, two from hipace,
