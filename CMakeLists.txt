@@ -232,6 +232,24 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME from_file.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/from_file.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME from_file.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/from_file.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME restart.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/restart.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME blowout_wake_explicit.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake_explicit.2Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
