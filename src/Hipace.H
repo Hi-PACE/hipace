@@ -103,13 +103,13 @@ public:
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
+     * \param[in] it current box number
      * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)
      */
     void NotifyFinish (const int it=0, bool only_ghost=false);
 
     /** \brief return whether rank is in the same transverse communicator w/ me
      *
-     * \param[in] it current box number
      * \param[in] rank MPI rank to test
      */
     bool InSameTransverseCommunicator (int rank) const;
