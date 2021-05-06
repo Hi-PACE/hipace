@@ -137,16 +137,16 @@ Hipace can be configured in further detail with options from AMReX, which are `d
 By default, the most important dependencies of Hipace++ are automatically downloaded for convenience:
 
 ===========================  =============================================  ==========================================================
-CMake Option                 Default & Values                               Description                                               
+CMake Option                 Default & Values                               Description
 ---------------------------  ---------------------------------------------  ----------------------------------------------------------
-``Hipace_amrex_src``         *None*                                         Path to AMReX source directory (preferred if set)         
-``Hipace_amrex_repo``        `https://github.com/AMReX-Codes/amrex.git`     Repository URI to pull and build AMReX from               
+``Hipace_amrex_src``         *None*                                         Path to AMReX source directory (preferred if set)
+``Hipace_amrex_repo``        `https://github.com/AMReX-Codes/amrex.git`     Repository URI to pull and build AMReX from
 ``Hipace_amrex_branch``      ``development``                                Repository branch for ``Hipace_amrex_repo``
-``Hipace_amrex_internal``    **ON**/OFF                                     Needs a pre-installed AMReX library if set to ``OFF``       
-``Hipace_openpmd_src``       *None*                                         Path to openPMD-api source directory (preferred if set)   
-``Hipace_openpmd_repo``      `https://github.com/openPMD/openPMD-api.git`   Repository URI to pull and build openPMD-api from         
-``Hipace_openpmd_branch``    `0.13.2`                                       Repository branch for ``Hipace_openpmd_repo``               
-``Hipace_openpmd_internal``  **ON**/OFF                                     Needs a pre-installed openPMD-api library if set to ``OFF`` 
+``Hipace_amrex_internal``    **ON**/OFF                                     Needs a pre-installed AMReX library if set to ``OFF``
+``Hipace_openpmd_src``       *None*                                         Path to openPMD-api source directory (preferred if set)
+``Hipace_openpmd_repo``      `https://github.com/openPMD/openPMD-api.git`   Repository URI to pull and build openPMD-api from
+``Hipace_openpmd_branch``    `0.13.2`                                       Repository branch for ``Hipace_openpmd_repo``
+``Hipace_openpmd_internal``  **ON**/OFF                                     Needs a pre-installed openPMD-api library if set to ``OFF``
 ===========================  =============================================  ==========================================================
 
 For example, one can also build against a local AMReX copy.
