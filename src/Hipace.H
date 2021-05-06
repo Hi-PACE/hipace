@@ -105,10 +105,11 @@ public:
      *
      * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)
      */
-    void NotifyFinish (bool only_ghost=false);
+    void NotifyFinish (const int it=0, bool only_ghost=false);
 
     /** \brief return whether rank is in the same transverse communicator w/ me
      *
+     * \param[in] it current box number
      * \param[in] rank MPI rank to test
      */
     bool InSameTransverseCommunicator (int rank) const;
@@ -188,6 +189,8 @@ public:
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
     MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
+    /** status of the physical time send request */
+    MPI_Request m_tsend_request = MPI_REQUEST_NULL;
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
