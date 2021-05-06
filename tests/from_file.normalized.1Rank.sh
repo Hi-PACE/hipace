@@ -21,7 +21,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 python3 ${HIPACE_SOURCE_DIR}/tools/write_beam.py
 
 # Run the simulation
-$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_from_file_normalized \
         hipace.file_prefix=${TEST_NAME}_1 \
         amr.n_cell = 16 16 32 \
         hipace.dt = 0 \
@@ -29,7 +29,7 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.names = no_plasma
 
 # Restart the simulation with previous beam output
-$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_from_file_normalized \
         hipace.file_prefix=${TEST_NAME}_2 \
         amr.n_cell = 24 24 32 \
         hipace.dt = 0 \
