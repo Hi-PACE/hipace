@@ -21,6 +21,7 @@ namespace {
     constexpr int pcomm_z_tag = 1002;
     constexpr int ncomm_z_tag_ghost = 1003;
     constexpr int pcomm_z_tag_ghost = 1004;
+    constexpr int tcomm_z_tag = 1005;
 }
 #endif
 
@@ -852,6 +853,15 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 #ifdef AMREX_USE_MPI
     if (step == 0) return;
 
+    // Receive physical time
+    if (it == m_numprocs_z - 1 && !only_ghost) {
+        MPI_Status status;
+        // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
+        MPI_Recv(&m_physical_time, 1,
+                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 (m_rank_z+1)%m_numprocs_z, tcomm_z_tag, m_comm_z, &status);
+    }
+
     const int nbeams = m_multi_beam.get_nbeams();
     // 1 element per beam species, and 1 for
     // the index of leftmost box with beam particles.
@@ -965,7 +975,7 @@ Hipace::Notify (const int step, const int it,
     constexpr int lev = 0;
 
 #ifdef AMREX_USE_MPI
-    NotifyFinish(only_ghost); // finish the previous send
+    NotifyFinish(it, only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
     const int nint = nbeams + 1;
@@ -981,6 +991,13 @@ Hipace::Notify (const int step, const int it,
             }
         }
         return;
+    }
+
+    // send physical time
+    if (it == m_numprocs_z - 1 && !only_ghost){
+        const amrex::Real t = m_physical_time + m_dt;
+        MPI_Isend(&t, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, tcomm_z_tag, m_comm_z, &m_tsend_request);
     }
 
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
@@ -1102,7 +1119,7 @@ Hipace::Notify (const int step, const int it,
 }
 
 void
-Hipace::NotifyFinish (bool only_ghost)
+Hipace::NotifyFinish (const int it, bool only_ghost)
 {
 #ifdef AMREX_USE_MPI
     if (only_ghost) {
@@ -1118,6 +1135,11 @@ Hipace::NotifyFinish (bool only_ghost)
             m_psend_buffer_ghost = nullptr;
         }
     } else {
+        if (it == m_numprocs_z - 1) {
+            MPI_Status status;
+            MPI_Wait(&m_tsend_request, &status);
+        }
+
         if (m_np_snd.size() > 0) {
             MPI_Status status;
             MPI_Wait(&m_nsend_request, &status);
