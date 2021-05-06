@@ -150,7 +150,7 @@ public:
         return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
     }
 
-    /** Version of the HiPACE executable
+    /** Version of the Hipace executable
      *
      * @return detailed version string
      */

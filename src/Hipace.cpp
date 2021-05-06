@@ -212,7 +212,7 @@ void
 Hipace::InitData ()
 {
     HIPACE_PROFILE("Hipace::InitData()");
-    amrex::Print() << "HiPACE++ (" << Hipace::Version() << ")\n";
+    amrex::Print() << "Hipace++ (" << Hipace::Version() << ")\n";
 
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {

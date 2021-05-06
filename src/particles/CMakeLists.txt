@@ -1,4 +1,4 @@
-target_sources(HiPACE
+target_sources(Hipace
   PRIVATE
     BeamParticleContainer.cpp
     BeamParticleContainerInit.cpp

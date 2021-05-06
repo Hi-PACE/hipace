@@ -63,7 +63,7 @@ then
     rm -rf $build_dir
     mkdir $build_dir
     cd $build_dir
-    cmake .. -DHiPACE_MPI=OFF
+    cmake .. -DHipace_MPI=OFF
     make -j 4
 fi
 
@@ -111,7 +111,7 @@ then
     rm -rf $build_dir
     mkdir $build_dir
     cd $build_dir
-    cmake .. -DHiPACE_MPI=ON
+    cmake .. -DHipace_MPI=ON
     make -j 4
 fi
 

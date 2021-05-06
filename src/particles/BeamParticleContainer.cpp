@@ -97,7 +97,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                           m_plasma_density, m_num_iteration, m_species_name, species_specified);
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
-                     "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+                     "Add Hipace_OPENPMD=ON when compiling Hipace++.\n");
 #endif  // HIPACE_USE_OPENPMD
     } else {
 

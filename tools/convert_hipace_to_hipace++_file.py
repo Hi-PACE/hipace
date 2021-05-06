@@ -220,7 +220,7 @@ class H5Keys:
                                 'type':'TYPE',
                                 'name':'NAME'
                               }
-        # HiPACE
+        # Hipace
         elif piccode == piccodes['hipace']:
 
             # HDF5 GRID dataset keys
@@ -610,7 +610,7 @@ def main():
         io.Unit_Dimension.M:  1,
     }
 
-    ### IMPORTANT NOTE: because HiPACE-C is C ordered and HiPACE++ is Fortran ordered
+    ### IMPORTANT NOTE: because Hipace-C is C ordered and Hipace++ is Fortran ordered
     ### the indices are switched!
     particle["r"]["x"].reset_dataset(dataset)
     particle["r"]["x"].store_chunk(x2)

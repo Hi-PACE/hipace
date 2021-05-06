@@ -16,7 +16,7 @@ jobs:
         cd build
         cmake ..                                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DHiPACE_COMPUTE=NOACC
+            -DHipace_COMPUTE=NOACC
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
         make install

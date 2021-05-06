@@ -1,29 +1,29 @@
 function(find_openpmd)
-    if(HiPACE_openpmd_src)
+    if(Hipace_openpmd_src)
         message(STATUS "Compiling local openPMD-api ...")
-        message(STATUS "openPMD-api source path: ${HiPACE_openpmd_src}")
-    elseif(HiPACE_openpmd_internal)
+        message(STATUS "openPMD-api source path: ${Hipace_openpmd_src}")
+    elseif(Hipace_openpmd_internal)
         message(STATUS "Downloading openPMD-api ...")
-        message(STATUS "openPMD-api repository: ${HiPACE_openpmd_repo} (${HiPACE_openpmd_branch})")
+        message(STATUS "openPMD-api repository: ${Hipace_openpmd_repo} (${Hipace_openpmd_branch})")
         include(FetchContent)
     endif()
-    if(HiPACE_openpmd_internal OR HiPACE_openpmd_src)
+    if(Hipace_openpmd_internal OR Hipace_openpmd_src)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://openpmd-api.readthedocs.io/en/0.13.1-alpha/dev/buildoptions.html
-        set(openPMD_USE_MPI         ${HiPACE_MPI} CACHE INTERNAL "")
+        set(openPMD_USE_MPI         ${Hipace_MPI} CACHE INTERNAL "")
         set(openPMD_USE_PYTHON      OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_CLI_TOOLS OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_EXAMPLES  OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_TESTING   OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_SHARED_LIBS OFF         CACHE INTERNAL "")
 
-        if(HiPACE_openpmd_src)
-            add_subdirectory(${HiPACE_openpmd_src} _deps/localopenpmd-build/)
+        if(Hipace_openpmd_src)
+            add_subdirectory(${Hipace_openpmd_src} _deps/localopenpmd-build/)
         else()
             FetchContent_Declare(fetchedopenpmd
-                GIT_REPOSITORY ${HiPACE_openpmd_repo}
-                GIT_TAG        ${HiPACE_openpmd_branch}
+                GIT_REPOSITORY ${Hipace_openpmd_repo}
+                GIT_TAG        ${Hipace_openpmd_branch}
                 BUILD_IN_SOURCE 0
             )
             FetchContent_GetProperties(fetchedopenpmd)
@@ -42,7 +42,7 @@ function(find_openpmd)
             mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDOPENPMD)
         endif()
 
-        # openPMD options not relevant to HiPACE users
+        # openPMD options not relevant to Hipace users
         mark_as_advanced(openPMD_USE_INTERNAL_VARIANT)
         mark_as_advanced(openPMD_USE_INTERNAL_CATCH)
         mark_as_advanced(openPMD_USE_INTERNAL_PYBIND11)
@@ -60,7 +60,7 @@ function(find_openpmd)
         mark_as_advanced(JSON_ImplicitConversions)
         mark_as_advanced(JSON_MultipleHeaders)
     else()
-        if(HiPACE_MPI)
+        if(Hipace_MPI)
             set(COMPONENT_WMPI MPI)
         else()
             set(COMPONENT_WMPI NOMPI)
@@ -70,21 +70,21 @@ function(find_openpmd)
     endif()
 endfunction()
 
-if(HiPACE_OPENPMD)
+if(Hipace_OPENPMD)
     # local source-tree
-    set(HiPACE_openpmd_src ""
+    set(Hipace_openpmd_src ""
         CACHE PATH
         "Local path to openPMD-api source directory (preferred if set)")
 
     # Git fetcher
-    option(HiPACE_openpmd_internal   "Download & build openPMD-api" ON)
-    set(HiPACE_openpmd_repo "https://github.com/openPMD/openPMD-api.git"
+    option(Hipace_openpmd_internal   "Download & build openPMD-api" ON)
+    set(Hipace_openpmd_repo "https://github.com/openPMD/openPMD-api.git"
         CACHE STRING
-        "Repository URI to pull and build openPMD-api from if(HiPACE_openpmd_internal)")
-    set(HiPACE_openpmd_branch "ac083025ee662469b8cad1adf93eef48cde35f58"
+        "Repository URI to pull and build openPMD-api from if(Hipace_openpmd_internal)")
+    set(Hipace_openpmd_branch "ac083025ee662469b8cad1adf93eef48cde35f58"
         CACHE STRING
-        "Repository branch for HiPACE_openpmd_repo if(HiPACE_openpmd_internal)")
+        "Repository branch for Hipace_openpmd_repo if(Hipace_openpmd_internal)")
 
-    set(HiPACE_HAVE_OPENPMD TRUE)
+    set(Hipace_HAVE_OPENPMD TRUE)
     find_openpmd()
 endif()

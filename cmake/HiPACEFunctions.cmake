@@ -4,7 +4,7 @@ macro(set_ccache)
     find_program(CCACHE_PROGRAM ccache)
     if(CCACHE_PROGRAM)
         set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-        if(HiPACE_COMPUTE STREQUAL CUDA)
+        if(Hipace_COMPUTE STREQUAL CUDA)
             set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
         endif()
     endif()
@@ -43,7 +43,7 @@ macro(set_default_install_dirs)
     if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
         include(GNUInstallDirs)
         if(NOT CMAKE_INSTALL_CMAKEDIR)
-            set(CMAKE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/HiPACE"
+            set(CMAKE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/Hipace"
                     CACHE PATH "CMake config package location for installed targets")
             if(WIN32)
                 set(CMAKE_INSTALL_LIBDIR Lib
@@ -114,54 +114,54 @@ endmacro()
 
 
 # Take an <imported_target> and expose it as INTERFACE target with
-# HiPACE::thirdparty::<propagated_name> naming and SYSTEM includes.
+# Hipace::thirdparty::<propagated_name> naming and SYSTEM includes.
 #
 function(make_third_party_includes_system imported_target propagated_name)
-    add_library(HiPACE::thirdparty::${propagated_name} INTERFACE IMPORTED)
-    target_link_libraries(HiPACE::thirdparty::${propagated_name} INTERFACE ${imported_target})
+    add_library(Hipace::thirdparty::${propagated_name} INTERFACE IMPORTED)
+    target_link_libraries(Hipace::thirdparty::${propagated_name} INTERFACE ${imported_target})
     get_target_property(ALL_INCLUDES ${imported_target} INCLUDE_DIRECTORIES)
-    set_target_properties(HiPACE::thirdparty::${propagated_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
-    target_include_directories(HiPACE::thirdparty::${propagated_name} SYSTEM INTERFACE ${ALL_INCLUDES})
+    set_target_properties(Hipace::thirdparty::${propagated_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+    target_include_directories(Hipace::thirdparty::${propagated_name} SYSTEM INTERFACE ${ALL_INCLUDES})
 endfunction()
 
 
 
-# Set a feature-based binary name for the HiPACE executable and create a generic
+# Set a feature-based binary name for the Hipace executable and create a generic
 # hipace symlink to it. Only sets options relevant for users (see summary).
 #
 function(set_hipace_binary_name)
-    set_target_properties(HiPACE PROPERTIES OUTPUT_NAME "hipace")
+    set_target_properties(Hipace PROPERTIES OUTPUT_NAME "hipace")
 
-    if(HiPACE_MPI)
-        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".MPI")
+    if(Hipace_MPI)
+        set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".MPI")
     else()
-        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".NOMPI")
+        set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".NOMPI")
     endif()
 
-    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".${HiPACE_COMPUTE}")
+    set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".${Hipace_COMPUTE}")
 
-    if(HiPACE_PRECISION STREQUAL "DOUBLE")
-        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".DP")
+    if(Hipace_PRECISION STREQUAL "DOUBLE")
+        set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".DP")
     else()
-        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".SP")
+        set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".SP")
     endif()
 
-    #if(HiPACE_ASCENT)
-    #    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".ASCENT")
+    #if(Hipace_ASCENT)
+    #    set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".ASCENT")
     #endif()
 
-    #if(HiPACE_OPENPMD)
-    #    set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".OPMD")
+    #if(Hipace_OPENPMD)
+    #    set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".OPMD")
     #endif()
 
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
-        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".DEBUG")
+        set_property(TARGET Hipace APPEND_STRING PROPERTY OUTPUT_NAME ".DEBUG")
     endif()
 
     # alias to the latest build, because using the full name is often confusing
-    add_custom_command(TARGET HiPACE POST_BUILD
+    add_custom_command(TARGET Hipace POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-            $<TARGET_FILE:HiPACE>
+            $<TARGET_FILE:Hipace>
             ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/hipace
     )
 endfunction()
@@ -195,12 +195,12 @@ function(get_source_version NAME SOURCE_DIR)
 endfunction ()
 
 
-# Prints a summary of HiPACE options at the end of the CMake configuration
+# Prints a summary of Hipace options at the end of the CMake configuration
 #
 function(hipace_print_summary)
     message("")
-    message("HiPACE build configuration:")
-    message("  Version: ${HiPACE_VERSION} (${HiPACE_GIT_VERSION})")
+    message("Hipace build configuration:")
+    message("  Version: ${Hipace_VERSION} (${Hipace_GIT_VERSION})")
     message("  C++ Compiler: ${CMAKE_CXX_COMPILER_ID} "
                             "${CMAKE_CXX_COMPILER_VERSION} "
                             "${CMAKE_CXX_COMPILER_WRAPPER}")
@@ -211,7 +211,7 @@ function(hipace_print_summary)
     message("        lib: ${CMAKE_INSTALL_LIBDIR}")
     message("    include: ${CMAKE_INSTALL_INCLUDEDIR}")
     message("      cmake: ${CMAKE_INSTALL_CMAKEDIR}")
-    if(HiPACE_HAVE_PYTHON)
+    if(Hipace_HAVE_PYTHON)
         message("     python: ${CMAKE_INSTALL_PYTHONDIR}")
     endif()
     message("")
@@ -223,9 +223,9 @@ function(hipace_print_summary)
     #endif()
     message("  Testing: ${BUILD_TESTING}")
     message("  Build options:")
-    message("    COMPUTE: ${HiPACE_COMPUTE}")
-    message("    MPI: ${HiPACE_MPI}")
-    message("    OPENPMD: ${HiPACE_OPENPMD}")
-    message("    PRECISION: ${HiPACE_PRECISION}")
+    message("    COMPUTE: ${Hipace_COMPUTE}")
+    message("    MPI: ${Hipace_MPI}")
+    message("    OPENPMD: ${Hipace_OPENPMD}")
+    message("    PRECISION: ${Hipace_PRECISION}")
     message("")
 endfunction()

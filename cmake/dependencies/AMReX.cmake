@@ -1,13 +1,13 @@
 macro(find_amrex)
-    if(HiPACE_amrex_src)
+    if(Hipace_amrex_src)
         message(STATUS "Compiling local AMReX ...")
-        message(STATUS "AMReX source path: ${HiPACE_amrex_src}")
-    elseif(HiPACE_amrex_internal)
+        message(STATUS "AMReX source path: ${Hipace_amrex_src}")
+    elseif(Hipace_amrex_internal)
         message(STATUS "Downloading AMReX ...")
-        message(STATUS "AMReX repository: ${HiPACE_amrex_repo} (${HiPACE_amrex_branch})")
+        message(STATUS "AMReX repository: ${Hipace_amrex_repo} (${Hipace_amrex_branch})")
         include(FetchContent)
     endif()
-    if(HiPACE_amrex_internal OR HiPACE_amrex_src)
+    if(Hipace_amrex_internal OR Hipace_amrex_src)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options
@@ -20,24 +20,24 @@ macro(find_amrex)
             set(AMReX_FPE OFF CACHE INTERNAL "")
         endif()
 
-        if(HiPACE_COMPUTE STREQUAL OMP)
+        if(Hipace_COMPUTE STREQUAL OMP)
             set(AMReX_GPU_BACKEND  "NONE" CACHE INTERNAL "")
             set(AMReX_OMP          ON     CACHE INTERNAL "")
-        elseif(HiPACE_COMPUTE STREQUAL NOACC)
+        elseif(Hipace_COMPUTE STREQUAL NOACC)
             set(AMReX_GPU_BACKEND  "NONE" CACHE INTERNAL "")
             set(AMReX_OMP          OFF    CACHE INTERNAL "")
         else()
-            set(AMReX_GPU_BACKEND  "${HiPACE_COMPUTE}" CACHE INTERNAL "")
+            set(AMReX_GPU_BACKEND  "${Hipace_COMPUTE}" CACHE INTERNAL "")
             set(AMReX_OMP          OFF                 CACHE INTERNAL "")
         endif()
 
-        if(HiPACE_MPI)
+        if(Hipace_MPI)
             set(AMReX_MPI ON CACHE INTERNAL "")
         else()
             set(AMReX_MPI OFF CACHE INTERNAL "")
         endif()
 
-        if(HiPACE_PRECISION STREQUAL "DOUBLE")
+        if(Hipace_PRECISION STREQUAL "DOUBLE")
             set(AMReX_PRECISION "DOUBLE" CACHE INTERNAL "")
             set(AMReX_PARTICLES_PRECISION "DOUBLE" CACHE INTERNAL "")
         else()
@@ -62,17 +62,17 @@ macro(find_amrex)
 
         set(AMReX_SPACEDIM 3 CACHE INTERNAL "")
 
-        if(HiPACE_amrex_src)
-            list(APPEND CMAKE_MODULE_PATH "${HiPACE_amrex_src}/Tools/CMake")
-            if(HiPACE_COMPUTE STREQUAL CUDA)
+        if(Hipace_amrex_src)
+            list(APPEND CMAKE_MODULE_PATH "${Hipace_amrex_src}/Tools/CMake")
+            if(Hipace_COMPUTE STREQUAL CUDA)
                 enable_language(CUDA)
                 include(AMReX_SetupCUDA)
             endif()
-            add_subdirectory(${HiPACE_amrex_src} _deps/localamrex-build/)
+            add_subdirectory(${Hipace_amrex_src} _deps/localamrex-build/)
         else()
             FetchContent_Declare(fetchedamrex
-                GIT_REPOSITORY ${HiPACE_amrex_repo}
-                GIT_TAG        ${HiPACE_amrex_branch}
+                GIT_REPOSITORY ${Hipace_amrex_repo}
+                GIT_TAG        ${Hipace_amrex_branch}
                 BUILD_IN_SOURCE 0
             )
             FetchContent_GetProperties(fetchedamrex)
@@ -80,7 +80,7 @@ macro(find_amrex)
             if(NOT fetchedamrex_POPULATED)
                 FetchContent_Populate(fetchedamrex)
                 list(APPEND CMAKE_MODULE_PATH "${fetchedamrex_SOURCE_DIR}/Tools/CMake")
-                if(HiPACE_COMPUTE STREQUAL CUDA)
+                if(Hipace_COMPUTE STREQUAL CUDA)
                     enable_language(CUDA)
                     include(AMReX_SetupCUDA)
                 endif()
@@ -96,7 +96,7 @@ macro(find_amrex)
             mark_as_advanced(FETCHCONTENT_UPDATES_DISCONNECTED_FETCHEDAMREX)
         endif()
 
-        # AMReX options not relevant to HiPACE users
+        # AMReX options not relevant to Hipace users
         mark_as_advanced(AMREX_BUILD_DATETIME)
         mark_as_advanced(AMReX_CONDUIT)
         mark_as_advanced(AMReX_ENABLE_TESTS)
@@ -127,23 +127,23 @@ macro(find_amrex)
         message(STATUS "AMReX: Using version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})") 
     else()
         message(STATUS "Searching for pre-installed AMReX ...")
-        set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
+        set(COMPONENT_PRECISION ${Hipace_PRECISION} P${Hipace_PRECISION})
         find_package(AMReX 20.11 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES TINYP)
         message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
     endif()
 endmacro()
 
 # local source-tree
-set(HiPACE_amrex_src ""
+set(Hipace_amrex_src ""
     CACHE PATH
     "Local path to AMReX source directory (preferred if set)")
 
 # Git fetcher
-set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
+set(Hipace_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
-    "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "development"
+    "Repository URI to pull and build AMReX from if(Hipace_amrex_internal)")
+set(Hipace_amrex_branch "development"
     CACHE STRING
-    "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
+    "Repository branch for Hipace_amrex_repo if(Hipace_amrex_internal)")
 
 find_amrex()
