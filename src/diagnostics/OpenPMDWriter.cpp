@@ -49,6 +49,7 @@ OpenPMDWriter::WriteDiagnostics (
     if (call_type == OpenPMDWriterCallType::beams ) {
         iteration.setTime(physical_time);
         WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D);
+        m_outputSeries->flush();
 
     } else if (call_type == OpenPMDWriterCallType::fields ) {
         WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
