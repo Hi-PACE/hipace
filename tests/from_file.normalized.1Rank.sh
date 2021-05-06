@@ -14,7 +14,7 @@ HIPACE_SOURCE_DIR=$2
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
-HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/from_file
+HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # gererate beam
@@ -23,6 +23,7 @@ python3 ${HIPACE_SOURCE_DIR}/tools/write_beam.py
 # Run the simulation
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=${TEST_NAME}_1 \
+        amr.n_cell = 16 16 32 \
         hipace.dt = 0 \
         max_step = 0 \
         plasmas.names = no_plasma
@@ -30,6 +31,7 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 # Restart the simulation with previous beam output
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=${TEST_NAME}_2 \
+        amr.n_cell = 24 24 32 \
         hipace.dt = 0 \
         max_step = 0 \
         plasmas.names = no_plasma \
@@ -38,6 +40,6 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.plasma_density = 0 # use value from file
 
 # Compare the beams
-$HIPACE_EXAMPLE_DIR/analysis.py --beam-py beam_%T.h5 \
-                                --beam-out1 ${TEST_NAME}_1/openpmd_%T.h5 \
-                                --beam-out2 ${TEST_NAME}_2/openpmd_%T.h5 \
+$HIPACE_EXAMPLE_DIR/analysis_from_file.py --beam-py beam_%T.h5 \
+                                          --beam-out1 ${TEST_NAME}_1/openpmd_%T.h5 \
+                                          --beam-out2 ${TEST_NAME}_2/openpmd_%T.h5 \
