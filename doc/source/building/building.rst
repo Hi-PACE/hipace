@@ -3,10 +3,15 @@
 Build/install Hipace++
 ======================
 
+Developers
+----------
+
+If you are new to CMake, `this short tutorial <https://hsf-training.github.io/hsf-training-cmake-webpage/>`__ from the HEP Software foundation is the perfect place to get started with it. If you just want to use CMake to build the project, jump into sections *1. Introduction*, *2. Building with CMake* and *9. Finding Packages*.
+
 Dependencies
 ------------
 
-HiPACE depends on the following popular third party software.
+Hipace++ depends on the following popular third party software.
 Please see installation instructions below in the Developers section.
 
 - a mature `C++14 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 5, Clang 3.6 or newer
@@ -85,33 +90,33 @@ If you also want to select a CUDA compiler:
 Build & Test
 ------------
 
-From the base of the HiPACE source directory, execute:
+From the base of the Hipace++ source directory, execute:
 
 .. code-block:: bash
-
-   mkdir -p build
-   cd build
 
    # find dependencies & configure
-   cmake ..
+   cmake -S . -B build
 
    # build using up to four threads
-   make -j 4
+   cmake --build build -j 4
 
    # run tests
-   ctest --output-on-failure
+   (cd build; ctest --output-on-failure)
 
-You can inspect and modify build options after running `cmake ..` with either
+
+An executable Hipace++ binary with the current compile-time options encoded in its file name will be created in ``bin/``.
+Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`__ named ``hipace`` can be found in that directory, which points to the last built Hipace++ executable. You can inspect and modify build options after running `cmake ..` with either
 
 .. code-block:: bash
 
-   ccmake .
+   ccmake build
 
 or by providing arguments to the CMake call
 
 .. code-block:: bash
 
-   cmake .. -D<OPTION_A>=<VALUE_A> -D<OPTION_B>=<VALUE_B>
+   cmake -S . -B build -D<OPTION_A>=<VALUE_A> -D<OPTION_B>=<VALUE_B>
+
 
 =============================  ========================================  =====================================================
  CMake Option                  Default & Values                          Description
@@ -126,10 +131,31 @@ or by providing arguments to the CMake call
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
 =============================  ========================================  =====================================================
 
-For example, one can also build against a local AMReX git repo.
-Assuming AMReX' source is located in ``$HOME/src/amrex`` and changes are committed into a branch such as ``my-amrex-branch`` then pass to ``cmake`` the arguments ``-DHiPACE_amrex_repo=file://$HOME/src/amrex -DHiPACE_amrex_branch=my-amrex-branch``.
+HiPACE can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`.
 
-For developers, HiPACE can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.
+**Developers** might be interested in additional options that control dependencies of Hipace++.
+By default, the most important dependencies of Hipace++ are automatically downloaded for convenience:
 
-An executable HiPACE binary with the current compile-time options encoded in its file name will be created in ``bin/``.
-Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`__ named ``hipace`` can be found in that directory, which points to the last built HiPACE executable.
+===========================  =============================================  ==========================================================
+CMake Option                 Default & Values                               Description                                               
+---------------------------  ---------------------------------------------  ----------------------------------------------------------
+``HiPACE_amrex_src``         *None*                                         Path to AMReX source directory (preferred if set)         
+``HiPACE_amrex_repo``        `https://github.com/AMReX-Codes/amrex.git`     Repository URI to pull and build AMReX from               
+``HiPACE_amrex_branch``      ``development``                                Repository branch for ``HiPACE_amrex_repo``
+``HiPACE_amrex_internal``    **ON**/OFF                                     Needs a pre-installed AMReX library if set to ``OFF``       
+``HiPACE_openpmd_src``       *None*                                         Path to openPMD-api source directory (preferred if set)   
+``HiPACE_openpmd_repo``      `https://github.com/openPMD/openPMD-api.git`   Repository URI to pull and build openPMD-api from         
+``HiPACE_openpmd_branch``    `0.13.2`                                       Repository branch for ``HiPACE_openpmd_repo``               
+``HiPACE_openpmd_internal``  **ON**/OFF                                     Needs a pre-installed openPMD-api library if set to ``OFF`` 
+===========================  =============================================  ==========================================================
+
+For example, one can also build against a local AMReX copy.
+Assuming AMReX' source is located in ``$HOME/src/amrex``, add the ``cmake`` argument ``-DHiPACE_amrex_src=$HOME/src/amrex``.
+Relative paths are also supported, e.g. ``-DHiPACE_amrex_src=../amrex``.
+
+Or build against an AMReX feature branch of a colleague.
+Assuming your colleague pushed AMReX to ``https://github.com/WeiqunZhang/amrex/`` in a branch ``new-feature`` then pass to ``cmake`` the arguments: ``-DHiPACE_amrex_repo=https://github.com/WeiqunZhang/amrex.git -DHiPACE_amrex_branch=new-feature``.
+
+You can speed up the install further if you pre-install these dependencies, e.g. with a package manager.
+Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`.
+Please see the [short CMake tutorial that we linked above](#Developers) if this sounds new to you.
