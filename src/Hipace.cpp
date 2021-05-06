@@ -111,6 +111,9 @@ Hipace::Hipace () :
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !(m_explicit && !m_normalized_units),
+        "The explicit solver doesn't work with SI yet. If you need it, please open an issue");
 
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
@@ -864,11 +867,11 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     // Receive particle counts
     {
         MPI_Status status;
-        const int loc_comm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
+        const int loc_ncomm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
         MPI_Recv(np_rcv.dataPtr(), nint,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 (m_rank_z+1)%m_numprocs_z, loc_comm_z_tag, m_comm_z, &status);
+                 (m_rank_z+1)%m_numprocs_z, loc_ncomm_z_tag, m_comm_z, &status);
     }
     if (!only_ghost) m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
 
@@ -881,11 +884,11 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
         MPI_Status status;
-        const int loc_comm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
+        const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
         MPI_Recv(recv_buffer, buffer_size,
                  amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                 (m_rank_z+1)%m_numprocs_z, loc_comm_z_tag, m_comm_z, &status);
+                 (m_rank_z+1)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, &status);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -1002,10 +1005,10 @@ Hipace::Notify (const int step, const int it,
     np_snd[nbeams] = m_leftmost_box_snd;
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-    const int loc_comm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
-    MPI_Request* loc_send_request = only_ghost ? &m_nsend_request_ghost : &m_nsend_request;
+    const int loc_ncomm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
+    MPI_Request* loc_nsend_request = only_ghost ? &m_nsend_request_ghost : &m_nsend_request;
     MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_comm_z_tag, m_comm_z, loc_send_request);
+              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_ncomm_z_tag, m_comm_z, loc_nsend_request);
 
     // Send beam particles. Currently only one tile.
     {
@@ -1089,11 +1092,11 @@ Hipace::Notify (const int step, const int it,
             offset_beam += np;
         } // here
 
-        const int loc_comm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
-        MPI_Request* loc_send_request = only_ghost ? &m_psend_request_ghost : &m_psend_request;
+        const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
+        MPI_Request* loc_psend_request = only_ghost ? &m_psend_request_ghost : &m_psend_request;
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
         MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
-                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_comm_z_tag, m_comm_z, loc_send_request);
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, loc_psend_request);
     }
 #endif
 }
@@ -1192,25 +1195,17 @@ Hipace::CheckGhostSlice (int it)
                              <<nreal<<" nghost "<<nghost<<"\n";
         }
 
-        const auto getPosition = GetParticlePosition<BeamParticleContainer>
-            (m_multi_beam.getBeam(ibeam), m_multi_beam.getNRealParticles(ibeam));
-
-        // Get lo and hi indices of relevant boxes
-        const amrex::Box& bxleft = boxArray(lev)[it-1];
+        // Get lo and hi indices of current box
         const amrex::Box& bx = boxArray(lev)[it];
         const int ilo = bx.smallEnd(Direction::z);
-        const int iloleft = bxleft.smallEnd(Direction::z);
-        const int ihileft = bxleft.bigEnd(Direction::z);
 
         // Get domain size in physical space
         const amrex::Real dz = Geom(lev).CellSize(Direction::z);
         const amrex::Real dom_lo = Geom(lev).ProbLo(Direction::z);
 
-        // Compute bounds of ghost cell, and of left box
+        // Compute bounds of ghost cell
         const amrex::Real zmin_leftcell = dom_lo + dz*(ilo-1);
         const amrex::Real zmax_leftcell = dom_lo + dz*ilo;
-        const amrex::Real zmin_leftbox = dom_lo + dz*iloleft;
-        const amrex::Real zmax_leftbox = dom_lo + dz*(ihileft+1);
 
         // Get pointers to ghost particles
         auto& ptile = m_multi_beam.getBeam(ibeam);
@@ -1223,8 +1218,6 @@ Hipace::CheckGhostSlice (int it)
             [=] AMREX_GPU_DEVICE (long idx) {
                 // Get zp of ghost particle
                 const amrex::Real zp = pos_structs[idx].pos(2);
-                // Make sure ghost particle is in the box directly left of the current box
-                AMREX_ASSERT(zp > zmin_leftbox && zp < zmax_leftbox);
                 // Invalidate ghost particle if not in the ghost slice
                 if ( zp < zmin_leftcell || zp > zmax_leftcell ) {
                     pos_structs[idx].id() = -1;
