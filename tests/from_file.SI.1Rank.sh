@@ -14,32 +14,26 @@ HIPACE_SOURCE_DIR=$2
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
-HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
+HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # gererate beam
 python3 ${HIPACE_SOURCE_DIR}/tools/write_beam.py
 
 # Run the simulation
-$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_from_file_SI \
-        hipace.file_prefix=${TEST_NAME}_1 \
+$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+        hipace.file_prefix=${TEST_NAME} \
         amr.n_cell = 16 16 32 \
         hipace.dt = 0 \
-        max_step = 0 \
-        plasmas.names = no_plasma
-
-# Restart the simulation with previous beam output
-$HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_from_file_SI \
-        hipace.file_prefix=${TEST_NAME}_2 \
-        amr.n_cell = 24 24 32 \
-        hipace.dt = 0 \
-        max_step = 0 \
-        plasmas.names = no_plasma \
-        beam.input_file = ${TEST_NAME}_1/openpmd_%T.h5 \
-        beam.openPMD_species_name = beam
+        geometry.prob_lo = -80.e-6 -80.e-6 -80.e-6 \
+        geometry.prob_hi =  80.e-6  80.e-6  80.e-6 \
+        beams.names = beam \
+        beam.injection_type = from_file \
+        beam.input_file = beam_%T.h5 \
+        beam.iteration = 0 \
+        beam.openPMD_species_name = Electrons
 
 # Compare the beams
 $HIPACE_EXAMPLE_DIR/analysis_from_file.py --beam-py beam_%T.h5 \
-                                          --beam-out1 ${TEST_NAME}_1/openpmd_%T.h5 \
-                                          --beam-out2 ${TEST_NAME}_2/openpmd_%T.h5 \
+                                          --beam-out1 ${TEST_NAME}/openpmd_%T.h5 \
                                           --SI
