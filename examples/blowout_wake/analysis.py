@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace
+# This Python analysis script is part of the code Hipace++
 #
 # It compares the transverse field By with the theoretical value, plots both
 # the simulation result and the theory on the same plot, and asserts that the
@@ -52,7 +52,7 @@ E_0 = omega_p * scc.m_e * scc.c / scc.e;
 
 kp = omega_p / scc.c  # 1./10.e-6
 
-# Load Hipace data for Ez in both normalized and SI units
+# Load Hipace++ data for Ez in both normalized and SI units
 Ez_along_z_norm, meta_norm = ts_norm.get_field(
     field='Ez', iteration=1, slice_across=['x','y'], slice_relative_position=[0,0])
 Ez_along_z_si, meta_si = ts_si.get_field(

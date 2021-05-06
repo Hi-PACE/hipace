@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace test suite.
+# This file is part of the Hipace++ test suite.
 # It runs a Hipace simulation with full IO and xz-slice IO, and checks that the results are equal.
 
 # abort on first encounted error

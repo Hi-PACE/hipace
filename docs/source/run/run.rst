@@ -6,7 +6,7 @@ Run Hipace++
 Run a simulation
 ----------------
 
-After compiling HiPACE (see above), from the HiPACE root directory, execute
+After compiling Hipace++ (see above), from the Hipace++ root directory, execute
 
 .. code-block:: bash
 
