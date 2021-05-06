@@ -109,6 +109,9 @@ Hipace::Hipace () :
         "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
+        "Ion motion with explicit solver is not implemented, need to use neutralize_background");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(m_explicit && !m_normalized_units),
         "The explicit solver doesn't work with SI yet. If you need it, please open an issue");
 
