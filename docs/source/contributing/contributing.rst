@@ -23,7 +23,7 @@ Hipace++ has a full (functions and classes and their members, albeit sometimes b
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
 
 The Hipace++ Doxygen documentation can be found `here <../_static/doxyhtml/index.html>`__.
-   
+
 Style and conventions
 ---------------------
 
