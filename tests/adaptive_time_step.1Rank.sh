@@ -25,8 +25,9 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_hi =  2.  2.  2. \
         hipace.dt = 0. \
         hipace.output_period = 20 \
-        beam.density = 1.e-8 \
+        beam.density = 1 \
         beam.radius = 1. \
+        beam.n_subcycles = 4 \
         beam.ppc = 4 4 1 \
         hipace.external_Ez_slope = -.5 \
         hipace.verbose=1\
@@ -41,8 +42,9 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_hi =  2.  2.  2. \
         hipace.dt = 0. \
         hipace.output_period = 20 \
-        beam.density = 1.e-8 \
+        beam.density = 1 \
         beam.radius = 1. \
+        beam.n_subcycles = 4 \
         beam.ppc = 4 4 1 \
         hipace.external_Ez_slope = .5 \
         hipace.verbose=1\
