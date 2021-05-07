@@ -14,4 +14,4 @@ Its main features are:
  - more coming soon...
 Hipace++ relies on the [AMReX](https://amrex-codes.github.io) library, which provides for particle and field data structures.
 
-Feel free to have a look at our documentation!
+Please have a look at our [documentation](https://hipace.readthedocs.io)!
