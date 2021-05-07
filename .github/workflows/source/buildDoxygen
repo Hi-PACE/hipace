@@ -2,7 +2,7 @@
 
 # Copyright 2020 Axel Huebl
 #
-# This file is part of Hipace
+# This file is part of Hipace++
 #
 # License: BSD-3-Clause-LBNL
 
@@ -13,7 +13,7 @@
 
 set -eu -o pipefail
 
-cd doc
+cd docs
 
 # treat all warnings as errors
 echo "WARN_AS_ERROR = YES" >> Doxyfile

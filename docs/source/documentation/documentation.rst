@@ -3,7 +3,7 @@
 Documentation
 =============
 
-Hipace has a full (all functions and classes and their members, albeit sometimes basic) Doxygen-readable documentation. You can compile it with
+Hipace++ has a full (all functions and classes and their members, albeit sometimes basic) Doxygen-readable documentation. You can compile it with
 
 .. code-block:: bash
 

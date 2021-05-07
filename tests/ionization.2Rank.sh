@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace test suite.
+# This file is part of the Hipace++ test suite.
 # It runs a Hipace simulation with in neutral hydrogen that gets ionized by the beam
 
 # abort on first encounted error

@@ -1,4 +1,4 @@
-In order to kick-start Hipace, things were done in the simplest way possible, leaving obvious optimizations for later.
+In order to kick-start Hipace++, things were done in the simplest way possible, leaving obvious optimizations for later.
 This file lists these easy optimizations, to avoid missing low-hanging fruits.
 
 1. AMReX particle Redistribute

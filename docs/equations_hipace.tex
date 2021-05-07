@@ -2,7 +2,7 @@
 \usepackage[a4paper, total={6in, 8in}]{geometry}
 \usepackage[utf8]{inputenc}
 
-\title{Contemporary field equations in HiPACE}
+\title{Contemporary field equations in Hipace++}
 
 \usepackage{xcolor}
 \usepackage{natbib}
@@ -12,7 +12,7 @@
 \begin{document}
 
 
-\section*{Contemporary field solving routine in HiPACE}
+\section*{Contemporary field solving routine in Hipace++}
 \label{se:pic_rad_field_solver}
 
 \newcommand{\blue}[1]{\textcolor{blue}{#1}}
@@ -82,7 +82,7 @@ In general, the charge deposition is the operation
 \end{equation}
 where $q$ is the charge of 1 physical particle of the species, $N$ is the number of physical particles in current macro-particle, $S(x)$ is the value of the shape factor at the grid point $ijk$ and $\Delta V$ is the volume of 1 cell.
 
-In Hipace, this is interpreted as
+In Hipace++, this is interpreted as
 \begin{equation}
 \begin{split}
 \rho_{ijk} &+= \frac{q N S(x_{ijk})}{\Delta V_{cell}} \\

@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace
+# This Python analysis script is part of the code Hipace++
 #
 # It compares the transverse field By with the theoretical value, plots both
 # the simulation result and the theory on the same plot, and asserts that the
@@ -58,7 +58,7 @@ else:
     # Radius of the can beam
     R = 10.e-6
 
-# Load Hipace data for By in SI units
+# Load Hipace++ data for By in SI units
 Bx_sim, Bx_meta = ts.get_field(field='Bx', iteration=0, slice_across=['x','z'], slice_relative_position=[0,0])
 By_sim, By_meta = ts.get_field(field='By', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])
 jz_sim = ts.get_field(field='jz_beam', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0]
@@ -90,7 +90,7 @@ if args.do_plot:
 
     if not args.norm_units:
         plt.subplot(131)
-        plt.plot(1.e6*y, Bx_sim, '+-', label='hipace++')
+        plt.plot(1.e6*y, Bx_sim, '+-', label='Hipace++')
         plt.plot(1.e6*y, Bx_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
@@ -99,7 +99,7 @@ if args.do_plot:
         plt.ylabel('Bx (T)')
 
         plt.subplot(132)
-        plt.plot(1.e6*x, By_sim, '+-', label='hipace++')
+        plt.plot(1.e6*x, By_sim, '+-', label='Hipace++')
         plt.plot(1.e6*x, By_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
@@ -108,7 +108,7 @@ if args.do_plot:
         plt.ylabel('By (T)')
 
         plt.subplot(133)
-        plt.plot(1.e6*x, jz_sim, '+-', label='hipace++')
+        plt.plot(1.e6*x, jz_sim, '+-', label='Hipace++')
         plt.plot(1.e6*x, jz_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
@@ -117,7 +117,7 @@ if args.do_plot:
         plt.ylabel('jz (A/m2)')
     else:
         plt.subplot(131)
-        plt.plot(y, Bx_sim, '+-', label='hipace++')
+        plt.plot(y, Bx_sim, '+-', label='Hipace++')
         plt.plot(y, Bx_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
@@ -126,7 +126,7 @@ if args.do_plot:
         plt.ylabel('c Bx / E0')
 
         plt.subplot(132)
-        plt.plot(x, By_sim, '+-', label='hipace++')
+        plt.plot(x, By_sim, '+-', label='Hipace++')
         plt.plot(x, By_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
@@ -135,7 +135,7 @@ if args.do_plot:
         plt.ylabel('c By / E0')
 
         plt.subplot(133)
-        plt.plot(x, jz_sim, '+-', label='hipace++')
+        plt.plot(x, jz_sim, '+-', label='Hipace++')
         plt.plot(x, jz_th, 'k--', label='theory')
         plt.grid()
         plt.legend()
