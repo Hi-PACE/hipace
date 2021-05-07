@@ -24,5 +24,4 @@ Hipace++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which 
    run/get_started.rst
    visualize/visualization.rst
    documentation/documentation.rst
-   style.rst
    contributing.rst

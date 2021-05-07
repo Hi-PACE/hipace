@@ -9,7 +9,7 @@ To contribute to Hipace++, the steps are as follows:
  - Commit your changes as usual, and push them on your fork
  - Open a PR between ``<new branch>`` on your for and ``development`` on baseline
 
- Style and conventions
+Style and conventions
 ---------------------
 
 - All new element (class, member of a class, struct, function) declared in a .H file must have a Doxygen-readable documentation
