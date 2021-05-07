@@ -69,7 +69,7 @@ Modeling ion motion is not yet supported by the explicit solver
     Possible values: ``predictor-corrector`` and ``explicit``.
 
 Predictor-corrector loop parameters
------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``hipace.predcorr_B_error_tolerance`` (`float`) optional (default `4e-2`)
     The tolerance of the transverse B-field error. To enable a fixed number of iterations,
@@ -101,7 +101,7 @@ Predictor-corrector loop parameters
    `hipace.predcorr_B_mixing_factor = 0.15`. The B-field error tolerance must be negative.
 
 Explicit solver parameters
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the AMReX multigrid solver.
@@ -190,7 +190,8 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Gaussian beam with a fixed number of particles with a constant weight.
     `from_file` reads a beam from openPMD files.
 
-**fixed_weight**
+Option: ``fixed_weight``
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``<beam name>.position_mean`` (3 `float`)
     The mean position of the beam in `x, y, z`, separated by a space.
@@ -232,7 +233,8 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using `do_z_push = 0` results in unphysical behavior.
 
-**from_file**
+Option: ``from_file``
+^^^^^^^^^^^^^^^^^^^^^
 
 * ``<beam name>.input_file`` (`string`)
     Name of the input file. **Note:** Reading in files with digits in their names (e.g.
