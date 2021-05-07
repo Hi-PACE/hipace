@@ -190,6 +190,11 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Gaussian beam with a fixed number of particles with a constant weight.
     `from_file` reads a beam from openPMD files.
 
+* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
+    Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
+    `n_subcycles` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
+    in highly non-linear focusing fields.
+
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
