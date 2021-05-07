@@ -160,18 +160,6 @@ You can speed up the install further if you pre-install these dependencies, e.g.
 Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`.
 Please see the [short CMake tutorial that we linked above](#Developers) if this sounds new to you.
 
-Run a first simulation and look at the results
-----------------------------------------------
-
-After compiling Hipace++ (see above), from the Hipace++ root directory, execute
-
-.. code-block:: bash
-
-   cd examples/linear_wake/
-   ../../build/bin/hipace inputs # Run the simulation with fields and plasma and beam particles
-   ./analysis.py # Plot results with the [openPMD-viewer](https://github.com/openPMD/openPMD-viewer), and save in img.png
-
-
 Documentation
 -------------
 
@@ -185,16 +173,3 @@ The documentation is written at the `RST <https://sphinx-tutorial.readthedocs.io
    open build/html/index.html
 
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
-
-Style and conventions
----------------------
-
-- All new element (class, member of a class, struct, function) declared in a .H file must have a Doxygen-readable documentation
-- Indent four spaces
-- No tabs allowed
-- No end-of-line whitespaces allowed
-- Classes use CamelCase
-- Objects use snake_case
-- Lines should not have >100 characters
-- The declaration and definition of a function should have a space between the function name and the first bracket (``my_function (...)``), function calls should not (``my_function(...)``).
-  This is a convention introduce in AMReX so ``git grep "my_function ("`` returns only the declaration and definition, not the many function calls.
