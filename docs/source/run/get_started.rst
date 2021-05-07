@@ -6,9 +6,6 @@ All the input parameters available in the simulation are available in the :doc:`
 
 .. literalinclude:: ../../../examples/get_started/inputs_normalized
 
-
-#   :literal:
-
 This input file is ``inputs_normalized`` in ``examples/get_started/``, which is the recommended place to start running a first simulation.
 
 See the :doc:`../building/building` section to install the code locally or on your favorite platform.
