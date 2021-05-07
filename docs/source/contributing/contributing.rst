@@ -9,6 +9,21 @@ To contribute to Hipace++, the steps are as follows:
  - Commit your changes as usual, and push them on your fork
  - Open a PR between ``<new branch>`` on your for and ``development`` on baseline
 
+Documentation
+-------------
+
+Hipace++ has a full (functions and classes and their members, albeit sometimes basic) Doxygen-readable documentation. You can compile it with
+
+.. code-block:: bash
+
+   cd docs
+   doxygen
+   open doxyhtml/index.html
+
+The last line would work on MacOS. On another platform, open the html file with your favorite browser.
+
+The Hipace++ Doxygen documentation can be found `here <../_static/doxyhtml/index.html>`__.
+   
 Style and conventions
 ---------------------
 

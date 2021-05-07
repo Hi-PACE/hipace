@@ -13,3 +13,4 @@ Hipace++ has a full (all functions and classes and their members, albeit sometim
 
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
 
+Our Doxygen C++ API documentation in classic formatting `is located here <../_static/doxyhtml/index.html>`_.
