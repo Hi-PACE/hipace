@@ -81,7 +81,7 @@ Hipace::Hipace () :
     pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
-    pph.query("grid_size_z", m_grid_size_z);
+    pph.query("boxes_in_z", m_boxes_in_z);
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
     pph.query("predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
@@ -247,7 +247,8 @@ Hipace::MakeNewLevelFromScratch (
         const amrex::IntVect box_size = ba[0].length();  // Uniform box size
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
-        const int nboxes_z = ncells_global[2] / box_size[2];
+        //const int nboxes_z = ncells_global[2] / box_size[2];
+        const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
         AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
                             static_cast<long>(nboxes_y) *
                             static_cast<long>(nboxes_z) == ba.size());
@@ -281,19 +282,19 @@ Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
     const amrex::IntVect ncells_global = Geom(0).Domain().length();
     amrex::IntVect box_size{ncells_global[0] / m_numprocs_x,
                             ncells_global[1] / m_numprocs_y,
-                            m_grid_size_z};
+                            ncells_global[2] / m_boxes_in_z};
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[0]*m_numprocs_x == ncells_global[0],
                                      "# of cells in x-direction is not divisible by hipace.numprocs_x");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[1]*m_numprocs_y == ncells_global[1],
                                      "# of cells in y-direction is not divisible by hipace.numprocs_y");
 
-    if (box_size[2] == 0) {
+    if (m_boxes_in_z == 1) {
         box_size[2] = ncells_global[2] / m_numprocs_z;
     }
 
     const int nboxes_x = m_numprocs_x;
     const int nboxes_y = m_numprocs_y;
-    const int nboxes_z = ncells_global[2] / box_size[2];
+    const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[2]*nboxes_z == ncells_global[2],
                                      "# of cells in z-direction is not divisible by # of boxes");
 
@@ -336,7 +337,8 @@ Hipace::Evolve ()
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
-        for (int it = m_numprocs_z-1; it >= 0; --it)
+        const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
+        for (int it = n_boxes-1; it >= 0; --it)
         {
             Wait(step, it);
 
