@@ -22,8 +22,7 @@ geometry.prob_lo     = -8.   -8.   -6    # physical domain
 geometry.prob_hi     =  8.    8.    6
 
 beams.names = beam
-beam.injection_type = fixed_weight
-beam.num_particles=100000
+beam.injection_type = fixed_ppc
 beam.profile = gaussian
 beam.zmin = -5.9
 beam.zmax = 5.9
