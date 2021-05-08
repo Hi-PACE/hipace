@@ -624,9 +624,6 @@ InitBeamFromFile (const std::string input_file,
 
         series.flush();
 
-        m_charge = (Hipace::m_normalized_units) ? q_q_data.get()[0] : q_q_data.get()[0] * unit_qq;
-        m_mass = (Hipace::m_normalized_units) ? m_m_data.get()[0] : m_m_data.get()[0] * unit_mm;
-
     }
     else {
         series.flush();

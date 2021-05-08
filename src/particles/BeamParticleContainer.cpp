@@ -41,9 +41,9 @@ void
 BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
+    QueryElementSetChargeMass(pp, m_charge, m_mass);
     pp.query("charge", m_charge);
     pp.query("mass", m_mass);
-    QueryElementSetChargeMass(pp, m_charge, m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The beam particle mass must not be 0");
 
     pp.get("injection_type", m_injection_type);
