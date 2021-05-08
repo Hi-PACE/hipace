@@ -216,7 +216,6 @@ void
 OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleContainer& beam,
                          const unsigned long long& np, const amrex::Geometry& geom)
 {
-    const PhysConst phys_const_hipace = get_phys_const();
     const PhysConst phys_const_SI = make_constants_SI();
     auto const realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np});
     auto const idType = openPMD::Dataset(openPMD::determineDatatype< uint64_t >(), {np});

@@ -605,29 +605,7 @@ InitBeamFromFile (const std::string input_file,
         unit_ww = electrons[name_w][name_ww].unitSI() / si_to_norm_weight;
     }
 
-    // Check if q/m matches that of electrons
-    if((name_mm != "") && (name_qq != "")) {
-        input_type unit_qq, unit_mm;
-        const std::shared_ptr< input_type > q_q_data = electrons[name_q][
-                                                       name_qq].loadChunk< input_type >();
-        const std::shared_ptr< input_type > m_m_data = electrons[name_m][
-                                                       name_mm].loadChunk< input_type >();
-
-        if(hipace_restart) {
-            unit_qq = electrons[name_q][name_qq].getAttribute(attr).get<double>();
-            unit_mm = electrons[name_m][name_mm].getAttribute(attr).get<double>();
-        }
-        else {
-            unit_qq = electrons[name_q][name_qq].unitSI();
-            unit_mm = electrons[name_m][name_mm].unitSI();
-        }
-
-        series.flush();
-
-    }
-    else {
-        series.flush();
-    }
+    series.flush();
 
     if(electrons[name_r][name_rx].getExtent()[0] >= 2147483647) {
         amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
