@@ -173,3 +173,12 @@ The documentation is written at the `RST <https://sphinx-tutorial.readthedocs.io
    open build/html/index.html
 
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
+
+HPC platforms
+-------------
+
+.. toctree::
+   :maxdepth: 1
+
+   platforms/booster_jsc.rst
+   platforms/maxwell_desy.rst
