@@ -8,7 +8,7 @@
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                            int const lev, const int islice, const amrex::Box box, const int offset,
-                           amrex::DenseBins<BeamParticleContainer::ParticleType>& bins)
+                           BeamBins& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -18,8 +18,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     const PhysConst phys_const = get_phys_const();
 
     const bool do_z_push = beam.m_do_z_push;
-
-    const amrex::Real dt = Hipace::m_dt;
+    const int n_subcycles = beam.m_n_subcycles;
+    const amrex::Real dt = Hipace::m_dt / n_subcycles;
 
     // Assumes '2' == 'z' == 'the long dimension'.
     int islice_local = islice - box.smallEnd(2);
@@ -68,13 +68,13 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     const amrex::Real zmin = xyzmin[2];
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type*
+    BeamBins::index_type*
         indices = nullptr;
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const *
+    BeamBins::index_type const *
         offsets = nullptr;
     indices = bins.permutationPtr();
     offsets = bins.offsetsPtr();
-    amrex::DenseBins<BeamParticleContainer::ParticleType>::index_type const
+    BeamBins::index_type const
         cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
     // The particles that are in slice islice_local are
     // given by the indices[cell_start:cell_stop]
@@ -94,74 +94,78 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
 
             amrex::ParticleReal xp, yp, zp;
             int pid;
-            getPosition(ip, xp, yp, zp, pid);
-            if (pid < 0) return;
 
-            const amrex::ParticleReal gammap = sqrt(
-                1.0_rt + uxp[ip]*uxp[ip]*clightsq
-                + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
+            for (int i = 0; i < n_subcycles; i++) {
 
-            // first we do half a step in x,y
-            // This is not required in z, which is pushed in one step later
-            xp += dt * 0.5_rt * uxp[ip] / gammap;
-            yp += dt * 0.5_rt * uyp[ip] / gammap;
+                getPosition(ip, xp, yp, zp, pid);
+                if (pid < 0) return;
 
-            setPosition(ip, xp, yp, zp);
-            if (enforceBC(ip)) return;
+                const amrex::ParticleReal gammap = sqrt(
+                    1.0_rt + uxp[ip]*uxp[ip]*clightsq
+                    + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
 
-            // define field at particle position reals
-            amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-            amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                // first we do half a step in x,y
+                // This is not required in z, which is pushed in one step later
+                xp += dt * 0.5_rt * uxp[ip] / gammap;
+                yp += dt * 0.5_rt * uyp[ip] / gammap;
 
-            // field gather for a single particle
-            doGatherShapeN(xp, yp, zmin,
-                           ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                           exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                           dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                setPosition(ip, xp, yp, zp);
+                if (enforceBC(ip)) return;
 
-            ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
-                               external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
+                // define field at particle position reals
+                amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+                amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
-            // use intermediate fields to calculate next (n+1) transverse momenta
-            const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
-                * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
-            const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
-                * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
+                // field gather for a single particle
+                doGatherShapeN(xp, yp, zmin,
+                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                               exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                               dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
 
-            // Now computing new longitudinal momentum
-            const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
-            const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
-            const amrex::ParticleReal uz_intermediate = uzp[ip]
-                + dt * 0.5_rt * charge_mass_ratio * Ezp;
+                ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
+                                   external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
 
-            const amrex::ParticleReal gamma_intermediate = sqrt(
-                1.0_rt + ux_intermediate*ux_intermediate*clightsq +
-                uy_intermediate*uy_intermediate*clightsq +
-                uz_intermediate*uz_intermediate*clightsq );
+                // use intermediate fields to calculate next (n+1) transverse momenta
+                const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
+                    * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
+                const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
+                    * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
 
-            const amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
-                * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
-                    / gamma_intermediate );
+                // Now computing new longitudinal momentum
+                const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
+                const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
+                const amrex::ParticleReal uz_intermediate = uzp[ip]
+                    + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
-            /* computing next gamma value */
-            const amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
-                                                         + ux_next*ux_next*clightsq
-                                                         + uy_next*uy_next*clightsq );
+                const amrex::ParticleReal gamma_intermediate = sqrt(
+                    1.0_rt + ux_intermediate*ux_intermediate*clightsq +
+                    uy_intermediate*uy_intermediate*clightsq +
+                    uz_intermediate*uz_intermediate*clightsq );
 
-            /*
-             * computing positions and setting momenta for the next timestep
-             *(n+1)
-             * The longitudinal position is updated here as well, but in
-             * first-order (i.e. without the intermediary half-step) using
-             * a simple Galilean transformation
-             */
-            xp += dt * 0.5_rt * ux_next  / gamma_next;
-            yp += dt * 0.5_rt * uy_next  / gamma_next;
-            if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
-            setPosition(ip, xp, yp, zp);
-            if (enforceBC(ip)) return;
-            uxp[ip] = ux_next;
-            uyp[ip] = uy_next;
-            uzp[ip] = uz_next;
+                const amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
+                    * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
+                        / gamma_intermediate );
+
+                /* computing next gamma value */
+                const amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
+                                                             + ux_next*ux_next*clightsq
+                                                             + uy_next*uy_next*clightsq );
+
+                /*
+                 * computing positions and setting momenta for the next timestep
+                 *(n+1)
+                 * The longitudinal position is updated here as well, but in
+                 * first-order (i.e. without the intermediary half-step) using
+                 * a simple Galilean transformation
+                 */
+                xp += dt * 0.5_rt * ux_next  / gamma_next;
+                yp += dt * 0.5_rt * uy_next  / gamma_next;
+                if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
+                setPosition(ip, xp, yp, zp);
+                if (enforceBC(ip)) return;
+                uxp[ip] = ux_next;
+                uyp[ip] = uy_next;
+                uzp[ip] = uz_next;
+            } // end for loop over n_subcycles
         });
 }

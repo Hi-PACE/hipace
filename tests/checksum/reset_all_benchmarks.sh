@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This file is part of the Hipace test suite.
+# This file is part of the Hipace++ test suite.
 # It resets all checksum benchmarks one by one,
 # based on the current version of the code.
 #
@@ -125,6 +125,30 @@ then
     ./checksumAPI.py --reset-benchmark \
                      --file_name ${build_dir}/bin/normalized_data \
                      --test-name blowout_wake.2Rank
+fi
+
+#hosing.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "hosing.2Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R hosing.2Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/hosing_data \
+                     --test-name hosing.2Rank
+fi
+
+#ionization.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "ionization.2Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R ionization.2Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/ionization.2Rank \
+                     --test-name ionization.2Rank
 fi
 
 #blowout_wake_explicit.2Rank

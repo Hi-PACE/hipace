@@ -34,7 +34,7 @@ public:
      */
     void DepositCurrentSlice (
         Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+        amrex::Vector<BeamBins> bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
         const bool do_beam_jx_jy_deposition, const int which_slice);
 
@@ -45,7 +45,7 @@ public:
      * \param[in] geom Geometry of the simulation domain
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
-    amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>
+    amrex::Vector<BeamBins>
     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
                               const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
@@ -72,7 +72,7 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins,
+        amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and init them
@@ -106,11 +106,51 @@ public:
     /** \brief Check that all beams have the same number of Int components
      * and return this number */
     int NumIntComps ();
+
+    /** \brief Store number of particles of each beam in m_n_real_particles */
+    void StoreNRealParticles ();
+
+    /** \brief Calculate and return the number of ghost particles in beam ibeam in box it.
+     * This is the number of particles in the last slice of it, so ghost particles of it+1.
+     *
+     * \param[in] ibeam index of the beam
+     * \param[in] bins bins object to access particles per slice
+     * \param[in] bx box in which we want to acce particles
+     */
+    int NGhostParticles (int ibeam, amrex::Vector<BeamBins>& bins, amrex::Box bx);
+
+    /** \brief remove ghost particles, in practice those after the last slice. */
+    void RemoveGhosts ();
+
+    /** Return the number of particles in beam ibeam
+     *
+     * \param[in] ibeam beam index
+     */
+    int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();};
+
+    /** \brief copy particles in box it-1 in the ghost buffer at the end of the particle array.
+     *
+     * The head rank does not receive ghost particles from anyone, but still has to handle them.
+     * Besides, slipped particles should also be appended as ghost slices.
+     * This function performs both of these tasks.
+     *
+     * \param[in] it index of the box from which we copy particles to the ghost buffer
+     * \param[in] box_sorters BoxSorter object to access the indices of particles in box it
+     */
+    void PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_sorters);
+
+    /** \brief getter function for number of real particles (as opposed to ghost particles)
+     *
+     * \param[in] ibeam index of the beam
+     */
+    int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];};
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
     amrex::Vector<std::string> m_names; /**< names of all beam containers */
     int m_nbeams {0}; /**< number of beam containers */
+    /** number of real particles per beam, as opposed to ghost particles */
+    amrex::Vector<amrex::Long> m_n_real_particles;
 };
 
 #endif // MULTIBEAM_H_

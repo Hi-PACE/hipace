@@ -2,10 +2,10 @@
 
 #include <AMReX_ParticleTransformation.H>
 
-amrex::DenseBins<BeamParticleContainer::ParticleType>
+BeamBins
 findParticlesInEachSlice (
     int /*lev*/, int ibox, amrex::Box bx,
-    BeamParticleContainer& beam, amrex::Geometry& geom,
+    BeamParticleContainer& beam, const amrex::Geometry& geom,
     const BoxSorter& a_box_sorter)
 {
     // Slice box: only 1 cell transversally, same as bx longitudinally.
@@ -24,7 +24,7 @@ findParticlesInEachSlice (
     const auto plo = geom.ProbLoArray();
 
     // Find the particles that are in each slice and return collections of indices per slice.
-    amrex::DenseBins<BeamParticleContainer::ParticleType> bins;
+    BeamBins bins;
     bins.build(
         np, particle_ptr, cbx,
         // Pass lambda function that returns the slice index

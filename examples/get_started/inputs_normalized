@@ -1,0 +1,41 @@
+### AMReX parameters
+################################
+amr.n_cell = 64 64 100                  # number of grid points in x, y, z
+amr.blocking_factor = 1                 # blocking factor. n_cell must be divisible by it
+amr.max_level = 0                       # level of mesh refinement. Currently, only 0 available
+
+#### General simulation settings
+################################
+max_step = 20                           # max time step. 0 computes the fields of the initial beam
+hipace.output_period = 1                # output period. Last step is always written
+hipace.normalized_units = 1             # unit system: SI units: 0, normalized units: 1
+hipace.dt = 4.4                         # Time step
+
+### Simulation domain
+################################
+geometry.coord_sys   =  0               # 0: Cartesian
+geometry.is_periodic =  1     1     0   # Is periodic?
+geometry.prob_lo     = -8.   -8.   -6   # physical domain: dimension must be provided
+geometry.prob_hi     =  8.    8.    6   # in the respective unit system
+
+### Beam(s)
+################################
+beams.names = beam                      # name(s) of the beam(s)
+beam.injection_type = fixed_weight      # injection type: fixed_weight, fixed_ppc, or from_file
+beam.num_particles = 100000             # number of constant weight particles
+beam.position_mean = 0. 0. 0            # mean position in x,y,z in the respective unit system
+beam.position_std = 0.3 0.3 1.41        # rms size in x,y,z in the respecitve unit system
+beam.density = 3.                       # peak density
+beam.u_mean = 0. 0. 2000                # normalized mean momentum in x,y,z
+beam.u_std = 0. 0. 0.                   # normalized rms of the momentum in x,y,z
+
+### Plasma
+################################
+plasmas.names = plasma                  # name(s) of the plasma(s)
+plasma.element = electron               # type of plasma: electron, proton, or an element e.g. He
+plasma.density = 1.                     # peak density in the respective unit systems
+plasma.ppc = 1 1                        # particles per cell in x,y
+
+### Diagnostics
+################################
+diagnostic.diag_type = xz               # 2D xz slice output. Options: xyz, xz, yz

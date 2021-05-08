@@ -11,8 +11,10 @@
 #include "utils/Constants.H"
 
 #include <AMReX_AmrCore.H>
-#include <AMReX_MLALaplacian.H>
-#include <AMReX_MLMG.H>
+#ifdef AMREX_USE_LINEAR_SOLVERS
+#  include <AMReX_MLALaplacian.H>
+#  include <AMReX_MLMG.H>
+#endif
 
 #ifdef HIPACE_USE_OPENPMD
 #include <openPMD/openPMD.hpp>
@@ -82,8 +84,10 @@ public:
      *
      * \param[in] step current time step
      * \param[in] it index of the box for which data is received
+     * \param[in] only_ghost whether to recv only ghost particles
      */
-    void Wait (const int step, int it);
+    void Wait (const int step, int it, bool only_ghost=false);
+
     /** \brief Send field slices to rank downstream
      *
      * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
@@ -92,10 +96,17 @@ public:
      *
      * \param[in] step current time step
      * \param[in] it current box number
+     * \param[in] bins slice indexing
+     * \param[in] only_ghost whether to send only ghost particles
      */
-    void Notify (const int step, const int it);
-    /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr */
-    void NotifyFinish ();
+    void Notify (const int step, const int it, amrex::Vector<BeamBins>& bins, bool only_ghost=false);
+
+    /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
+     *
+     * \param[in] it current box number
+     * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)
+     */
+    void NotifyFinish (const int it=0, bool only_ghost=false);
 
     /** \brief return whether rank is in the same transverse communicator w/ me
      *
@@ -122,7 +133,7 @@ public:
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
     void SolveOneSlice (int islice, int lev, const int ibox,
-                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>>& bins);
+                        amrex::Vector<BeamBins>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -168,12 +179,18 @@ public:
     int m_grid_size_z = 0;
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
+    char* m_psend_buffer_ghost = nullptr;
     /** Send buffer for the number of particles for each beam (pipeline) */
     amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
+    amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
     /** status of the number of particles send request */
     MPI_Request m_nsend_request = MPI_REQUEST_NULL;
+    MPI_Request m_nsend_request_ghost = MPI_REQUEST_NULL;
     /** status of the particle send request */
     MPI_Request m_psend_request = MPI_REQUEST_NULL;
+    MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
+    /** status of the physical time send request */
+    MPI_Request m_tsend_request = MPI_REQUEST_NULL;
 
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
@@ -265,6 +282,13 @@ public:
      */
     void ExplicitSolveBxBy (const int lev);
 
+    /** \brief Check that the ghost beam particles are in the proper box, and invalidate
+     * those not in the right slice.
+     *
+     * \param[in] it Current box, the ghost slice of particles should be in the cell downstream.
+     */
+    void CheckGhostSlice (int it);
+
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
@@ -273,10 +297,12 @@ private:
     amrex::DistributionMapping m_slice_dm;
     amrex::BoxArray m_slice_ba;
 
+#ifdef AMREX_USE_LINEAR_SOLVERS
     /** Linear operator for the explicit Bx and By solver */
     std::unique_ptr<amrex::MLALaplacian> m_mlalaplacian;
     /** Geometric multigrid solver class, for the explicit Bx and By solver */
     std::unique_ptr<amrex::MLMG> m_mlmg;
+#endif
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
 
@@ -298,8 +324,10 @@ private:
      * \param[in] ibox index of the current box
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, const amrex::Box bx,
-                        amrex::Vector<amrex::DenseBins<BeamParticleContainer::ParticleType>> bins,
+                        amrex::Vector<BeamBins> bins,
                         const int ibox);
+
+    void Ionisation (const int lev);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.

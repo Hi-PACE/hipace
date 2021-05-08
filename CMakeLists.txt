@@ -149,6 +149,10 @@ if(HiPACE_OPENPMD)
     target_link_libraries(HiPACE PUBLIC openPMD::openPMD)
 endif()
 
+if(AMReX_LINEAR_SOLVERS)
+    target_compile_definitions(HiPACE PUBLIC AMREX_USE_LINEAR_SOLVERS)
+endif()
+
 # fancy binary name for build variants
 set_hipace_binary_name()
 
@@ -216,6 +220,36 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        #add_test(NAME hosing.2Rank
+        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/hosing.2Rank.sh
+        #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+        #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        #)
+
+        add_test(NAME ionization.2Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/ionization.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME from_file.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/from_file.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME from_file.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/from_file.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME restart.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/restart.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME blowout_wake_explicit.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake_explicit.2Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
@@ -278,6 +312,12 @@ if(BUILD_TESTING)
 
         add_test(NAME beam_in_vacuum.normalized.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME next_deposition_beam.2Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/next_deposition_beam.2Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
