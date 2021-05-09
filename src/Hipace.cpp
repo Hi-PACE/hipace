@@ -82,6 +82,8 @@ Hipace::Hipace () :
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
     pph.query("boxes_in_z", m_boxes_in_z);
+    if (m_boxes_in_z > 1) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_numprocs_z == 1,
+                            "Multiple boxes per rank only implemented for one rank.");
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
     pph.query("predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
@@ -247,7 +249,6 @@ Hipace::MakeNewLevelFromScratch (
         const amrex::IntVect box_size = ba[0].length();  // Uniform box size
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
-        //const int nboxes_z = ncells_global[2] / box_size[2];
         const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
         AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
                             static_cast<long>(nboxes_y) *
