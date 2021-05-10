@@ -112,9 +112,6 @@ Hipace::Hipace () :
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        !(m_explicit && !m_normalized_units),
-        "The explicit solver doesn't work with SI yet. If you need it, please open an issue");
 
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
@@ -578,6 +575,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
 
+        PhysConst pc = m_phys_const;
+        const amrex::Real dz = Geom(lev).CellSize(Direction::z);
+        const amrex::Real omegap = std::sqrt(m_multi_plasma.maxDensity()*pc.q_e*pc.q_e/(pc.m_e*pc.ep0));
+        const amrex::Real kp = omegap/pc.c;
+        const amrex::Real kpinv = 1./kp;
+        const amrex::Real e0 = omegap * pc.m_e * pc.c / pc.q_e;
         amrex::ParallelFor(
             bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -604,45 +607,59 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k));
                 const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k));
                 const amrex::Real cjyp    = - (jy(i,j,k) - jyb(i,j,k));
-                const amrex::Real cpsi    =   psi(i,j,k);
+                const amrex::Real cpsi    =   psi(i,j,k)* pc.q_e / (pc.m_e * pc.c * pc.c);
                 const amrex::Real cjxx    = - jxx(i,j,k);
                 const amrex::Real cjxy    = - jxy(i,j,k);
                 const amrex::Real cjyy    = - jyy(i,j,k);
                 const amrex::Real cdx_jxx = - dx_jxx;
                 const amrex::Real cdx_jxy = - dx_jxy;
                 const amrex::Real cdx_jz  = - dx_jz;
-                const amrex::Real cdx_psi =   dx_psi;
+                const amrex::Real cdx_psi =   dx_psi* pc.q_e / (pc.m_e * pc.c * pc.c);
                 const amrex::Real cdy_jyy = - dy_jyy;
                 const amrex::Real cdy_jxy = - dy_jxy;
                 const amrex::Real cdy_jz  = - dy_jz;
-                const amrex::Real cdy_psi =   dy_psi;
+                const amrex::Real cdy_psi =   dy_psi* pc.q_e / (pc.m_e * pc.c * pc.c);
                 const amrex::Real cdz_jxb = - dz_jxb;
                 const amrex::Real cdz_jyb = - dz_jyb;
                 const amrex::Real cez     =   ez(i,j,k);
                 const amrex::Real cbz     =   bz(i,j,k);
 
                 // to calculate nstar, only the plasma current density is needed
-                const amrex::Real nstar = cne - cjzp;
+                // dimensions: density [m^-3]
+                const amrex::Real nstar = cne/pc.q_e - cjzp/pc.q_e/pc.c;
 
-                const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt * nstar/(1._rt+cpsi);
+                // dimensions: density [m^-3]
+                const amrex::Real nstar_gamma =
+                    0.5_rt* (1._rt+cpsi)*(cjxx/pc.q_e/pc.c/pc.c + cjyy/pc.q_e/pc.c/pc.c + nstar)
+                    + 0.5_rt * nstar/(1._rt+cpsi);
 
+                // dimensions: B / L^2
                 const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+                    (nstar_gamma*cdx_psi/(1._rt+cpsi)/(kp*pc.c)
+                     - cjxp*cez/(kp*pc.c*pc.c*pc.q_e)
+                     - cjxx*cdx_psi*pc.mu0 - cjxy*cdy_psi*pc.mu0);
 
                 const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdy_psi/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                    (nstar_gamma*cdy_psi/(1._rt+cpsi)/(kp*pc.c)
+                     - cjyp*cez/(kp*pc.c*pc.c*pc.q_e)
+                     - cjxy*cdx_psi*pc.mu0 - cjyy*cdy_psi*pc.mu0);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
-                mult(i,j,k,0) = nstar / (1._rt + cpsi);
-                mult(i,j,k,1) = nstar / (1._rt + cpsi);
+                // dimensions: L^-2
+                mult(i,j,k,0) = nstar / (1._rt + cpsi) * kpinv;
+                mult(i,j,k,1) = nstar / (1._rt + cpsi) * kpinv;
 
                 // sy, to compute Bx
-                s(i,j,k,0) = + cbz * cjxp / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
-                             + cdz_jyb;
+                // dimensions: B / L^2
+                s(i,j,k,0) = + cbz * cjxp / (1._rt+cpsi) /pc.q_e/pc.c/kp + nstar_ay
+                    - cdx_jxy/pc.c*pc.mu0 - cdy_jyy/pc.c*pc.mu0
+                    + cdy_jz*pc.mu0 + cdz_jyb*pc.mu0;
+
                 // sx, to compute By
-                s(i,j,k,1) = - cbz * cjyp / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
-                             + cdz_jxb;
+                // dimensions: B / L^2
+                s(i,j,k,1) = - cbz * cjyp / (1._rt+cpsi) /pc.q_e/pc.c/kp + nstar_ax
+                    - cdx_jxx/pc.c*pc.mu0 - cdy_jxy/pc.c*pc.mu0
+                    + cdx_jz*pc.mu0 + cdz_jxb*pc.mu0;
                 s(i,j,k,1) *= -1;
             }
             );

@@ -30,10 +30,6 @@ parser.add_argument('--si-data',
                     dest='si_data',
                     required=True,
                     help='Path to the data of the SI units run')
-parser.add_argument('--si-fixed-weight-data',
-                    dest='si_fixed_weight_data',
-                    required=True,
-                    help='Path to the data of the SI units run with a fixed weight beam')
 parser.add_argument('--do-plot',
                     dest='do_plot',
                     action='store_true',
@@ -43,7 +39,6 @@ args = parser.parse_args()
 
 ts_norm = OpenPMDTimeSeries(args.norm_data)
 ts_si = OpenPMDTimeSeries(args.si_data)
-ts_si_fixed_weight = OpenPMDTimeSeries(args.si_fixed_weight_data)
 
 elec_density = 2.8239587008591567e23 # [1/m^3]
 # calculation of the plasma frequency
@@ -56,8 +51,6 @@ kp = omega_p / scc.c  # 1./10.e-6
 Ez_along_z_norm, meta_norm = ts_norm.get_field(
     field='Ez', iteration=1, slice_across=['x','y'], slice_relative_position=[0,0])
 Ez_along_z_si, meta_si = ts_si.get_field(
-    field='Ez', iteration=1, slice_across=['x','y'], slice_relative_position=[0,0])
-Ez_along_z_si_fixed_w, meta = ts_si_fixed_weight.get_field(
     field='Ez', iteration=1, slice_across=['x','y'], slice_relative_position=[0,0])
 zeta_norm = meta_norm.z
 zeta_si = meta_si.z
@@ -73,7 +66,4 @@ if args.do_plot:
 # Assert that the simulation result is close enough to theory
 error_Ez = np.sum((Ez_along_z_si/E_0-Ez_along_z_norm)**2) / np.sum((Ez_along_z_norm)**2)
 print("total relative error Ez: " + str(error_Ez) + " (tolerance = 1e-10)")
-error_Ez_fixed_weight = np.sum((Ez_along_z_si_fixed_w-Ez_along_z_si)**2) / np.sum((Ez_along_z_si)**2)
-print("total relative error Ez for a fixed weight beam to the fixed ppc beam: " + str(error_Ez_fixed_weight) + " (tolerance = 1e-2)")
 assert(error_Ez < 1e-10)
-assert(error_Ez_fixed_weight < 1e-2)
