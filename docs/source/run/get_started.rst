@@ -14,7 +14,7 @@ After compiling Hipace++ from the Hipace++ root directory, execute
 .. code-block:: bash
 
    cd examples/get_started/
-   ../../build/bin/hipace inputs # run the simulation
+   ../../build/bin/hipace inputs_normalized # run the simulation
 
 Then you can use the `openPMD-viewer <https://github.com/openPMD/openPMD-viewer>`__ to read the simulation output data. Directory `examples/get_started/` also contains this :download:`example notebook <../../../examples/get_started/notebook.ipynb>`. Reading the simulation output only takes these few Python commands:
 
