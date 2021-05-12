@@ -145,7 +145,7 @@ public:
      */
     int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];};
 
-    /** \brief Allows beams.all_from_file <file> to specify the input file of all beams that have
+    /** \brief Allows beams.all_from_file to specify the input file of all beams that have
      * no injection_type. Also passes down beams.iteration, beams.plasma_density and
      * beams.file_coordinates_xyz to the individual beams if applicable.
      *
