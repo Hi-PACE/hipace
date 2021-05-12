@@ -322,16 +322,16 @@ InitBeamFromFileHelper (const std::string input_file,
         }
 
         if( input_type == openPMD::Datatype::INT || (species_specified && !species_known)) {
-          std::string err = "Error, the particle species name " + species_name +
-                " was not found or doss not contain any data. The input file contains the" +
-                " following particle species names:\n";
-          for( auto const& species_type : series.iterations[num_iteration].particles ) {
-              err += species_type.first + "\n";
-          }
-          if( !species_specified ) {
-              err += "Use beam.openPMD_species_name NAME to specify a paricle species\n";
-          }
-          amrex::Abort(err);
+            std::string err = "Error, the particle species name " + species_name +
+                  " was not found or does not contain any data. The input file contains the" +
+                  " following particle species names:\n";
+            for( auto const& species_type : series.iterations[num_iteration].particles ) {
+                err += species_type.first + "\n";
+            }
+            if( !species_specified ) {
+                err += "Use beam.openPMD_species_name NAME to specify a paricle species\n";
+            }
+            amrex::Abort(err);
         }
 
     }
