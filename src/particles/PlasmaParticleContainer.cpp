@@ -31,7 +31,7 @@ PlasmaParticleContainer::ReadParameters ()
 
     amrex::Real mass_Da;
     if(pp.query("mass_Da", mass_Da)) {
-        m_mass = 1.007276466621 * phys_const.m_p * mass_Da;
+        m_mass = phys_const.m_p * mass_Da / 1.007276466621;
     }
     pp.query("mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
