@@ -599,7 +599,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and hipace++:
                 //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                //   psi in hipace++ has the wrong sign, it is actually -psi.
                 const amrex::Real cne     = - rho(i,j,k);
                 const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k));
                 const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k));
