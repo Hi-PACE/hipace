@@ -188,17 +188,16 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
 
     // Slice Geometry
     constexpr int lev = 0;
-    const int dir = AMREX_SPACEDIM-1;
     // Set the lo and hi of domain and probdomain in the z direction
     amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
     amrex::Box tmp_dom = Geom(lev).Domain();
-    const amrex::Real dx = Geom(lev).CellSize(dir);
-    const amrex::Real hi = Geom(lev).ProbHi(dir);
+    const amrex::Real dx = Geom(lev).CellSize(Direction::z);
+    const amrex::Real hi = Geom(lev).ProbHi(Direction::z);
     const amrex::Real lo = hi - dx;
-    tmp_probdom.setLo(dir, lo);
-    tmp_probdom.setHi(dir, hi);
-    tmp_dom.setSmall(dir, 0);
-    tmp_dom.setBig(dir, 0);
+    tmp_probdom.setLo(Direction::z, lo);
+    tmp_probdom.setHi(Direction::z, hi);
+    tmp_dom.setSmall(Direction::z, 0);
+    tmp_dom.setBig(Direction::z, 0);
     m_slice_geom = amrex::Geometry(
         tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
 }
