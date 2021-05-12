@@ -15,22 +15,16 @@ namespace
         pph.query("normalized_units", normalized_units);
         PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
 
-        std::string element;
-        bool element_is_specified = pp.query("element", element);
-        if (element_is_specified){
-            if (element == "electron"){
-                charge = -phys_const.q_e;
-                mass = phys_const.m_e;
-            } else if (element == "proton"){
-                charge = phys_const.q_e;
-                mass = phys_const.m_p;
-            } else if (element == "positron"){
-                charge = phys_const.q_e;
-                mass = phys_const.m_e;
-            }
-        } else {
-            // using electron beam as default
+        std::string element = "electron";
+        pp.query("element", element);
+        if (element == "electron"){
             charge = -phys_const.q_e;
+            mass = phys_const.m_e;
+        } else if (element == "proton"){
+            charge = phys_const.q_e;
+            mass = phys_const.m_p;
+        } else if (element == "positron"){
+            charge = phys_const.q_e;
             mass = phys_const.m_e;
         }
     }
@@ -42,6 +36,7 @@ BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
     QueryElementSetChargeMass(pp, m_charge, m_mass);
+    // Overwrite element's charge and mass if user specifies them explicitly
     pp.query("charge", m_charge);
     pp.query("mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The beam particle mass must not be 0");
