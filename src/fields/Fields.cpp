@@ -441,6 +441,11 @@ Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
     const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
                                               ( 2.5 * predcorr_B_error_tolerance ), 2));
 
+// TO-DO: Change mix factor to 1 to match WP approach
+
+    amrex::Print() << "mix factor used: " << mix_factor_init_guess;
+
+
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
         1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],

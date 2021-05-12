@@ -78,8 +78,8 @@ Hipace::Hipace () :
         m_phys_const = make_constants_SI();
     }
     pph.query("dt", m_dt);
-    pph.query("verbose",  m_verbose);
-    pph.query("numprocs_x",  m_numprocs_x);
+    pph.query("verbose", m_verbose);
+    pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
     pph.query("grid_size_z", m_grid_size_z);
     pph.query("depos_order_xy", m_depos_order_xy);
@@ -109,6 +109,7 @@ Hipace::Hipace () :
         solver == "explicit",
         "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
+    pph.query("NewInitialGuess", m_initialGuess);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
@@ -689,6 +690,23 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
     // So we solve Delta BxBy - A * BxBy = S
     m_mlalaplacian->setScalars(-1.0, -1.0);
+
+    if (m_initialGuess){
+
+      amrex::Print() << "New initial guess is used.";
+
+      amrex::Real relative_Bfield_error = m_fields.ComputeRelBFieldError(
+          m_fields.getSlices(lev, WhichSlice::Previous1),
+          m_fields.getSlices(lev, WhichSlice::Previous1),
+          m_fields.getSlices(lev, WhichSlice::Previous2),
+          m_fields.getSlices(lev, WhichSlice::Previous2),
+          Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
+          Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
+          Geom(lev));
+
+      m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
+
+    }
 
     m_mlmg->solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
 #else
