@@ -79,7 +79,7 @@ Hipace::Hipace () :
     }
     pph.query("dt", m_dt);
     pph.query("verbose",  m_verbose);
-    pph.query("numprocs_x", m_numprocs_x);
+    pph.query("numprocs_x",  m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
     pph.query("grid_size_z", m_grid_size_z);
     pph.query("depos_order_xy", m_depos_order_xy);
