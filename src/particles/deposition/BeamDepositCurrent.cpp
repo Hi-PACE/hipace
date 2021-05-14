@@ -26,8 +26,6 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
         "Only order 0 deposition is allowed for beam per-slice deposition");
 
-    PhysConst const phys_const = get_phys_const();
-
     // Assumes '2' == 'z' == 'the long dimension'.
     int islice_local = islice - bx.smallEnd(2);
 
@@ -55,7 +53,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     amrex::FArrayBox& jzb_fab = jz_beam[0];
 
     // For now: fix the value of the charge
-    const amrex::Real q = - phys_const.q_e;
+    const amrex::Real q = beam.m_charge;
 
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){

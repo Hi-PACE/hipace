@@ -82,6 +82,8 @@ public:
 #endif
 
     std::string get_name () const {return m_name;};
+    amrex::Real m_charge; /**< charge of each particle of this species */
+    amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     int m_n_subcycles {1}; /**< Number of sub-cycles in the beam pusher */
     /** Number of particles on upstream rank (required for IO) */
