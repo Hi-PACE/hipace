@@ -225,8 +225,8 @@ Hipace::InitData ()
 
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
-    m_multi_beam.InitData(geom[0]);
-    m_multi_plasma.InitData(lev, m_slice_ba, m_slice_dm, m_slice_geom, geom[0]);
+    m_multi_beam.InitData(geom[lev]);
+    m_multi_plasma.InitData(lev, m_slice_ba, m_slice_dm, m_slice_geom, geom[lev]);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
@@ -243,7 +243,7 @@ Hipace::MakeNewLevelFromScratch (
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
     {
-        const amrex::IntVect ncells_global = Geom(0).Domain().length();
+        const amrex::IntVect ncells_global = Geom(lev).Domain().length();
         const amrex::IntVect box_size = ba[0].length();  // Uniform box size
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
@@ -278,7 +278,8 @@ Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
 {
     // This is called by AmrCore::InitFromScratch.
     // The BoxArray made by AmrCore is not what we want.  We will replace it with our own.
-    const amrex::IntVect ncells_global = Geom(0).Domain().length();
+    const int lev = 0;
+    const amrex::IntVect ncells_global = Geom(lev).Domain().length();
     amrex::IntVect box_size{ncells_global[0] / m_numprocs_x,
                             ncells_global[1] / m_numprocs_y,
                             m_grid_size_z};
