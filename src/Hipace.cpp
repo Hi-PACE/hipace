@@ -110,6 +110,7 @@ Hipace::Hipace () :
         "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
     pph.query("NewInitialGuess", m_initialGuess);
+    pph.query("IG_Mix_Factor", m_mixfactor);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
@@ -413,6 +414,8 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     const amrex::Box& bx = boxArray(lev)[ibox];
 
+    amrex::Print()<<"Using m_explicit="<<m_explicit<<"\n";
+
     if (m_explicit) {
         // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
         const int ibx = Comps[WhichSlice::This]["Bx"];
@@ -693,18 +696,24 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     if (m_initialGuess){
 
-      amrex::Print() << "New initial guess is used.";
+      amrex::Print()<<"New initial guess is used.";
 
-      amrex::Real relative_Bfield_error = m_fields.ComputeRelBFieldError(
-          m_fields.getSlices(lev, WhichSlice::Previous1),
-          m_fields.getSlices(lev, WhichSlice::Previous1),
-          m_fields.getSlices(lev, WhichSlice::Previous2),
-          m_fields.getSlices(lev, WhichSlice::Previous2),
-          Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
-          Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
-          Geom(lev));
+      amrex::Real mixfactor = (float) m_mixfactor / 10.0;
 
-      m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
+      amrex::Real relative_Bfield_error = 0.0;
+
+      if (mixfactor==0.0){
+        amrex::Real relative_Bfield_error = m_fields.ComputeRelBFieldError(
+            m_fields.getSlices(lev, WhichSlice::Previous1),
+            m_fields.getSlices(lev, WhichSlice::Previous1),
+            m_fields.getSlices(lev, WhichSlice::Previous2),
+            m_fields.getSlices(lev, WhichSlice::Previous2),
+            Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
+            Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
+            Geom(lev));
+      }
+
+      m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev, mixfactor);
 
     }
 

@@ -432,14 +432,17 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
 
 void
 Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
-                            const amrex::Real predcorr_B_error_tolerance, const int lev)
+                            const amrex::Real predcorr_B_error_tolerance, const int lev,
+                            const amrex::Real mix_factor_init_guess)
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
     HIPACE_PROFILE("Fields::InitialBfieldGuess()");
 
-    const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
+    if (mix_factor_init_guess == 0.0) {
+      const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
                                               ( 2.5 * predcorr_B_error_tolerance ), 2));
+    }
 
 // TO-DO: Change mix factor to 1 to match WP approach
 

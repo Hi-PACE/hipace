@@ -211,7 +211,8 @@ public:
      * \param[in] lev current level
      */
     void InitialBfieldGuess (const amrex::Real relative_Bfield_error,
-                             const amrex::Real predcorr_B_error_tolerance, const int lev);
+                             const amrex::Real predcorr_B_error_tolerance, const int lev,
+                             const amrex::Real mix_factor = 0.0);
     /** \brief Mixes the B field with the calculated current and previous iteration
      * of it and shifts the current to the previous iteration afterwards.
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
