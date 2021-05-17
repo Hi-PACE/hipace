@@ -5,7 +5,7 @@
 <!-- ![macOS](https://github.com/Hi-PACE/hipace/workflows/macos/badge.svg?branch=development&event=push) -->
 
 HiPACE++ is an open-source portable GPU-capable quasistatic particle-in-cell code for wakefield acceleration written in C++.
-It is a full re-writing of the legacy code [HiPACE](http://dx.doi.org/10.1088/0741-3335/56/8/084012), the Highly efficient Plasma Accelerator Emulator.
+It is a full re-writing of the legacy code [HiPACE](http://dx.doi.org/10.1088/0741-3335/56/8/084012), the Highly efficient Plasma ACcelerator Emulator.
 Its main features are:
  - Multiple beams and multiple plasma species to simulation beam-driven wakefield acceleration
  - Field ionization of the plasma using the ADK model
