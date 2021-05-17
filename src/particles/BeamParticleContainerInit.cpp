@@ -216,6 +216,7 @@ InitBeamFixedWeight (int num_to_add,
                      const amrex::RealVect pos_std,
                      const amrex::Real total_charge,
                      const bool do_symmetrize,
+                     const bool do_full_symmetrize,
                      const amrex::Real dx_per_dzeta,
                      const amrex::Real dy_per_dzeta)
 {
@@ -223,6 +224,7 @@ InitBeamFixedWeight (int num_to_add,
 
     if (num_to_add == 0) return;
     if (do_symmetrize) num_to_add /=4;
+    if (do_full_symmetrize) num_to_add /=16;
 
     PhysConst phys_const = get_phys_const();
 
@@ -231,6 +233,7 @@ InitBeamFixedWeight (int num_to_add,
         auto& particle_tile = *this;
         auto old_size = particle_tile.GetArrayOfStructs().size();
         auto new_size = do_symmetrize? old_size + 4*num_to_add : old_size + num_to_add;
+        if (do_full_symmetrize) new_size =  old_size + 16*num_to_add;
         particle_tile.resize(new_size);
 
         // Access particles' AoS and SoA
@@ -257,12 +260,12 @@ InitBeamFixedWeight (int num_to_add,
                 const amrex::Real cental_y_pos = pos_mean[1] + z*dy_per_dzeta;
 
                 amrex::Real weight = total_charge / num_to_add / phys_const.q_e;
-                if (!do_symmetrize)
+                if (!do_symmetrize && !do_full_symmetrize)
                 {
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
                                        pos_mean[2]+z, u[0], u[1], u[2], weight,
                                        pid, procID, i, phys_const.c);
-                } else {
+                } else if (do_symmetrize) {
                     weight /= 4;
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
                                        pos_mean[2]+z, u[0], u[1], u[2], weight,
@@ -276,6 +279,56 @@ InitBeamFixedWeight (int num_to_add,
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
                                        pos_mean[2]+z, -u[0], -u[1], u[2], weight,
                                        pid, procID, 4*i+3, phys_const.c);
+                } else {
+                    weight /= 16;
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                                       pos_mean[2]+z, u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                                       pos_mean[2]+z, u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+1, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                                       pos_mean[2]+z, -u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+2, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                                       pos_mean[2]+z, -u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+3, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
+                                       pos_mean[2]+z, u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+4, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
+                                       pos_mean[2]+z, u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+5, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
+                                       pos_mean[2]+z, -u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+6, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
+                                       pos_mean[2]+z, -u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+7, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
+                                       pos_mean[2]+z, u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+8, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
+                                       pos_mean[2]+z, u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+9, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
+                                       pos_mean[2]+z, -u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+10, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
+                                       pos_mean[2]+z, -u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+11, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
+                                       pos_mean[2]+z, u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+12, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
+                                       pos_mean[2]+z, u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+13, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
+                                       pos_mean[2]+z, -u[0], u[1], u[2], weight,
+                                       pid, procID, 16*i+14, phys_const.c);
+                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
+                                       pos_mean[2]+z, -u[0], -u[1], u[2], weight,
+                                       pid, procID, 16*i+15, phys_const.c);
                 }
             });
     }

@@ -59,6 +59,14 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.query("do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
+        pp.query("do_full_symmetrize", m_do_full_symmetrize);
+        if (m_do_full_symmetrize) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%16 == 0,
+            "To fully symmetrize the beam, please specify a beam particle number divisible by 16.");
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_do_symmetrize == 0,
+            "You can either symmetrize the beam or super-symmetrize the beam, not both");
+        }
+
 
         if (peak_density_is_specified)
         {
@@ -76,8 +84,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
-                            m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
-                            m_dy_per_dzeta);
+                            m_position_std, m_total_charge, m_do_symmetrize, m_do_full_symmetrize,
+                            m_dx_per_dzeta, m_dy_per_dzeta);
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
