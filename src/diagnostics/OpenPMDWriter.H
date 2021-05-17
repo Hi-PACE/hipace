@@ -26,12 +26,12 @@ private:
     /** \brief setup the openPMD parameters do dump the AoS beam data
      *
      * \param[in,out] currSpecies openPMD species to set up
+     * \param[in] beam beam particle container to get mass and charge
      * \param[in] np total number of particles in the bunch
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      */
-    void SetupPos(openPMD::ParticleSpecies& currSpecies,
-                  const unsigned long long& np,
-                  const amrex::Geometry& geom);
+    void SetupPos(openPMD::ParticleSpecies& currSpecies, BeamParticleContainer& beam,
+                  const unsigned long long& np, const amrex::Geometry& geom);
 
     /** \brief setup the openPMD parameters do dump the SoA beam data
      *

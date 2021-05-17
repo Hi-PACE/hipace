@@ -3,10 +3,44 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
+namespace
+{
+    void QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real& mass)
+    {
+        // normalized_units is directly queried here so we can defined the appropriate PhysConst
+        // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
+        // PlasmaParticleContainer constructor is called.
+        amrex::ParmParse pph("hipace");
+        bool normalized_units = false;
+        pph.query("normalized_units", normalized_units);
+        PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
+
+        std::string element = "electron";
+        pp.query("element", element);
+        if (element == "electron"){
+            charge = -phys_const.q_e;
+            mass = phys_const.m_e;
+        } else if (element == "proton"){
+            charge = phys_const.q_e;
+            mass = phys_const.m_p;
+        } else if (element == "positron"){
+            charge = phys_const.q_e;
+            mass = phys_const.m_e;
+        }
+    }
+}
+
+
 void
 BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
+    QueryElementSetChargeMass(pp, m_charge, m_mass);
+    // Overwrite element's charge and mass if user specifies them explicitly
+    pp.query("charge", m_charge);
+    pp.query("mass", m_mass);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The beam particle mass must not be 0");
+
     pp.get("injection_type", m_injection_type);
     amrex::Vector<amrex::Real> tmp_vector;
     if (pp.queryarr("ppc", tmp_vector)){

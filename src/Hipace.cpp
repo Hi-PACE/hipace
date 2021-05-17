@@ -81,7 +81,15 @@ Hipace::Hipace () :
     pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
     pph.query("numprocs_y", m_numprocs_y);
-    pph.query("grid_size_z", m_grid_size_z);
+    m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step+1,
+                                     "Please use more or equal time steps than number of ranks");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
+                                     == amrex::ParallelDescriptor::NProcs(),
+                                     "Check hipace.numprocs_x and hipace.numprocs_y");
+    pph.query("boxes_in_z", m_boxes_in_z);
+    if (m_boxes_in_z > 1) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_numprocs_z == 1,
+                            "Multiple boxes per rank only implemented for one rank.");
     pph.query("depos_order_xy", m_depos_order_xy);
     pph.query("depos_order_z", m_depos_order_z);
     pph.query("predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
@@ -91,12 +99,6 @@ Hipace::Hipace () :
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_period != 0,
                                      "To avoid output, please use output_period = -1.");
     pph.query("beam_injection_cr", m_beam_injection_cr);
-    m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step+1,
-                                     "Please use more or equal time steps than number of ranks");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
-                                     == amrex::ParallelDescriptor::NProcs(),
-                                     "Check hipace.numprocs_x and hipace.numprocs_y");
     pph.query("do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     pph.query("do_device_synchronize", m_do_device_synchronize);
     pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
@@ -244,7 +246,7 @@ Hipace::MakeNewLevelFromScratch (
         const amrex::IntVect box_size = ba[0].length();  // Uniform box size
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
-        const int nboxes_z = ncells_global[2] / box_size[2];
+        const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
         AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
                             static_cast<long>(nboxes_y) *
                             static_cast<long>(nboxes_z) == ba.size());
@@ -278,19 +280,19 @@ Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
     const amrex::IntVect ncells_global = Geom(0).Domain().length();
     amrex::IntVect box_size{ncells_global[0] / m_numprocs_x,
                             ncells_global[1] / m_numprocs_y,
-                            m_grid_size_z};
+                            ncells_global[2] / m_boxes_in_z};
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[0]*m_numprocs_x == ncells_global[0],
                                      "# of cells in x-direction is not divisible by hipace.numprocs_x");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[1]*m_numprocs_y == ncells_global[1],
                                      "# of cells in y-direction is not divisible by hipace.numprocs_y");
 
-    if (box_size[2] == 0) {
+    if (m_boxes_in_z == 1) {
         box_size[2] = ncells_global[2] / m_numprocs_z;
     }
 
     const int nboxes_x = m_numprocs_x;
     const int nboxes_y = m_numprocs_y;
-    const int nboxes_z = ncells_global[2] / box_size[2];
+    const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(box_size[2]*nboxes_z == ncells_global[2],
                                      "# of cells in z-direction is not divisible by # of boxes");
 
@@ -333,7 +335,8 @@ Hipace::Evolve ()
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
-        for (int it = m_numprocs_z-1; it >= 0; --it)
+        const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
+        for (int it = n_boxes-1; it >= 0; --it)
         {
             Wait(step, it);
 
@@ -611,7 +614,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and hipace++:
                 //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                //   psi in hipace++ has the wrong sign, it is actually -psi.
                 const amrex::Real cne     = - rho(i,j,k) / n0 / pc.q_e ;
                 const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k)) / n0 / pc.q_e / pc.c;
                 const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k)) / n0 / pc.q_e / pc.c;

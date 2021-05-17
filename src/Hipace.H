@@ -176,7 +176,7 @@ public:
     /** My rank in the longitudinal communicator */
     int m_rank_z = 0;
     /** Max number of grid size in the longitudinal direction */
-    int m_grid_size_z = 0;
+    int m_boxes_in_z = 1;
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
     char* m_psend_buffer_ghost = nullptr;

@@ -322,16 +322,16 @@ InitBeamFromFileHelper (const std::string input_file,
         }
 
         if( input_type == openPMD::Datatype::INT || (species_specified && !species_known)) {
-          std::string err = "Error, the particle species name " + species_name +
-                " was not found or doss not contain any data. The input file contains the" +
-                " following particle species names:\n";
-          for( auto const& species_type : series.iterations[num_iteration].particles ) {
-              err += species_type.first + "\n";
-          }
-          if( !species_specified ) {
-              err += "Use beam.openPMD_species_name NAME to specify a paricle species\n";
-          }
-          amrex::Abort(err);
+            std::string err = "Error, the particle species name " + species_name +
+                  " was not found or does not contain any data. The input file contains the" +
+                  " following particle species names:\n";
+            for( auto const& species_type : series.iterations[num_iteration].particles ) {
+                err += species_type.first + "\n";
+            }
+            if( !species_specified ) {
+                err += "Use beam.openPMD_species_name NAME to specify a paricle species\n";
+            }
+            amrex::Abort(err);
         }
 
     }
@@ -605,34 +605,7 @@ InitBeamFromFile (const std::string input_file,
         unit_ww = electrons[name_w][name_ww].unitSI() / si_to_norm_weight;
     }
 
-    // Check if q/m matches that of electrons
-    if((name_mm != "") && (name_qq != "")) {
-        input_type unit_qq, unit_mm;
-        const std::shared_ptr< input_type > q_q_data = electrons[name_q][
-                                                       name_qq].loadChunk< input_type >();
-        const std::shared_ptr< input_type > m_m_data = electrons[name_m][
-                                                       name_mm].loadChunk< input_type >();
-
-        if(hipace_restart) {
-            unit_qq = electrons[name_q][name_qq].getAttribute(attr).get<double>();
-            unit_mm = electrons[name_m][name_mm].getAttribute(attr).get<double>();
-        }
-        else {
-            unit_qq = electrons[name_q][name_qq].unitSI();
-            unit_mm = electrons[name_m][name_mm].unitSI();
-        }
-
-        series.flush();
-
-        const input_type file_e_m = q_q_data.get()[0] * unit_qq / (m_m_data.get()[0] * unit_mm);
-        if( std::abs(file_e_m - ( phys_const_SI.q_e / phys_const_SI.m_e ) ) > 1e9) {
-            amrex::Abort("Charge / Mass of Beam Particle from file "
-                         "does not match electrons (1.7588e11)\n");
-        }
-    }
-    else {
-        series.flush();
-    }
+    series.flush();
 
     if(electrons[name_r][name_rx].getExtent()[0] >= 2147483647) {
         amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
