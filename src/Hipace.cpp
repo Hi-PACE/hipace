@@ -191,9 +191,9 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     // Set the lo and hi of domain and probdomain in the z direction
     amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
     amrex::Box tmp_dom = Geom(lev).Domain();
-    const amrex::Real dx = Geom(lev).CellSize(Direction::z);
+    const amrex::Real dz = Geom(lev).CellSize(Direction::z);
     const amrex::Real hi = Geom(lev).ProbHi(Direction::z);
-    const amrex::Real lo = hi - dx;
+    const amrex::Real lo = hi - dz;
     tmp_probdom.setLo(Direction::z, lo);
     tmp_probdom.setHi(Direction::z, hi);
     tmp_dom.setSmall(Direction::z, 0);
