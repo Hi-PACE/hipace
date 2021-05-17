@@ -54,6 +54,12 @@ General parameters
     Using the default, the beam deposits all currents `Jx`, `Jy`, `Jz`. Using
     `hipace.do_beam_jx_jy_deposition = 0` disables the transverse current deposition of the beams.
 
+* ``hipace.boxes_in_z`` (`int`) optional (default `1`)
+    Number of boxes along the z-axis. In serial runs, the arrays for 3D IO can easily exceed the
+    memory of a GPU. Using multiple boxes reduces the memory requirements by the same factor.
+    This option is only available in serial runs, in parallel runs, please use more GPU to achieve
+    the same effect.
+
 Field solver parameters
 -----------------------
 
