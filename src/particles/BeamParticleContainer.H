@@ -55,7 +55,7 @@ public:
                               const amrex::RealVect pos_std,
                               const amrex::Real total_charge,
                               const bool do_symmetrize,
-                              const bool do_super_symmetrize,
+                              const bool do_full_symmetrize,
                               const amrex::Real dx_per_dzeta,
                               const amrex::Real dy_per_dzeta);
 
@@ -114,7 +114,7 @@ private:
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
-    bool m_do_super_symmetrize {0}; /**< Option to fully symmetrize the beam */
+    bool m_do_full_symmetrize {0}; /**< Option to fully symmetrize the beam */
     /** Density of plasma to convert from_file beam to normalized units */
     amrex::Real m_plasma_density;
     std::string m_input_file; /**< Path to bean input file */
