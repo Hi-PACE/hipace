@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This file is part of the Hipace++ test suite.
+# This file is part of the HiPACE++ test suite.
 # It resets all checksum benchmarks one by one,
 # based on the current version of the code.
 #

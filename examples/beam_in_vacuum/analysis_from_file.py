@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace++
+# This Python analysis script is part of the code HiPACE++
 #
 # It is used in the beam from_file test and compares three beams,
 # one from the write_beam script, two from hipace,
@@ -74,11 +74,11 @@ for comp in all_comps:
                 if beam_type[i] == 0:
                     beam_arr[i] *= units_py[comp[0]]
             elif comp[0] == "q":
-                beam_arr[i] *= np.sqrt(beam_par[i].get_attribute("Hipace++_Plasma_Density"))
+                beam_arr[i] *= np.sqrt(beam_par[i].get_attribute("HiPACE++_Plasma_Density"))
                 if beam_type[i] == 0:
                     beam_arr[i] *= beam_data.unit_SI * units_py[comp[0]]
                 else:
-                    beam_arr[i] *= beam_data.get_attribute("Hipace++_reference_unitSI")
+                    beam_arr[i] *= beam_data.get_attribute("HiPACE++_reference_unitSI")
 
         are_equal = np.all(np.isclose(np.sort(beam_arr[0]), np.sort(beam_arr[1]), rtol=1.e-8))
         assert are_equal, f"The two beams are not equal for {comp[1]} component"

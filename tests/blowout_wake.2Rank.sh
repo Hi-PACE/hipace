@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace++ test suite.
+# This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation in the blowout regime and compares the result
 # with SI units.
 

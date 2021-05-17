@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace++ test suite.
+# This file is part of the HiPACE++ test suite.
 # It runs a small simulation with a fixed ppc beam and a grid current and ensures that they cancel
 # each other
 

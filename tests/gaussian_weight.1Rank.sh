@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace++ test suite.
+# This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation initializing a Gaussian beam, and compares the result
 # of the simulation to theory.
 

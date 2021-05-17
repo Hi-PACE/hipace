@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2020 The Hipace++ Community
+# Copyright 2020 The HiPACE++ Community
 #
 # License: BSD-3-Clause-LBNL
 # Authors: Axel Huebl

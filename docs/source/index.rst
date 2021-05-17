@@ -1,7 +1,7 @@
-Hipace++ documentation
+HiPACE++ documentation
 ======================
 
-Hipace++ is an open-source portable (GPU-capable) quasistatic particle-in-cell code written in C++, available `here <https://github.com/Hi-PACE/hipace>`__.
+HiPACE++ is an open-source portable (GPU-capable) quasistatic particle-in-cell code written in C++, available `here <https://github.com/Hi-PACE/hipace>`__.
 It is a full re-writing of the DESY-LBNL legacy code `HiPACE <http://dx.doi.org/10.1088/0741-3335/56/8/084012>`__, the Highly efficient Plasma Accelerator Emulator.
 Its main features are:
 
@@ -13,7 +13,7 @@ Its main features are:
 - Adaptive time step and sub-cycling
 - more coming soon...
 
-Hipace++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which provides for particle and field data structures.
+HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which provides for particle and field data structures.
 
 .. toctree::
    :maxdepth: 1

@@ -1,7 +1,7 @@
 """
 Copyright 2021
 
-This file is part of Hipace++
+This file is part of HiPACE++
 
 License: BSD-3-Clause-LBNL
 """

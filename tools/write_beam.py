@@ -29,7 +29,7 @@ i = series.iterations[0]
 
 particle = i.particles["Electrons"]
 
-particle.set_attribute("Hipace++_Plasma_Density", plasma_density)
+particle.set_attribute("HiPACE++_Plasma_Density", plasma_density)
 
 dataset = io.Dataset(data[0].dtype,data[0].shape)
 

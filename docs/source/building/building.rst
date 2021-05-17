@@ -1,6 +1,6 @@
 .. _build-source:
 
-Build/install Hipace++
+Build/install HiPACE++
 ======================
 
 Developers
@@ -11,7 +11,7 @@ If you are new to CMake, `this short tutorial <https://hsf-training.github.io/hs
 Dependencies
 ------------
 
-Hipace++ depends on the following popular third party software.
+HiPACE++ depends on the following popular third party software.
 Please see installation instructions below in the Developers section.
 
 - a mature `C++14 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 5, Clang 3.6 or newer
@@ -90,7 +90,7 @@ If you also want to select a CUDA compiler:
 Build & Test
 ------------
 
-From the base of the Hipace++ source directory, execute:
+From the base of the HiPACE++ source directory, execute:
 
 .. code-block:: bash
 
@@ -104,8 +104,8 @@ From the base of the Hipace++ source directory, execute:
    (cd build; ctest --output-on-failure)
 
 
-An executable Hipace++ binary with the current compile-time options encoded in its file name will be created in ``bin/``.
-Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`__ named ``hipace`` can be found in that directory, which points to the last built Hipace++ executable. You can inspect and modify build options after running `cmake ..` with either
+An executable HiPACE++ binary with the current compile-time options encoded in its file name will be created in ``bin/``.
+Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`__ named ``hipace`` can be found in that directory, which points to the last built HiPACE++ executable. You can inspect and modify build options after running `cmake ..` with either
 
 .. code-block:: bash
 
@@ -131,10 +131,10 @@ or by providing arguments to the CMake call
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
 =============================  ========================================  =====================================================
 
-Hipace++ can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`.
+HiPACE++ can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`.
 
-**Developers** might be interested in additional options that control dependencies of Hipace++.
-By default, the most important dependencies of Hipace++ are automatically downloaded for convenience:
+**Developers** might be interested in additional options that control dependencies of HiPACE++.
+By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
 
 ===========================  =============================================  ==========================================================
 CMake Option                 Default & Values                               Description

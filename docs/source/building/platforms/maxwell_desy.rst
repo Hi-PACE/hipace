@@ -1,10 +1,10 @@
 Maxwell cluster @ DESY
 ======================
 
-This page only provides Hipace++ specific instructions.
+This page only provides HiPACE++ specific instructions.
 For more information please visit the `Maxwell documentation <https://confluence.desy.de/display/IS/Maxwell>`__.
 
-Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with Hipace++:
+Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with HiPACE++:
 
 .. code-block:: bash
 
@@ -13,7 +13,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    module load maxwell cuda/11.1 # cuda/11.0
    module load hdf5/1.10.6
 
-Install Hipace++ (the first time, and whenever you want the latest version):
+Install HiPACE++ (the first time, and whenever you want the latest version):
 
 .. code-block:: bash
 
@@ -26,7 +26,7 @@ Install Hipace++ (the first time, and whenever you want the latest version):
    cmake .. -DHiPACE_COMPUTE=CUDA
    make -j 16
 
-You can get familiar with the Hipace++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
+You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
 You can then create your directory on BEEGFS ``$SCRATCH_<project id>``, where you can put your input file and adapt the following submission script:
 
 .. code-block:: bash

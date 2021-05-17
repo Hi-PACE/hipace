@@ -561,8 +561,8 @@ InitBeamFromFile (const std::string input_file,
     // calculate the multiplier to convert to Hipace units
     if(Hipace::m_normalized_units) {
         if(n_0 == 0) {
-            if(electrons.containsAttribute("Hipace++_Plasma_Density")) {
-                n_0 = electrons.getAttribute("Hipace++_Plasma_Density").get<double>();
+            if(electrons.containsAttribute("HiPACE++_Plasma_Density")) {
+                n_0 = electrons.getAttribute("HiPACE++_Plasma_Density").get<double>();
             }
             else {
                 amrex::Abort("Please specify the plasma density of the external beam "
@@ -579,9 +579,9 @@ InitBeamFromFile (const std::string input_file,
 
     input_type unit_rx, unit_ry, unit_rz, unit_ux, unit_uy, unit_uz, unit_ww;
     bool hipace_restart = false;
-    const std::string attr = "Hipace++_reference_unitSI";
-    if(electrons.containsAttribute("Hipace++_use_reference_unitSI")) {
-        if(electrons.getAttribute("Hipace++_use_reference_unitSI").get<bool>() == true) {
+    const std::string attr = "HiPACE++_reference_unitSI";
+    if(electrons.containsAttribute("HiPACE++_use_reference_unitSI")) {
+        if(electrons.getAttribute("HiPACE++_use_reference_unitSI").get<bool>() == true) {
             hipace_restart = true;
         }
     }

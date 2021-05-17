@@ -613,7 +613,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 // Store (i,j,k) cell value in local variable.
                 // All quantities are converted to normalized units, if applicable
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
-                // WAND-PIC and hipace++:
+                // WAND-PIC and HiPACE++:
                 //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
                 const amrex::Real cne     = - rho(i,j,k) / n0 / pc.q_e ;
                 const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k)) / n0 / pc.q_e / pc.c;
@@ -1210,7 +1210,7 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
                         m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
                         it, m_box_sorters, geom[lev], call_type);
 #else
-    amrex::Print()<<"WARNING: hipace++ compiled without openPMD support, the simulation has no I/O.\n";
+    amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
 }
 

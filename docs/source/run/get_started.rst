@@ -1,7 +1,7 @@
 Get started
 ===========
 
-A full Hipace++ input file can be found below, with a detailed description of the main parameters.
+A full HiPACE++ input file can be found below, with a detailed description of the main parameters.
 All the input parameters available in the simulation are available in the :doc:`parameters` section.
 
 .. literalinclude:: ../../../examples/get_started/inputs_normalized
@@ -9,7 +9,7 @@ All the input parameters available in the simulation are available in the :doc:`
 This input file is ``inputs_normalized`` in ``examples/get_started/``, which is the recommended place to start running a first simulation.
 
 See the :doc:`../building/building` section to install the code locally or on your favorite platform.
-After compiling Hipace++ from the Hipace++ root directory, execute
+After compiling HiPACE++ from the HiPACE++ root directory, execute
 
 .. code-block:: bash
 

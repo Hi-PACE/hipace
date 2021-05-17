@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Hipace++'
+project = 'HiPACE++'
 copyright = '2020, Severin Diederichs, Maxence Thevenet'
 author = 'Severin Diederichs, Maxence Thevenet'
 
@@ -52,9 +52,9 @@ html_static_path = ['_static']
 
 # Setup the breathe extension
 breathe_projects = {
-    "Hipace++": "../doxyxml/"
+    "HiPACE++": "../doxyxml/"
 }
-breathe_default_project = "Hipace++"
+breathe_default_project = "HiPACE++"
 
 # Tell sphinx what the primary language being documented is.
 primary_domain = 'cpp'

@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace++ test suite.
+# This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation for a can beam, and compares the result
 # of the simulation to a benchmark.
 

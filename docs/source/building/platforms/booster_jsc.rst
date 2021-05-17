@@ -1,12 +1,12 @@
 Juwels Booster @ JSC
 ====================
 
-This page only provides Hipace++ specific instructions.
+This page only provides HiPACE++ specific instructions.
 For more information please visit the `JSC documentation <https://apps.fz-juelich.de/jsc/hps/juwels/index.html>`__.
 
 Log in with ``<yourid>@juwels-booster.fz-juelich.de``.
 
-Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with Hipace++:
+Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with HiPACE++:
 
 .. code-block:: bash
 
@@ -22,7 +22,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    # optimize CUDA compilation for A100
    export AMREX_CUDA_ARCH=8.0 # 8.0 for A100, 7.0 for V100
 
-Install Hipace++ (the first time, and whenever you want the latest version):
+Install HiPACE++ (the first time, and whenever you want the latest version):
 
 .. code-block:: bash
 
@@ -33,7 +33,7 @@ Install Hipace++ (the first time, and whenever you want the latest version):
    cmake -S . -B build -DHiPACE_COMPUTE=CUDA
    cmake --build build -j 16
 
-You can get familiar with the Hipace++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
+You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
 You can then create your directory in your ``$SCRATCH_<project id>``, where you can put your input file and adapt the following submission script:
 
 .. code-block:: bash
