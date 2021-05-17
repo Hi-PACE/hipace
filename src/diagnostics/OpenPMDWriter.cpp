@@ -251,7 +251,7 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     if(Hipace::m_normalized_units) {
         const auto dx = geom.CellSizeArray();
         const double n_0 = 1.;
-        currSpecies.setAttribute("Hipace++_Plasma_Density", n_0);
+        currSpecies.setAttribute("HiPACE++_Plasma_Density", n_0);
         const double omega_p = (double)phys_const_SI.q_e * sqrt( (double)n_0 /
                                       ( (double)phys_const_SI.ep0 * (double)phys_const_SI.m_e ) );
         const double kp_inv = (double)phys_const_SI.c / omega_p;
@@ -271,8 +271,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     }
 
     // write SI conversion
-    currSpecies.setAttribute("Hipace++_use_reference_unitSI", true);
-    const std::string attr = "Hipace++_reference_unitSI";
+    currSpecies.setAttribute("HiPACE++_use_reference_unitSI", true);
+    const std::string attr = "HiPACE++_reference_unitSI";
     for( auto const& comp : positionComponents ) {
         currSpecies["position"][comp].setAttribute( attr, hipace_to_SI_pos );
         //posOffset allways 0

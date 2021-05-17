@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace++ test suite.
+# This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation with a beam in vacuum with transverse currents
 # in serial and parallel and asserts that both give the same result.
 # This checks the complex communication patterns to handle next slice of slice 0

@@ -30,7 +30,7 @@ if [ $ok -ne 0 ]
 then
     echo ""
     echo "Files in examples/ must start with one of:"
-    echo " - inputs       : for Hipace++ input files"
+    echo " - inputs       : for HiPACE++ input files"
     echo " - analysis     : for scripts testing the accuracy of a test"
     echo " - README       : for readme files"
     echo ""

@@ -1,10 +1,10 @@
-Contribute to Hipace++
+Contribute to HiPACE++
 ======================
 
 We welcome new contributors!
 
-To contribute to Hipace++, the steps are as follows:
- - Fork the Hipace++ repo, so you have your own fork
+To contribute to HiPACE++, the steps are as follows:
+ - Fork the HiPACE++ repo, so you have your own fork
  - Pull the latest development from baseline, and create your ``<new branch>`` from it
  - Commit your changes as usual, and push them on your fork
  - Open a PR between ``<new branch>`` on your for and ``development`` on baseline
@@ -12,7 +12,7 @@ To contribute to Hipace++, the steps are as follows:
 Documentation
 -------------
 
-Hipace++ has a full (functions and classes and their members, albeit sometimes basic) Doxygen-readable documentation. You can compile it with
+HiPACE++ has a full (functions and classes and their members, albeit sometimes basic) Doxygen-readable documentation. You can compile it with
 
 .. code-block:: bash
 
@@ -22,7 +22,7 @@ Hipace++ has a full (functions and classes and their members, albeit sometimes b
 
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
 
-The Hipace++ Doxygen documentation can be found `here <../_static/doxyhtml/index.html>`__.
+The HiPACE++ Doxygen documentation can be found `here <../_static/doxyhtml/index.html>`__.
 
 Style and conventions
 ---------------------
