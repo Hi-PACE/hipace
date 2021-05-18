@@ -43,7 +43,7 @@ Optional dependencies include:
 - `OpenMP 3.1+ <https://www.openmp.org>`__: for threaded CPU execution (currently not fully accelerated)
 - `CCache <https://ccache.dev>`__: to speed up rebuilds (needs 3.7.9+ for CUDA)
 
-Pleas choose **one** of the installation methods below to get started:
+Please choose **one** of the installation methods below to get started:
 
 .. _install-spack:
 
