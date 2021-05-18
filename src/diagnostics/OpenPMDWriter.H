@@ -92,6 +92,9 @@ private:
     /** Parallel openPMD-api Series object for output */
     std::unique_ptr< openPMD::Series > m_outputSeries;
 
+    /** openPMD backend: h5, bp, or json. Default depends on what is available */
+    std::string m_openpmd_backend = "default";
+
     /** Last iteration that was written to file.
      * This is stored to make sure we don't write the last iteration multiple times. */
     int m_last_output_dumped = -1;

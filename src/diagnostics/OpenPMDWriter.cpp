@@ -12,6 +12,7 @@ OpenPMDWriter::OpenPMDWriter ()
         "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
     amrex::ParmParse pp("hipace");
     pp.query("file_prefix", m_file_prefix);
+    pp.query("openpmd_backend", m_openpmd_backend);
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");
@@ -27,7 +28,18 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
 
-    std::string filename = m_file_prefix + "/openpmd_%06T.h5"; // bp or h5
+     // pick first available backend if default is chosen
+     if( m_openpmd_backend == "default" ) {
+#if openPMD_HAVE_HDF5==1
+        m_openpmd_backend = "h5";
+#elif openPMD_HAVE_ADIOS2==1
+        m_openpmd_backend = "bp";
+#else
+        m_openpmd_backend = "json";
+#endif
+     }
+
+    std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
 
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
