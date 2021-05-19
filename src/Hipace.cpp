@@ -570,100 +570,112 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // transforming BxBy array to normalized units for use as initial guess
     BxBy.mult(pc.c/E0);
 
+    const int islp = WhichSlice::Plasma;    
+    amrex::MultiFab& slicemfp = m_fields.getSlices(lev, islp);
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
-        // add enough guard cells to enable transverse derivatives
-        amrex::Box const& bx = mfi.growntilebox({1,1,0});
+        const int nspecies = m_multi_plasma.Nspecies();
+        for (int ispecies = 0; ispecies<nspecies; ispecies++)
+        {
+            const amrex::MultiFab Rho(slicemfp, amrex::make_alias, nspecies*Comps[islp]["rho"]+ispecies, 1);
+            const amrex::MultiFab Jx (slicemfp, amrex::make_alias, nspecies*Comps[islp]["jx" ]+ispecies, 1);
+            const amrex::MultiFab Jy (slicemfp, amrex::make_alias, nspecies*Comps[islp]["jy" ]+ispecies, 1);
+            const amrex::MultiFab Jxx(slicemfp, amrex::make_alias, nspecies*Comps[islp]["jxx"]+ispecies, 1);
+            const amrex::MultiFab Jxy(slicemfp, amrex::make_alias, nspecies*Comps[islp]["jxy"]+ispecies, 1);
+            const amrex::MultiFab Jyy(slicemfp, amrex::make_alias, nspecies*Comps[islp]["jyy"]+ispecies, 1);
+            const amrex::MultiFab Jz (slicemfp, amrex::make_alias, nspecies*Comps[islp]["jz" ]+ispecies, 1);
 
-        amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
-        amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
-        amrex::Array4<amrex::Real const> const & jy  = Jy .array(mfi);
-        amrex::Array4<amrex::Real const> const & jxb = Jxb.array(mfi);
-        amrex::Array4<amrex::Real const> const & jyb = Jyb.array(mfi);
-        amrex::Array4<amrex::Real const> const & jxx = Jxx.array(mfi);
-        amrex::Array4<amrex::Real const> const & jxy = Jxy.array(mfi);
-        amrex::Array4<amrex::Real const> const & jyy = Jyy.array(mfi);
-        amrex::Array4<amrex::Real const> const & jz  = Jz .array(mfi);
-        amrex::Array4<amrex::Real const> const & jzb = Jzb.array(mfi);
-        amrex::Array4<amrex::Real const> const & psi = Psi.array(mfi);
-        amrex::Array4<amrex::Real const> const & bz  = Bz.array(mfi);
-        amrex::Array4<amrex::Real const> const & ez  = Ez.array(mfi);
-        amrex::Array4<amrex::Real const> const & next_jxb = next_Jxb.array(mfi);
-        amrex::Array4<amrex::Real const> const & prev_jxb = prev_Jxb.array(mfi);
-        amrex::Array4<amrex::Real const> const & next_jyb = next_Jyb.array(mfi);
-        amrex::Array4<amrex::Real const> const & prev_jyb = prev_Jyb.array(mfi);
-        amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
-        amrex::Array4<amrex::Real> const & s = S.array(mfi);
+            // add enough guard cells to enable transverse derivatives
+            amrex::Box const& bx = mfi.growntilebox({1,1,0});
 
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-            {
-                const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
-                const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
-                const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
-                const amrex::Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
+            amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
+            amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
+            amrex::Array4<amrex::Real const> const & jy  = Jy .array(mfi);
+            amrex::Array4<amrex::Real const> const & jxb = Jxb.array(mfi);
+            amrex::Array4<amrex::Real const> const & jyb = Jyb.array(mfi);
+            amrex::Array4<amrex::Real const> const & jxx = Jxx.array(mfi);
+            amrex::Array4<amrex::Real const> const & jxy = Jxy.array(mfi);
+            amrex::Array4<amrex::Real const> const & jyy = Jyy.array(mfi);
+            amrex::Array4<amrex::Real const> const & jz  = Jz .array(mfi);
+            amrex::Array4<amrex::Real const> const & jzb = Jzb.array(mfi);
+            amrex::Array4<amrex::Real const> const & psi = Psi.array(mfi);
+            amrex::Array4<amrex::Real const> const & bz  = Bz.array(mfi);
+            amrex::Array4<amrex::Real const> const & ez  = Ez.array(mfi);
+            amrex::Array4<amrex::Real const> const & next_jxb = next_Jxb.array(mfi);
+            amrex::Array4<amrex::Real const> const & prev_jxb = prev_Jxb.array(mfi);
+            amrex::Array4<amrex::Real const> const & next_jyb = next_Jyb.array(mfi);
+            amrex::Array4<amrex::Real const> const & prev_jyb = prev_Jyb.array(mfi);
+            amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
+            amrex::Array4<amrex::Real> const & s = S.array(mfi);
 
-                const amrex::Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
-                const amrex::Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
-                const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
-                const amrex::Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
+            amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                {
+                    const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
+                    const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
+                    const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
+                    const amrex::Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
 
-                const amrex::Real dz_jxb = (prev_jxb(i,j,k)-next_jxb(i,j,k))/(2._rt*dz);
-                const amrex::Real dz_jyb = (prev_jyb(i,j,k)-next_jyb(i,j,k))/(2._rt*dz);
+                    const amrex::Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
+                    const amrex::Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
+                    const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
+                    const amrex::Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
 
-                // Store (i,j,k) cell value in local variable.
-                // All quantities are converted to normalized units, if applicable
-                // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
-                // WAND-PIC and HiPACE++:
-                //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                const amrex::Real cne     = - rho(i,j,k) / n0 / pc.q_e ;
-                const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k)) / n0 / pc.q_e / pc.c;
-                const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k)) / n0 / pc.q_e / pc.c;
-                const amrex::Real cjyp    = - (jy(i,j,k) - jyb(i,j,k)) / n0 / pc.q_e / pc.c;
-                const amrex::Real cpsi    =   psi(i,j,k) * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cjxx    = - jxx(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cjxy    = - jxy(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cjyy    = - jyy(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdx_jxx = - dx_jxx / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdx_jxy = - dx_jxy / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdx_jz  = - dx_jz  / n0 / pc.q_e / pc.c;
-                const amrex::Real cdx_psi =   dx_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cdy_jyy = - dy_jyy / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdy_jxy = - dy_jxy / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdy_jz  = - dy_jz  / n0 / pc.q_e / pc.c ;
-                const amrex::Real cdy_psi =   dy_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cdz_jxb = - dz_jxb / n0 / pc.q_e / pc.c;
-                const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
-                const amrex::Real cez     =   ez(i,j,k) / E0;
-                const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
+                    const amrex::Real dz_jxb = (prev_jxb(i,j,k)-next_jxb(i,j,k))/(2._rt*dz);
+                    const amrex::Real dz_jyb = (prev_jyb(i,j,k)-next_jyb(i,j,k))/(2._rt*dz);
 
-                // to calculate nstar, only the plasma current density is needed
-                const amrex::Real nstar = cne - cjzp;
+                    // Store (i,j,k) cell value in local variable.
+                    // All quantities are converted to normalized units, if applicable
+                    // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
+                    // WAND-PIC and HiPACE++:
+                    //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
+                    const amrex::Real cne     = - rho(i,j,k) / n0 / pc.q_e ;
+                    const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k)) / n0 / pc.q_e / pc.c;
+                    const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k)) / n0 / pc.q_e / pc.c;
+                    const amrex::Real cjyp    = - (jy(i,j,k) - jyb(i,j,k)) / n0 / pc.q_e / pc.c;
+                    const amrex::Real cpsi    =   psi(i,j,k) * pc.q_e / (pc.m_e * pc.c * pc.c);
+                    const amrex::Real cjxx    = - jxx(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cjxy    = - jxy(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cjyy    = - jyy(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cdx_jxx = - dx_jxx / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cdx_jxy = - dx_jxy / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cdx_jz  = - dx_jz  / n0 / pc.q_e / pc.c;
+                    const amrex::Real cdx_psi =   dx_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
+                    const amrex::Real cdy_jyy = - dy_jyy / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cdy_jxy = - dy_jxy / n0 / pc.q_e / pc.c / pc.c;
+                    const amrex::Real cdy_jz  = - dy_jz  / n0 / pc.q_e / pc.c ;
+                    const amrex::Real cdy_psi =   dy_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
+                    const amrex::Real cdz_jxb = - dz_jxb / n0 / pc.q_e / pc.c;
+                    const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
+                    const amrex::Real cez     =   ez(i,j,k) / E0;
+                    const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
 
-                const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt * nstar/(1._rt+cpsi);
+                    // to calculate nstar, only the plasma current density is needed
+                    const amrex::Real nstar = cne - cjzp;
 
-                const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+                    const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
+                        + 0.5_rt * nstar/(1._rt+cpsi);
 
-                const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdy_psi/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                    const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
+                        (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
 
-                // Should only have 1 component, but not supported yet by the AMReX MG solver
-                mult(i,j,k,0) = nstar / (1._rt + cpsi);
-                mult(i,j,k,1) = nstar / (1._rt + cpsi);
+                    const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
+                        (nstar_gamma*cdy_psi/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
-                // sy, to compute Bx
-                s(i,j,k,0) = + cbz * cjxp / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
-                             + cdz_jyb;
-                // sx, to compute By
-                s(i,j,k,1) = - cbz * cjyp / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
-                             + cdz_jxb;
-                s(i,j,k,1) *= -1;
+                    // Should only have 1 component, but not supported yet by the AMReX MG solver
+                    mult(i,j,k,0) += nstar / (1._rt + cpsi);
+                    mult(i,j,k,1) += nstar / (1._rt + cpsi);
 
-            }
-            );
+                    // sy, to compute Bx
+                    s(i,j,k,0) += + cbz * cjxp / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
+                        + cdz_jyb;
+                    // sx, to compute By
+                    s(i,j,k,1) += cbz * cjyp / (1._rt+cpsi) - nstar_ax + cdx_jxx + cdy_jxy - cdx_jz
+                        - cdz_jxb;
+                }
+                );
+        }
     }
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
