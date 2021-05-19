@@ -40,6 +40,7 @@ Fields::AllocData (
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
     }
+    m_nspecies = nspecies;
     m_slices[lev][WhichSlice::Plasma].define(
         slice_ba, slice_dm, Comps[WhichSlice::Plasma]["N"]*m_nspecies, m_slices_nguards,
         amrex::MFInfo().SetArena(amrex::The_Arena()));
@@ -49,7 +50,6 @@ Fields::AllocData (
         slice_ba, slice_dm, Comps[WhichSlice::PlasmaRhoIons]["N"]*m_nspecies, m_slices_nguards,
         amrex::MFInfo().SetArena(amrex::The_Arena()));
     m_slices[lev][WhichSlice::PlasmaRhoIons].setVal(0.0);
-    m_nspecies = nspecies;
 
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
