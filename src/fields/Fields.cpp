@@ -17,7 +17,8 @@ Fields::Fields (Hipace const* a_hipace)
 void
 Fields::AllocData (
     int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
-    amrex::Geometry const& geom, const amrex::BoxArray& slice_ba, const amrex::DistributionMapping& slice_dm)
+    amrex::Geometry const& geom, const amrex::BoxArray& slice_ba, const amrex::DistributionMapping& slice_dm,
+    int nspecies)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
@@ -33,11 +34,17 @@ Fields::AllocData (
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
+        if (islice == WhichSlice::Plasma) continue;
         m_slices[lev][islice].define(
             slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
     }
+    m_slices[lev][WhichSlice::Plasma].define(
+        slice_ba, slice_dm, Comps[WhichSlice::Plasma]["N"]*m_nspecies, m_slices_nguards,
+        amrex::MFInfo().SetArena(amrex::The_Arena()));
+    m_slices[lev][WhichSlice::Plasma].setVal(0.0);
+    m_nspecies = nspecies;
 
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,

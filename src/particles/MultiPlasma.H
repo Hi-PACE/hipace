@@ -93,6 +93,8 @@ public:
 
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
     bool AllSpeciesNeutralizeBackground () const;
+
+    int Nspecies () const {return m_nplasmas;};
 private:
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */

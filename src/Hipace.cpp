@@ -268,7 +268,7 @@ Hipace::MakeNewLevelFromScratch (
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
     DefineSliceGDB(ba, dm);
-    m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
+    m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm, m_multi_plasma.Nspecies());
 }
 
 void

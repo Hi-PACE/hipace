@@ -15,12 +15,12 @@ enum struct FieldCopyType { FtoS, StoF };
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
+    enum slice { Next=0, This, Plasma, Previous1, Previous2, RhoIons, N };
 };
 
 /** \brief Map names and indices of each fields in each slice
  */
-static std::array<std::map<std::string, int>, 5> Comps
+static std::array<std::map<std::string, int>, 6> Comps
 {{
         /* WhichSlice::Next */
         {{
@@ -31,6 +31,10 @@ static std::array<std::map<std::string, int>, 5> Comps
                 {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6},
                 {"jx_beam", 7}, {"jy", 8}, {"jy_beam", 9}, {"jz", 10}, {"jz_beam", 11}, {"rho", 12},
                 {"Psi", 13}, {"jxx", 14}, {"jxy", 15}, {"jyy", 16}, {"N", 17}
+            }},
+        /* WhichSlice::Plasma */
+        {{
+                {"jx", 0}, {"jy", 1}, {"jz", 2}, {"rho", 3}, {"jxx", 4}, {"jxy", 5}, {"jyy", 6}, {"N", 7}
             }},
         /* WhichSlice::Previous1 */
         {{
@@ -83,7 +87,7 @@ public:
     void AllocData (
         int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
         amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm);
+        const amrex::DistributionMapping& slice_dm, int nspecies);
 
     void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
 
@@ -257,6 +261,7 @@ private:
     amrex::Vector<amrex::MultiFab> m_F;
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
+    int m_nspecies;
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
