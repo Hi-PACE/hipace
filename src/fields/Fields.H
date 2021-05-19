@@ -73,7 +73,7 @@ class Fields
 {
 private:
     /** Number of slices in temporary slice object */
-    static constexpr int m_nslices = 5;
+    static constexpr int m_nslices = 7;
 
 public:
     /** Constructor */

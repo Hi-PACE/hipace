@@ -33,23 +33,14 @@ Fields::AllocData (
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
+    m_nspecies = nspecies;
     for (int islice=0; islice<WhichSlice::N; islice++) {
-        if (islice == WhichSlice::Plasma || islice == WhichSlice::PlasmaRhoIons) continue;
+        int N = (islice == WhichSlice::Plasma || islice == WhichSlice::PlasmaRhoIons) ? nspecies : 1;
         m_slices[lev][islice].define(
-            slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
+            slice_ba, slice_dm, N*Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0.0);
     }
-    m_nspecies = nspecies;
-    m_slices[lev][WhichSlice::Plasma].define(
-        slice_ba, slice_dm, Comps[WhichSlice::Plasma]["N"]*m_nspecies, m_slices_nguards,
-        amrex::MFInfo().SetArena(amrex::The_Arena()));
-    m_slices[lev][WhichSlice::Plasma].setVal(0.0);
-
-    m_slices[lev][WhichSlice::PlasmaRhoIons].define(
-        slice_ba, slice_dm, Comps[WhichSlice::PlasmaRhoIons]["N"]*m_nspecies, m_slices_nguards,
-        amrex::MFInfo().SetArena(amrex::The_Arena()));
-    m_slices[lev][WhichSlice::PlasmaRhoIons].setVal(0.0);
 
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,

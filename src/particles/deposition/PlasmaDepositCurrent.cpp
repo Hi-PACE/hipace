@@ -16,12 +16,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-    which_slice == WhichSlice::This || which_slice == WhichSlice::Next ||
-    which_slice == WhichSlice::RhoIons,
-    "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
-    " (WhichSlice::Next) or for the ion charge deposition (WhichSLice::RhoIons)");
-
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
