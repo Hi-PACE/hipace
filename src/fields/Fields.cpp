@@ -34,7 +34,7 @@ Fields::AllocData (
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
-        if (islice == WhichSlice::Plasma) continue;
+        if (islice == WhichSlice::Plasma || islice == WhichSlice::PlasmaRhoIons) continue;
         m_slices[lev][islice].define(
             slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
@@ -44,6 +44,11 @@ Fields::AllocData (
         slice_ba, slice_dm, Comps[WhichSlice::Plasma]["N"]*m_nspecies, m_slices_nguards,
         amrex::MFInfo().SetArena(amrex::The_Arena()));
     m_slices[lev][WhichSlice::Plasma].setVal(0.0);
+
+    m_slices[lev][WhichSlice::PlasmaRhoIons].define(
+        slice_ba, slice_dm, Comps[WhichSlice::PlasmaRhoIons]["N"]*m_nspecies, m_slices_nguards,
+        amrex::MFInfo().SetArena(amrex::The_Arena()));
+    m_slices[lev][WhichSlice::PlasmaRhoIons].setVal(0.0);
     m_nspecies = nspecies;
 
     // The Poisson solver operates on transverse slices only.

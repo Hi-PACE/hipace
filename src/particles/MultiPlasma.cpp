@@ -83,11 +83,17 @@ void
 MultiPlasma::DepositNeutralizingBackground (
     Fields & fields, int which_slice, amrex::Geometry const& gm, int const lev)
 {
-    for (auto& plasma : m_all_plasmas) {
+    for (int i=0; i<m_nplasmas; i++) {
+        auto& plasma = m_all_plasmas[i];
+        int ispecies =
+            (which_slice == WhichSlice::PlasmaRhoIons || which_slice == WhichSlice::Plasma) ? i : 0;
+        int nspecies =
+            (which_slice == WhichSlice::PlasmaRhoIons || which_slice == WhichSlice::Plasma) ? m_nplasmas : 1;        
         if (plasma.m_neutralize_background){
             // current of ions is zero, so they are not deposited.
             ::DepositCurrent(plasma, fields, which_slice, false,
-                             false, false, true, false, gm, lev);
+                             false, false, true, false, gm, lev,
+                             ispecies, nspecies);
         }
     }
 }

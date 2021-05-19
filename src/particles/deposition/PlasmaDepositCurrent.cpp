@@ -11,7 +11,8 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                bool deposit_j_squared, amrex::Geometry const& gm, int const lev)
+                bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
+                int ispecies, int nspecies)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
@@ -41,13 +42,13 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         // Extract the fields currents
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
-        amrex::MultiFab jx(S, amrex::make_alias, Comps[which_slice]["jx"], 1);
-        amrex::MultiFab jy(S, amrex::make_alias, Comps[which_slice]["jy"], 1);
-        amrex::MultiFab jz(S, amrex::make_alias, Comps[which_slice]["jz"], 1);
-        amrex::MultiFab rho(S, amrex::make_alias, Comps[which_slice]["rho"], 1);
-        amrex::MultiFab jxx(S, amrex::make_alias, Comps[which_slice]["jxx"], 1);
-        amrex::MultiFab jxy(S, amrex::make_alias, Comps[which_slice]["jxy"], 1);
-        amrex::MultiFab jyy(S, amrex::make_alias, Comps[which_slice]["jyy"], 1);
+        amrex::MultiFab jx(S, amrex::make_alias, nspecies*Comps[which_slice]["jx"]+ispecies, 1);
+        amrex::MultiFab jy(S, amrex::make_alias, nspecies*Comps[which_slice]["jy"]+ispecies, 1);
+        amrex::MultiFab jz(S, amrex::make_alias, nspecies*Comps[which_slice]["jz"]+ispecies, 1);
+        amrex::MultiFab rho(S, amrex::make_alias, nspecies*Comps[which_slice]["rho"]+ispecies, 1);
+        amrex::MultiFab jxx(S, amrex::make_alias, nspecies*Comps[which_slice]["jxx"]+ispecies, 1);
+        amrex::MultiFab jxy(S, amrex::make_alias, nspecies*Comps[which_slice]["jxy"]+ispecies, 1);
+        amrex::MultiFab jyy(S, amrex::make_alias, nspecies*Comps[which_slice]["jyy"]+ispecies, 1);
 
         // Extract FabArray for this box
         amrex::FArrayBox& jx_fab = jx[pti];

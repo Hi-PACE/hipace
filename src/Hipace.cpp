@@ -333,6 +333,7 @@ Hipace::Evolve ()
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev], lev);
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::PlasmaRhoIons, geom[lev], lev);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
@@ -432,6 +433,8 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
 
     m_multi_plasma.DepositCurrent(
         m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+    m_multi_plasma.DepositCurrent(
+        m_fields, WhichSlice::Plasma, false, true, true, true, m_explicit, geom[lev], lev);
 
         if (m_explicit){
             amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),

@@ -15,12 +15,12 @@ enum struct FieldCopyType { FtoS, StoF };
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Plasma, Previous1, Previous2, RhoIons, N };
+    enum slice { Next=0, This, Plasma, PlasmaRhoIons, Previous1, Previous2, RhoIons, N };
 };
 
 /** \brief Map names and indices of each fields in each slice
  */
-static std::array<std::map<std::string, int>, 6> Comps
+static std::array<std::map<std::string, int>, 7> Comps
 {{
         /* WhichSlice::Next */
         {{
@@ -32,9 +32,13 @@ static std::array<std::map<std::string, int>, 6> Comps
                 {"jx_beam", 7}, {"jy", 8}, {"jy_beam", 9}, {"jz", 10}, {"jz_beam", 11}, {"rho", 12},
                 {"Psi", 13}, {"jxx", 14}, {"jxy", 15}, {"jyy", 16}, {"N", 17}
             }},
-        /* WhichSlice::Plasma */
+        /* WhichSlice::Plasma. One of each per plasma species */
         {{
                 {"jx", 0}, {"jy", 1}, {"jz", 2}, {"rho", 3}, {"jxx", 4}, {"jxy", 5}, {"jyy", 6}, {"N", 7}
+            }},
+        /* WhichSlice::PlasmaRhoIons. One of each per plasma species */
+        {{
+                {"rho", 0}, {"N", 1}
             }},
         /* WhichSlice::Previous1 */
         {{
