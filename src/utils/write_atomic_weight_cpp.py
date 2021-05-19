@@ -58,7 +58,8 @@ for item in average_mass_dict.items():
 
 cpp_str += """ };
 
-#endif // #ifndef ATOMIC_WEIGHT_TABLE_H_"""
+#endif // #ifndef ATOMIC_WEIGHT_TABLE_H_
+"""
 
 f= open('AtomicWeightTable.H','w')
 f.write(cpp_str)
