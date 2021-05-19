@@ -157,23 +157,21 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     Can also be set with `plasma_name.element`. Must be `>0`.
 
 * ``<plasma name>.charge`` (`float`) optional (default `0.`)
-    The charge of a plasma particle. Can also be set with `plasma_name.element`
-    or if the plasma is ionizable the default becomes :math:`+ q_e`.
-    If the plasma is ionizable, the charge gets multiplied by the current
-    ionization level.
+    The charge of a plasma particle. Can also be set with `plasma_name.element`.
+    The charge gets multiplied by the current ionization level.
 
 * ``<plasma name>.element`` (`string`) optional (default "")
-    The Physical Element of the plasma. For `electron` and `positron` the charge
-    and mass are set accordingly. For common Elements like `H`, `He`, `Li`, ...
-    the element is used to get the specific Ionization Energy of each state.
+    The Physical Element of the plasma. Sets charge, mass and, if available,
+    the specific Ionization Energy of each state.
+    Options are: `electron`, `positron`, `H`, `D`, `T`, `He`, `Li`, `Be`, `B`, ….
 
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
-    Whether this plasma can ionize. Can also be set by specifying
-    `plasma_name.initial_ion_level` `>= 0`.
+    Whether this plasma can ionize. Can also be set to 1 by specifying
+    `plasma_name.ionization_product`.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
-    The initial Ionization state of the plasma. `-1` for non-ionizable plasmas,
-    `0` for neutral, ionizable gasses and `1`, `2`, `3`, ... for ionizable plasmas.
+    The initial Ionization state of the plasma. `0` for neutral gasses.
+    If set, the Plasma charge gets multiplied by this number.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     The `plasma_name` of the plasma that contains the new electrons that are produced
