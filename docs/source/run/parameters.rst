@@ -261,6 +261,11 @@ Option: ``from_file``
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
 
+* ``beams.all_from_file`` (`string`)
+    Name of the input file for all beams. This macro then passes it down to all individual beams
+    without a specified `injection_type`. Additionally the input parameters `beams.iteration`,
+    `beams.plasma_density` and `beams.file_coordinates_xyz` are passed down if applicable.
+
 Diagnostic parameters
 ---------------------
 

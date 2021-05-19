@@ -11,6 +11,7 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     pp.getarr("names", m_names);
     if (m_names[0] == "no_beam") return;
     m_nbeams = m_names.size();
+    MultiFromFileMacro(m_names);
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
@@ -171,5 +172,44 @@ MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_
                 uzp_dst[idx] = uzp_src[idx];
             }
             );
+    }
+}
+
+void
+MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
+{
+    amrex::ParmParse pp("beams");
+    std::string all_input_file = "";
+    if(!pp.query("all_from_file", all_input_file)) {
+        return;
+    }
+
+    int iteration = 0;
+    const bool multi_iteration = pp.query("iteration", iteration);
+    amrex::Real plasma_density = 0;
+    const bool multi_plasma_density = pp.query("plasma_density", plasma_density);
+    std::vector<std::string> file_coordinates_xyz;
+    const bool multi_file_coordinates_xyz = pp.queryarr("file_coordinates_xyz",
+                                                        file_coordinates_xyz);
+
+    for( std::string name : beam_names ) {
+        amrex::ParmParse pp_beam(name);
+        if(!pp_beam.contains("injection_type")) {
+            std::string str_from_file = "from_file";
+            pp_beam.add("injection_type", str_from_file);
+            pp_beam.add("input_file", all_input_file);
+
+            if(!pp_beam.contains("iteration") && multi_iteration) {
+                pp_beam.add("iteration", iteration);
+            }
+
+            if(!pp_beam.contains("plasma_density") && multi_plasma_density) {
+                pp_beam.add("plasma_density", plasma_density);
+            }
+
+            if(!pp_beam.contains("file_coordinates_xyz") && multi_file_coordinates_xyz) {
+                pp_beam.addarr("file_coordinates_xyz", file_coordinates_xyz);
+            }
+        }
     }
 }
