@@ -570,7 +570,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // transforming BxBy array to normalized units for use as initial guess
     BxBy.mult(pc.c/E0);
 
-    const int islp = WhichSlice::Plasma;    
+    const int islp = WhichSlice::Plasma;
     amrex::MultiFab& slicemfp = m_fields.getSlices(lev, islp);
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
