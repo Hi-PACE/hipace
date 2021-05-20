@@ -282,3 +282,9 @@ Diagnostic parameters
     `none` or a subset of `ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi`.
     **Note:** The option `none` only suppressed the output of the field data. To suppress any
     output, please use `hipace.output_period = -1`.
+
+* ``diagnostic.beam_data`` (`string`) optional (default `all`)
+    Names of the beams written to file, separated by a space. The beam names need to be `all`,
+    `none` or a subset of `beams.names`.
+    **Note:** The option `none` only suppressed the output of the beam data. To suppress any
+    output, please use `hipace.output_period = -1`.
