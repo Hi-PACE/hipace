@@ -87,6 +87,7 @@ public:
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
+     * \param[in] nspecies number of species, for per-species densities arrays
      */
     void AllocData (
         int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
