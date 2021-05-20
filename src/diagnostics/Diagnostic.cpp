@@ -1,9 +1,8 @@
-#include "FieldDiagnostic.H"
-#include "fields/Fields.H"
+#include "Diagnostic.H"
 #include "Hipace.H"
 #include <AMReX_ParmParse.H>
 
-FieldDiagnostic::FieldDiagnostic (int nlev)
+Diagnostic::Diagnostic (int nlev)
     : m_F(nlev),
       m_geom_io(nlev)
 {
@@ -50,7 +49,7 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
 }
 
 void
-FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom)
+Diagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom)
 {
     m_nfields = nfields;
 
@@ -72,14 +71,14 @@ FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::G
 }
 
 void
-FieldDiagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
+Diagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
 {
     amrex::Box io_box = TrimIOBox(box);
     m_F[lev].resize(io_box, m_nfields);
  }
 
 amrex::Box
-FieldDiagnostic::TrimIOBox (const amrex::Box box_3d)
+Diagnostic::TrimIOBox (const amrex::Box box_3d)
 {
     // Create a xz slice Box
     amrex::Box slice_bx = box_3d;
