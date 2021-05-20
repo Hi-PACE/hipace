@@ -1211,12 +1211,12 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 
     // assumption: same order as in struct enum Field Comps
     const amrex::Vector< std::string > varnames = getDiagComps();
-
+    const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
     constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
-                        m_physical_time, output_step, lev, getDiagSliceDir(), varnames,
+                        m_physical_time, output_step, lev, getDiagSliceDir(), varnames, beamnames,
                         it, m_box_sorters, geom[lev], call_type);
 #else
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";

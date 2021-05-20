@@ -40,7 +40,8 @@ OpenPMDWriter::WriteDiagnostics (
     amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int lev,
-    const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
+    const int slice_dir, const amrex::Vector< std::string > varnames,
+    const amrex::Vector< std::string > beamnames, const int it,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D,
     const OpenPMDWriterCallType call_type)
 {
@@ -48,7 +49,7 @@ OpenPMDWriter::WriteDiagnostics (
 
     if (call_type == OpenPMDWriterCallType::beams ) {
         iteration.setTime(physical_time);
-        WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D);
+        WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D, beamnames);
         m_outputSeries->flush();
 
     } else if (call_type == OpenPMDWriterCallType::fields ) {
@@ -134,7 +135,8 @@ void
 OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
                                       const int output_step, const int it,
                                       const amrex::Vector<BoxSorter>& a_box_sorter_vec,
-                                      const amrex::Geometry& geom)
+                                      const amrex::Geometry& geom,
+                                      const amrex::Vector< std::string > beamnames)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
@@ -144,6 +146,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
+        if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
+
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
 
         auto& beam = beams.getBeam(ibeam);
