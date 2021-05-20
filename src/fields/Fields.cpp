@@ -7,8 +7,7 @@
 
 Fields::Fields (Hipace const* a_hipace)
     : m_F(a_hipace->maxLevel()+1),
-      m_slices(a_hipace->maxLevel()+1),
-      m_diags(a_hipace->maxLevel()+1)
+      m_slices(a_hipace->maxLevel()+1)
 {
     amrex::ParmParse ppf("fields");
     ppf.query("do_dirichlet_poisson", m_do_dirichlet_poisson);
@@ -29,8 +28,6 @@ Fields::AllocData (
 
     // The Arena uses pinned memory.
     m_F[lev].define(ba, dm, Comps[WhichSlice::This]["N"], nguards_F, amrex::MFInfo().SetAlloc(false));
-    // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
-    m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], geom);
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -188,10 +185,10 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 }
 
 void
-Fields::FillDiagnostics (int lev, int i_slice)
+Fields::FillDiagnostics (int lev, int i_slice, Diagnostic diags)
 {
     Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
-         m_diags.getF(lev), m_diags.sliceDir());
+         diags.getF(lev), diags.sliceDir());
 }
 
 void

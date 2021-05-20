@@ -9,7 +9,10 @@
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
 #include "utils/Constants.H"
+#include "diagnostics/Diagnostic.H"
 
+#include <AMReX_MultiFab.H>
+#include <AMReX_Vector.H>
 #include <AMReX_AmrCore.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
 #  include <AMReX_MLALaplacian.H>
@@ -306,6 +309,9 @@ private:
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
 
+    /** Diagnostics */
+    Diagnostic m_diags;
+
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
      * 2. Using this Bx and By values, the plasma particles are advanced to the next slice,
@@ -336,6 +342,16 @@ private:
      * \param[in] dm DistributionMappint of the whole domain
      */
     void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+
+    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
+    /** \brief get diagnostics Component names of Fields to output */
+    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
+    /** \brief get diagnostics multifab */
+    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); };
+    /** \brief get diagnostics geometry */
+    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
+    /** \brief get slicing direction of the diagnostics */
+    int getDiagSliceDir () { return m_diags.sliceDir(); };
 
     int leftmostBoxWithParticles () const;
 };

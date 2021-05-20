@@ -2,7 +2,7 @@
 #define FIELDS_H_
 
 #include "fft_poisson_solver/FFTPoissonSolver.H"
-#include "diagnostics/FieldDiagnostic.H"
+#include "diagnostics/Diagnostic.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -85,8 +85,6 @@ public:
         amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm);
 
-    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
-
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
     /** get function for the main 3D array F */
@@ -105,20 +103,14 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
-    /** \brief get diagnostics Component names of Fields to output */
-    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
-    /** \brief get diagnostics multifab */
-    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); };
-    /** \brief get diagnostics geometry */
-    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
-    /** \brief get slicing direction of the diagnostics */
-    int getDiagSliceDir () { return m_diags.sliceDir(); };
+
     /** \brief Copy the data from xy slices to the field diagnostics.
      *
      * \param[in] lev MR leve
      * \param[in] i_slice z slice in which to write the data
+     * \param[in] diags diagnostic instance
      */
-    void FillDiagnostics(int lev, int i_slice);
+    void FillDiagnostics(int lev, int i_slice, Diagnostic diags);
     /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
      * \param[in] lev MR level
@@ -261,8 +253,6 @@ private:
     amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
-    /** Diagnostics */
-    FieldDiagnostic m_diags;
 };
 
 #endif
