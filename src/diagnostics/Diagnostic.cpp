@@ -54,7 +54,7 @@ Diagnostic::Diagnostic (int nlev)
     // read in which beam should be written to file
     ppd.queryarr("beam_data", m_output_beam_names);
 
-    if(m_comps_output.empty()) {
+    if(m_output_beam_names.empty()) {
         m_output_beam_names = all_beam_names;
     } else {
         for(std::string beam_name : m_output_beam_names) {
