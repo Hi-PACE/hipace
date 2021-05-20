@@ -35,7 +35,8 @@ Fields::AllocData (
 
     m_nspecies = nspecies;
     for (int islice=0; islice<WhichSlice::N; islice++) {
-        int N = (islice == WhichSlice::Plasma || islice == WhichSlice::PlasmaRhoIons) ? nspecies : 1;
+        int N = (islice == WhichSlice::Plasma || islice == WhichSlice::PlasmaRhoIons)
+            ? std::max(1, nspecies) : 1;
         m_slices[lev][islice].define(
             slice_ba, slice_dm, N*Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));

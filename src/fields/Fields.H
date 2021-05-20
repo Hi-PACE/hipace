@@ -20,7 +20,7 @@ struct WhichSlice {
 
 /** \brief Map names and indices of each fields in each slice
  */
-static std::array<std::map<std::string, int>, 7> Comps
+static std::array<std::map<std::string, int>, WhichSlice::N> Comps
 {{
         /* WhichSlice::Next */
         {{

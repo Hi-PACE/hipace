@@ -88,7 +88,7 @@ MultiPlasma::DepositNeutralizingBackground (
         int ispecies =
             (which_slice == WhichSlice::PlasmaRhoIons || which_slice == WhichSlice::Plasma) ? i : 0;
         int nspecies =
-            (which_slice == WhichSlice::PlasmaRhoIons || which_slice == WhichSlice::Plasma) ? m_nplasmas : 1;        
+            (which_slice == WhichSlice::PlasmaRhoIons || which_slice == WhichSlice::Plasma) ? m_nplasmas : 1;
         if (plasma.m_neutralize_background){
             // current of ions is zero, so they are not deposited.
             ::DepositCurrent(plasma, fields, which_slice, false,
