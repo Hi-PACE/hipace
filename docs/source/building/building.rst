@@ -3,10 +3,14 @@
 Build/install HiPACE++
 ======================
 
+.. _Developers:
+
 Developers
 ----------
 
 If you are new to CMake, `this short tutorial <https://hsf-training.github.io/hsf-training-cmake-webpage/>`__ from the HEP Software foundation is the perfect place to get started with it. If you just want to use CMake to build the project, jump into sections *1. Introduction*, *2. Building with CMake* and *9. Finding Packages*.
+
+.. Dependencies:
 
 Dependencies
 ------------
@@ -157,8 +161,8 @@ Or build against an AMReX feature branch of a colleague.
 Assuming your colleague pushed AMReX to ``https://github.com/WeiqunZhang/amrex/`` in a branch ``new-feature`` then pass to ``cmake`` the arguments: ``-DHiPACE_amrex_repo=https://github.com/WeiqunZhang/amrex.git -DHiPACE_amrex_branch=new-feature``.
 
 You can speed up the install further if you pre-install these dependencies, e.g. with a package manager.
-Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`.
-Please see the [short CMake tutorial that we linked above](#Developers) if this sounds new to you.
+Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`__.
+Please see the short CMake tutorial that we linked in the :ref:`Developers` section if this sounds new to you.
 
 Documentation
 -------------
