@@ -9,6 +9,7 @@
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
 #include "utils/Constants.H"
+#include "diagnostics/Diagnostic.H"
 
 #include <AMReX_AmrCore.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -305,6 +306,22 @@ private:
 #endif
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
+
+    /** Diagnostics */
+    Diagnostic m_diags;
+
+    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
+    void FillDiagnostics (int lev, int i_slice);
+    /** \brief get diagnostics Component names of Fields to output */
+    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
+    /** \brief get diagnostics Component names of Fields to output */
+    amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); };
+    /** \brief get diagnostics multifab */
+    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); };
+    /** \brief get diagnostics geometry */
+    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
+    /** \brief get slicing direction of the diagnostics */
+    int getDiagSliceDir () { return m_diags.sliceDir(); };
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

@@ -1,9 +1,8 @@
-#include "FieldDiagnostic.H"
-#include "fields/Fields.H"
+#include "Diagnostic.H"
 #include "Hipace.H"
 #include <AMReX_ParmParse.H>
 
-FieldDiagnostic::FieldDiagnostic (int nlev)
+Diagnostic::Diagnostic (int nlev)
     : m_F(nlev),
       m_geom_io(nlev)
 {
@@ -47,10 +46,36 @@ FieldDiagnostic::FieldDiagnostic (int nlev)
             }
         }
     }
+
+    amrex::ParmParse ppb("beams");
+    // read in all beam names
+    amrex::Vector<std::string> all_beam_names;
+    ppb.queryarr("names", all_beam_names);
+    // read in which beam should be written to file
+    ppd.queryarr("beam_data", m_output_beam_names);
+
+    if(m_output_beam_names.empty()) {
+        m_output_beam_names = all_beam_names;
+    } else {
+        for(std::string beam_name : m_output_beam_names) {
+            if(beam_name == "all" || beam_name == "All") {
+                m_output_beam_names = all_beam_names;
+                break;
+            }
+            if(beam_name == "none" || beam_name == "None") {
+                m_output_beam_names.clear();
+                break;
+            }
+            if(std::find(all_beam_names.begin(), all_beam_names.end(), beam_name) ==  all_beam_names.end() ) {
+                amrex::Abort("Unknown beam name: " + beam_name + "\nmust be " +
+                "a subset of beams.names or 'none'");
+            }
+        }
+    }
 }
 
 void
-FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom)
+Diagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom)
 {
     m_nfields = nfields;
 
@@ -72,14 +97,14 @@ FieldDiagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::G
 }
 
 void
-FieldDiagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
+Diagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
 {
     amrex::Box io_box = TrimIOBox(box);
     m_F[lev].resize(io_box, m_nfields);
  }
 
 amrex::Box
-FieldDiagnostic::TrimIOBox (const amrex::Box box_3d)
+Diagnostic::TrimIOBox (const amrex::Box box_3d)
 {
     // Create a xz slice Box
     amrex::Box slice_bx = box_3d;

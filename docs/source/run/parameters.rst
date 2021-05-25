@@ -60,6 +60,11 @@ General parameters
     This option is only available in serial runs, in parallel runs, please use more GPU to achieve
     the same effect.
 
+* ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
+    OpenPMD backend. This can either be `h5, bp`, or `json`. The default is chosen by what is
+    available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
+    slow and is not recommended for production runs.
+
 Field solver parameters
 -----------------------
 
@@ -279,4 +284,10 @@ Diagnostic parameters
     Names of the fields written to file, separated by a space. The field names need to be `all`,
     `none` or a subset of `ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi`.
     **Note:** The option `none` only suppressed the output of the field data. To suppress any
+    output, please use `hipace.output_period = -1`.
+
+* ``diagnostic.beam_data`` (`string`) optional (default `all`)
+    Names of the beams written to file, separated by a space. The beam names need to be `all`,
+    `none` or a subset of `beams.names`.
+    **Note:** The option `none` only suppressed the output of the beam data. To suppress any
     output, please use `hipace.output_period = -1`.

@@ -1,7 +1,22 @@
 .. _build-source:
 
+.. raw:: html
+
+   <style>
+   .rst-content .section>img {
+       width: 30px;
+       margin-bottom: 0;
+       margin-top: 0;
+       margin-right: 15px;
+       margin-left: 15px;
+       float: left;
+   }
+   </style>
+
 Build/install HiPACE++
 ======================
+
+.. _Developers:
 
 Developers
 ----------
@@ -30,10 +45,19 @@ Optional dependencies include:
 - `OpenMP 3.1+ <https://www.openmp.org>`__: for threaded CPU execution (currently not fully accelerated)
 - `CCache <https://ccache.dev>`__: to speed up rebuilds (needs 3.7.9+ for CUDA)
 
-Install Dependencies
---------------------
+Please choose **one** of the installation methods below to get started:
 
-macOS/Linux:
+.. _install-spack:
+
+.. only:: html
+
+   .. image:: spack.svg
+
+Using the Spack package manager
+-------------------------------
+
+The dependencies can be installed via the package manager
+`Spack <https://spack.readthedocs.io/en/latest/>`__ (macOS/Linux):
 
 .. code-block:: bash
 
@@ -52,7 +76,18 @@ macOS/Linux:
 
 (in new terminals, re-activate the environment with ``spack env activate hipace-dev`` again)
 
-or macOS/Linux:
+.. _install-brew:
+
+.. only:: html
+
+   .. image:: brew.svg
+
+Using the Brew package manager
+------------------------------
+
+The dependencies can be installed via the package manager
+`Homebrew <https://brew.sh/>`__ (macOS/Linux):
+
 
 .. code-block:: bash
 
@@ -131,7 +166,7 @@ or by providing arguments to the CMake call
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
 =============================  ========================================  =====================================================
 
-HiPACE++ can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`.
+HiPACE++ can be configured in further detail with options from AMReX, which are documented in the `AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.
 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
@@ -157,8 +192,8 @@ Or build against an AMReX feature branch of a colleague.
 Assuming your colleague pushed AMReX to ``https://github.com/WeiqunZhang/amrex/`` in a branch ``new-feature`` then pass to ``cmake`` the arguments: ``-DHiPACE_amrex_repo=https://github.com/WeiqunZhang/amrex.git -DHiPACE_amrex_branch=new-feature``.
 
 You can speed up the install further if you pre-install these dependencies, e.g. with a package manager.
-Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`.
-Please see the [short CMake tutorial that we linked above](#Developers) if this sounds new to you.
+Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`__.
+Please see the short CMake tutorial that we linked in the :ref:`Developers` section if this sounds new to you.
 
 Documentation
 -------------

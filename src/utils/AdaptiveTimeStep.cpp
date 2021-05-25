@@ -150,7 +150,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         {
             const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
                                           / ( phys_const.ep0*phys_const.m_e ));
-            new_dt = sqrt(2.*chosen_min_uz)/omega_p * m_nt_per_omega_betatron;
+            new_dt = std::sqrt(2.*chosen_min_uz)/omega_p * m_nt_per_omega_betatron;
         }
 
         /* set the new time step */

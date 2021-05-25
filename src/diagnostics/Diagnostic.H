@@ -1,19 +1,20 @@
-#ifndef FIELDDIAGNOSTIC_H_
-#define FIELDDIAGNOSTIC_H_
+#ifndef DIAGNOSTIC_H_
+#define DIAGNOSTIC_H_
 
 #include <AMReX_MultiFab.H>
+#include <AMReX_Vector.H>
 
 /** type of diagnostics: full xyz array or xz slice or yz slice */
 enum struct DiagType{xyz, xz, yz};
 
 /** \brief This class holds data for 1 diagnostics (full or slice) */
-class FieldDiagnostic
+class Diagnostic
 {
 
 public:
 
     /** \brief Constructor */
-    explicit FieldDiagnostic (int nlev);
+    explicit Diagnostic (int nlev);
 
     /** \brief allocate arrays of this MF
      *
@@ -35,6 +36,9 @@ public:
 
     /** \brief return Component names of Fields to output */
     amrex::Vector<std::string>& getComps () { return m_comps_output; };
+
+    /** \brief return names of the beams to output */
+    amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; };
 
     /** return the diagnostics geometry */
     amrex::Vector<amrex::Geometry>& getGeom () { return m_geom_io; };
@@ -62,8 +66,9 @@ private:
     DiagType m_diag_type; /**< Type of diagnostics (xyz xz yz) */
     int m_slice_dir; /**< Slicing direction */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
+    amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */
 };
 
-#endif // FIELDDIAGNOSTIC_H_
+#endif // DIAGNOSTIC_H_

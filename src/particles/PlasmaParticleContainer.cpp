@@ -20,7 +20,7 @@ PlasmaParticleContainer::ReadParameters ()
     PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
 
     amrex::ParmParse pp(m_name);
-    std::string element;
+    std::string element = "";
     amrex::Real mass_Da = 0;
     pp.query("element", element);
     if (element == "electron") {
@@ -29,6 +29,9 @@ PlasmaParticleContainer::ReadParameters ()
     } else if (element == "positron") {
         m_charge = phys_const.q_e;
         m_mass = phys_const.m_e;
+    } else if (element == "proton") {
+        m_charge = phys_const.q_e;
+        m_mass = phys_const.m_p;
     } else if (element != "") {
         m_charge = phys_const.q_e;
         mass_Da = standard_atomic_weights[element];
