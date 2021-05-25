@@ -131,7 +131,7 @@ or by providing arguments to the CMake call
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
 =============================  ========================================  =====================================================
 
-HiPACE++ can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`.
+HiPACE++ can be configured in further detail with options from AMReX, which are documented in the `AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.
 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
