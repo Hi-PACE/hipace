@@ -27,6 +27,9 @@ PlasmaParticleContainer::ReadParameters ()
     } else if (element == "positron") {
         m_charge = phys_const.q_e;
         m_mass = phys_const.m_e;
+    } else if (element == "proton") {
+        m_charge = phys_const.q_e;
+        m_mass = phys_const.m_p;
     }
 
     amrex::Real mass_Da;
