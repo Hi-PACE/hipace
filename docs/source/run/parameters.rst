@@ -60,7 +60,7 @@ General parameters
     This option is only available in serial runs, in parallel runs, please use more GPU to achieve
     the same effect.
 
-* ``hipace.openpmd_backend`` (`string`) optional
+* ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
     OpenPMD backend. This can either be `h5, bp`, or `json`. The default is chosen by what is
     available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
     slow and is not recommended for production runs.
