@@ -1,5 +1,18 @@
 .. _build-source:
 
+.. raw:: html
+
+   <style>
+   .rst-content .section>img {
+       width: 30px;
+       margin-bottom: 0;
+       margin-top: 0;
+       margin-right: 15px;
+       margin-left: 15px;
+       float: left;
+   }
+   </style>
+
 Build/install HiPACE++
 ======================
 
@@ -30,10 +43,19 @@ Optional dependencies include:
 - `OpenMP 3.1+ <https://www.openmp.org>`__: for threaded CPU execution (currently not fully accelerated)
 - `CCache <https://ccache.dev>`__: to speed up rebuilds (needs 3.7.9+ for CUDA)
 
-Install Dependencies
---------------------
+Please choose **one** of the installation methods below to get started:
 
-macOS/Linux:
+.. _install-spack:
+
+.. only:: html
+
+   .. image:: spack.svg
+
+Using the Spack package manager
+-------------------------------
+
+The dependencies can be installed via the package manager
+`Spack <https://spack.readthedocs.io/en/latest/>`__ (macOS/Linux):
 
 .. code-block:: bash
 
@@ -52,7 +74,18 @@ macOS/Linux:
 
 (in new terminals, re-activate the environment with ``spack env activate hipace-dev`` again)
 
-or macOS/Linux:
+.. _install-brew:
+
+.. only:: html
+
+   .. image:: brew.svg
+
+Using the Brew package manager
+------------------------------
+
+The dependencies can be installed via the package manager
+`Homebrew <https://brew.sh/>`__ (macOS/Linux):
+
 
 .. code-block:: bash
 
