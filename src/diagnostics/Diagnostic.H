@@ -1,19 +1,20 @@
-#ifndef FIELDDIAGNOSTIC_H_
-#define FIELDDIAGNOSTIC_H_
+#ifndef DIAGNOSTIC_H_
+#define DIAGNOSTIC_H_
 
 #include <AMReX_MultiFab.H>
+#include <AMReX_Vector.H>
 
 /** type of diagnostics: full xyz array or xz slice or yz slice */
 enum struct DiagType{xyz, xz, yz};
 
 /** \brief This class holds data for 1 diagnostics (full or slice) */
-class FieldDiagnostic
+class Diagnostic
 {
 
 public:
 
     /** \brief Constructor */
-    explicit FieldDiagnostic (int nlev);
+    explicit Diagnostic (int nlev);
 
     /** \brief allocate arrays of this MF
      *
@@ -66,4 +67,4 @@ private:
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */
 };
 
-#endif // FIELDDIAGNOSTIC_H_
+#endif // DIAGNOSTIC_H_

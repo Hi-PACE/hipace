@@ -58,7 +58,8 @@ Hipace::GetInstance ()
 Hipace::Hipace () :
     m_fields(this),
     m_multi_beam(this),
-    m_multi_plasma(this)
+    m_multi_plasma(this),
+    m_diags(this->maxLevel()+1)
 {
     m_instance = this;
 
@@ -268,6 +269,8 @@ Hipace::MakeNewLevelFromScratch (
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
     DefineSliceGDB(ba, dm);
+    // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
+    m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
     m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
 }
 
@@ -353,7 +356,7 @@ Hipace::Evolve ()
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
             const amrex::Box& bx = boxArray(lev)[it];
-            m_fields.ResizeFDiagFAB(bx, lev);
+            ResizeFDiagFAB(bx, lev);
 
             amrex::Vector<BeamBins> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
@@ -488,7 +491,7 @@ Hipace::SolveOneSlice (int islice, int lev, const int ibox,
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
 
-    m_fields.FillDiagnostics(lev, islice);
+    FillDiagnostics(lev, islice);
 
     m_fields.ShiftSlices(lev);
 
@@ -1191,6 +1194,13 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
 }
 
 void
+Hipace::FillDiagnostics (int lev, int i_slice)
+{
+    m_fields.Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
+         m_diags.getF(lev), m_diags.sliceDir());
+}
+
+void
 Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type)
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
@@ -1200,13 +1210,13 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
         (!(output_step == m_max_step) && output_step % m_output_period != 0) ) return;
 
     // assumption: same order as in struct enum Field Comps
-    const amrex::Vector< std::string > varnames = m_fields.getDiagComps();
+    const amrex::Vector< std::string > varnames = getDiagComps();
 
 
 #ifdef HIPACE_USE_OPENPMD
     constexpr int lev = 0;
-    m_openpmd_writer.WriteDiagnostics(m_fields.getDiagF(), m_multi_beam, m_fields.getDiagGeom(),
-                        m_physical_time, output_step, lev, m_fields.getDiagSliceDir(), varnames,
+    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
+                        m_physical_time, output_step, lev, getDiagSliceDir(), varnames,
                         it, m_box_sorters, geom[lev], call_type);
 #else
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
