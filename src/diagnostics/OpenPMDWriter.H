@@ -66,11 +66,13 @@ private:
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] beamnames list of the names of the beam to be written to file
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
                                 const int output_step, const int it,
                                 const amrex::Vector<BoxSorter>& a_box_sorter_vec,
-                                const amrex::Geometry& geom);
+                                const amrex::Geometry& geom,
+                                const amrex::Vector< std::string > beamnames);
 
     /** \brief writing openPMD field data
      *
@@ -125,6 +127,7 @@ public:
      * \param[in] lev MR level
      * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in] beamnames list of the names of the beam to be written to file
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
@@ -134,7 +137,8 @@ public:
         amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int lev,
-        const int slice_dir, const amrex::Vector< std::string > varnames, const int it,
+        const int slice_dir, const amrex::Vector< std::string > varnames,
+        const amrex::Vector< std::string > beamnames, const int it,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D,
         const OpenPMDWriterCallType call_type);
 

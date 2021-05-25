@@ -314,6 +314,8 @@ private:
     void FillDiagnostics (int lev, int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
+    /** \brief get diagnostics Component names of Fields to output */
+    amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); };
     /** \brief get diagnostics multifab */
     amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); };
     /** \brief get diagnostics geometry */

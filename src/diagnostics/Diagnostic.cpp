@@ -46,6 +46,32 @@ Diagnostic::Diagnostic (int nlev)
             }
         }
     }
+
+    amrex::ParmParse ppb("beams");
+    // read in all beam names
+    amrex::Vector<std::string> all_beam_names;
+    ppb.queryarr("names", all_beam_names);
+    // read in which beam should be written to file
+    ppd.queryarr("beam_data", m_output_beam_names);
+
+    if(m_output_beam_names.empty()) {
+        m_output_beam_names = all_beam_names;
+    } else {
+        for(std::string beam_name : m_output_beam_names) {
+            if(beam_name == "all" || beam_name == "All") {
+                m_output_beam_names = all_beam_names;
+                break;
+            }
+            if(beam_name == "none" || beam_name == "None") {
+                m_output_beam_names.clear();
+                break;
+            }
+            if(std::find(all_beam_names.begin(), all_beam_names.end(), beam_name) ==  all_beam_names.end() ) {
+                amrex::Abort("Unknown beam name: " + beam_name + "\nmust be " +
+                "a subset of beams.names or 'none'");
+            }
+        }
+    }
 }
 
 void
