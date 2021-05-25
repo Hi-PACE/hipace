@@ -16,6 +16,8 @@
 Build/install HiPACE++
 ======================
 
+.. _Developers:
+
 Developers
 ----------
 
@@ -164,7 +166,7 @@ or by providing arguments to the CMake call
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
 =============================  ========================================  =====================================================
 
-HiPACE++ can be configured in further detail with options from AMReX, which are `documented in the AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`.
+HiPACE++ can be configured in further detail with options from AMReX, which are documented in the `AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.
 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
@@ -190,8 +192,8 @@ Or build against an AMReX feature branch of a colleague.
 Assuming your colleague pushed AMReX to ``https://github.com/WeiqunZhang/amrex/`` in a branch ``new-feature`` then pass to ``cmake`` the arguments: ``-DHiPACE_amrex_repo=https://github.com/WeiqunZhang/amrex.git -DHiPACE_amrex_branch=new-feature``.
 
 You can speed up the install further if you pre-install these dependencies, e.g. with a package manager.
-Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`.
-Please see the [short CMake tutorial that we linked above](#Developers) if this sounds new to you.
+Set ``-DHiPACE_<dependency-name>_internal=OFF`` and add installation prefix of the dependency to the environment variable `CMAKE_PREFIX_PATH <https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html>`__.
+Please see the short CMake tutorial that we linked in the :ref:`Developers` section if this sounds new to you.
 
 Documentation
 -------------
