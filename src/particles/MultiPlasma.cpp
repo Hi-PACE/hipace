@@ -43,10 +43,11 @@ MultiPlasma::InitData (int lev, amrex::BoxArray slice_ba,
 amrex::Real
 MultiPlasma::maxDensity ()
 {
-    amrex::Real max_density = 0;
+    amrex::Real max_density = 0.;
     for (auto& plasma : m_all_plasmas) {
         max_density = amrex::max(max_density, plasma.m_density);
     }
+    AMREX_ALWAYS_ASSERT(max_density>0.);
     return amrex::max(max_density, m_adaptive_density);
 }
 
