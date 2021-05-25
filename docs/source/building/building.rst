@@ -10,8 +10,6 @@ Developers
 
 If you are new to CMake, `this short tutorial <https://hsf-training.github.io/hsf-training-cmake-webpage/>`__ from the HEP Software foundation is the perfect place to get started with it. If you just want to use CMake to build the project, jump into sections *1. Introduction*, *2. Building with CMake* and *9. Finding Packages*.
 
-.. Dependencies:
-
 Dependencies
 ------------
 
