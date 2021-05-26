@@ -1,11 +1,19 @@
 // This script was automatically generated!
-// Edit dev/Source/Utils/write_atomic_weight_cpp.py instead!
+// Edit src/utils/write_atomic_weight_cpp.py instead!
 #ifndef HIPACE_ATOMIC_WEIGHT_TABLE_H_
 #define HIPACE_ATOMIC_WEIGHT_TABLE_H_
 
 #include <AMReX_AmrCore.H>
 #include <AMReX_REAL.H>
 #include <map>
+
+// Reference:
+// Coursey, J.S., Schwab, D.J., Tsai, J.J., and Dragoset, R.A. (2015),
+// Atomic Weights and Isotopic Compositions (version 4.1).
+// [Online] Available: http://physics.nist.gov/Comp [2021, 05, 19].
+// National Institute of Standards and Technology, Gaithersburg, MD.
+//
+// The Data written below is a reformatting of the data referenced form NIST.
 
 std::map<std::string, amrex::Real> standard_atomic_weights = {
     {"H", 1.007975},

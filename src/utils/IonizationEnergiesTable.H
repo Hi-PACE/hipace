@@ -1,9 +1,3 @@
-/* Copyright 2019-2021 Axel Huebl, Maxence Thevenet
- *
- * This file is part of WarpX.
- *
- * License: BSD-3-Clause-LBNL
- */
 // This script was automatically generated!
 // Edit dev/Source/Utils/write_atomic_data_cpp.py instead!
 #ifndef HIPACE_IONIZATION_TABLE_H_
@@ -12,6 +6,13 @@
 #include <AMReX_AmrCore.H>
 #include <AMReX_REAL.H>
 #include <map>
+
+// Reference:
+// Kramida, A., Ralchenko, Yu., Reader, J., and NIST ASD Team (2014).
+// NIST Atomic Spectra Database (ver. 5.2), [Online].
+// Available: http://physics.nist.gov/asd [2017, March 3].
+//
+// The Data written below is a reformatting of the data referenced form NIST.
 
 std::map<std::string, int> ion_map_ids = {
     {"H", 0},
