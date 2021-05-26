@@ -43,7 +43,7 @@ ion_offsets = np.concatenate(([0], np.cumsum(np.array(ion_atom_numbers)[:-1])), 
 
 # Head of CPP file
 cpp_string = """// This script was automatically generated!
-// Edit dev/Source/Utils/write_atomic_data_cpp.py instead!
+// Edit src/utils/write_atomic_data_cpp.py instead!
 #ifndef HIPACE_IONIZATION_TABLE_H_
 #define HIPACE_IONIZATION_TABLE_H_
 

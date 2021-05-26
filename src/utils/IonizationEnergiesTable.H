@@ -1,5 +1,5 @@
 // This script was automatically generated!
-// Edit dev/Source/Utils/write_atomic_data_cpp.py instead!
+// Edit src/utils/write_atomic_data_cpp.py instead!
 #ifndef HIPACE_IONIZATION_TABLE_H_
 #define HIPACE_IONIZATION_TABLE_H_
 
