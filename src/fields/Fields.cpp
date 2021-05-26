@@ -433,33 +433,46 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
 void
 Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
                             const amrex::Real predcorr_B_error_tolerance, const int lev,
-                            const amrex::Real mix_factor_init_guess)
+                            const amrex::Real mix_factor_init_guess,
+                            bool m_igmethod)
 {
     /* Sets the initial guess of the B field from the two previous slices
      */
     HIPACE_PROFILE("Fields::InitialBfieldGuess()");
 
-    if (mix_factor_init_guess == 0.0) {
-      const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
-                                              ( 2.5 * predcorr_B_error_tolerance ), 2));
-    }
+    if (!m_igmethod){
+        const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
+                                                ( 2.5 * predcorr_B_error_tolerance ), 2));
+      }
 
-// TO-DO: Change mix factor to 1 to match WP approach
+      amrex::Print() << "mix factor used: " << mix_factor_init_guess << ".\n";
 
-    amrex::Print() << "mix factor used: " << mix_factor_init_guess;
+      amrex::MultiFab::LinComb(
+          getSlices(lev, WhichSlice::This),
+          1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
+          -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
+          Comps[WhichSlice::This]["Bx"], 1, 0);
 
+      amrex::MultiFab::LinComb(
+          getSlices(lev, WhichSlice::This),
+          1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
+          -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
+          Comps[WhichSlice::This]["By"], 1, 0);
 
-    amrex::MultiFab::LinComb(
-        getSlices(lev, WhichSlice::This),
-        1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
-        -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
-        Comps[WhichSlice::This]["Bx"], 1, 0);
+      if (mix_factor_init_guess == -1.0){
+        amrex::Print() << "Initial Guess is 0.\n";
+        amrex::MultiFab::LinComb(
+            getSlices(lev, WhichSlice::This),
+            0, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
+            0, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
+            Comps[WhichSlice::This]["Bx"], 1, 0);
 
-    amrex::MultiFab::LinComb(
-        getSlices(lev, WhichSlice::This),
-        1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
-        -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
-        Comps[WhichSlice::This]["By"], 1, 0);
+        amrex::MultiFab::LinComb(
+            getSlices(lev, WhichSlice::This),
+            0, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
+            0, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
+            Comps[WhichSlice::This]["By"], 1, 0);
+      }
 }
 
 void

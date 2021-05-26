@@ -111,6 +111,7 @@ Hipace::Hipace () :
     if (solver == "explicit") m_explicit = true;
     pph.query("NewInitialGuess", m_initialGuess);
     pph.query("IG_Mix_Factor", m_mixfactor);
+    pph.query("IG_method", m_igmethod);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
@@ -696,13 +697,14 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     if (m_initialGuess){
 
-      amrex::Print()<<"New initial guess is used.";
+      amrex::Print()<<"New initial guess is used.\n";
+      amrex::Print()<<"Method used is: "<<m_igmethod<<".\n";
 
       amrex::Real mixfactor = (float) m_mixfactor / 10.0;
 
       amrex::Real relative_Bfield_error = 0.0;
 
-      if (mixfactor==0.0){
+      if (!m_igmethod){
         amrex::Real relative_Bfield_error = m_fields.ComputeRelBFieldError(
             m_fields.getSlices(lev, WhichSlice::Previous1),
             m_fields.getSlices(lev, WhichSlice::Previous1),
@@ -713,7 +715,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
             Geom(lev));
       }
 
-      m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev, mixfactor);
+      m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev, mixfactor, m_igmethod);
 
     }
 

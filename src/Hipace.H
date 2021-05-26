@@ -273,6 +273,7 @@ public:
     int m_skip_empty_comms = false;
     bool m_explicit = false;
     bool m_initialGuess = false;
+    bool m_igmethod = false;
     int m_mixfactor = 0;
     /**
      * \brief Solve for Bx an By in slice MF using the explicit solver
