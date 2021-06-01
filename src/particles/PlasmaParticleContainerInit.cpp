@@ -208,7 +208,9 @@ InitIonizationModule (const amrex::Geometry& geom,
     amrex::ParmParse pp(m_name);
     std::string physical_element;
     pp.get("element", physical_element);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0, "Unknown Element");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0,
+        "There are no ionization energies available for this element. "
+        "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(product_pc->m_charge / m_charge +1) < 1e-3),
         "Ion and Ionization product charges have to be opposite");
     // Get atomic number and ionization energies from file

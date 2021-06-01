@@ -7,11 +7,24 @@
 #
 # License: BSD-3-Clause-LBNL
 
-'''
+"""
 This python script reads ionization tables in atomic_data.txt (generated from
 the NIST website) and extracts ionization levels into C++ file
 IonizationEnergiesTable.H, which contains tables + metadata.
-'''
+
+To update IonizationEnergiesTable.H go to http://physics.nist.gov/asd
+select 'Ground states and ionization energies', then select:
+-Spectra eg.: 'H-Ar Cu Kr Rb Xe Rn'
+-Units: eV
+-Format output: ASCII (text)
+-Ordered by Z
+-Output Data: only 'Atomic number', 'Spectrum name', 'Ion charge'
+-Ionization energy
+-no Uncertainty and no Bibliographic references
+-finally click Retrieve Data
+Copy the data into a text file in src/utils/ named
+'atomic_data.txt'. Run this script.
+"""
 
 import re, os
 import numpy as np
@@ -29,13 +42,23 @@ ion_names = list(dict.fromkeys( [x[1] for x in list_of_tuples] ))
 ion_offsets = np.concatenate(([0], np.cumsum(np.array(ion_atom_numbers)[:-1])), axis=0)
 
 # Head of CPP file
-cpp_string = '// This script was automatically generated!\n'
-cpp_string += '// Edit dev/Source/Utils/write_atomic_data_cpp.py instead!\n'
-cpp_string += '#ifndef HIPACE_IONIZATION_TABLE_H_\n'
-cpp_string += '#define HIPACE_IONIZATION_TABLE_H_\n\n'
-cpp_string += '#include <AMReX_AmrCore.H>\n'
-cpp_string += '#include <AMReX_REAL.H>\n'
-cpp_string += '#include <map>\n\n'
+cpp_string = """// This script was automatically generated!
+// Edit src/utils/write_atomic_data_cpp.py instead!
+#ifndef HIPACE_IONIZATION_TABLE_H_
+#define HIPACE_IONIZATION_TABLE_H_
+
+#include <AMReX_AmrCore.H>
+#include <AMReX_REAL.H>
+#include <map>
+
+// Reference:
+// Kramida, A., Ralchenko, Yu., Reader, J., and NIST ASD Team (2014).
+// NIST Atomic Spectra Database (ver. 5.2), [Online].
+// Available: http://physics.nist.gov/asd [2017, March 3].
+//
+// The Data written below is a reformatting of the data referenced form NIST.
+
+"""
 
 # Map each element to ID in table
 cpp_string += 'std::map<std::string, int> ion_map_ids = {'
