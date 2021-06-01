@@ -24,6 +24,7 @@ struct GetInitialMomentum
      * \param[in] z position in z
      * \param[in] duz_per_uz0_dzeta correlated energy spread
      */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (amrex::Real& ux, amrex::Real& uy, amrex::Real& uz, const amrex::Real z=0.,
                      const amrex::Real duz_per_uz0_dzeta=0.) const
     {
