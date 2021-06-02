@@ -1197,7 +1197,7 @@ void
 Hipace::FillDiagnostics (int lev, int i_slice)
 {
     m_fields.Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
-         m_diags.getF(lev), m_diags.sliceDir());
+                  m_diags.getF(lev), m_diags.sliceDir(), Geom(lev));
 }
 
 void
