@@ -102,8 +102,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         const int init_ion_lev = m_init_ion_lev;
 
-        amrex::ParallelFor(tile_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        amrex::ParallelForRNG(tile_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
         {
             int ix = i - lo.x;
             int iy = j - lo.y;
@@ -137,7 +137,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 const amrex::Real rp = std::sqrt(x*x + y*y);
 
                 amrex::Real u[3] = {0.,0.,0.};
-                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std);
+                ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + pidx;

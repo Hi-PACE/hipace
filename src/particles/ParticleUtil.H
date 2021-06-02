@@ -5,6 +5,7 @@
 #include <AMReX_REAL.H>
 #include <AMReX_IntVect.H>
 #include <AMReX_RealVect.H>
+#include <AMReX_Random.H>
 
 /** \brief Basic helper functions that can be used for both plasma and beam species */
 namespace ParticleUtil
@@ -39,13 +40,16 @@ namespace ParticleUtil
      * \param[in,out] u 3D momentum of 1 particle, modified by this function
      * \param[in] u_mean Mean value of the random distribution in each dimension
      * \param[in] u_std standard deviation of the random distribution in each dimension
+     * \param[in] engine random number engine
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void get_gaussian_random_momentum (amrex::Real* u, const amrex::RealVect u_mean, const amrex::RealVect u_std)
+    void get_gaussian_random_momentum (amrex::Real* u, const amrex::RealVect u_mean,
+                                       const amrex::RealVect u_std,
+                                       const amrex::RandomEngine& engine)
     {
-        amrex::Real ux_th = amrex::RandomNormal(0.0, u_std[0]);
-        amrex::Real uy_th = amrex::RandomNormal(0.0, u_std[1]);
-        amrex::Real uz_th = amrex::RandomNormal(0.0, u_std[2]);
+        amrex::Real ux_th = amrex::RandomNormal(0.0, u_std[0], engine);
+        amrex::Real uy_th = amrex::RandomNormal(0.0, u_std[1], engine);
+        amrex::Real uz_th = amrex::RandomNormal(0.0, u_std[2], engine);
 
         u[0] = u_mean[0] + ux_th;
         u[1] = u_mean[1] + uy_th;

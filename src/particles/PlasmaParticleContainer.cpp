@@ -194,8 +194,8 @@ IonizationModule (const int lev,
 
         long num_ions = ptile_ion.numParticles();
 
-        amrex::ParallelFor(num_ions,
-            [=] AMREX_GPU_DEVICE (long ip) {
+        amrex::ParallelForRNG(num_ions,
+            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
 
             amrex::ParticleReal xp, yp, zp;
             int pid;
@@ -229,7 +229,7 @@ IonizationModule (const int lev,
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
             amrex::Real p = 1._rt - std::exp( - w_dtau );
 
-            amrex::Real random_draw = amrex::Random();
+            amrex::Real random_draw = amrex::Random(engine);
             if (random_draw < p)
             {
                 ion_lev[ip] += 1;
