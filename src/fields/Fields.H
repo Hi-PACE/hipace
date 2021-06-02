@@ -114,9 +114,10 @@ public:
      * \param[in] ncomp number of components to copy
      * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
+     * \param[in] geom main geometry
      */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp, amrex::FArrayBox& fab, int slice_dir);
+               int ncomp, amrex::FArrayBox& fab, int slice_dir, amrex::Geometry geom);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
