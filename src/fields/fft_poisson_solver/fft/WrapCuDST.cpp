@@ -150,7 +150,7 @@ namespace AnyDST
                 const int n_1 = n_data+1;
                 const int stride_in = n_1*j;
                 const int stride_out = n_data*j;
-                out[i-1+stride_out] = 0.5*(in[i+stride_in] - in[n_1-i+stride_in] +
+                out[i-1+stride_out] = 0.5*( in[n_1-i+stride_in] - in[i+stride_in] +
                     (in[i+stride_in] + in[n_1-i+stride_in])/(2*std::sin(i*pi/n_1)));
             });
         amrex::Gpu::synchronize();
@@ -170,7 +170,29 @@ namespace AnyDST
         amrex::Gpu::synchronize();
         }
     };
+/*
+    void print_arr(const amrex::Real* const arr, const int nx, const int ny) {
+        for(int j=0; j<ny;++j) {
+            std::cout << "[ ";
+            for(int i=0;i<nx;++i) {
+                std::cout << arr[i+nx*j] << " , ";
+            }
+            std::cout << " ], ";
+        }
+        std::cout << std::endl;
+    }
 
+    void print_arr(amrex::GpuComplex<amrex::Real>* arr, const int nx, const int ny) {
+        for(int j=0; j<ny;++j) {
+            std::cout << "[ ";
+            for(int i=0;i<nx;++i) {
+                std::cout << arr[i+nx*j].m_real << " +1j* " << arr[i+nx*j].m_imag << " , ";
+            }
+            std::cout << " ], ";
+        }
+        std::cout << std::endl;
+    }
+*/
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
                         amrex::FArrayBox* fourier_array)
     {
@@ -264,7 +286,14 @@ namespace AnyDST
             dst_plan.m_position_array = position_array;
             dst_plan.m_fourier_array = fourier_array;
             /*
-            amrex::BaseFab<amrex::GpuComplex<amrex::Real>> test({{0,0,0}, {2,3,4}},1);
+            int mx = 3;
+            int my = 4;
+
+            amrex::FArrayBox t_exxp_pos({{0,0,0}, {2,3,4}},1);
+            amrex::BaseFab<amrex::GpuComplex<amrex::Real>> t_exp_fou({{0,0,0}, {2,3,4}},1);
+            amrex::FArrayBox t_pos({{0,0,0}, {2,3,4}},1);
+            amrex::FArrayBox t_fou({{0,0,0}, {2,3,4}},1);
+
             amrex::Array4<amrex::GpuComplex<amrex::Real>> const & test_arr = test.array();
             amrex::ParallelFor({{0,0,0}, {2,3,4}}, [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
@@ -293,6 +322,7 @@ namespace AnyDST
         if(!dst_plan.use_small_dst) {
             // Expand in position space m_position_array -> m_expanded_position_array
             ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
+            amrex::Gpu::synchronize();
 
             cudaStream_t stream = amrex::Gpu::Device::cudaStream();
             cufftSetStream ( dst_plan.m_plan, stream);
@@ -308,6 +338,7 @@ namespace AnyDST
                 dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(),
                 reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #endif
+            cudaDeviceSynchronize();
             // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
             ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
 
@@ -315,6 +346,7 @@ namespace AnyDST
                 amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
                     CuFFTUtils::cufftErrorToString(result) << "\n";
             }
+            amrex::Gpu::synchronize();
         }
         else {
             const int nx = dst_plan.m_position_array->box().length(0); // initially contiguous
@@ -324,23 +356,24 @@ namespace AnyDST
             amrex::GpuComplex<amrex::Real>* comp_arr = dst_plan.m_expanded_fourier_array->dataPtr();
             amrex::Real* const real_arr = dst_plan.m_expanded_position_array->dataPtr();
             amrex::Real* const fourier_arr = dst_plan.m_fourier_array->dataPtr();
-
+            //std::cout << "######### stepp #########" << std::endl;
+            //print_arr(pos_arr, nx, ny);
             ToComplex(pos_arr, comp_arr, nx, ny);
-
+            //print_arr(comp_arr, (nx+1)/2+1, ny);
             C2Rfft(dst_plan.m_plan, comp_arr, real_arr);
-
+            //print_arr(real_arr, nx+1, ny);
             ToSine(real_arr, pos_arr, nx, ny);
-
+            //print_arr(pos_arr, nx, ny);
             Transpose(pos_arr, fourier_arr, nx, ny);
-
+            //print_arr(fourier_arr, ny, nx);
             ToComplex(fourier_arr, comp_arr, ny, nx);
-
+            //print_arr(comp_arr, (ny+1)/2+1, nx);
             C2Rfft(dst_plan.m_plan_b, comp_arr, real_arr);
-
+            //print_arr(real_arr, ny+1, nx);
             ToSine(real_arr, pos_arr, ny, nx);
-
+            //print_arr(pos_arr, ny, nx);
             Transpose(pos_arr, fourier_arr, ny, nx);
-
+            //print_arr(fourier_arr, nx, ny);
         }
     }
 }
