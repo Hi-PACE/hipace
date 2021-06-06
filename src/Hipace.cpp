@@ -716,6 +716,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
       }
 
       m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev, mixfactor, m_igmethod);
+      amrex::Print()<<"Norm of Bx is: " << m_fields.getSlices(lev, WhichSlice::This).norm2(Comps[WhichSlice::This]["Bx"])<<".\n";
 
     }
 
