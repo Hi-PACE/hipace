@@ -10,7 +10,7 @@ General parameters
     Number of cells in x, y and z.
 
 * ``amr.max_level`` (`integer`)
-    Maximum level of mesh-refinement. Mesh-refinement is not yet implemented, therefore only
+    Maximum level of mesh refinement. Mesh refinement is not yet implemented, therefore only
     level `0` is supported.
 
 * ``hipace.fine_tag_lo`` (3 `float`)
