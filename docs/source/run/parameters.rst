@@ -9,6 +9,16 @@ General parameters
 * ``amr.n_cell`` (3 `integer`)
     Number of cells in x, y and z.
 
+* ``amr.max_level`` (`integer`)
+    Maximum level of mesh-refinement. Mesh-refinement is not yet implemented, therefore only
+    level `0` is supported.
+
+* ``hipace.fine_tag_lo`` (3 `float`)
+    Lower end of the refined grid in x, y and z.
+
+* ``hipace.fine_tag_hi`` (3 `float`)
+    Upper end of the refined grid in x, y and z.
+
 * ``max_step`` (`integer`) optional (default `0`)
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
