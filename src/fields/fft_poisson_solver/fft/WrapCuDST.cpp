@@ -73,82 +73,20 @@ namespace AnyDST
         amrex::Gpu::synchronize();
     };
 
-    void ToComplex(const amrex::Real* const AMREX_RESTRICT in, amrex::GpuComplex<amrex::Real>* const AMREX_RESTRICT out,
-                   const int n_data, const int n_batch)
+    /** \brief Make Complex array out of Real array to prepare for fft.
+     * out[idx] = -in[2*idx-2] + in[2*idx] + i*in[2*idx-1] for each column with
+     * in[-1] = 0; in[-2] = -in[0]; in[n_data] = 0; in[n_data+1] = -in[n_data-1]
+     *
+     * \param[in] in input real array
+     * \param[out] out output complex array
+     * \param[in] n_data number of (contiguous) rows in position matrix
+     * \param[in] n_batch number of (strided) columns in position matrix
+     */
+    void ToComplex (const amrex::Real* const AMREX_RESTRICT in,
+                    amrex::GpuComplex<amrex::Real>* const AMREX_RESTRICT out,
+                    const int n_data, const int n_batch)
     {
-        {
         HIPACE_PROFILE("AnyDST::ToComplex()");
-        const int n_half = (n_data+1)/2;
-        if((n_data%2 == 1)) {
-            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                {
-                    const int stride_in = n_data*j;
-                    const int stride_out = (n_half+1)*j;
-                    if(i==0) {
-                        out[stride_out].m_real = 2*in[stride_in];
-                        out[stride_out].m_imag = 0;
-                    } else if(i==n_half) {
-                        out[n_half+stride_out].m_real = -2*in[n_data-1+stride_in];
-                        out[n_half+stride_out].m_imag = 0;
-                    } else {
-                        out[i+stride_out].m_real = - in[2*i-2+stride_in] +in[2*i+stride_in];
-                        out[i+stride_out].m_imag = in[2*i-1+stride_in];
-                    }
-                });
-        } else {
-            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                {
-                    const int stride_in = n_data*j;
-                    const int stride_out = (n_half+1)*j;
-                    if(i==0) {
-                        out[stride_out].m_real = 2*in[stride_in];
-                        out[stride_out].m_imag = 0;
-                    } else if(i==n_half) {
-                        out[n_half+stride_out].m_real = -in[n_data-2+stride_in];
-                        out[n_half+stride_out].m_imag = in[n_data-1+stride_in];
-                    } else {
-                        out[i+stride_out].m_real = -in[2*i-2+stride_in] +in[2*i+stride_in];
-                        out[i+stride_out].m_imag = in[2*i-1+stride_in];
-                    }
-                });
-        }
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToComplexBranchless()");
-        const int n_half = (n_data+1)/2;
-        if((n_data%2 == 1)) {
-            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                {
-                    const int stride_in = n_data*j;
-                    const int stride_out = (n_half+1)*j;
-                    bool i_is_zero = (i==0);
-                    bool i_is_n_half = (i==n_half);
-                    out[i+stride_out].m_real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
-                                               +in[2*i-2*i_is_n_half+stride_in]*(1-2*i_is_n_half);
-                    out[i+stride_out].m_imag = in[2*i-1+i_is_zero-i_is_n_half+stride_in]
-                                               *!i_is_zero*!i_is_n_half;
-                });
-        } else {
-            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                {
-                    const int stride_in = n_data*j;
-                    const int stride_out = (n_half+1)*j;
-                    bool i_is_zero = (i==0);
-                    bool i_is_n_half = (i==n_half);
-                    out[i+stride_out].m_real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
-                                               +in[2*i-i_is_n_half+stride_in]*!i_is_n_half;
-                    out[i+stride_out].m_imag = in[2*i-1+i_is_zero+stride_in]*!i_is_zero;
-                });
-        }
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToComplexConstructor()");
         const int n_half = (n_data+1)/2;
         if((n_data%2 == 1)) {
             amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
@@ -177,108 +115,18 @@ namespace AnyDST
                 });
         }
         amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToComplexGoodBranch()");
-        using namespace amrex::literals;
-
-        const int n_half = (n_data+1)/2;
-        if((n_data%2 == 1)) {
-            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                {
-                    const int stride_in = n_data*j;
-                    const bool i_is_zero = (i==0);
-                    const bool i_is_n_half = (i==n_half);
-                    const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
-                                             +in[2*i-2*i_is_n_half+stride_in]*(1-2*i_is_n_half);
-                    amrex::Real imag = 0._rt;
-                    if(!i_is_zero && !i_is_n_half) {
-                        imag = in[2*i-1+stride_in];
-                    }
-                    out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
-                });
-        } else {
-            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-                {
-                    const int stride_in = n_data*j;
-                    const bool i_is_zero = (i==0);
-                    const bool i_is_n_half = (i==n_half);
-                    amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero);
-                    amrex::Real imag = 0._rt;
-                    if(!i_is_n_half) {
-                        real += in[2*i+stride_in];
-                    }
-                    if(!i_is_zero) {
-                        imag = in[2*i-1+stride_in];
-                    }
-                    out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
-                });
-        }
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToComplexSharedSimple()");
-        const int n_half = (n_data+1)/2;
-        if((n_data%2 == 1)) {
-            amrex::launch(n_batch, n_half+1, n_data*sizeof(amrex::Real), amrex::Gpu::gpuStream(),
-                [=] AMREX_GPU_DEVICE() noexcept
-                {
-                    amrex::Gpu::SharedMemory<amrex::Real> gsm;
-                    amrex::Real* const tile = gsm.dataPtr();
-                    const int i = threadIdx.x;
-                    const int j = blockIdx.x;
-                    const int stride_in = n_data*j;
-
-                    tile[i] = in[i+stride_in];
-                    if(i+n_half+1 < n_data) {
-                        tile[i+n_half+1] = in[i+n_half+1+stride_in];
-                    }
-
-                    __syncthreads();
-
-                    const bool i_is_zero = (i==0);
-                    const bool i_is_n_half = (i==n_half);
-                    const amrex::Real real = -tile[2*i-2+2*i_is_zero]*(1-2*i_is_zero)
-                                             +tile[2*i-2*i_is_n_half]*(1-2*i_is_n_half);
-                    const amrex::Real imag = tile[2*i-1+i_is_zero-i_is_n_half]
-                                             *!i_is_zero*!i_is_n_half;
-                    out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
-                });
-        } else {
-            amrex::launch(n_batch, n_half+1, n_data*sizeof(amrex::Real), amrex::Gpu::gpuStream(),
-                [=] AMREX_GPU_DEVICE() noexcept
-                {
-                    amrex::Gpu::SharedMemory<amrex::Real> gsm;
-                    amrex::Real* const tile = gsm.dataPtr();
-                    const int i = threadIdx.x;
-                    const int j = blockIdx.x;
-                    const int stride_in = n_data*j;
-
-                    tile[i] = in[i+stride_in];
-                    if(i+n_half+1 < n_data) {
-                        tile[i+n_half+1] = in[i+n_half+1+stride_in];
-                    }
-
-                    __syncthreads();
-
-                    const bool i_is_zero = (i==0);
-                    const bool i_is_n_half = (i==n_half);
-                    const amrex::Real real = -tile[2*i-2+2*i_is_zero]*(1-2*i_is_zero)
-                                             +tile[2*i-i_is_n_half]*!i_is_n_half;
-                    const amrex::Real imag = tile[2*i-1+i_is_zero]*!i_is_zero;
-                    out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
-                });
-        }
-        amrex::Gpu::synchronize();
-        }
     };
 
-    void C2Rfft(AnyFFT::VendorFFTPlan& plan, amrex::GpuComplex<amrex::Real>* AMREX_RESTRICT in,
-                amrex::Real* const AMREX_RESTRICT out)
+    /** \brief Complex to Real fft for every column of the input matrix.
+     * The output Matrix has its indexes reversed compared to some other libraries
+     *
+     * \param[in] plan cuda fft plan for transformation
+     * \param[in] in input complex array
+     * \param[out] out output real array
+     */
+    void C2Rfft (AnyFFT::VendorFFTPlan& plan, amrex::GpuComplex<amrex::Real>* AMREX_RESTRICT in,
+                 amrex::Real* const AMREX_RESTRICT out)
     {
-        {
         HIPACE_PROFILE("AnyDST::C2Rfft()");
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
         cufftSetStream(plan, stream);
@@ -294,80 +142,21 @@ namespace AnyDST
             amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
                 CuFFTUtils::cufftErrorToString(result) << "\n";
         }
-        }
     };
 
-    void ToSine(const amrex::Real* const AMREX_RESTRICT in, amrex::Real* const AMREX_RESTRICT out,
-                const int n_data, const int n_batch)
+    /** \brief Make Sine-space Real array out of array from fft.
+     * out[idx] = 0.5 *(in[n_data-idx] - in[idx+1] + (in[n_data-idx] + in[idx+1])/
+     * (2*sin()(idx+1)*pi/(n_data+1)))) for each column
+     *
+     * \param[in] in input real array
+     * \param[out] out output real array
+     * \param[in] n_data number of (contiguous) rows in position matrix
+     * \param[in] n_batch number of (strided) columns in position matrix
+     */
+    void ToSine (const amrex::Real* const AMREX_RESTRICT in, amrex::Real* const AMREX_RESTRICT out,
+                 const int n_data, const int n_batch)
     {
-        {
         HIPACE_PROFILE("AnyDST::ToSine()");
-        amrex::Real pi = MathConst::pi;
-        amrex::ParallelFor({{1,0,0}, {n_data,n_batch-1,0}},
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-            {
-                const int n_1 = n_data+1;
-                const int stride_in = n_1*j;
-                const int stride_out = n_data*j;
-                out[i-1+stride_out] = 0.5*( in[n_1-i+stride_in] - in[i+stride_in] +
-                    (in[i+stride_in] + in[n_1-i+stride_in])/(2*std::sin(i*pi/n_1)));
-            });
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToSineCuda()");
-        using namespace amrex::literals;
-
-        amrex::Real pi = MathConst::pi;
-        amrex::ParallelFor({{1,0,0}, {n_data,n_batch-1,0}},
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-            {
-                const int n_1 = n_data+1;
-                const int stride_in = n_1*j;
-                const int stride_out = n_data*j;
-                out[i-1+stride_out] = 0.5_rt*( in[n_1-i+stride_in] - in[i+stride_in] +
-                    (in[i+stride_in] + in[n_1-i+stride_in])/(2._rt*sinf(i*pi/n_1)));
-            });
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToSineStd()");
-        using namespace amrex::literals;
-
-        amrex::Real pi = MathConst::pi;
-        amrex::ParallelFor({{1,0,0}, {n_data,n_batch-1,0}},
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-            {
-                const int n_1 = n_data+1;
-                const int stride_in = n_1*j;
-                const int stride_out = n_data*j;
-                out[i-1+stride_out] = 0.5_rt*( in[n_1-i+stride_in] - in[i+stride_in] +
-                    (in[i+stride_in] + in[n_1-i+stride_in])/(2._rt*std::sin(i*pi/n_1)));
-            });
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToSineDouble()");
-        using namespace amrex::literals;
-
-        amrex::Real pi = MathConst::pi;
-        amrex::ParallelFor({{1,0,0}, {(n_data+1)/2,n_batch-1,0}},
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-            {
-                const int n_1 = n_data+1;
-                const int i_rev = n_1-i;
-                const int stride_in = n_1*j;
-                const int stride_out = n_data*j;
-                const amrex::Real in_a = in[i+stride_in];
-                const amrex::Real in_b = in[i_rev+stride_in];
-                out[i-1+stride_out] = 0.5_rt*(in_b-in_a+(in_a+in_b)/(2._rt*std::sin(i*pi/n_1)));
-                out[i_rev-1+stride_out] = 0.5_rt*(in_a-in_b+(in_a+in_b)/(2._rt
-                                          *std::sin(i_rev*pi/n_1)));
-            });
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::ToSineDoubleCuda()");
         using namespace amrex::literals;
 
         const amrex::Real n_1_real = n_data+1._rt;
@@ -391,23 +180,21 @@ namespace AnyDST
 #endif
             });
         amrex::Gpu::synchronize();
-        }
     };
 
-    void Transpose(const amrex::Real* const AMREX_RESTRICT in, amrex::Real* const AMREX_RESTRICT out,
-                   const int n_data, const int n_batch)
+    /** \brief Transpose input matrix
+     * out[idy][idx] = in[idx][idy]
+     *
+     * \param[in] in input real array
+     * \param[out] out output real array
+     * \param[in] n_data number of (contiguous) rows in input matrix
+     * \param[in] n_batch number of (strided) columns in input matrix
+     */
+    void Transpose (const amrex::Real* const AMREX_RESTRICT in,
+                    amrex::Real* const AMREX_RESTRICT out,
+                    const int n_data, const int n_batch)
     {
-        {
-        HIPACE_PROFILE("AnyDST::TransposeBad()");
-        amrex::ParallelFor({{0,0,0}, {n_data-1,n_batch-1,0}},
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
-            {
-                out[j+n_batch*i] = in[i+n_data*j];
-            });
-        amrex::Gpu::synchronize();
-        }
-        {
-        HIPACE_PROFILE("AnyDST::TransposeSharedMem()");
+        HIPACE_PROFILE("AnyDST::Transpose()");
         constexpr int tile_dim = 32;
         constexpr int block_rows = 8;
         const int num_blocks_x = (n_data + tile_dim - 1)/tile_dim;
@@ -434,7 +221,7 @@ namespace AnyDST
 
                 __syncthreads();
 
-                mat_x = block_y * tile_dim + thread_x; // transposed matrix
+                mat_x = block_y * tile_dim + thread_x;
                 mat_y = block_x * tile_dim + thread_y;
 
                 for (int i = 0; i < tile_dim; i += block_rows) {
@@ -444,31 +231,8 @@ namespace AnyDST
                 }
             });
         amrex::Gpu::synchronize();
-        }
     };
-/*
-    void print_arr(const amrex::Real* const arr, const int nx, const int ny) {
-        for(int j=0; j<ny;++j) {
-            std::cout << "[ ";
-            for(int i=0;i<nx;++i) {
-                std::cout << arr[i+nx*j] << " , ";
-            }
-            std::cout << " ], ";
-        }
-        std::cout << std::endl;
-    }
 
-    void print_arr(amrex::GpuComplex<amrex::Real>* arr, const int nx, const int ny) {
-        for(int j=0; j<ny;++j) {
-            std::cout << "[ ";
-            for(int i=0;i<nx;++i) {
-                std::cout << arr[i+nx*j].m_real << " +1j* " << arr[i+nx*j].m_imag << " , ";
-            }
-            std::cout << " ], ";
-        }
-        std::cout << std::endl;
-    }
-*/
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
                         amrex::FArrayBox* fourier_array)
     {
@@ -522,8 +286,6 @@ namespace AnyDST
             const int nx = real_size[0]; // contiguous
             const int ny = real_size[1]; // not contiguous
 
-            std::cout << "Pos box size nx: " << nx << " ny: " << ny << std::endl;
-
             // Allocate 1d Array for 2d data or 2d transpose data
             const int real_1d_size = std::max((nx+1)*ny, (ny+1)*nx);
             const int complex_1d_size = std::max(((nx+1)/2+1)*ny, ((ny+1)/2+1)*nx);
@@ -561,26 +323,6 @@ namespace AnyDST
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
             dst_plan.m_fourier_array = fourier_array;
-            /*
-            int mx = 3;
-            int my = 4;
-
-            amrex::FArrayBox t_exxp_pos({{0,0,0}, {2,3,4}},1);
-            amrex::BaseFab<amrex::GpuComplex<amrex::Real>> t_exp_fou({{0,0,0}, {2,3,4}},1);
-            amrex::FArrayBox t_pos({{0,0,0}, {2,3,4}},1);
-            amrex::FArrayBox t_fou({{0,0,0}, {2,3,4}},1);
-
-            amrex::Array4<amrex::GpuComplex<amrex::Real>> const & test_arr = test.array();
-            amrex::ParallelFor({{0,0,0}, {2,3,4}}, [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                {
-                    test_arr(i,j,k).m_real = i+3*j+3*4*k;
-                    test_arr(i,j,k).m_imag = i+3*j+3*4*k+100;
-                });
-            amrex::GpuComplex<amrex::Real>* test_ptr = test.dataPtr();
-            for(int i=0; i<60;++i) {
-                std::cout << test_ptr[i].m_real << " ## " << test_ptr[i].m_imag << std::endl;
-            }
-            */
 
             return dst_plan;
         }
@@ -630,24 +372,22 @@ namespace AnyDST
             amrex::GpuComplex<amrex::Real>* comp_arr = dst_plan.m_expanded_fourier_array->dataPtr();
             amrex::Real* const real_arr = dst_plan.m_expanded_position_array->dataPtr();
             amrex::Real* const fourier_arr = dst_plan.m_fourier_array->dataPtr();
-            //std::cout << "######### stepp #########" << std::endl;
-            //print_arr(pos_arr, nx, ny);
+
             ToComplex(pos_arr, comp_arr, nx, ny);
-            //print_arr(comp_arr, (nx+1)/2+1, ny);
+
             C2Rfft(dst_plan.m_plan, comp_arr, real_arr);
-            //print_arr(real_arr, nx+1, ny);
+
             ToSine(real_arr, pos_arr, nx, ny);
-            //print_arr(pos_arr, nx, ny);
+
             Transpose(pos_arr, fourier_arr, nx, ny);
-            //print_arr(fourier_arr, ny, nx);
+
             ToComplex(fourier_arr, comp_arr, ny, nx);
-            //print_arr(comp_arr, (ny+1)/2+1, nx);
+
             C2Rfft(dst_plan.m_plan_b, comp_arr, real_arr);
-            //print_arr(real_arr, ny+1, nx);
+
             ToSine(real_arr, pos_arr, ny, nx);
-            //print_arr(pos_arr, ny, nx);
+
             Transpose(pos_arr, fourier_arr, ny, nx);
-            //print_arr(fourier_arr, nx, ny);
         }
     }
 }
