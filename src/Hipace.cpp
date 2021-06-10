@@ -280,7 +280,7 @@ Hipace::MakeNewLevelFromScratch (
     DefineSliceGDB(ba, dm);
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
-    m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
+    m_fields.AllocData(lev, Geom(lev), m_slice_ba, m_slice_dm);
 }
 
 void
