@@ -50,7 +50,6 @@ namespace AnyFFT
         fft_plan.m_real_array = real_array;
         fft_plan.m_complex_array = complex_array;
         fft_plan.m_dir = dir;
-        fft_plan.m_dim = dim;
 
         return fft_plan;
     }
