@@ -13,11 +13,14 @@ General parameters
     Maximum level of mesh refinement. Mesh refinement is not yet implemented, therefore only
     level `0` is supported.
 
-* ``hipace.fine_tag_lo`` (3 `float`)
+* ``hipace.patch_lo`` (3 `float`)
     Lower end of the refined grid in x, y and z.
 
-* ``hipace.fine_tag_hi`` (3 `float`)
+* ``hipace.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
+
+* ``amr.ref_ratio_vect`` (3 `int`)
+    Refinement ratio. Last one must be 1.
 
 * ``max_step`` (`integer`) optional (default `0`)
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the

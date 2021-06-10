@@ -290,8 +290,8 @@ public:
      */
     void CheckGhostSlice (int it);
 
-    amrex::RealVect fine_tag_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
-    amrex::RealVect fine_tag_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
+    amrex::RealVect patch_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
+    amrex::RealVect patch_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;

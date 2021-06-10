@@ -122,10 +122,10 @@ Hipace::Hipace () :
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        pph.get("fine_tag_lo", loc_array);
-        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) fine_tag_lo[idim] = loc_array[idim];
-        pph.get("fine_tag_hi", loc_array);
-        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) fine_tag_hi[idim] = loc_array[idim];
+        pph.get("patch_lo", loc_array);
+        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
+        pph.get("patch_hi", loc_array);
+        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
     }
 
 #ifdef AMREX_USE_MPI
@@ -300,7 +300,7 @@ Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /
             amrex::RealVect pos {AMREX_D_DECL((cell[0]+0.5_rt)*dx[0]+problo[0],
                                        (cell[1]+0.5_rt)*dx[1]+problo[1],
                                        (cell[2]+0.5_rt)*dx[2]+problo[2])};
-            if (pos > fine_tag_lo && pos < fine_tag_hi) {
+            if (pos > patch_lo && pos < patch_hi) {
                 fab(cell) = amrex::TagBox::SET;
             }
         }
