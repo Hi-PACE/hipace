@@ -246,7 +246,7 @@ void
 Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
-    AMREX_ALWAYS_ASSERT(lev == 0);
+    // AMREX_ALWAYS_ASSERT(lev == 0);
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
@@ -256,6 +256,16 @@ Hipace::MakeNewLevelFromScratch (
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
         const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
+
+        amrex::Print() << " level " << lev << "\n";
+                amrex::Print() << " box array " << ba << "\n";
+                        amrex::Print() <<  " dm " << dm << "\n";
+        amrex::Print() << "ncells_global[0] " <<  ncells_global[0] << " ncells_global[1] " <<  ncells_global[1] << " ncells_global[2] " <<  ncells_global[2] << "\n";
+        amrex::Print() << " box_size[0] " << box_size[0] << " box_size[1] " << box_size[1] << " box_size[2] " << box_size[2] << "\n";
+        amrex::Print() << " nboxes_x " << nboxes_x << " nboxes_y " << nboxes_y << " nboxes_z " << nboxes_z << " ba.size() " << ba.size() << "\n";
+
+
+
         AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
                             static_cast<long>(nboxes_y) *
                             static_cast<long>(nboxes_z) == ba.size());
