@@ -164,8 +164,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
         PhysConst phys_const = get_phys_const();
 
-        amrex::ParallelFor(domain_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        amrex::ParallelForRNG(domain_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
         {
             int ix = i - lo.x;
             int iy = j - lo.y;
@@ -197,7 +197,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                 if (density < a_min_density) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
-                get_momentum(u[0],u[1],u[2]);
+                get_momentum(u[0],u[1],u[2], engine);
 
                 const amrex::Real weight = density * scale_fac;
                 AddOneBeamParticle(pstruct, arrdata, x, y, z, u[0], u[1], u[2], weight,
@@ -243,15 +243,15 @@ InitBeamFixedWeight (int num_to_add,
         ParticleType::NextID(pid + num_to_add);
 
         const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
-        amrex::ParallelFor(
+        amrex::ParallelForRNG(
             num_to_add,
-            [=] AMREX_GPU_DEVICE (int i) noexcept
+            [=] AMREX_GPU_DEVICE (int i, const amrex::RandomEngine& engine) noexcept
             {
-                const amrex::Real x = amrex::RandomNormal(0, pos_std[0]);
-                const amrex::Real y = amrex::RandomNormal(0, pos_std[1]);
-                const amrex::Real z = amrex::RandomNormal(0, pos_std[2]);
+                const amrex::Real x = amrex::RandomNormal(0, pos_std[0], engine);
+                const amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine);
+                const amrex::Real z = amrex::RandomNormal(0, pos_std[2], engine);
                 amrex::Real u[3] = {0.,0.,0.};
-                get_momentum(u[0],u[1],u[2], z, duz_per_uz0_dzeta);
+                get_momentum(u[0],u[1],u[2], engine, z, duz_per_uz0_dzeta);
 
                 const amrex::Real cental_x_pos = pos_mean[0] + z*dx_per_dzeta;
                 const amrex::Real cental_y_pos = pos_mean[1] + z*dy_per_dzeta;

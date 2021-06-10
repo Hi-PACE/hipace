@@ -57,7 +57,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
 
     if (m_do_adaptive_time_step == 0) return;
     if (!Hipace::HeadRank() && initial) return;
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density != 0.,
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density > 0.,
         "A >0 plasma density must be specified to use an adaptive time step.");
 
     // Extract properties associated with physical size of the box

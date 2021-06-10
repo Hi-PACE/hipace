@@ -1,6 +1,7 @@
 #include "Hipace.H"
 #include "PlasmaParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/AtomicWeightTable.H"
 #include "pusher/PlasmaParticleAdvance.H"
 #include "pusher/BeamParticleAdvance.H"
 #include "pusher/FieldGather.H"
@@ -19,7 +20,8 @@ PlasmaParticleContainer::ReadParameters ()
     PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
 
     amrex::ParmParse pp(m_name);
-    std::string element;
+    std::string element = "";
+    amrex::Real mass_Da = 0;
     pp.query("element", element);
     if (element == "electron") {
         m_charge = -phys_const.q_e;
@@ -30,22 +32,25 @@ PlasmaParticleContainer::ReadParameters ()
     } else if (element == "proton") {
         m_charge = phys_const.q_e;
         m_mass = phys_const.m_p;
+    } else if (element != "") {
+        m_charge = phys_const.q_e;
+        mass_Da = standard_atomic_weights[element];
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(mass_Da != 0, "Unknown Element");
     }
 
-    amrex::Real mass_Da;
-    if(pp.query("mass_Da", mass_Da)) {
+    pp.query("mass_Da", mass_Da);
+    if(mass_Da != 0) {
         m_mass = phys_const.m_p * mass_Da / 1.007276466621;
     }
     pp.query("mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
 
-    pp.query("initial_ion_level", m_init_ion_lev);
-    m_can_ionize = (m_init_ion_lev >= 0);
+    bool ion_lev_specified = pp.query("initial_ion_level", m_init_ion_lev);
+    m_can_ionize = pp.contains("ionization_product");
 
     pp.query("can_ionize", m_can_ionize);
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
-        m_charge = phys_const.q_e;
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!normalized_units,
             "Cannot use Ionization Module in normalized units");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
@@ -58,6 +63,10 @@ PlasmaParticleContainer::ReadParameters ()
     if(!pp.query("charge", m_charge)) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge != 0,
             "The plasma particle charge must be specified");
+    }
+
+    if(ion_lev_specified && !m_can_ionize) {
+        m_charge *= m_init_ion_lev;
     }
     pp.query("ionization_product", m_product_name);
     pp.query("density", m_density);
@@ -185,8 +194,8 @@ IonizationModule (const int lev,
 
         long num_ions = ptile_ion.numParticles();
 
-        amrex::ParallelFor(num_ions,
-            [=] AMREX_GPU_DEVICE (long ip) {
+        amrex::ParallelForRNG(num_ions,
+            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
 
             amrex::ParticleReal xp, yp, zp;
             int pid;
@@ -220,7 +229,7 @@ IonizationModule (const int lev,
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
             amrex::Real p = 1._rt - std::exp( - w_dtau );
 
-            amrex::Real random_draw = amrex::Random();
+            amrex::Real random_draw = amrex::Random(engine);
             if (random_draw < p)
             {
                 ion_lev[ip] += 1;

@@ -119,6 +119,15 @@ Hipace::Hipace () :
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
 
+    if (maxLevel() > 0) {
+        AMREX_ALWAYS_ASSERT(maxLevel() < 2);
+        amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+        pph.get("patch_lo", loc_array);
+        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
+        pph.get("patch_hi", loc_array);
+        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
+    }
+
 #ifdef AMREX_USE_MPI
     pph.query("skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();
@@ -272,6 +281,30 @@ Hipace::MakeNewLevelFromScratch (
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
     m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
+}
+
+void
+Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /*ngrow*/)
+{
+    using namespace amrex::literals;
+    const amrex::Real* problo = Geom(lev).ProbLo();
+    const amrex::Real* dx = Geom(lev).CellSize();
+
+    for (amrex::MFIter mfi(tags); mfi.isValid(); ++mfi)
+    {
+        auto& fab = tags[mfi];
+        const amrex::Box& bx = fab.box();
+        for (amrex::BoxIterator bi(bx); bi.ok(); ++bi)
+        {
+            const amrex::IntVect& cell = bi();
+            amrex::RealVect pos {AMREX_D_DECL((cell[0]+0.5_rt)*dx[0]+problo[0],
+                                       (cell[1]+0.5_rt)*dx[1]+problo[1],
+                                       (cell[2]+0.5_rt)*dx[2]+problo[2])};
+            if (pos > patch_lo && pos < patch_hi) {
+                fab(cell) = amrex::TagBox::SET;
+            }
+        }
+    }
 }
 
 void
@@ -1197,7 +1230,7 @@ void
 Hipace::FillDiagnostics (int lev, int i_slice)
 {
     m_fields.Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
-         m_diags.getF(lev), m_diags.sliceDir());
+                  m_diags.getF(lev), m_diags.sliceDir(), Geom(lev));
 }
 
 void

@@ -87,11 +87,6 @@ public:
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
-    /** get function for the main 3D array F */
-    amrex::Vector<amrex::MultiFab>& getF () { return m_F; }
-    /** get function for the main 3D array F
-     * \param lev MR level */
-    amrex::MultiFab& getF (int lev) { return m_F[lev]; }
     /** get function for the 2D slices */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>>& getSlices () {return m_slices; }
     /** get function for the 2D slices
@@ -114,9 +109,10 @@ public:
      * \param[in] ncomp number of components to copy
      * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
+     * \param[in] geom main geometry
      */
     void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp, amrex::FArrayBox& fab, int slice_dir);
+               int ncomp, amrex::FArrayBox& fab, int slice_dir, amrex::Geometry geom);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
@@ -238,8 +234,6 @@ public:
                                        const int By_iter_comp, const amrex::Geometry& geom);
 
 private:
-    /** Vector over levels, all fields */
-    amrex::Vector<amrex::MultiFab> m_F;
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
     /** Number of guard cells for slices MultiFab */
