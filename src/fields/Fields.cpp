@@ -6,8 +6,7 @@
 #include "utils/Constants.H"
 
 Fields::Fields (Hipace const* a_hipace)
-    : m_F(a_hipace->maxLevel()+1),
-      m_slices(a_hipace->maxLevel()+1)
+    : m_slices(a_hipace->maxLevel()+1)
 {
     amrex::ParmParse ppf("fields");
     ppf.query("do_dirichlet_poisson", m_do_dirichlet_poisson);
@@ -25,9 +24,6 @@ Fields::AllocData (
 
     // Only xy slices need guard cells, there is no deposition to/gather from the output array F.
     amrex::IntVect nguards_F = amrex::IntVect(0,0,0);
-
-    // The Arena uses pinned memory.
-    m_F[lev].define(ba, dm, Comps[WhichSlice::This]["N"], nguards_F, amrex::MFInfo().SetAlloc(false));
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
