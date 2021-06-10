@@ -5,7 +5,7 @@ hipace.verbose = 1
 hipace.output_period = 1
 random_seed = 4
 amr.blocking_factor = 2
-amr.max_level = 1
+amr.max_level = 0
 
 max_step = 9
 

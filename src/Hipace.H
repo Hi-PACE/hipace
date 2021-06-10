@@ -44,9 +44,9 @@ public:
         const amrex::DistributionMapping& dm) override;
 
     /** Tag cells for refinement */
-    void ErrorEst (
+    virtual void ErrorEst (
                    int /*lev*/, amrex::TagBoxArray& /*tags*/,
-                   amrex::Real /*time*/, int /*ngrow*/) override {}
+                   amrex::Real /*time*/, int /*ngrow*/) final;
 
     /** Make a new level using provided BoxArray and DistributionMapping and
      * fill with interpolated coarse level data */
@@ -290,6 +290,8 @@ public:
      */
     void CheckGhostSlice (int it);
 
+    amrex::RealVect patch_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
+    amrex::RealVect patch_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
 private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
