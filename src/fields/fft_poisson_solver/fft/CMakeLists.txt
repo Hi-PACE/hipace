@@ -9,6 +9,7 @@ elif (HiPACE_COMPUTE STREQUAL HIP)
   target_sources(HiPACE
       PRIVATE
         WrapRocFFT.cpp
+        WrapRocDST.cpp
   )
 else()
   target_sources(HiPACE
