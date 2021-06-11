@@ -391,7 +391,8 @@ Hipace::Evolve ()
 
             const amrex::Box& bx = boxArray(lev)[it];
 
-            // FIXME: dirty workaround to not touch the box in general but only for IO.
+            // FIXME: dirty workaround to not touch the box in general
+            // but resize the boxes on all levels for IO.
             for (int lev_loc = 0; lev_loc < m_nlev; ++lev_loc) {
                 const amrex::Box& bx_loc = boxArray(lev_loc)[it];
                 ResizeFDiagFAB(bx_loc, lev_loc);
