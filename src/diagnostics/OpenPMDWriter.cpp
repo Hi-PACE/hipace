@@ -40,7 +40,7 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
 #endif
     }
 
-    if (nlev > 0) {
+    if (nlev > 1) {
         for (int lev=0; lev<nlev; ++lev) {
             std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
                                    + m_openpmd_backend;
