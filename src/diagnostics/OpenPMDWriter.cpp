@@ -43,11 +43,10 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (nlev > 0) {
         for (int lev=0; lev<nlev; ++lev) {
             std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
-                                 + m_openpmd_backend;
+                                   + m_openpmd_backend;
 
             m_outputSeries.push_back(std::make_unique< openPMD::Series >(
                 filename, openPMD::Access::CREATE) );
-
             m_last_output_dumped.push_back(-1);
         }
     } else {
@@ -55,7 +54,6 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
 
         m_outputSeries.push_back(std::make_unique< openPMD::Series >(
             filename, openPMD::Access::CREATE) );
-
         m_last_output_dumped.push_back(-1);
     }
 
@@ -388,6 +386,5 @@ void OpenPMDWriter::reset (const int nlev)
 {
     for (int lev = 0; lev<nlev; ++lev) m_outputSeries[lev].reset();
 }
-
 
 #endif // HIPACE_USE_OPENPMD
