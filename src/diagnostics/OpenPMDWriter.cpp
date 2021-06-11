@@ -382,9 +382,11 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     }
 }
 
-void OpenPMDWriter::reset (const int nlev)
+void OpenPMDWriter::reset ()
 {
-    for (int lev = 0; lev<nlev; ++lev) m_outputSeries[lev].reset();
+    for (int lev = 0; lev<m_outputSeries.size(); ++lev) {
+        m_outputSeries[lev].reset();
+    }
 }
 
 #endif // HIPACE_USE_OPENPMD

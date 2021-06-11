@@ -146,11 +146,8 @@ public:
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, amrex::Vector<amrex::Geometry> const& geom3D,
         const OpenPMDWriterCallType call_type);
 
-    /** \brief Resets the openPMD series of all levels
-     *
-     * \param[in] nlev number of mesh refinement levels
-     */
-    void reset (const int nlev);
+    /** \brief Resets the openPMD series of all levels */
+    void reset ();
 
     /** Prefix/path for the output files */
     std::string m_file_prefix = "diags/hdf5";
