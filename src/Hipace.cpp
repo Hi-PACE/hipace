@@ -248,7 +248,6 @@ void
 Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
-    // AMREX_ALWAYS_ASSERT(lev == 0);
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
@@ -258,16 +257,6 @@ Hipace::MakeNewLevelFromScratch (
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
         const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
-
-        amrex::Print() << " level " << lev << "\n";
-                amrex::Print() << " box array " << ba << "\n";
-                        amrex::Print() <<  " dm " << dm << "\n";
-        amrex::Print() << "ncells_global[0] " <<  ncells_global[0] << " ncells_global[1] " <<  ncells_global[1] << " ncells_global[2] " <<  ncells_global[2] << "\n";
-        amrex::Print() << " box_size[0] " << box_size[0] << " box_size[1] " << box_size[1] << " box_size[2] " << box_size[2] << "\n";
-        amrex::Print() << " nboxes_x " << nboxes_x << " nboxes_y " << nboxes_y << " nboxes_z " << nboxes_z << " ba.size() " << ba.size() << "\n";
-
-
-
         AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
                             static_cast<long>(nboxes_y) *
                             static_cast<long>(nboxes_z) == ba.size());
@@ -372,7 +361,7 @@ Hipace::Evolve ()
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, maxLevel()+1);
+        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, m_nlev);
 #endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
@@ -402,12 +391,11 @@ Hipace::Evolve ()
 
             const amrex::Box& bx = boxArray(lev)[it];
 
-            // FIXME: this is super dirty, we need a proper loop over levels
+            // FIXME: dirty workaround to not touch the box in general but only for IO.
             for (int lev_loc = 0; lev_loc < m_nlev; ++lev_loc) {
                 const amrex::Box& bx_loc = boxArray(lev_loc)[it];
                 ResizeFDiagFAB(bx_loc, lev_loc);
             }
-
 
             amrex::Vector<BeamBins> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
@@ -451,7 +439,7 @@ Hipace::Evolve ()
     }
 
 #ifdef HIPACE_USE_OPENPMD
-    if (m_output_period > 0) m_openpmd_writer.reset(maxLevel()+1);
+    if (m_output_period > 0) m_openpmd_writer.reset(m_nlev);
 #endif
 }
 
@@ -1267,9 +1255,8 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
-    const int nlev = maxLevel()+1;
     m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
-                        m_physical_time, output_step, nlev, getDiagSliceDir(), varnames, beamnames,
+                        m_physical_time, output_step, m_nlev, getDiagSliceDir(), varnames, beamnames,
                         it, m_box_sorters, geom, call_type);
 #else
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
