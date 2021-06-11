@@ -14,8 +14,8 @@ Fields::Fields (Hipace const* a_hipace)
 
 void
 Fields::AllocData (
-    int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
-    amrex::Geometry const& geom, const amrex::BoxArray& slice_ba, const amrex::DistributionMapping& slice_dm)
+    int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
+    const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
