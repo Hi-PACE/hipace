@@ -32,6 +32,8 @@ Fields::AllocData (
         m_slices[lev][islice].setVal(0.0);
     }
 
+    // construct PoissonSolver only for maingrid FIXME: add refined grids
+    if (lev>0) return;
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.

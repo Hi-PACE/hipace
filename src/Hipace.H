@@ -290,6 +290,7 @@ public:
      */
     void CheckGhostSlice (int it);
 
+    static int m_nlev; /**< number of MR levels */
     amrex::RealVect patch_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
     amrex::RealVect patch_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
 private:
@@ -313,7 +314,7 @@ private:
     Diagnostic m_diags;
 
     void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
-    void FillDiagnostics (int lev, int i_slice);
+    void FillDiagnostics (int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
     /** \brief get diagnostics Component names of Fields to output */

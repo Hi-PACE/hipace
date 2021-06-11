@@ -20,7 +20,8 @@ OpenPMDWriter::OpenPMDWriter ()
 }
 
 void
-OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, const int max_step)
+OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, const int max_step,
+                                const int nlev)
 {
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
 
@@ -28,8 +29,8 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
 
-     // pick first available backend if default is chosen
-     if( m_openpmd_backend == "default" ) {
+    // pick first available backend if default is chosen
+    if( m_openpmd_backend == "default" ) {
 #if openPMD_HAVE_HDF5==1
         m_openpmd_backend = "h5";
 #elif openPMD_HAVE_ADIOS2==1
@@ -37,46 +38,65 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
 #else
         m_openpmd_backend = "json";
 #endif
-     }
+    }
 
-    std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
+    if (nlev > 0) {
+        for (int lev=0; lev<nlev; ++lev) {
+            std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
+                                 + m_openpmd_backend;
 
-    m_outputSeries = std::make_unique< openPMD::Series >(
-        filename, openPMD::Access::CREATE);
+            m_outputSeries.push_back(std::make_unique< openPMD::Series >(
+                filename, openPMD::Access::CREATE) );
+
+            m_last_output_dumped.push_back(-1);
+        }
+    } else {
+        std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
+
+        m_outputSeries.push_back(std::make_unique< openPMD::Series >(
+            filename, openPMD::Access::CREATE) );
+
+        m_last_output_dumped.push_back(-1);
+    }
+
+
 
     // TODO: meta-data: author, mesh path, extensions, software
 }
 
 void
 OpenPMDWriter::WriteDiagnostics (
-    amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
+    amrex::Vector<amrex::FArrayBox> & a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
-    const amrex::Real physical_time, const int output_step, const int lev,
+    const amrex::Real physical_time, const int output_step, const int nlev,
     const int slice_dir, const amrex::Vector< std::string > varnames,
     const amrex::Vector< std::string > beamnames, const int it,
-    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const amrex::Geometry& geom3D,
+    const amrex::Vector<BoxSorter>& a_box_sorter_vec, amrex::Vector<amrex::Geometry> const& geom3D,
     const OpenPMDWriterCallType call_type)
 {
-    openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
+    for (int lev=0; lev<nlev; ++lev) {
+        openPMD::Iteration iteration = m_outputSeries[lev]->iterations[output_step];
 
-    if (call_type == OpenPMDWriterCallType::beams ) {
-        iteration.setTime(physical_time);
-        WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D, beamnames);
-        m_outputSeries->flush();
+        if (call_type == OpenPMDWriterCallType::beams ) {
+            iteration.setTime(physical_time);
+            if (lev == 0) {
+                WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D[lev], beamnames, lev);
+            }
+            m_outputSeries[lev]->flush();
 
-    } else if (call_type == OpenPMDWriterCallType::fields ) {
-        WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step);
-        m_outputSeries->flush();
-        m_last_output_dumped = output_step;
+        } else if (call_type == OpenPMDWriterCallType::fields ) {
+            WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step, lev);
+            m_outputSeries[lev]->flush();
+            m_last_output_dumped[lev] = output_step;
+        }
     }
-
 }
 
 void
 OpenPMDWriter::WriteFieldData (
-    amrex::FArrayBox const& fab, amrex::Geometry const& geom,
+    amrex::FArrayBox & fab, amrex::Geometry const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
-    openPMD::Iteration iteration, const int output_step)
+    openPMD::Iteration iteration, const int output_step, const int lev)
 {
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
@@ -118,7 +138,7 @@ OpenPMDWriter::WriteFieldData (
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
-        if (m_last_output_dumped != output_step) {
+        if (m_last_output_dumped[lev] != output_step) {
             openPMD::Dataset dataset(datatype, global_size);
             field_comp.resetDataset(dataset);
         }
@@ -128,7 +148,6 @@ OpenPMDWriter::WriteFieldData (
         std::shared_ptr< amrex::Real const > data;
 
         data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
-
 
         // Determine the offset and size of this data chunk in the global output
         amrex::IntVect const box_offset = data_box.smallEnd();
@@ -148,7 +167,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                                       const int output_step, const int it,
                                       const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                                       const amrex::Geometry& geom,
-                                      const amrex::Vector< std::string > beamnames)
+                                      const amrex::Vector< std::string > beamnames, const int lev)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
@@ -165,7 +184,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         auto& beam = beams.getBeam(ibeam);
 
         const unsigned long long np = beams.get_total_num_particles(ibeam);
-        if (m_last_output_dumped != output_step) {
+        if (m_last_output_dumped[lev] != output_step) {
             SetupPos(beam_species, beam, np, geom);
             SetupRealProperties(beam_species, m_real_names, np);
         }
@@ -364,5 +383,11 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
         } // end for NumSoARealAttributes
     }
 }
+
+void OpenPMDWriter::reset (const int nlev)
+{
+    for (int lev = 0; lev<nlev; ++lev) m_outputSeries[lev].reset();
+}
+
 
 #endif // HIPACE_USE_OPENPMD
