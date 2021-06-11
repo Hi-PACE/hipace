@@ -85,7 +85,7 @@ private:
      * \param[in] output_step current time step to dump
      * \param[in] lev MR level
      */
-    void WriteFieldData (amrex::FArrayBox & fab, amrex::Geometry const& geom,
+    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
                          const int slice_dir, const amrex::Vector< std::string > varnames,
                          openPMD::Iteration iteration, const int output_step, const int lev);
 
@@ -138,7 +138,7 @@ public:
      * \param[in] call_type whether the beams or the fields should be written to file
      */
     void WriteDiagnostics(
-        amrex::Vector<amrex::FArrayBox> & a_mf, MultiBeam& a_multi_beam,
+        amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Real physical_time, const int output_step, const int nlev,
         const int slice_dir, const amrex::Vector< std::string > varnames,
