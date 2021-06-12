@@ -15,7 +15,8 @@ Fields::Fields (Hipace const* a_hipace)
 void
 Fields::AllocData (
     int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
-    amrex::Geometry const& geom, const amrex::BoxArray& slice_ba, const amrex::DistributionMapping& slice_dm)
+    amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
+    const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
@@ -32,21 +33,19 @@ Fields::AllocData (
         m_slices[lev][islice].setVal(0.0);
     }
 
-    // FIXME the Poisson solver must be constructed per level, here it is only constructed for lev 0
-    if (lev>0) return;
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
     if (m_do_dirichlet_poisson){
-        m_poisson_solver = std::unique_ptr<FFTPoissonSolverDirichlet>(
+        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichlet>(
             new FFTPoissonSolverDirichlet(getSlices(lev, WhichSlice::This).boxArray(),
                                           getSlices(lev, WhichSlice::This).DistributionMap(),
-                                          geom));
+                                          geom[lev])) );
     } else {
-        m_poisson_solver = std::unique_ptr<FFTPoissonSolverPeriodic>(
+        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
             new FFTPoissonSolverPeriodic(getSlices(lev, WhichSlice::This).boxArray(),
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
-                                         geom));
+                                         geom[lev]))  );
     }
 }
 
@@ -255,14 +254,14 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
                         Comps[WhichSlice::This]["Psi"], 1);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    amrex::MultiFab::Copy(m_poisson_solver->StagingArea(), getSlices(lev, WhichSlice::This),
+    amrex::MultiFab::Copy(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
                               Comps[WhichSlice::This]["jz"], 0, 1, 0);
-    m_poisson_solver->StagingArea().mult(-1./phys_const.c);
-    amrex::MultiFab::Add(m_poisson_solver->StagingArea(), getSlices(lev, WhichSlice::This),
+    m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
+    amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
                           Comps[WhichSlice::This]["rho"], 0, 1, 0);
-    m_poisson_solver->StagingArea().mult(-1./phys_const.ep0);
+    m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
 
-    m_poisson_solver->SolvePoissonEquation(lhs);
+    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */
     amrex::ParallelContext::push(m_comm_xy);
@@ -306,7 +305,7 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
     // from the slice MF, and store in the staging area of poisson_solver
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         1./(phys_const.ep0*phys_const.c),
@@ -315,7 +314,7 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
 
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         1./(phys_const.ep0*phys_const.c),
@@ -324,7 +323,7 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver->SolvePoissonEquation(lhs);
+    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 }
 
 void
@@ -338,7 +337,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
     // and store in the staging area of poisson_solver
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         -phys_const.mu0,
@@ -348,7 +347,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
     LongitudinalDerivative(
         getSlices(lev, WhichSlice::Previous1),
         getSlices(lev, WhichSlice::Next),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         geom.CellSize(Direction::z),
         phys_const.mu0,
         SliceOperatorType::Add,
@@ -357,7 +356,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver->SolvePoissonEquation(Bx_iter);
+    m_poisson_solver[lev]->SolvePoissonEquation(Bx_iter);
 }
 
 void
@@ -371,7 +370,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
     // and store in the staging area of poisson_solver
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         phys_const.mu0,
@@ -381,7 +380,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
     LongitudinalDerivative(
         getSlices(lev, WhichSlice::Previous1),
         getSlices(lev, WhichSlice::Next),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         geom.CellSize(Direction::z),
         -phys_const.mu0,
         SliceOperatorType::Add,
@@ -390,7 +389,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver->SolvePoissonEquation(By_iter);
+    m_poisson_solver[lev]->SolvePoissonEquation(By_iter);
 }
 
 void
@@ -407,7 +406,7 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
     // from the slice MF, and store in the staging area of m_poisson_solver
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         Direction::y,
         geom.CellSize(Direction::y),
         phys_const.mu0,
@@ -416,7 +415,7 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
 
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
-        m_poisson_solver->StagingArea(),
+        m_poisson_solver[lev]->StagingArea(),
         Direction::x,
         geom.CellSize(Direction::x),
         -phys_const.mu0,
@@ -425,7 +424,7 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
-    m_poisson_solver->SolvePoissonEquation(lhs);
+    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 }
 
 void

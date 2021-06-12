@@ -82,11 +82,11 @@ public:
      */
     void AllocData (
         int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
-        amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
+        amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
-    std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
+    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** get function for the 2D slices */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>>& getSlices () {return m_slices; }
     /** get function for the 2D slices
