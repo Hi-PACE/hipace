@@ -26,7 +26,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     using namespace amrex::literals;
 
     if (m_use_grid_current == 0) return;
-    
+
     // grid current deposits only up to its finest level
     if (m_finest_level < lev) return;
 
