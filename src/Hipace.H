@@ -296,9 +296,9 @@ private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
 
-    amrex::Geometry m_slice_geom;
-    amrex::DistributionMapping m_slice_dm;
-    amrex::BoxArray m_slice_ba;
+    amrex::Vector<amrex::Geometry> m_slice_geom;
+    amrex::Vector<amrex::DistributionMapping> m_slice_dm;
+    amrex::Vector<amrex::BoxArray> m_slice_ba;
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     /** Linear operator for the explicit Bx and By solver */
@@ -351,10 +351,12 @@ private:
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.
      *
+     * \param[in] lev level of mesh refinement
      * \param[in] ba BoxArray of the whole domain
      * \param[in] dm DistributionMappint of the whole domain
      */
-    void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+    void DefineSliceGDB (const int lev, const amrex::BoxArray& ba,
+                         const amrex::DistributionMapping& dm);
 
     int leftmostBoxWithParticles () const;
 };

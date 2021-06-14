@@ -149,7 +149,7 @@ Hipace::~Hipace ()
 }
 
 void
-Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
+Hipace::DefineSliceGDB (const int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
 {
     std::map<int,amrex::Vector<amrex::Box> > boxes;
     for (int i = 0; i < ba.size(); ++i) {
@@ -190,13 +190,12 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     }
 
     // Slice BoxArray
-    m_slice_ba = amrex::BoxArray(std::move(bl));
+    m_slice_ba.push_back(amrex::BoxArray(std::move(bl)));
 
     // Slice DistributionMapping
-    m_slice_dm = amrex::DistributionMapping(std::move(procmap));
+    m_slice_dm.push_back(amrex::DistributionMapping(std::move(procmap)));
 
     // Slice Geometry
-    constexpr int lev = 0;
     // Set the lo and hi of domain and probdomain in the z direction
     amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
     amrex::Box tmp_dom = Geom(lev).Domain();
@@ -207,8 +206,8 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     tmp_probdom.setHi(Direction::z, hi);
     tmp_dom.setSmall(Direction::z, 0);
     tmp_dom.setBig(Direction::z, 0);
-    m_slice_geom = amrex::Geometry(
-        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
+    m_slice_geom.push_back(amrex::Geometry(
+        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic()));
 }
 
 bool
@@ -234,7 +233,7 @@ Hipace::InitData ()
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
     m_multi_beam.InitData(geom[lev]);
-    m_multi_plasma.InitData(lev, m_slice_ba, m_slice_dm, m_slice_geom, geom[lev]);
+    m_multi_plasma.InitData(lev, m_slice_ba[lev], m_slice_dm[lev], m_slice_geom[lev], geom[lev]);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
@@ -244,8 +243,26 @@ Hipace::InitData ()
 
 void
 Hipace::MakeNewLevelFromScratch (
-    int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
+    int lev, amrex::Real /*time*/, const amrex::BoxArray& a_ba, const amrex::DistributionMapping&)
 {
+    amrex::BoxArray ba;
+    if (lev == 0) {
+        ba = a_ba;
+    } else if (lev == 1) {
+        // for lev == 1, we have to create the box array by hand: it is correct transversely,
+        // but not longitudinally. We use the box array from level 0 longitudinally and use the
+        // transverse dimensions from level 1.
+        ba = boxArray(0);
+        for (int i = 0; i<ba.size(); i++) {
+            ba[i].setSmall(0, a_ba[0].smallEnd(Direction::x));
+            ba[i].setSmall(1, a_ba[1].smallEnd(Direction::y));
+            ba[i].setBig  (0, a_ba[0].bigEnd  (Direction::x));
+            ba[i].setBig  (1, a_ba[1].bigEnd  (Direction::y));
+        }
+        SetBoxArray(lev, ba); // Let AmrCore know
+    } else {
+        amrex::Abort("Only lev <= 1 implemented");
+    }
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
@@ -276,10 +293,10 @@ Hipace::MakeNewLevelFromScratch (
         dm.define(std::move(procmap));
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
-    DefineSliceGDB(ba, dm);
+    DefineSliceGDB(lev, ba, dm);
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
-    m_fields.AllocData(lev, Geom(), m_slice_ba, m_slice_dm);
+    m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev]);
 }
 
 void
