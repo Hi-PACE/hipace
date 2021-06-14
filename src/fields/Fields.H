@@ -79,11 +79,11 @@ public:
      * \param[in] slice_dm DistributionMapping for the slice
      */
     void AllocData (
-        int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
+        int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
-    std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
+    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** get function for the 2D slices */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>>& getSlices () {return m_slices; }
     /** get function for the 2D slices
