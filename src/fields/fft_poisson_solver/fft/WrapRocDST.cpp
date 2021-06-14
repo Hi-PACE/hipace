@@ -106,17 +106,21 @@ namespace AnyDST
             dst_plan.m_expanded_position_array->box(), 0,
             dst_plan.m_expanded_position_array->nComp());
 
+        // check for type of expanded size, should be const size_t *
         const amrex::IntVect& expanded_size = expanded_position_box.length();
+        const std::size_t lengths[] = {AMREX_D_DECL(std::size_t(expanded_size[0]),
+                                                    std::size_t(expanded_size[1]),
+                                                    std::size_t(expanded_size[2]))};
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
         rocfft_status result;
-        result = rocfft_plan_create(&(dst_plan.m_plan),
-                                    rocfft_placement_notinplace,
-                                    rocfft_transform_type_real_forward,
-                                    precision,
-                                    dim,
-                                    expanded_size,
-                                    1,
+        result = rocfft_plan_create(&(dst_plan.m_plan), \
+                                    rocfft_placement_notinplace, \
+                                    rocfft_transform_type_real_forward, \
+                                    precision, \
+                                    dim, \
+                                    lengths, \
+                                    1, \
                                     nullptr);
 
         assert_rocfft_status("rocfft_plan_create", result);
@@ -153,9 +157,11 @@ namespace AnyDST
         assert_rocfft_status("rocfft_execution_info_set_stream", result);
 
         // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
-        result = rocfft_execute(dst_plan.m_plan,
-                                dst_plan.m_expanded_position_array->dataPtr(),
-            reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr())
+        // 2nd argument type still wrong, should be void*
+        // reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()), //3rd arg
+        result = rocfft_execute(dst_plan.m_plan, \
+                                (void**)&(dst_plan.m_expanded_position_array), \
+                                (void**)&(dst_plan.m_expanded_fourier_array), \
                                 execinfo);
 
         assert_rocfft_status("rocfft_execute", result);
