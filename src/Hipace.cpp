@@ -260,6 +260,8 @@ Hipace::MakeNewLevelFromScratch (
             ba[i].setBig  (1, a_ba[1].bigEnd  (Direction::y));
         }
         SetBoxArray(lev, ba); // Let AmrCore know
+    } else {
+        amrex::Abort("Only lev <= 1 implemented");
     }
 
     // We are going to ignore the DistributionMapping argument and build our own.
