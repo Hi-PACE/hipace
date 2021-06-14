@@ -90,6 +90,7 @@ public:
                            Fields& fields);
 
     amrex::Real m_density {0}; /**< Density of the plasma */
+    int m_MR_level {0}; /**< mesh refinement level on which the plasma lives */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};

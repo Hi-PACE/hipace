@@ -14,6 +14,7 @@ GridCurrent::GridCurrent ()
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
         pp.get("position_std", loc_array);
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
+        pp.query("finest_level", m_finest_level);
     }
 }
 
@@ -25,6 +26,9 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     using namespace amrex::literals;
 
     if (m_use_grid_current == 0) return;
+    
+    // grid current deposits only up to its finest level
+    if (m_finest_level < lev) return;
 
     const auto plo = geom.ProbLoArray();
     amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();

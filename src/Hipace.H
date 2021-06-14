@@ -129,12 +129,10 @@ public:
     /** \brief Full evolve on 1 slice
      *
      * \param[in] islice slice number
-     * \param[in] lev MR level
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice, int lev, const int ibox,
-                        amrex::Vector<BeamBins>& bins);
+    void SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -313,7 +311,7 @@ private:
     Diagnostic m_diags;
 
     void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
-    void FillDiagnostics (int i_slice);
+    void FillDiagnostics (const int lev, int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
     /** \brief get diagnostics Component names of Fields to output */
