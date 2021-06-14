@@ -45,7 +45,6 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-int Hipace::m_nlev = 0;
 
 Hipace&
 Hipace::GetInstance ()
@@ -120,7 +119,6 @@ Hipace::Hipace () :
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
 
-    m_nlev = maxLevel()+1;
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
@@ -361,7 +359,7 @@ Hipace::Evolve ()
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, m_nlev);
+        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
 #endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
@@ -393,7 +391,7 @@ Hipace::Evolve ()
 
             // FIXME: dirty workaround to not touch the box in general
             // but resize the boxes on all levels for IO.
-            for (int lev_loc = 0; lev_loc < m_nlev; ++lev_loc) {
+            for (int lev_loc = 0; lev_loc < finestLevel()+1; ++lev_loc) {
                 const amrex::Box& bx_loc = boxArray(lev_loc)[it];
                 ResizeFDiagFAB(bx_loc, lev_loc);
             }
@@ -1236,7 +1234,7 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
 void
 Hipace::FillDiagnostics (int i_slice)
 {
-    for (int lev = 0; lev < m_nlev; ++lev) {
+    for (int lev = 0; lev < finestLevel()+1; ++lev) {
         m_fields.Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
                       m_diags.getF(lev), m_diags.sliceDir(), Geom(lev));
     }
@@ -1257,7 +1255,7 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
-                        m_physical_time, output_step, m_nlev, getDiagSliceDir(), varnames, beamnames,
+                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames, beamnames,
                         it, m_box_sorters, geom, call_type);
 #else
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
