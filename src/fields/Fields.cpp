@@ -22,9 +22,6 @@ Fields::AllocData (
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
 
-    // Only xy slices need guard cells, there is no deposition to/gather from the output array F.
-    amrex::IntVect nguards_F = amrex::IntVect(0,0,0);
-
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
             slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
