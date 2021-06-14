@@ -290,7 +290,6 @@ public:
      */
     void CheckGhostSlice (int it);
 
-    static int m_nlev; /**< number of MR levels */
     amrex::RealVect patch_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
     amrex::RealVect patch_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
 private:

@@ -14,8 +14,7 @@ Fields::Fields (Hipace const* a_hipace)
 
 void
 Fields::AllocData (
-    int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
-    amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
+    int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
     const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
