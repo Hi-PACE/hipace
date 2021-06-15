@@ -300,9 +300,9 @@ Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /
             amrex::RealVect pos {AMREX_D_DECL((cell[0]+0.5_rt)*dx[0]+problo[0],
                                         (cell[1]+0.5_rt)*dx[1]+problo[1],
                                         (cell[2]+0.5_rt)*dx[2]+problo[2])};
-             if (pos > patch_lo && pos < patch_hi) {
-                 fab(cell) = amrex::TagBox::SET;
-             }
+            if (pos > patch_lo && pos < patch_hi) {
+                fab(cell) = amrex::TagBox::SET;
+            }
         }
     }
 }
