@@ -1,8 +1,3 @@
-#include "AnyDST.H"
-#include "utils/HipaceProfilerWrapper.H"
-
-namespace AnyDST
-{
 #ifdef AMREX_USE_FLOAT
     const auto VendorCreatePlanR2R2D = fftwf_plan_r2r_2d;
 #else
@@ -53,5 +48,3 @@ namespace AnyDST
         fftw_execute( dst_plan.m_plan );
 #  endif
     }
-
-}

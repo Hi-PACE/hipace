@@ -1,71 +1,8 @@
-#include "AnyDST.H"
-#include "CuFFTUtils.H"
-#include "utils/HipaceProfilerWrapper.H"
-
-namespace AnyDST
-{
 #ifdef AMREX_USE_FLOAT
     cufftType VendorR2C = CUFFT_R2C;
 #else
     cufftType VendorR2C = CUFFT_D2Z;
 #endif
-
-    /** \brief Extend src into a symmetrized larger array dst
-     *
-     * \param[in,out] dst destination array, odd symmetry around 0 and the middle points in x and y
-     * \param[in] src source array
-     */
-    void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
-    {
-        HIPACE_PROFILE("AnyDST::ExpandR2R()");
-        constexpr int scomp = 0;
-        constexpr int dcomp = 0;
-
-        const amrex::Box bx = src.box();
-        const int nx = bx.length(0);
-        const int ny = bx.length(1);
-        amrex::Array4<amrex::Real const> const & src_array = src.array();
-        amrex::Array4<amrex::Real> const & dst_array = dst.array();
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                /* upper left quadrant */
-                dst_array(i+1,j+1,0,dcomp) = src_array(i, j, k, scomp);
-                /* lower left quadrant */
-                dst_array(i+1,j+ny+2,0,dcomp) = -src_array(i, ny-1-j, k, scomp);
-                /* upper right quadrant */
-                dst_array(i+nx+2,j+1,0,dcomp) = -src_array(nx-1-i, j, k, scomp);
-                /* lower right quadrant */
-                dst_array(i+nx+2,j+ny+2,0,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
-            }
-            );
-    };
-
-    /** \brief Extract symmetrical src array into smaller array dst
-     *
-     * \param[in,out] dst destination array
-     * \param[in] src destination array, symmetric in x and y
-     */
-    void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
-    {
-        HIPACE_PROFILE("AnyDST::ShrinkC2R()");
-        constexpr int scomp = 0;
-        constexpr int dcomp = 0;
-
-        const amrex::Box bx = dst.box();
-        amrex::Array4<amrex::GpuComplex<amrex::Real> const> const & src_array = src.array();
-        amrex::Array4<amrex::Real> const & dst_array = dst.array();
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                /* upper left quadrant */
-                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
-            }
-            );
-    };
 
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
                         amrex::FArrayBox* fourier_array)
@@ -144,4 +81,3 @@ namespace AnyDST
                 CuFFTUtils::cufftErrorToString(result) << "\n";
         }
     }
-}
