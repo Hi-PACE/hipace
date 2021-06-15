@@ -78,10 +78,10 @@ public:
      * \param[in,out] fields the general field class, modified by this function
      * \param[in] which_slice slice in which the densities are deposited
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
-     * \param[in] lev MR level
+     * \param[in] nlev number of MR levels
      */
     void DepositNeutralizingBackground (
-        Fields & fields, int which_slice, amrex::Geometry const& gm, int const lev);
+        Fields & fields, int which_slice, amrex::Geometry const& gm, int const nlev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *
