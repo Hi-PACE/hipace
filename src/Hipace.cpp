@@ -195,15 +195,6 @@ Hipace::DefineSliceGDB (const int lev, const amrex::BoxArray& ba, const amrex::D
     // Slice DistributionMapping
     m_slice_dm.push_back(amrex::DistributionMapping(std::move(procmap)));
 
-    // the domain of level 1 must be adjusted
-    if (lev == 1) {
-        amrex::RealBox rbx = amrex::RealBox(AMREX_D_DECL(patch_lo[0], patch_lo[1], patch_lo[2]),
-                                            AMREX_D_DECL(patch_hi[0], patch_hi[1], patch_hi[2]));
-        Geom(lev).ProbDomain(rbx);
-    } else if (lev > 1) {
-        amrex::Abort("Only lev <= 1 implemented");
-    }
-
     // Slice Geometry
     // Set the lo and hi of domain and probdomain in the z direction
     amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
@@ -292,8 +283,11 @@ Hipace::MakeNewLevelFromScratch (
 }
 
 void
-Hipace::ErrorEst (int /*lev*/, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /*ngrow*/)
+Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /*ngrow*/)
 {
+    using namespace amrex::literals;
+    const amrex::Real* problo = Geom(lev).ProbLo();
+    const amrex::Real* dx = Geom(lev).CellSize();
 
     // we need to tag all cells, because we will adjust the domain of level 1 by hand anyway
     for (amrex::MFIter mfi(tags); mfi.isValid(); ++mfi)
@@ -303,7 +297,12 @@ Hipace::ErrorEst (int /*lev*/, amrex::TagBoxArray& tags, amrex::Real /*time*/, i
         for (amrex::BoxIterator bi(bx); bi.ok(); ++bi)
         {
             const amrex::IntVect& cell = bi();
-            fab(cell) = amrex::TagBox::SET;
+            amrex::RealVect pos {AMREX_D_DECL((cell[0]+0.5_rt)*dx[0]+problo[0],
+                                        (cell[1]+0.5_rt)*dx[1]+problo[1],
+                                        (cell[2]+0.5_rt)*dx[2]+problo[2])};
+             if (pos > patch_lo && pos < patch_hi) {
+                 fab(cell) = amrex::TagBox::SET;
+             }
         }
     }
 }
