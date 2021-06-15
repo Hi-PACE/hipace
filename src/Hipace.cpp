@@ -289,7 +289,6 @@ Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /
     const amrex::Real* problo = Geom(lev).ProbLo();
     const amrex::Real* dx = Geom(lev).CellSize();
 
-    // we need to tag all cells, because we will adjust the domain of level 1 by hand anyway
     for (amrex::MFIter mfi(tags); mfi.isValid(); ++mfi)
     {
         auto& fab = tags[mfi];
