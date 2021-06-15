@@ -137,10 +137,8 @@ public:
     /** \brief Reset plasma and field slice quantities to initial value.
      *
      * Typically done at the beginning of each iteration.
-     *
-     * \param[in] lev MR level
      */
-    void ResetAllQuantities (int lev);
+    void ResetAllQuantities ();
 
     /**
        \brief Returns true on the head rank, otherwise false.
@@ -310,7 +308,11 @@ private:
     /** Diagnostics */
     Diagnostic m_diags;
 
-    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
+    /** \brief resizes the diagnostic fab to the correct box in a loop over boxes
+     *
+     * \param[in] it index of box to be resized to
+     */
+    void ResizeFDiagFAB (const int it);
     void FillDiagnostics (const int lev, int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };

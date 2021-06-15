@@ -364,13 +364,11 @@ Hipace::Evolve ()
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
-        for (int lev_loc = 0; lev_loc <= finestLevel(); ++lev_loc) {
-            ResetAllQuantities(lev_loc);
+        ResetAllQuantities();
 
-            /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-            m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
-                                                         lev_loc);
-        }
+        /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
+                                                     finestLevel()+1);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
@@ -392,12 +390,7 @@ Hipace::Evolve ()
 
             const amrex::Box& bx = boxArray(lev)[it];
 
-            // FIXME: dirty workaround to not touch the box in general
-            // but resize the boxes on all levels for IO.
-            for (int lev_loc = 0; lev_loc <= finestLevel(); ++lev_loc) {
-                const amrex::Box& bx_loc = boxArray(lev_loc)[it];
-                ResizeFDiagFAB(bx_loc, lev_loc);
-            }
+            ResizeFDiagFAB(it);
 
             amrex::Vector<BeamBins> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
@@ -547,13 +540,15 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
 }
 
 void
-Hipace::ResetAllQuantities (int lev)
+Hipace::ResetAllQuantities ()
 {
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
-    m_multi_plasma.ResetParticles(lev, true);
 
-    for (int islice=0; islice<WhichSlice::N; islice++) {
-        m_fields.getSlices(lev, islice).setVal(0.);
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+        m_multi_plasma.ResetParticles(lev, true);
+        for (int islice=0; islice<WhichSlice::N; islice++) {
+            m_fields.getSlices(lev, islice).setVal(0.);
+        }
     }
 }
 
@@ -1236,6 +1231,15 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
         }
     }
 #endif
+}
+
+void
+Hipace::ResizeFDiagFAB (const int it)
+{
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+        const amrex::Box& bx = boxArray(lev)[it];
+        m_diags.ResizeFDiagFAB(bx, lev);
+    }
 }
 
 void
