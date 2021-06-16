@@ -129,20 +129,16 @@ public:
     /** \brief Full evolve on 1 slice
      *
      * \param[in] islice slice number
-     * \param[in] lev MR level
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice, int lev, const int ibox,
-                        amrex::Vector<BeamBins>& bins);
+    void SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
      * Typically done at the beginning of each iteration.
-     *
-     * \param[in] lev MR level
      */
-    void ResetAllQuantities (int lev);
+    void ResetAllQuantities ();
 
     /**
        \brief Returns true on the head rank, otherwise false.
@@ -296,9 +292,9 @@ private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
 
-    amrex::Geometry m_slice_geom;
-    amrex::DistributionMapping m_slice_dm;
-    amrex::BoxArray m_slice_ba;
+    amrex::Vector<amrex::Geometry> m_slice_geom;
+    amrex::Vector<amrex::DistributionMapping> m_slice_dm;
+    amrex::Vector<amrex::BoxArray> m_slice_ba;
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     /** Linear operator for the explicit Bx and By solver */
@@ -312,8 +308,12 @@ private:
     /** Diagnostics */
     Diagnostic m_diags;
 
-    void ResizeFDiagFAB (const amrex::Box box, const int lev) { m_diags.ResizeFDiagFAB(box, lev); };
-    void FillDiagnostics (int lev, int i_slice);
+    /** \brief resizes the diagnostic fab to the correct box in a loop over boxes
+     *
+     * \param[in] it index of box to be resized to
+     */
+    void ResizeFDiagFAB (const int it);
+    void FillDiagnostics (const int lev, int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
     /** \brief get diagnostics Component names of Fields to output */
@@ -351,10 +351,12 @@ private:
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.
      *
+     * \param[in] lev level of mesh refinement
      * \param[in] ba BoxArray of the whole domain
      * \param[in] dm DistributionMappint of the whole domain
      */
-    void DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm);
+    void DefineSliceGDB (const int lev, const amrex::BoxArray& ba,
+                         const amrex::DistributionMapping& dm);
 
     int leftmostBoxWithParticles () const;
 };

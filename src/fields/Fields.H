@@ -74,19 +74,16 @@ public:
     /** Allocate MultiFabs for the 3D array and the 2D slices
      * and define the BoxArrays and DistributionMappings.
      * \param[in] lev MR level
-     * \param[in] ba BoxArray for the simulation
-     * \param[in] dm DistributionMapping for the whole simulation
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
      */
     void AllocData (
-        int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm,
-        amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
+        int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
-    std::unique_ptr<FFTPoissonSolver> m_poisson_solver;
+    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** get function for the 2D slices */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>>& getSlices () {return m_slices; }
     /** get function for the 2D slices

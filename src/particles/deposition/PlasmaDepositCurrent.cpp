@@ -21,6 +21,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
     " (WhichSlice::Next) or for the ion charge deposition (WhichSLice::RhoIons)");
 
+    // only deposit plasma currents on their according MR level
+    if (plasma.m_MR_level != lev) return;
+
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 

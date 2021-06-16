@@ -149,7 +149,7 @@ Hipace::~Hipace ()
 }
 
 void
-Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
+Hipace::DefineSliceGDB (const int lev, const amrex::BoxArray& ba, const amrex::DistributionMapping& dm)
 {
     std::map<int,amrex::Vector<amrex::Box> > boxes;
     for (int i = 0; i < ba.size(); ++i) {
@@ -190,13 +190,12 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     }
 
     // Slice BoxArray
-    m_slice_ba = amrex::BoxArray(std::move(bl));
+    m_slice_ba.push_back(amrex::BoxArray(std::move(bl)));
 
     // Slice DistributionMapping
-    m_slice_dm = amrex::DistributionMapping(std::move(procmap));
+    m_slice_dm.push_back(amrex::DistributionMapping(std::move(procmap)));
 
     // Slice Geometry
-    constexpr int lev = 0;
     // Set the lo and hi of domain and probdomain in the z direction
     amrex::RealBox tmp_probdom = Geom(lev).ProbDomain();
     amrex::Box tmp_dom = Geom(lev).Domain();
@@ -207,8 +206,8 @@ Hipace::DefineSliceGDB (const amrex::BoxArray& ba, const amrex::DistributionMapp
     tmp_probdom.setHi(Direction::z, hi);
     tmp_dom.setSmall(Direction::z, 0);
     tmp_dom.setBig(Direction::z, 0);
-    m_slice_geom = amrex::Geometry(
-        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
+    m_slice_geom.push_back(amrex::Geometry(
+        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic()));
 }
 
 bool
@@ -234,7 +233,7 @@ Hipace::InitData ()
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
     m_multi_beam.InitData(geom[lev]);
-    m_multi_plasma.InitData(lev, m_slice_ba, m_slice_dm, m_slice_geom, geom[lev]);
+    m_multi_plasma.InitData(lev, m_slice_ba[lev], m_slice_dm[lev], m_slice_geom[lev], geom[lev]);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
@@ -246,7 +245,7 @@ void
 Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
-    AMREX_ALWAYS_ASSERT(lev == 0);
+    SetMaxGridSize(1048576); // 2^20, this ensures that level 1 uses only 1 box longitudinally.
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
@@ -277,10 +276,10 @@ Hipace::MakeNewLevelFromScratch (
         dm.define(std::move(procmap));
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
-    DefineSliceGDB(ba, dm);
+    DefineSliceGDB(lev, ba, dm);
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
-    m_fields.AllocData(lev, ba, dm, Geom(lev), m_slice_ba, m_slice_dm);
+    m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev]);
 }
 
 void
@@ -298,8 +297,8 @@ Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /
         {
             const amrex::IntVect& cell = bi();
             amrex::RealVect pos {AMREX_D_DECL((cell[0]+0.5_rt)*dx[0]+problo[0],
-                                       (cell[1]+0.5_rt)*dx[1]+problo[1],
-                                       (cell[2]+0.5_rt)*dx[2]+problo[2])};
+                                        (cell[1]+0.5_rt)*dx[1]+problo[1],
+                                        (cell[2]+0.5_rt)*dx[2]+problo[2])};
             if (pos > patch_lo && pos < patch_hi) {
                 fab(cell) = amrex::TagBox::SET;
             }
@@ -360,15 +359,16 @@ Hipace::Evolve ()
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step);
+        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
 #endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
-        ResetAllQuantities(lev);
+        ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev], lev);
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
+                                                     finestLevel()+1);
 
         // Loop over longitudinal boxes on this rank, from head to tail
         const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
@@ -389,24 +389,25 @@ Hipace::Evolve ()
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
             const amrex::Box& bx = boxArray(lev)[it];
-            ResizeFDiagFAB(bx, lev);
+
+            ResizeFDiagFAB(it);
 
             amrex::Vector<BeamBins> bins;
             bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
-            SolveOneSlice(bx.bigEnd(Direction::z), lev, it, bins);
+            SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
             // Notify ghost slice
             if (it<m_numprocs_z-1) Notify(step, it, bins, true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, lev, it, bins);
+                SolveOneSlice(isl, it, bins);
             };
             // Receive ghost slice
             if (it>0) Wait(step, it, true);
             CheckGhostSlice(it);
             // Solve tail slice. Consume ghost particles.
-            SolveOneSlice(bx.smallEnd(Direction::z), lev, it, bins);
+            SolveOneSlice(bx.smallEnd(Direction::z), it, bins);
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
 
@@ -438,110 +439,116 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, int lev, const int ibox,
-                       amrex::Vector<BeamBins>& bins)
+Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
-    // Between this push and the corresponding pop at the end of this
-    // for loop, the parallelcontext is the transverse communicator
-    amrex::ParallelContext::push(m_comm_xy);
 
-    const amrex::Box& bx = boxArray(lev)[ibox];
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+        // Between this push and the corresponding pop at the end of this
+        // for loop, the parallelcontext is the transverse communicator
+        amrex::ParallelContext::push(m_comm_xy);
 
-    if (m_explicit) {
-        // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
-        const int ibx = Comps[WhichSlice::This]["Bx"];
-        const int iby = Comps[WhichSlice::This]["By"];
-        const int nc = Comps[WhichSlice::This]["N"];
-        AMREX_ALWAYS_ASSERT( iby == ibx+1 );
-        m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx);
-        m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1);
-    } else {
-        m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
-    }
+        const amrex::Box& bx = boxArray(lev)[ibox];
 
-    if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
-                                                     true, false, false, lev);
-
-    amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        Comps[WhichSlice::This]["rho"], 1);
-
-    m_multi_plasma.DepositCurrent(
-        m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
-
-        if (m_explicit){
-            amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
-                                         amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
-            j_slice_next.setVal(0.);
-            m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
-                                             ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
-            m_fields.AddBeamCurrents(lev, WhichSlice::Next);
-            // need to exchange jx jy jx_beam jy_beam
-            j_slice_next.FillBoundary(Geom(lev).periodicity());
+        if (m_explicit) {
+            // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
+            const int ibx = Comps[WhichSlice::This]["Bx"];
+            const int iby = Comps[WhichSlice::This]["By"];
+            const int nc = Comps[WhichSlice::This]["N"];
+            AMREX_ALWAYS_ASSERT( iby == ibx+1 );
+            m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx);
+            m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1);
+        } else {
+            m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
         }
 
-    m_fields.AddRhoIons(lev);
+        if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
+                                                         true, false, false, lev);
 
-    // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
-    // Assert that the order of the transverse currents and charge density is correct. This order is
-    // also required in the FillBoundary call on the next slice in the predictor-corrector loop, as
-    // well as in the shift slices.
-    const int ijx = Comps[WhichSlice::This]["jx"];
-    const int ijx_beam = Comps[WhichSlice::This]["jx_beam"];
-    const int ijy = Comps[WhichSlice::This]["jy"];
-    const int ijy_beam = Comps[WhichSlice::This]["jy_beam"];
-    const int ijz = Comps[WhichSlice::This]["jz"];
-    const int ijz_beam = Comps[WhichSlice::This]["jz_beam"];
-    const int irho = Comps[WhichSlice::This]["rho"];
-    AMREX_ALWAYS_ASSERT( ijx_beam == ijx+1 && ijy == ijx+2 && ijy_beam == ijx+3 && ijz == ijx+4 &&
-                         ijz_beam == ijx+5 && irho == ijx+6 );
-    amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
-                            amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
-    j_slice.FillBoundary(Geom(lev).periodicity());
+        amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
+                            Comps[WhichSlice::This]["rho"], 1);
 
-    m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
+        m_multi_plasma.DepositCurrent(
+            m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
-    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-    m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
-                                     ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
-    m_fields.AddBeamCurrents(lev, WhichSlice::This);
+            if (m_explicit){
+                amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
+                                             amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
+                j_slice_next.setVal(0.);
+                m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins,
+                                                 m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                                 WhichSlice::Next);
+                m_fields.AddBeamCurrents(lev, WhichSlice::Next);
+                // need to exchange jx jy jx_beam jy_beam
+                j_slice_next.FillBoundary(Geom(lev).periodicity());
+            }
 
-    j_slice.FillBoundary(Geom(lev).periodicity());
-
-    m_fields.SolvePoissonEz(Geom(lev),lev);
-    m_fields.SolvePoissonBz(Geom(lev), lev);
-
-    // Modifies Bx and By in the current slice and the force terms of the plasma particles
-    if (m_explicit){
-        m_fields.AddRhoIons(lev, true);
-        ExplicitSolveBxBy(lev);
-        m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
         m_fields.AddRhoIons(lev);
-    } else {
-        PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);
+
+        // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
+        // Assert that the order of the transverse currents and charge density is correct. This order is
+        // also required in the FillBoundary call on the next slice in the predictor-corrector loop, as
+        // well as in the shift slices.
+        const int ijx = Comps[WhichSlice::This]["jx"];
+        const int ijx_beam = Comps[WhichSlice::This]["jx_beam"];
+        const int ijy = Comps[WhichSlice::This]["jy"];
+        const int ijy_beam = Comps[WhichSlice::This]["jy_beam"];
+        const int ijz = Comps[WhichSlice::This]["jz"];
+        const int ijz_beam = Comps[WhichSlice::This]["jz_beam"];
+        const int irho = Comps[WhichSlice::This]["rho"];
+        AMREX_ALWAYS_ASSERT( ijx_beam == ijx+1 && ijy == ijx+2 && ijy_beam == ijx+3 &&
+                             ijz == ijx+4 && ijz_beam == ijx+5 && irho == ijx+6 );
+        amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
+                                amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
+        j_slice.FillBoundary(Geom(lev).periodicity());
+
+        m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
+
+        m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
+        m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
+                                         ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
+        m_fields.AddBeamCurrents(lev, WhichSlice::This);
+
+        j_slice.FillBoundary(Geom(lev).periodicity());
+
+        m_fields.SolvePoissonEz(Geom(lev), lev);
+        m_fields.SolvePoissonBz(Geom(lev), lev);
+
+        // Modifies Bx and By in the current slice and the force terms of the plasma particles
+        if (m_explicit){
+            m_fields.AddRhoIons(lev, true);
+            ExplicitSolveBxBy(lev);
+            m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
+            m_fields.AddRhoIons(lev);
+        } else {
+            PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);
+        }
+
+        // Push beam particles
+        m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins,
+                                               m_box_sorters, ibox);
+
+        FillDiagnostics(lev, islice);
+
+        m_fields.ShiftSlices(lev);
+
+        m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+
+        // After this, the parallel context is the full 3D communicator again
+        amrex::ParallelContext::pop();
     }
-
-    // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters, ibox);
-
-    FillDiagnostics(lev, islice);
-
-    m_fields.ShiftSlices(lev);
-
-    m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
-
-    // After this, the parallel context is the full 3D communicator again
-    amrex::ParallelContext::pop();
 }
 
 void
-Hipace::ResetAllQuantities (int lev)
+Hipace::ResetAllQuantities ()
 {
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
-    m_multi_plasma.ResetParticles(lev, true);
 
-    for (int islice=0; islice<WhichSlice::N; islice++) {
-        m_fields.getSlices(lev, islice).setVal(0.);
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+        m_multi_plasma.ResetParticles(lev, true);
+        for (int islice=0; islice<WhichSlice::N; islice++) {
+            m_fields.getSlices(lev, islice).setVal(0.);
+        }
     }
 }
 
@@ -1227,7 +1234,16 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
 }
 
 void
-Hipace::FillDiagnostics (int lev, int i_slice)
+Hipace::ResizeFDiagFAB (const int it)
+{
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+        const amrex::Box& bx = boxArray(lev)[it];
+        m_diags.ResizeFDiagFAB(bx, lev);
+    }
+}
+
+void
+Hipace::FillDiagnostics (const int lev, int i_slice)
 {
     m_fields.Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
                   m_diags.getF(lev), m_diags.sliceDir(), Geom(lev));
@@ -1247,10 +1263,9 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
-    constexpr int lev = 0;
     m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
-                        m_physical_time, output_step, lev, getDiagSliceDir(), varnames, beamnames,
-                        it, m_box_sorters, geom[lev], call_type);
+                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames, beamnames,
+                        it, m_box_sorters, geom, call_type);
 #else
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif

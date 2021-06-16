@@ -52,6 +52,7 @@ BeamParticleContainer::ReadParameters ()
     pp.query("duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     pp.query("do_z_push", m_do_z_push);
     pp.query("n_subcycles", m_n_subcycles);
+    pp.query("finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.)
