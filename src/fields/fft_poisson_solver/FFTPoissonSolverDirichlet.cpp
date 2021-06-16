@@ -105,6 +105,8 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichlet::SolvePoissonEquation()");
 
+    amrex::Gpu::synchronize();
+
     // Loop over boxes
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
 

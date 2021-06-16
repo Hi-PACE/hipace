@@ -79,6 +79,10 @@ Modeling ion motion is not yet supported by the explicit solver
     Which solver to use.
     Possible values: ``predictor-corrector`` and ``explicit``.
 
+* ``fields.use_small_dst`` (`bool`) optional (default `0`)
+    Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
+    The small dst can be much quicker for high resolutions.
+
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

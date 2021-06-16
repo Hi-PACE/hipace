@@ -86,15 +86,16 @@ namespace AnyDST
                     amrex::GpuComplex<amrex::Real>* const AMREX_RESTRICT out,
                     const int n_data, const int n_batch)
     {
-        HIPACE_PROFILE("AnyDST::ToComplex()");
+        {
+        HIPACE_PROFILE("AnyDST::ToComplexInt()");
         const int n_half = (n_data+1)/2;
         if((n_data%2 == 1)) {
             amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
                 [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                 {
                     const int stride_in = n_data*j;
-                    const bool i_is_zero = (i==0);
-                    const bool i_is_n_half = (i==n_half);
+                    const int i_is_zero = (i==0);
+                    const int i_is_n_half = (i==n_half);
                     const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
                                              +in[2*i-2*i_is_n_half+stride_in]*(1-2*i_is_n_half);
                     const amrex::Real imag = in[2*i-1+i_is_zero-i_is_n_half+stride_in]
@@ -106,8 +107,8 @@ namespace AnyDST
                 [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
                 {
                     const int stride_in = n_data*j;
-                    const bool i_is_zero = (i==0);
-                    const bool i_is_n_half = (i==n_half);
+                    const int i_is_zero = (i==0);
+                    const int i_is_n_half = (i==n_half);
                     const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
                                              +in[2*i-i_is_n_half+stride_in]*!i_is_n_half;
                     const amrex::Real imag = in[2*i-1+i_is_zero+stride_in]*!i_is_zero;
@@ -365,6 +366,7 @@ namespace AnyDST
             }
         }
         else {
+            amrex::Gpu::synchronize();
             const int nx = dst_plan.m_position_array->box().length(0); // initially contiguous
             const int ny = dst_plan.m_position_array->box().length(1); // contiguous after transpose
 
