@@ -105,8 +105,6 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichlet::SolvePoissonEquation()");
 
-    amrex::Gpu::synchronize();
-
     // Loop over boxes
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
 
@@ -122,7 +120,6 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 tmp_cmplx_arr(i,j,k) *= eigenvalue_matrix(i,j,k);
             });
-        amrex::Gpu::synchronize();
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area
         AnyDST::Execute(m_backward_plan[mfi]);
@@ -135,7 +132,5 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
                 // Copy and normalize field
                 lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
             });
-        amrex::Gpu::synchronize();
-
     }
 }

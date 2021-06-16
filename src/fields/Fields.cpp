@@ -91,7 +91,6 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
             }
             );
     }
-    amrex::Gpu::synchronize();
 }
 
 void
@@ -126,7 +125,6 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
             }
             );
     }
-    amrex::Gpu::synchronize();
 }
 
 
@@ -187,7 +185,6 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
             });
         }
     }
-    amrex::Gpu::synchronize();
 }
 
 void
@@ -260,7 +257,6 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
                           Comps[WhichSlice::This]["rho"], 0, 1, 0);
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
 
-    amrex::Gpu::synchronize();
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */

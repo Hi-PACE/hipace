@@ -44,7 +44,6 @@ namespace AnyDST
                 dst_array(i+nx+2,j+ny+2,0,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
             }
             );
-        amrex::Gpu::synchronize();
     };
 
     /** \brief Extract symmetrical src array into smaller array dst
@@ -69,7 +68,6 @@ namespace AnyDST
                 dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
             }
             );
-        amrex::Gpu::synchronize();
     };
 
     /** \brief Make Complex array out of Real array to prepare for fft.
@@ -113,7 +111,6 @@ namespace AnyDST
                     out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
                 });
         }
-        amrex::Gpu::synchronize();
     };
 
     /** \brief Complex to Real fft for every column of the input matrix.
@@ -136,7 +133,6 @@ namespace AnyDST
 #else
         result = cufftExecZ2D(plan, reinterpret_cast<AnyFFT::Complex*>(in), out);
 #endif
-        cudaDeviceSynchronize();
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
                 CuFFTUtils::cufftErrorToString(result) << "\n";
@@ -145,7 +141,7 @@ namespace AnyDST
 
     /** \brief Make Sine-space Real array out of array from fft.
      * out[idx] = 0.5 *(in[n_data-idx] - in[idx+1] + (in[n_data-idx] + in[idx+1])/
-     * (2*sin()(idx+1)*pi/(n_data+1)))) for each column
+     * (2*sin((idx+1)*pi/(n_data+1)))) for each column
      *
      * \param[in] in input real array
      * \param[out] out output real array
@@ -178,7 +174,6 @@ namespace AnyDST
                                           *sinpi(i_rev/n_1_real)));
 #endif
             });
-        amrex::Gpu::synchronize();
     };
 
     /** \brief Transpose input matrix
@@ -229,7 +224,6 @@ namespace AnyDST
                     }
                 }
             });
-        amrex::Gpu::synchronize();
     };
 
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
@@ -354,7 +348,6 @@ namespace AnyDST
                 dst_plan.m_plan, dst_plan.m_expanded_position_array->dataPtr(),
                 reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #endif
-            cudaDeviceSynchronize();
             // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
             ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
 
@@ -364,7 +357,6 @@ namespace AnyDST
             }
         }
         else {
-            amrex::Gpu::synchronize();
             const int nx = dst_plan.m_position_array->box().length(0); // initially contiguous
             const int ny = dst_plan.m_position_array->box().length(1); // contiguous after transpose
 
