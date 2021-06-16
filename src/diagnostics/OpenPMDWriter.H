@@ -14,11 +14,13 @@
 #include <vector>
 
 #ifdef HIPACE_USE_OPENPMD
-#include <openPMD/openPMD.hpp>
+#   include <openPMD/openPMD.hpp>
+#endif
 
 /** \brief Whether the beam, the field data is written, or if it is just flushing the stored data */
 enum struct OpenPMDWriterCallType { beams, fields };
 
+#ifdef HIPACE_USE_OPENPMD
 /** \brief class handling the IO with openPMD */
 class OpenPMDWriter
 {

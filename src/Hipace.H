@@ -10,6 +10,7 @@
 #include "utils/GridCurrent.H"
 #include "utils/Constants.H"
 #include "diagnostics/Diagnostic.H"
+#include "diagnostics/OpenPMDWriter.H"
 
 #include <AMReX_AmrCore.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -18,8 +19,7 @@
 #endif
 
 #ifdef HIPACE_USE_OPENPMD
-#include <openPMD/openPMD.hpp>
-#include "diagnostics/OpenPMDWriter.H"
+#   include <openPMD/openPMD.hpp>
 #endif
 
 #include <memory>
