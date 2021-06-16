@@ -86,6 +86,7 @@ public:
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     int m_n_subcycles {1}; /**< Number of sub-cycles in the beam pusher */
+    int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
     /** Number of particles on upstream rank (required for IO) */
     int m_num_particles_on_upstream_ranks {0};
 

@@ -81,13 +81,15 @@ MultiPlasma::ResetParticles (int lev, bool initial)
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, int which_slice, amrex::Geometry const& gm, int const lev)
+    Fields & fields, int which_slice, amrex::Geometry const& gm, int const nlev)
 {
-    for (auto& plasma : m_all_plasmas) {
-        if (plasma.m_neutralize_background){
-            // current of ions is zero, so they are not deposited.
-            ::DepositCurrent(plasma, fields, which_slice, false,
-                             false, false, true, false, gm, lev);
+    for (int lev = 0; lev < nlev; ++lev) {
+        for (auto& plasma : m_all_plasmas) {
+            if (plasma.m_neutralize_background){
+                // current of ions is zero, so they are not deposited.
+                ::DepositCurrent(plasma, fields, which_slice, false,
+                                 false, false, true, false, gm, lev);
+            }
         }
     }
 }

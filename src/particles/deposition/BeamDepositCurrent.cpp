@@ -18,6 +18,9 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometr
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
+    // beam deposits only up to its finest level
+    if (beam.m_finest_level < lev) return;
+
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
     which_slice == WhichSlice::This || which_slice == WhichSlice::Next,
     "Current deposition can only be done in this slice (WhichSlice::This), or the next slice "
