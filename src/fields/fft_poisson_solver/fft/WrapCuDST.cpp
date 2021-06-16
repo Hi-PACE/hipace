@@ -2,7 +2,6 @@
 #include "CuFFTUtils.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
-#include <cmath>
 
 namespace AnyDST
 {
@@ -86,8 +85,7 @@ namespace AnyDST
                     amrex::GpuComplex<amrex::Real>* const AMREX_RESTRICT out,
                     const int n_data, const int n_batch)
     {
-        {
-        HIPACE_PROFILE("AnyDST::ToComplexInt()");
+        HIPACE_PROFILE("AnyDST::ToComplex()");
         const int n_half = (n_data+1)/2;
         if((n_data%2 == 1)) {
             amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
