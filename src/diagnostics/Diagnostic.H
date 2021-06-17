@@ -26,25 +26,25 @@ public:
     void AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom);
 
     /** \brief return the main diagnostics multifab */
-    amrex::Vector<amrex::FArrayBox>& getF () { return m_F; };
+    amrex::Vector<amrex::FArrayBox>& getF () { return m_F; }
 
     /** \brief return the main diagnostics multifab
      *
      * \param[in] lev MR level
      */
-    amrex::FArrayBox& getF (int lev) {return m_F[lev];};
+    amrex::FArrayBox& getF (int lev) { return m_F[lev]; }
 
     /** \brief return Component names of Fields to output */
-    amrex::Vector<std::string>& getComps () { return m_comps_output; };
+    amrex::Vector<std::string>& getComps () { return m_comps_output; }
 
     /** \brief return names of the beams to output */
-    amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; };
+    amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
 
     /** return the diagnostics geometry */
-    amrex::Vector<amrex::Geometry>& getGeom () { return m_geom_io; };
+    amrex::Vector<amrex::Geometry>& getGeom () { return m_geom_io; }
 
     /** return slice direction of the diagnostics */
-    int sliceDir () {return m_slice_dir;};
+    int sliceDir () {return m_slice_dir;}
 
     /** \brief return box which possibly was trimmed in case of slice IO
      *
