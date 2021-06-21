@@ -1267,6 +1267,7 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
                         m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames, beamnames,
                         it, m_box_sorters, geom, call_type);
 #else
+    amrex::ignore_unused(it, call_type);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
 }
