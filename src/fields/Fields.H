@@ -152,34 +152,36 @@ public:
      * \param[in] m_comm_xy transverse communicator on the slice
      * \param[in] lev current level
      */
-    void SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
-                                    const int lev);
+    void SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
+                                    const MPI_Comm& m_comm_xy, const int lev);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonEz (amrex::Geometry const& geom, const int lev);
+    void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, const int lev);
+    void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
+                         const int lev);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonBy (amrex::MultiFab& By_iter,amrex::Geometry const& geom, const int lev);
+    void SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
+                         const int lev);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
      */
-    void SolvePoissonBz (amrex::Geometry const& geom, const int lev);
+    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices

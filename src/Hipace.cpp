@@ -502,7 +502,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
                                 amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
         j_slice.FillBoundary(Geom(lev).periodicity());
 
-        m_fields.SolvePoissonExmByAndEypBx(Geom(lev), m_comm_xy, lev);
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev);
 
         m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
         m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
@@ -511,8 +511,8 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
 
         j_slice.FillBoundary(Geom(lev).periodicity());
 
-        m_fields.SolvePoissonEz(Geom(lev), lev);
-        m_fields.SolvePoissonBz(Geom(lev), lev);
+        m_fields.SolvePoissonEz(Geom(), lev);
+        m_fields.SolvePoissonBz(Geom(), lev);
 
         // Modifies Bx and By in the current slice and the force terms of the plasma particles
         if (m_explicit){
@@ -863,8 +863,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
-        m_fields.SolvePoissonBx(Bx_iter, Geom(lev), lev);
-        m_fields.SolvePoissonBy(By_iter, Geom(lev), lev);
+        m_fields.SolvePoissonBx(Bx_iter, Geom(), lev);
+        m_fields.SolvePoissonBy(By_iter, Geom(), lev);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
             m_fields.getSlices(lev, WhichSlice::This),
