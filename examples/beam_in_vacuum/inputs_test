@@ -1,0 +1,38 @@
+amr.n_cell = 64 64 64
+
+hipace.patch_lo = -6 -6 -6
+hipace.patch_hi =  6  6  6
+amr.ref_ratio_vect = 2 2 1
+
+hipace.normalized_units=1
+hipace.predcorr_max_iterations = 1
+hipace.predcorr_B_mixing_factor = 0.12
+hipace.predcorr_B_error_tolerance = -1
+
+amr.blocking_factor = 2
+amr.max_level = 1
+
+max_step = 0
+hipace.output_period = 1
+
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
+hipace.depos_order_xy = 2
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = 1     1     0      # Is periodic?
+geometry.prob_lo     = -12.   -12.   -6    # physical domain
+geometry.prob_hi     =  12.    12.    6
+
+beams.names = no_beam
+
+grid_current.use_grid_current  = 1
+grid_current.position_mean = 0. 0. 0.
+grid_current.position_std= 0.3 0.3 1.41
+grid_current.peak_current_density = -3
+grid_current.finest_level = 1
+
+plasmas.names = no_plasma
+
+diagnostic.diag_type = xyz
