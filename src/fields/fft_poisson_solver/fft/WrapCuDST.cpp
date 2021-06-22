@@ -1,7 +1,6 @@
 #include "AnyDST.H"
 #include "CuFFTUtils.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include "utils/Constants.H"
 
 namespace AnyDST
 {
@@ -232,7 +231,7 @@ namespace AnyDST
         HIPACE_PROFILE("AnyDST::CreatePlan()");
         DSTplan dst_plan;
 
-        amrex::ParmParse pp("fields");
+        amrex::ParmParse pp("hipace");
         dst_plan.use_small_dst = false;
         pp.query("use_small_dst", dst_plan.use_small_dst);
 
