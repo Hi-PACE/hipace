@@ -256,6 +256,60 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
                           Comps[WhichSlice::This]["rho"], 0, 1, 0);
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
+     
+    /*Setting non-zero boundary conditions*/
+    const auto plo = geom.ProbLoArray();
+    const auto xmin =geom.ProbLo(0);
+    const auto xmax =geom.ProbHi(0);
+    const auto ymin =geom.ProbLo(1);
+    const auto ymax=geom.ProbHi(1);
+    const auto dx = geom.CellSizeArray();
+    const auto ncells_global = geom.Domain().length();
+    const auto nx = ncells_global[0];
+    const auto ny =ncells_global[1];
+    
+    if (lev!=0)
+    {
+        //Interpolation 
+         amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
+                        Comps[WhichSlice::This]["Psi"], 1);
+        //amrex::Print()<<"Refined Mesh \n";
+        for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi){
+            const amrex::Box & bx = mfi.tilebox();
+            amrex::Array4<amrex::Real >  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
+            amrex::Array4<amrex::Real >  data_array_coarse = m_poisson_solver[lev-1]->StagingArea().array(mfi);
+            amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
+                {
+                
+                    if (i == 0 || i == nx-1)
+                    {   
+                        /*
+                        amrex::Real x = plo[0] + (i+0.5) *dx[0];
+                        amrex::Real y = plo[1] + (j+0.5) *dx[1];
+                        amrex::Real r_square  = pow(x,2)+pow(y,2);
+                        data_array(i,j,k,0) -= 1./4*(r_square/(pow(dx[0],2)));
+                        */
+
+                        data_array(i,j,k,0) -= 9;
+                    }
+                    if (j== 0 || j == ny-1)
+                    {   
+                        /*
+                        amrex::Real x = plo[0] + (i+0.5) *dx[0];
+                        amrex::Real y = plo[1] + (j+0.5) *dx[1];
+                        amrex::Real r_square  = pow(x,2)+pow(y,2);
+                        data_array(i,j,k,0) -= 1./4*(r_square/(pow(dx[0],2)));
+                        */
+                        data_array(i,j,k,0) -= 9;
+                    }
+                
+                }
+
+        );
+        }
+    }
 
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
