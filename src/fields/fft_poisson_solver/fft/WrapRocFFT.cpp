@@ -22,9 +22,10 @@ namespace AnyFFT
     }
 
     FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
-                        Complex * const complex_array, const direction dir, const int dim)
+                        Complex * const complex_array, const direction dir)
     {
         FFTplan fft_plan;
+        int dim = 3;
 
         const std::size_t lengths[] = {AMREX_D_DECL(std::size_t(real_size[0]),
                                                     std::size_t(real_size[1]),
