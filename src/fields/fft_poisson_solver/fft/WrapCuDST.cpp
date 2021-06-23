@@ -326,12 +326,19 @@ namespace AnyDST
         cufftDestroy( dst_plan.m_plan_b );
     }
 
+    template<direction d>
     void Execute (DSTplan& dst_plan){
         HIPACE_PROFILE("AnyDST::Execute()");
 
         if(!dst_plan.use_small_dst) {
+            // Swap position and fourier space based on execute direction
+            amrex::FArrayBox* position_array =
+                (d == direction::forward) ? dst_plan.m_position_array : dst_plan.m_fourier_array;
+            amrex::FArrayBox* fourier_array =
+                (d == direction::forward) ? dst_plan.m_fourier_array : dst_plan.m_position_array;
+
             // Expand in position space m_position_array -> m_expanded_position_array
-            ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
+            ExpandR2R(*dst_plan.m_expanded_position_array, *position_array);
 
             cudaStream_t stream = amrex::Gpu::Device::cudaStream();
             cufftSetStream ( dst_plan.m_plan, stream);
@@ -348,7 +355,7 @@ namespace AnyDST
                 reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()));
 #endif
             // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
-            ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
+            ShrinkC2R(*fourier_array, *dst_plan.m_expanded_fourier_array);
 
             if ( result != CUFFT_SUCCESS ) {
                 amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
@@ -359,10 +366,16 @@ namespace AnyDST
             const int nx = dst_plan.m_position_array->box().length(0); // initially contiguous
             const int ny = dst_plan.m_position_array->box().length(1); // contiguous after transpose
 
-            amrex::Real* const pos_arr = dst_plan.m_position_array->dataPtr();
+            amrex::Real* const tmp_pos_arr = dst_plan.m_position_array->dataPtr();
+            amrex::Real* const tmp_fourier_arr = dst_plan.m_fourier_array->dataPtr();
             amrex::GpuComplex<amrex::Real>* comp_arr = dst_plan.m_expanded_fourier_array->dataPtr();
             amrex::Real* const real_arr = dst_plan.m_expanded_position_array->dataPtr();
-            amrex::Real* const fourier_arr = dst_plan.m_fourier_array->dataPtr();
+
+            // Swap position and fourier space based on execute direction
+            amrex::Real* const pos_arr =
+                (d == direction::forward) ? tmp_pos_arr : tmp_fourier_arr;
+            amrex::Real* const fourier_arr =
+                (d == direction::forward) ? tmp_fourier_arr : tmp_pos_arr;
 
             ToComplex(pos_arr, comp_arr, nx, ny);
 
@@ -381,4 +394,7 @@ namespace AnyDST
             Transpose(pos_arr, fourier_arr, ny, nx);
         }
     }
+
+    template void Execute<direction::forward>(DSTplan& dst_plan);
+    template void Execute<direction::backward>(DSTplan& dst_plan);
 }

@@ -18,6 +18,9 @@
 namespace AnyDST
 {
 
+    /** Direction in which the FFT is performed. */
+    enum struct direction {forward, backward};
+
     /** \brief This struct contains the vendor FFT plan and additional metadata
      */
     struct DSTplan
@@ -50,7 +53,11 @@ namespace AnyDST
     /** \brief Perform FFT with backend library.
      * \param[out] dst_plan plan for which the FFT is performed
      */
+    template<AnyDST::direction d>
     void Execute (DSTplan& dst_plan);
+
+    extern template void Execute<direction::forward>(DSTplan& dst_plan);
+    extern template void Execute<direction::backward>(DSTplan& dst_plan);
 }
 
 #endif // ANYDST_H_
