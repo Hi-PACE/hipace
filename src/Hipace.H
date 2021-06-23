@@ -10,6 +10,7 @@
 #include "utils/GridCurrent.H"
 #include "utils/Constants.H"
 #include "diagnostics/Diagnostic.H"
+#include "diagnostics/OpenPMDWriter.H"
 
 #include <AMReX_AmrCore.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -18,8 +19,7 @@
 #endif
 
 #ifdef HIPACE_USE_OPENPMD
-#include <openPMD/openPMD.hpp>
-#include "diagnostics/OpenPMDWriter.H"
+#   include <openPMD/openPMD.hpp>
 #endif
 
 #include <memory>
@@ -124,7 +124,7 @@ public:
     void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
 
     /** \brief Return a copy of member struct for physical constants */
-    PhysConst get_phys_const () {return m_phys_const;};
+    PhysConst get_phys_const () {return m_phys_const;}
 
     /** \brief Full evolve on 1 slice
      *
@@ -315,15 +315,15 @@ private:
     void ResizeFDiagFAB (const int it);
     void FillDiagnostics (const int lev, int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
-    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); };
+    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); }
     /** \brief get diagnostics Component names of Fields to output */
-    amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); };
+    amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); }
     /** \brief get diagnostics multifab */
-    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); };
+    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); }
     /** \brief get diagnostics geometry */
-    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); };
+    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); }
     /** \brief get slicing direction of the diagnostics */
-    int getDiagSliceDir () { return m_diags.sliceDir(); };
+    int getDiagSliceDir () { return m_diags.sliceDir(); }
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

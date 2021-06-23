@@ -81,7 +81,7 @@ public:
                            const bool species_specified);
 #endif
 
-    std::string get_name () const {return m_name;};
+    std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
@@ -92,7 +92,7 @@ public:
 
     unsigned long long m_total_num_particles {0};
 
-    unsigned long long get_total_num_particles () const {return m_total_num_particles;};
+    unsigned long long get_total_num_particles () const {return m_total_num_particles;}
 
     amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
 

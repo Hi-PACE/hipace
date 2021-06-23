@@ -235,8 +235,8 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
 }
 
 void
-Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& m_comm_xy,
-                                   const int lev)
+Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
+                                   const MPI_Comm& m_comm_xy, const int lev)
 {
     /* Solves Laplacian(Psi) =  1/episilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -261,7 +261,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
 
     /* ---------- Transverse FillBoundary Psi ---------- */
     amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(geom.periodicity());
+    lhs.FillBoundary(geom[lev].periodicity());
     amrex::ParallelContext::pop();
 
     /* Compute ExmBy and Eypbx from grad(-psi) */
@@ -269,7 +269,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
         getSlices(lev, WhichSlice::This),
         getSlices(lev, WhichSlice::This),
         Direction::x,
-        geom.CellSize(Direction::x),
+        geom[lev].CellSize(Direction::x),
         -1.,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["Psi"],
@@ -279,7 +279,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
         getSlices(lev, WhichSlice::This),
         getSlices(lev, WhichSlice::This),
         Direction::y,
-        geom.CellSize(Direction::y),
+        geom[lev].CellSize(Direction::y),
         -1.,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["Psi"],
@@ -288,7 +288,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Geometry const& geom, const MPI_Comm& 
 
 
 void
-Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
+Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
@@ -303,7 +303,7 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
         getSlices(lev, WhichSlice::This),
         m_poisson_solver[lev]->StagingArea(),
         Direction::x,
-        geom.CellSize(Direction::x),
+        geom[lev].CellSize(Direction::x),
         1./(phys_const.ep0*phys_const.c),
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["jx"]);
@@ -312,7 +312,7 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
         getSlices(lev, WhichSlice::This),
         m_poisson_solver[lev]->StagingArea(),
         Direction::y,
-        geom.CellSize(Direction::y),
+        geom[lev].CellSize(Direction::y),
         1./(phys_const.ep0*phys_const.c),
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"]);
@@ -323,7 +323,8 @@ Fields::SolvePoissonEz (amrex::Geometry const& geom, const int lev)
 }
 
 void
-Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, const int lev)
+Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
+                        const int lev)
 {
     /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBx()");
@@ -335,7 +336,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
         getSlices(lev, WhichSlice::This),
         m_poisson_solver[lev]->StagingArea(),
         Direction::y,
-        geom.CellSize(Direction::y),
+        geom[lev].CellSize(Direction::y),
         -phys_const.mu0,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["jz"]);
@@ -344,7 +345,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
         getSlices(lev, WhichSlice::Previous1),
         getSlices(lev, WhichSlice::Next),
         m_poisson_solver[lev]->StagingArea(),
-        geom.CellSize(Direction::z),
+        geom[lev].CellSize(Direction::z),
         phys_const.mu0,
         SliceOperatorType::Add,
         Comps[WhichSlice::Previous1]["jy"],
@@ -356,7 +357,8 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Geometry const& geom, c
 }
 
 void
-Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, const int lev)
+Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
+                        const int lev)
 {
     /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBy()");
@@ -368,7 +370,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
         getSlices(lev, WhichSlice::This),
         m_poisson_solver[lev]->StagingArea(),
         Direction::x,
-        geom.CellSize(Direction::x),
+        geom[lev].CellSize(Direction::x),
         phys_const.mu0,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["jz"]);
@@ -377,7 +379,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
         getSlices(lev, WhichSlice::Previous1),
         getSlices(lev, WhichSlice::Next),
         m_poisson_solver[lev]->StagingArea(),
-        geom.CellSize(Direction::z),
+        geom[lev].CellSize(Direction::z),
         -phys_const.mu0,
         SliceOperatorType::Add,
         Comps[WhichSlice::Previous1]["jx"],
@@ -389,7 +391,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Geometry const& geom, c
 }
 
 void
-Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
+Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev)
 {
     /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonBz()");
@@ -404,7 +406,7 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
         getSlices(lev, WhichSlice::This),
         m_poisson_solver[lev]->StagingArea(),
         Direction::y,
-        geom.CellSize(Direction::y),
+        geom[lev].CellSize(Direction::y),
         phys_const.mu0,
         SliceOperatorType::Assign,
         Comps[WhichSlice::This]["jx"]);
@@ -413,7 +415,7 @@ Fields::SolvePoissonBz (amrex::Geometry const& geom, const int lev)
         getSlices(lev, WhichSlice::This),
         m_poisson_solver[lev]->StagingArea(),
         Direction::x,
-        geom.CellSize(Direction::x),
+        geom[lev].CellSize(Direction::x),
         -phys_const.mu0,
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"]);

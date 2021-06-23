@@ -83,21 +83,21 @@ public:
     /** Return 1 species
      * \param[in] i index of the beam
      */
-    BeamParticleContainer& getBeam (int i) {return m_all_beams[i];};
+    BeamParticleContainer& getBeam (int i) {return m_all_beams[i];}
 
     /** returns the number of beams */
-    int get_nbeams () const {return m_nbeams;};
+    int get_nbeams () const {return m_nbeams;}
 
     /** returns the name of a beam */
-    std::string get_name (int i) const {return m_all_beams[i].get_name();};
+    std::string get_name (int i) const {return m_all_beams[i].get_name();}
 
     /** returns the local number of particles of a beam */
     unsigned long long get_local_n_part (int i) const
-        {return m_all_beams[i].TotalNumberOfParticles(1,1);};
+        {return m_all_beams[i].TotalNumberOfParticles(1,1);}
 
     /** returns the local number of particles of a beam */
     unsigned long long get_total_num_particles (int i) const
-        {return m_all_beams[i].get_total_num_particles();};
+        {return m_all_beams[i].get_total_num_particles();}
 
     /** \brief Check that all beams have the same number of Real components
      * and return this number */
@@ -126,7 +126,7 @@ public:
      *
      * \param[in] ibeam beam index
      */
-    int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();};
+    int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();}
 
     /** \brief copy particles in box it-1 in the ghost buffer at the end of the particle array.
      *
@@ -143,7 +143,7 @@ public:
      *
      * \param[in] ibeam index of the beam
      */
-    int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];};
+    int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];}
 
     /** \brief Allows beams.all_from_file to specify the input file of all beams that have
      * no injection_type. Also passes down beams.iteration, beams.plasma_density and
