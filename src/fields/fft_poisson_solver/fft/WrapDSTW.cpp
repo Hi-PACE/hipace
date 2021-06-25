@@ -21,13 +21,15 @@ namespace AnyDST
         const int ny = real_size[1];
 
 #if defined(AMREX_USE_OMP) && defined(HIPACE_FFTW_OMP)
+        if (nx > 32 && ny > 32) {
 #   ifdef AMREX_USE_FLOAT
-        fftwf_init_threads();
-        fftwf_plan_with_nthreads(omp_get_max_threads());
+            fftwf_init_threads();
+            fftwf_plan_with_nthreads(omp_get_max_threads());
 #   else
-        fftw_init_threads();
-        fftw_plan_with_nthreads(omp_get_max_threads());
+            fftw_init_threads();
+            fftw_plan_with_nthreads(omp_get_max_threads());
 #   endif
+        }
 #endif
 
         // Initialize fft_plan.m_plan with the vendor fft plan.
