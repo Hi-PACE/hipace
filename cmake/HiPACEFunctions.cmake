@@ -7,10 +7,12 @@ macro(set_ccache)
         if(HiPACE_COMPUTE STREQUAL CUDA)
             set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
         endif()
+        message(STATUS "Found CCache: ${CCACHE_PROGRAM}")
+    else()
+        message(STATUS "Could NOT find CCache")
     endif()
     mark_as_advanced(CCACHE_PROGRAM)
 endmacro()
-
 
 # set names and paths of temporary build directories
 # the defaults in CMake are sub-ideal for historic reasons, lets make them more
