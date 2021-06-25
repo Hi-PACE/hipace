@@ -20,7 +20,7 @@ namespace AnyDST
         const int nx = real_size[0];
         const int ny = real_size[1];
 
-#ifdef AMREX_USE_OMP
+#if defined(AMREX_USE_OMP) && defined(HIPACE_FFTW_OMP)
 #   ifdef AMREX_USE_FLOAT
         fftwf_init_threads();
         fftwf_plan_with_nthreads(omp_get_max_threads());
