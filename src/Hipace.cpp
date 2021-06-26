@@ -226,6 +226,7 @@ Hipace::InitData ()
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
         mgs[0] = mgs[1] = 1024000000; // disable domain decomposition in x and y directions
+        mgs[2] = Geom(ilev).Domain().length()[2]/m_numprocs_z; // make 1 box per rank longitudinally
         new_max_grid_size.push_back(mgs);
     }
     SetMaxGridSize(new_max_grid_size);
@@ -245,7 +246,7 @@ void
 Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
-    SetMaxGridSize(1048576); // 2^20, this ensures that level 1 uses only 1 box longitudinally.
+    // SetMaxGridSize(1048576); // 2^20, this ensures that level 1 uses only 1 box longitudinally.
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
