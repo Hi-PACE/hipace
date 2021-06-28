@@ -246,7 +246,6 @@ void
 Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
-    // SetMaxGridSize(1048576); // 2^20, this ensures that level 1 uses only 1 box longitudinally.
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
