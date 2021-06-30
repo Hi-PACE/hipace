@@ -25,13 +25,24 @@ namespace AnyDST
      */
     struct DSTplan
     {
-        amrex::FArrayBox* m_position_array; /**< pointer to array in position space */
-        amrex::FArrayBox* m_fourier_array; /**< pointer to array in Fourier space */
-        std::unique_ptr<amrex::FArrayBox> m_expanded_position_array; /**< Expanded data in position space, only for Cuda */
-        std::unique_ptr<amrex::BaseFab<amrex::GpuComplex<amrex::Real>>> m_expanded_fourier_array; /**< Expanded data in Fourier, only for Cuda */
-        AnyFFT::VendorFFTPlan m_plan; /**< Vendor FFT plan */
-        AnyFFT::VendorFFTPlan m_plan_b; /**< Vendor FFT plan */
-        bool use_small_dst; /**< Use large R2C or small C2R dst */
+
+        /** pointer to array in position space */
+        amrex::FArrayBox* m_position_array;
+        /** pointer to array in Fourier space */
+        amrex::FArrayBox* m_fourier_array;
+
+        /** Expanded data in position space, only for Cuda */
+        std::unique_ptr<amrex::FArrayBox> m_expanded_position_array;
+        /** Expanded data in Fourier, only for Cuda */
+        std::unique_ptr<amrex::BaseFab<amrex::GpuComplex<amrex::Real>>> m_expanded_fourier_array;
+
+        /** Vendor FFT plan */
+        AnyFFT::VendorFFTPlan m_plan;
+        /** Vendor FFT plan for the transpose transform. Used for use_small_dst and DSTW */
+        AnyFFT::VendorFFTPlan m_plan_b;
+
+        /** Use large R2C or small C2R dst */
+        bool use_small_dst;
     };
 
     /** Collection of FFT plans, one FFTplan per box */

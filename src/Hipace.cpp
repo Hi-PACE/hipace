@@ -226,6 +226,7 @@ Hipace::InitData ()
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
         amrex::IntVect mgs = maxGridSize(ilev);
         mgs[0] = mgs[1] = 1024000000; // disable domain decomposition in x and y directions
+        mgs[2] = Geom(ilev).Domain().length()[2]/m_numprocs_z; // make 1 box per rank longitudinally
         new_max_grid_size.push_back(mgs);
     }
     SetMaxGridSize(new_max_grid_size);
@@ -245,7 +246,6 @@ void
 Hipace::MakeNewLevelFromScratch (
     int lev, amrex::Real /*time*/, const amrex::BoxArray& ba, const amrex::DistributionMapping&)
 {
-    SetMaxGridSize(1048576); // 2^20, this ensures that level 1 uses only 1 box longitudinally.
 
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
@@ -475,7 +475,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
                 amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                              amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
                 j_slice_next.setVal(0.);
-                m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins,
+                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice, bx, bins,
                                                  m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                                  WhichSlice::Next);
                 m_fields.AddBeamCurrents(lev, WhichSlice::Next);
@@ -505,7 +505,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev);
 
         m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-        m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
         m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
@@ -851,7 +851,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
-        m_multi_beam.DepositCurrentSlice(m_fields, geom[lev], lev, islice, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 

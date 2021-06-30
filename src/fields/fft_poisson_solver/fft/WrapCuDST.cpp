@@ -188,7 +188,7 @@ namespace AnyDST
                     const int n_data, const int n_batch)
     {
         HIPACE_PROFILE("AnyDST::Transpose()");
-        constexpr int tile_dim = 32;
+        constexpr int tile_dim = 32; //must be power of 2
         constexpr int block_rows = 8;
         const int num_blocks_x = (n_data + tile_dim - 1)/tile_dim;
         const int num_blocks_y = (n_batch + tile_dim - 1)/tile_dim;
@@ -200,7 +200,7 @@ namespace AnyDST
                 amrex::Real* const tile = gsm.dataPtr();
 
                 const int thread_x = threadIdx.x&(tile_dim-1);
-                const int thread_y = threadIdx.x>>5; // for tile_dim = 2^5
+                const int thread_y = threadIdx.x/tile_dim;
                 const int block_y = blockIdx.x/num_blocks_x;
                 const int block_x = blockIdx.x - block_y*num_blocks_x;
                 int mat_x = block_x * tile_dim + thread_x;

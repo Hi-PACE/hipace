@@ -83,14 +83,7 @@ include(${HiPACE_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 make_third_party_includes_system(AMReX::amrex AMReX)
 
 # FFTW (non-GPU) and cuFFT (GPU)
-if(NOT HiPACE_COMPUTE STREQUAL CUDA)
-    find_package(PkgConfig REQUIRED QUIET)
-    if(HiPACE_PRECISION STREQUAL "DOUBLE")
-        pkg_check_modules(fftw3 REQUIRED IMPORTED_TARGET fftw3)
-    else()
-        pkg_check_modules(fftw3f REQUIRED IMPORTED_TARGET fftw3f)
-    endif()
-endif()
+include(${HiPACE_SOURCE_DIR}/cmake/dependencies/FFT.cmake)
 
 # openPMD-api
 include(${HiPACE_SOURCE_DIR}/cmake/dependencies/openPMD.cmake)
@@ -124,16 +117,7 @@ set_target_properties(HiPACE PROPERTIES
 # link dependencies
 target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::AMReX)
 
-if(HiPACE_COMPUTE STREQUAL CUDA)
-    # CUDA_ADD_CUFFT_TO_TARGET(HiPACE)
-    target_link_libraries(HiPACE PUBLIC cufft)
-else()
-    if(HiPACE_PRECISION STREQUAL "DOUBLE")
-        target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3)
-    else()
-        target_link_libraries(HiPACE PUBLIC PkgConfig::fftw3f)
-    endif()
-endif()
+target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::FFT)
 
 # AMReX helper function: propagate CUDA specific target & source properties
 if(HiPACE_COMPUTE STREQUAL CUDA)

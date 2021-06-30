@@ -17,6 +17,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    module load OpenMPI
    module load CUDA
    module load HDF5
+   module load ccache # optional, accelerates recompilation
    export GPUS_PER_SOCKET=2
    export GPUS_PER_NODE=4
    # optimize CUDA compilation for A100
