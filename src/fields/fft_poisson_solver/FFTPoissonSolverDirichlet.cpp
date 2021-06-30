@@ -132,6 +132,5 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
                 // Copy and normalize field
                 lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
             });
-
     }
 }
