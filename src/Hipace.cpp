@@ -1257,7 +1257,15 @@ void
 Hipace::ResizeFDiagFAB (const int it)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        const amrex::Box& bx = boxArray(lev)[it];
+        amrex::Box bx = boxArray(lev)[it];
+
+        if (lev == 1) {
+            const amrex::Box& bx_lev0 = boxArray(0)[it];
+            // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
+            bx.setSmall(Direction::z, bx_lev0.smallEnd(Direction::z));
+            bx.setBig  (Direction::z, bx_lev0.bigEnd(Direction::z));
+        }
+
         m_diags.ResizeFDiagFAB(bx, lev);
     }
 }
