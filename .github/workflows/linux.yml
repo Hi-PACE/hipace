@@ -37,7 +37,7 @@ jobs:
         mkdir build
         cd build
         cmake ..                                   \
-            -DHiPACE_COMPUTE=OMP                   \   
+            -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
             -DCMAKE_CXX_STANDARD=17
         make -j 2 VERBOSE=ON
