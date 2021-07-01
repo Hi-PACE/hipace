@@ -92,9 +92,10 @@ Modeling ion motion is not yet supported by the explicit solver
     Which solver to use.
     Possible values: ``predictor-corrector`` and ``explicit``.
 
-* ``hipace.use_small_dst`` (`bool`) optional (default `0`)
+* ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
     Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
-    The small dst can be much quicker for high resolutions.
+    The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
+    The default is set accordingly.
 
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

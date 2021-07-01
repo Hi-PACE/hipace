@@ -232,7 +232,7 @@ namespace AnyDST
         DSTplan dst_plan;
 
         amrex::ParmParse pp("hipace");
-        dst_plan.use_small_dst = false;
+        dst_plan.use_small_dst = (std::max(real_size[0], real_size[1]) >= 511);
         pp.query("use_small_dst", dst_plan.use_small_dst);
 
         if(!dst_plan.use_small_dst) {
