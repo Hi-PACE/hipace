@@ -237,9 +237,6 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        # use OpenMP from here on
-        export OMP_NUM_THREADS=2
-
         add_test(NAME blowout_wake_explicit.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake_explicit.2Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}

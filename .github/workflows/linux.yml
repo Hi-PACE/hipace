@@ -41,6 +41,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
             -DCMAKE_CXX_STANDARD=17
         make -j 2 VERBOSE=ON
+        export OMP_NUM_THREADS=2
         ctest --output-on-failure
 
 #  linux_gcc_cxx14:
