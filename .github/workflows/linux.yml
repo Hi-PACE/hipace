@@ -42,7 +42,7 @@ jobs:
             -DCMAKE_CXX_STANDARD=17
         make -j 2 VERBOSE=ON
         export OMP_NUM_THREADS=2
-        ctest --output-on-failure
+        ctest --verbose
 
 #  linux_gcc_cxx14:
 #    name: GNU@7.5 C++14 Serial
