@@ -57,6 +57,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jxx_fab,
                          amrex::FArrayBox& jxy_fab,
                          amrex::FArrayBox& jyy_fab,
+                         amrex::Vector<amrex::FArrayBox>& tmp_densities,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
                          amrex::Dim3 const lo,
@@ -98,7 +99,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const int z_index = pti.tilebox().smallEnd(2);
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
-
+/*
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
@@ -106,7 +107,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jxx_arr = jxx_fab.array();
     amrex::Array4<amrex::Real> const& jxy_arr = jxy_fab.array();
     amrex::Array4<amrex::Real> const& jyy_arr = jyy_fab.array();
-
+*/
     constexpr int CELL = amrex::IndexType::CELL;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -125,9 +126,20 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
     BeamBins::index_type const * const indices = bins.permutationPtr();
     BeamBins::index_type const * const offsets = bins.offsetsPtr();
-
+    
 #ifdef AMREX_USE_OMP
-#pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+    {
+#endif
+    amrex::Array4<amrex::Real> const& jx_arr = tmp_densities[omp_get_thread_num()].array(0);
+    amrex::Array4<amrex::Real> const& jy_arr = tmp_densities[omp_get_thread_num()].array(1);
+    amrex::Array4<amrex::Real> const& jz_arr = tmp_densities[omp_get_thread_num()].array(2);
+    amrex::Array4<amrex::Real> const& rho_arr = tmp_densities[omp_get_thread_num()].array(3);
+    amrex::Array4<amrex::Real> const& jxx_arr = tmp_densities[omp_get_thread_num()].array(4);
+    amrex::Array4<amrex::Real> const& jxy_arr = tmp_densities[omp_get_thread_num()].array(5);
+    amrex::Array4<amrex::Real> const& jyy_arr = tmp_densities[omp_get_thread_num()].array(6);
+#ifdef AMREX_USE_OMP
+#pragma omp for
 #endif
     for (int itile=0; itile<bins.numBins(); itile++){
         int const num_particles = offsets[itile+1]-offsets[itile];
@@ -228,6 +240,10 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             }
             );
     }
+#ifdef AMREX_USE_OMP
+    }
+#endif
+
     n_qsa_violation = gpu_n_qsa_violation.dataValue();
     if (n_qsa_violation > 0 && (Hipace::m_verbose >= 3))
         amrex::Print()<< "number of QSA violating particles on this slice: " \

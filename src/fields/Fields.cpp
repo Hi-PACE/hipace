@@ -15,7 +15,7 @@ Fields::Fields (Hipace const* a_hipace)
 void
 Fields::AllocData (
     int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-    const amrex::DistributionMapping& slice_dm)
+    const amrex::DistributionMapping& slice_dm, int bin_size)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
@@ -43,6 +43,15 @@ Fields::AllocData (
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
                                          geom[lev]))  );
     }
+#ifdef AMREX_USE_OMP
+    m_tmp_densities.resize(omp_get_thread_num());
+    for (int i=0; i<omp_get_thread_num(); i++){
+        amrex::Box bx = {{0, 0, 0}, {bin_size, bin_size, 0}};
+        bx.grow(m_slices_nguards);
+        // jx jy jz rho jxx jxy jyy
+        m_tmp_densities[i].resize(bx, 7);
+    }
+#endif
 }
 
 void

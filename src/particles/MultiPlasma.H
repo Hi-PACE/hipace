@@ -97,6 +97,8 @@ public:
 
     void TileSort (int step, amrex::Box bx, amrex::Geometry geom);
 
+    int m_sort_bin_size {512}; /**< Bin size to sort plasma particles */
+
 private:
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
@@ -106,7 +108,6 @@ private:
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
     int m_sort_int {-1}; /**< Period at which plasma particles are sorted */
-    int m_sort_bin_size {512}; /**< Bin size to sort plasma particles */
 };
 
 #endif // MULTIPLASMA_H_
