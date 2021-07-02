@@ -192,8 +192,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
-
-            // std::cout<<"particle position "<<pos_structs[ip].pos(0)<<" "<<pos_structs[ip].pos(1)<<'\n';
             
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){

@@ -2,6 +2,7 @@
 #define PLASMAPARTICLEADVANCE_H_
 
 #include "particles/PlasmaParticleContainer.H"
+#include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "Hipace.H"
 
@@ -18,7 +19,8 @@
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
-                        const bool do_update, const bool do_shift, int const lev);
+                        const bool do_update, const bool do_shift, int const lev,
+                        PlasmaBins& bins);
 
 /** \brief Resets the particle position x, y, to x_prev, y_prev
  * \param[in,out] plasma plasma species to reset

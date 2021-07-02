@@ -13,7 +13,8 @@
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
-                        const bool do_update, const bool do_shift, int const lev)
+                        const bool do_update, const bool do_shift, int const lev,
+                        PlasmaBins& bins)
 {
     HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -116,8 +117,17 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real charge = plasma.m_charge;
         const amrex::Real mass = plasma.m_mass;
         const bool can_ionize = plasma.m_can_ionize;
-        amrex::ParallelFor(pti.numParticles(),
-            [=] AMREX_GPU_DEVICE (long ip) {
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (int itile=0; itile<bins.numBins(); itile++){
+        BeamBins::index_type const * const indices = bins.permutationPtr();
+        BeamBins::index_type const * const offsets = bins.offsetsPtr();
+        int const num_particles = offsets[itile+1]-offsets[itile];
+        amrex::ParallelFor(num_particles,
+            [=] AMREX_GPU_DEVICE (long idx) {
+                const int ip = indices[offsets[itile]+idx];
                 amrex::ParticleReal xp, yp, zp;
                 int pid;
                 getPosition(ip, xp, yp, zp, pid);
@@ -165,9 +175,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        dz, temp_slice, ip, SetPosition, enforceBC );
                 }
                 return;
-          }
-          );
-      }
+            }
+            );
+    }
+    }
 }
 
 void

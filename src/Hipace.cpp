@@ -522,7 +522,6 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_fields.AddRhoIons(lev, true);
             ExplicitSolveBxBy(lev);
             m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
-            std::cout<<"call TileSort\n";
             m_multi_plasma.TileSort(islice, bx, geom[lev]);
             m_fields.AddRhoIons(lev);
         } else {
