@@ -13,7 +13,6 @@ findParticlesInEachTile (
     // Tile box: only 1 cell longitudinally, same as bx transversally.
     const amrex::Box tcbx = bx.coarsen(bin_size);
     const amrex::Box cbx = {{tcbx.smallEnd(0),tcbx.smallEnd(1),0}, {tcbx.bigEnd(0),tcbx.bigEnd(1),0}};
-    amrex::Print()<<"cbx\n"<<cbx<<'\n';
 
     PlasmaBins bins;
 
