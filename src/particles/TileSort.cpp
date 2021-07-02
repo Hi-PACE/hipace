@@ -1,4 +1,5 @@
 #include "TileSort.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_ParticleTransformation.H>
 
@@ -7,6 +8,8 @@ findParticlesInEachTile (
     int lev, amrex::Box bx, int bin_size,
     PlasmaParticleContainer& plasma, const amrex::Geometry& geom)
 {
+    HIPACE_PROFILE("findParticlesInEachTile()");
+
     // Tile box: only 1 cell longitudinally, same as bx transversally.
     const amrex::Box tcbx = bx.coarsen(bin_size);
     const amrex::Box cbx = {{tcbx.smallEnd(0),tcbx.smallEnd(1),0}, {tcbx.bigEnd(0),tcbx.bigEnd(1),0}};

@@ -1,4 +1,5 @@
 #include "SliceSort.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_ParticleTransformation.H>
 
@@ -8,6 +9,8 @@ findParticlesInEachSlice (
     BeamParticleContainer& beam, const amrex::Geometry& geom,
     const BoxSorter& a_box_sorter)
 {
+    HIPACE_PROFILE("findParticlesInEachSlice()");
+
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     const amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
 
