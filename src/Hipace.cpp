@@ -1,6 +1,6 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include "particles/BinSort.H"
+#include "particles/SliceSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
@@ -367,6 +367,8 @@ Hipace::Evolve ()
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
+        const amrex::Box& bx = boxArray(lev)[0];
+        m_multi_plasma.TileSort(1, bx, geom[lev]);
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
@@ -449,6 +451,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         amrex::ParallelContext::push(m_comm_xy);
 
         const amrex::Box& bx = boxArray(lev)[ibox];
+        m_multi_plasma.TileSort(1, bx, geom[lev]);
 
         if (m_explicit) {
             // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
@@ -519,6 +522,8 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_fields.AddRhoIons(lev, true);
             ExplicitSolveBxBy(lev);
             m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
+            std::cout<<"call TileSort\n";
+            m_multi_plasma.TileSort(islice, bx, geom[lev]);
             m_fields.AddRhoIons(lev);
         } else {
             PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);

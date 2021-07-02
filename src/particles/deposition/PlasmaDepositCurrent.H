@@ -2,6 +2,7 @@
 #define PLASMADEPOSITCURRENT_H_
 
 #include "particles/PlasmaParticleContainer.H"
+#include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
@@ -22,7 +23,8 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                bool deposit_j_squared, amrex::Geometry const& gm, int const lev);
+                bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
+                PlasmaBins& bins);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_

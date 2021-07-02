@@ -2,6 +2,7 @@
 #define MULTIPLASMA_H_
 
 #include "PlasmaParticleContainer.H"
+#include "TileSort.H"
 #include "fields/Fields.H"
 
 class MultiPlasma
@@ -93,13 +94,19 @@ public:
 
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
     bool AllSpeciesNeutralizeBackground () const;
+
+    void TileSort (int step, amrex::Box bx, amrex::Geometry geom);
+
 private:
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
+    amrex::Vector<PlasmaBins> m_all_bins; /**< Logical tile bins for all plasma containers */
     amrex::Vector<std::string> m_names; /**< names of all plasma containers */
     int m_nplasmas; /**< number of plasma containers */
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
+    int m_sort_int {-1}; /**< Period at which plasma particles are sorted */
+    int m_sort_bin_size {512}; /**< Bin size to sort plasma particles */
 };
 
 #endif // MULTIPLASMA_H_

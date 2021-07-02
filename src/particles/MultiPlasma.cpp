@@ -1,6 +1,7 @@
 #include "MultiPlasma.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
+#include "TileSort.H"
 
 MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 {
@@ -8,6 +9,9 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     amrex::ParmParse pp("plasmas");
     pp.getarr("names", m_names);
     pp.query("adaptive_density", m_adaptive_density);
+    pp.query("sort_int", m_sort_int);
+    pp.query("sort_bin_size", m_sort_bin_size);
+
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
@@ -55,9 +59,10 @@ MultiPlasma::DepositCurrent (
     Fields & fields, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
     bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm, int const lev)
 {
-    for (auto& plasma : m_all_plasmas) {
-        ::DepositCurrent(plasma, fields, which_slice, temp_slice, deposit_jx_jy, deposit_jz,
-                         deposit_rho, deposit_j_squared, gm, lev);
+    //    for (auto& plasma : m_all_plasmas) {
+    for (int i=0; i<m_nplasmas; i++) {
+        ::DepositCurrent(m_all_plasmas[i], fields, which_slice, temp_slice, deposit_jx_jy, deposit_jz,
+                         deposit_rho, deposit_j_squared, gm, lev, m_all_bins[i]);
     }
 }
 
@@ -84,11 +89,12 @@ MultiPlasma::DepositNeutralizingBackground (
     Fields & fields, int which_slice, amrex::Geometry const& gm, int const nlev)
 {
     for (int lev = 0; lev < nlev; ++lev) {
-        for (auto& plasma : m_all_plasmas) {
-            if (plasma.m_neutralize_background){
+        // for (auto& plasma : m_all_plasmas) {
+        for (int i=0; i<m_nplasmas; i++) {
+            if (m_all_plasmas[i].m_neutralize_background){
                 // current of ions is zero, so they are not deposited.
-                ::DepositCurrent(plasma, fields, which_slice, false,
-                                 false, false, true, false, gm, lev);
+                ::DepositCurrent(m_all_plasmas[i], fields, which_slice, false,
+                                 false, false, true, false, gm, lev, m_all_bins[i]);
             }
         }
     }
@@ -101,7 +107,6 @@ MultiPlasma::DoFieldIonization (
     for (auto& plasma : m_all_plasmas) {
         plasma.IonizationModule(lev, geom, fields);
     }
-
 }
 
 bool
@@ -112,4 +117,22 @@ MultiPlasma::AllSpeciesNeutralizeBackground () const
         if (!plasma.m_neutralize_background) all_species_neutralize = false;
     }
     return all_species_neutralize;
+}
+
+void
+MultiPlasma::TileSort (int step, amrex::Box bx, amrex::Geometry geom)
+{
+    amrex::Print()<<"do sorting?\n";
+    AMREX_ALWAYS_ASSERT(m_sort_int == 1 || m_sort_int == -1);
+    if (m_sort_int < 0 || step % m_sort_int != 0) return;
+    amrex::Print()<<"sorting\n";
+    amrex::IntVect sort_bin = {m_sort_bin_size, m_sort_bin_size, 1};
+    constexpr int lev = 0;
+    m_all_bins.clear();
+    for (auto& plasma : m_all_plasmas) {
+        m_all_bins.emplace_back(
+            findParticlesInEachTile(lev, bx, m_sort_bin_size, plasma, geom)
+            );
+    }
+    amrex::Print()<<"m_all_bins.size() "<<m_all_bins.size()<<'\n';
 }

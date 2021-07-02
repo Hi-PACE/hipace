@@ -4,7 +4,8 @@ target_sources(HiPACE
     BeamParticleContainerInit.cpp
     PlasmaParticleContainer.cpp
     PlasmaParticleContainerInit.cpp
-    BinSort.cpp
+    SliceSort.cpp
+    TileSort.cpp
     BoxSort.cpp
     MultiBeam.cpp
     MultiPlasma.cpp

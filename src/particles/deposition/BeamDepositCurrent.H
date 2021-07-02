@@ -4,7 +4,7 @@
 #include "particles/BeamParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-#include "particles/BinSort.H"
+#include "particles/SliceSort.H"
 
 /** Depose current of beam particles on a single slice
  * \param[in] beam species of which the current is deposited

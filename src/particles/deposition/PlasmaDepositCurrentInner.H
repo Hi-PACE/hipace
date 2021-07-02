@@ -9,6 +9,7 @@
 #define HIPACE_PLASMADEPOSITCURRENTINNER_H_
 
 #include "particles/ShapeFactors.H"
+#include "particles/TileSort.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
 
@@ -63,12 +64,15 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          const bool can_ionize,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor)
+                         const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
+                         PlasmaBins& bins)
 {
     using namespace amrex::literals;
 
     const PhysConst phys_const = get_phys_const();
 
+    amrex::Print()<<"bins.size() "<<bins.numBins()<<" "<<bins.numItems()<<"\n";
+    
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
@@ -122,11 +126,21 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
 
-    // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
-    amrex::ParallelFor(
-        pti.numParticles(),
-        [=] AMREX_GPU_DEVICE (long ip) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (int itile=0; itile<bins.numBins(); itile++){
+        BeamBins::index_type const * const indices = bins.permutationPtr();
+        BeamBins::index_type const * const offsets = bins.offsetsPtr();
+        int const num_particles = offsets[itile+1]-offsets[itile];
+        amrex::Print()<<"thread "<<omp_get_thread_num()<<" tile "<<itile<<" num_particles "<<num_particles<<"\n";
 
+// Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
+    amrex::ParallelFor(
+        num_particles,
+        [=] AMREX_GPU_DEVICE (long idx) {
+
+            const int ip = indices[offsets[itile]+idx];
             if (pos_structs[ip].id() < 0) return;
 
             const amrex::Real psi = psip[ip] *
@@ -179,6 +193,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
+            // std::cout<<"particle position "<<pos_structs[ip].pos(0)<<" "<<pos_structs[ip].pos(1)<<'\n';
+            
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){
@@ -216,6 +232,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             return;
         }
         );
+    }
         n_qsa_violation = gpu_n_qsa_violation.dataValue();
         if (n_qsa_violation > 0 && (Hipace::m_verbose >= 3))
             amrex::Print()<< "number of QSA violating particles on this slice: " \
