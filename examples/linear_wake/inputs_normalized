@@ -1,6 +1,8 @@
-amr.n_cell = 32 32 200
+amr.n_cell = 16 16 10
 
 hipace.normalized_units=1
+hipace.bxby_solver = explicit
+# hipace.depos_order_xy = 0
 
 hipace.output_period = 1
 
@@ -16,8 +18,8 @@ hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     0      # Is periodic?
-geometry.prob_lo     = -10.   -10.   -7.5    # physical domain
-geometry.prob_hi     =  10.    10.    2
+geometry.prob_lo     = -8.   -8.   -7.5    # physical domain
+geometry.prob_hi     =  8.    8.    2
 
 beams.names = beam
 beam.injection_type = fixed_ppc

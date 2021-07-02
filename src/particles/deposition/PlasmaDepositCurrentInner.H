@@ -71,8 +71,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
     const PhysConst phys_const = get_phys_const();
 
-    amrex::Print()<<"bins.size() "<<bins.numBins()<<" "<<bins.numItems()<<"\n";
-    
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
@@ -133,7 +131,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         BeamBins::index_type const * const indices = bins.permutationPtr();
         BeamBins::index_type const * const offsets = bins.offsetsPtr();
         int const num_particles = offsets[itile+1]-offsets[itile];
-        amrex::Print()<<"thread "<<omp_get_thread_num()<<" tile "<<itile<<" num_particles "<<num_particles<<"\n";
 
 // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
     amrex::ParallelFor(
@@ -192,7 +189,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
             const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
-            
+
             // Deposit current into jx_arr, jy_arr and jz_arr
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){

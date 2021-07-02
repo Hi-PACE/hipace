@@ -123,10 +123,8 @@ MultiPlasma::AllSpeciesNeutralizeBackground () const
 void
 MultiPlasma::TileSort (int step, amrex::Box bx, amrex::Geometry geom)
 {
-    amrex::Print()<<"do sorting?\n";
     AMREX_ALWAYS_ASSERT(m_sort_int == 1 || m_sort_int == -1);
     if (m_sort_int < 0 || step % m_sort_int != 0) return;
-    amrex::Print()<<"sorting\n";
     amrex::IntVect sort_bin = {m_sort_bin_size, m_sort_bin_size, 1};
     constexpr int lev = 0;
     m_all_bins.clear();
@@ -135,5 +133,4 @@ MultiPlasma::TileSort (int step, amrex::Box bx, amrex::Geometry geom)
             findParticlesInEachTile(lev, bx, m_sort_bin_size, plasma, geom)
             );
     }
-    amrex::Print()<<"m_all_bins.size() "<<m_all_bins.size()<<'\n';
 }
