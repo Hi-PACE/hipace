@@ -12,7 +12,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
-                PlasmaBins& bins)
+                PlasmaBins& bins, int bin_size)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
 
@@ -68,25 +68,25 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                                           jxx_fab, jxy_fab, jyy_fab, tmp_dens,
                                           dx, xyzmin, lo, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          deposit_j_squared, max_qsa_weighting_factor, bins);
+                                          deposit_j_squared, max_qsa_weighting_factor, bins, bin_size);
         } else if (Hipace::m_depos_order_xy == 1){
                 doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           jxx_fab, jxy_fab, jyy_fab, tmp_dens,
                                           dx, xyzmin, lo, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          deposit_j_squared, max_qsa_weighting_factor, bins);
+                                          deposit_j_squared, max_qsa_weighting_factor, bins, bin_size);
         } else if (Hipace::m_depos_order_xy == 2){
                 doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           jxx_fab, jxy_fab, jyy_fab, tmp_dens,
                                           dx, xyzmin, lo, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          deposit_j_squared, max_qsa_weighting_factor, bins);
+                                          deposit_j_squared, max_qsa_weighting_factor, bins, bin_size);
         } else if (Hipace::m_depos_order_xy == 3){
                 doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
                                           jxx_fab, jxy_fab, jyy_fab, tmp_dens,
                                           dx, xyzmin, lo, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho,
-                                          deposit_j_squared, max_qsa_weighting_factor, bins);
+                                          deposit_j_squared, max_qsa_weighting_factor, bins, bin_size);
         } else {
             amrex::Abort("unknow deposition order");
         }

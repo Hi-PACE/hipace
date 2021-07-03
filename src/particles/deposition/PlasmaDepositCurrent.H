@@ -24,7 +24,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
-                PlasmaBins& bins);
+                PlasmaBins& bins, int bin_size);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_

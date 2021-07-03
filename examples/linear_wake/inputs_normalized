@@ -2,7 +2,7 @@ amr.n_cell = 16 16 10
 
 hipace.normalized_units=1
 hipace.bxby_solver = explicit
-# hipace.depos_order_xy = 0
+hipace.depos_order_xy = 0
 
 hipace.output_period = 1
 

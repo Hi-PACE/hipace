@@ -62,7 +62,7 @@ MultiPlasma::DepositCurrent (
     //    for (auto& plasma : m_all_plasmas) {
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, which_slice, temp_slice, deposit_jx_jy, deposit_jz,
-                         deposit_rho, deposit_j_squared, gm, lev, m_all_bins[i]);
+                         deposit_rho, deposit_j_squared, gm, lev, m_all_bins[i], m_sort_bin_size);
     }
 }
 
@@ -95,7 +95,7 @@ MultiPlasma::DepositNeutralizingBackground (
             if (m_all_plasmas[i].m_neutralize_background){
                 // current of ions is zero, so they are not deposited.
                 ::DepositCurrent(m_all_plasmas[i], fields, which_slice, false,
-                                 false, false, true, false, gm, lev, m_all_bins[i]);
+                                 false, false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
             }
         }
     }

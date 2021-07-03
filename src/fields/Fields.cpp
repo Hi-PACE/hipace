@@ -44,9 +44,9 @@ Fields::AllocData (
                                          geom[lev]))  );
     }
 #ifdef AMREX_USE_OMP
-    m_tmp_densities.resize(omp_get_thread_num());
-    for (int i=0; i<omp_get_thread_num(); i++){
-        amrex::Box bx = {{0, 0, 0}, {bin_size, bin_size, 0}};
+    m_tmp_densities.resize(omp_get_num_threads());
+    for (int i=0; i<omp_get_num_threads(); i++){
+        amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
         bx.grow(m_slices_nguards);
         // jx jy jz rho jxx jxy jyy
         m_tmp_densities[i].resize(bx, 7);

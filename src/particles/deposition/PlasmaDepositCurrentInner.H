@@ -66,7 +66,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
-                         PlasmaBins& bins)
+                         PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
 
@@ -126,7 +126,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
     BeamBins::index_type const * const indices = bins.permutationPtr();
     BeamBins::index_type const * const offsets = bins.offsetsPtr();
-    
+
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
     {
@@ -138,16 +138,26 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jxx_arr = tmp_densities[omp_get_thread_num()].array(4);
     amrex::Array4<amrex::Real> const& jxy_arr = tmp_densities[omp_get_thread_num()].array(5);
     amrex::Array4<amrex::Real> const& jyy_arr = tmp_densities[omp_get_thread_num()].array(6);
+
+    int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*depos_order_xy;
+    int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*depos_order_xy;
+    AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
+    AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
+    int ntilex = ncellx / bin_size;
+    int ntiley = ncelly / bin_size;
+
 #ifdef AMREX_USE_OMP
 #pragma omp for
 #endif
     for (int itile=0; itile<bins.numBins(); itile++){
         int const num_particles = offsets[itile+1]-offsets[itile];
-
+        int itilex = itile / ntiley;
+        int itiley = itile % ntiley;
 // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
         amrex::ParallelFor(
             num_particles,
             [=] AMREX_GPU_DEVICE (long idx) {
+
 
                 const int ip = indices[offsets[itile]+idx];
                 if (pos_structs[ip].id() < 0) return;
@@ -193,12 +203,12 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 // --- Compute shape factors
                 // x direction
                 // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-                const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
+                const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi - itilex*bin_size;
                 amrex::Real sx_cell[depos_order_xy + 1];
                 const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
 
                 // y direction
-                const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
+                const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi - itiley*bin_size;
                 amrex::Real sy_cell[depos_order_xy + 1];
                 const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
 
@@ -239,6 +249,20 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 return;
             }
             );
+        // atomic add from tmp arrays to main arrays
+        amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
+        amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, 0},
+                            {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, 0}};
+        int nguards_xy = std::max(1, depos_order_xy);;
+        srcbx.grow({nguards_xy, nguards_xy, 0});
+        dstbx.grow({nguards_xy, nguards_xy, 0});
+        jx_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 0, 0, 1);
+        jy_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 1, 0, 1);
+        jz_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 2, 0, 1);
+        rho_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 3, 0, 1);
+        jxx_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 4, 0, 1);
+        jxy_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 5, 0, 1);
+        jyy_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 6, 0, 1);
     }
 #ifdef AMREX_USE_OMP
     }
