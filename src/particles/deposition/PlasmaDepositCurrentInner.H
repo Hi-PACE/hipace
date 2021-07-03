@@ -49,7 +49,7 @@
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  * \param[in] bins objects containing indices of plasma particles in each tile
- * \param[in] bins_size tile size (square)
+ * \param[in] bin_size tile size (square)
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const PlasmaParticleIterator& pti,
