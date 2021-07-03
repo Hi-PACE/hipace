@@ -44,8 +44,14 @@ Fields::AllocData (
                                          geom[lev]))  );
     }
 #ifdef AMREX_USE_OMP
-    m_tmp_densities.resize(omp_get_num_threads());
-    for (int i=0; i<omp_get_num_threads(); i++){
+    int num_threads = 1;
+#pragma omp parallel
+    {
+        std::cout<<"omp_get_num_threads() "<<omp_get_num_threads()<<'\n';
+        num_threads = omp_get_num_threads();
+    }
+    m_tmp_densities.resize(num_threads);
+    for (int i=0; i<num_threads; i++){
         amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
         bx.grow(m_slices_nguards);
         // jx jy jz rho jxx jxy jyy
