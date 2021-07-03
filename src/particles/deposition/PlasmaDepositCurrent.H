@@ -19,7 +19,7 @@
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  * \param[in] bins objects containing indices of plasma particles in each tile
- * \param[in] bins_size tile size (square)
+ * \param[in] bin_size tile size (square)
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
