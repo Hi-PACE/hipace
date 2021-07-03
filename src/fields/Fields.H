@@ -77,6 +77,7 @@ public:
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
+     * \param[in] bin_size size of plasma tiles, for tmp arrays
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
