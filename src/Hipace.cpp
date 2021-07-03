@@ -45,11 +45,7 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-#ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
-#else
-bool Hipace::m_do_tiling = true;
-#endif
 
 Hipace&
 Hipace::GetInstance ()
@@ -124,6 +120,7 @@ Hipace::Hipace () :
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
     pph.query("do_tiling", m_do_tiling);
+    if (m_do_tiling) AMREX_ALWAYS_ASSERT(m_explicit);
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
