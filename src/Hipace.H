@@ -239,6 +239,7 @@ public:
     static bool m_do_device_synchronize;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
+    static bool m_do_tiling;
     static int m_beam_injection_cr;
     /** Slope of external focusing fields applied to beam particles.
      * The fields applied are ExmBy = m_external_ExmBy_slope*x, and same in y. */

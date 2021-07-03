@@ -16,9 +16,7 @@ findParticlesInEachTile (
 
     PlasmaBins bins;
 
-    // const int np = numParticles();
     // Extract particle structures for this tile
-    // PlasmaParticleContainer::ParticleType const* particle_ptr = plasma.GetArrayOfStructs()().data();
     int count = 0;
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
         count += 1;

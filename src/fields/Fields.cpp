@@ -49,12 +49,14 @@ Fields::AllocData (
     {
         num_threads = omp_get_num_threads();
     }
-    m_tmp_densities.resize(num_threads);
-    for (int i=0; i<num_threads; i++){
-        amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
-        bx.grow(m_slices_nguards);
-        // jx jy jz rho jxx jxy jyy
-        m_tmp_densities[i].resize(bx, 7);
+    if (Hipace::m_do_tiling) {
+        m_tmp_densities.resize(num_threads);
+        for (int i=0; i<num_threads; i++){
+            amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
+            bx.grow(m_slices_nguards);
+            // jx jy jz rho jxx jxy jyy
+            m_tmp_densities[i].resize(bx, 7);
+        }
     }
 #endif
 }

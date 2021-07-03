@@ -45,6 +45,11 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
+#ifdef AMREX_USE_GPU
+bool Hipace::m_do_tiling = false;
+#else
+bool Hipace::m_do_tiling = true;
+#endif
 
 Hipace&
 Hipace::GetInstance ()
@@ -118,6 +123,7 @@ Hipace::Hipace () :
 
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
+    pph.query("do_tiling", m_do_tiling);
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
@@ -351,7 +357,6 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
-
     m_box_sorters.clear();
     m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 
@@ -367,8 +372,7 @@ Hipace::Evolve ()
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        const amrex::Box& bx = boxArray(lev)[0];
-        m_multi_plasma.TileSort(1, bx, geom[lev]);
+        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
@@ -451,7 +455,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         amrex::ParallelContext::push(m_comm_xy);
 
         const amrex::Box& bx = boxArray(lev)[ibox];
-        m_multi_plasma.TileSort(1, bx, geom[lev]);
+        if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         if (m_explicit) {
             // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
@@ -522,7 +526,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_fields.AddRhoIons(lev, true);
             ExplicitSolveBxBy(lev);
             m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
-            m_multi_plasma.TileSort(islice, bx, geom[lev]);
+            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
             m_fields.AddRhoIons(lev);
         } else {
             PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);

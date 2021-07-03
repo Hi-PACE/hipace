@@ -11,8 +11,8 @@ using PlasmaBins = amrex::DenseBins<PlasmaParticleContainer::ParticleType>;
  * Note that this does *not* rearrange particle arrays
  *
  * \param[in] lev MR level
- * \param[in] ibox index of the box
  * \param[in] bx 3d box in which particles are sorted per slice
+ * \param[in] bin_size number of cells per tile (square)
  * \param[in] plasma Plasma particle container
  * \param[in] geom Geometry
  */
@@ -21,4 +21,4 @@ findParticlesInEachTile (
     int lev, amrex::Box bx, int bin_size,
     PlasmaParticleContainer& plasma, const amrex::Geometry& geom);
 
-#endif // HIPACE_SLICESORT_H_
+#endif // HIPACE_TILESORT_H_

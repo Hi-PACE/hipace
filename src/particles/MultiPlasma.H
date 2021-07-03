@@ -95,9 +95,14 @@ public:
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
     bool AllSpeciesNeutralizeBackground () const;
 
-    void TileSort (int step, amrex::Box bx, amrex::Geometry geom);
+    /** \brief sort particles of all containers by tile logically, and store results in m_all_bins
+     *
+     * \param[in] bx transverse box on which the particles are sorted
+     * \param[in] geom Geometry object
+     */
+    void TileSort (amrex::Box bx, amrex::Geometry geom);
 
-    int m_sort_bin_size {512}; /**< Bin size to sort plasma particles */
+    int m_sort_bin_size {32}; /**< Bin size to sort plasma particles */
 
 private:
 
@@ -107,7 +112,6 @@ private:
     int m_nplasmas; /**< number of plasma containers */
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
-    int m_sort_int {-1}; /**< Period at which plasma particles are sorted */
 };
 
 #endif // MULTIPLASMA_H_
