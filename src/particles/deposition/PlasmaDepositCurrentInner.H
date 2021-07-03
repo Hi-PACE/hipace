@@ -131,7 +131,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
     {
 #endif
-    tmp_densities[omp_get_thread_num()].setVal(0.);
     amrex::Array4<amrex::Real> const& jx_arr = tmp_densities[omp_get_thread_num()].array(0);
     amrex::Array4<amrex::Real> const& jy_arr = tmp_densities[omp_get_thread_num()].array(1);
     amrex::Array4<amrex::Real> const& jz_arr = tmp_densities[omp_get_thread_num()].array(2);
@@ -153,6 +152,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #pragma omp for
 #endif
     for (int itile=0; itile<bins.numBins(); itile++){
+        tmp_densities[omp_get_thread_num()].setVal(0.);
         int const num_particles = offsets[itile+1]-offsets[itile];
         int itilex = itile / ntiley;
         int itiley = itile % ntiley;

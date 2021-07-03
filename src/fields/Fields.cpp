@@ -47,7 +47,6 @@ Fields::AllocData (
     int num_threads = 1;
 #pragma omp parallel
     {
-        std::cout<<"omp_get_num_threads() "<<omp_get_num_threads()<<'\n';
         num_threads = omp_get_num_threads();
     }
     m_tmp_densities.resize(num_threads);
