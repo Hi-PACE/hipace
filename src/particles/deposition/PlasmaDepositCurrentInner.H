@@ -150,7 +150,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             ntiley = ncelly / bin_size;
         }
 
-        const int ntiles = Hipace::m_do_tiling ? 1 : bins.numBins();
+        const int ntiles = Hipace::m_do_tiling ? bins.numBins() : 1;
 #ifdef AMREX_USE_OMP
 #pragma omp for
 #endif
