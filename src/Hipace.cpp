@@ -120,7 +120,7 @@ Hipace::Hipace () :
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
     pph.query("do_tiling", m_do_tiling);
-    if (m_do_tiling) AMREX_ALWAYS_ASSERT(m_explicit);
+    // if (m_do_tiling) AMREX_ALWAYS_ASSERT(m_explicit);
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
@@ -466,8 +466,11 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
         }
 
-        if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
-                                                         true, false, false, lev);
+        if (!m_explicit) {
+            m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
+                                            true, false, false, lev);
+            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+        }
 
         amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                             Comps[WhichSlice::This]["rho"], 1);
@@ -852,6 +855,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         /* Push particles to the next slice */
         m_multi_plasma.AdvanceParticles(m_fields, geom[lev], true, true, false, false, lev);
 
+        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);

@@ -41,7 +41,7 @@ MultiPlasma::InitData (int lev, amrex::BoxArray slice_ba,
             plasma.InitIonizationModule(gm, plasma_product);
         }
     }
-    m_all_bins.resize(m_nplasmas);
+    if (m_nplasmas > 0) m_all_bins.resize(m_nplasmas);
 }
 
 amrex::Real
