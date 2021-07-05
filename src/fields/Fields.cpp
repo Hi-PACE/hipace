@@ -4,6 +4,8 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
+#include <cstdlib>
+#include <math.h>
 
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
@@ -258,52 +260,281 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
      
     /*Setting non-zero boundary conditions*/
-    const auto plo = geom.ProbLoArray();
-    const auto xmin =geom.ProbLo(0);
-    const auto xmax =geom.ProbHi(0);
-    const auto ymin =geom.ProbLo(1);
-    const auto ymax=geom.ProbHi(1);
-    const auto dx = geom.CellSizeArray();
-    const auto ncells_global = geom.Domain().length();
-    const auto nx = ncells_global[0];
-    const auto ny =ncells_global[1];
+    const auto plo = geom[lev].ProbLoArray();
+    //amrex::Print()<<plo[0]<<"\n"; 
+    const auto xmin =geom[lev].ProbLo(0);
+    const auto xmax =geom[lev].ProbHi(0);
+    const auto ymin =geom[lev].ProbLo(1);
+    const auto ymax=geom[lev].ProbHi(1);
+    const auto dx = geom[lev].CellSizeArray();
     
     if (lev!=0)
-    {
+    {   
+        //amrex::Print()<<xmin<<"\n";
         //Interpolation 
          amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["Psi"], 1);
         //amrex::Print()<<"Refined Mesh \n";
-        for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi){
+        for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
+        {
             const amrex::Box & bx = mfi.tilebox();
+
+            /*
+                Get information of the mesh 
+            */
+           
+            const amrex::Box & bx_fine = mfi.tilebox();
+            const amrex::IntVect& small = bx_fine.smallEnd(); //Get the small end of the Box
+            const auto nx_fine_low  =  small[0];
+            const auto ny_fine_low = small[1]; 
+           
+            const amrex::IntVect& high = bx.bigEnd();  // Get the big end of the Box 
+            const auto nx_fine_high = high[0];
+            const auto ny_fine_high = high[1];
+            
+
+            //
+
+            
+            const auto x_min_fine = plo[0]+ (nx_fine_low+0.5)*dx[0];
+            const auto x_max_fine = plo[0]+ (nx_fine_high+0.5)*dx[0];
+            //amrex::Print()<<"x_max: "<<nx_fine_low<<"x_min: "<<nx_fine_high<<"\n";
+            const auto y_min_fine = plo[1]+ (ny_fine_low+0.5)*dx[1];
+            const auto y_max_fine = plo[1]+ (ny_fine_high+0.5)*dx[1];
+
+            
+            //
+            //const auto x_min_fine =
             amrex::Array4<amrex::Real >  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
             amrex::Array4<amrex::Real >  data_array_coarse = m_poisson_solver[lev-1]->StagingArea().array(mfi);
             amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
                 {
-                
-                    if (i == 0 || i == nx-1)
-                    {   
-                        /*
+    
+                    //Compute coordinate
+                    const auto plo_coarse = geom[lev-1].ProbLoArray(); 
+                    const auto dx_coarse = geom[lev-1].CellSizeArray(); //
+                    const auto refinement_ratio = dx_coarse[0]/dx[0];
+                    
+                    if (j==ny_fine_low|| j == ny_fine_high)
+                    {
+                        //amrex::Print()<<"dx coarse "<< dx_coarse[0]<< " dx fine "<< dx[0]<<"\n";
                         amrex::Real x = plo[0] + (i+0.5) *dx[0];
                         amrex::Real y = plo[1] + (j+0.5) *dx[1];
-                        amrex::Real r_square  = pow(x,2)+pow(y,2);
-                        data_array(i,j,k,0) -= 1./4*(r_square/(pow(dx[0],2)));
-                        */
+                        amrex::Real x_neighbor_left = x - dx[0];
+                        amrex::Real x_neighbor_right = x + dx[0];
+                        if(x_neighbor_left <= x_min_fine) {x_neighbor_left = x_min_fine;}
+                        if(x_neighbor_right >= x_max_fine) {x_neighbor_right = x_max_fine;}
 
-                        data_array(i,j,k,0) -= 9;
-                    }
-                    if (j== 0 || j == ny-1)
-                    {   
+                        double ind_left = (x_neighbor_left-plo[0]-0.5*dx_coarse[0])/dx_coarse[0]; //-0.5*dx_coarse[0]
+                        double ind_right = (x_neighbor_right-plo[0]-0.5*dx_coarse[0])/dx_coarse[0];
+                        int count_2=0; 
+                        double epsilon = 1E-5;
+                        amrex::Print()<<"Start Loop initial position: "<< x_neighbor_left<<"\n";
+                        while ( ind_left-floor(ind_left) > epsilon && count_2 <refinement_ratio)
+                        {
+                            amrex::Print()<< "Floor: "<<floor(ind_left)<<" Real value "<<ind_left<<" "<<x_neighbor_left<<"\n";
+                            x_neighbor_left = x_neighbor_left - dx[0];
+                            ind_left = (x_neighbor_left-plo[0]-0.5*dx_coarse[0])/(dx_coarse[0]);
+                            count_2 +=1;
+                            //amrex::Print()<<"Indices in loop left "<<ind_left<<"\n";
+                            //amrex::Print()<<"Position in Loop left "<<x_neighbor_left<<"\n";
+                            
+                        }
+                        amrex::Print()<<"End loop indice: "<<ind_left<<"\n";
+                        int count_1=0;
+                        while (  ind_right-floor(ind_right) > epsilon && count_1 <refinement_ratio){
+                            //amrex::Print()<<std::floor(ind_right)!= ind_right<<"\n";
+                            x_neighbor_right = x_neighbor_right + dx[0];
+                            ind_right = (x_neighbor_right-plo[0]-0.5*dx_coarse[0])/(dx_coarse[0]);
+                            count_1 +=1;
+                            /*
+                            amrex::Print()<<"Position "<<x_neighbor_right<<"\n";
+                            amrex::Print()<<"Iterator "<<count_1<<"\n";
+                            amrex::Print()<<"Indices "<<ind_right<<"\n";
+                            */
+
+                            /*
+                            amrex::Print()<<"Indices in loop right  "<<ind_right<<"\n";
+                            amrex::Print()<<"Position in Loop right "<<x_neighbor_right<<"\n";
+                            */
+                        }
+                        
+                        if(count_2>=refinement_ratio){
+                            amrex::Print()<<" Problem !! \n";
+                            //amrex::Print()<<"Position Left "<<x_neighbor_left<<"\n";
+                            //amrex::Print()<<"Indice "<<ind_left<<"\n";
+                        }
                         /*
-                        amrex::Real x = plo[0] + (i+0.5) *dx[0];
-                        amrex::Real y = plo[1] + (j+0.5) *dx[1];
-                        amrex::Real r_square  = pow(x,2)+pow(y,2);
-                        data_array(i,j,k,0) -= 1./4*(r_square/(pow(dx[0],2)));
+                        if(count_1>=4){
+                            amrex::Print()<<"Position right "<<x_neighbor_right<<"\n";
+                            amrex::Print()<<"Indice "<<ind_right<<"\n";
+                        }
                         */
-                        data_array(i,j,k,0) -= 9;
+                        if(x_neighbor_left <= x_min_fine){ x_neighbor_left = x_min_fine; ind_left = ny_fine_low;}
+                        if(x_neighbor_right >= x_max_fine){ x_neighbor_right = x_max_fine; ind_right = ny_fine_high;}
+                        //amrex::Print()<<x_max_fine<<"\n";
+                        //amrex::Print()<<"Left neighbor in coarse grid: "<<x_neighbor_left<<"\n Point: "<<x<<" Right neighbor in coarse grid: "<<x_neighbor_right<<"\n";
+                        //amrex::Print()<<"Left neighbor "<<x_neighbor_left<<"\n";
+                        //amrex::Print()<<"Index left "<<ind_left<<" Index right "<<ind_right<<"\n";
+                        /*
+                            Interpolation 
+                        */
+                        const auto val_left = data_array_coarse(std::floor(ind_left),j,k);
+                        const auto val_right = data_array_coarse(std::floor(ind_right),j,k);
+                        const auto left_term = val_left*(x-x_neighbor_right)/(x_neighbor_left-x_neighbor_right) ;
+                        const auto right_term = val_right*(x-x_neighbor_left)/(x_neighbor_right-x_neighbor_left) ;
+                        data_array(i,j,k) += left_term+right_term/(pow(dx[0],2));
+
                     }
+                   
+                    if(i==nx_fine_low || i== nx_fine_high)
+                    {
+                        //amrex::Print()<<"dx coarse "<< dx_coarse[0]<< " dx fine "<< dx[0]<<"\n";
+                        amrex::Real x = plo[0] + (i) *dx[0];
+                        amrex::Real y = plo[1] + (j) *dx[1];
+                        amrex::Real y_neighbor_left = y - dx[1];
+                        amrex::Real y_neighbor_right = y + dx[1];
+                        double ind_left = (y_neighbor_left-plo[1])/dx_coarse[1]; //-0.5*dx_coarse[1]
+                        double ind_right = (y_neighbor_right-plo[1])/dx_coarse[1];
+                        double epsilon = 1E-5;
+
+                        while (ind_left-floor(ind_left) > epsilon)
+                        {
+                            y_neighbor_left -= dx[1];
+                            ind_left = (y_neighbor_left-plo[1])/dx_coarse[1];
+                        }
+
+                        if(y_neighbor_left <= y_min_fine){ y_neighbor_left = y_min_fine; ind_left = nx_fine_low;}
+
+                        while (ind_right-floor(ind_right) > epsilon)
+                        {
+                            y_neighbor_right += dx[1];
+                            ind_right = (y_neighbor_right-plo[1])/dx_coarse[1];
+                        }
+                        if(y_neighbor_right >= y_max_fine){ y_neighbor_right = y_max_fine; ind_right = nx_fine_high;}
+                        //amrex::Print()<<y_max_fine<<"\n";
+                        //amrex::Print()<<"Left neighbor in coarse grid "<<y_neighbor_left<<"\n Point: "<<y<<" Right neighbor in coarse grid: "<<y_neighbor_right<<"\n";
+                        //amrex::Print()<<"Index left "<<ind_left<<" Index right "<<ind_right<<"\n";
+                        /*
+                            Interpolation 
+                        */
+                        const auto val_left = data_array_coarse(i,std::floor(ind_left),k);
+                        const auto val_right = data_array_coarse(i,std::floor(ind_right),k);
+                        const auto left_term = val_left*(y-y_neighbor_right)/(y_neighbor_left-y_neighbor_right) ;
+                        const auto right_term = val_right*(y-y_neighbor_left)/(y_neighbor_right-y_neighbor_left) ;
+                        data_array(i,j,k) += left_term+right_term/(pow(dx[0],2)); 
+                    }
+
+                    /*
+                    if (y-dx_coarse[0] <= y_max_fine && x >= x_min_fine && x<= x_max_fine)
+                    {   
+                        amrex::Real x_neighbor_left = x - dx_coarse[0];
+                        amrex::Real x_neighbor_right = x + dx_coarse[0];
+                        //if (x_neighbor_left < x_min_fine) {x_neighbor_left = x_min_fine;}
+                        //if (x_neighbor_right > x_max_fine ) {x_neighbor_right = x_max_fine;}
+                        //Or high i have to check 
+                        const auto index_row = 4;
+                        //amrex::Print()<<x_neighbor_left<<"Begin\n";
+                        for(int m = 0; m < 2*(refinement_ratio+1); m++)
+                        {   
+                            double x_point = x_neighbor_left + m*dx[0];
+                            double col_ind =  (x_point-x_min_fine)/dx[0];
+                            //amrex::Print()<<col_ind<<" "<<x_point<<"\n";
+                            //amrex::Print()<<col_ind<<"\n";
+                            //Interpolation we use polynomial interpolation 
+                            const auto val_mid = data_array_coarse(i,j,k);
+                            const auto val_left = data_array_coarse(i-1,j,k);
+                            const auto val_right = data_array_coarse(i+1,j,k);
+                            const auto first_term = val_mid*(x_point-x_neighbor_right)*(x_point-x_neighbor_left)/((x-x_neighbor_left)*(x-x_neighbor_right));
+                            const auto second_term = val_left*(x_point-x)*(x_point-x_neighbor_right)/((x_neighbor_left-x)*(x_neighbor_left-x_neighbor_right));
+                            const auto third_term = val_right*(x_point-x)*(x_point-x_neighbor_left)/((x_neighbor_right-x)*(x_neighbor_right-x_neighbor_left));
+                            data_array(col_ind,index_row,k,0) += first_term+second_term+third_term;
+                        }
+                        //amrex::Print()<<"End\n";
+                    }
+                    if (y+dx_coarse[1] >= y_min_fine && x >= x_min_fine && x<= x_max_fine )
+                    {   
+                        amrex::Real x_neighbor_left = x - dx_coarse[0];
+                        amrex::Real x_neighbor_right = x + dx_coarse[0];
+                        //if (x_neighbor_left < x_min_fine) {x_neighbor_left = x_min_fine;}
+                        //if (x_neighbor_right > x_max_fine ) {x_neighbor_right = x_max_fine;}
+                        //Or high i have to check 
+                        const auto index_row = 15;
+                        //amrex::Print()<<x_neighbor_left<<"Begin\n";
+                        for(int m = 0; m < 2*(refinement_ratio+1); m++)
+                        {   
+                            double x_point = x_neighbor_left + m*dx[0];
+                            double col_ind =  (x_point-x_min_fine)/dx[0];
+                            //amrex::Print()<<col_ind<<" "<<x_point<<"\n";
+                            //amrex::Print()<<col_ind<<"\n";
+                            //Interpolation we use polynomial interpolation 
+                            const auto val_mid = data_array_coarse(i,j,k);
+                            const auto val_left = data_array_coarse(i-1,j,k);
+                            const auto val_right = data_array_coarse(i+1,j,k);
+                            const auto first_term = val_mid*(x_point-x_neighbor_right)*(x_point-x_neighbor_left)/((x-x_neighbor_left)*(x-x_neighbor_right));
+                            const auto second_term = val_left*(x_point-x)*(x_point-x_neighbor_right)/((x_neighbor_left-x)*(x_neighbor_left-x_neighbor_right));
+                            const auto third_term = val_right*(x_point-x)*(x_point-x_neighbor_left)/((x_neighbor_right-x)*(x_neighbor_right-x_neighbor_left));
+                            data_array(col_ind,index_row,k,0) += first_term+second_term+third_term;
+                        }
+                        //amrex::Print()<<"End\n";
+                        
+                    }
+
+                    if (x+dx_coarse[0]>= x_min_fine && y >= y_min_fine && y<= y_max_fine)
+                    {   
+                        amrex::Real y_neighbor_left = y - dx_coarse[1];
+                        amrex::Real y_neighbor_right = y + dx_coarse[1];
+                        //if (x_neighbor_left < x_min_fine) {x_neighbor_left = x_min_fine;}
+                        //if (x_neighbor_right > x_max_fine ) {x_neighbor_right = x_max_fine;}
+                        //Or high i have to check 
+                        const auto index_line = 15;
+                        //amrex::Print()<<x_neighbor_left<<"Begin\n";
+                        for(int m = 0; m < 2*(refinement_ratio+1); m++)
+                        {   
+                            double y_point = y_neighbor_left + m*dx[1];
+                            double line_ind =  (y_point-y_min_fine)/dx[1];
+                            //amrex::Print()<<col_ind<<" "<<x_point<<"\n";
+                            //amrex::Print()<<col_ind<<"\n";
+                            //Interpolation we use polynomial interpolation 
+                            const auto val_mid = data_array_coarse(i,j,k);
+                            const auto val_left = data_array_coarse(i-1,j,k);
+                            const auto val_right = data_array_coarse(i+1,j,k);
+                            const auto first_term = val_mid*(y_point-y_neighbor_right)*(y_point-y_neighbor_left)/((y-y_neighbor_left)*(y-y_neighbor_right));
+                            const auto second_term = val_left*(y_point-y)*(y_point-y_neighbor_right)/((y_neighbor_left-y)*(y_neighbor_left-y_neighbor_right));
+                            const auto third_term = val_right*(y_point-y)*(y_point-y_neighbor_left)/((y_neighbor_right-y)*(y_neighbor_right-y_neighbor_left));
+                            data_array(index_line,line_ind,k,0) += first_term+second_term+third_term;
+                        }
+                        //amrex::Print()<<"End\n";
+                    }
+                    if (x-dx_coarse[0]<= x_max_fine && y >= y_min_fine && y<= y_max_fine)
+                    {   
+                        amrex::Real y_neighbor_left = y - dx_coarse[1];
+                        amrex::Real y_neighbor_right = y + dx_coarse[1];
+                        //if (x_neighbor_left < x_min_fine) {x_neighbor_left = x_min_fine;}
+                        //if (x_neighbor_right > x_max_fine ) {x_neighbor_right = x_max_fine;}
+                        //Or high i have to check 
+                        const auto index_line = 4;
+                        //amrex::Print()<<x_neighbor_left<<"Begin\n";
+                        for(int m = 0; m < 2*(refinement_ratio+1); m++)
+                        {   
+                            double y_point = y_neighbor_left + m*dx[1];
+                            double line_ind =  (y_point-y_min_fine)/dx[1];
+                            //amrex::Print()<<col_ind<<" "<<x_point<<"\n";
+                            //amrex::Print()<<col_ind<<"\n";
+                            //Interpolation we use polynomial interpolation 
+                            const auto val_mid = data_array_coarse(i,j,k);
+                            const auto val_left = data_array_coarse(i-1,j,k);
+                            const auto val_right = data_array_coarse(i+1,j,k);
+                            const auto first_term = val_mid*(y_point-y_neighbor_right)*(y_point-y_neighbor_left)/((y-y_neighbor_left)*(y-y_neighbor_right));
+                            const auto second_term = val_left*(y_point-y)*(y_point-y_neighbor_right)/((y_neighbor_left-y)*(y_neighbor_left-y_neighbor_right));
+                            const auto third_term = val_right*(y_point-y)*(y_point-y_neighbor_left)/((y_neighbor_right-y)*(y_neighbor_right-y_neighbor_left));
+                            data_array(index_line,line_ind,k,0) += first_term+second_term+third_term;
+                        }
+                        //amrex::Print()<<"End\n";
+                    }
+                    */
                 
                 }
 
