@@ -23,7 +23,7 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
    rm -rf build
    mkdir build
    cd build
-   cmake .. -DHiPACE_COMPUTE=CUDA
+   cmake3 .. -DHiPACE_COMPUTE=CUDA
    make -j 16
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
