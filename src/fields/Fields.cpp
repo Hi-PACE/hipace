@@ -4,8 +4,6 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
-#include <cstdlib>
-#include <math.h>
 
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
@@ -236,34 +234,28 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
     }
 }
 
-void 
+
+void
 Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                                     const int lev, std::string component)
-{
-    /*Setting non-zero boundary conditions*/
+{   
+    if (lev == 0) return;
     const auto plo = geom[lev].ProbLoArray();
     const auto dx = geom[lev].CellSizeArray();
-    if (lev == 0) return;
-    
+    const auto plo_coarse = geom[lev-1].ProbLoArray();
+    const auto dx_coarse = geom[lev-1].CellSizeArray(); 
+    const auto refinement_ratio = dx_coarse[0]/dx[0];
+
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,Comps[WhichSlice::This][component], 1);
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
-
-        /*
-            Get information of the mesh 
-        */
-        
-       
         const amrex::IntVect& small = bx.smallEnd(); //Get the small end of the Box
         const auto nx_fine_low  =  small[0];
-        const auto ny_fine_low = small[1]; 
-        
-        const amrex::IntVect& high = bx.bigEnd();  // Get the big end of the Box 
+        const auto ny_fine_low = small[1];
+        const amrex::IntVect& high = bx.bigEnd();  // Get the big end of the Box
         const auto nx_fine_high = high[0];
         const auto ny_fine_high = high[1];
-        
-
         amrex::Array4<amrex::Real >  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real >  data_array_coarse = lhs_coarse.array(mfi);
         amrex::ParallelFor(
@@ -272,30 +264,26 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
             {
 
                 //Compute coordinate
-                const auto plo_coarse = geom[lev-1].ProbLoArray(); 
-                const auto dx_coarse = geom[lev-1].CellSizeArray(); //
-                const auto refinement_ratio = dx_coarse[0]/dx[0];
                 amrex::Real x = plo[0] + (i+0.5) *dx[0];
                 amrex::Real y = plo[1] + (j+0.5) *dx[1];
-                const auto ind_left = static_cast<int>(std::floor(static_cast<amrex::Real>(i)/ refinement_ratio));
-                const auto ind_right = ind_left+1;
+                int ind_left = static_cast<int>(std::floor(static_cast<amrex::Real>(i)/ refinement_ratio));
+                int ind_right = ind_left+1;
                 amrex::Real x_neighbor_right = plo_coarse[0]+(ind_right+0.5)*dx_coarse[0];
                 amrex::Real x_neighbor_left = plo_coarse[0]+(ind_left+0.5)*dx_coarse[0];
-                const auto ind_down = static_cast<int>(std::floor(static_cast<amrex::Real>(j)    / refinement_ratio));
-                const auto ind_up = ind_down+1;
+                int ind_down = static_cast<int>(std::floor(static_cast<amrex::Real>(j) / refinement_ratio));
+                int ind_up = ind_down+1;
                 amrex::Real y_neighbor_up =plo_coarse[1]+(ind_up+0.5)*dx_coarse[1];
                 amrex::Real y_neighbor_down =plo_coarse[1]+(ind_down+0.5)*dx_coarse[1];
 
-
                 if(i==nx_fine_low || i== nx_fine_high)
-                {   
+                {
                     /*
-                        Interpolation 
+                        Bilinear interpolation from coarse to fine grid
                     */
-                    const auto val_left_up = data_array_coarse(ind_left,ind_up,k);
-                    const auto val_right_up = data_array_coarse(ind_right,ind_up,k);
-                    const auto val_left_down = data_array_coarse(ind_left,ind_down,k);
-                    const auto val_right_down =data_array_coarse(ind_right,ind_down,k);
+                    amrex::Real  val_left_up = data_array_coarse(ind_left,ind_up,k);
+                    amrex::Real val_right_up = data_array_coarse(ind_right,ind_up,k);
+                    amrex::Real  val_left_down = data_array_coarse(ind_left,ind_down,k);
+                    amrex::Real  val_right_down =data_array_coarse(ind_right,ind_down,k);
                     amrex::Real first_term = val_right_down-val_left_down;
                     amrex::Real second_term = val_left_up-val_left_down;
                     amrex::Real third_term =val_left_down + val_right_up -val_right_down -val_left_up;
@@ -303,18 +291,17 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                     second_term = second_term*(y-y_neighbor_down)/dx_coarse[1];
                     third_term = third_term*(x-x_neighbor_left)*(y-y_neighbor_down)/(dx_coarse[0]*dx_coarse[1]);
                     data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)/(dx[0]*dx[0]);
-                    
                 }
 
                 if (j==ny_fine_low|| j == ny_fine_high)
                 {
                     /*
-                        Interpolation 
+                        Bilinear interpolation from coarse to fine grid
                     */
-                    const auto val_left_up = data_array_coarse(ind_left,ind_up,k);
-                    const auto val_right_up = data_array_coarse(ind_right,ind_up,k);
-                    const auto val_left_down = data_array_coarse(ind_left,ind_down,k);
-                    const auto val_right_down =data_array_coarse(ind_right,ind_down,k);
+                    amrex::Real  val_left_up = data_array_coarse(ind_left,ind_up,k);
+                    amrex::Real  val_right_up = data_array_coarse(ind_right,ind_up,k);
+                    amrex::Real  val_left_down = data_array_coarse(ind_left,ind_down,k);
+                    amrex::Real  val_right_down =data_array_coarse(ind_right,ind_down,k);
                     amrex::Real first_term = val_right_down-val_left_down;
                     amrex::Real second_term = val_left_up-val_left_down;
                     amrex::Real third_term =val_left_down + val_right_up -val_right_down -val_left_up;
@@ -322,16 +309,15 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                     second_term = second_term*(y-y_neighbor_down)/dx_coarse[1];
                     third_term = third_term*(x-x_neighbor_left)*(y-y_neighbor_down)/(dx_coarse[0]*dx_coarse[1]);
                     data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)/(dx[1]*dx[1]);
-
                 }
 
-                
+
             }
 
     );
 }
-   
-    
+
+
 }
 
 void
@@ -356,8 +342,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
                           Comps[WhichSlice::This]["rho"], 0, 1, 0);
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
-     
-    
+
+
     InterpolateBoundaries( geom, lev, "Psi");
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
@@ -423,7 +409,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
-    
+
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 }
 
@@ -455,7 +441,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
         SliceOperatorType::Add,
         Comps[WhichSlice::Previous1]["jy"],
         Comps[WhichSlice::Next]["jy"]);
-    //Interpolation 
+    //Interpolation
     InterpolateBoundaries( geom, lev, "Bx");
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
@@ -491,7 +477,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
         SliceOperatorType::Add,
         Comps[WhichSlice::Previous1]["jx"],
         Comps[WhichSlice::Next]["jx"]);
-    //Interpolation 
+    //Interpolation
     InterpolateBoundaries( geom, lev, "By");
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
@@ -528,7 +514,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
         -phys_const.mu0,
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"]);
-    //Interpolation 
+    //Interpolation
     InterpolateBoundaries( geom, lev, "Bz");
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
