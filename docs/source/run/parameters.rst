@@ -92,6 +92,11 @@ Modeling ion motion is not yet supported by the explicit solver
     Which solver to use.
     Possible values: ``predictor-corrector`` and ``explicit``.
 
+* ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
+    Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
+    The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
+    The default is set accordingly.
+
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -150,6 +155,9 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
+
+* ``<plasma name>.level`` (`integer`) optional (default `0`)
+    Level of mesh refinement to which the plasma is assigned.
 
 * ``<plasma name>.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
