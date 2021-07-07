@@ -22,7 +22,7 @@ public:
 
     /** Loop over all beam species and deposit their current on the 2D XY slice
      * \param[in] fields Field object, with 2D slice MultiFabs
-     * \param[in] geom Geometry object at level lev
+     * \param[in] geom Geometry vector for all levels
      * \param[in] lev MR level
      * \param[in] islice slice index in which the current is stored
      * \param[in] bx current box to calculate in loop over longutidinal boxes
@@ -33,8 +33,8 @@ public:
      * \param[in] which_slice defines if this or the next slice is handled
      */
     void DepositCurrentSlice (
-        Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-        amrex::Vector<BeamBins> bins,
+        Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
+        const amrex::Box bx, amrex::Vector<BeamBins> bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
         const bool do_beam_jx_jy_deposition, const int which_slice);
 

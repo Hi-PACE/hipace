@@ -57,6 +57,9 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
     using namespace amrex::literals;
 
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
@@ -104,6 +107,10 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 {
     HIPACE_PROFILE("Fields::LongitudinalDerivative()");
     using namespace amrex::literals;
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real const> const & src1_array = src1.array(mfi);

@@ -82,8 +82,7 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    m_forward_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
-    m_backward_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
+    m_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
     // Loop over boxes and allocate the corresponding plan
     // for each box owned by the local MPI proc
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
@@ -91,11 +90,8 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
         // differ when using real-to-complex FFT. When initializing
         // the FFT plan, the valid dimensions are those of the real-space box.
         amrex::IntVect fft_size = mfi.validbox().length();
-        m_forward_plan[mfi] = AnyDST::CreatePlan(
+        m_plan[mfi] = AnyDST::CreatePlan(
             fft_size, &m_stagingArea[mfi], &m_tmpSpectralField[mfi]);
-
-        m_backward_plan[mfi] = AnyDST::CreatePlan(
-            fft_size, &m_tmpSpectralField[mfi], &m_stagingArea[mfi]);
     }
 }
 
@@ -109,7 +105,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
 
         // Perform Fourier transform from the staging area to `tmpSpectralField`
-        AnyDST::Execute(m_forward_plan[mfi]);
+        AnyDST::Execute<AnyDST::direction::forward>(m_plan[mfi]);
 
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by eigenvalue_matrix
@@ -122,7 +118,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area
-        AnyDST::Execute(m_backward_plan[mfi]);
+        AnyDST::Execute<AnyDST::direction::backward>(m_plan[mfi]);
 
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
@@ -132,6 +128,5 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
                 // Copy and normalize field
                 lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
             });
-
     }
 }

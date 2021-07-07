@@ -53,7 +53,7 @@ private:
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
     /** DST plans */
-    AnyDST::DSTplans m_forward_plan, m_backward_plan;
+    AnyDST::DSTplans m_plan;
 };
 
 #endif

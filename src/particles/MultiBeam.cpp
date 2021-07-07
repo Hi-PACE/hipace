@@ -28,8 +28,8 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 
 void
 MultiBeam::DepositCurrentSlice (
-    Fields& fields, const amrex::Geometry& geom, const int lev, int islice, const amrex::Box bx,
-    amrex::Vector<BeamBins> bins,
+    Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
+    const amrex::Box bx, amrex::Vector<BeamBins> bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
     const bool do_beam_jx_jy_deposition, const int which_slice)
 
