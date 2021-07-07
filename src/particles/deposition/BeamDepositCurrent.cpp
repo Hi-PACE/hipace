@@ -29,9 +29,6 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
         "Only order 0 deposition is allowed for beam per-slice deposition");
 
-    // Assumes '2' == 'z' == 'the long dimension'.
-    int islice_local = islice - bx.smallEnd(2);
-
     // Extract properties associated with the extent of the current box
     amrex::Box tilebox = bx;
     tilebox.grow({Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, Hipace::m_depos_order_z});
@@ -68,16 +65,16 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){
-        doDepositionShapeN<0, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice_local,
+        doDepositionShapeN<0, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
                                   bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 1){
-        doDepositionShapeN<1, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice_local,
+        doDepositionShapeN<1, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
                                   bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 2){
-        doDepositionShapeN<2, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice_local,
+        doDepositionShapeN<2, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
                                   bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 3){
-        doDepositionShapeN<3, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice_local,
+        doDepositionShapeN<3, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
                                   bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
     } else {
         amrex::Abort("unknown deposition order");
