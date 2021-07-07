@@ -256,10 +256,12 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
-        const amrex::IntVect& small = bx.smallEnd(); //Get the small end of the Box
+        //Get the small end of the Box
+        const amrex::IntVect& small = bx.smallEnd();
         const auto nx_fine_low  =  small[0];
         const auto ny_fine_low = small[1];
-        const amrex::IntVect& high = bx.bigEnd();  // Get the big end of the Box
+        // Get the big end of the Box
+        const amrex::IntVect& high = bx.bigEnd();
         const auto nx_fine_high = high[0];
         const auto ny_fine_high = high[1];
         amrex::Array4<amrex::Real >  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
