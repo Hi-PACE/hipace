@@ -17,6 +17,7 @@ kp_inv = constants.c / constants.e * math.sqrt(constants.epsilon_0 * constants.m
 single_charge = (beam_density * beam_position_std[0] * beam_position_std[1] *
                  beam_position_std[2] * np.sqrt(2. * math.pi)**3 / n)
 
+np.random.seed(0)
 data = np.zeros([6,n],dtype=np.float64)
 
 for i in [0,1,2]:
