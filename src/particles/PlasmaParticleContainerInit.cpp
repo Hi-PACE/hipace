@@ -17,7 +17,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
 
-    const int lev = 0;
+    const int lev = m_level;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
     const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();

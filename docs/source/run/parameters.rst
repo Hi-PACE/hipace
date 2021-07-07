@@ -156,6 +156,9 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
 
+* ``<plasma name>.level`` (`integer`) optional (default `0`)
+    Level of mesh refinement to which the plasma is assigned.
+
 * ``<plasma name>.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
