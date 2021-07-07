@@ -245,14 +245,13 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
 void
 Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                                     const int lev, std::string component)
-{   
+{
     if (lev == 0) return;
     const auto plo = geom[lev].ProbLoArray();
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
-    const auto dx_coarse = geom[lev-1].CellSizeArray(); 
+    const auto dx_coarse = geom[lev-1].CellSizeArray();
     const auto refinement_ratio = dx_coarse[0]/dx[0];
-
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,Comps[WhichSlice::This][component], 1);
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
@@ -269,7 +268,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
             {
-
                 //Compute coordinate
                 amrex::Real x = plo[0] + (i+0.5) *dx[0];
                 amrex::Real y = plo[1] + (j+0.5) *dx[1];
@@ -281,7 +279,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                 int ind_up = ind_down+1;
                 amrex::Real y_neighbor_up =plo_coarse[1]+(ind_up+0.5)*dx_coarse[1];
                 amrex::Real y_neighbor_down =plo_coarse[1]+(ind_down+0.5)*dx_coarse[1];
-
                 if(i==nx_fine_low || i== nx_fine_high)
                 {
                     /*
@@ -317,14 +314,9 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                     third_term = third_term*(x-x_neighbor_left)*(y-y_neighbor_down)/(dx_coarse[0]*dx_coarse[1]);
                     data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)/(dx[1]*dx[1]);
                 }
-
-
             }
-
     );
 }
-
-
 }
 
 void
@@ -349,7 +341,6 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
                           Comps[WhichSlice::This]["rho"], 0, 1, 0);
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
-
 
     InterpolateBoundaries( geom, lev, "Psi");
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
