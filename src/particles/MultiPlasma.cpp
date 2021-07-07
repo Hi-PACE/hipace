@@ -16,14 +16,15 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 }
 
 void
-MultiPlasma::InitData (int lev, amrex::BoxArray slice_ba,
-                       amrex::DistributionMapping slice_dm, amrex::Geometry slice_gm,
-                       amrex::Geometry gm)
+MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
+                       amrex::Vector<amrex::DistributionMapping> slice_dm,
+                       amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
 {
     for (auto& plasma : m_all_plasmas) {
-        plasma.SetParticleBoxArray(lev, slice_ba);
-        plasma.SetParticleDistributionMap(lev, slice_dm);
-        plasma.SetParticleGeometry(lev, slice_gm);
+        const int lev = plasma.m_level;
+        plasma.SetParticleBoxArray(lev, slice_ba[lev]);
+        plasma.SetParticleDistributionMap(lev, slice_dm[lev]);
+        plasma.SetParticleGeometry(lev, slice_gm[lev]);
         plasma.InitData();
 
         if(plasma.m_can_ionize) {
@@ -35,7 +36,7 @@ MultiPlasma::InitData (int lev, amrex::BoxArray slice_ba,
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
                 "Must specify a valid product plasma for Ionization using ionization_product");
-            plasma.InitIonizationModule(gm, plasma_product);
+            plasma.InitIonizationModule(gm[lev], plasma_product);
         }
     }
 }

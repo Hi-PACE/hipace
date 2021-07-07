@@ -70,7 +70,7 @@ PlasmaParticleContainer::ReadParameters ()
     }
     pp.query("ionization_product", m_product_name);
     pp.query("density", m_density);
-    pp.query("MR_level", m_MR_level);
+    pp.query("level", m_level);
     pp.query("radius", m_radius);
     pp.query("hollow_core_radius", m_hollow_core_radius);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
