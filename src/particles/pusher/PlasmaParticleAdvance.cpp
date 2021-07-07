@@ -19,7 +19,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
     using namespace amrex::literals;
 
     // only push plasma particles on their according MR level
-    if (plasma.m_MR_level != lev) return;
+    if (plasma.m_level != lev) return;
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();

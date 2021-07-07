@@ -121,6 +121,8 @@ Hipace::Hipace () :
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_explicit, "Mesh refinement + explicit solver is not yet"
+                                " supported! Please use hipace.bxby_solver = predictor-corrector");
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         pph.get("patch_lo", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
@@ -234,7 +236,7 @@ Hipace::InitData ()
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
     m_multi_beam.InitData(geom[lev]);
-    m_multi_plasma.InitData(lev, m_slice_ba[lev], m_slice_dm[lev], m_slice_geom[lev], geom[lev]);
+    m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
@@ -254,7 +256,7 @@ Hipace::MakeNewLevelFromScratch (
         const amrex::IntVect box_size = ba[0].length();  // Uniform box size
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
-        const int nboxes_z = (m_boxes_in_z == 1) ? ncells_global[2] / box_size[2] : m_boxes_in_z;
+        const int nboxes_z = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
         AMREX_ALWAYS_ASSERT(static_cast<long>(nboxes_x) *
                             static_cast<long>(nboxes_y) *
                             static_cast<long>(nboxes_z) == ba.size());
@@ -444,11 +446,24 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
+
+        if (lev == 1) { // skip all slices which are not existing on level 1
+            const amrex::Real* problo = Geom(lev).ProbLo();
+            const amrex::Real* dx = Geom(lev).CellSize();
+            amrex::Real pos = (islice+0.5)*dx[2]+problo[2];
+            if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
+        }
+
         // Between this push and the corresponding pop at the end of this
         // for loop, the parallelcontext is the transverse communicator
         amrex::ParallelContext::push(m_comm_xy);
 
         const amrex::Box& bx = boxArray(lev)[ibox];
+
+        // Assumes '2' == 'z' == 'the long dimension'.
+        // fixme: boxArray(lev) is hardcoded to lev = 0, because we currently only bin the beam
+        // particles on level 0. This must be addressed if we want to have longitudinal refinement.
+        const int islice_local = islice - boxArray(0)[ibox].smallEnd(2);
 
         if (m_explicit) {
             // Set all quantities to 0 except Bx and By: the previous slice serves as initial guess.
@@ -471,17 +486,17 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
-            if (m_explicit){
-                amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
-                                             amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
-                j_slice_next.setVal(0.);
-                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice, bx, bins,
-                                                 m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                                 WhichSlice::Next);
-                m_fields.AddBeamCurrents(lev, WhichSlice::Next);
-                // need to exchange jx jy jx_beam jy_beam
-                j_slice_next.FillBoundary(Geom(lev).periodicity());
-            }
+        if (m_explicit){
+            amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
+                                         amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
+            j_slice_next.setVal(0.);
+            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins,
+                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                             WhichSlice::Next);
+            m_fields.AddBeamCurrents(lev, WhichSlice::Next);
+            // need to exchange jx jy jx_beam jy_beam
+            j_slice_next.FillBoundary(Geom(lev).periodicity());
+        }
 
         m_fields.AddRhoIons(lev);
 
@@ -505,7 +520,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev);
 
         m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
         m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
@@ -834,6 +849,11 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
     /* shift force terms, update force terms using guessed Bx and By */
     m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
 
+    // Assumes '2' == 'z' == 'the long dimension'.
+    // fixme: boxArray(lev) is hardcoded to lev = 0, because we currently only bin the beam
+    // particles on level 0. This must be addressed if we want to have longitudinal refinement.
+    const int islice_local = islice - boxArray(0)[ibox].smallEnd(2);
+
     /* Begin of predictor corrector loop  */
     int i_iter = 0;
     /* resetting the initial B-field error for mixing between iterations */
@@ -851,7 +871,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
-        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 
@@ -919,7 +939,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
 
     // adding relative B field error for diagnostic
     m_predcorr_avg_B_error += relative_Bfield_error;
-    if (m_verbose >= 2) amrex::Print()<<"islice: " << islice << " n_iter: "<<i_iter<<
+    if (m_verbose >= 2) amrex::Print()<<"level: " << lev << " islice: " << islice << " n_iter: "<<i_iter<<
                             " relative B field error: "<<relative_Bfield_error<< "\n";
 }
 
@@ -1237,7 +1257,15 @@ void
 Hipace::ResizeFDiagFAB (const int it)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        const amrex::Box& bx = boxArray(lev)[it];
+        amrex::Box bx = boxArray(lev)[it];
+
+        if (lev == 1) {
+            const amrex::Box& bx_lev0 = boxArray(0)[it];
+            // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
+            bx.setSmall(Direction::z, bx_lev0.smallEnd(Direction::z));
+            bx.setBig  (Direction::z, bx_lev0.bigEnd(Direction::z));
+        }
+
         m_diags.ResizeFDiagFAB(bx, lev);
     }
 }
