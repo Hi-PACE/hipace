@@ -171,9 +171,9 @@ HiPACE++ can be configured in further detail with options from AMReX, which are 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
 
-===========================  =============================================  ==========================================================
+===========================  =============================================  ============================================================
 CMake Option                 Default & Values                               Description
----------------------------  ---------------------------------------------  ----------------------------------------------------------
+---------------------------  ---------------------------------------------  ------------------------------------------------------------
 ``HiPACE_amrex_src``         *None*                                         Path to AMReX source directory (preferred if set)
 ``HiPACE_amrex_repo``        `https://github.com/AMReX-Codes/amrex.git`     Repository URI to pull and build AMReX from
 ``HiPACE_amrex_branch``      ``development``                                Repository branch for ``HiPACE_amrex_repo``
@@ -182,7 +182,8 @@ CMake Option                 Default & Values                               Desc
 ``HiPACE_openpmd_repo``      `https://github.com/openPMD/openPMD-api.git`   Repository URI to pull and build openPMD-api from
 ``HiPACE_openpmd_branch``    `0.13.2`                                       Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                     Needs a pre-installed openPMD-api library if set to ``OFF``
-===========================  =============================================  ==========================================================
+``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                     Compile AMReX multigrid solver. Required for explicit solver
+===========================  =============================================  ============================================================
 
 For example, one can also build against a local AMReX copy.
 Assuming AMReX' source is located in ``$HOME/src/amrex``, add the ``cmake`` argument ``-DHiPACE_amrex_src=$HOME/src/amrex``.
