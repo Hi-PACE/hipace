@@ -64,7 +64,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                   const amrex::Real a_zmin,
                   const amrex::Real a_zmax,
                   const amrex::Real a_radius,
-                  const amrex::Real a_min_density)
+                  const amrex::Real a_min_density,
+                  const amrex::Vector<int>& random_ppc)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -108,21 +109,36 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
     amrex::Gpu::DeviceVector<unsigned int> offsets(domain_box.numPts());
     unsigned int* poffset = offsets.dataPtr();
 
-    amrex::ParallelFor(domain_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    const amrex::GpuArray<int, 3> rand_ppc {random_ppc[0], random_ppc[1], random_ppc[2]};
+
+    amrex::ParallelForRNG(
+        domain_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
         {
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
                 amrex::Real r[3];
 
-                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
+                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part, engine, rand_ppc);
 
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
                 amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
-                if (z >= a_zmax || z < a_zmin ||
-                    (x*x+y*y) > a_radius*a_radius) continue;
+                if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false ) {
+                    // If particles are evenly spaced, discard particles
+                    // individually if they are out of bounds
+                    if (z >= a_zmax || z < a_zmin ||
+                        (x*x+y*y) > a_radius*a_radius) continue;
+                } else {
+                    // If particles are randomly spaced, discard particles
+                    // if the cell is outside the domain
+                    amrex::Real xc = plo[0]+i*dx[0];
+                    amrex::Real yc = plo[1]+j*dx[1];
+                    amrex::Real zc = plo[2]+k*dx[2];
+                    if (zc >= a_zmax || zc < a_zmin ||
+                        (xc*xc+yc*yc) > a_radius*a_radius) continue;
+                }
 
                 const amrex::Real density = get_density(x, y, z);
                 if (density < a_min_density) continue;
@@ -184,14 +200,26 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
             {
                 amrex::Real r[3] = {0.,0.,0.};
 
-                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part);
+                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part, engine, rand_ppc);
 
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
                 amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
-                if (z >= a_zmax || z < a_zmin ||
-                    (x*x+y*y) > a_radius*a_radius) continue;
+                if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false) {
+                    // If particles are evenly spaced, discard particles
+                    // individually if they are out of bounds
+                    if (z >= a_zmax || z < a_zmin ||
+                        (x*x+y*y) > a_radius*a_radius) continue;
+                } else {
+                    // If particles are randomly spaced, discard particles
+                    // if the cell is outside the domain
+                    amrex::Real xc = plo[0]+i*dx[0];
+                    amrex::Real yc = plo[1]+j*dx[1];
+                    amrex::Real zc = plo[2]+k*dx[2];
+                    if (zc >= a_zmax || zc < a_zmin ||
+                        (xc*xc+yc*yc) > a_radius*a_radius) continue;
+                }
 
                 const amrex::Real density = get_density(x, y, z);
                 if (density < a_min_density) continue;

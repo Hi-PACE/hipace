@@ -46,7 +46,8 @@ public:
         const amrex::Real     a_zmin,
         const amrex::Real     a_zmax,
         const amrex::Real     a_radius,
-        const amrex::Real     a_min_density);
+        const amrex::Real     a_min_density,
+        const amrex::Vector<int>& random_ppc);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
