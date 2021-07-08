@@ -19,6 +19,8 @@ namespace ParticleUtil
      * \param[in,out] r position of the particle, modified by the function
      * \param[in] nppc number of particles per cell in each direction
      * \param[in] i_part index of current particle, between 0 and nppc-1
+     * \param[in] engine random engine
+     * \param[in] rand whether to randomize position in each cell, per dimension
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void get_position_unit_cell (amrex::Real* r, const amrex::IntVect& nppc, int i_part, const amrex::RandomEngine& engine, const amrex::GpuArray<int, 3> rand)
