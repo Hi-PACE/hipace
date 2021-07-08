@@ -15,12 +15,13 @@ Fields::Fields (Hipace const* a_hipace)
 void
 Fields::AllocData (
     int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-    const amrex::DistributionMapping& slice_dm)
+    const amrex::DistributionMapping& slice_dm, amrex::Vector<amrex::IntVect> const& ref_ratio)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
+    if (lev == 1) m_ref_ratio = ref_ratio[0];
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -246,79 +247,72 @@ void
 Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
                                     const int lev, std::string component)
 {
-    if (lev == 0) return;
+    HIPACE_PROFILE("Fields::InterpolateBoundaries()");
+    if (lev == 0) return; // only interpolate boundaries to lev 1
+    using namespace amrex::literals;
     const auto plo = geom[lev].ProbLoArray();
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-    const auto refinement_ratio = dx_coarse[0]/dx[0];
-    amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,Comps[WhichSlice::This][component], 1);
+    const amrex::IntVect refinement_ratio = m_ref_ratio;
+
+    amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
+                               Comps[WhichSlice::This][component], 1);
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
-        //Get the small end of the Box
+        // Get the small end of the Box
         const amrex::IntVect& small = bx.smallEnd();
-        const auto nx_fine_low  =  small[0];
+        const auto nx_fine_low = small[0];
         const auto ny_fine_low = small[1];
         // Get the big end of the Box
         const amrex::IntVect& high = bx.bigEnd();
         const auto nx_fine_high = high[0];
         const auto ny_fine_high = high[1];
-        amrex::Array4<amrex::Real >  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
-        amrex::Array4<amrex::Real >  data_array_coarse = lhs_coarse.array(mfi);
+        amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
+        amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
         amrex::ParallelFor(
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
             {
-                //Compute coordinate
-                amrex::Real x = plo[0] + (i+0.5) *dx[0];
-                amrex::Real y = plo[1] + (j+0.5) *dx[1];
-                int ind_left = static_cast<int>(std::floor(static_cast<amrex::Real>(i)/ refinement_ratio));
-                int ind_right = ind_left+1;
-                amrex::Real x_neighbor_right = plo_coarse[0]+(ind_right+0.5)*dx_coarse[0];
-                amrex::Real x_neighbor_left = plo_coarse[0]+(ind_left+0.5)*dx_coarse[0];
-                int ind_down = static_cast<int>(std::floor(static_cast<amrex::Real>(j) / refinement_ratio));
-                int ind_up = ind_down+1;
-                amrex::Real y_neighbor_up =plo_coarse[1]+(ind_up+0.5)*dx_coarse[1];
-                amrex::Real y_neighbor_down =plo_coarse[1]+(ind_down+0.5)*dx_coarse[1];
-                if(i==nx_fine_low || i== nx_fine_high)
-                {
-                    /*
-                        Bilinear interpolation from coarse to fine grid
-                    */
-                    amrex::Real  val_left_up = data_array_coarse(ind_left,ind_up,k);
-                    amrex::Real val_right_up = data_array_coarse(ind_right,ind_up,k);
-                    amrex::Real  val_left_down = data_array_coarse(ind_left,ind_down,k);
-                    amrex::Real  val_right_down =data_array_coarse(ind_right,ind_down,k);
-                    amrex::Real first_term = val_right_down-val_left_down;
-                    amrex::Real second_term = val_left_up-val_left_down;
-                    amrex::Real third_term =val_left_down + val_right_up -val_right_down -val_left_up;
-                    first_term = first_term*(x-x_neighbor_left)/dx_coarse[0];
-                    second_term = second_term*(y-y_neighbor_down)/dx_coarse[1];
-                    third_term = third_term*(x-x_neighbor_left)*(y-y_neighbor_down)/(dx_coarse[0]*dx_coarse[1]);
-                    data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)/(dx[0]*dx[0]);
-                }
+                if (i==nx_fine_low || i== nx_fine_high || j==ny_fine_low || j == ny_fine_high) {
+                    //Compute coordinate
+                    amrex::Real x = plo[0] + (i+0.5_rt)*dx[0];
+                    amrex::Real y = plo[1] + (j+0.5_rt)*dx[1];
+                    int ind_left = i / refinement_ratio[0];
+                    int ind_right = ind_left+1;
+                    amrex::Real x_neighbor_right = plo_coarse[0]+(ind_right+0.5_rt)*dx_coarse[0];
+                    amrex::Real x_neighbor_left = plo_coarse[0]+(ind_left+0.5_rt)*dx_coarse[0];
+                    int ind_down = j / refinement_ratio[1];
+                    int ind_up = ind_down+1;
+                    amrex::Real y_neighbor_up =plo_coarse[1]+(ind_up+0.5_rt)*dx_coarse[1];
+                    amrex::Real y_neighbor_down =plo_coarse[1]+(ind_down+0.5_rt)*dx_coarse[1];
 
-                if (j==ny_fine_low|| j == ny_fine_high)
-                {
-                    /*
-                        Bilinear interpolation from coarse to fine grid
-                    */
-                    amrex::Real  val_left_up = data_array_coarse(ind_left,ind_up,k);
-                    amrex::Real  val_right_up = data_array_coarse(ind_right,ind_up,k);
-                    amrex::Real  val_left_down = data_array_coarse(ind_left,ind_down,k);
-                    amrex::Real  val_right_down =data_array_coarse(ind_right,ind_down,k);
-                    amrex::Real first_term = val_right_down-val_left_down;
-                    amrex::Real second_term = val_left_up-val_left_down;
-                    amrex::Real third_term =val_left_down + val_right_up -val_right_down -val_left_up;
+                    // Bilinear interpolation from coarse to fine grid
+                    amrex::Real val_left_up = data_array_coarse(ind_left,ind_up,0);
+                    amrex::Real val_right_up = data_array_coarse(ind_right,ind_up,0);
+                    amrex::Real val_left_down = data_array_coarse(ind_left,ind_down,0);
+                    amrex::Real val_right_down = data_array_coarse(ind_right,ind_down,0);
+                    amrex::Real first_term = val_right_down -val_left_down;
+                    amrex::Real second_term = val_left_up -val_left_down;
+                    amrex::Real third_term = val_left_down +val_right_up -val_right_down
+                                            -val_left_up;
                     first_term = first_term*(x-x_neighbor_left)/dx_coarse[0];
                     second_term = second_term*(y-y_neighbor_down)/dx_coarse[1];
-                    third_term = third_term*(x-x_neighbor_left)*(y-y_neighbor_down)/(dx_coarse[0]*dx_coarse[1]);
-                    data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)/(dx[1]*dx[1]);
+                    third_term = third_term*(x-x_neighbor_left)*(y-y_neighbor_down)
+                                /(dx_coarse[0]*dx_coarse[1]);
+
+                    if (i==nx_fine_low || i== nx_fine_high) {
+                        data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)
+                                             /(dx[0]*dx[0]);
+                    }
+                    if (j==ny_fine_low || j == ny_fine_high) {
+                        data_array(i,j,k) -= (first_term+second_term+third_term+val_left_down)
+                                             /(dx[1]*dx[1]);
+                    }
                 }
-            }
-    );
-}
+            });
+    }
 }
 
 void

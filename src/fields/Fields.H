@@ -80,7 +80,7 @@ public:
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm);
+        const amrex::DistributionMapping& slice_dm, amrex::Vector<amrex::IntVect> const& ref_ratio);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
@@ -247,6 +247,7 @@ private:
     amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
+    amrex::IntVect m_ref_ratio;
 };
 
 #endif
