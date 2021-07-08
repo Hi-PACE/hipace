@@ -84,6 +84,18 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         amrex::ParmParse pp(m_name);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+        bool can = false;
+        amrex::Real zmin = 0, zmax = 0;
+        std::string profile = "gaussian";
+        pp.query("profile", profile);
+        if (profile == "can") {
+            can = true;
+            pp.get("zmin", zmin);
+            pp.get("zmax", zmax);
+        } else if (profile == "gaussian") {
+        } else {
+            amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
+        }
         pp.get("position_mean", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
         pp.get("position_std", loc_array);
@@ -114,7 +126,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
-                            m_dy_per_dzeta);
+                            m_dy_per_dzeta, can, zmin, zmax);
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD

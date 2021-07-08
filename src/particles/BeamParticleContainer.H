@@ -57,7 +57,8 @@ public:
                               const amrex::Real total_charge,
                               const bool do_symmetrize,
                               const amrex::Real dx_per_dzeta,
-                              const amrex::Real dy_per_dzeta);
+                              const amrex::Real dy_per_dzeta,
+                              const bool can, const amrex::Real zmin, const amrex::Real zmax);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype*/

@@ -224,6 +224,11 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Whether to randomize the position of particles in each cell, per dimension.
     Only used if ``<beam name>.injection_type = fixed_ppc``.
 
+* ``<beam name>.profile`` (`string`)
+    Beam profile.
+    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop`` (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
+    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can`` (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
+
 * ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     `n_subcycles` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy

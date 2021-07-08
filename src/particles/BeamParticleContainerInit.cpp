@@ -245,7 +245,8 @@ InitBeamFixedWeight (int num_to_add,
                      const amrex::Real total_charge,
                      const bool do_symmetrize,
                      const amrex::Real dx_per_dzeta,
-                     const amrex::Real dy_per_dzeta)
+                     const amrex::Real dy_per_dzeta,
+                     const bool can, const amrex::Real zmin, const amrex::Real zmax)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
@@ -277,7 +278,9 @@ InitBeamFixedWeight (int num_to_add,
             {
                 const amrex::Real x = amrex::RandomNormal(0, pos_std[0], engine);
                 const amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine);
-                const amrex::Real z = amrex::RandomNormal(0, pos_std[2], engine);
+                const amrex::Real z = can
+                    ? zmin + amrex::Random(engine) * (zmax - zmin)
+                    : amrex::RandomNormal(0, pos_std[2], engine);
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2], engine, z, duz_per_uz0_dzeta);
 
