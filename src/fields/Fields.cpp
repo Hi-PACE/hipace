@@ -242,7 +242,6 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
     }
 }
 
-
 void
 Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                std::string component)
