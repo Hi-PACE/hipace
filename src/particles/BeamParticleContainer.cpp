@@ -73,15 +73,29 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         pp.get("zmax", m_zmax);
         pp.get("radius", m_radius);
         pp.query("min_density", m_min_density);
+        amrex::Vector<int> random_ppc {false, false, false};
+        pp.queryarr("random_ppc", random_ppc);
         const GetInitialDensity get_density(m_name);
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
-                         m_zmax, m_radius, m_min_density);
+                         m_zmax, m_radius, m_min_density, random_ppc);
 
     } else if (m_injection_type == "fixed_weight") {
 
         amrex::ParmParse pp(m_name);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+        bool can = false;
+        amrex::Real zmin = 0, zmax = 0;
+        std::string profile = "gaussian";
+        pp.query("profile", profile);
+        if (profile == "can") {
+            can = true;
+            pp.get("zmin", zmin);
+            pp.get("zmax", zmax);
+        } else if (profile == "gaussian") {
+        } else {
+            amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
+        }
         pp.get("position_mean", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
         pp.get("position_std", loc_array);
@@ -112,7 +126,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
                             m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
-                            m_dy_per_dzeta);
+                            m_dy_per_dzeta, can, zmin, zmax);
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
