@@ -248,7 +248,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
     // must be corrected at the outmost grid points in x by -field_value_at_boundary / dx^2 and
-    // in y by -field_value_at_boundary / dy^2
+    // in y by -field_value_at_boundary / dy^2, where dx and dy are those of the fine grid
     HIPACE_PROFILE("Fields::InterpolateBoundaries()");
     if (lev == 0) return; // only interpolate boundaries to lev 1
     using namespace amrex::literals;
