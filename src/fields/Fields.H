@@ -77,6 +77,7 @@ public:
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
+     * \param[in] ref_ratio mesh refinement ratio
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
@@ -146,13 +147,14 @@ public:
                                  const int sc1omp=0, const int s2comp=0, const int dcomp=0);
 
     /** \brief Interpolate values at boundaries from coarse grid to the fine grid
-     * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
      * \param[in] geom Geometry
-     * \param[in] component which can be Psi, Ez, By,Bx ...
+     * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in] lev current level
      */
-    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,const int lev, std::string component);
+    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,const int lev,
+                                std::string component);
+
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *

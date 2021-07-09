@@ -244,8 +244,8 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
 
 
 void
-Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,
-                                    const int lev, std::string component)
+Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                               std::string component)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
     // must be corrected at the outmost grid points in x by -field_value_at_boundary / dx^2 and
