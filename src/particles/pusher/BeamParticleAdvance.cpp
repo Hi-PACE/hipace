@@ -66,7 +66,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
 
     const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
     const auto setPosition = SetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto enforceBC = EnforceBC<BeamParticleContainer>(beam, lev, offset);
+    const auto enforceBC = EnforceBC<BeamParticleContainer>(beam, lev, box, offset);
 
     const amrex::Real zmin = xyzmin[2];
 
@@ -113,7 +113,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
                 yp += dt * 0.5_rt * uyp[ip] / gammap;
 
                 setPosition(ip, xp, yp, zp);
-                if (enforceBC(ip)) return;
+                if (enforceBC(ip, lev)) return;
 
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
@@ -165,7 +165,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
                 yp += dt * 0.5_rt * uy_next  / gamma_next;
                 if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
                 setPosition(ip, xp, yp, zp);
-                if (enforceBC(ip)) return;
+                if (enforceBC(ip, lev)) return;
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;

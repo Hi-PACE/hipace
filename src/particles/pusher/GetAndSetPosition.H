@@ -141,21 +141,40 @@ struct EnforceBC
 
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;
+    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo_lev1;
+    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi_lev1;
     amrex::GpuArray<int,AMREX_SPACEDIM> m_is_per;
     amrex::GpuArray<int,AMREX_SPACEDIM> m_periodicity;
 
     /** Constructor.
      * \param a_ptile tile containing the macroparticles
      * \param lev level of MR
+     * \param box box to get the correct physical boundaries
      * \param a_offset offset to apply to the particle indices
      */
-    EnforceBC (T_ParTile& a_ptile, const int lev, int a_offset = 0) noexcept
+    EnforceBC (T_ParTile& a_ptile, const int lev, const amrex::Box box, int a_offset = 0) noexcept
     {
 
         m_plo    = Hipace::GetInstance().Geom(lev).ProbLoArray();
         m_phi    = Hipace::GetInstance().Geom(lev).ProbHiArray();
         m_is_per = Hipace::GetInstance().Geom(lev).isPeriodicArray();
         AMREX_ALWAYS_ASSERT(m_is_per[0] == m_is_per[1]);
+
+        if (lev == 1) {
+            const auto dx = Hipace::GetInstance().Geom(lev).CellSizeArray();
+            const amrex::IntVect& small = box.smallEnd();
+            const amrex::IntVect& big = box.bigEnd();
+
+            const auto plo = m_plo;
+            const auto phi = m_phi;
+            m_plo_lev1 = {{AMREX_D_DECL(plo[0]+(small[0]+0.5)*dx[0], plo[1]+(small[1]+0.5)*dx[1],
+                                        plo[2]+(small[2]+0.5)*dx[2])}};
+            m_phi_lev1 =  {{AMREX_D_DECL(plo[0]+(big[0]+0.5)*dx[0], plo[1]+(big[1]+0.5)*dx[1],
+                                         plo[2]+(big[2]+0.5)*dx[2])}};
+        // amrex::Print() << " m_plo_lev1 " << m_plo_lev1[0] << " " << m_plo_lev1[1] << " " << m_plo_lev1[2]  << " m_phi_lev1 " << m_phi_lev1[0] << " " << m_phi_lev1[1] << " "<< m_phi_lev1[2] << "\n";
+        } else {
+            amrex::ignore_unused(box);
+        }
 
         m_periodicity = {true, true, false};
 
@@ -168,13 +187,20 @@ struct EnforceBC
     /** \brief enforces the boundary condition to the particle at index `i + a_offset`
      * and returns if the particle is invalid
      * \param[in] ip index of the particle
+     * \param[in] lev level of mesh refinement
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const int ip) const noexcept
+    bool operator() (const int ip, const int lev) const noexcept
     {
         using namespace amrex::literals;
 
-        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_periodicity);
+        bool shifted;
+        if (lev == 0) {
+            shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_periodicity);
+        } else {
+            shifted = enforcePeriodic(m_structs[ip], m_plo_lev1, m_phi_lev1, m_periodicity);
+        }
+
         const bool invalid = (shifted && !m_is_per[0]);
         if (invalid) {
             m_weights[ip] = 0.0_rt;

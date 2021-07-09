@@ -51,6 +51,7 @@
  * \param[in] ip index of the plasma particle
  * \param[in] SetPosition Functor for setting the particle position
  * \param[in] enforceBC Functor for applying the boundary conditions to a single plasma particle
+ * \param[in] lev level of mesh refinement
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void PlasmaParticlePush (
@@ -87,7 +88,8 @@ void PlasmaParticlePush (
     const bool temp_slice,
     const long ip,
     const SetParticlePosition<PlasmaParticleContainer::ParticleTileType>& SetPosition,
-    const EnforceBC<PlasmaParticleContainer::ParticleTileType>& enforceBC )
+    const EnforceBC<PlasmaParticleContainer::ParticleTileType>& enforceBC,
+    const int lev)
 
 {
     using namespace amrex::literals;
@@ -106,7 +108,7 @@ void PlasmaParticlePush (
             + a4_times_dz * Fy4 + a5_times_dz * Fy5;
 
         SetPosition(ip, xp, yp, zp);
-        if (enforceBC(ip)) return;
+        if (enforceBC(ip, lev)) return;
 
         x_prev = xp;
         y_prev = yp;
@@ -125,7 +127,7 @@ void PlasmaParticlePush (
                  + a4_times_dz * Fy4 + a5_times_dz * Fy5 );
 
         SetPosition(ip, xp, yp, zp);
-        if (enforceBC(ip)) return;
+        if (enforceBC(ip, lev)) return;
         ux_temp = uxp - ( a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
                   + a4_times_dz * Fux4 + a5_times_dz * Fux5 );
         uy_temp = uyp - ( a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
