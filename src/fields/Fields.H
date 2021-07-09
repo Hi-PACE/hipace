@@ -149,10 +149,10 @@ public:
     /** \brief Interpolate values at boundaries from coarse grid to the fine grid
      *
      * \param[in] geom Geometry
-     * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in] lev current level
+     * \param[in] component which can be Psi, Ez, By, Bx ...
      */
-    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom,const int lev,
+    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                 std::string component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
