@@ -249,7 +249,7 @@ private:
     amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
-    amrex::IntVect m_ref_ratio;
+    amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
 };
 
 #endif
