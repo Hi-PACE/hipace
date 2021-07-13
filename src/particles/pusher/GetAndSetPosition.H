@@ -166,7 +166,6 @@ struct EnforceBC
             const amrex::IntVect& big = box.bigEnd();
 
             const auto plo = m_plo;
-            const auto phi = m_phi;
             m_plo_lev1 = {{AMREX_D_DECL(plo[0]+(small[0]+0.5)*dx[0], plo[1]+(small[1]+0.5)*dx[1],
                                         plo[2]+(small[2]+0.5)*dx[2])}};
             m_phi_lev1 =  {{AMREX_D_DECL(plo[0]+(big[0]+0.5)*dx[0], plo[1]+(big[1]+0.5)*dx[1],
