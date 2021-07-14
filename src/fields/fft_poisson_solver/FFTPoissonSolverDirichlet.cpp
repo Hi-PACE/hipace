@@ -132,7 +132,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::ParallelFor( mfi.validbox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field
-                lhs_arr(i+lo[0],j+lo[1],k+lo[2]) = tmp_real_arr(i,j,k);
+                lhs_arr(i+lo[0],j+lo[1],k) = tmp_real_arr(i,j,k);
             });
     }
 }

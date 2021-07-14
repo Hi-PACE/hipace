@@ -70,11 +70,11 @@ Fields::CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType s
 
                 if (slice_operator==SliceOperatorType::Assign)
                 {
-                    dst_array(i,j,k,0) = src_array(i+lo[0], j+lo[1], k+lo[2], scomp);
+                    dst_array(i,j,k,0) = src_array(i+lo[0], j+lo[1], k, scomp);
                 }
                 else /* SliceOperatorType::Add */
                 {
-                    dst_array(i,j,k,0) += src_array(i+lo[0], j+lo[1], k+lo[2], scomp);
+                    dst_array(i,j,k,0) += src_array(i+lo[0], j+lo[1], k, scomp);
                 }
 
             }
@@ -109,28 +109,28 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
                     if (slice_operator==SliceOperatorType::Assign)
                     {
                         dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
-                                                 (src_array(i+1+lo[0], j+lo[1], k+lo[2], scomp)
-                                                  - src_array(i-1+lo[0], j+lo[1], k+lo[2], scomp));
+                                                 (src_array(i+1+lo[0], j+lo[1], k, scomp)
+                                                  - src_array(i-1+lo[0], j+lo[1], k, scomp));
                     }
                     else /* SliceOperatorType::Add */
                     {
                         dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
-                                                  (src_array(i+1+lo[0], j+lo[1], k+lo[2], scomp)
-                                                   - src_array(i-1+lo[0], j+lo[1], k+lo[2], scomp));
+                                                  (src_array(i+1+lo[0], j+lo[1], k, scomp)
+                                                   - src_array(i-1+lo[0], j+lo[1], k, scomp));
                     }
                 } else /* Direction::y */ {
                     /* finite difference along y */
                     if (slice_operator==SliceOperatorType::Assign)
                     {
                         dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dx) *
-                                                 (src_array(i+lo[0], j+1+lo[1], k+lo[2], scomp)
-                                                  - src_array(i+lo[0], j-1+lo[1], k+lo[2], scomp));
+                                                 (src_array(i+lo[0], j+1+lo[1], k, scomp)
+                                                  - src_array(i+lo[0], j-1+lo[1], k, scomp));
                     }
                     else /* SliceOperatorType::Add */
                     {
                         dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dx) *
-                                                  (src_array(i+lo[0], j+1+lo[1], k+lo[2], scomp)
-                                                   - src_array(i+lo[0], j-1+lo[1], k+lo[2], scomp));
+                                                  (src_array(i+lo[0], j+1+lo[1], k, scomp)
+                                                   - src_array(i+lo[0], j-1+lo[1], k, scomp));
                     }
                 }
             }
@@ -164,14 +164,14 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
                 if (slice_operator==SliceOperatorType::Assign)
                 {
                     dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dz) *
-                                             (src1_array(i+1+lo[0], j+lo[1], k+lo[2], s1comp)
-                                              - src2_array(i+1+lo[0], j+lo[1], k+lo[2], s2comp));
+                                             (src1_array(i+1+lo[0], j+lo[1], k, s1comp)
+                                              - src2_array(i+1+lo[0], j+lo[1], k, s2comp));
                 }
                 else /* SliceOperatorType::Add */
                 {
                     dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dz) *
-                                              (src1_array(i+1+lo[0], j+lo[1], k+lo[2], s1comp)
-                                               - src2_array(i+1+lo[0], j+lo[1], k+lo[2], s2comp));
+                                              (src1_array(i+1+lo[0], j+lo[1], k, s1comp)
+                                               - src2_array(i+1+lo[0], j+lo[1], k, s2comp));
                 }
 
             }
