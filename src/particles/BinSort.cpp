@@ -4,9 +4,8 @@
 
 BeamBins
 findParticlesInEachSlice (
-    int /*lev*/, int ibox, amrex::Box bx,
-    BeamParticleContainer& beam, const amrex::Geometry& geom,
-    const BoxSorter& a_box_sorter)
+    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam,
+    amrex::Vector<amrex::Geometry> const& geom, const BoxSorter& a_box_sorter)
 {
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     const amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
@@ -20,8 +19,8 @@ findParticlesInEachSlice (
 
     // Extract box properties
     const auto lo = lbound(cbx);
-    const auto dxi = geom.InvCellSizeArray();
-    const auto plo = geom.ProbLoArray();
+    const auto dxi = geom[lev].InvCellSizeArray();
+    const auto plo = geom[lev].ProbLoArray();
 
     // Find the particles that are in each slice and return collections of indices per slice.
     BeamBins bins;

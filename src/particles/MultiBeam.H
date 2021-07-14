@@ -45,8 +45,9 @@ public:
      * \param[in] geom Geometry of the simulation domain
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
-    amrex::Vector<BeamBins>
-    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
+    amrex::Vector<amrex::Vector<BeamBins>>
+    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx,
+                              amrex::Vector<amrex::Geometry> const& geom,
                               const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
     /** \brief Loop over all beam species and sort particles by box

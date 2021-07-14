@@ -21,8 +21,7 @@ using BeamBins = amrex::DenseBins<BeamParticleContainer::ParticleType>;
  */
 BeamBins
 findParticlesInEachSlice (
-    int lev, int ibox, amrex::Box bx,
-    BeamParticleContainer& beam, const amrex::Geometry& geom,
-    const BoxSorter& a_box_sorter);
+    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam,
+    amrex::Vector<amrex::Geometry> const& geom, const BoxSorter& a_box_sorter);
 
 #endif // HIPACE_BinSort_H_

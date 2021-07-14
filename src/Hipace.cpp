@@ -394,13 +394,13 @@ Hipace::Evolve ()
 
             ResizeFDiagFAB(it);
 
-            amrex::Vector<BeamBins> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(lev, it, bx, geom[lev], m_box_sorters);
+            amrex::Vector<amrex::Vector<BeamBins>> bins;
+            bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx, geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
             SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
             // Notify ghost slice
-            if (it<m_numprocs_z-1) Notify(step, it, bins, true);
+            if (it<m_numprocs_z-1) Notify(step, it, bins[lev], true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
                 SolveOneSlice(isl, it, bins);
@@ -422,7 +422,7 @@ Hipace::Evolve ()
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
 
-            Notify(step, it, bins);
+            Notify(step, it, bins[lev]);
         }
 
         // printing and resetting predictor corrector loop diagnostics
@@ -441,7 +441,7 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins)
+Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
@@ -490,7 +490,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                          amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
             j_slice_next.setVal(0.);
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins,
+            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
                                              m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                              WhichSlice::Next);
             m_fields.AddBeamCurrents(lev, WhichSlice::Next);
@@ -520,7 +520,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev);
 
         m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev], m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::This);
         m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
@@ -536,11 +536,11 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
             m_fields.AddRhoIons(lev);
         } else {
-            PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);
+            PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins[lev], ibox);
         }
 
         // Push beam particles
-        m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins,
+        m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins[lev],
                                                m_box_sorters, ibox);
 
         FillDiagnostics(lev, islice);

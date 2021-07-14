@@ -132,7 +132,7 @@ public:
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins);
+    void SolveOneSlice (int islice, const int ibox, amrex::Vector<amrex::Vector<BeamBins>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
