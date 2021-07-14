@@ -11,7 +11,7 @@ FFTPoissonSolverDirichlet::FFTPoissonSolverDirichlet (
 }
 
 void
-FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
+FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
                                    amrex::DistributionMapping const& dm,
                                    amrex::Geometry const& gm )
 {
@@ -19,25 +19,32 @@ FFTPoissonSolverDirichlet::define ( amrex::BoxArray const& realspace_ba,
 
     HIPACE_PROFILE("FFTPoissonSolverDirichlet::define()");
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(realspace_ba.size() == 1, "Parallel FFT not supported yet");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(a_realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
     // Create the box array that corresponds to spectral space
     amrex::BoxList spectral_bl; // Create empty box list
+    amrex::BoxList realspace_bl; // Create empty box list
     // Loop over boxes and fill the box list
-    for (int i=0; i < realspace_ba.size(); i++ ) {
+    for (int i=0; i < a_realspace_ba.size(); i++ ) {
         // For local FFTs, boxes in spectral space start at 0 in
         // each direction and have the same number of points as the
         // (cell-centered) real space box
         // Define the corresponding box
         amrex::Box spectral_bx = amrex::Box( amrex::IntVect::TheZeroVector(),
-                          realspace_ba[i].length() - amrex::IntVect::TheUnitVector() );
+                          a_realspace_ba[i].length() - amrex::IntVect::TheUnitVector() );
         spectral_bl.push_back( spectral_bx );
+        amrex::Box realspace_bx = amrex::Box( amrex::IntVect::TheZeroVector(),
+                          a_realspace_ba[i].length() - amrex::IntVect::TheUnitVector() );
+        realspace_bl.push_back( realspace_bx );
     }
     m_spectralspace_ba.define( std::move(spectral_bl) );
+    m_realspace_ba.define( std::move(realspace_bl) );
+    const amrex::Box bx = a_realspace_ba[0];
+    m_offset = bx.smallEnd();
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
-    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
+    m_stagingArea = amrex::MultiFab(m_realspace_ba, dm, 1, 0);
     m_tmpSpectralField = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     m_stagingArea.setVal(0.0); // this is not required
     m_tmpSpectralField.setVal(0.0);
@@ -123,10 +130,11 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        const amrex::IntVect& lo = m_offset;
         amrex::ParallelFor( mfi.validbox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field
-                lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
+                lhs_arr(i+lo[0],j+lo[1],k+lo[2]) = tmp_real_arr(i,j,k);
             });
     }
 }

@@ -47,9 +47,16 @@ public:
 
     /** Get reference to the taging area */
     amrex::MultiFab& StagingArea ();
+
+    /** get offset of box on level 1 */
+    amrex::IntVect GetOffset () { return m_offset; }
 protected:
     /** BoxArray for the spectral fields */
     amrex::BoxArray m_spectralspace_ba;
+    /** BoxArray for the real fields */
+    amrex::BoxArray m_realspace_ba;
+    /** offset of the box per level */
+    amrex::IntVect m_offset;
     /** Staging area, contains (real) field in real space.
      * This is where the source term is stored before calling the Poisson solver */
     amrex::MultiFab m_stagingArea;
