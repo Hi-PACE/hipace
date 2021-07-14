@@ -53,8 +53,6 @@ public:
 protected:
     /** BoxArray for the spectral fields */
     amrex::BoxArray m_spectralspace_ba;
-    /** BoxArray for the real fields */
-    amrex::BoxArray m_realspace_ba;
     /** offset of the box per level */
     amrex::IntVect m_offset;
     /** Staging area, contains (real) field in real space.

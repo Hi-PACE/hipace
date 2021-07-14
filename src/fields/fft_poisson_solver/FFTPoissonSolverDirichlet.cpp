@@ -21,30 +21,28 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(a_realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
-    // Create the box array that corresponds to spectral space
-    amrex::BoxList spectral_bl; // Create empty box list
-    amrex::BoxList realspace_bl; // Create empty box list
+    // Create the box array that cor    responds to spectral space
+    amrex::BoxList boxlist; // Create empty box list
     // Loop over boxes and fill the box list
     for (int i=0; i < a_realspace_ba.size(); i++ ) {
         // For local FFTs, boxes in spectral space start at 0 in
         // each direction and have the same number of points as the
         // (cell-centered) real space box
         // Define the corresponding box
-        amrex::Box spectral_bx = amrex::Box( amrex::IntVect::TheZeroVector(),
+        amrex::Box box = amrex::Box( amrex::IntVect::TheZeroVector(),
                           a_realspace_ba[i].length() - amrex::IntVect::TheUnitVector() );
-        spectral_bl.push_back( spectral_bx );
-        amrex::Box realspace_bx = amrex::Box( amrex::IntVect::TheZeroVector(),
-                          a_realspace_ba[i].length() - amrex::IntVect::TheUnitVector() );
-        realspace_bl.push_back( realspace_bx );
+        boxlist.push_back( box );
     }
-    m_spectralspace_ba.define( std::move(spectral_bl) );
-    m_realspace_ba.define( std::move(realspace_bl) );
-    const amrex::Box bx = a_realspace_ba[0];
-    m_offset = bx.smallEnd();
+    m_spectralspace_ba.define( std::move(boxlist) );
+    // save offset of real space array
+    const amrex::Box offset_bx = a_realspace_ba[0];
+    m_offset = offset_bx.smallEnd();
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
-    m_stagingArea = amrex::MultiFab(m_realspace_ba, dm, 1, 0);
+    // The stagingArea is also created from 0 to nx, because the real space array may have
+    // an offset for levels > 0
+    m_stagingArea = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     m_tmpSpectralField = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     m_stagingArea.setVal(0.0); // this is not required
     m_tmpSpectralField.setVal(0.0);
