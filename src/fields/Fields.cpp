@@ -392,8 +392,6 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     }
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
 
-
-
     InterpolateBoundaries( geom, lev, "Psi");
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
