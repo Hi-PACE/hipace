@@ -272,9 +272,6 @@ namespace AnyDST
             dst_plan.m_position_array = position_array;
             dst_plan.m_fourier_array = fourier_array;
 
-            amrex::Print() << " real_size " << real_size << " position_array " << position_array << " fourier_array " << fourier_array << "\n";
-
-
             return dst_plan;
         }
         else {

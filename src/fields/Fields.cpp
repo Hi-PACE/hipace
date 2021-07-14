@@ -47,6 +47,42 @@ Fields::AllocData (
 }
 
 void
+Fields::CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
+                           const int scomp, const int lev)
+{
+    HIPACE_PROFILE("Fields::CopyToStagingArea()");
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for ( amrex::MFIter mfi(m_poisson_solver[lev]->StagingArea(), amrex::TilingIfNotGPU());
+          mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+        amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
+        amrex::Array4<amrex::Real> const & dst_array = m_poisson_solver[lev]
+                                                       ->StagingArea().array(mfi);
+
+        const amrex::IntVect lo = m_poisson_solver[lev]->GetOffset();
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+
+                if (slice_operator==SliceOperatorType::Assign)
+                {
+                    dst_array(i,j,k,0) = src_array(i+lo[0], j+lo[1], k+lo[2], scomp);
+                }
+                else /* SliceOperatorType::Add */
+                {
+                    dst_array(i,j,k,0) += src_array(i+lo[0], j+lo[1], k+lo[2], scomp);
+                }
+
+            }
+            );
+    }
+}
+
+void
 Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
                               const amrex::Real dx, const amrex::Real mult_coeff,
                               const SliceOperatorType slice_operator,
@@ -341,12 +377,22 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                         Comps[WhichSlice::This]["Psi"], 1);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    // amrex::MultiFab::Copy(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
-    //                           Comps[WhichSlice::This]["jz"], 0, 1, 0);
-    // m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
-    // amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev, WhichSlice::This),
-    //                       Comps[WhichSlice::This]["rho"], 0, 1, 0);
-    // m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
+    if (lev == 0) {
+        amrex::MultiFab::Copy(m_poisson_solver[lev]->StagingArea(), getSlices(lev,WhichSlice::This),
+                                  Comps[WhichSlice::This]["jz"], 0, 1, 0);
+        m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
+        amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev,WhichSlice::This),
+                              Comps[WhichSlice::This]["rho"], 0, 1, 0);
+    } else {
+        CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
+                           Comps[WhichSlice::This]["jz"], lev);
+        m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
+        CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Add,
+                           Comps[WhichSlice::This]["rho"], lev);
+    }
+    m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
+
+
 
     InterpolateBoundaries( geom, lev, "Psi");
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
