@@ -164,14 +164,14 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
                 if (slice_operator==SliceOperatorType::Assign)
                 {
                     dst_array(i,j,k,dcomp) = mult_coeff / (2.0_rt*dz) *
-                                             (src1_array(i+1+lo[0], j+lo[1], k, s1comp)
-                                              - src2_array(i+1+lo[0], j+lo[1], k, s2comp));
+                                             (src1_array(i+lo[0], j+lo[1], k, s1comp)
+                                              - src2_array(i+lo[0], j+lo[1], k, s2comp));
                 }
                 else /* SliceOperatorType::Add */
                 {
                     dst_array(i,j,k,dcomp) += mult_coeff / (2.0_rt*dz) *
-                                              (src1_array(i+1+lo[0], j+lo[1], k, s1comp)
-                                               - src2_array(i+1+lo[0], j+lo[1], k, s2comp));
+                                              (src1_array(i+lo[0], j+lo[1], k, s1comp)
+                                               - src2_array(i+lo[0], j+lo[1], k, s2comp));
                 }
 
             }
