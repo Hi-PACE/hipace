@@ -523,7 +523,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, amrex::Vector<amrex::V
                                     amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
             j_slice.FillBoundary(Geom(lev).periodicity());
 
-            m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev);
+            m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
 
             m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
             m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
@@ -533,8 +533,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, amrex::Vector<amrex::V
 
             j_slice.FillBoundary(Geom(lev).periodicity());
 
-            m_fields.SolvePoissonEz(Geom(), lev);
-            m_fields.SolvePoissonBz(Geom(), lev);
+            m_fields.SolvePoissonEz(Geom(), lev, islice);
+            m_fields.SolvePoissonBz(Geom(), lev, islice);
 
             // Modifies Bx and By in the current slice and the force terms of the plasma particles
             if (m_explicit){
@@ -859,6 +859,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     /* shift force terms, update force terms using guessed Bx and By */
     m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
 
+    const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
     /* Begin of predictor corrector loop  */
     int i_iter = 0;
     /* resetting the initial B-field error for mixing between iterations */
@@ -888,8 +889,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
-        m_fields.SolvePoissonBx(Bx_iter, Geom(), lev);
-        m_fields.SolvePoissonBy(By_iter, Geom(), lev);
+        m_fields.SolvePoissonBx(Bx_iter, Geom(), lev, islice);
+        m_fields.SolvePoissonBy(By_iter, Geom(), lev, islice);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
             m_fields.getSlices(lev, WhichSlice::This),
@@ -944,7 +945,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
     // adding relative B field error for diagnostic
     m_predcorr_avg_B_error += relative_Bfield_error;
-    const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
     if (m_verbose >= 2) amrex::Print()<<"level: " << lev << " islice: " << islice <<
                     " n_iter: "<<i_iter<<" relative B field error: "<<relative_Bfield_error<< "\n";
 }
