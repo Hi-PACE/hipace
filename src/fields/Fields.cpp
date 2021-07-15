@@ -289,11 +289,14 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     const amrex::Real x_left = plo_coarse[0]+(idx_left +0.5_rt)*dx_coarse[0];
                     const amrex::Real y_down = plo_coarse[1]+(idx_down +0.5_rt)*dx_coarse[1];
 
+                    // longitudinal index on coarse grid
+                    const int iz = k / refinement_ratio[2];
+
                     // Bilinear interpolation from coarse to fine grid
-                    const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  , 0);
-                    const amrex::Real val_left_up    = data_array_coarse(idx_left  , idx_down+1, 0);
-                    const amrex::Real val_right_up   = data_array_coarse(idx_left+1, idx_down+1, 0);
-                    const amrex::Real val_right_down = data_array_coarse(idx_left+1, idx_down  , 0);
+                    const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  ,iz);
+                    const amrex::Real val_left_up    = data_array_coarse(idx_left  , idx_down+1,iz);
+                    const amrex::Real val_right_up   = data_array_coarse(idx_left+1, idx_down+1,iz);
+                    const amrex::Real val_right_down = data_array_coarse(idx_left+1, idx_down  ,iz);
                     const amrex::Real df_x = val_right_down - val_left_down;
                     const amrex::Real df_y = val_left_up - val_left_down;
                     const amrex::Real df_xy = val_left_down + val_right_up - val_right_down
