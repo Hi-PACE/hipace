@@ -262,6 +262,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx_coarse = geom[lev-1].CellSizeArray();
     const amrex::IntVect refinement_ratio = m_ref_ratio;
 
+    // get relative position of fine grid slice between coarse grids for longitudinal lin. interpol.
     const amrex::Real z = plo_coarse[2] + (islice+0.5_rt)*dx[2];
     const int idz_coarse = (z-plo_coarse[2])/dx_coarse[2];
     const amrex::Real rel_z = (z - (plo_coarse[2] + (idz_coarse)*dx_coarse[2])) / dx_coarse[2];
@@ -282,9 +283,11 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const amrex::IntVect& big = bx.bigEnd();
         const auto nx_fine_high = big[0];
         const auto ny_fine_high = big[1];
+        // fine grid staging area
         amrex::Array4<amrex::Real>  dst = m_poisson_solver[lev]->StagingArea().array(mfi);
-        amrex::Array4<amrex::Real>  src_coarse = lhs_coarse.array(mfi);
-        amrex::Array4<amrex::Real>  src_coarse_prev = lhs_coarse_prev.array(mfi);
+        // coarse grid field and coarse grid field from previous slice for long. interpolation
+        amrex::Array4<amrex::Real>  src = lhs_coarse.array(mfi);
+        amrex::Array4<amrex::Real>  src_prev = lhs_coarse_prev.array(mfi);
         // Loop over the valid indices on the fine grid and bilinearly interpolate the boundary
         // value from the coarse grid to the outer grid points on the fine grid
         amrex::ParallelFor(
@@ -301,19 +304,16 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     const amrex::Real x_left = plo_coarse[0]+(idx_left +0.5_rt)*dx_coarse[0];
                     const amrex::Real y_down = plo_coarse[1]+(idx_down +0.5_rt)*dx_coarse[1];
 
-                    // Bilinear interpolation from coarse to fine grid
-                    const amrex::Real val_left_down  = src_coarse(idx_left  , idx_down  ,iz);
-                    const amrex::Real val_left_up    = src_coarse(idx_left  , idx_down+1,iz);
-                    const amrex::Real val_right_up   = src_coarse(idx_left+1, idx_down+1,iz);
-                    const amrex::Real val_right_down = src_coarse(idx_left+1, idx_down  ,iz);
-                    // const amrex::Real val_left_down  = (1-rel_z)*src_coarse(idx_left  , idx_down  ,iz)
-                    //                                     + rel_z*src_coarse_prev(idx_left  , idx_down  ,iz);
-                    // const amrex::Real val_left_up    = (1-rel_z)*src_coarse(idx_left  , idx_down+1,iz)
-                    //                                     + rel_z*src_coarse_prev(idx_left  , idx_down+1,iz);
-                    // const amrex::Real val_right_up   = (1-rel_z)*src_coarse(idx_left+1, idx_down+1,iz)
-                    //                                     + rel_z*src_coarse_prev(idx_left+1, idx_down+1,iz);
-                    // const amrex::Real val_right_down = (1-rel_z)*src_coarse(idx_left+1, idx_down  ,iz)
-                    //                                     + rel_z*src_coarse_prev(idx_left+1, idx_down  ,iz);
+                    // transverse bilinear interpolation and longitudinal linear interpolatiton
+                    // from coarse to fine grid
+                    const amrex::Real val_left_down  = (1-rel_z)*src(idx_left  , idx_down  ,iz)
+                                                        + rel_z*src_prev(idx_left  , idx_down  ,iz);
+                    const amrex::Real val_left_up    = (1-rel_z)*src(idx_left  , idx_down+1,iz)
+                                                        + rel_z*src_prev(idx_left  , idx_down+1,iz);
+                    const amrex::Real val_right_up   = (1-rel_z)*src(idx_left+1, idx_down+1,iz)
+                                                        + rel_z*src_prev(idx_left+1, idx_down+1,iz);
+                    const amrex::Real val_right_down = (1-rel_z)*src(idx_left+1, idx_down  ,iz)
+                                                        + rel_z*src_prev(idx_left+1, idx_down  ,iz);
                     const amrex::Real df_x = val_right_down - val_left_down;
                     const amrex::Real df_y = val_left_up - val_left_down;
                     const amrex::Real df_xy = val_left_down + val_right_up - val_right_down
