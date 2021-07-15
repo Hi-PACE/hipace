@@ -45,6 +45,7 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
+amrex::Box Hipace::m_current_box = amrex::Box();
 
 Hipace&
 Hipace::GetInstance ()
@@ -391,6 +392,7 @@ Hipace::Evolve ()
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
             const amrex::Box& bx = boxArray(lev)[it];
+            m_current_box = bx;
 
             ResizeFDiagFAB(it);
 

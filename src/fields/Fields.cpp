@@ -271,6 +271,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const amrex::IntVect& big = bx.bigEnd();
         const auto nx_fine_high = big[0];
         const auto ny_fine_high = big[1];
+        const int iz = Hipace::m_current_box.smallEnd(Direction::z);
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
         // Loop over the valid indices on the fine grid and bilinearly interpolate the boundary
@@ -288,9 +289,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     const int idx_down = j / refinement_ratio[1];
                     const amrex::Real x_left = plo_coarse[0]+(idx_left +0.5_rt)*dx_coarse[0];
                     const amrex::Real y_down = plo_coarse[1]+(idx_down +0.5_rt)*dx_coarse[1];
-
-                    // longitudinal index on coarse grid
-                    const int iz = k / refinement_ratio[2];
 
                     // Bilinear interpolation from coarse to fine grid
                     const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  ,iz);
