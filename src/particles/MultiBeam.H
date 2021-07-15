@@ -42,6 +42,7 @@ public:
      * \param[in] lev MR level
      * \param[in] ibox box index
      * \param[in] bx 3D box on which per-slice sorting is done
+     * \param[in] ref_ratio refinement ratio in (x, y, z)
      * \param[in] geom Geometry of the simulation domain
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */

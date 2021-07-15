@@ -547,8 +547,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, amrex::Vector<amrex::V
             }
 
             // Push beam particles
-            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice, bx, bins[lev],
-                                                   m_box_sorters, ibox);
+            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                                   bins[lev], m_box_sorters, ibox);
 
             FillDiagnostics(lev, islice);
 
