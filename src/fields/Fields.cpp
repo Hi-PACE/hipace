@@ -260,6 +260,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
 
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
+    amrex::FArrayBox& lhs_fab = lhs_coarse[0];
+    const int iz = lhs_fab.box().smallEnd(Direction::z);
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
@@ -271,7 +273,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const amrex::IntVect& big = bx.bigEnd();
         const auto nx_fine_high = big[0];
         const auto ny_fine_high = big[1];
-        const int iz = Hipace::m_current_box.smallEnd(Direction::z);
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
         // Loop over the valid indices on the fine grid and bilinearly interpolate the boundary

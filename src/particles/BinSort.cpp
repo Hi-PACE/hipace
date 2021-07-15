@@ -4,12 +4,12 @@
 
 BeamBins
 findParticlesInEachSlice (
-    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam,
+    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam, const amrex::IntVect& ref_ratio,
     amrex::Vector<amrex::Geometry> const& geom, const BoxSorter& a_box_sorter)
 {
     // Slice box: only 1 cell transversally, same as bx longitudinally.
-    const amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
-
+    amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
+    if (lev == 1) cbx.refine(ref_ratio);
     const int np = a_box_sorter.boxCountsPtr()[ibox];
     const int offset = a_box_sorter.boxOffsetsPtr()[ibox];
 

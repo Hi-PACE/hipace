@@ -270,7 +270,6 @@ public:
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
     bool m_explicit = false;
-    static amrex::Box m_current_box; /**< current box to be calculated */
     /**
      * \brief Solve for Bx an By in slice MF using the explicit solver
      *

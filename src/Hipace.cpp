@@ -45,7 +45,6 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-amrex::Box Hipace::m_current_box = amrex::Box();
 
 Hipace&
 Hipace::GetInstance ()
@@ -392,12 +391,12 @@ Hipace::Evolve ()
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
             const amrex::Box& bx = boxArray(lev)[it];
-            m_current_box = bx;
 
             ResizeFDiagFAB(it);
 
             amrex::Vector<amrex::Vector<BeamBins>> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx, geom, m_box_sorters);
+            bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx, ref_ratio[0],
+                                                         geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
             SolveOneSlice(bx.bigEnd(Direction::z), it, bins);

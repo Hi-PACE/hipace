@@ -46,7 +46,7 @@ public:
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
     amrex::Vector<amrex::Vector<BeamBins>>
-    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx,
+    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, const amrex::IntVect& ref_ratio,
                               amrex::Vector<amrex::Geometry> const& geom,
                               const amrex::Vector<BoxSorter>& a_box_sorter_vec);
 
@@ -72,8 +72,8 @@ public:
      * \param[in] ibox index of the current box
      */
     void AdvanceBeamParticlesSlice (
-        Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<BeamBins>& bins,
+        Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
+        const amrex::Box bx, amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and init them
