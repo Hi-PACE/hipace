@@ -34,8 +34,8 @@ static std::array<std::map<std::string, int>, 5> Comps
             }},
         /* WhichSlice::Previous1 */
         {{
-                {"Ez", 0}, {"Bx", 0}, {"By", 1}, {"Bz", 7}, {"jx", 2}, {"jx_beam", 3}, {"jy", 4},
-                {"jy_beam", 5}, {"Psi", 8}, {"N", 9}
+                {"Ez", 0}, {"Bx", 1}, {"By", 2}, {"Bz", 3}, {"jx", 4}, {"jx_beam", 5}, {"jy", 6},
+                {"jy_beam", 7}, {"Psi", 8}, {"N", 9}
             }},
         /* WhichSlice::Previous2 */
         {{

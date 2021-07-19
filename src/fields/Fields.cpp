@@ -268,7 +268,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const amrex::Real rel_z = (z - (plo_coarse[2] + (idz_coarse)*dx_coarse[2])) / dx_coarse[2];
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
-    amrex::MultiFab lhs_coarse_prev(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
+    amrex::MultiFab lhs_coarse_prev(getSlices(lev-1, WhichSlice::Previous1), amrex::make_alias,
                                Comps[WhichSlice::Previous1][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     const int iz = lhs_fab.box().smallEnd(Direction::z);
