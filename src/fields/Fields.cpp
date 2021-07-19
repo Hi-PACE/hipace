@@ -209,6 +209,7 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
             const amrex::Real* dx = geom.CellSize();
             const amrex::Real pos = (islice+0.5)*dx[2]+problo[2];
             if (pos < patch_lo || pos > patch_hi) continue;
+        }
 
         amrex::MultiFab::Copy(
             getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
