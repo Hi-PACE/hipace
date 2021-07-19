@@ -170,7 +170,6 @@ struct EnforceBC
                                         plo[2]+(small[2]+0.5)*dx[2])}};
             m_phi_lev1 =  {{AMREX_D_DECL(plo[0]+(big[0]+0.5)*dx[0], plo[1]+(big[1]+0.5)*dx[1],
                                          plo[2]+(big[2]+0.5)*dx[2])}};
-        // amrex::Print() << " m_plo_lev1 " << m_plo_lev1[0] << " " << m_plo_lev1[1] << " " << m_plo_lev1[2]  << " m_phi_lev1 " << m_phi_lev1[0] << " " << m_phi_lev1[1] << " "<< m_phi_lev1[2] << "\n";
         } else {
             amrex::ignore_unused(box);
         }
