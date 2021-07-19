@@ -552,8 +552,6 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, amrex::Vector<amrex::V
 
             FillDiagnostics(lev, islice);
 
-            m_fields.ShiftSlices(lev);
-
             m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
 
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
@@ -562,6 +560,18 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, amrex::Vector<amrex::V
         amrex::ParallelContext::pop();
 
     } // end for (int lev = 0; lev <= finestLevel(); ++lev)
+
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+
+        if (lev == 1) { // skip all slices which are not existing on level 1
+            // use geometry of coarse grid to determine whether slice is to be solved
+            const amrex::Real* problo = Geom(0).ProbLo();
+            const amrex::Real* dx = Geom(0).CellSize();
+            amrex::Real pos = (islice_coarse+0.5)*dx[2]+problo[2];
+            if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
+        }
+        m_fields.ShiftSlices(lev);
+    }
 }
 
 void
