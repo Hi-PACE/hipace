@@ -308,6 +308,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     // from coarse to fine grid
                     const amrex::Real val_left_down  = (1-rel_z)*src(idx_left  , idx_down  ,iz)
                                                         + rel_z*src_prev(idx_left  , idx_down  ,iz);
+                    // if ( idx_left == 70 ) amrex::AllPrint() << "idx_left " << idx_left << " idx_down " << idx_down <<  " value left " << src(idx_left  , idx_down  ,iz) << " value right " << src_prev(idx_left  , idx_down  ,iz) << " val_left_down " << val_left_down << "\n";
+
                     const amrex::Real val_left_up    = (1-rel_z)*src(idx_left  , idx_down+1,iz)
                                                         + rel_z*src_prev(idx_left  , idx_down+1,iz);
                     const amrex::Real val_right_up   = (1-rel_z)*src(idx_left+1, idx_down+1,iz)
