@@ -119,9 +119,14 @@ public:
      * to compute each slice. The current slice is always stored in index 1.
      * Hence, after one slice is computed, slices must be shifted by 1 element.
      *
-     * \param[in] lev MR level
+     * \param[in] nlev number of MR level
+     * \param[in] islice current slice to be shifted
+     * \param[in] geom geometry
+     * \param[in] patch_lo lower longitudinal end of refined level
+     * \param[in] patch_hi upper longitudinal end of refined level
      */
-    void ShiftSlices (int lev);
+    void ShiftSlices (int nlev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
+                      const amrex::Real patch_hi);
 
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev, bool inverse=false);

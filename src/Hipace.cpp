@@ -561,17 +561,9 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, amrex::Vector<amrex::V
 
     } // end for (int lev = 0; lev <= finestLevel(); ++lev)
 
-    for (int lev = 0; lev <= finestLevel(); ++lev) {
+    // shift slices of all levels
+    m_fields.ShiftSlices(finestLevel()+1, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
 
-        if (lev == 1) { // skip all slices which are not existing on level 1
-            // use geometry of coarse grid to determine whether slice is to be solved
-            const amrex::Real* problo = Geom(0).ProbLo();
-            const amrex::Real* dx = Geom(0).CellSize();
-            amrex::Real pos = (islice_coarse+0.5)*dx[2]+problo[2];
-            if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
-        }
-        m_fields.ShiftSlices(lev);
-    }
 }
 
 void

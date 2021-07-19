@@ -196,25 +196,37 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 }
 
 void
-Fields::ShiftSlices (int lev)
+Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real patch_lo,
+                     amrex::Real patch_hi)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
-        Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous2]["Bx"],
-        2, m_slices_nguards);
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["Ez"], Comps[WhichSlice::Previous1]["Ez"],
-        4, m_slices_nguards);
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["Psi"], Comps[WhichSlice::Previous1]["Psi"],
-        1, m_slices_nguards);
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["jx"], Comps[WhichSlice::Previous1]["jx"],
-        4, m_slices_nguards);
+
+    for (int lev = 0; lev < nlev; ++lev) {
+
+        if (lev == 1) { // skip all slices which are not existing on level 1
+            // use geometry of coarse grid to determine whether slice is to be solved
+            const amrex::Real* problo = geom.ProbLo();
+            const amrex::Real* dx = geom.CellSize();
+            const amrex::Real pos = (islice+0.5)*dx[2]+problo[2];
+            if (pos < patch_lo || pos > patch_hi) continue;
+
+        amrex::MultiFab::Copy(
+            getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
+            Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous2]["Bx"],
+            2, m_slices_nguards);
+        amrex::MultiFab::Copy(
+            getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
+            Comps[WhichSlice::This]["Ez"], Comps[WhichSlice::Previous1]["Ez"],
+            4, m_slices_nguards);
+        amrex::MultiFab::Copy(
+            getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
+            Comps[WhichSlice::This]["Psi"], Comps[WhichSlice::Previous1]["Psi"],
+            1, m_slices_nguards);
+        amrex::MultiFab::Copy(
+            getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
+            Comps[WhichSlice::This]["jx"], Comps[WhichSlice::Previous1]["jx"],
+            4, m_slices_nguards);
+    }
 }
 
 void
@@ -308,8 +320,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     // from coarse to fine grid
                     const amrex::Real val_left_down  = (1-rel_z)*src(idx_left  , idx_down  ,iz)
                                                         + rel_z*src_prev(idx_left  , idx_down  ,iz);
-                    // if ( idx_left == 70 ) amrex::AllPrint() << "idx_left " << idx_left << " idx_down " << idx_down <<  " value left " << src(idx_left  , idx_down  ,iz) << " value right " << src_prev(idx_left  , idx_down  ,iz) << " val_left_down " << val_left_down << "\n";
-
                     const amrex::Real val_left_up    = (1-rel_z)*src(idx_left  , idx_down+1,iz)
                                                         + rel_z*src_prev(idx_left  , idx_down+1,iz);
                     const amrex::Real val_right_up   = (1-rel_z)*src(idx_left+1, idx_down+1,iz)
