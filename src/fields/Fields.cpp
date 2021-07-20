@@ -56,34 +56,43 @@ Fields::CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType s
     amrex::Box src_bx = src_fab.box();
     src_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
     amrex::IntVect lo = src_bx.smallEnd();
-    // lo.grow({-Hipace:: m_slices_nguards[0], -Hipace::m_slices_nguards[1], 0});
+
+    if (lo[0] == 0 && lo[1] == 0) {
+        if (slice_operator==SliceOperatorType::Assign) {
+            amrex::MultiFab::Copy(m_poisson_solver[lev]->StagingArea(),
+                                  getSlices(lev,WhichSlice::This), Comps[WhichSlice::This]["jz"], 0,
+                                  1, 0);
+        } else {
+            amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(),
+                                 getSlices(lev,WhichSlice::This), Comps[WhichSlice::This]["rho"], 0,
+                                 1, 0);
+        }
+    } else {
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(m_poisson_solver[lev]->StagingArea(), amrex::TilingIfNotGPU());
-          mfi.isValid(); ++mfi ){
-        const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
-        amrex::Array4<amrex::Real> const & dst_array = m_poisson_solver[lev]
-                                                       ->StagingArea().array(mfi);
+        for ( amrex::MFIter mfi(m_poisson_solver[lev]->StagingArea(), amrex::TilingIfNotGPU());
+              mfi.isValid(); ++mfi ){
+            const amrex::Box& bx = mfi.tilebox();
+            amrex::Array4<amrex::Real const> const & src_array = src.array(mfi);
+            amrex::Array4<amrex::Real> const & dst_array = m_poisson_solver[lev]
+                                                           ->StagingArea().array(mfi);
 
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-
-                if (slice_operator==SliceOperatorType::Assign)
+            amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    dst_array(i,j,k,0) = src_array(i+lo[0], j+lo[1], k, scomp);
+                    if (slice_operator==SliceOperatorType::Assign) {
+                        dst_array(i,j,k,0) = src_array(i+lo[0], j+lo[1], k, scomp);
+                    }
+                    else /* SliceOperatorType::Add */
+                    {
+                        dst_array(i,j,k,0) += src_array(i+lo[0], j+lo[1], k, scomp);
+                    }
                 }
-                else /* SliceOperatorType::Add */
-                {
-                    dst_array(i,j,k,0) += src_array(i+lo[0], j+lo[1], k, scomp);
-                }
-
-            }
-            );
+                );
+        }
     }
 }
 
@@ -91,16 +100,20 @@ void
 Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, const int direction,
                               const amrex::Real dx, const amrex::Real mult_coeff,
                               const SliceOperatorType slice_operator, const int scomp,
-                              const int dcomp)
+                              const int dcomp, const bool use_offset)
 {
     HIPACE_PROFILE("Fields::TransverseDerivative()");
     using namespace amrex::literals;
 
-    const amrex::FArrayBox& src_fab = src[0];
-    amrex::Box src_bx = src_fab.box();
-    src_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
-    amrex::IntVect lo = src_bx.smallEnd();
-    amrex::Print() << " lo " << lo << "\n";
+    amrex::IntVect lo;
+    if (use_offset) {
+        const amrex::FArrayBox& src_fab = src[0];
+        amrex::Box src_bx = src_fab.box();
+        src_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+        lo = src_bx.smallEnd();
+    } else {
+        lo = {0 , 0, 0};
+    }
 
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));
 #ifdef AMREX_USE_OMP
@@ -395,19 +408,11 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                         Comps[WhichSlice::This]["Psi"], 1);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    if (lev == 0) {
-        amrex::MultiFab::Copy(m_poisson_solver[lev]->StagingArea(), getSlices(lev,WhichSlice::This),
-                                  Comps[WhichSlice::This]["jz"], 0, 1, 0);
-        m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
-        amrex::MultiFab::Add(m_poisson_solver[lev]->StagingArea(), getSlices(lev,WhichSlice::This),
-                              Comps[WhichSlice::This]["rho"], 0, 1, 0);
-    } else {
-        CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
-                           Comps[WhichSlice::This]["jz"], lev);
-        m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
-        CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Add,
-                           Comps[WhichSlice::This]["rho"], lev);
-    }
+    CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
+                       Comps[WhichSlice::This]["jz"], lev);
+    m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
+    CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Add,
+                       Comps[WhichSlice::This]["rho"], lev);
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
 
     InterpolateBoundaries(geom, lev, "Psi");
@@ -460,7 +465,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
         geom[lev].CellSize(Direction::x),
         1./(phys_const.ep0*phys_const.c),
         SliceOperatorType::Assign,
-        Comps[WhichSlice::This]["jx"]);
+        Comps[WhichSlice::This]["jx"], 0, 1);
 
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
@@ -469,7 +474,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
         geom[lev].CellSize(Direction::y),
         1./(phys_const.ep0*phys_const.c),
         SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jy"]);
+        Comps[WhichSlice::This]["jy"], 0, 1);
 
     InterpolateBoundaries(geom, lev, "Ez");
     // Solve Poisson equation.
@@ -495,7 +500,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
         geom[lev].CellSize(Direction::y),
         -phys_const.mu0,
         SliceOperatorType::Assign,
-        Comps[WhichSlice::This]["jz"]);
+        Comps[WhichSlice::This]["jz"], 0, 1);
 
     LongitudinalDerivative(
         getSlices(lev, WhichSlice::Previous1),
@@ -531,7 +536,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
         geom[lev].CellSize(Direction::x),
         phys_const.mu0,
         SliceOperatorType::Assign,
-        Comps[WhichSlice::This]["jz"]);
+        Comps[WhichSlice::This]["jz"], 0, 1);
 
     LongitudinalDerivative(
         getSlices(lev, WhichSlice::Previous1),
@@ -569,7 +574,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
         geom[lev].CellSize(Direction::y),
         phys_const.mu0,
         SliceOperatorType::Assign,
-        Comps[WhichSlice::This]["jx"]);
+        Comps[WhichSlice::This]["jx"], 0, 1);
 
     TransverseDerivative(
         getSlices(lev, WhichSlice::This),
@@ -578,7 +583,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
         geom[lev].CellSize(Direction::x),
         -phys_const.mu0,
         SliceOperatorType::Add,
-        Comps[WhichSlice::This]["jy"]);
+        Comps[WhichSlice::This]["jy"], 0, 1);
 
     InterpolateBoundaries(geom, lev, "Bz");
     // Solve Poisson equation.

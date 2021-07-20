@@ -147,7 +147,7 @@ public:
                                const int direction, const amrex::Real dx,
                                const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0);
+                               const int scomp=0, const int dcomp=0, const bool use_offset=false);
 
     /** Compute longitudinal derivative (difference between two slices) */
     void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
