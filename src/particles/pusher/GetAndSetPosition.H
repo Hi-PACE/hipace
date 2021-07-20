@@ -149,12 +149,14 @@ struct EnforceBC
      * \param lev level of MR
      * \param a_offset offset to apply to the particle indices
      */
-    EnforceBC (T_ParTile& a_ptile, const int lev, int a_offset = 0) noexcept
+    EnforceBC (T_ParTile& a_ptile, const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& plo,
+               const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& phi,
+               const amrex::GpuArray<int,AMREX_SPACEDIM>& is_per, int a_offset = 0) noexcept
     {
 
-        m_plo    = Hipace::GetInstance().Geom(lev).ProbLoArray();
-        m_phi    = Hipace::GetInstance().Geom(lev).ProbHiArray();
-        m_is_per = Hipace::GetInstance().Geom(lev).isPeriodicArray();
+        m_plo    = plo;
+        m_phi    = phi;
+        m_is_per = is_per;
         AMREX_ALWAYS_ASSERT(m_is_per[0] == m_is_per[1]);
 
         m_periodicity = {true, true, false};
