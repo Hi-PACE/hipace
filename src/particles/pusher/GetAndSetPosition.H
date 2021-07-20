@@ -146,7 +146,9 @@ struct EnforceBC
 
     /** Constructor.
      * \param a_ptile tile containing the macroparticles
-     * \param lev level of MR
+     * \param plo lower end of the physical domain where particles should stay
+     * \param phi upper end of the physical domain where particles should stay
+     * \param is_per periodicity
      * \param a_offset offset to apply to the particle indices
      */
     EnforceBC (T_ParTile& a_ptile, const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& plo,
