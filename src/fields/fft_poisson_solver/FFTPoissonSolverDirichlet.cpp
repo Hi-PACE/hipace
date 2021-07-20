@@ -132,7 +132,9 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         const amrex::FArrayBox& lhs_fab = lhs_mf[0];
-        const amrex::IntVect lo = lhs_fab.box().smallEnd();
+        amrex::Box lhs_bx = lhs_fab.box();
+        lhs_bx.grow({-Fields::m_slices_nguards[0], -Fields::m_slices_nguards[1], 0});
+        const amrex::IntVect lo = lhs_bx.smallEnd();
         amrex::ParallelFor( mfi.validbox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field

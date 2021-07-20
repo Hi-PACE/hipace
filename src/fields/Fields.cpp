@@ -5,6 +5,8 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 
+amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
+
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
 {
@@ -112,7 +114,7 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
         src_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
         lo = src_bx.smallEnd();
     } else {
-        lo = {0 , 0, 0};
+        lo = {0, 0, 0};
     }
 
     AMREX_ALWAYS_ASSERT((direction == Direction::x) || (direction == Direction::y));

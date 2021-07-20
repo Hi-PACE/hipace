@@ -252,11 +252,11 @@ public:
                                        const int By_comp, const int Bx_iter_comp,
                                        const int By_iter_comp, const amrex::Geometry& geom);
 
+    /** Number of guard cells for slices MultiFab */
+    static amrex::IntVect m_slices_nguards;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
-    /** Number of guard cells for slices MultiFab */
-    amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
     amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
