@@ -147,16 +147,14 @@ public:
                                const int direction, const amrex::Real dx,
                                const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0,
-                               const amrex::IntVect src_offsets={0,0,0});
+                               const int scomp=0, const int dcomp=0);
 
     /** Compute longitudinal derivative (difference between two slices) */
     void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
                                  amrex::MultiFab& dst, const amrex::Real dz,
                                  const amrex::Real mult_coeff=1.,
                                  const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                                 const int sc1omp=0, const int s2comp=0, const int dcomp=0,
-                                 const amrex::IntVect src_offsets={0,0,0});
+                                 const int sc1omp=0, const int s2comp=0, const int dcomp=0);
 
     /** \brief Interpolate values at boundaries from coarse grid to the fine grid
      *

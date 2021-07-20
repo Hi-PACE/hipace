@@ -40,9 +40,6 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     }
     m_spectralspace_ba.define( std::move(spectral_bl) );
     amrex::BoxArray real_ba(std::move(real_bl));
-    // save offset of real space array
-    const amrex::Box offset_bx = a_realspace_ba[0];
-    m_offset = offset_bx.smallEnd();
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
@@ -134,7 +131,8 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
-        const amrex::IntVect& lo = m_offset;
+        const amrex::FArrayBox& lhs_fab = lhs_mf[0];
+        const amrex::IntVect lo = lhs_fab.box().smallEnd();
         amrex::ParallelFor( mfi.validbox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field
