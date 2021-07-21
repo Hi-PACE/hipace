@@ -54,6 +54,7 @@ Fields::CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType s
 {
     HIPACE_PROFILE("Fields::CopyToStagingArea()");
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(src.size() == 1, "Slice MFs must be defined on one box only");
     const amrex::FArrayBox& src_fab = src[0];
     amrex::Box src_bx = src_fab.box();
     src_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
@@ -107,6 +108,7 @@ Fields::TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst, 
     HIPACE_PROFILE("Fields::TransverseDerivative()");
     using namespace amrex::literals;
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(src.size() == 1, "Slice MFs must be defined on one box only");
     amrex::IntVect lo;
     if (use_offset) {
         const amrex::FArrayBox& src_fab = src[0];
@@ -173,6 +175,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
     HIPACE_PROFILE("Fields::LongitudinalDerivative()");
     using namespace amrex::literals;
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(src1.size() == 1, "Slice MFs must be defined on one box only");
     const amrex::FArrayBox& src_fab = src1[0];
     amrex::Box src_bx = src_fab.box();
     src_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});

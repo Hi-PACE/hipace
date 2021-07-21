@@ -131,6 +131,8 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
+                                         "Slice MFs must be defined on one box only");
         const amrex::FArrayBox& lhs_fab = lhs_mf[0];
         amrex::Box lhs_bx = lhs_fab.box();
         lhs_bx.grow({-Fields::m_slices_nguards[0], -Fields::m_slices_nguards[1], 0});
