@@ -99,7 +99,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
     // slice is only one cell thick
     AMREX_ASSERT(pti.tilebox().smallEnd(2) == pti.tilebox().bigEnd(2));
-    const int z_index = pti.tilebox().smallEnd(2);
+    const int z_index = Hipace::m_do_tiling ? 0 : pti.tilebox().smallEnd(2);
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
     constexpr int CELL = amrex::IndexType::CELL;
@@ -265,8 +265,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             if (Hipace::m_do_tiling) {
                 // atomic add from tmp arrays to main arrays
                 amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
-                amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, 0},
-                                    {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, 0}};
+                amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, pti.tilebox().smallEnd(2)},
+                                    {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
                 srcbx.grow({ng, ng, 0});
                 dstbx.grow({ng, ng, 0});
                 if (deposit_jx_jy) {

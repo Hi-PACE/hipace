@@ -120,7 +120,6 @@ Hipace::Hipace () :
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
     pph.query("do_tiling", m_do_tiling);
-    // if (m_do_tiling) AMREX_ALWAYS_ASSERT(m_explicit);
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
