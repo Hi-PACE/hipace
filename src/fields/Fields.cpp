@@ -365,8 +365,23 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
             {
                 if (i==nx_fine_low || i== nx_fine_high || j==ny_fine_low || j == ny_fine_high) {
                     // Compute coordinate on fine grid
-                    const amrex::Real x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
-                    const amrex::Real y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
+                    amrex::Real x, y;
+                    if (i==nx_fine_low) {
+                        x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
+                    } else if (i== nx_fine_high) {
+                        x = plo[0] + (i+lo[0]+2.5_rt)*dx[0];
+                    } else {
+                        x = plo[0] + (i+lo[0]+1.5_rt)*dx[0];
+                    }
+
+                    if (j==ny_fine_low) {
+                        y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
+                    } else if (j== ny_fine_high) {
+                        y = plo[1] + (j+lo[1]+2.5_rt)*dx[1];
+                    } else {
+                        y = plo[1] + (j+lo[1]+1.5_rt)*dx[1];
+                    }
+
                     // index left (in x) and below (in y) of the compute coordinate on coarse grid
                     const int idx_left = (i + lo[0]) / refinement_ratio[0];
                     const int idx_down = (j + lo[1]) / refinement_ratio[1];
@@ -412,6 +427,12 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["Psi"], 1);
+
+if (lev == 1) {
+    amrex::MultiFab rho(getSlices(lev, WhichSlice::This), amrex::make_alias,
+                        Comps[WhichSlice::This]["rho"], 1);
+                    rho.setVal(1);
+}
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
