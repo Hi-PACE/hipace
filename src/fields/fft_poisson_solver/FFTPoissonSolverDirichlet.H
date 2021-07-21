@@ -20,7 +20,7 @@ class FFTPoissonSolverDirichlet final : public FFTPoissonSolver
 {
 public:
     /** Constructor */
-    FFTPoissonSolverDirichlet ( amrex::BoxArray const& realspace_ba,
+    FFTPoissonSolverDirichlet ( amrex::BoxArray const& a_realspace_ba,
                                 amrex::DistributionMapping const& dm,
                                 amrex::Geometry const& gm);
 

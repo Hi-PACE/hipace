@@ -252,8 +252,6 @@ Hipace::MakeNewLevelFromScratch (
     // We are going to ignore the DistributionMapping argument and build our own.
     amrex::DistributionMapping dm;
     {
-        const amrex::IntVect ncells_global = Geom(lev).Domain().length();
-        const amrex::IntVect box_size = ba[0].length();  // Uniform box size
         const int nboxes_x = m_numprocs_x;
         const int nboxes_y = m_numprocs_y;
         const int nboxes_z = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
