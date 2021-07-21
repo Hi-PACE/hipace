@@ -77,11 +77,10 @@ public:
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
-     * \param[in] ref_ratio mesh refinement ratio
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm, amrex::Vector<amrex::IntVect> const& ref_ratio);
+        const amrex::DistributionMapping& slice_dm);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
