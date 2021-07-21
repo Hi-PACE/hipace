@@ -4,6 +4,7 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
+#include "particles/ShapeFactors.H"
 
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 
@@ -23,7 +24,6 @@ Fields::AllocData (
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
-    if (lev == 1) m_ref_ratio = ref_ratio[0];
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -332,12 +332,13 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-    const amrex::IntVect refinement_ratio = m_ref_ratio;
+
+    const int interpol_order = 2;
 
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
-    const int iz = lhs_fab.box().smallEnd(Direction::z);
+    const amrex::IntVect lo_coarse = lhs_fab.box().smallEnd();
     // get offset of level 1 w.r.t. the staging area
     amrex::MultiFab lhs_fine(getSlices(lev, WhichSlice::This), amrex::make_alias,
                               Comps[WhichSlice::This][component], 1);
@@ -382,25 +383,27 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         y = plo[1] + (j+lo[1]+1.5_rt)*dx[1];
                     }
 
-                    // index left (in x) and below (in y) of the compute coordinate on coarse grid
-                    const int idx_left = (i + lo[0]) / refinement_ratio[0];
-                    const int idx_down = (j + lo[1]) / refinement_ratio[1];
-                    const amrex::Real x_left = plo_coarse[0]+(idx_left +0.5_rt)*dx_coarse[0];
-                    const amrex::Real y_down = plo_coarse[1]+(idx_down +0.5_rt)*dx_coarse[1];
+                    // --- Compute shape factors
+                    // x direction
+                    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
+                    const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
+                    amrex::Real sx_cell[interpol_order + 1];
+                    const int j_cell = compute_shape_factor<interpol_order>(sx_cell, xmid + 0.5_rt);
 
-                    // Bilinear interpolation from coarse to fine grid
-                    const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  ,iz);
-                    const amrex::Real val_left_up    = data_array_coarse(idx_left  , idx_down+1,iz);
-                    const amrex::Real val_right_up   = data_array_coarse(idx_left+1, idx_down+1,iz);
-                    const amrex::Real val_right_down = data_array_coarse(idx_left+1, idx_down  ,iz);
-                    const amrex::Real df_x = val_right_down - val_left_down;
-                    const amrex::Real df_y = val_left_up - val_left_down;
-                    const amrex::Real df_xy = val_left_down + val_right_up - val_right_down
-                                             -val_left_up;
+                    // y direction
+                    const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
+                    amrex::Real sy_cell[interpol_order + 1];
+                    const int k_cell = compute_shape_factor<interpol_order>(sy_cell, ymid + 0.5_rt);
 
-                    const amrex::Real boundary_value =
-                        df_x*(x-x_left)/dx_coarse[0] + df_y*(y-y_down)/dx_coarse[1] +
-                        df_xy*(x-x_left)*(y-y_down)/(dx_coarse[0]*dx_coarse[1]) + val_left_down;
+                    amrex::Real boundary_value = 0.0_rt;
+                    // Deposit current into jx_arr, jy_arr and jz_arr
+                    for (int iy=0; iy<=interpol_order; iy++){
+                        for (int ix=0; ix<=interpol_order; ix++){
+                            boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
+                                                                lo_coarse[1]+k_cell+iy,
+                                                                lo_coarse[2])*sx_cell[ix]*sy_cell[iy];
+                        }
+                    }
 
                     if (i==nx_fine_low || i== nx_fine_high) {
                         data_array(i,j,k) -= boundary_value/(dx[0]*dx[0]);
@@ -427,12 +430,6 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["Psi"], 1);
-
-if (lev == 1) {
-    amrex::MultiFab rho(getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        Comps[WhichSlice::This]["rho"], 1);
-                    rho.setVal(1);
-}
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,

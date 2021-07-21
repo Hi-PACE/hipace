@@ -259,7 +259,6 @@ private:
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
-    amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
 };
 
 #endif
