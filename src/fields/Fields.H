@@ -132,12 +132,22 @@ public:
      */
     void AddBeamCurrents (const int lev, const int which_slice);
 
+    /** Copy or add array to staging area
+     *
+     * \param[in] src multifab to be copied or added
+     * \param[in] slice_operator operation: SliceOperatorType::Assign or Add
+     * \param[in] scomp compent of source MF
+     * \param[in] lev level of mesh refinement
+     */
+    void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
+                            const int scomp, const int lev);
+
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
                                const int direction, const amrex::Real dx,
                                const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0);
+                               const int scomp=0, const int dcomp=0, const bool use_offset=false);
 
     /** Compute longitudinal derivative (difference between two slices) */
     void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
@@ -242,11 +252,11 @@ public:
                                        const int By_comp, const int Bx_iter_comp,
                                        const int By_iter_comp, const amrex::Geometry& geom);
 
+    /** Number of guard cells for slices MultiFab */
+    static amrex::IntVect m_slices_nguards;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
-    /** Number of guard cells for slices MultiFab */
-    amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
     amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
