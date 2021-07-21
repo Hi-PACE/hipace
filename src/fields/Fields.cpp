@@ -336,7 +336,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
 
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
-
+    amrex::FArrayBox& lhs_fab = lhs_coarse[0];
+    const int iz = lhs_fab.box().smallEnd(Direction::z);
     // get offset of level 1 w.r.t. the staging area
     amrex::MultiFab lhs_fine(getSlices(lev, WhichSlice::This), amrex::make_alias,
                               Comps[WhichSlice::This][component], 1);
@@ -373,10 +374,10 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     const amrex::Real y_down = plo_coarse[1]+(idx_down +0.5_rt)*dx_coarse[1];
 
                     // Bilinear interpolation from coarse to fine grid
-                    const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  , 0);
-                    const amrex::Real val_left_up    = data_array_coarse(idx_left  , idx_down+1, 0);
-                    const amrex::Real val_right_up   = data_array_coarse(idx_left+1, idx_down+1, 0);
-                    const amrex::Real val_right_down = data_array_coarse(idx_left+1, idx_down  , 0);
+                    const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  ,iz);
+                    const amrex::Real val_left_up    = data_array_coarse(idx_left  , idx_down+1,iz);
+                    const amrex::Real val_right_up   = data_array_coarse(idx_left+1, idx_down+1,iz);
+                    const amrex::Real val_right_down = data_array_coarse(idx_left+1, idx_down  ,iz);
                     const amrex::Real df_x = val_right_down - val_left_down;
                     const amrex::Real df_y = val_left_up - val_left_down;
                     const amrex::Real df_xy = val_left_down + val_right_up - val_right_down
