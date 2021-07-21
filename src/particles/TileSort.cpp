@@ -17,7 +17,7 @@ findParticlesInEachTile (
     PlasmaBins bins;
 
     // Extract particle structures for this tile
-    int count = 0;
+    int count = 0; // number of boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
         count += 1;
 
@@ -43,6 +43,6 @@ findParticlesInEachTile (
                         0));
             });
     }
-    AMREX_ALWAYS_ASSERT(count == 1);
+    AMREX_ALWAYS_ASSERT(count <= 1);
     return bins;
 }
