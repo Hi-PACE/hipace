@@ -125,20 +125,25 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
     {
 #endif
+#ifdef AMREX_USE_OMP
+        const int ithread = omp_get_thread_num();
+#else
+        const int ithread = 0;
+#endif        
         amrex::Array4<amrex::Real> const& jx_arr  =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(0) : jx_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
         amrex::Array4<amrex::Real> const& jy_arr  =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(1) : jy_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(1) : jy_fab.array();
         amrex::Array4<amrex::Real> const& jz_arr  =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(2) : jz_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(2) : jz_fab.array();
         amrex::Array4<amrex::Real> const& rho_arr =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(3) : rho_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(3) : rho_fab.array();
         amrex::Array4<amrex::Real> const& jxx_arr =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(4) : jxx_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(4) : jxx_fab.array();
         amrex::Array4<amrex::Real> const& jxy_arr =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(5) : jxy_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
         amrex::Array4<amrex::Real> const& jyy_arr =
-            Hipace::m_do_tiling ? tmp_densities[omp_get_thread_num()].array(6) : jyy_fab.array();
+            Hipace::m_do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
 
         const int ng = std::max(1, depos_order_xy);
         int ntiley;
@@ -156,7 +161,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #endif
         for (int itile=0; itile<ntiles; itile++){
 
-            if (Hipace::m_do_tiling) tmp_densities[omp_get_thread_num()].setVal(0.);
+            if (Hipace::m_do_tiling) tmp_densities[ithread].setVal(0.);
             const int num_particles = Hipace::m_do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
             const int itilex = Hipace::m_do_tiling ? itile / ntiley : 0;
             const int itiley = Hipace::m_do_tiling ? itile % ntiley : 0;
@@ -265,19 +270,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 srcbx.grow({ng, ng, 0});
                 dstbx.grow({ng, ng, 0});
                 if (deposit_jx_jy) {
-                    jx_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 0, 0, 1);
-                    jy_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 1, 0, 1);
+                    jx_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 0, 0, 1);
+                    jy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 1, 0, 1);
                 }
                 if (deposit_jz) {
-                    jz_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 2, 0, 1);
+                    jz_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 2, 0, 1);
                 }
                 if (deposit_rho) {
-                    rho_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 3, 0, 1);
+                    rho_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 3, 0, 1);
                 }
                 if (deposit_j_squared) {
-                    jxx_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 4, 0, 1);
-                    jxy_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 5, 0, 1);
-                    jyy_fab.atomicAdd(tmp_densities[omp_get_thread_num()], srcbx, dstbx, 6, 0, 1);
+                    jxx_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, 0, 1);
+                    jxy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 5, 0, 1);
+                    jyy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 6, 0, 1);
                 }
             }
         }
