@@ -87,7 +87,7 @@ private:
      * \param[in] output_step current time step to dump
      * \param[in] lev MR level
      */
-    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
+    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Vector<amrex::Geometry> const& geom,
                          const int slice_dir, const amrex::Vector< std::string > varnames,
                          openPMD::Iteration iteration, const int output_step, const int lev);
 
