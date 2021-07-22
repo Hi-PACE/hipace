@@ -92,6 +92,7 @@ public:
      */
     void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
 
+    bool IonizationOn () const;
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
     bool AllSpeciesNeutralizeBackground () const;
 

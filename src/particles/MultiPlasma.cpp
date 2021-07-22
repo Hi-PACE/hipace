@@ -110,6 +110,16 @@ MultiPlasma::DoFieldIonization (
 }
 
 bool
+MultiPlasma::IonizationOn () const
+{
+    bool ionization_on = false;
+    for (auto& plasma : m_all_plasmas) {
+        if (plasma.m_can_ionize) ionization_on = true;
+    }
+    return ionization_on;
+}
+
+bool
 MultiPlasma::AllSpeciesNeutralizeBackground () const
 {
     bool all_species_neutralize = true;

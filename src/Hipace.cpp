@@ -540,6 +540,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         m_fields.ShiftSlices(lev);
 
         m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+        if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();
