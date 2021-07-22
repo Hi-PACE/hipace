@@ -2,6 +2,7 @@
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "TileSort.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 {
@@ -23,6 +24,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                        amrex::Vector<amrex::DistributionMapping> slice_dm,
                        amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
 {
+    HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
         const int lev = plasma.m_level;
         plasma.SetParticleBoxArray(lev, slice_ba[lev]);

@@ -237,9 +237,10 @@ public:
     static bool m_do_beam_jx_jy_deposition;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static bool m_do_device_synchronize;
+    /** Whether to use tiling for particle operations */
+    static bool m_do_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
-    static bool m_do_tiling;
     static int m_beam_injection_cr;
     /** Slope of external focusing fields applied to beam particles.
      * The fields applied are ExmBy = m_external_ExmBy_slope*x, and same in y. */

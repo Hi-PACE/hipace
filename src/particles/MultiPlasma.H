@@ -103,7 +103,7 @@ public:
      */
     void TileSort (amrex::Box bx, amrex::Geometry geom);
 
-    int m_sort_bin_size {32}; /**< Bin size to sort plasma particles */
+    int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
 private:
 

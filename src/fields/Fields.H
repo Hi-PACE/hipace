@@ -98,7 +98,7 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
-
+    /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
@@ -262,6 +262,7 @@ private:
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
+    /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
     amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
 };

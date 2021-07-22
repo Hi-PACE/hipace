@@ -124,8 +124,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
     {
-#endif
-#ifdef AMREX_USE_OMP
         const int ithread = omp_get_thread_num();
 #else
         const int ithread = 0;
@@ -263,7 +261,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 }
                 );
             if (Hipace::m_do_tiling) {
-                // atomic add from tmp arrays to main arrays
+                // If tiling is on, the current was deposited (see above) in temporary tile arrays.
+                // Now, we atomic add from these temporary arrays to the main arrays
                 amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
                 amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, pti.tilebox().smallEnd(2)},
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
