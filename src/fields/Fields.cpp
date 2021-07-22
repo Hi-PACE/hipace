@@ -335,7 +335,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
 
     const int interpol_order = 2;
     const int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-    amrex::Print() << " nguards_xy " << nguards_xy << "\n";
+
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
