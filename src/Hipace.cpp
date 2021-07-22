@@ -45,7 +45,7 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-bool Hipace::m_do_tiling = false;
+bool Hipace::m_do_tiling = true;
 
 Hipace&
 Hipace::GetInstance ()

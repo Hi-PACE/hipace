@@ -19,6 +19,7 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+                   plasmas.sort_bin_size = 8 \
                    hipace.depos_order_xy=0 \
                    hipace.file_prefix=$TEST_NAME
 

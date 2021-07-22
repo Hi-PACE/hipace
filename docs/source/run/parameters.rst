@@ -78,7 +78,7 @@ General parameters
     available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
     slow and is not recommended for production runs.
 
-* ``hipace.do_tiling`` (`bool`) optional (default `false`)
+* ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.

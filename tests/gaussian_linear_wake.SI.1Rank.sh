@@ -19,15 +19,16 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-            beam.profile = gaussian \
-            beam.zmin = -59.e-6 \
-            beam.zmax = 59.e-6 \
-            beam.radius = 100.e-6 \
-            beam.position_mean = 0. 0. 0 \
-            beam.position_std = 20.e-6 20.e-6 14.1e-6 \
-            geometry.prob_lo     = -100.e-6   -100.e-6   -60.e-6 \
-            geometry.prob_hi     =  100.e-6    100.e-6    60.e-6 \
-            hipace.file_prefix=$TEST_NAME
+        plasmas.sort_bin_size = 8 \
+        beam.profile = gaussian \
+        beam.zmin = -59.e-6 \
+        beam.zmax = 59.e-6 \
+        beam.radius = 100.e-6 \
+        beam.position_mean = 0. 0. 0 \
+        beam.position_std = 20.e-6 20.e-6 14.1e-6 \
+        geometry.prob_lo     = -100.e-6   -100.e-6   -60.e-6 \
+        geometry.prob_hi     =  100.e-6    100.e-6    60.e-6 \
+        hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --gaussian-beam --output-dir=$TEST_NAME
