@@ -110,7 +110,7 @@ private:
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     amrex::Vector<PlasmaBins> m_all_bins; /**< Logical tile bins for all plasma containers */
     amrex::Vector<std::string> m_names; /**< names of all plasma containers */
-    int m_nplasmas; /**< number of plasma containers */
+    int m_nplasmas = 0; /**< number of plasma containers */
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
 };
