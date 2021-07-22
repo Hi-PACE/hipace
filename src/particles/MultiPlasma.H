@@ -20,14 +20,14 @@ public:
 
     /** \brief Loop over plasma species and initialize them.
      *
-     * \param[in] lev MR level
      * \param[in] slice_ba slice boxarray, on which plasma particles are defined
      * \param[in] slice_dm DistributionMapping of the transverse slice domain
      * \param[in] slice_gm slice geometry
      * \param[in] gm Geometry of the simulation, to get the cell size
      */
-    void InitData (int lev, amrex::BoxArray slice_ba, amrex::DistributionMapping slice_dm,
-                   amrex::Geometry slice_gm, amrex::Geometry gm);
+    void InitData (amrex::Vector<amrex::BoxArray> slice_ba,
+                   amrex::Vector<amrex::DistributionMapping> slice_dm,
+                   amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm);
 
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields

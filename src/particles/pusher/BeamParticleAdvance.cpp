@@ -4,6 +4,7 @@
 #include "utils/Constants.H"
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "GetDomainLev.H"
 
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
@@ -66,8 +67,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
 
     const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
     const auto setPosition = SetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto enforceBC = EnforceBC<BeamParticleContainer>(beam, lev, offset);
-
+    const auto enforceBC = EnforceBC<BeamParticleContainer>(
+        beam, GetDomainLev(gm, box, 1, lev), GetDomainLev(gm, box, 0, lev),
+        gm.isPeriodicArray(), offset);
     const amrex::Real zmin = xyzmin[2];
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.

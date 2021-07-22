@@ -110,8 +110,9 @@ Diagnostic::TrimIOBox (const amrex::Box box_3d)
     amrex::Box slice_bx = box_3d;
     if (m_slice_dir >= 0){
             // Flatten the box down to 1 cell in the approprate direction.
-            slice_bx.setSmall(m_slice_dir, box_3d.length(m_slice_dir)/2);
-            slice_bx.setBig  (m_slice_dir, box_3d.length(m_slice_dir)/2);
+            const int idx = box_3d.smallEnd(m_slice_dir) + box_3d.length(m_slice_dir)/2;
+            slice_bx.setSmall(m_slice_dir, idx);
+            slice_bx.setBig  (m_slice_dir, idx);
     }
     // m_F is defined on F_bx, the full or the slice Box
     amrex::Box F_bx = m_slice_dir >= 0 ? slice_bx : box_3d;

@@ -78,10 +78,12 @@ public:
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
      * \param[in] bin_size size of plasma tiles, for tmp arrays
+     * \param[in] ref_ratio mesh refinement ratio
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm, int bin_size);
+        const amrex::DistributionMapping& slice_dm, int bin_size,
+        amrex::Vector<amrex::IntVect> const& ref_ratio);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
@@ -133,12 +135,22 @@ public:
      */
     void AddBeamCurrents (const int lev, const int which_slice);
 
+    /** Copy or add array to staging area
+     *
+     * \param[in] src multifab to be copied or added
+     * \param[in] slice_operator operation: SliceOperatorType::Assign or Add
+     * \param[in] scomp compent of source MF
+     * \param[in] lev level of mesh refinement
+     */
+    void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
+                            const int scomp, const int lev);
+
     /** Compute transverse derivative of 1 slice*/
     void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
                                const int direction, const amrex::Real dx,
                                const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0);
+                               const int scomp=0, const int dcomp=0, const bool use_offset=false);
 
     /** Compute longitudinal derivative (difference between two slices) */
     void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
@@ -146,6 +158,15 @@ public:
                                  const amrex::Real mult_coeff=1.,
                                  const SliceOperatorType slice_operator=SliceOperatorType::Assign,
                                  const int sc1omp=0, const int s2comp=0, const int dcomp=0);
+
+    /** \brief Interpolate values at boundaries from coarse grid to the fine grid
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be Psi, Ez, By, Bx ...
+     */
+    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                                std::string component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
@@ -234,14 +255,15 @@ public:
                                        const int By_comp, const int Bx_iter_comp,
                                        const int By_iter_comp, const amrex::Geometry& geom);
 
+    /** Number of guard cells for slices MultiFab */
+    static amrex::IntVect m_slices_nguards;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
-    /** Number of guard cells for slices MultiFab */
-    amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
+    amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
 };
 
 #endif

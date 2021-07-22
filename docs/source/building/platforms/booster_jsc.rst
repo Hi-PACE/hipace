@@ -13,6 +13,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    # please set your project account
    export proj=<your project id>
    # required dependencies
+   module load CMake
    module load GCC
    module load OpenMPI
    module load CUDA

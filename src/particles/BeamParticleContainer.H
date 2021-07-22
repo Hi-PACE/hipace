@@ -46,7 +46,8 @@ public:
         const amrex::Real     a_zmin,
         const amrex::Real     a_zmax,
         const amrex::Real     a_radius,
-        const amrex::Real     a_min_density);
+        const amrex::Real     a_min_density,
+        const amrex::Vector<int>& random_ppc);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
@@ -56,7 +57,8 @@ public:
                               const amrex::Real total_charge,
                               const bool do_symmetrize,
                               const amrex::Real dx_per_dzeta,
-                              const amrex::Real dy_per_dzeta);
+                              const amrex::Real dy_per_dzeta,
+                              const bool can, const amrex::Real zmin, const amrex::Real zmax);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype*/

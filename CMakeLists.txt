@@ -66,8 +66,8 @@ endif()
 
 option(HiPACE_amrex_internal "Download & build AMReX" ON)
 
-# change the default build type to RelWithDebInfo (or Release) instead of Debug
-set_default_build_type("RelWithDebInfo")
+# change the default build type to Release (or RelWithDebInfo) instead of Debug
+set_default_build_type("Release")
 
 # this defined the variable BUILD_TESTING which is ON by default
 include(CTest)

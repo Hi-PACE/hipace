@@ -156,6 +156,9 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
 
+* ``<plasma name>.level`` (`integer`) optional (default `0`)
+    Level of mesh refinement to which the plasma is assigned.
+
 * ``<plasma name>.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
@@ -216,6 +219,15 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     varying weights. It can be either a Gaussian or a flattop beam. `fixed_weight` generates a
     Gaussian beam with a fixed number of particles with a constant weight.
     `from_file` reads a beam from openPMD files.
+
+* ``<beam name>.random_ppc`` (list of 3 `int`) optional (default `0 0 0`)
+    Whether to randomize the position of particles in each cell, per dimension.
+    Only used if ``<beam name>.injection_type = fixed_ppc``.
+
+* ``<beam name>.profile`` (`string`)
+    Beam profile.
+    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop`` (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
+    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can`` (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
 * ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed

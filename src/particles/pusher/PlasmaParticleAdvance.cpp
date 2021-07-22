@@ -1,6 +1,7 @@
 #include "PlasmaParticleAdvance.H"
 
 #include "particles/PlasmaParticleContainer.H"
+#include "GetDomainLev.H"
 #include "FieldGather.H"
 #include "PushPlasmaParticles.H"
 #include "UpdateForceTerms.H"
@@ -20,7 +21,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
     using namespace amrex::literals;
 
     // only push plasma particles on their according MR level
-    if (plasma.m_MR_level != lev) return;
+    if (plasma.m_level != lev) return;
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
@@ -110,7 +111,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         using PTileType = PlasmaParticleContainer::ParticleTileType;
         const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
         const auto SetPosition = SetParticlePosition<PTileType>(pti.GetParticleTile());
-        const auto enforceBC = EnforceBC<PTileType>(pti.GetParticleTile(), lev);
+        const auto enforceBC = EnforceBC<PTileType>(
+            pti.GetParticleTile(), GetDomainLev(gm, pti.tilebox(), 1, lev),
+            GetDomainLev(gm, pti.tilebox(), 0, lev), gm.isPeriodicArray());
         const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 

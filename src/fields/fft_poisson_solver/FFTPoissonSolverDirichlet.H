@@ -20,7 +20,7 @@ class FFTPoissonSolverDirichlet final : public FFTPoissonSolver
 {
 public:
     /** Constructor */
-    FFTPoissonSolverDirichlet ( amrex::BoxArray const& realspace_ba,
+    FFTPoissonSolverDirichlet ( amrex::BoxArray const& a_realspace_ba,
                                 amrex::DistributionMapping const& dm,
                                 amrex::Geometry const& gm);
 
@@ -53,7 +53,7 @@ private:
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
     /** DST plans */
-    AnyDST::DSTplans m_forward_plan, m_backward_plan;
+    AnyDST::DSTplans m_plan;
 };
 
 #endif
