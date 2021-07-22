@@ -79,7 +79,7 @@ General parameters
     slow and is not recommended for production runs.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `false`)
-    Whether to use tiling, when running on GPU.
+    Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.
 
