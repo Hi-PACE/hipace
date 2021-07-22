@@ -81,6 +81,7 @@ MultiPlasma::AdvanceParticles (
 void
 MultiPlasma::ResetParticles (int lev, bool initial)
 {
+    if (m_nplasmas < 1) return;
     for (auto& plasma : m_all_plasmas) {
         ResetPlasmaParticles(plasma, lev, initial);
     }
