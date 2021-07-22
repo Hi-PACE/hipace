@@ -129,7 +129,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         const int ithread = omp_get_thread_num();
 #else
         const int ithread = 0;
-#endif        
+#endif
         amrex::Array4<amrex::Real> const& jx_arr  =
             Hipace::m_do_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
         amrex::Array4<amrex::Real> const& jy_arr  =
