@@ -146,7 +146,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             Hipace::m_do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
 
         const int ng = std::max(1, depos_order_xy);
-        int ntiley;
+        int ntiley = 0;
         if (Hipace::m_do_tiling) {
             const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
             const int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*ng;

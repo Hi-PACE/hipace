@@ -133,7 +133,6 @@ MultiPlasma::AllSpeciesNeutralizeBackground () const
 void
 MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
 {
-    amrex::IntVect sort_bin = {m_sort_bin_size, m_sort_bin_size, 1};
     constexpr int lev = 0;
     m_all_bins.clear();
     for (auto& plasma : m_all_plasmas) {
