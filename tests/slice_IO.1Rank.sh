@@ -17,19 +17,19 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         diagnostic.diag_type=xyz \
-        amr.n_cell = 64 86 100 \
+        amr.n_cell = 64 88 100 \
         hipace.file_prefix=full_io
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         diagnostic.diag_type=xz \
-        amr.n_cell = 64 86 100 \
+        amr.n_cell = 64 88 100 \
         hipace.file_prefix=slice_io_xz
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         diagnostic.diag_type=yz \
-        amr.n_cell = 64 86 100 \
+        amr.n_cell = 64 88 100 \
         hipace.file_prefix=slice_io_yz
 
 # assert whether the two IO types match
