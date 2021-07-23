@@ -14,7 +14,7 @@ import argparse
 from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = False
-field = 'Bz'
+field = 'Ez'
 
 ts1 = OpenPMDTimeSeries('full_io')
 F_full = ts1.get_field(field=field, iteration=ts1.iterations[-1])[0]
