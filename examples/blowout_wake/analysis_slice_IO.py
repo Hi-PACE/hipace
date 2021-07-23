@@ -69,5 +69,5 @@ print("F_slice_yz.shape", F_slice_yz.shape)
 print("error_xz", error_xz)
 print("error_yz", error_yz)
 
-assert(error_xz < 1.e-14)
-assert(error_yz < 1.e-14)
+assert(error_xz < 3.e-14)
+assert(error_yz < 3.e-14)
