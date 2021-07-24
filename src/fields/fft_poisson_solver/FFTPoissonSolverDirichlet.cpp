@@ -59,12 +59,13 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( gm.Domain().length(0) + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( gm.Domain().length(1) + 1 ));
+    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( real_ba[0].length(0) + 1 ));
+    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( real_ba[0].length(1) + 1 ));
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (( gm.Domain().length(0) + 1 ) * ( gm.Domain().length(1) + 1 )));
+    const amrex::Real norm_fac = 0.5 / ( 2 * (( real_ba[0].length(0) + 1 )
+                                             *( real_ba[0].length(1) + 1 )));
 
     m_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
 
