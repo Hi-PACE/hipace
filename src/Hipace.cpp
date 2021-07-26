@@ -460,7 +460,6 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         amrex::ParallelContext::push(m_comm_xy);
 
         const amrex::Box& bx = boxArray(lev)[ibox];
-        if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         // Assumes '2' == 'z' == 'the long dimension'.
         // fixme: boxArray(lev) is hardcoded to lev = 0, because we currently only bin the beam
@@ -482,12 +481,12 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         if (!m_explicit) {
             m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
                                             true, false, false, lev);
-            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
         }
 
         amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                             Comps[WhichSlice::This]["rho"], 1);
 
+        if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
@@ -539,7 +538,6 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_fields.AddRhoIons(lev, true);
             ExplicitSolveBxBy(lev);
             m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
-            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
             m_fields.AddRhoIons(lev);
         } else {
             PredictorCorrectorLoopToSolveBxBy(islice, lev, bx, bins, ibox);
