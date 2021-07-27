@@ -360,6 +360,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     // in y by -field_value_at_guard_cell / dy^2, where dx and dy are those of the fine grid
     // This follows Van Loan, C. (1992). Computational frameworks for the fast Fourier transform.
     // Page 254 ff.
+    // The interpolation is done in second order transversely and linearly in longitudinal direction
 
     HIPACE_PROFILE("Fields::InterpolateBoundaries()");
     if (lev == 0) return; // only interpolate boundaries to lev 1
@@ -378,6 +379,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     // get level 0 for interpolation to source term of level 1
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
+    amrex::MultiFab lhs_coarse_prev(getSlices(lev-1, WhichSlice::Previous1), amrex::make_alias,
+                               Comps[WhichSlice::Previous1][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
@@ -404,6 +407,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const auto ny_fine_high = big[1];
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
+        amrex::Array4<amrex::Real>  data_array_coarse_prev = lhs_coarse_prev.array(mfi);
 
         // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
         // at the location of the guard cell on the fine grid to the first/last valid grid point on
@@ -446,9 +450,9 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // add interpolated contribution to boundary value
                         for (int iy=0; iy<=interpol_order; iy++){
                             for (int ix=0; ix<=interpol_order; ix++){
-                                boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
-                                                                    lo_coarse[1]+k_cell+iy,
-                                                                    lo_coarse[2])
+                                boundary_value += ((1.0_rt-rel_z)*data_array_coarse(
+                                    lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2])
+                                + rel_z*data_array_coarse_prev(lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2]) )
                                                                     *sx_cell[ix]*sy_cell[iy];
                             }
                         }
@@ -487,9 +491,9 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // add interpolated contribution to boundary value
                         for (int iy=0; iy<=interpol_order; iy++){
                             for (int ix=0; ix<=interpol_order; ix++){
-                                boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
-                                                                    lo_coarse[1]+k_cell+iy,
-                                                                    lo_coarse[2])
+                                boundary_value += ((1.0_rt-rel_z)*data_array_coarse(
+                                    lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2])
+                                + rel_z*data_array_coarse_prev(lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2]) )
                                                                     *sx_cell[ix]*sy_cell[iy];
                             }
                         }
@@ -509,6 +513,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     // This function interpolates values from the coarse to the fine grid with second order.
     // This is required for rho to fix the incomplete deposition close to the boundary and for Psi
     // to fill the guard cell, which is needed for the transverse derivative
+    // The interpolation is done in second order transversely and linearly in longitudinal direction
 
     HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
     if (lev == 0) return; // only interpolate boundaries to lev 1
@@ -527,6 +532,8 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     // get level 0 array
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
+    amrex::MultiFab lhs_coarse_prev(getSlices(lev-1, WhichSlice::Previous1), amrex::make_alias,
+                              Comps[WhichSlice::Previous1][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
@@ -559,6 +566,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
         amrex::Array4<amrex::Real>  data_array = lhs_fine.array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
+        amrex::Array4<amrex::Real>  data_array_coarse_prev = lhs_coarse_prev.array(mfi);
 
         // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
         amrex::ParallelFor(
@@ -590,9 +598,10 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                     // sum interpolated contributions
                     for (int iy=0; iy<=interpol_order; iy++){
                         for (int ix=0; ix<=interpol_order; ix++){
-                            coarse_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
-                                                              lo_coarse[1]+k_cell+iy,
-                                                              lo_coarse[2])*sx_cell[ix]*sy_cell[iy];
+                            coarse_value += ((1.0_rt-rel_z)*data_array_coarse(
+                                lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2])
+                            + rel_z*data_array_coarse_prev(lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2]) )
+                                                                *sx_cell[ix]*sy_cell[iy];
                         }
                     }
 
