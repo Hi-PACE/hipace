@@ -292,21 +292,34 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
 }
 
 void
-Fields::ShiftSlices (int lev)
+Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real patch_lo,
+                     amrex::Real patch_hi)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-    amrex::MultiFab::Copy(
+
+    for (int lev = 0; lev < nlev; ++lev) {
+
+    if (lev == 1) { // skip all slices which are not existing on level 1
+        // use geometry of coarse grid to determine whether slice is to be solved
+        const amrex::Real* problo = geom.ProbLo();
+        const amrex::Real* dx = geom.CellSize();
+        const amrex::Real pos = (islice+0.5)*dx[2]+problo[2];
+        if (pos < patch_lo || pos > patch_hi) continue;
+    }
+
+    amrex::MultiFab::Copy( // shift Bx, By
         getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
         Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous2]["Bx"],
         2, m_slices_nguards);
-    amrex::MultiFab::Copy(
+    amrex::MultiFab::Copy( // shift Ez, Bx, By, Bz, jx, jx_beam, jy, jy_beam
         getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::Previous1]["Bx"],
+        Comps[WhichSlice::This]["Ez"], Comps[WhichSlice::Previous1]["Ez"],
+        8, m_slices_nguards);
+    amrex::MultiFab::Copy(  // shift rho, Psi
+        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
+        Comps[WhichSlice::This]["rho"], Comps[WhichSlice::Previous1]["rho"],
         2, m_slices_nguards);
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["jx"], Comps[WhichSlice::Previous1]["jx"],
-        4, m_slices_nguards);
+    }
 }
 
 void
@@ -340,7 +353,7 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
 
 void
 Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               std::string component)
+                               std::string component, const int islice)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
     // must be corrected at the outmost grid points in x by -field_value_at_guard_cell / dx^2 and
@@ -356,6 +369,11 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
     const int interpol_order = 2;
+
+    // get relative position of fine grid slice between coarse grids for longitudinal lin. interpol.
+     const amrex::Real z = plo_coarse[2] + (islice+0.5_rt)*dx[2];
+     const int idz_coarse = (z-plo_coarse[2])/dx_coarse[2];
+     const amrex::Real rel_z = (z - (plo_coarse[2] + (idz_coarse)*dx_coarse[2])) / dx_coarse[2];
 
     // get level 0 for interpolation to source term of level 1
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
@@ -486,7 +504,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
 
 void
 Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                   std::string component)
+                                   std::string component, const int islice)
 {
     // This function interpolates values from the coarse to the fine grid with second order.
     // This is required for rho to fix the incomplete deposition close to the boundary and for Psi
@@ -500,6 +518,11 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
     const int interpol_order = 2;
+
+    // get relative position of fine grid slice between coarse grids for longitudinal lin. interpol.
+     const amrex::Real z = plo_coarse[2] + (islice+0.5_rt)*dx[2];
+     const int idz_coarse = (z-plo_coarse[2])/dx_coarse[2];
+     const amrex::Real rel_z = (z - (plo_coarse[2] + (idz_coarse)*dx_coarse[2])) / dx_coarse[2];
 
     // get level 0 array
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
@@ -583,7 +606,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
 void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                   const MPI_Comm& m_comm_xy, const int lev)
+                                   const MPI_Comm& m_comm_xy, const int lev, const int islice)
 {
     /* Solves Laplacian(Psi) =  1/episilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -596,7 +619,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["Psi"], 1);
 
-    InterpolateFromLev0toLev1(geom, lev, "rho");
+    InterpolateFromLev0toLev1(geom, lev, "rho", islice);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
@@ -606,7 +629,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                        Comps[WhichSlice::This]["rho"], lev);
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
 
-    InterpolateBoundaries(geom, lev, "Psi");
+    InterpolateBoundaries(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */
@@ -614,7 +637,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     lhs.FillBoundary(geom[lev].periodicity());
     amrex::ParallelContext::pop();
 
-    InterpolateFromLev0toLev1(geom, lev, "Psi");
+    InterpolateFromLev0toLev1(geom, lev, "Psi", islice);
 
     /* Compute ExmBy and Eypbx from grad(-psi) */
     TransverseDerivative(
@@ -640,7 +663,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 
 
 void
-Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev)
+Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
@@ -669,7 +692,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"], 0, 1);
 
-    InterpolateBoundaries(geom, lev, "Ez");
+    InterpolateBoundaries(geom, lev, "Ez", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -678,7 +701,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
 void
 Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
-                        const int lev)
+                        const int lev, const int islice)
 {
     /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBx()");
@@ -705,7 +728,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
         Comps[WhichSlice::Previous1]["jy"],
         Comps[WhichSlice::Next]["jy"]);
 
-    InterpolateBoundaries(geom, lev, "Bx");
+    InterpolateBoundaries(geom, lev, "Bx", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -714,7 +737,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
 
 void
 Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
-                        const int lev)
+                        const int lev, const int islice)
 {
     /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBy()");
@@ -741,7 +764,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
         Comps[WhichSlice::Previous1]["jx"],
         Comps[WhichSlice::Next]["jx"]);
 
-    InterpolateBoundaries(geom, lev, "By");
+    InterpolateBoundaries(geom, lev, "By", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -749,7 +772,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
 }
 
 void
-Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev)
+Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice)
 {
     /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonBz()");
@@ -778,7 +801,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
         SliceOperatorType::Add,
         Comps[WhichSlice::This]["jy"], 0, 1);
 
-    InterpolateBoundaries(geom, lev, "Bz");
+    InterpolateBoundaries(geom, lev, "Bz", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.

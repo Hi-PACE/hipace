@@ -42,13 +42,14 @@ public:
      * \param[in] lev MR level
      * \param[in] ibox box index
      * \param[in] bx 3D box on which per-slice sorting is done
+     * \param[in] ref_ratio refinement ratio in (x, y, z)
      * \param[in] geom Geometry of the simulation domain
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
-    amrex::Vector<BeamBins>
-    findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
-                              const amrex::Vector<BoxSorter>& a_box_sorter_vec);
-
+     amrex::Vector<amrex::Vector<BeamBins>>
+     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, const amrex::IntVect& ref_ratio,
+                               amrex::Vector<amrex::Geometry> const& geom,
+                               const amrex::Vector<BoxSorter>& a_box_sorter_vec);
     /** \brief Loop over all beam species and sort particles by box
      *
      * \param[in] a_box_sorter_vec Vector of BoxSorter objects for each beam species
