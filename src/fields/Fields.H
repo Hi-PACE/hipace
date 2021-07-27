@@ -166,6 +166,15 @@ public:
     void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                 std::string component);
 
+    /** \brief Interpolate values from coarse grid to the fine grid
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be Psi or rho
+     */
+    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                                    std::string component);
+
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
@@ -256,16 +265,6 @@ public:
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
 private:
-
-    /** \brief Interpolate values from coarse grid to the fine grid
-     *
-     * \param[in] geom Geometry
-     * \param[in] lev current level
-     * \param[in] component which can be Psi, Ez, By, Bx ...
-     */
-    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component);
-
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
