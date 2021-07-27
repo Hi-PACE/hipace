@@ -323,8 +323,11 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                                std::string component)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
-    // must be corrected at the outmost grid points in x by -field_value_at_boundary / dx^2 and
-    // in y by -field_value_at_boundary / dy^2, where dx and dy are those of the fine grid
+    // must be corrected at the outmost grid points in x by -field_value_at_guard_cell / dx^2 and
+    // in y by -field_value_at_guard_cell / dy^2, where dx and dy are those of the fine grid
+    // This follows Van Loan, C. (1992). Computational frameworks for the fast Fourier transform.
+    // Page 254 ff.
+
     HIPACE_PROFILE("Fields::InterpolateBoundaries()");
     if (lev == 0) return; // only interpolate boundaries to lev 1
     using namespace amrex::literals;
@@ -332,16 +335,16 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-
     const int interpol_order = 2;
-    // const int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
 
+    // get level 0 for interpolation to source term of level 1
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
     const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
+
     // get offset of level 1 w.r.t. the staging area
     amrex::MultiFab lhs_fine(getSlices(lev, WhichSlice::This), amrex::make_alias,
                               Comps[WhichSlice::This][component], 1);
@@ -349,6 +352,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     amrex::Box lhs_fine_bx = lhs_fine_fab.box();
     lhs_fine_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
     const amrex::IntVect lo = lhs_fine_bx.smallEnd();
+
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
@@ -363,8 +367,9 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
 
-        // Loop over the valid indices on the fine grid and bilinearly interpolate the boundary
-        // value from the coarse grid to the outer grid points on the fine grid
+        // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
+        // at the location of the guard cell on the fine grid to the first/last valid grid point on
+        // the fine grid
         amrex::ParallelFor(
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
@@ -372,48 +377,86 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                 if (i==nx_fine_low || i== nx_fine_high || j==ny_fine_low || j == ny_fine_high) {
                     // Compute coordinate on fine grid
                     amrex::Real x, y;
-                    if (i==nx_fine_low) {
-                        x = plo[0] + (i+lo[0]-0.5_rt)*dx[0];
-                    } else if (i== nx_fine_high) {
-                        x = plo[0] + (i+lo[0]+1.5_rt)*dx[0];
-                    } else {
-                        x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
-                    }
 
-                    if (j==ny_fine_low) {
-                        y = plo[1] + (j+lo[1]-0.5_rt)*dx[1];
-                    } else if (j== ny_fine_high) {
-                        y = plo[1] + (j+lo[1]+1.5_rt)*dx[1];
-                    } else {
-                        y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
-                    }
-
-                    // --- Compute shape factors
-                    // x direction
-                    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-                    const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
-                    amrex::Real sx_cell[interpol_order + 1];
-                    const int j_cell = compute_shape_factor<interpol_order>(sx_cell, xmid-0.5_rt);
-
-                    // y direction
-                    const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
-                    amrex::Real sy_cell[interpol_order + 1];
-                    const int k_cell = compute_shape_factor<interpol_order>(sy_cell, ymid-0.5_rt);
-
-                    amrex::Real boundary_value = 0.0_rt;
-                    // Deposit current into jx_arr, jy_arr and jz_arr
-                    for (int iy=0; iy<=interpol_order; iy++){
-                        for (int ix=0; ix<=interpol_order; ix++){
-                            boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
-                                                                lo_coarse[1]+k_cell+iy,
-                                                                lo_coarse[2])*sx_cell[ix]*sy_cell[iy];
+                    // handling of the left and right boundary of the staging area
+                    if ((i==nx_fine_low) || (i==nx_fine_high)) {
+                        if (i==nx_fine_low) {
+                            // position of guard cell left of first valid grid point
+                            x = plo[0] + (i+lo[0]-0.5_rt)*dx[0];
+                        } else if (i== nx_fine_high) {
+                            // position of guard cell right of last valid grid point
+                            x = plo[0] + (i+lo[0]+1.5_rt)*dx[0];
                         }
-                    }
+                        y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
 
-                    if (i==nx_fine_low || i== nx_fine_high) {
+                        // --- Compute shape factors
+                        // x direction
+                        // j_cell leftmost cell in x that the particle touches.
+                        // sx_cell shape factor along x
+                        const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
+                        amrex::Real sx_cell[interpol_order + 1];
+                        const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
+                                                                                xmid-0.5_rt);
+
+                        // y direction
+                        const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
+                        amrex::Real sy_cell[interpol_order + 1];
+                        const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
+                                                                                ymid-0.5_rt);
+
+                        amrex::Real boundary_value = 0.0_rt;
+                        // add interpolated contribution to boundary value
+                        for (int iy=0; iy<=interpol_order; iy++){
+                            for (int ix=0; ix<=interpol_order; ix++){
+                                boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
+                                                                    lo_coarse[1]+k_cell+iy,
+                                                                    lo_coarse[2])
+                                                                    *sx_cell[ix]*sy_cell[iy];
+                            }
+                        }
+
+                        // adjusting source term to get non-zero Dirichlet boundary condition
                         data_array(i,j,k) -= boundary_value/(dx[0]*dx[0]);
                     }
-                    if (j==ny_fine_low || j == ny_fine_high) {
+
+                    // handling of the bottom and top boundary of the staging area
+                    if ((j==ny_fine_low) || (j==ny_fine_high)) {
+                        if (j==ny_fine_low) {
+                            // position of guard cell below of first valid grid point
+                            y = plo[1] + (j+lo[1]-0.5_rt)*dx[1];
+                        } else if (j== ny_fine_high) {
+                            // position of guard cell above of last valid grid point
+                            y = plo[1] + (j+lo[1]+1.5_rt)*dx[1];
+                        }
+                        x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
+
+                        // --- Compute shape factors
+                        // x direction
+                        // j_cell leftmost cell in x that the particle touches.
+                        // sx_cell shape factor along x
+                        const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
+                        amrex::Real sx_cell[interpol_order + 1];
+                        const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
+                                                                                xmid-0.5_rt);
+
+                        // y direction
+                        const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
+                        amrex::Real sy_cell[interpol_order + 1];
+                        const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
+                                                                                ymid-0.5_rt);
+
+                        amrex::Real boundary_value = 0.0_rt;
+                        // add interpolated contribution to boundary value
+                        for (int iy=0; iy<=interpol_order; iy++){
+                            for (int ix=0; ix<=interpol_order; ix++){
+                                boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
+                                                                    lo_coarse[1]+k_cell+iy,
+                                                                    lo_coarse[2])
+                                                                    *sx_cell[ix]*sy_cell[iy];
+                            }
+                        }
+
+                        // adjusting source term to get non-zero Dirichlet boundary condition
                         data_array(i,j,k) -= boundary_value/(dx[1]*dx[1]);
                     }
                 }
