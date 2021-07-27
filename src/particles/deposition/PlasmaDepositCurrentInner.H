@@ -161,6 +161,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
             if (Hipace::m_do_tiling) tmp_densities[ithread].setVal(0.);
             const int num_particles = Hipace::m_do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
+            // Get the x and y indices of current tile from its linearized index itile = itiley + itilex * ntiley
             const int itilex = Hipace::m_do_tiling ? itile / ntiley : 0;
             const int itiley = Hipace::m_do_tiling ? itile % ntiley : 0;
 
