@@ -406,8 +406,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const auto nx_fine_high = big[0];
         const auto ny_fine_high = big[1];
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
-        amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
-        amrex::Array4<amrex::Real>  data_array_coarse_prev = lhs_coarse_prev.array(mfi);
+        amrex::Array4<amrex::Real>  arr_coarse = lhs_coarse.array(mfi);
+        amrex::Array4<amrex::Real>  arr_coarse_prev = lhs_coarse_prev.array(mfi);
 
         // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
         // at the location of the guard cell on the fine grid to the first/last valid grid point on
@@ -450,10 +450,11 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // add interpolated contribution to boundary value
                         for (int iy=0; iy<=interpol_order; iy++){
                             for (int ix=0; ix<=interpol_order; ix++){
-                                boundary_value += ((1.0_rt-rel_z)*data_array_coarse(
-                                    lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2])
-                                + rel_z*data_array_coarse_prev(lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2]) )
-                                                                    *sx_cell[ix]*sy_cell[iy];
+                                boundary_value += sx_cell[ix]*sy_cell[iy]*
+                                  ((1.0_rt-rel_z)*arr_coarse(lo_coarse[0]+j_cell+ix,
+                                                             lo_coarse[1]+k_cell+iy, lo_coarse[2])
+                                     + rel_z*arr_coarse_prev(lo_coarse[0]+j_cell+ix,
+                                                             lo_coarse[1]+k_cell+iy, lo_coarse[2]));
                             }
                         }
 
@@ -491,10 +492,11 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // add interpolated contribution to boundary value
                         for (int iy=0; iy<=interpol_order; iy++){
                             for (int ix=0; ix<=interpol_order; ix++){
-                                boundary_value += ((1.0_rt-rel_z)*data_array_coarse(
-                                    lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2])
-                                + rel_z*data_array_coarse_prev(lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2]) )
-                                                                    *sx_cell[ix]*sy_cell[iy];
+                                boundary_value += sx_cell[ix]*sy_cell[iy]*
+                                  ((1.0_rt-rel_z)*arr_coarse(lo_coarse[0]+j_cell+ix,
+                                                             lo_coarse[1]+k_cell+iy, lo_coarse[2])
+                                     + rel_z*arr_coarse_prev(lo_coarse[0]+j_cell+ix,
+                                                             lo_coarse[1]+k_cell+iy, lo_coarse[2]));
                             }
                         }
 
@@ -565,8 +567,8 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         const int y_range = (component == "rho") ? m_slices_nguards[1] : 1;
 
         amrex::Array4<amrex::Real>  data_array = lhs_fine.array(mfi);
-        amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
-        amrex::Array4<amrex::Real>  data_array_coarse_prev = lhs_coarse_prev.array(mfi);
+        amrex::Array4<amrex::Real>  arr_coarse = lhs_coarse.array(mfi);
+        amrex::Array4<amrex::Real>  arr_coarse_prev = lhs_coarse_prev.array(mfi);
 
         // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
         amrex::ParallelFor(
@@ -598,10 +600,11 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                     // sum interpolated contributions
                     for (int iy=0; iy<=interpol_order; iy++){
                         for (int ix=0; ix<=interpol_order; ix++){
-                            coarse_value += ((1.0_rt-rel_z)*data_array_coarse(
-                                lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2])
-                            + rel_z*data_array_coarse_prev(lo_coarse[0]+j_cell+ix, lo_coarse[1]+k_cell+iy, lo_coarse[2]) )
-                                                                *sx_cell[ix]*sy_cell[iy];
+                            coarse_value += sx_cell[ix]*sy_cell[iy]*
+                                ((1.0_rt-rel_z)*arr_coarse(lo_coarse[0]+j_cell+ix,
+                                                           lo_coarse[1]+k_cell+iy, lo_coarse[2])
+                                   + rel_z*arr_coarse_prev(lo_coarse[0]+j_cell+ix,
+                                                           lo_coarse[1]+k_cell+iy, lo_coarse[2]));
                         }
                     }
 
