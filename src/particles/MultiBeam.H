@@ -3,7 +3,7 @@
 
 #include "BeamParticleContainer.H"
 #include "fields/Fields.H"
-#include "particles/BinSort.H"
+#include "particles/SliceSort.H"
 #include "particles/BoxSort.H"
 
 class MultiBeam

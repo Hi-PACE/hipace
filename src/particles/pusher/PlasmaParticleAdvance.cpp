@@ -14,7 +14,8 @@
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
-                        const bool do_update, const bool do_shift, int const lev)
+                        const bool do_update, const bool do_shift, int const lev,
+                        PlasmaBins& bins)
 {
     HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -119,58 +120,74 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real charge = plasma.m_charge;
         const amrex::Real mass = plasma.m_mass;
         const bool can_ionize = plasma.m_can_ionize;
-        amrex::ParallelFor(pti.numParticles(),
-            [=] AMREX_GPU_DEVICE (long ip) {
-                amrex::ParticleReal xp, yp, zp;
-                int pid;
-                getPosition(ip, xp, yp, zp, pid);
 
-                if (pid < 0) return;
+        const int ntiles = Hipace::m_do_tiling ? bins.numBins() : 1;
 
-                // define field at particle position reals
-                amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-                amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (int itile=0; itile<ntiles; itile++){
+            BeamBins::index_type const * const indices =
+                Hipace::m_do_tiling ? bins.permutationPtr() : nullptr;
+            BeamBins::index_type const * const offsets =
+                Hipace::m_do_tiling ? bins.offsetsPtr() : nullptr;
+            int const num_particles =
+                Hipace::m_do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
+            amrex::ParallelFor(
+                num_particles,
+                [=] AMREX_GPU_DEVICE (long idx) {
+                    const int ip = Hipace::m_do_tiling ? indices[offsets[itile]+idx] : idx;
+                    amrex::ParticleReal xp, yp, zp;
+                    int pid;
+                    getPosition(ip, xp, yp, zp, pid);
 
-                if (do_shift)
-                {
-                    ShiftForceTerms(Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                                    Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                                    Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                                    Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                                    Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
+                    if (pid < 0) return;
+
+                    // define field at particle position reals
+                    amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+                    amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+
+                    if (do_shift)
+                    {
+                        ShiftForceTerms(Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
+                                        Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
+                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
+                                        Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
+                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
+                    }
+
+                    if (do_update)
+                    {
+                        // field gather for a single particle
+                        doGatherShapeN(xp, yp, zmin,
+                                       ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                                       exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                                       dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                        // update force terms for a single particle
+                        const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
+                        const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
+                        UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
+                                         Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
+                                         Fpsi1[ip], clightsq, phys_const, q, mass);
+                    }
+
+                    if (do_push)
+                    {
+                        // push a single particle
+                        PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_prev[ip],
+                                           y_prev[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
+                                           Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
+                                           Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
+                                           Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
+                                           Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
+                                           Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
+                                           dz, temp_slice, ip, SetPosition, enforceBC );
+                    }
+                    return;
                 }
-
-                if (do_update)
-                {
-                    // field gather for a single particle
-                    doGatherShapeN(xp, yp, zmin,
-                                   ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                                   exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                                   dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
-                    // update force terms for a single particle
-                    const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
-                    const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
-                    UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
-                                     Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                     Fpsi1[ip], clightsq, phys_const, q, mass);
-                }
-
-                if (do_push)
-                {
-                    // push a single particle
-                    PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_prev[ip],
-                                       y_prev[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
-                                       Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                                       Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                                       Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                                       Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                                       Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                                       dz, temp_slice, ip, SetPosition, enforceBC );
-                }
-                return;
-          }
-          );
-      }
+                );
+        }
+    }
 }
 
 void
@@ -236,7 +253,8 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         const auto SetPosition =
             SetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
 
-        amrex::ParallelFor(pti.numParticles(),
+        amrex::ParallelFor(
+            pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
 
                 amrex::ParticleReal xp, yp, zp;
@@ -282,7 +300,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     Fpsi5[ip] = 0._rt;
                     ion_lev[ip] = init_ion_lev;
                 }
-        }
-        );
+            }
+            );
     }
 }

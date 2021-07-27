@@ -2,6 +2,7 @@
 #define MULTIPLASMA_H_
 
 #include "PlasmaParticleContainer.H"
+#include "TileSort.H"
 #include "fields/Fields.H"
 
 class MultiPlasma
@@ -91,13 +92,25 @@ public:
      */
     void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
 
+    bool IonizationOn () const;
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
     bool AllSpeciesNeutralizeBackground () const;
+
+    /** \brief sort particles of all containers by tile logically, and store results in m_all_bins
+     *
+     * \param[in] bx transverse box on which the particles are sorted
+     * \param[in] geom Geometry object
+     */
+    void TileSort (amrex::Box bx, amrex::Geometry geom);
+
+    int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
+
 private:
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
+    amrex::Vector<PlasmaBins> m_all_bins; /**< Logical tile bins for all plasma containers */
     amrex::Vector<std::string> m_names; /**< names of all plasma containers */
-    int m_nplasmas; /**< number of plasma containers */
+    int m_nplasmas = 0; /**< number of plasma containers */
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
 };

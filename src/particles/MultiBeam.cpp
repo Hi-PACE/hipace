@@ -1,6 +1,6 @@
 #include "MultiBeam.H"
 #include "deposition/BeamDepositCurrent.H"
-#include "particles/BinSort.H"
+#include "particles/SliceSort.H"
 #include "pusher/BeamParticleAdvance.H"
 #include "utils/HipaceProfilerWrapper.H"
 
