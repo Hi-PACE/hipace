@@ -334,17 +334,21 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx_coarse = geom[lev-1].CellSizeArray();
 
     const int interpol_order = 2;
-    const int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+    // const int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
 
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
-    const amrex::IntVect lo_coarse = lhs_fab.box().smallEnd();
+    amrex::Box lhs_bx = lhs_fab.box();
+    lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
     // get offset of level 1 w.r.t. the staging area
     amrex::MultiFab lhs_fine(getSlices(lev, WhichSlice::This), amrex::make_alias,
                               Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fine_fab = lhs_fine[0];
-    const amrex::IntVect lo = lhs_fine_fab.box().smallEnd();
+    amrex::Box lhs_fine_bx = lhs_fine_fab.box();
+    lhs_fine_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    const amrex::IntVect lo = lhs_fine_bx.smallEnd();
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
@@ -369,19 +373,19 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     // Compute coordinate on fine grid
                     amrex::Real x, y;
                     if (i==nx_fine_low) {
-                        x = plo[0] + (i+lo[0]+nguards_xy-0.5_rt)*dx[0];
+                        x = plo[0] + (i+lo[0]-0.5_rt)*dx[0];
                     } else if (i== nx_fine_high) {
-                        x = plo[0] + (i+lo[0]+nguards_xy+1.5_rt)*dx[0];
+                        x = plo[0] + (i+lo[0]+1.5_rt)*dx[0];
                     } else {
-                        x = plo[0] + (i+lo[0]+nguards_xy+0.5_rt)*dx[0];
+                        x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
                     }
 
                     if (j==ny_fine_low) {
-                        y = plo[1] + (j+lo[1]+nguards_xy-0.5_rt)*dx[1];
+                        y = plo[1] + (j+lo[1]-0.5_rt)*dx[1];
                     } else if (j== ny_fine_high) {
-                        y = plo[1] + (j+lo[1]+nguards_xy+1.5_rt)*dx[1];
+                        y = plo[1] + (j+lo[1]+1.5_rt)*dx[1];
                     } else {
-                        y = plo[1] + (j+lo[1]+nguards_xy+0.5_rt)*dx[1];
+                        y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
                     }
 
                     // --- Compute shape factors
@@ -389,14 +393,12 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
                     const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
                     amrex::Real sx_cell[interpol_order + 1];
-                    const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
-                                                                            xmid+nguards_xy-0.5_rt);
+                    const int j_cell = compute_shape_factor<interpol_order>(sx_cell, xmid-0.5_rt);
 
                     // y direction
                     const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
                     amrex::Real sy_cell[interpol_order + 1];
-                    const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
-                                                                            ymid+nguards_xy-0.5_rt);
+                    const int k_cell = compute_shape_factor<interpol_order>(sy_cell, ymid-0.5_rt);
 
                     amrex::Real boundary_value = 0.0_rt;
                     // Deposit current into jx_arr, jy_arr and jz_arr
