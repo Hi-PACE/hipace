@@ -14,7 +14,7 @@ import argparse
 from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = False
-field = 'Bz'
+field = 'Ez'
 
 ts1 = OpenPMDTimeSeries('full_io')
 F_full = ts1.get_field(field=field, iteration=ts1.iterations[-1])[0]
@@ -69,5 +69,5 @@ print("F_slice_yz.shape", F_slice_yz.shape)
 print("error_xz", error_xz)
 print("error_yz", error_yz)
 
-assert(error_xz < 1.e-14)
-assert(error_yz < 1.e-14)
+assert(error_xz < 3.e-14)
+assert(error_yz < 3.e-14)

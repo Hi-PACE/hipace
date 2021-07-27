@@ -1,6 +1,6 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include "particles/BinSort.H"
+#include "particles/SliceSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
@@ -45,6 +45,7 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
+bool Hipace::m_do_tiling = true;
 
 Hipace&
 Hipace::GetInstance ()
@@ -118,6 +119,7 @@ Hipace::Hipace () :
 
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
+    pph.query("do_tiling", m_do_tiling);
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
@@ -279,7 +281,8 @@ Hipace::MakeNewLevelFromScratch (
     DefineSliceGDB(lev, ba, dm);
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
-    m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev]);
+    m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
+                       m_multi_plasma.m_sort_bin_size);
 }
 
 void
@@ -351,7 +354,6 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
-
     m_box_sorters.clear();
     m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 
@@ -367,6 +369,7 @@ Hipace::Evolve ()
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
+        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
@@ -475,12 +478,15 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
             m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
         }
 
-        if (!m_explicit) m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
-                                                         true, false, false, lev);
+        if (!m_explicit) {
+            m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
+                                            true, false, false, lev);
+        }
 
         amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                             Comps[WhichSlice::This]["rho"], 1);
 
+        if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
@@ -546,6 +552,7 @@ Hipace::SolveOneSlice (int islice, const int ibox, amrex::Vector<BeamBins>& bins
         m_fields.ShiftSlices(lev);
 
         m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+        if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();
@@ -865,6 +872,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int lev, cons
         /* Push particles to the next slice */
         m_multi_plasma.AdvanceParticles(m_fields, geom[lev], true, true, false, false, lev);
 
+        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);

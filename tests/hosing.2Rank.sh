@@ -18,6 +18,7 @@ rm -rf hosing_data
 
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        plasmas.sort_bin_size = 8 \
         hipace.dt = 20 \
         hipace.output_period = 10 \
         beam.injection_type = fixed_weight \

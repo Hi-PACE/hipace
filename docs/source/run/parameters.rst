@@ -78,6 +78,11 @@ General parameters
     available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
     slow and is not recommended for production runs.
 
+* ``hipace.do_tiling`` (`bool`) optional (default `true`)
+    Whether to use tiling, when running on CPU.
+    Currently, this option only affects plasma operations (gather, push and deposition).
+    The tile size can be set with ``plasmas.sort_bin_size``.
+
 Field solver parameters
 -----------------------
 
@@ -202,6 +207,10 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     The `plasma_name` of the plasma that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
+
+* ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
+    Tile size for plasma current deposition, when running on CPU.
+    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current arrays.
 
 Beam parameters
 ---------------

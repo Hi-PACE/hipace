@@ -1,5 +1,5 @@
-#ifndef HIPACE_BinSort_H_
-#define HIPACE_BinSort_H_
+#ifndef HIPACE_SLICESORT_H_
+#define HIPACE_SLICESORT_H_
 
 #include "BeamParticleContainer.H"
 #include "BoxSort.H"
@@ -25,4 +25,4 @@ findParticlesInEachSlice (
     BeamParticleContainer& beam, const amrex::Geometry& geom,
     const BoxSorter& a_box_sorter);
 
-#endif // HIPACE_BinSort_H_
+#endif // HIPACE_SLICESORT_H_

@@ -2,6 +2,7 @@
 #define PLASMADEPOSITCURRENT_H_
 
 #include "particles/PlasmaParticleContainer.H"
+#include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
@@ -17,12 +18,15 @@
  * \param[in] deposit_j_squared if true, deposit jxx, jxy, jyy
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
+ * \param[in] bins objects containing indices of plasma particles in each tile
+ * \param[in] bin_size tile size (square)
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                bool deposit_j_squared, amrex::Geometry const& gm, int const lev);
+                bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
+                PlasmaBins& bins, int bin_size);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_

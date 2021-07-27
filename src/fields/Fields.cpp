@@ -18,7 +18,7 @@ Fields::Fields (Hipace const* a_hipace)
 void
 Fields::AllocData (
     int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-    const amrex::DistributionMapping& slice_dm)
+    const amrex::DistributionMapping& slice_dm, int bin_size)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
@@ -45,6 +45,26 @@ Fields::AllocData (
             new FFTPoissonSolverPeriodic(getSlices(lev, WhichSlice::This).boxArray(),
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
                                          geom[lev]))  );
+    }
+    int num_threads = 1;
+#ifdef AMREX_USE_OMP
+#pragma omp parallel
+    {
+        num_threads = omp_get_num_threads();
+    }
+#endif
+    if (Hipace::m_do_tiling) {
+        const amrex::Box dom_box = slice_ba[0];
+        const amrex::IntVect ncell = dom_box.bigEnd() - dom_box.smallEnd() + 1;
+        AMREX_ALWAYS_ASSERT(ncell[0] % bin_size == 0 && ncell[1] % bin_size == 0);
+
+        m_tmp_densities.resize(num_threads);
+        for (int i=0; i<num_threads; i++){
+            amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
+            bx.grow(m_slices_nguards);
+            // jx jy jz rho jxx jxy jyy
+            m_tmp_densities[i].resize(bx, 7);
+        }
     }
 }
 
