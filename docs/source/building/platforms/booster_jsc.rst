@@ -113,7 +113,7 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    export OMP_PLACES=cores # threads cores sockets
 
    export OMP_NUM_THREADS=8 # Anything <= 16, depending on the problem size
-   
+
    srun -n 8 --cpu_bind=sockets <path/to/executable> inputs
 
 and use it to submit a simulation.
