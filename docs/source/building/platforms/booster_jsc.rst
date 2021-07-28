@@ -6,6 +6,9 @@ For more information please visit the `JSC documentation <https://apps.fz-juelic
 
 Log in with ``<yourid>@juwels-booster.fz-juelich.de``.
 
+Running on GPU
+--------------
+
 Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with HiPACE++:
 
 .. code-block:: bash
@@ -57,5 +60,60 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    module load CUDA
    module load HDF5
    srun -n 8 --cpu_bind=sockets $HOME/src/hipace/build/bin/hipace.MPI.CUDA.DP inputs
+
+and use it to submit a simulation.
+
+Running on CPU
+--------------
+
+Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with HiPACE++:
+
+.. code-block:: bash
+
+   # please set your project account
+   export proj=<your project id>
+   # required dependencies
+   module load CMake
+   module load GCC
+   module load OpenMPI
+   module load FFTW
+   module load HDF5
+   module load ccache # optional, accelerates recompilation
+
+Install HiPACE++ (the first time, and whenever you want the latest version):
+
+.. code-block:: bash
+
+   source profile.hipace
+   git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # only the first time
+   cd $HOME/src/hipace
+   rm -rf build
+   cmake -S . -B build -DHiPACE_COMPUTE=OMP
+   cmake --build build -j 16
+
+You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
+You can then create your directory in your ``$SCRATCH_<project id>``, where you can put your input file and adapt the following submission script:
+
+.. code-block:: bash
+
+   #!/bin/bash -l
+   #SBATCH -A $proj
+   #SBATCH --partition=booster
+   #SBATCH --nodes=1
+   #SBATCH --ntasks=1
+   #SBATCH --time=00:05:00
+   #SBATCH --job-name=hipace
+   #SBATCH --output=hipace-%j-%N.txt
+   #SBATCH --error=hipace-%j-%N.err
+
+   source $HOME/hipace.profile
+
+   # These options give the best performance, in particular for the threaded FFTW
+   export OMP_PROC_BIND=false # true false master close spread
+   export OMP_PLACES=cores # threads cores sockets
+
+   export OMP_NUM_THREADS=8 # Anything <= 16, depending on the problem size
+   
+   srun -n 8 --cpu_bind=sockets <path/to/executable> inputs
 
 and use it to submit a simulation.
