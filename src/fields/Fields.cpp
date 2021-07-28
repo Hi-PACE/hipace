@@ -414,19 +414,19 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // sx_cell shape factor along x
                         const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
                         amrex::Real sx_cell[interpol_order + 1];
-                        const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
+                        const int j_cell = compute_shape_factor<interp_order>(sx_cell,
                                                                                 xmid-0.5_rt);
 
                         // y direction
                         const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
                         amrex::Real sy_cell[interpol_order + 1];
-                        const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
+                        const int k_cell = compute_shape_factor<interp_order>(sy_cell,
                                                                                 ymid-0.5_rt);
 
                         amrex::Real boundary_value = 0.0_rt;
                         // add interpolated contribution to boundary value
-                        for (int iy=0; iy<=interpol_order; iy++){
-                            for (int ix=0; ix<=interpol_order; ix++){
+                        for (int iy=0; iy<=interp_order; iy++){
+                            for (int ix=0; ix<=interp_order; ix++){
                                 boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
                                                                     lo_coarse[1]+k_cell+iy,
                                                                     lo_coarse[2])
@@ -455,19 +455,19 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // sx_cell shape factor along x
                         const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
                         amrex::Real sx_cell[interpol_order + 1];
-                        const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
+                        const int j_cell = compute_shape_factor<interp_order>(sx_cell,
                                                                                 xmid-0.5_rt);
 
                         // y direction
                         const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
                         amrex::Real sy_cell[interpol_order + 1];
-                        const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
+                        const int k_cell = compute_shape_factor<interp_order>(sy_cell,
                                                                                 ymid-0.5_rt);
 
                         amrex::Real boundary_value = 0.0_rt;
                         // add interpolated contribution to boundary value
-                        for (int iy=0; iy<=interpol_order; iy++){
-                            for (int ix=0; ix<=interpol_order; ix++){
+                        for (int iy=0; iy<=interp_order; iy++){
+                            for (int ix=0; ix<=interp_order; ix++){
                                 boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
                                                                     lo_coarse[1]+k_cell+iy,
                                                                     lo_coarse[2])
