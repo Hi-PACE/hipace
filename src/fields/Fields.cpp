@@ -378,9 +378,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const amrex::Box & bx = mfi.tilebox();
         // Get the small end of the Box
         const amrex::IntVect& small = bx.smallEnd();
-        // lowest valid index of the staging area in x and y
-        const int nx_fine_low = small[0];
-        const int ny_fine_low = small[1];
         // Get the big end of the Box
         const amrex::IntVect& big = bx.bigEnd();
         // highest valid index of the staging area in x and y
@@ -396,13 +393,13 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
             {
-                if (i==nx_fine_low || i== nx_fine_high || j==ny_fine_low || j == ny_fine_high) {
+                if (i==0 || i== nx_fine_high || j==0 || j == ny_fine_high) {
                     // Compute coordinate on fine grid
                     amrex::Real x, y;
 
                     // handling of the left and right boundary of the staging area
-                    if ((i==nx_fine_low) || (i==nx_fine_high)) {
-                        if (i==nx_fine_low) {
+                    if ((i==0) || (i==nx_fine_high)) {
+                        if (i==0) {
                             // position of guard cell left of first valid grid point
                             x = plo[0] + (i+lo[0]-0.5_rt)*dx[0];
                         } else if (i== nx_fine_high) {
@@ -442,8 +439,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     }
 
                     // handling of the bottom and top boundary of the staging area
-                    if ((j==ny_fine_low) || (j==ny_fine_high)) {
-                        if (j==ny_fine_low) {
+                    if ((j==0) || (j==ny_fine_high)) {
+                        if (j==0) {
                             // position of guard cell below of first valid grid point
                             y = plo[1] + (j+lo[1]-0.5_rt)*dx[1];
                         } else if (j== ny_fine_high) {
