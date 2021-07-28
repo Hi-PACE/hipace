@@ -120,7 +120,6 @@ OpenPMDWriter::WriteFieldData (
         //   labels, spacing and offsets
         std::vector< std::string > axisLabels {"z", "y", "x"};
         auto dCells = utils::getReversedVec(geom[lev].CellSize()); // dx, dy, dz
-        // auto offWindow = utils::getReversedVec(geom[lev].ProbLo()); // start of moving window //fixme start is surely wrong for lev 1
         amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> correct_problo = GetDomainLev(geom[lev], data_box, 1, lev);
         amrex::Vector<double> finalproblo = {AMREX_D_DECL(
                      static_cast<double>(geom[lev].ProbLo()[2]),
@@ -150,7 +149,7 @@ OpenPMDWriter::WriteFieldData (
                      static_cast<long unsigned int>(prob_size[1]),
                      static_cast<long unsigned int>(prob_size[0])
                       )};
-        openPMD::Extent global_size = probsize_reformat; //geom[lev].Domain().size()); //fixme check if size correct
+        openPMD::Extent global_size = probsize_reformat; //geom[lev].Domain().size());
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
