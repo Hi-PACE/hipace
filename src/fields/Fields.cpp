@@ -363,7 +363,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
-    // low end of the coarse grid excluding cuard cells
+    // low end of the coarse grid excluding guard cells
     const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
 
     // get offset of level 1 w.r.t. the staging area
@@ -372,7 +372,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     amrex::FArrayBox& lhs_fine_fab = lhs_fine[0];
     amrex::Box lhs_fine_bx = lhs_fine_fab.box();
     lhs_fine_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
-    // low end of the fine grid excluding cuard cells
+    // low end of the fine grid excluding guard cells
     const amrex::IntVect lo = lhs_fine_bx.smallEnd();
 
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
