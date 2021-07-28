@@ -580,7 +580,6 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     }
 }
 
-
 void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                                    const MPI_Comm& m_comm_xy, const int lev)
