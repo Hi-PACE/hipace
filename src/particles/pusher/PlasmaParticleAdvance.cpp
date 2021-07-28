@@ -27,6 +27,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
 
+    const bool do_tiling = Hipace::m_do_tiling;
+
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
@@ -121,22 +123,22 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real mass = plasma.m_mass;
         const bool can_ionize = plasma.m_can_ionize;
 
-        const int ntiles = Hipace::m_do_tiling ? bins.numBins() : 1;
+        const int ntiles = do_tiling ? bins.numBins() : 1;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
 #endif
         for (int itile=0; itile<ntiles; itile++){
             BeamBins::index_type const * const indices =
-                Hipace::m_do_tiling ? bins.permutationPtr() : nullptr;
+                do_tiling ? bins.permutationPtr() : nullptr;
             BeamBins::index_type const * const offsets =
-                Hipace::m_do_tiling ? bins.offsetsPtr() : nullptr;
+                do_tiling ? bins.offsetsPtr() : nullptr;
             int const num_particles =
-                Hipace::m_do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
+                do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
             amrex::ParallelFor(
                 num_particles,
                 [=] AMREX_GPU_DEVICE (long idx) {
-                    const int ip = Hipace::m_do_tiling ? indices[offsets[itile]+idx] : idx;
+                    const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                     amrex::ParticleReal xp, yp, zp;
                     int pid;
                     getPosition(ip, xp, yp, zp, pid);
