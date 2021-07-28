@@ -355,7 +355,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-    const int interpol_order = 2;
+    constexpr int interp_order = 2;
 
     // get level 0 for interpolation to source term of level 1
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
@@ -378,12 +378,14 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
         const amrex::Box & bx = mfi.tilebox();
         // Get the small end of the Box
         const amrex::IntVect& small = bx.smallEnd();
-        const auto nx_fine_low = small[0];
-        const auto ny_fine_low = small[1];
+        // lowest valid index of the staging area in x and y
+        const int nx_fine_low = small[0];
+        const int ny_fine_low = small[1];
         // Get the big end of the Box
         const amrex::IntVect& big = bx.bigEnd();
-        const auto nx_fine_high = big[0];
-        const auto ny_fine_high = big[1];
+        // highest valid index of the staging area in x and y
+        const int nx_fine_high = big[0];
+        const int ny_fine_high = big[1];
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
 
