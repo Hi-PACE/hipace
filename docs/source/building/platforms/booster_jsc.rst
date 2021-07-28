@@ -66,6 +66,11 @@ and use it to submit a simulation.
 Running on CPU
 --------------
 
+.. warning::
+    The Juwels Booster is a GPU-accelerated supercomputer, and running on CPUs only is strongly discouraged.
+    This section only illustrates how to efficiently run on CPU with OpenMP threading, which was tested on the Juwels Booster for practical reasons, but should apply to other supercomputers.
+    In particular, the proposed values of OMP_PROC_BIND and OMP_PLACES give decent performance for both threaded FFTW and particle operations.
+
 Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with HiPACE++:
 
 .. code-block:: bash
