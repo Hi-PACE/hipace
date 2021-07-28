@@ -75,6 +75,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
     const PhysConst phys_const = get_phys_const();
 
+    const bool do_tiling = Hipace::m_do_tiling;
+
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
     const auto& pos_structs = aos.begin();
@@ -99,7 +101,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
     // slice is only one cell thick
     AMREX_ASSERT(pti.tilebox().smallEnd(2) == pti.tilebox().bigEnd(2));
-    const int z_index = Hipace::m_do_tiling ? 0 : pti.tilebox().smallEnd(2);
+    const int z_index = do_tiling ? 0 : pti.tilebox().smallEnd(2);
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
     constexpr int CELL = amrex::IndexType::CELL;
@@ -118,8 +120,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
-    BeamBins::index_type const * const indices = Hipace::m_do_tiling ? bins.permutationPtr() : nullptr;
-    BeamBins::index_type const * const offsets = Hipace::m_do_tiling ? bins.offsetsPtr() : nullptr;
+    BeamBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
+    BeamBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -129,23 +131,23 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         const int ithread = 0;
 #endif
         amrex::Array4<amrex::Real> const& jx_arr  =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
+            do_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
         amrex::Array4<amrex::Real> const& jy_arr  =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(1) : jy_fab.array();
+            do_tiling ? tmp_densities[ithread].array(1) : jy_fab.array();
         amrex::Array4<amrex::Real> const& jz_arr  =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(2) : jz_fab.array();
+            do_tiling ? tmp_densities[ithread].array(2) : jz_fab.array();
         amrex::Array4<amrex::Real> const& rho_arr =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(3) : rho_fab.array();
+            do_tiling ? tmp_densities[ithread].array(3) : rho_fab.array();
         amrex::Array4<amrex::Real> const& jxx_arr =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(4) : jxx_fab.array();
+            do_tiling ? tmp_densities[ithread].array(4) : jxx_fab.array();
         amrex::Array4<amrex::Real> const& jxy_arr =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
+            do_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
         amrex::Array4<amrex::Real> const& jyy_arr =
-            Hipace::m_do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
+            do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
 
         const int ng = std::max(1, depos_order_xy);
         int ntiley = 0;
-        if (Hipace::m_do_tiling) {
+        if (do_tiling) {
             const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
             const int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*ng;
             AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
@@ -153,24 +155,24 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             ntiley = ncelly / bin_size;
         }
 
-        const int ntiles = Hipace::m_do_tiling ? bins.numBins() : 1;
+        const int ntiles = do_tiling ? bins.numBins() : 1;
 #ifdef AMREX_USE_OMP
 #pragma omp for
 #endif
         for (int itile=0; itile<ntiles; itile++){
 
-            if (Hipace::m_do_tiling) tmp_densities[ithread].setVal(0.);
-            const int num_particles = Hipace::m_do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
+            if (do_tiling) tmp_densities[ithread].setVal(0.);
+            const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
             // Get the x and y indices of current tile from its linearized index itile = itiley + itilex * ntiley
-            const int itilex = Hipace::m_do_tiling ? itile / ntiley : 0;
-            const int itiley = Hipace::m_do_tiling ? itile % ntiley : 0;
+            const int itilex = do_tiling ? itile / ntiley : 0;
+            const int itiley = do_tiling ? itile % ntiley : 0;
 
             // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
             amrex::ParallelFor(
                 num_particles,
                 [=] AMREX_GPU_DEVICE (long idx) {
 
-                    const int ip = Hipace::m_do_tiling ? indices[offsets[itile]+idx] : idx;
+                    const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                     if (pos_structs[ip].id() < 0) return;
 
                     const amrex::Real psi = psip[ip] *
@@ -261,7 +263,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     return;
                 }
                 );
-            if (Hipace::m_do_tiling) {
+            if (do_tiling) {
                 // If tiling is on, the current was deposited (see above) in temporary tile arrays.
                 // Now, we atomic add from these temporary arrays to the main arrays
                 amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
