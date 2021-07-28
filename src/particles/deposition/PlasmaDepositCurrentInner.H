@@ -161,7 +161,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #endif
         for (int itile=0; itile<ntiles; itile++){
 
+#ifndef AMREX_USE_GPU
             if (do_tiling) tmp_densities[ithread].setVal(0.);
+#endif
             const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
             // Get the x and y indices of current tile from its linearized index itile = itiley + itilex * ntiley
             const int itilex = do_tiling ? itile / ntiley : 0;
@@ -263,6 +265,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     return;
                 }
                 );
+#ifndef AMREX_USE_GPU
             if (do_tiling) {
                 // If tiling is on, the current was deposited (see above) in temporary tile arrays.
                 // Now, we atomic add from these temporary arrays to the main arrays
@@ -287,6 +290,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     jyy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 6, 0, 1);
                 }
             }
+#endif
         }
 #ifdef AMREX_USE_OMP
     }
