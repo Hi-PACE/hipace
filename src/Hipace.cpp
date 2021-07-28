@@ -289,7 +289,7 @@ Hipace::MakeNewLevelFromScratch (
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
     m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
-                       m_multi_plasma.m_sort_bin_size, ref_ratio);
+                       m_multi_plasma.m_sort_bin_size);
 }
 
 void

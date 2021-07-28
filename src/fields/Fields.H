@@ -78,12 +78,10 @@ public:
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
      * \param[in] bin_size size of plasma tiles, for tmp arrays
-     * \param[in] ref_ratio mesh refinement ratio
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm, int bin_size,
-        amrex::Vector<amrex::IntVect> const& ref_ratio);
+        const amrex::DistributionMapping& slice_dm, int bin_size);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
@@ -264,7 +262,6 @@ private:
     bool m_do_dirichlet_poisson = true;
     /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
-    amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
 };
 
 #endif

@@ -4,6 +4,7 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
+#include "particles/ShapeFactors.H"
 
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 
@@ -17,13 +18,12 @@ Fields::Fields (Hipace const* a_hipace)
 void
 Fields::AllocData (
     int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-    const amrex::DistributionMapping& slice_dm, int bin_size, amrex::Vector<amrex::IntVect> const& ref_ratio)
+    const amrex::DistributionMapping& slice_dm, int bin_size)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
-    if (lev == 1) m_ref_ratio = ref_ratio[0];
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -343,8 +343,11 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                                std::string component)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
-    // must be corrected at the outmost grid points in x by -field_value_at_boundary / dx^2 and
-    // in y by -field_value_at_boundary / dy^2, where dx and dy are those of the fine grid
+    // must be corrected at the outmost grid points in x by -field_value_at_guard_cell / dx^2 and
+    // in y by -field_value_at_guard_cell / dy^2, where dx and dy are those of the fine grid
+    // This follows Van Loan, C. (1992). Computational frameworks for the fast Fourier transform.
+    // Page 254 ff.
+
     HIPACE_PROFILE("Fields::InterpolateBoundaries()");
     if (lev == 0) return; // only interpolate boundaries to lev 1
     using namespace amrex::literals;
@@ -352,65 +355,127 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-    const amrex::IntVect refinement_ratio = m_ref_ratio;
+    constexpr int interp_order = 2;
 
+    // get level 0 for interpolation to source term of level 1
     amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
                                Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
-    const int iz = lhs_fab.box().smallEnd(Direction::z);
+    amrex::Box lhs_bx = lhs_fab.box();
+    lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    // low end of the coarse grid excluding guard cells
+    const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
+
     // get offset of level 1 w.r.t. the staging area
     amrex::MultiFab lhs_fine(getSlices(lev, WhichSlice::This), amrex::make_alias,
                               Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fine_fab = lhs_fine[0];
-    const amrex::IntVect lo = lhs_fine_fab.box().smallEnd();
+    amrex::Box lhs_fine_bx = lhs_fine_fab.box();
+    lhs_fine_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    // low end of the fine grid excluding guard cells, in units of fine cells.
+    const amrex::IntVect lo = lhs_fine_bx.smallEnd();
+
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
-        // Get the small end of the Box
-        const amrex::IntVect& small = bx.smallEnd();
-        const auto nx_fine_low = small[0];
-        const auto ny_fine_low = small[1];
         // Get the big end of the Box
         const amrex::IntVect& big = bx.bigEnd();
-        const auto nx_fine_high = big[0];
-        const auto ny_fine_high = big[1];
+        // highest valid index (not counting guard cells) of the staging area in x and y
+        const int nx_fine_high = big[0];
+        const int ny_fine_high = big[1];
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
 
-        // Loop over the valid indices on the fine grid and bilinearly interpolate the boundary
-        // value from the coarse grid to the outer grid points on the fine grid
+        // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
+        // at the location of the guard cell on the fine grid to the first/last valid grid point on
+        // the fine grid
         amrex::ParallelFor(
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
             {
-                if (i==nx_fine_low || i== nx_fine_high || j==ny_fine_low || j == ny_fine_high) {
+                if (i==0 || i== nx_fine_high || j==0 || j == ny_fine_high) {
                     // Compute coordinate on fine grid
-                    const amrex::Real x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
-                    const amrex::Real y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
-                    // index left (in x) and below (in y) of the compute coordinate on coarse grid
-                    const int idx_left = (i + lo[0]) / refinement_ratio[0];
-                    const int idx_down = (j + lo[1]) / refinement_ratio[1];
-                    const amrex::Real x_left = plo_coarse[0]+(idx_left +0.5_rt)*dx_coarse[0];
-                    const amrex::Real y_down = plo_coarse[1]+(idx_down +0.5_rt)*dx_coarse[1];
+                    amrex::Real x, y;
 
-                    // Bilinear interpolation from coarse to fine grid
-                    const amrex::Real val_left_down  = data_array_coarse(idx_left  , idx_down  ,iz);
-                    const amrex::Real val_left_up    = data_array_coarse(idx_left  , idx_down+1,iz);
-                    const amrex::Real val_right_up   = data_array_coarse(idx_left+1, idx_down+1,iz);
-                    const amrex::Real val_right_down = data_array_coarse(idx_left+1, idx_down  ,iz);
-                    const amrex::Real df_x = val_right_down - val_left_down;
-                    const amrex::Real df_y = val_left_up - val_left_down;
-                    const amrex::Real df_xy = val_left_down + val_right_up - val_right_down
-                                             -val_left_up;
+                    // handling of the left and right boundary of the staging area
+                    if ((i==0) || (i==nx_fine_high)) {
+                        if (i==0) {
+                            // position of guard cell left of first valid grid point
+                            x = plo[0] + (i+lo[0]-0.5_rt)*dx[0];
+                        } else if (i== nx_fine_high) {
+                            // position of guard cell right of last valid grid point
+                            x = plo[0] + (i+lo[0]+1.5_rt)*dx[0];
+                        }
+                        y = plo[1] + (j+lo[1]+0.5_rt)*dx[1];
 
-                    const amrex::Real boundary_value =
-                        df_x*(x-x_left)/dx_coarse[0] + df_y*(y-y_down)/dx_coarse[1] +
-                        df_xy*(x-x_left)*(y-y_down)/(dx_coarse[0]*dx_coarse[1]) + val_left_down;
+                        // --- Compute shape factors
+                        // x direction
+                        // j_cell leftmost cell in x that the particle touches.
+                        // sx_cell shape factor along x
+                        const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
+                        amrex::Real sx_cell[interp_order + 1];
+                        const int j_cell = compute_shape_factor<interp_order>(sx_cell,
+                                                                                xmid-0.5_rt);
 
-                    if (i==nx_fine_low || i== nx_fine_high) {
+                        // y direction
+                        const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
+                        amrex::Real sy_cell[interp_order + 1];
+                        const int k_cell = compute_shape_factor<interp_order>(sy_cell,
+                                                                                ymid-0.5_rt);
+
+                        amrex::Real boundary_value = 0.0_rt;
+                        // add interpolated contribution to boundary value
+                        for (int iy=0; iy<=interp_order; iy++){
+                            for (int ix=0; ix<=interp_order; ix++){
+                                boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
+                                                                    lo_coarse[1]+k_cell+iy,
+                                                                    lo_coarse[2])
+                                                                    *sx_cell[ix]*sy_cell[iy];
+                            }
+                        }
+
+                        // adjusting source term to get non-zero Dirichlet boundary condition
                         data_array(i,j,k) -= boundary_value/(dx[0]*dx[0]);
                     }
-                    if (j==ny_fine_low || j == ny_fine_high) {
+
+                    // handling of the bottom and top boundary of the staging area
+                    if ((j==0) || (j==ny_fine_high)) {
+                        if (j==0) {
+                            // position of guard cell below of first valid grid point
+                            y = plo[1] + (j+lo[1]-0.5_rt)*dx[1];
+                        } else if (j== ny_fine_high) {
+                            // position of guard cell above of last valid grid point
+                            y = plo[1] + (j+lo[1]+1.5_rt)*dx[1];
+                        }
+                        x = plo[0] + (i+lo[0]+0.5_rt)*dx[0];
+
+                        // --- Compute shape factors
+                        // x direction
+                        // j_cell leftmost cell in x that the particle touches.
+                        // sx_cell shape factor along x
+                        const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
+                        amrex::Real sx_cell[interp_order + 1];
+                        const int j_cell = compute_shape_factor<interp_order>(sx_cell,
+                                                                                xmid-0.5_rt);
+
+                        // y direction
+                        const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
+                        amrex::Real sy_cell[interp_order + 1];
+                        const int k_cell = compute_shape_factor<interp_order>(sy_cell,
+                                                                                ymid-0.5_rt);
+
+                        amrex::Real boundary_value = 0.0_rt;
+                        // add interpolated contribution to boundary value
+                        for (int iy=0; iy<=interp_order; iy++){
+                            for (int ix=0; ix<=interp_order; ix++){
+                                boundary_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
+                                                                    lo_coarse[1]+k_cell+iy,
+                                                                    lo_coarse[2])
+                                                                    *sx_cell[ix]*sy_cell[iy];
+                            }
+                        }
+
+                        // adjusting source term to get non-zero Dirichlet boundary condition
                         data_array(i,j,k) -= boundary_value/(dx[1]*dx[1]);
                     }
                 }
