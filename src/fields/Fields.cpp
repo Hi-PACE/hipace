@@ -233,7 +233,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 
 void
-Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
+Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
               int ncomp, amrex::FArrayBox& fab, int slice_dir, amrex::Geometry geom)
 {
     using namespace amrex::literals;
@@ -263,31 +263,23 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         const bool nx_even = ncells_global[0] % 2 == 0;
         const bool ny_even = ncells_global[1] % 2 == 0;
 
-        if (copy_type == FieldCopyType::FtoS) {
-            amrex::ParallelFor(copy_box, ncomp,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-            {
-                slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
-            });
-        } else {
-            amrex::ParallelFor(copy_box, ncomp,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-            {
-                if        (slice_dir ==-1 /* 3D data */){
-                    full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
-                } else if (slice_dir == 0 /* yz slice */){
-                    full_array(i,j,k,n+full_comp) =
-                        nx_even ? 0.5_rt * (slice_array(i-1,j,k,n+slice_comp) +
-                                            slice_array(i,j,k,n+slice_comp))
-                        : slice_array(i,j,k,n+slice_comp);
-                } else /* slice_dir == 1, xz slice */{
-                    full_array(i,j,k,n+full_comp) =
-                        ny_even ? 0.5_rt * ( slice_array(i,j-1,k,n+slice_comp) +
-                                             slice_array(i,j,k,n+slice_comp))
-                        : slice_array(i,j,k,n+slice_comp);
-                }
-            });
-        }
+        amrex::ParallelFor(copy_box, ncomp,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+        {
+            if        (slice_dir ==-1 /* 3D data */){
+                full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
+            } else if (slice_dir == 0 /* yz slice */){
+                full_array(i,j,k,n+full_comp) =
+                    nx_even ? 0.5_rt * (slice_array(i-1,j,k,n+slice_comp) +
+                                        slice_array(i,j,k,n+slice_comp))
+                    : slice_array(i,j,k,n+slice_comp);
+            } else /* slice_dir == 1, xz slice */{
+                full_array(i,j,k,n+full_comp) =
+                    ny_even ? 0.5_rt * ( slice_array(i,j-1,k,n+slice_comp) +
+                                         slice_array(i,j,k,n+slice_comp))
+                    : slice_array(i,j,k,n+slice_comp);
+            }
+        });
     }
 }
 
