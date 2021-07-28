@@ -127,7 +127,7 @@ OpenPMDWriter::WriteFieldData (
                      static_cast<double>(correct_problo[1]),
                      static_cast<double>(correct_problo[0])
                       )};
-         auto offWindow = finalproblo;
+        auto offWindow = finalproblo;
         if (slice_dir >= 0) {
             // User requested slice IO
             // remove the slicing direction in position, label, resolution, offset
