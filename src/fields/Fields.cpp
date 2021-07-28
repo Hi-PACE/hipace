@@ -376,8 +376,6 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
-        // Get the small end of the Box
-        const amrex::IntVect& small = bx.smallEnd();
         // Get the big end of the Box
         const amrex::IntVect& big = bx.bigEnd();
         // highest valid index of the staging area in x and y
@@ -413,13 +411,13 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // j_cell leftmost cell in x that the particle touches.
                         // sx_cell shape factor along x
                         const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
-                        amrex::Real sx_cell[interpol_order + 1];
+                        amrex::Real sx_cell[interp_order + 1];
                         const int j_cell = compute_shape_factor<interp_order>(sx_cell,
                                                                                 xmid-0.5_rt);
 
                         // y direction
                         const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
-                        amrex::Real sy_cell[interpol_order + 1];
+                        amrex::Real sy_cell[interp_order + 1];
                         const int k_cell = compute_shape_factor<interp_order>(sy_cell,
                                                                                 ymid-0.5_rt);
 
@@ -454,13 +452,13 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // j_cell leftmost cell in x that the particle touches.
                         // sx_cell shape factor along x
                         const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
-                        amrex::Real sx_cell[interpol_order + 1];
+                        amrex::Real sx_cell[interp_order + 1];
                         const int j_cell = compute_shape_factor<interp_order>(sx_cell,
                                                                                 xmid-0.5_rt);
 
                         // y direction
                         const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
-                        amrex::Real sy_cell[interpol_order + 1];
+                        amrex::Real sy_cell[interp_order + 1];
                         const int k_cell = compute_shape_factor<interp_order>(sy_cell,
                                                                                 ymid-0.5_rt);
 
