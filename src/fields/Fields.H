@@ -10,9 +10,6 @@
 
 class Hipace;
 
-/** \brief Direction of field copies: from 3D F to 2D slice S or the other way round */
-enum struct FieldCopyType { FtoS, StoF };
-
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
     enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
