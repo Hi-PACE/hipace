@@ -101,16 +101,17 @@ public:
      *
      * \param[in] lev MR level
      * \param[in] i_slice z slice in which to write the data
-     * \param[in] copy_type whether to copy from the xy slice to the main array or opposite
      * \param[in] slice_comp first component of the xy slice to copy from/to
      * \param[in] full_comp first component of the full array to copy from/to
      * \param[in] ncomp number of components to copy
      * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
+     * \param[in] coarsening ratio of diagnostics
      * \param[in] geom main geometry
      */
-    void Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-               int ncomp, amrex::FArrayBox& fab, int slice_dir, amrex::Geometry geom);
+    void Copy (int lev, int i_slice, int slice_comp, int full_comp,
+               int ncomp, amrex::FArrayBox& fab, int slice_dir,
+               amrex::IntVect diag_coarsen, amrex::Geometry geom);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *

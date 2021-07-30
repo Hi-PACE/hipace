@@ -234,11 +234,12 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
-              int ncomp, amrex::FArrayBox& fab, int slice_dir, amrex::Geometry geom)
+              int ncomp, amrex::FArrayBox& fab, int slice_dir,
+              amrex::IntVect diag_coarsen, amrex::Geometry geom)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][WhichSlice::This]; // copy from/to the current slice
+    auto& slice_mf = m_slices[lev][WhichSlice::This]; // copy from the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
@@ -250,12 +251,13 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
     }
 
     amrex::Box const& vbx = fab.box();
-    if (vbx.smallEnd(Direction::z) <= i_slice and
-        vbx.bigEnd  (Direction::z) >= i_slice)
+    if (vbx.smallEnd(Direction::z) <= i_slice / diag_coarsen[2] and
+        vbx.bigEnd  (Direction::z) >= i_slice / diag_coarsen[2] and
+        i_slice % diag_coarsen[2] == 0)
     {
         amrex::Box copy_box = vbx;
-        copy_box.setSmall(Direction::z, i_slice);
-        copy_box.setBig  (Direction::z, i_slice);
+        copy_box.setSmall(Direction::z, i_slice / diag_coarsen[2]);
+        copy_box.setBig  (Direction::z, i_slice / diag_coarsen[2]);
 
         amrex::Array4<amrex::Real> const& full_array = fab.array();
 
@@ -263,23 +265,66 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
         const bool nx_even = ncells_global[0] % 2 == 0;
         const bool ny_even = ncells_global[1] % 2 == 0;
 
-        amrex::ParallelFor(copy_box, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            if        (slice_dir ==-1 /* 3D data */){
-                full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
-            } else if (slice_dir == 0 /* yz slice */){
-                full_array(i,j,k,n+full_comp) =
-                    nx_even ? 0.5_rt * (slice_array(i-1,j,k,n+slice_comp) +
-                                        slice_array(i,j,k,n+slice_comp))
-                    : slice_array(i,j,k,n+slice_comp);
-            } else /* slice_dir == 1, xz slice */{
-                full_array(i,j,k,n+full_comp) =
-                    ny_even ? 0.5_rt * ( slice_array(i,j-1,k,n+slice_comp) +
-                                         slice_array(i,j,k,n+slice_comp))
-                    : slice_array(i,j,k,n+slice_comp);
-            }
-        });
+        const int coarse_x = diag_coarsen[0];
+        const int coarse_y = diag_coarsen[1];
+        const int coarse_z = diag_coarsen[2];
+
+        const int ncells_x = ncells_global[0];
+        const int ncells_y = ncells_global[1];
+
+        if (slice_dir ==-1 /* 3D data */){
+
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                amrex::Real field_value = 0;
+                int n_values = 0;
+                for (int j_c = 0; j_c < coarse_y && (j*coarse_y+j_c) < ncells_y; ++j_c) {
+                    for (int i_c = 0; i_c < coarse_x && (i*coarse_x+i_c) < ncells_x; ++i_c) {
+                        field_value += slice_array( i*coarse_x+i_c,
+                                                    j*coarse_y+j_c,
+                                                    k*coarse_z,
+                                                    n+slice_comp);
+                        ++n_values;
+                    }
+                }
+                full_array(i,j,k,n+full_comp) = field_value / max(n_values,1);
+            });
+
+        } else if (slice_dir == 0 /* yz slice */){
+
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                amrex::Real field_value = 0;
+                int n_values = 0;
+                for (int j_c = 0; j_c < coarse_y && (j*coarse_y+j_c) < ncells_y; ++j_c) {
+                    field_value += nx_even ?
+                        0.5_rt * (slice_array(i-1,j*coarse_y+j_c,k*coarse_z,n+slice_comp) +
+                                  slice_array(i  ,j*coarse_y+j_c,k*coarse_z,n+slice_comp))
+                                : slice_array(i  ,j*coarse_y+j_c,k*coarse_z,n+slice_comp);
+                    ++n_values;
+                }
+                full_array(i,j,k,n+full_comp) = field_value / max(n_values,1);
+            });
+
+        } else /* slice_dir == 1, xz slice */{
+
+            amrex::ParallelFor(copy_box, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                amrex::Real field_value = 0;
+                int n_values = 0;
+                for (int i_c = 0; i_c < coarse_x && (i*coarse_x+i_c) < ncells_x; ++i_c) {
+                    field_value += ny_even ?
+                        0.5_rt * (slice_array(i*coarse_x+i_c,j-1,k*coarse_z,n+slice_comp) +
+                                  slice_array(i*coarse_x+i_c,j  ,k*coarse_z,n+slice_comp))
+                                : slice_array(i*coarse_x+i_c,j  ,k*coarse_z,n+slice_comp);
+                    ++n_values;
+                }
+                full_array(i,j,k,n+full_comp) = field_value / max(n_values,1);
+            });
+        }
     }
 }
 
