@@ -321,7 +321,7 @@ Diagnostic parameters
 
 * ``diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
     Coarsening ratio of field output in x, y and z direction respectively. For x and y, the average
-    value is taken. For z, the access slices are skipped in the output.
+    value is taken. For z, the extra slices are skipped in the output.
 
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be `all`,
