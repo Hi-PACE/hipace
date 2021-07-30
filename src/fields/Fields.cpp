@@ -288,7 +288,7 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
                         ++n_values;
                     }
                 }
-                full_array(i,j,k,n+full_comp) = field_value / max(n_values,1);
+                full_array(i,j,k,n+full_comp) = field_value / std::max(n_values,1);
             });
 
         } else if (slice_dir == 0 /* yz slice */){
@@ -305,7 +305,7 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
                                 : slice_array(i  ,j*coarse_y+j_c,k*coarse_z,n+slice_comp);
                     ++n_values;
                 }
-                full_array(i,j,k,n+full_comp) = field_value / max(n_values,1);
+                full_array(i,j,k,n+full_comp) = field_value / std::max(n_values,1);
             });
 
         } else /* slice_dir == 1, xz slice */{
@@ -322,7 +322,7 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
                                 : slice_array(i*coarse_x+i_c,j  ,k*coarse_z,n+slice_comp);
                     ++n_values;
                 }
-                full_array(i,j,k,n+full_comp) = field_value / max(n_values,1);
+                full_array(i,j,k,n+full_comp) = field_value / std::max(n_values,1);
             });
         }
     }

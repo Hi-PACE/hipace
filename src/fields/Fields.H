@@ -106,7 +106,7 @@ public:
      * \param[in] ncomp number of components to copy
      * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
-     * \param[in] coarsening ratio of diagnostics
+     * \param[in] diag_coarsen coarsening ratio of diagnostics
      * \param[in] geom main geometry
      */
     void Copy (int lev, int i_slice, int slice_comp, int full_comp,
