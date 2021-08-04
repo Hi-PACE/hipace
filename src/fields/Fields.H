@@ -103,6 +103,7 @@ public:
      * \param[in] i_slice z slice in which to write the data
      * \param[in] slice_comp first component of the xy slice to copy from/to
      * \param[in] full_comp first component of the full array to copy from/to
+     * \param[in] diag_comps_vect the field components to copy
      * \param[in] ncomp number of components to copy
      * \param[in,out] fab full FArrayBox
      * \param[in] slice_dir slicing direction. 0=x, 1=y, -1=no slicing (full 3D)
@@ -110,6 +111,7 @@ public:
      * \param[in] geom main geometry
      */
     void Copy (int lev, int i_slice, int slice_comp, int full_comp,
+               amrex::Gpu::DeviceVector<int>& diag_comps_vect,
                int ncomp, amrex::FArrayBox& fab, int slice_dir,
                amrex::IntVect diag_coarsen, amrex::Geometry geom);
 

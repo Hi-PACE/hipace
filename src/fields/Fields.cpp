@@ -234,6 +234,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
+              amrex::Gpu::DeviceVector<int>& diag_comps_vect,
               int ncomp, amrex::FArrayBox& fab, int slice_dir,
               amrex::IntVect diag_coarsen, amrex::Geometry geom)
 {
@@ -272,11 +273,14 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
         const int ncells_x = ncells_global[0];
         const int ncells_y = ncells_global[1];
 
+        const int *diag_comps = diag_comps_vect.data();
+
         if (slice_dir ==-1 /* 3D data */){
 
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {
+                int m = diag_comps[n];
                 amrex::Real field_value = 0;
                 int n_values = 0;
                 for (int j_c = 0; j_c < coarse_y && (j*coarse_y+j_c) < ncells_y; ++j_c) {
@@ -284,7 +288,7 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
                         field_value += slice_array( i*coarse_x+i_c,
                                                     j*coarse_y+j_c,
                                                     k*coarse_z,
-                                                    n+slice_comp);
+                                                    m+slice_comp);
                         ++n_values;
                     }
                 }
@@ -296,13 +300,14 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {
+                int m = diag_comps[n];
                 amrex::Real field_value = 0;
                 int n_values = 0;
                 for (int j_c = 0; j_c < coarse_y && (j*coarse_y+j_c) < ncells_y; ++j_c) {
                     field_value += nx_even ?
-                        0.5_rt * (slice_array(i-1,j*coarse_y+j_c,k*coarse_z,n+slice_comp) +
-                                  slice_array(i  ,j*coarse_y+j_c,k*coarse_z,n+slice_comp))
-                                : slice_array(i  ,j*coarse_y+j_c,k*coarse_z,n+slice_comp);
+                        0.5_rt * (slice_array(i-1,j*coarse_y+j_c,k*coarse_z,m+slice_comp) +
+                                  slice_array(i  ,j*coarse_y+j_c,k*coarse_z,m+slice_comp))
+                                : slice_array(i  ,j*coarse_y+j_c,k*coarse_z,m+slice_comp);
                     ++n_values;
                 }
                 full_array(i,j,k,n+full_comp) = field_value / std::max(n_values,1);
@@ -313,13 +318,14 @@ Fields::Copy (int lev, int i_slice, int slice_comp, int full_comp,
             amrex::ParallelFor(copy_box, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {
+                int m = diag_comps[n];
                 amrex::Real field_value = 0;
                 int n_values = 0;
                 for (int i_c = 0; i_c < coarse_x && (i*coarse_x+i_c) < ncells_x; ++i_c) {
                     field_value += ny_even ?
-                        0.5_rt * (slice_array(i*coarse_x+i_c,j-1,k*coarse_z,n+slice_comp) +
-                                  slice_array(i*coarse_x+i_c,j  ,k*coarse_z,n+slice_comp))
-                                : slice_array(i*coarse_x+i_c,j  ,k*coarse_z,n+slice_comp);
+                        0.5_rt * (slice_array(i*coarse_x+i_c,j-1,k*coarse_z,m+slice_comp) +
+                                  slice_array(i*coarse_x+i_c,j  ,k*coarse_z,m+slice_comp))
+                                : slice_array(i*coarse_x+i_c,j  ,k*coarse_z,m+slice_comp);
                     ++n_values;
                 }
                 full_array(i,j,k,n+full_comp) = field_value / std::max(n_values,1);

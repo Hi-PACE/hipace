@@ -287,7 +287,7 @@ Hipace::MakeNewLevelFromScratch (
     SetDistributionMap(lev, dm); // Let AmrCore know
     DefineSliceGDB(lev, ba, dm);
     // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
-    m_diags.AllocData(lev, ba[0], Comps[WhichSlice::This]["N"], Geom(lev));
+    m_diags.AllocData(lev, ba[0], Geom(lev));
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size, ref_ratio);
 }
@@ -1286,7 +1286,7 @@ Hipace::ResizeFDiagFAB (const int it)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    m_fields.Copy(lev, i_slice, 0, 0, Comps[WhichSlice::This]["N"],
+    m_fields.Copy(lev, i_slice, 0, 0, m_diags.getCompsIdx(), m_diags.getNFields(),
                   m_diags.getF(lev), m_diags.sliceDir(), m_diags.getCoarsening(lev), Geom(lev));
 }
 
