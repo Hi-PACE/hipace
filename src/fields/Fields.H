@@ -109,9 +109,9 @@ public:
      * \param[in] diag_coarsen coarsening ratio of diagnostics
      * \param[in] geom main geometry
      */
-    void Copy (int lev, int i_slice, int slice_comp, int full_comp,
-               int ncomp, amrex::FArrayBox& fab, int slice_dir,
-               amrex::IntVect diag_coarsen, amrex::Geometry geom);
+    void Copy (const int lev, const int i_slice, const int slice_comp, const int full_comp,
+               const int ncomp, amrex::FArrayBox& fab, const int slice_dir,
+               const amrex::IntVect diag_coarsen, const amrex::Geometry geom);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
