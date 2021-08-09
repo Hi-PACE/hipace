@@ -505,6 +505,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                                Comps[WhichSlice::This][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
+    // lhs_bx should only have valid cells
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
     // low end of the coarse grid excluding guard cells, in units of coarse cells.
     const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
@@ -530,7 +531,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         // for Psi at the guard cell above the last valid cell
         const int nx_fine_high = (component == "rho") ? big[0] : big[0]-m_slices_nguards[0]+1;
         const int ny_fine_high = (component == "rho") ? big[1] : big[1]-m_slices_nguards[0]+1;
-        // rho needs to be interpolated for the number of guard cells, rho just for one guard cell
+        // rho needs to be interpolated for the number of guard cells, Psi just for one guard cell
         const int x_range = (component == "rho") ? m_slices_nguards[0] : 1;
         const int y_range = (component == "rho") ? m_slices_nguards[1] : 1;
 
