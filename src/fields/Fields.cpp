@@ -484,6 +484,104 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
 }
 
 void
+Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                                   std::string component)
+{
+    // This function interpolates values from the coarse to the fine grid with second order.
+    // This is required for rho to fix the incomplete deposition close to the boundary and for Psi
+    // to fill the guard cell, which is needed for the transverse derivative
+
+    HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
+    if (lev == 0) return; // only interpolate boundaries to lev 1
+    using namespace amrex::literals;
+    const auto plo = geom[lev].ProbLoArray();
+    const auto dx = geom[lev].CellSizeArray();
+    const auto plo_coarse = geom[lev-1].ProbLoArray();
+    const auto dx_coarse = geom[lev-1].CellSizeArray();
+    constexpr int interp_order = 2;
+
+    // get level 0 array
+    amrex::MultiFab lhs_coarse(getSlices(lev-1, WhichSlice::This), amrex::make_alias,
+                               Comps[WhichSlice::This][component], 1);
+    amrex::FArrayBox& lhs_fab = lhs_coarse[0];
+    amrex::Box lhs_bx = lhs_fab.box();
+    // lhs_bx should only have valid cells
+    lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    // low end of the coarse grid excluding guard cells, in units of coarse cells.
+    const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
+
+    // get level 1 array
+    amrex::MultiFab lhs_fine(getSlices(lev, WhichSlice::This), amrex::make_alias,
+                              Comps[WhichSlice::This][component], 1);
+
+    for (amrex::MFIter mfi( lhs_fine,false); mfi.isValid(); ++mfi)
+    {
+        amrex::Box bx = mfi.tilebox();
+        // psi needs the guard cells, as these are the cells we need to fill
+        if (component == "Psi") bx.grow(m_slices_nguards);
+        // Get the small end of the Box
+        const amrex::IntVect& small = bx.smallEnd();
+        // the interpolation of rho at the low end starts at the lowest valid cell,
+        // for Psi at the guard cell below the first valid cell
+        const int nx_fine_low = (component == "rho") ? small[0] : small[0]+m_slices_nguards[0]-1;
+        const int ny_fine_low = (component == "rho") ? small[1] : small[1]+m_slices_nguards[1]-1;
+        // Get the big end of the Box
+        const amrex::IntVect& big = bx.bigEnd();
+        // the interpolation of rho at the high end starts at the highest valid cell,
+        // for Psi at the guard cell above the last valid cell
+        const int nx_fine_high = (component == "rho") ? big[0] : big[0]-m_slices_nguards[0]+1;
+        const int ny_fine_high = (component == "rho") ? big[1] : big[1]-m_slices_nguards[0]+1;
+        // rho needs to be interpolated for the number of guard cells, Psi just for one guard cell
+        const int x_range = (component == "rho") ? m_slices_nguards[0] : 1;
+        const int y_range = (component == "rho") ? m_slices_nguards[1] : 1;
+
+        amrex::Array4<amrex::Real>  data_array = lhs_fine.array(mfi);
+        amrex::Array4<amrex::Real>  data_array_coarse = lhs_coarse.array(mfi);
+
+        // Loop over the valid indices on the fine grid and interpolate the value of the coarse grid
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
+            {
+                if ((i >= nx_fine_low  && i < nx_fine_low  + x_range) ||
+                    (i <= nx_fine_high && i > nx_fine_high - x_range) ||
+                    (j >= ny_fine_low  && j < ny_fine_low  + y_range) ||
+                    (j <= ny_fine_high && j > ny_fine_high - y_range) ) {
+
+                    const amrex::Real x = plo[0] + (i+0.5_rt)*dx[0];
+                    const amrex::Real y = plo[1] + (j+0.5_rt)*dx[1];
+
+                    // --- Compute shape factors
+                    // x direction
+                    // j_cell leftmost cell in x that the particle touches.
+                    // sx_cell shape factor along x
+                    const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
+                    amrex::Real sx_cell[interp_order + 1];
+                    const int j_cell = compute_shape_factor<interp_order>(sx_cell, xmid-0.5_rt);
+
+                    // y direction
+                    const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
+                    amrex::Real sy_cell[interp_order + 1];
+                    const int k_cell = compute_shape_factor<interp_order>(sy_cell, ymid-0.5_rt);
+
+                    amrex::Real coarse_value = 0.0_rt;
+                    // sum interpolated contributions
+                    for (int iy=0; iy<=interp_order; iy++){
+                        for (int ix=0; ix<=interp_order; ix++){
+                            coarse_value += data_array_coarse(lo_coarse[0]+j_cell+ix,
+                                                              lo_coarse[1]+k_cell+iy,
+                                                              lo_coarse[2])*sx_cell[ix]*sy_cell[iy];
+                        }
+                    }
+
+                    // set value on the fine grid to the interpolated value of the coarse grid
+                    data_array(i,j,k) = coarse_value;
+                }
+            });
+    }
+}
+
+void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                                    const MPI_Comm& m_comm_xy, const int lev)
 {
@@ -497,6 +595,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
                         Comps[WhichSlice::This]["Psi"], 1);
+
+    InterpolateFromLev0toLev1(geom, lev, "rho");
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
@@ -513,6 +613,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     amrex::ParallelContext::push(m_comm_xy);
     lhs.FillBoundary(geom[lev].periodicity());
     amrex::ParallelContext::pop();
+
+    InterpolateFromLev0toLev1(geom, lev, "Psi");
 
     /* Compute ExmBy and Eypbx from grad(-psi) */
     TransverseDerivative(
