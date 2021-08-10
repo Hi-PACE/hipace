@@ -1,4 +1,5 @@
 #include "FFTPoissonSolverPeriodic.H"
+#include "fft/AnyFFT.H"
 #include "utils/Constants.H"
 #include "utils/HipaceProfilerWrapper.H"
 
