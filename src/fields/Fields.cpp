@@ -257,8 +257,8 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
     if (vbx.smallEnd(Direction::z) <= full_array_z and
         vbx.bigEnd  (Direction::z) >= full_array_z and
         ( i_slice % diag_coarsen[2] == diag_coarsen[2]/2 or
-        i_slice == ncells_global[2] - 1 and
-        ( ncells_global[2] - 1 ) % diag_coarsen[2] < diag_coarsen[2]/2 ))
+        ( i_slice == ncells_global[2] - 1 and
+        ( ncells_global[2] - 1 ) % diag_coarsen[2] < diag_coarsen[2]/2 )))
     {
         amrex::Box copy_box = vbx;
         copy_box.setSmall(Direction::z, full_array_z);
@@ -284,7 +284,7 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
             const int j_c_start = amrex::min(j*coarse_y +(coarse_y-1)/2 -even_slice_y, ncells_y-1);
             const int j_c_stop  = amrex::min(j*coarse_y +coarse_y/2+1, ncells_y);
 
-            amrex::Real field_value = 0;
+            amrex::Real field_value = 0._rt;
             int n_values = 0;
 
             for (int j_c = j_c_start; j_c != j_c_stop; ++j_c) {

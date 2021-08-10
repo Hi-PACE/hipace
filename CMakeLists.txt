@@ -315,6 +315,12 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME output_coarsening.2Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/output_coarsening.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME gaussian_weight.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/gaussian_weight.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
