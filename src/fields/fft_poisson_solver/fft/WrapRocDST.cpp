@@ -2,6 +2,9 @@
 #include "RocFFTUtils.H"
 #include "utils/HipaceProfilerWrapper.H"
 
+#include <AMReX_Config.H>
+
+
 namespace AnyDST
 {
     /** \brief Extend src into a symmetrized larger array dst
@@ -122,18 +125,24 @@ namespace AnyDST
                                                     std::size_t(expanded_size[1]),
                                                     std::size_t(expanded_size[2]))};
 
+#ifdef AMREX_USE_FLOAT
+        rocfft_precision precision = rocfft_precision_single;
+#else
+        rocfft_precision precision = rocfft_precision_double;
+#endif
+
         // Initialize fft_plan.m_plan with the vendor fft plan.
         rocfft_status result;
-        result = rocfft_plan_create(&(dst_plan.m_plan), \
-                                    rocfft_placement_notinplace, \
-                                    rocfft_transform_type_real_forward, \
-                                    precision, \
-                                    dim, \
-                                    lengths, \
-                                    1, \
+        result = rocfft_plan_create(&(dst_plan.m_plan),
+                                    rocfft_placement_notinplace,
+                                    rocfft_transform_type_real_forward,
+                                    precision,
+                                    dim,
+                                    lengths,
+                                    1,
                                     nullptr);
 
-        assert_rocfft_status("rocfft_plan_create", result);
+        RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 
         // Store meta-data in dst_plan
         dst_plan.m_position_array = position_array;
@@ -158,27 +167,27 @@ namespace AnyDST
 
         rocfft_execution_info execinfo = NULL;
         result = rocfft_execution_info_create(&execinfo);
-        assert_rocfft_status("rocfft_execution_info_create", result);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
 
         std::size_t buffersize = 0;
         result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan, &buffersize);
-        assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+        RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
 
         result = rocfft_execution_info_set_stream(execinfo, amrex::Gpu::gpuStream());
-        assert_rocfft_status("rocfft_execution_info_set_stream", result);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
 
         // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
         // 2nd argument type still wrong, should be void*
         // reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()), //3rd arg
-        result = rocfft_execute(dst_plan.m_plan, \
-                                (void**)&(dst_plan.m_expanded_position_array), \
-                                (void**)&(dst_plan.m_expanded_fourier_array), \
+        result = rocfft_execute(dst_plan.m_plan,
+                                (void**)&(dst_plan.m_expanded_position_array),
+                                (void**)&(dst_plan.m_expanded_fourier_array),
                                 execinfo);
 
-        assert_rocfft_status("rocfft_execute", result);
+        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
 
         result = rocfft_execution_info_destroy(execinfo);
-        assert_rocfft_status("rocfft_execution_info_destroy", result);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
 
         // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
         ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
