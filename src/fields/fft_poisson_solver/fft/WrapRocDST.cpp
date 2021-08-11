@@ -156,12 +156,18 @@ namespace AnyDST
         rocfft_plan_destroy( dst_plan.m_plan );
     }
 
-    //template<direction d>
+    template<direction d>
     void Execute (DSTplan& dst_plan){
         HIPACE_PROFILE("AnyDST::Execute()");
 
+        // Swap position and fourier space based on execute direction
+        amrex::FArrayBox* position_array =
+            (d == direction::forward) ? dst_plan.m_position_array : dst_plan.m_fourier_array;
+        amrex::FArrayBox* fourier_array =
+            (d == direction::forward) ? dst_plan.m_fourier_array : dst_plan.m_position_array;
+
         // Expand in position space m_position_array -> m_expanded_position_array
-        ExpandR2R(*dst_plan.m_expanded_position_array, *dst_plan.m_position_array);
+        ExpandR2R(*dst_plan.m_expanded_position_array, *position_array);
 
         rocfft_status result;
 
@@ -190,10 +196,10 @@ namespace AnyDST
         RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
 
         // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
-        ShrinkC2R(*dst_plan.m_fourier_array, *dst_plan.m_expanded_fourier_array);
+        ShrinkC2R(*fourier_array, *dst_plan.m_expanded_fourier_array);
 
     }
 
-    //template void Execute<direction::forward>(DSTplan& dst_plan);
-    //template void Execute<direction::backward>(DSTplan& dst_plan);
+    template void Execute<direction::forward>(DSTplan& dst_plan);
+    template void Execute<direction::backward>(DSTplan& dst_plan);
 }
