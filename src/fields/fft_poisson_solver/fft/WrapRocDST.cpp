@@ -15,7 +15,29 @@ namespace AnyDST
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
         HIPACE_PROFILE("AnyDST::ExpandR2R()");
-        /* todo */
+        constexpr int scomp = 0;
+        constexpr int dcomp = 0;
+
+        const amrex::Box bx = src.box();
+        const int nx = bx.length(0);
+        const int ny = bx.length(1);
+        amrex::Array4<amrex::Real const> const & src_array = src.array();
+        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                /* upper left quadrant */
+                dst_array(i+1,j+1,0,dcomp) = src_array(i, j, k, scomp);
+                /* lower left quadrant */
+                dst_array(i+1,j+ny+2,0,dcomp) = -src_array(i, ny-1-j, k, scomp);
+                /* upper right quadrant */
+                dst_array(i+nx+2,j+1,0,dcomp) = -src_array(nx-1-i, j, k, scomp);
+                /* lower right quadrant */
+                dst_array(i+nx+2,j+ny+2,0,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
+            }
+            );
     }
 
     /** \brief Extract symmetrical src array into smaller array dst
@@ -26,7 +48,20 @@ namespace AnyDST
     void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
     {
         HIPACE_PROFILE("AnyDST::ShrinkC2R()");
-        /* todo */
+        constexpr int scomp = 0;
+        constexpr int dcomp = 0;
+
+        const amrex::Box bx = dst.box();
+        amrex::Array4<amrex::GpuComplex<amrex::Real> const> const & src_array = src.array();
+        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                /* upper left quadrant */
+                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
+            }
+            );
     }
 
     /** \brief Make Complex array out of Real array to prepare for fft.
@@ -43,7 +78,33 @@ namespace AnyDST
                     const int n_data, const int n_batch)
     {
         HIPACE_PROFILE("AnyDST::ToComplex()");
-        /* todo */
+        const int n_half = (n_data+1)/2;
+        if((n_data%2 == 1)) {
+            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
+                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+                {
+                    const int stride_in = n_data*j;
+                    const int i_is_zero = (i==0);
+                    const int i_is_n_half = (i==n_half);
+                    const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
+                                             +in[2*i-2*i_is_n_half+stride_in]*(1-2*i_is_n_half);
+                    const amrex::Real imag = in[2*i-1+i_is_zero-i_is_n_half+stride_in]
+                                             *!i_is_zero*!i_is_n_half;
+                    out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
+                });
+        } else {
+            amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
+                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+                {
+                    const int stride_in = n_data*j;
+                    const int i_is_zero = (i==0);
+                    const int i_is_n_half = (i==n_half);
+                    const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
+                                             +in[2*i-i_is_n_half+stride_in]*!i_is_n_half;
+                    const amrex::Real imag = in[2*i-1+i_is_zero+stride_in]*!i_is_zero;
+                    out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
+                });
+        }
     }
 
     /** \brief Complex to Real fft for every column of the input matrix.
@@ -57,7 +118,29 @@ namespace AnyDST
                  amrex::Real* const AMREX_RESTRICT out)
     {
         HIPACE_PROFILE("AnyDST::C2Rfft()");
-        /* todo */
+        rocfft_status result;
+
+        rocfft_execution_info execinfo = NULL;
+        result = rocfft_execution_info_create(&execinfo);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
+
+        std::size_t buffersize = 0;
+        result = rocfft_plan_get_work_buffer_size(plan, &buffersize);
+        RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+
+        result = rocfft_execution_info_set_stream(execinfo, amrex::Gpu::gpuStream());
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
+
+        // C2R FFT in -> out
+        // ???  2nd argument type still wrong, should be void*
+        // ??? reinterpret_cast<AnyFFT::Complex*>(in->dataPtr()), //3rd arg
+        result = rocfft_execute(
+            plan, (void**)&(in), (void**)&(out), execinfo);
+
+        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
+
+        result = rocfft_execution_info_destroy(execinfo);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
     }
 
     /** \brief Make Sine-space Real array out of array from fft.
@@ -73,7 +156,28 @@ namespace AnyDST
                  const int n_data, const int n_batch)
     {
         HIPACE_PROFILE("AnyDST::ToSine()");
-        /* todo */
+        using namespace amrex::literals;
+
+        const amrex::Real n_1_real = n_data+1._rt;
+        const int n_1 = n_data+1;
+        amrex::ParallelFor({{1,0,0}, {(n_data+1)/2,n_batch-1,0}},
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+            {
+                const int i_rev = n_1-i;
+                const int stride_in = n_1*j;
+                const int stride_out = n_data*j;
+                const amrex::Real in_a = in[i+stride_in];
+                const amrex::Real in_b = in[i_rev+stride_in];
+#ifdef AMREX_USE_FLOAT
+                out[i-1+stride_out] = 0.5_rt*(in_b-in_a+(in_a+in_b)/(2._rt*sinpif(i/n_1_real)));
+                out[i_rev-1+stride_out] = 0.5_rt*(in_a-in_b+(in_a+in_b)/(2._rt
+                                          *sinpif(i_rev/n_1_real)));
+#else
+                out[i-1+stride_out] = 0.5_rt*(in_b-in_a+(in_a+in_b)/(2._rt*sinpi(i/n_1_real)));
+                out[i_rev-1+stride_out] = 0.5_rt*(in_a-in_b+(in_a+in_b)/(2._rt
+                                          *sinpi(i_rev/n_1_real)));
+#endif
+            });
     }
 
     /** \brief Transpose input matrix
@@ -197,7 +301,6 @@ namespace AnyDST
 
         // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
         ShrinkC2R(*fourier_array, *dst_plan.m_expanded_fourier_array);
-
     }
 
     template void Execute<direction::forward>(DSTplan& dst_plan);
