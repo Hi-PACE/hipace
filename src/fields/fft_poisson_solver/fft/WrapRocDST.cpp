@@ -193,7 +193,41 @@ namespace AnyDST
                     const int n_data, const int n_batch)
     {
         HIPACE_PROFILE("AnyDST::Transpose()");
-        /* todo */
+        constexpr int tile_dim = 32; //must be power of 2
+        constexpr int block_rows = 8;
+        const int num_blocks_x = (n_data + tile_dim - 1)/tile_dim;
+        const int num_blocks_y = (n_batch + tile_dim - 1)/tile_dim;
+        amrex::launch(num_blocks_x*num_blocks_y, tile_dim*block_rows,
+            tile_dim*(tile_dim+1)*sizeof(amrex::Real), amrex::Gpu::gpuStream(),
+            [=] AMREX_GPU_DEVICE() noexcept
+            {
+                amrex::Gpu::SharedMemory<amrex::Real> gsm;
+                amrex::Real* const tile = gsm.dataPtr();
+
+                const int thread_x = threadIdx.x&(tile_dim-1);
+                const int thread_y = threadIdx.x/tile_dim;
+                const int block_y = blockIdx.x/num_blocks_x;
+                const int block_x = blockIdx.x - block_y*num_blocks_x;
+                int mat_x = block_x * tile_dim + thread_x;
+                int mat_y = block_y * tile_dim + thread_y;
+
+                for (int i = 0; i < tile_dim; i += block_rows) {
+                    if(mat_x < n_data && (mat_y+i) < n_batch) {
+                        tile[(thread_y+i)*(tile_dim+1) + thread_x] = in[(mat_y+i)*n_data + mat_x];
+                    }
+                }
+
+                __syncthreads();
+
+                mat_x = block_y * tile_dim + thread_x;
+                mat_y = block_x * tile_dim + thread_y;
+
+                for (int i = 0; i < tile_dim; i += block_rows) {
+                    if(mat_x < n_batch && (mat_y+i) < n_data) {
+                        out[(mat_y+i)*n_batch + mat_x] = tile[thread_x*(tile_dim+1) + thread_y+i];
+                    }
+                }
+            });
     }
 
     DSTplan CreatePlan (const amrex::IntVect& real_size, amrex::FArrayBox* position_array,
