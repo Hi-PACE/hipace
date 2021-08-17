@@ -3,6 +3,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
+#include "particles/pusher/GetDomainLev.H"
 
 #ifdef HIPACE_USE_OPENPMD
 
@@ -83,7 +84,7 @@ OpenPMDWriter::WriteDiagnostics (
             m_outputSeries[lev]->flush();
 
         } else if (call_type == OpenPMDWriterCallType::fields ) {
-            WriteFieldData(a_mf[lev], geom[lev], slice_dir, varnames, iteration, output_step, lev);
+            WriteFieldData(a_mf[lev], geom, slice_dir, varnames, iteration, output_step, lev);
             m_outputSeries[lev]->flush();
             m_last_output_dumped[lev] = output_step;
         }
@@ -92,7 +93,7 @@ OpenPMDWriter::WriteDiagnostics (
 
 void
 OpenPMDWriter::WriteFieldData (
-    amrex::FArrayBox const& fab, amrex::Geometry const& geom,
+    amrex::FArrayBox const& fab, amrex::Vector<amrex::Geometry> const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
     openPMD::Iteration iteration, const int output_step, const int lev)
 {
@@ -113,10 +114,19 @@ OpenPMDWriter::WriteFieldData (
         //   node staggering
         auto relative_cell_pos = utils::getRelativeCellPosition(fab);      // AMReX Fortran index order
         std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
+
+        amrex::Box const data_box = fab.box();
+
         //   labels, spacing and offsets
         std::vector< std::string > axisLabels {"z", "y", "x"};
-        auto dCells = utils::getReversedVec(geom.CellSize()); // dx, dy, dz
-        auto offWindow = utils::getReversedVec(geom.ProbLo()); // start of moving window
+        auto dCells = utils::getReversedVec(geom[lev].CellSize()); // dx, dy, dz
+        amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> correct_problo = GetDomainLev(geom[lev], data_box, 1, lev);
+        amrex::Vector<double> finalproblo = {AMREX_D_DECL(
+                     static_cast<double>(geom[lev].ProbLo()[2]),
+                     static_cast<double>(correct_problo[1]),
+                     static_cast<double>(correct_problo[0])
+                      )};
+        auto offWindow = finalproblo;
         if (slice_dir >= 0) {
             // User requested slice IO
             // remove the slicing direction in position, label, resolution, offset
@@ -132,7 +142,14 @@ OpenPMDWriter::WriteFieldData (
 
         // data type and global size of the simulation
         openPMD::Datatype datatype = openPMD::determineDatatype< amrex::Real >();
-        openPMD::Extent global_size = utils::getReversedVec(geom.Domain().size());
+        amrex::IntVect prob_size = data_box.bigEnd() - data_box.smallEnd()
+                                   + amrex::IntVect::TheUnitVector();
+        amrex::Vector<long unsigned int> probsize_reformat = {AMREX_D_DECL(
+                     static_cast<long unsigned int>(geom[lev].Domain().size()[2]),
+                     static_cast<long unsigned int>(prob_size[1]),
+                     static_cast<long unsigned int>(prob_size[0])
+                      )};
+        openPMD::Extent global_size = probsize_reformat; //geom[lev].Domain().size());
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
@@ -142,13 +159,11 @@ OpenPMDWriter::WriteFieldData (
         }
 
         // Store the provided box as a chunk with openpmd
-        amrex::Box const data_box = fab.box();
         std::shared_ptr< amrex::Real const > data;
-
         data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
 
         // Determine the offset and size of this data chunk in the global output
-        amrex::IntVect const box_offset = data_box.smallEnd();
+        amrex::IntVect const box_offset = {0, 0, data_box.smallEnd(2)};
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
         openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
         if (slice_dir >= 0) { // remove Ny components

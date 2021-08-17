@@ -183,6 +183,15 @@ public:
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                     std::string component, const int islice);
 
+    /** \brief Interpolate values from coarse grid to the fine grid
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be Psi or rho
+     */
+    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                                    std::string component);
+
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *

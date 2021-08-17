@@ -369,7 +369,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-    const int interpol_order = 2;
+constexpr int interp_order = 2;
 
     // get relative position of fine grid slice between coarse grids for longitudinal lin. interpol.
      const amrex::Real z = plo_coarse[2] + (islice+0.5_rt)*dx[2];
@@ -384,6 +384,7 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    // low end of the coarse grid excluding guard cells
     const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
 
     // get offset of level 1 w.r.t. the staging area
@@ -392,19 +393,17 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
     amrex::FArrayBox& lhs_fine_fab = lhs_fine[0];
     amrex::Box lhs_fine_bx = lhs_fine_fab.box();
     lhs_fine_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    // low end of the fine grid excluding guard cells, in units of fine cells.
     const amrex::IntVect lo = lhs_fine_bx.smallEnd();
 
     for (amrex::MFIter mfi( m_poisson_solver[lev]->StagingArea(),false); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
-        // Get the small end of the Box
-        const amrex::IntVect& small = bx.smallEnd();
-        const auto nx_fine_low = small[0];
-        const auto ny_fine_low = small[1];
         // Get the big end of the Box
         const amrex::IntVect& big = bx.bigEnd();
-        const auto nx_fine_high = big[0];
-        const auto ny_fine_high = big[1];
+        // highest valid index (not counting guard cells) of the staging area in x and y
+        const int nx_fine_high = big[0];
+        const int ny_fine_high = big[1];
         amrex::Array4<amrex::Real>  data_array = m_poisson_solver[lev]->StagingArea().array(mfi);
         amrex::Array4<amrex::Real>  arr_coarse = lhs_coarse.array(mfi);
         amrex::Array4<amrex::Real>  arr_coarse_prev = lhs_coarse_prev.array(mfi);
@@ -416,13 +415,13 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j , int k) noexcept
             {
-                if (i==nx_fine_low || i== nx_fine_high || j==ny_fine_low || j == ny_fine_high) {
+                if (i==0 || i== nx_fine_high || j==0 || j == ny_fine_high) {
                     // Compute coordinate on fine grid
                     amrex::Real x, y;
 
                     // handling of the left and right boundary of the staging area
-                    if ((i==nx_fine_low) || (i==nx_fine_high)) {
-                        if (i==nx_fine_low) {
+                    if ((i==0) || (i==nx_fine_high)) {
+                        if (i==0) {
                             // position of guard cell left of first valid grid point
                             x = plo[0] + (i+lo[0]-0.5_rt)*dx[0];
                         } else if (i== nx_fine_high) {
@@ -436,20 +435,18 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // j_cell leftmost cell in x that the particle touches.
                         // sx_cell shape factor along x
                         const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
-                        amrex::Real sx_cell[interpol_order + 1];
-                        const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
-                                                                                xmid-0.5_rt);
+                        amrex::Real sx_cell[interp_order + 1];
+                        const int j_cell = compute_shape_factor<interp_order>(sx_cell, xmid-0.5_rt);
 
                         // y direction
                         const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
-                        amrex::Real sy_cell[interpol_order + 1];
-                        const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
-                                                                                ymid-0.5_rt);
+                        amrex::Real sy_cell[interp_order + 1];
+                        const int k_cell = compute_shape_factor<interp_order>(sy_cell, ymid-0.5_rt);
 
                         amrex::Real boundary_value = 0.0_rt;
                         // add interpolated contribution to boundary value
-                        for (int iy=0; iy<=interpol_order; iy++){
-                            for (int ix=0; ix<=interpol_order; ix++){
+                        for (int iy=0; iy<=interp_order; iy++){
+                            for (int ix=0; ix<=interp_order; ix++){
                                 boundary_value += sx_cell[ix]*sy_cell[iy]*
                                   ((1.0_rt-rel_z)*arr_coarse(lo_coarse[0]+j_cell+ix,
                                                              lo_coarse[1]+k_cell+iy, lo_coarse[2])
@@ -463,8 +460,8 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                     }
 
                     // handling of the bottom and top boundary of the staging area
-                    if ((j==ny_fine_low) || (j==ny_fine_high)) {
-                        if (j==ny_fine_low) {
+                    if ((j==0) || (j==ny_fine_high)) {
+                        if (j==0) {
                             // position of guard cell below of first valid grid point
                             y = plo[1] + (j+lo[1]-0.5_rt)*dx[1];
                         } else if (j== ny_fine_high) {
@@ -478,20 +475,18 @@ Fields::InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const
                         // j_cell leftmost cell in x that the particle touches.
                         // sx_cell shape factor along x
                         const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
-                        amrex::Real sx_cell[interpol_order + 1];
-                        const int j_cell = compute_shape_factor<interpol_order>(sx_cell,
-                                                                                xmid-0.5_rt);
+                        amrex::Real sx_cell[interp_order + 1];
+                        const int j_cell = compute_shape_factor<interp_order>(sx_cell, xmid-0.5_rt);
 
                         // y direction
                         const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
-                        amrex::Real sy_cell[interpol_order + 1];
-                        const int k_cell = compute_shape_factor<interpol_order>(sy_cell,
-                                                                                ymid-0.5_rt);
+                        amrex::Real sy_cell[interp_order + 1];
+                        const int k_cell = compute_shape_factor<interp_order>(sy_cell, ymid-0.5_rt);
 
                         amrex::Real boundary_value = 0.0_rt;
                         // add interpolated contribution to boundary value
-                        for (int iy=0; iy<=interpol_order; iy++){
-                            for (int ix=0; ix<=interpol_order; ix++){
+                        for (int iy=0; iy<=interp_order; iy++){
+                            for (int ix=0; ix<=interp_order; ix++){
                                 boundary_value += sx_cell[ix]*sy_cell[iy]*
                                   ((1.0_rt-rel_z)*arr_coarse(lo_coarse[0]+j_cell+ix,
                                                              lo_coarse[1]+k_cell+iy, lo_coarse[2])
@@ -524,7 +519,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     const auto dx = geom[lev].CellSizeArray();
     const auto plo_coarse = geom[lev-1].ProbLoArray();
     const auto dx_coarse = geom[lev-1].CellSizeArray();
-    const int interpol_order = 2;
+    constexpr int interp_order = 2;
 
     // get relative position of fine grid slice between coarse grids for longitudinal lin. interpol.
      const amrex::Real z = plo_coarse[2] + (islice+0.5_rt)*dx[2];
@@ -538,7 +533,9 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                               Comps[WhichSlice::Previous1][component], 1);
     amrex::FArrayBox& lhs_fab = lhs_coarse[0];
     amrex::Box lhs_bx = lhs_fab.box();
+    // lhs_bx should only have valid cells
     lhs_bx.grow({-m_slices_nguards[0], -m_slices_nguards[1], 0});
+    // low end of the coarse grid excluding guard cells, in units of coarse cells.
     const amrex::IntVect lo_coarse = lhs_bx.smallEnd();
 
     // get level 1 array
@@ -554,15 +551,15 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         const amrex::IntVect& small = bx.smallEnd();
         // the interpolation of rho at the low end starts at the lowest valid cell,
         // for Psi at the guard cell below the first valid cell
-        const auto nx_fine_low = (component == "rho") ? small[0] : small[0]+m_slices_nguards[0]-1;
-        const auto ny_fine_low = (component == "rho") ? small[1] : small[1]+m_slices_nguards[1]-1;
+        const int nx_fine_low = (component == "rho") ? small[0] : small[0]+m_slices_nguards[0]-1;
+        const int ny_fine_low = (component == "rho") ? small[1] : small[1]+m_slices_nguards[1]-1;
         // Get the big end of the Box
         const amrex::IntVect& big = bx.bigEnd();
         // the interpolation of rho at the high end starts at the highest valid cell,
         // for Psi at the guard cell above the last valid cell
-        const auto nx_fine_high = (component == "rho") ? big[0] : big[0]-m_slices_nguards[0]+1;
-        const auto ny_fine_high = (component == "rho") ? big[1] : big[1]-m_slices_nguards[0]+1;
-        // rho needs to be interpolated for the number of guard cells, rho just for one guard cell
+        const int nx_fine_high = (component == "rho") ? big[0] : big[0]-m_slices_nguards[0]+1;
+        const int ny_fine_high = (component == "rho") ? big[1] : big[1]-m_slices_nguards[0]+1;
+        // rho needs to be interpolated for the number of guard cells, Psi just for one guard cell
         const int x_range = (component == "rho") ? m_slices_nguards[0] : 1;
         const int y_range = (component == "rho") ? m_slices_nguards[1] : 1;
 
@@ -588,18 +585,18 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                     // j_cell leftmost cell in x that the particle touches.
                     // sx_cell shape factor along x
                     const amrex::Real xmid = (x - plo_coarse[0])/dx_coarse[0];
-                    amrex::Real sx_cell[interpol_order + 1];
-                    const int j_cell = compute_shape_factor<interpol_order>(sx_cell, xmid-0.5_rt);
+                    amrex::Real sx_cell[interp_order + 1];
+                    const int j_cell = compute_shape_factor<interp_order>(sx_cell, xmid-0.5_rt);
 
                     // y direction
                     const amrex::Real ymid = (y - plo_coarse[1])/dx_coarse[1];
-                    amrex::Real sy_cell[interpol_order + 1];
-                    const int k_cell = compute_shape_factor<interpol_order>(sy_cell, ymid-0.5_rt);
+                    amrex::Real sy_cell[interp_order + 1];
+                    const int k_cell = compute_shape_factor<interp_order>(sy_cell, ymid-0.5_rt);
 
                     amrex::Real coarse_value = 0.0_rt;
                     // sum interpolated contributions
-                    for (int iy=0; iy<=interpol_order; iy++){
-                        for (int ix=0; ix<=interpol_order; ix++){
+                    for (int iy=0; iy<=interp_order; iy++){
+                        for (int ix=0; ix<=interp_order; ix++){
                             coarse_value += sx_cell[ix]*sy_cell[iy]*
                                 ((1.0_rt-rel_z)*arr_coarse(lo_coarse[0]+j_cell+ix,
                                                            lo_coarse[1]+k_cell+iy, lo_coarse[2])

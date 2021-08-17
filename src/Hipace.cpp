@@ -45,7 +45,11 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
+#ifdef AMREX_USE_GPU
+bool Hipace::m_do_tiling = false;
+#else
 bool Hipace::m_do_tiling = true;
+#endif
 
 Hipace&
 Hipace::GetInstance ()
@@ -120,6 +124,9 @@ Hipace::Hipace () :
     pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
     pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
     pph.query("do_tiling", m_do_tiling);
+#ifdef AMREX_USE_GPU
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
+#endif
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
@@ -224,7 +231,12 @@ void
 Hipace::InitData ()
 {
     HIPACE_PROFILE("Hipace::InitData()");
-    amrex::Print() << "HiPACE++ (" << Hipace::Version() << ")\n";
+#ifdef AMREX_USE_FLOAT
+    amrex::Print() << "HiPACE++ (" << Hipace::Version() << ") running in single precision\n";
+#else
+    amrex::Print() << "HiPACE++ (" << Hipace::Version() << ") running in double precision\n";
+#endif
+
 
     amrex::Vector<amrex::IntVect> new_max_grid_size;
     for (int ilev = 0; ilev <= maxLevel(); ++ilev) {
