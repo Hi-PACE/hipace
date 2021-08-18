@@ -118,7 +118,7 @@ macro(find_amrex)
         mark_as_advanced(AMReX_FPE)
         mark_as_advanced(AMReX_FORTRAN)
         mark_as_advanced(AMReX_FORTRAN_INTERFACES)
-        mark_as_advanced(AMReX_HDF5)  # we will do HDF5 I/O (and more) via openPMD-api
+        mark_as_advanced(AMReX_HDF5)  # we do HDF5 I/O (and more) via openPMD-api
         mark_as_advanced(AMReX_LINEAR_SOLVERS)
         mark_as_advanced(AMReX_MEM_PROFILE)
         mark_as_advanced(AMReX_MPI)
