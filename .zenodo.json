@@ -1,36 +1,46 @@
 {
+    "license": "other-open",
+    "title": "Hi-PACE/hipace: v21.09",
+    "version": "v21.09",
+    "upload_type": "software",
+    "publication_date": "2021-09-01",
     "creators": [
-      {
-        "affiliation": "Lawrence Berkeley National Laboratory",
-        "name": "Huebl, Axel",
-        "orcid": "0000-0003-1943-7141"
-      },
-      {
-        "affiliation": "Lawrence Berkeley National Laboratory, now DESY",
-        "name": "Th\u00e9venet, Maxence",
-        "orcid": "0000-0001-7216-2277"
-      },
-      {
-        "affiliation": "Lawrence Berkeley National Laboratory",
-        "name": "Lehe, Remi",
-        "orcid": "0000-0002-3656-9659"
-      },
+        {
+          "affiliation": "Deutsches Elektronen-Synchrotron, previously LBNL",
+          "name": "Th\u00e9venet, Maxence",
+          "orcid": "0000-0001-7216-2277"
+        },
+        {
+            "affiliation": "Deutsches Elektronen-Synchrotron",
+            "name": "Severin Diederichs"
+          "orcid": "0000-0001-9079-0461"
+        },
+        {
+          "affiliation": "Lawrence Berkeley National Laboratory",
+          "name": "Huebl, Axel",
+          "orcid": "0000-0003-1943-7141"
+        },
       {
         "affiliation": "Lawrence Berkeley National Laboratory",
         "name": "Myers, Andrew",
         "orcid": "0000-0001-8427-8330"
       },
+        {
+            "affiliation": "Deutsches Elektronen-Synchrotron",
+            "name": "AlexanderSinn"
+        },
       {
         "affiliation": "Lawrence Berkeley National Laboratory",
         "name": "Zhang, Weiqun",
         "orcid": "0000-0001-8092-1974"
       },
+      {
+        "affiliation": "Lawrence Berkeley National Laboratory",
+        "name": "Lehe, Remi",
+        "orcid": "0000-0002-3656-9659"
+      }
     ],
-    "contributors": [
-    ],
-    "license": {
-      "id": "BSD-3-Clause-LBNL"
-    },
+    "access_right": "open",
     "language": "eng",
     "keywords": [
       "research",
@@ -42,5 +52,16 @@
       "physics",
       "pic"
     ],
-    "access_right": "open"
+    "related_identifiers": [
+        {
+            "scheme": "url",
+            "identifier": "https://github.com/Hi-PACE/hipace/tree/v21.09",
+            "relation": "isSupplementTo"
+        },
+        {
+            "scheme": "doi",
+            "identifier": "10.5281/zenodo.5358483",
+            "relation": "isVersionOf"
+        }
+    ]
 }
