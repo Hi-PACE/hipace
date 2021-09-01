@@ -1,0 +1,46 @@
+{
+    "creators": [
+      {
+        "affiliation": "Lawrence Berkeley National Laboratory",
+        "name": "Huebl, Axel",
+        "orcid": "0000-0003-1943-7141"
+      },
+      {
+        "affiliation": "Lawrence Berkeley National Laboratory, now DESY",
+        "name": "Th\u00e9venet, Maxence",
+        "orcid": "0000-0001-7216-2277"
+      },
+      {
+        "affiliation": "Lawrence Berkeley National Laboratory",
+        "name": "Lehe, Remi",
+        "orcid": "0000-0002-3656-9659"
+      },
+      {
+        "affiliation": "Lawrence Berkeley National Laboratory",
+        "name": "Myers, Andrew",
+        "orcid": "0000-0001-8427-8330"
+      },
+      {
+        "affiliation": "Lawrence Berkeley National Laboratory",
+        "name": "Zhang, Weiqun",
+        "orcid": "0000-0001-8092-1974"
+      },
+    ],
+    "contributors": [
+    ],
+    "license": {
+      "id": "BSD-3-Clause-LBNL"
+    },
+    "language": "eng",
+    "keywords": [
+      "research",
+      "simulation",
+      "plasma",
+      "quasi-static",
+      "particle-in-cell",
+      "gpu",
+      "physics",
+      "pic"
+    ],
+    "access_right": "open"
+}
