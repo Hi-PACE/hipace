@@ -83,6 +83,38 @@ Hipace::Hipace () :
     } else {
         m_phys_const = make_constants_SI();
     }
+
+    double test_d = 0;
+    bool test_d_b = queryWithParser(pph, "test_d", test_d);
+    amrex::Print() << "##### Parser Test double " << test_d_b << ": " << test_d << '\n';
+
+    float test_f = 0;
+    bool test_f_b = queryWithParser(pph, "test_f", test_f);
+    amrex::Print() << "##### Parser Test float " << test_f_b << ": " << test_f << '\n';
+
+    int test_i = 0;
+    bool test_i_b = queryWithParser(pph, "test_i", test_i);
+    amrex::Print() << "##### Parser Test int " << test_i_b << ": " << test_i << '\n';
+
+    std::vector<double> test_v{};
+    bool test_v_b = queryWithParser(pph, "test_v", test_v);
+    amrex::Print() << "##### Parser Test vector " << test_v_b << ": ";
+    for (auto t : test_v) {
+        amrex::Print() << t << " ";
+    }
+    amrex::Print() << '\n';
+
+    std::array<double,3> test_a{};
+    bool test_a_b = queryWithParser(pph, "test_a", test_a);
+    amrex::Print() << "##### Parser Test array " << test_a_b << ": ";
+    for (auto t : test_a) {
+        amrex::Print() << t << " ";
+    }
+    amrex::Print() << '\n';
+
+    auto test_func = getFunctionWithParser<3>(pph, "test_func", {"x","y","z"});
+    amrex::Print() << "##### Parser Test function " << test_func(1.,2.,3.) << '\n';
+
     pph.query("dt", m_dt);
     pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
