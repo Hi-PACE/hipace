@@ -153,7 +153,7 @@ Hipace::~Hipace ()
 {
 #ifdef AMREX_USE_MPI
     NotifyFinish();
-    NotifyFinish(true);
+    NotifyFinish(0, true);
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
