@@ -299,7 +299,8 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
 
     for (int lev = 0; lev < nlev; ++lev) {
 
-    if (lev == 1) { // skip all slices which are not existing on level 1
+    // skip all slices which are not existing on level 1
+    if (lev == 1) {
         // use geometry of coarse grid to determine whether slice is to be solved
         const amrex::Real* problo = geom.ProbLo();
         const amrex::Real* dx = geom.CellSize();
@@ -307,15 +308,18 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         if (pos < patch_lo || pos > patch_hi) continue;
     }
 
-    amrex::MultiFab::Copy( // shift Bx, By
+    // shift Bx, By
+    amrex::MultiFab::Copy(
         getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
         Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous2]["Bx"],
         2, m_slices_nguards);
-    amrex::MultiFab::Copy( // shift Ez, Bx, By, Bz, jx, jx_beam, jy, jy_beam
+    // shift Ez, Bx, By, Bz, jx, jx_beam, jy, jy_beam
+    amrex::MultiFab::Copy(
         getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
         Comps[WhichSlice::This]["Ez"], Comps[WhichSlice::Previous1]["Ez"],
         8, m_slices_nguards);
-    amrex::MultiFab::Copy(  // shift rho, Psi
+    // shift rho, Psi
+    amrex::MultiFab::Copy(
         getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
         Comps[WhichSlice::This]["rho"], Comps[WhichSlice::Previous1]["rho"],
         2, m_slices_nguards);

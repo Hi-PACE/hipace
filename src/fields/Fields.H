@@ -126,8 +126,8 @@ public:
      * \param[in] patch_lo lower longitudinal end of refined level
      * \param[in] patch_hi upper longitudinal end of refined level
      */
-     void ShiftSlices (int nlev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
-                       const amrex::Real patch_hi);
+    void ShiftSlices (int nlev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
+                      const amrex::Real patch_hi);
 
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev, bool inverse=false);
