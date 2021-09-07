@@ -46,6 +46,9 @@ public:
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;}
 
+    /** return coarsening ratio of diagnostics */
+    amrex::IntVect getCoarsening (int lev) { return m_diag_coarsen[lev]; }
+
     /** \brief return box which possibly was trimmed in case of slice IO
      *
      * \param[in] box_3d box to be possibly trimmed to a slice box
@@ -65,6 +68,7 @@ private:
     amrex::Vector<amrex::FArrayBox> m_F;
     DiagType m_diag_type; /**< Type of diagnostics (xyz xz yz) */
     int m_slice_dir; /**< Slicing direction */
+    amrex::Vector<amrex::IntVect> m_diag_coarsen; /**< xyz coarsening ratio (positive) */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
     int m_nfields; /**< Number of physical fields to write */

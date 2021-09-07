@@ -233,12 +233,13 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 
 void
-Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int full_comp,
-              int ncomp, amrex::FArrayBox& fab, int slice_dir, amrex::Geometry geom)
+Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int full_comp,
+              const int ncomp, amrex::FArrayBox& fab, const int slice_dir,
+              const amrex::IntVect diag_coarsen, const amrex::Geometry geom)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][WhichSlice::This]; // copy from/to the current slice
+    auto& slice_mf = m_slices[lev][WhichSlice::This]; // copy from the current slice
     amrex::Array4<amrex::Real> slice_array; // There is only one Box.
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
@@ -249,45 +250,52 @@ Fields::Copy (int lev, int i_slice, FieldCopyType copy_type, int slice_comp, int
         // slice_array's longitude index is i_slice.
     }
 
+    const int full_array_z = i_slice / diag_coarsen[2];
+    const amrex::IntVect ncells_global = geom.Domain().length();
+
     amrex::Box const& vbx = fab.box();
-    if (vbx.smallEnd(Direction::z) <= i_slice and
-        vbx.bigEnd  (Direction::z) >= i_slice)
+    if (vbx.smallEnd(Direction::z) <= full_array_z and
+        vbx.bigEnd  (Direction::z) >= full_array_z and
+        ( i_slice % diag_coarsen[2] == diag_coarsen[2]/2 or
+        ( i_slice == ncells_global[2] - 1 and
+        ( ncells_global[2] - 1 ) % diag_coarsen[2] < diag_coarsen[2]/2 )))
     {
         amrex::Box copy_box = vbx;
-        copy_box.setSmall(Direction::z, i_slice);
-        copy_box.setBig  (Direction::z, i_slice);
+        copy_box.setSmall(Direction::z, full_array_z);
+        copy_box.setBig  (Direction::z, full_array_z);
 
         amrex::Array4<amrex::Real> const& full_array = fab.array();
 
-        const amrex::IntVect ncells_global = geom.Domain().length();
-        const bool nx_even = ncells_global[0] % 2 == 0;
-        const bool ny_even = ncells_global[1] % 2 == 0;
+        const int even_slice_x = ncells_global[0] % 2 == 0 and slice_dir == 0;
+        const int even_slice_y = ncells_global[1] % 2 == 0 and slice_dir == 1;
 
-        if (copy_type == FieldCopyType::FtoS) {
-            amrex::ParallelFor(copy_box, ncomp,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-            {
-                slice_array(i,j,k,n+slice_comp) = full_array(i,j,k,n+full_comp);
-            });
-        } else {
-            amrex::ParallelFor(copy_box, ncomp,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-            {
-                if        (slice_dir ==-1 /* 3D data */){
-                    full_array(i,j,k,n+full_comp) = slice_array(i,j,k,n+slice_comp);
-                } else if (slice_dir == 0 /* yz slice */){
-                    full_array(i,j,k,n+full_comp) =
-                        nx_even ? 0.5_rt * (slice_array(i-1,j,k,n+slice_comp) +
-                                            slice_array(i,j,k,n+slice_comp))
-                        : slice_array(i,j,k,n+slice_comp);
-                } else /* slice_dir == 1, xz slice */{
-                    full_array(i,j,k,n+full_comp) =
-                        ny_even ? 0.5_rt * ( slice_array(i,j-1,k,n+slice_comp) +
-                                             slice_array(i,j,k,n+slice_comp))
-                        : slice_array(i,j,k,n+slice_comp);
+        const int coarse_x = diag_coarsen[0];
+        const int coarse_y = diag_coarsen[1];
+
+        const int ncells_x = ncells_global[0];
+        const int ncells_y = ncells_global[1];
+
+        amrex::ParallelFor(copy_box, ncomp,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+        {
+            // coarsening in slice direction is always 1
+            const int i_c_start = amrex::min(i*coarse_x +(coarse_x-1)/2 -even_slice_x, ncells_x-1);
+            const int i_c_stop  = amrex::min(i*coarse_x +coarse_x/2+1, ncells_x);
+            const int j_c_start = amrex::min(j*coarse_y +(coarse_y-1)/2 -even_slice_y, ncells_y-1);
+            const int j_c_stop  = amrex::min(j*coarse_y +coarse_y/2+1, ncells_y);
+
+            amrex::Real field_value = 0._rt;
+            int n_values = 0;
+
+            for (int j_c = j_c_start; j_c != j_c_stop; ++j_c) {
+                for (int i_c = i_c_start; i_c != i_c_stop; ++i_c) {
+                    field_value += slice_array(i_c, j_c, i_slice, n+slice_comp);
+                    ++n_values;
                 }
-            });
-        }
+            }
+
+            full_array(i,j,k,n+full_comp) = field_value / amrex::max(n_values,1);
+        });
     }
 }
 

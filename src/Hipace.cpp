@@ -1291,8 +1291,8 @@ Hipace::ResizeFDiagFAB (const int it)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    m_fields.Copy(lev, i_slice, FieldCopyType::StoF, 0, 0, Comps[WhichSlice::This]["N"],
-                  m_diags.getF(lev), m_diags.sliceDir(), Geom(lev));
+    m_fields.Copy(lev, i_slice, 0, 0, Comps[WhichSlice::This]["N"],
+                  m_diags.getF(lev), m_diags.sliceDir(), m_diags.getCoarsening(lev), Geom(lev));
 }
 
 void
