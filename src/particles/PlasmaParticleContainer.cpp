@@ -11,13 +11,7 @@
 void
 PlasmaParticleContainer::ReadParameters ()
 {
-    // normalized_units is directly queried here so we can defined the appropriate PhysConst
-    // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
-    // PlasmaParticleContainer constructor is called.
-    amrex::ParmParse pph("hipace");
-    bool normalized_units = false;
-    pph.query("normalized_units", normalized_units);
-    PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
+    PhysConst phys_const = get_phys_const();
 
     amrex::ParmParse pp(m_name);
     std::string element = "";
@@ -51,7 +45,7 @@ PlasmaParticleContainer::ReadParameters ()
     pp.query("can_ionize", m_can_ionize);
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!normalized_units,
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!Hipace::GetInstance().m_normalized_units,
             "Cannot use Ionization Module in normalized units");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial Ion level must be specified");
