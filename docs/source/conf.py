@@ -17,9 +17,10 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 # -- Project information -----------------------------------------------------
 
 project = 'HiPACE++'
-copyright = '2020, Severin Diederichs, Maxence Thevenet'
-author = 'Severin Diederichs, Maxence Thevenet'
-
+copyright = '2021, Severin Diederichs, Axel Huebl, Remi Lehe, Andrew Myers, Alexander Sinn, Maxence Thevenet, Weiqun Zhang'
+author = 'Severin Diederichs, Axel Huebl, Remi Lehe, Andrew Myers, Alexander Sinn, Maxence Thevenet, Weiqun Zhang'
+version = u'21.09'
+release = u'21.09'
 
 # -- General configuration ---------------------------------------------------
 

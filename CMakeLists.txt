@@ -1,7 +1,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.15.0)
-project(HiPACE VERSION 0.20.5)
+project(HiPACE VERSION 21.09)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -311,6 +311,12 @@ if(BUILD_TESTING)
 
         add_test(NAME slice_IO.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/slice_IO.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME output_coarsening.2Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/output_coarsening.2Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )

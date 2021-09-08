@@ -31,7 +31,8 @@ static std::array<std::map<std::string, int>, 5> Comps
             }},
         /* WhichSlice::Previous1 */
         {{
-                {"Bx", 0}, {"By", 1}, {"jx", 2}, {"jx_beam", 3}, {"jy", 4}, {"jy_beam", 5}, {"N", 6}
+                {"Ez", 0}, {"Bx", 1}, {"By", 2}, {"Bz", 3}, {"jx", 4}, {"jx_beam", 5}, {"jy", 6},
+                {"jy_beam", 7}, {"rho", 8}, {"Psi", 9}, {"N", 10}
             }},
         /* WhichSlice::Previous2 */
         {{
@@ -75,12 +76,10 @@ public:
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
      * \param[in] bin_size size of plasma tiles, for tmp arrays
-     * \param[in] ref_ratio mesh refinement ratio
      */
     void AllocData (
         int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm, int bin_size,
-        amrex::Vector<amrex::IntVect> const& ref_ratio);
+        const amrex::DistributionMapping& slice_dm, int bin_size);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
@@ -110,10 +109,10 @@ public:
      * \param[in] diag_coarsen coarsening ratio of diagnostics
      * \param[in] geom main geometry
      */
-    void Copy (int lev, int i_slice, int slice_comp, int full_comp,
-               amrex::Gpu::DeviceVector<int>& diag_comps_vect,
-               int ncomp, amrex::FArrayBox& fab, int slice_dir,
-               amrex::IntVect diag_coarsen, amrex::Geometry geom);
+    void Copy (const int lev, const int i_slice, const int slice_comp, const int full_comp,
+               const amrex::Gpu::DeviceVector<int>& diag_comps_vect,
+               const int ncomp, amrex::FArrayBox& fab, const int slice_dir,
+               const amrex::IntVect diag_coarsen, const amrex::Geometry geom);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
@@ -121,9 +120,14 @@ public:
      * to compute each slice. The current slice is always stored in index 1.
      * Hence, after one slice is computed, slices must be shifted by 1 element.
      *
-     * \param[in] lev MR level
+     * \param[in] nlev number of MR level
+     * \param[in] islice current slice to be shifted
+     * \param[in] geom geometry
+     * \param[in] patch_lo lower longitudinal end of refined level
+     * \param[in] patch_hi upper longitudinal end of refined level
      */
-    void ShiftSlices (int lev);
+    void ShiftSlices (int nlev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
+                      const amrex::Real patch_hi);
 
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev, bool inverse=false);
@@ -164,9 +168,29 @@ public:
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] component which can be Psi, Ez, By, Bx ...
+     * \param[in] islice longitudinal slice
      */
     void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                std::string component);
+                                std::string component, const int islice);
+
+    /** \brief Interpolate values from coarse grid to the fine grid
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be Psi or rho
+     * \param[in] islice longitudinal slice
+     */
+    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                                    std::string component, const int islice);
+
+    /** \brief Interpolate values from coarse grid to the fine grid
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be Psi or rho
+     */
+    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                                    std::string component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
@@ -174,37 +198,44 @@ public:
      * \param[in] geom Geometry
      * \param[in] m_comm_xy transverse communicator on the slice
      * \param[in] lev current level
+     * \param[in] islice longitudinal slice
      */
     void SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                    const MPI_Comm& m_comm_xy, const int lev);
+                                    const MPI_Comm& m_comm_xy, const int lev, const int islice);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] islice longitudinal slice
      */
-    void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
+    void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                         const int islice);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] islice longitudinal slice
      */
     void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev);
+                         const int lev, const int islice);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] islice longitudinal slice
      */
     void SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev);
+                         const int lev, const int islice);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] islice longitudinal slice
      */
-    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
+    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                         const int islice);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
@@ -264,7 +295,6 @@ private:
     bool m_do_dirichlet_poisson = true;
     /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
-    amrex::IntVect m_ref_ratio; /**< refinement ratio in {x, y, z} */
 };
 
 #endif
