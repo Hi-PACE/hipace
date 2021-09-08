@@ -59,6 +59,11 @@ Diagnostic::Diagnostic (int nlev)
             }
         }
     }
+    m_nfields = m_comps_output.size();
+    m_comps_output_idx = amrex::Gpu::DeviceVector<int>(m_nfields);
+    for(int i = 0; i < m_nfields; ++i) {
+        m_comps_output_idx[i] = Comps[WhichSlice::This][m_comps_output[i]];
+    }
 
     amrex::ParmParse ppb("beams");
     // read in all beam names
@@ -88,10 +93,8 @@ Diagnostic::Diagnostic (int nlev)
 }
 
 void
-Diagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom)
+Diagnostic::AllocData (int lev, const amrex::Box& bx, amrex::Geometry const& geom)
 {
-    m_nfields = nfields;
-
     // trim the 3D box to slice box for slice IO
     amrex::Box F_bx = TrimIOBox(bx);
 

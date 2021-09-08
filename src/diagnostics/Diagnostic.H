@@ -20,10 +20,9 @@ public:
      *
      * \param[in] lev MR level
      * \param[in] bx Box for initialization
-     * \param[in] nfields number of field components
      * \param[in] geom geometry of the full simulation domain
      */
-    void AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geometry const& geom);
+    void AllocData (int lev, const amrex::Box& bx, amrex::Geometry const& geom);
 
     /** \brief return the main diagnostics multifab */
     amrex::Vector<amrex::FArrayBox>& getF () { return m_F; }
@@ -36,6 +35,12 @@ public:
 
     /** \brief return Component names of Fields to output */
     amrex::Vector<std::string>& getComps () { return m_comps_output; }
+
+    /** \brief return Component indexes of Fields to output */
+    amrex::Gpu::DeviceVector<int>& getCompsIdx() { return m_comps_output_idx; }
+
+    /** \brief return the number of Field components to output */
+    int getNFields() { return m_nfields; }
 
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
@@ -70,6 +75,8 @@ private:
     int m_slice_dir; /**< Slicing direction */
     amrex::Vector<amrex::IntVect> m_diag_coarsen; /**< xyz coarsening ratio (positive) */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
+    /** Component indexes to Write to output file */
+    amrex::Gpu::DeviceVector<int> m_comps_output_idx;
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */

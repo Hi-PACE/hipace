@@ -234,6 +234,7 @@ Fields::LongitudinalDerivative (const amrex::MultiFab& src1, const amrex::MultiF
 
 void
 Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int full_comp,
+              const amrex::Gpu::DeviceVector<int>& diag_comps_vect,
               const int ncomp, amrex::FArrayBox& fab, const int slice_dir,
               const amrex::IntVect diag_coarsen, const amrex::Geometry geom)
 {
@@ -275,9 +276,13 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
         const int ncells_x = ncells_global[0];
         const int ncells_y = ncells_global[1];
 
+        const int *diag_comps = diag_comps_vect.data();
+
         amrex::ParallelFor(copy_box, ncomp,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
+            const int m = n[diag_comps];
+
             // coarsening in slice direction is always 1
             const int i_c_start = amrex::min(i*coarse_x +(coarse_x-1)/2 -even_slice_x, ncells_x-1);
             const int i_c_stop  = amrex::min(i*coarse_x +coarse_x/2+1, ncells_x);
@@ -289,7 +294,7 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
 
             for (int j_c = j_c_start; j_c != j_c_stop; ++j_c) {
                 for (int i_c = i_c_start; i_c != i_c_stop; ++i_c) {
-                    field_value += slice_array(i_c, j_c, i_slice, n+slice_comp);
+                    field_value += slice_array(i_c, j_c, i_slice, m+slice_comp);
                     ++n_values;
                 }
             }
