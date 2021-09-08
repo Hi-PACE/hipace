@@ -101,12 +101,11 @@ OpenPMDWriter::WriteFieldData (
     auto meshes = iteration.meshes;
 
     // loop over field components
-    for (std::string fieldname : varnames)
+    for ( int icomp = 0; icomp < varnames.size(); ++icomp )
     {
-        int icomp = Comps[WhichSlice::This][fieldname];
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
-        openPMD::Mesh field = meshes[fieldname];
+        openPMD::Mesh field = meshes[varnames[icomp]];
         openPMD::MeshRecordComponent field_comp = field[openPMD::MeshRecordComponent::SCALAR];
 
         // meta-data
