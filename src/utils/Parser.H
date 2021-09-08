@@ -8,6 +8,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -51,14 +52,14 @@ safeCastToInt(const double x, const std::string& real_name) {
     return result;
 }
 
-static amrex::Parser
-makeParser (std::string const& parse_function, amrex::Vector<std::string> const& varnames)
+static amrex::Parser&
+initParser (amrex::Parser& parser, amrex::Vector<std::string> const& varnames)
 {
     // Since queryWithParser recursively calls this routine, keep track of symbols
     // in case an infinite recursion is found (a symbol's value depending on itself).
     static std::set<std::string> recursive_symbols{};
 
-    amrex::Parser parser(parse_function);
+    //amrex::Parser parser(parse_function);
     parser.registerVariables(varnames);
 
     std::set<std::string> symbols = parser.symbols();
@@ -92,13 +93,15 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
 
     for (auto const& s : symbols) {
 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(recursive_symbols.count(s)==0,
+                                         "Expressions contains recursive symbol " + s);
+
         auto usr_constant = my_constants_cache.find(s);
         if (usr_constant != my_constants_cache.end()) {
             parser.setConstant(s, usr_constant->second);
             continue;
         }
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(recursive_symbols.count(s)==0,
-                                         "Expressions contains recursive symbol " + s);
+
         double v;
         recursive_symbols.insert(s);
         const bool is_input = queryWithParser(pp_my_constants, s.c_str(), v);
@@ -118,7 +121,6 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
 
         amrex::Abort("makeParser::Unknown symbol " + s);
     }
-    parser.print();
     return parser;
 }
 
@@ -126,40 +128,50 @@ template<int N>
 inline auto
 getFunctionWithParser (const amrex::ParmParse& pp,
                        char const * const str,
+                       amrex::Parser& parser,
                        amrex::Vector<std::string> const& varnames)
 {
     std::string func_str{};
     std::vector<std::string> f;
     pp.getarr(str, f);
     for (auto const& s : f) {
-        func_str += s;
+        func_str += s + ' ';
     }
-    return makeParser(func_str, varnames).compile<N>();
+    parser.define(func_str);
+    initParser(parser, varnames);
+    parser.print();
+    return parser.compile<N>();
 }
 
 inline void
 fillWithParser (std::string const& str, double& val) {
-    val = makeParser(str, {}).compileHost<0>()();
+    amrex::Parser parser(str);
+    val = initParser(parser, {}).compileHost<0>()();
 }
 
 inline void
 fillWithParser (std::string const& str, float& val) {
-    val = static_cast<float>(makeParser(str, {}).compileHost<0>()());
+    amrex::Parser parser(str);
+    val = static_cast<float>(initParser(parser, {}).compileHost<0>()());
 }
 
 inline void
 fillWithParser (std::string const& str, int& val) {
-    val = safeCastToInt(std::round(makeParser(str, {}).compileHost<0>()()),str);
+    amrex::Parser parser(str);
+    val = safeCastToInt(std::round(initParser(parser, {}).compileHost<0>()()),str);
 }
 
 inline void
 fillWithParser (std::string const& str, bool& val) {
-    val = makeParser(str, {}).compileHost<0>()();
+    amrex::Parser parser(str);
+    val = initParser(parser, {}).compileHost<0>()();
 }
 
 inline void
 fillWithParser (std::string const& str, std::string& val) {
     val = str;
+    auto end_pos = std::remove(val.begin(), val.end(), ' ');
+    val.erase(end_pos, val.end());
 }
 
 template<class T>
@@ -167,10 +179,10 @@ inline void
 fillWithParserArr (std::vector<std::string> const& str_arr, T& val) {
     std::string str{};
     for (auto const& s : str_arr) {
-        str += s;
+        str += s + ' ';
     }
     fillWithParser(str, val);
-    amrex::Print() << val;
+    amrex::Print() << " " << val;
 }
 
 template<class T>
@@ -180,7 +192,18 @@ fillWithParserArr (std::vector<std::string> const& str_arr, std::vector<T>& val_
     val_arr.resize(n);
     for (auto i=0ul ; i != n ; ++i) {
         fillWithParser(str_arr[i], val_arr[i]);
-        amrex::Print() << val_arr[i] << " ";
+        amrex::Print() << " " << val_arr[i];
+    }
+}
+
+template<class T>
+inline void
+fillWithParserArr (std::vector<std::string> const& str_arr, amrex::Vector<T>& val_arr) {
+    auto const n = str_arr.size();
+    val_arr.resize(n);
+    for (auto i=0ul ; i != n ; ++i) {
+        fillWithParser(str_arr[i], val_arr[i]);
+        amrex::Print() << " " << val_arr[i];
     }
 }
 
@@ -197,7 +220,7 @@ fillWithParserArr (std::vector<std::string> const& str_arr, std::array<T,size>& 
     AMREX_ALWAYS_ASSERT( n == size );
     for (auto i=0ul ; i != n ; ++i) {
         fillWithParser(str_arr[i], val_arr[i]);
-        amrex::Print() << val_arr[i] << " ";
+        amrex::Print() << " " << val_arr[i];
     }
 }
 
@@ -207,7 +230,7 @@ getWithParser (const amrex::ParmParse& pp, char const * const str, T& val)
 {
     std::vector<std::string> f;
     pp.getarr(str, f);
-    amrex::Print() << str << " ";
+    amrex::Print() << str << " :";
     fillWithParserArr(f, val);
     amrex::Print() << '\n';
 }
@@ -218,7 +241,7 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val)
 {
     std::vector<std::string> f;
     const int is_specified = pp.queryarr(str, f);
-    amrex::Print() << str << " ";
+    amrex::Print() << str << " :";
     if (is_specified)
     {
         fillWithParserArr(f, val);

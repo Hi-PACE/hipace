@@ -1,5 +1,5 @@
 #include "GetInitialDensity.H"
-#include <AMReX_ParmParse.H>
+#include "utils/Parser.H"
 
 GetInitialDensity::GetInitialDensity (const std::string& name)
 {
