@@ -4,6 +4,7 @@
 
 Diagnostic::Diagnostic (int nlev)
     : m_F(nlev),
+      m_diag_coarsen(nlev),
       m_geom_io(nlev)
 {
     amrex::ParmParse ppd("diagnostic");
@@ -20,6 +21,18 @@ Diagnostic::Diagnostic (int nlev)
         m_slice_dir = 0;
     } else {
         amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
+    }
+
+    for(int ilev = 0; ilev<nlev; ++ilev) {
+        amrex::Array<int,3> diag_coarsen_arr{1,1,1};
+        // set all levels the same for now
+        ppd.query("coarsening", diag_coarsen_arr);
+        if(m_slice_dir == 0 || m_slice_dir == 1) {
+            diag_coarsen_arr[m_slice_dir] = 1;
+        }
+        m_diag_coarsen[ilev] = amrex::IntVect(diag_coarsen_arr);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_diag_coarsen[ilev].min() >= 1,
+            "Coarsening ratio must be >= 1");
     }
 
     ppd.queryarr("field_data", m_comps_output);
@@ -82,6 +95,8 @@ Diagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geomet
     // trim the 3D box to slice box for slice IO
     amrex::Box F_bx = TrimIOBox(bx);
 
+    F_bx.coarsen(m_diag_coarsen[lev]);
+
     m_F.push_back(amrex::FArrayBox(F_bx, m_nfields, amrex::The_Pinned_Arena()));
 
     m_geom_io[lev] = geom;
@@ -94,14 +109,16 @@ Diagnostic::AllocData (int lev, const amrex::Box& bx, int nfields, amrex::Geomet
         domain.setBig(m_slice_dir, icenter);
         m_geom_io[lev] = amrex::Geometry(domain, &prob_domain, geom.Coord());
     }
+    m_geom_io[lev].coarsen(m_diag_coarsen[lev]);
 }
 
 void
 Diagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
 {
     amrex::Box io_box = TrimIOBox(box);
+    io_box.coarsen(m_diag_coarsen[lev]);
     m_F[lev].resize(io_box, m_nfields);
- }
+}
 
 amrex::Box
 Diagnostic::TrimIOBox (const amrex::Box box_3d)

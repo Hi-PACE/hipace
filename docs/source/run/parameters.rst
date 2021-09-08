@@ -319,6 +319,10 @@ Diagnostic parameters
     x-axis, respectively. In case of an even number of grid points, the value will be averaged
     between the two inner grid points.
 
+* ``diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
+    Coarsening ratio of field output in x, y and z direction respectively. For x and y, the
+    value is subsampled at the cell center. For z, the slice nearest to the cell center is taken.
+
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be `all`,
     `none` or a subset of `ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi`.
