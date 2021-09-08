@@ -27,9 +27,9 @@ namespace {
 
 Hipace* Hipace::m_instance = nullptr;
 
+bool Hipace::m_normalized_units = false;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
-bool Hipace::m_normalized_units = false;
 amrex::Real Hipace::m_physical_time = 0.0;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
@@ -54,20 +54,26 @@ bool Hipace::m_do_tiling = true;
 Hipace&
 Hipace::GetInstance ()
 {
-    if (!m_instance) {
-        m_instance = new Hipace();
-    }
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_instance, "instance has not been initialized yet");
     return *m_instance;
 }
 
 Hipace::Hipace () :
+    m_phys_const([this](){
+        m_instance = this;
+        amrex::ParmParse pph("hipace");
+        pph.query("normalized_units", this->m_normalized_units);
+        if (this->m_normalized_units){
+            return make_constants_normalized();
+        } else {
+            return make_constants_SI();
+        }
+    }()),
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
     m_diags(this->maxLevel()+1)
 {
-    m_instance = this;
-
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     pp.query("max_step", m_max_step);
 
@@ -77,12 +83,6 @@ Hipace::Hipace () :
 #endif
 
     amrex::ParmParse pph("hipace");
-    pph.query("normalized_units", m_normalized_units);
-    if (m_normalized_units){
-        m_phys_const = make_constants_normalized();
-    } else {
-        m_phys_const = make_constants_SI();
-    }
     pph.query("dt", m_dt);
     pph.query("verbose", m_verbose);
     pph.query("numprocs_x", m_numprocs_x);
