@@ -10,7 +10,7 @@ namespace
         PhysConst phys_const = get_phys_const();
 
         std::string element = "electron";
-        pp.query("element", element);
+        queryWithParser(pp, "element", element);
         if (element == "electron"){
             charge = -phys_const.q_e;
             mass = phys_const.m_e;
@@ -31,22 +31,22 @@ BeamParticleContainer::ReadParameters ()
     amrex::ParmParse pp(m_name);
     QueryElementSetChargeMass(pp, m_charge, m_mass);
     // Overwrite element's charge and mass if user specifies them explicitly
-    pp.query("charge", m_charge);
-    pp.query("mass", m_mass);
+    queryWithParser(pp, "charge", m_charge);
+    queryWithParser(pp, "mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The beam particle mass must not be 0");
 
-    pp.get("injection_type", m_injection_type);
+    getWithParser(pp, "injection_type", m_injection_type);
     amrex::Vector<amrex::Real> tmp_vector;
-    if (pp.queryarr("ppc", tmp_vector)){
+    if (queryWithParser(pp, "ppc", tmp_vector)){
         AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
         for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
     }
-    pp.query("dx_per_dzeta", m_dx_per_dzeta);
-    pp.query("dy_per_dzeta", m_dy_per_dzeta);
-    pp.query("duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
-    pp.query("do_z_push", m_do_z_push);
-    pp.query("n_subcycles", m_n_subcycles);
-    pp.query("finest_level", m_finest_level);
+    queryWithParser(pp, "dx_per_dzeta", m_dx_per_dzeta);
+    queryWithParser(pp, "dy_per_dzeta", m_dy_per_dzeta);
+    queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
+    queryWithParser(pp, "do_z_push", m_do_z_push);
+    queryWithParser(pp, "n_subcycles", m_n_subcycles);
+    queryWithParser(pp, "finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.)
@@ -63,12 +63,12 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     if (m_injection_type == "fixed_ppc") {
 
         amrex::ParmParse pp(m_name);
-        pp.get("zmin", m_zmin);
-        pp.get("zmax", m_zmax);
-        pp.get("radius", m_radius);
-        pp.query("min_density", m_min_density);
+        getWithParser(pp, "zmin", m_zmin);
+        getWithParser(pp, "zmax", m_zmax);
+        getWithParser(pp, "radius", m_radius);
+        queryWithParser(pp, "min_density", m_min_density);
         amrex::Vector<int> random_ppc {false, false, false};
-        pp.queryarr("random_ppc", random_ppc);
+        queryWithParser(pp, "random_ppc", random_ppc);
         const GetInitialDensity get_density(m_name);
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
@@ -81,25 +81,25 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool can = false;
         amrex::Real zmin = 0, zmax = 0;
         std::string profile = "gaussian";
-        pp.query("profile", profile);
+        queryWithParser(pp, "profile", profile);
         if (profile == "can") {
             can = true;
-            pp.get("zmin", zmin);
-            pp.get("zmax", zmax);
+            getWithParser(pp, "zmin", zmin);
+            getWithParser(pp, "zmax", zmax);
         } else if (profile == "gaussian") {
         } else {
             amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
         }
-        pp.get("position_mean", loc_array);
+        getWithParser(pp, "position_mean", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
-        pp.get("position_std", loc_array);
+        getWithParser(pp, "position_std", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
-        pp.get("num_particles", m_num_particles);
-        bool charge_is_specified = pp.query("total_charge", m_total_charge);
-        bool peak_density_is_specified = pp.query("density", m_density);
+        getWithParser(pp, "num_particles", m_num_particles);
+        bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
+        bool peak_density_is_specified = queryWithParser(pp, "density", m_density);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
             "Please specify exlusively either total_charge or density of the beam");
-        pp.query("do_symmetrize", m_do_symmetrize);
+        queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
 
@@ -125,11 +125,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
         amrex::ParmParse pp(m_name);
-        pp.get("input_file", m_input_file);
-        bool coordinates_specified = pp.query("file_coordinates_xyz", m_file_coordinates_xyz);
-        bool n_0_specified = pp.query("plasma_density", m_plasma_density);
-        pp.query("iteration", m_num_iteration);
-        bool species_specified = pp.query("openPMD_species_name", m_species_name);
+        getWithParser(pp, "input_file", m_input_file);
+        bool coordinates_specified = queryWithParser(pp, "file_coordinates_xyz", m_file_coordinates_xyz);
+        bool n_0_specified = queryWithParser(pp, "plasma_density", m_plasma_density);
+        queryWithParser(pp, "iteration", m_num_iteration);
+        bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;
         }

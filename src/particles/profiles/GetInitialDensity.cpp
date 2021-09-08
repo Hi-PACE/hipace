@@ -5,8 +5,8 @@ GetInitialDensity::GetInitialDensity (const std::string& name)
 {
     amrex::ParmParse pp(name);
     std::string profile;
-    pp.get("density", m_density);
-    pp.get("profile", profile);
+    getWithParser(pp, "density", m_density);
+    getWithParser(pp, "profile", profile);
 
     if        (profile == "gaussian") {
         m_profile = BeamProfileType::Gaussian;
@@ -18,12 +18,12 @@ GetInitialDensity::GetInitialDensity (const std::string& name)
 
     if (m_profile == BeamProfileType::Gaussian) {
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        if (pp.query("position_mean", loc_array)) {
+        if (queryWithParser(pp, "position_mean", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
                 m_position_mean[idim] = loc_array[idim];
             }
         }
-        if (pp.query("position_std", loc_array)) {
+        if (queryWithParser(pp, "position_std", loc_array)) {
             for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
                 m_position_std[idim] = loc_array[idim];
             }

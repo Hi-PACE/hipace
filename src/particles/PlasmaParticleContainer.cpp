@@ -16,7 +16,7 @@ PlasmaParticleContainer::ReadParameters ()
     amrex::ParmParse pp(m_name);
     std::string element = "";
     amrex::Real mass_Da = 0;
-    pp.query("element", element);
+    queryWithParser(pp, "element", element);
     if (element == "electron") {
         m_charge = -phys_const.q_e;
         m_mass = phys_const.m_e;
@@ -32,17 +32,17 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(mass_Da != 0, "Unknown Element");
     }
 
-    pp.query("mass_Da", mass_Da);
+    queryWithParser(pp, "mass_Da", mass_Da);
     if(mass_Da != 0) {
         m_mass = phys_const.m_p * mass_Da / 1.007276466621;
     }
-    pp.query("mass", m_mass);
+    queryWithParser(pp, "mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
 
-    bool ion_lev_specified = pp.query("initial_ion_level", m_init_ion_lev);
+    bool ion_lev_specified = queryWithParser(pp, "initial_ion_level", m_init_ion_lev);
     m_can_ionize = pp.contains("ionization_product");
 
-    pp.query("can_ionize", m_can_ionize);
+    queryWithParser(pp, "can_ionize", m_can_ionize);
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!Hipace::GetInstance().m_normalized_units,
@@ -50,11 +50,11 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial Ion level must be specified");
     }
-    pp.query("neutralize_background", m_neutralize_background);
+    queryWithParser(pp, "neutralize_background", m_neutralize_background);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
         "Cannot use neutralize_background for Ion plasma");
 
-    if(!pp.query("charge", m_charge)) {
+    if(!queryWithParser(pp, "charge", m_charge)) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge != 0,
             "The plasma particle charge must be specified");
     }
@@ -62,18 +62,18 @@ PlasmaParticleContainer::ReadParameters ()
     if(ion_lev_specified && !m_can_ionize) {
         m_charge *= m_init_ion_lev;
     }
-    pp.query("ionization_product", m_product_name);
-    pp.query("density", m_density);
-    pp.query("level", m_level);
-    pp.query("radius", m_radius);
-    pp.query("hollow_core_radius", m_hollow_core_radius);
+    queryWithParser(pp, "ionization_product", m_product_name);
+    queryWithParser(pp, "density", m_density);
+    queryWithParser(pp, "level", m_level);
+    queryWithParser(pp, "radius", m_radius);
+    queryWithParser(pp, "hollow_core_radius", m_hollow_core_radius);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
-    pp.query("parabolic_curvature", m_parabolic_curvature);
-    pp.query("max_qsa_weighting_factor", m_max_qsa_weighting_factor);
+    queryWithParser(pp, "parabolic_curvature", m_parabolic_curvature);
+    queryWithParser(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor);
     amrex::Vector<amrex::Real> tmp_vector;
-    if (pp.queryarr("ppc", tmp_vector)){
+    if (queryWithParser(pp, "ppc", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
         "ppc is only specified in transverse directions for plasma particles, "
         "it is 1 in the longitudinal direction z. "
@@ -81,12 +81,12 @@ PlasmaParticleContainer::ReadParameters ()
         for (int i=0; i<AMREX_SPACEDIM-1; i++) m_ppc[i] = tmp_vector[i];
     }
     amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-    if (pp.query("u_mean", loc_array)) {
+    if (queryWithParser(pp, "u_mean", loc_array)) {
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             m_u_mean[idim] = loc_array[idim];
         }
     }
-    if (pp.query("u_std", loc_array)) {
+    if (queryWithParser(pp, "u_std", loc_array)) {
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             m_u_std[idim] = loc_array[idim];
         }

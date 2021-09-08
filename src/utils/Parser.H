@@ -21,7 +21,7 @@ inline void
 getWithParser (const amrex::ParmParse& pp, char const * const str, T& val);
 
 template<class T>
-inline bool
+inline int
 queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val);
 
 inline int
@@ -97,9 +97,8 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
             parser.setConstant(s, usr_constant->second);
             continue;
         }
-
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(recursive_symbols.count(*it)==0,
-                                         "Expressions contains recursive symbol " + *it);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(recursive_symbols.count(s)==0,
+                                         "Expressions contains recursive symbol " + s);
         double v;
         recursive_symbols.insert(s);
         const bool is_input = queryWithParser(pp_my_constants, s.c_str(), v);
@@ -153,6 +152,16 @@ fillWithParser (std::string const& str, int& val) {
     val = safeCastToInt(std::round(makeParser(str, {}).compileHost<0>()()),str);
 }
 
+inline void
+fillWithParser (std::string const& str, bool& val) {
+    val = makeParser(str, {}).compileHost<0>()();
+}
+
+inline void
+fillWithParser (std::string const& str, std::string& val) {
+    val = str;
+}
+
 template<class T>
 inline void
 fillWithParserArr (std::vector<std::string> const& str_arr, T& val) {
@@ -161,6 +170,7 @@ fillWithParserArr (std::vector<std::string> const& str_arr, T& val) {
         str += s;
     }
     fillWithParser(str, val);
+    amrex::Print() << val;
 }
 
 template<class T>
@@ -170,6 +180,7 @@ fillWithParserArr (std::vector<std::string> const& str_arr, std::vector<T>& val_
     val_arr.resize(n);
     for (auto i=0ul ; i != n ; ++i) {
         fillWithParser(str_arr[i], val_arr[i]);
+        amrex::Print() << val_arr[i] << " ";
     }
 }
 
@@ -186,6 +197,7 @@ fillWithParserArr (std::vector<std::string> const& str_arr, std::array<T,size>& 
     AMREX_ALWAYS_ASSERT( n == size );
     for (auto i=0ul ; i != n ; ++i) {
         fillWithParser(str_arr[i], val_arr[i]);
+        amrex::Print() << val_arr[i] << " ";
     }
 }
 
@@ -195,19 +207,23 @@ getWithParser (const amrex::ParmParse& pp, char const * const str, T& val)
 {
     std::vector<std::string> f;
     pp.getarr(str, f);
+    amrex::Print() << str << " ";
     fillWithParserArr(f, val);
+    amrex::Print() << '\n';
 }
 
 template<class T>
-inline bool
+inline int
 queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val)
 {
     std::vector<std::string> f;
-    bool is_specified = pp.queryarr(str, f);
+    const int is_specified = pp.queryarr(str, f);
+    amrex::Print() << str << " ";
     if (is_specified)
     {
         fillWithParserArr(f, val);
     }
+    amrex::Print() << '\n';
     return is_specified;
 }
 

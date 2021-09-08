@@ -165,9 +165,9 @@ Hipace::Hipace () :
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_explicit, "Mesh refinement + explicit solver is not yet"
                                 " supported! Please use hipace.bxby_solver = predictor-corrector");
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        pph.get("patch_lo", loc_array);
+        getWithParser(pph, "patch_lo", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
-        pph.get("patch_hi", loc_array);
+        getWithParser(pph, "patch_hi", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
     }
 
