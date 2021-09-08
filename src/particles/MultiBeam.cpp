@@ -42,13 +42,20 @@ MultiBeam::DepositCurrentSlice (
     }
 }
 
-amrex::Vector<BeamBins>
-MultiBeam::findParticlesInEachSlice (int lev, int ibox, amrex::Box bx, amrex::Geometry& geom,
+amrex::Vector<amrex::Vector<BeamBins>>
+MultiBeam::findParticlesInEachSlice (int nlev, int ibox, amrex::Box bx,
+                                     const amrex::IntVect& ref_ratio,
+                                     amrex::Vector<amrex::Geometry> const& geom,
                                      const amrex::Vector<BoxSorter>& a_box_sorter_vec)
 {
-    amrex::Vector<BeamBins> bins;
-    for (int i=0; i<m_nbeams; i++) {
-        bins.emplace_back(::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i], geom, a_box_sorter_vec[i]));
+    amrex::Vector<amrex::Vector<BeamBins>> bins;
+    for (int lev = 0; lev < nlev; ++lev) {
+        amrex::Vector<BeamBins> bins_per_level;
+        for (int i=0; i<m_nbeams; i++) {
+            bins_per_level.emplace_back(::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i],
+                                                            ref_ratio, geom, a_box_sorter_vec[i]));
+        }
+        bins.emplace_back(bins_per_level);
     }
     return bins;
 }

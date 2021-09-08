@@ -8,8 +8,8 @@
 
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                           int const lev, const int islice, const amrex::Box box, const int offset,
-                           BeamBins& bins)
+                           int const lev, const int islice_local, const amrex::Box box,
+                           const int offset, BeamBins& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -24,9 +24,6 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const amrex::Real dt = Hipace::m_dt / n_subcycles;
-
-    // Assumes '2' == 'z' == 'the long dimension'.
-    int islice_local = islice - box.smallEnd(2);
 
     // Extract properties associated with the extent of the current box
     const int depos_order_xy = Hipace::m_depos_order_xy;
