@@ -9,6 +9,7 @@
 #include <AMReX_Parser.H>
 
 #include <array>
+#include <cmath>
 #include <limits>
 #include <vector>
 #include <set>
@@ -28,18 +29,20 @@ safeCastToInt(const double x, const std::string& real_name) {
     int result = 0;
     bool error_detected = false;
     std::string assert_msg;
-    // (2.0*(numeric_limits<int>::max()/2+1)) converts numeric_limits<int>::max()+1 to a real ensuring accuracy to all digits
-    // This accepts x = 2**31-1 but rejects 2**31.
+    // (2.0*(numeric_limits<int>::max()/2+1)) converts numeric_limits<int>::max()+1 to a real
+    // ensuring accuracy to all digits. This accepts x = 2**31-1 but rejects 2**31.
     if (x < (2.0*(std::numeric_limits<int>::max()/2+1))) {
         if (std::ceil(x) >= std::numeric_limits<int>::min()) {
             result = static_cast<int>(x);
         } else {
             error_detected = true;
-            assert_msg = "Error: Negative overflow detected when casting " + real_name + " = " + std::to_string(x) + " to int";
+            assert_msg = "Error: Negative overflow detected when casting " +
+                         real_name + " = " + std::to_string(x) + " to int";
         }
     } else if (x > 0) {
         error_detected = true;
-        assert_msg =  "Error: Overflow detected when casting " + real_name + " = " + std::to_string(x) + " to int";
+        assert_msg = "Error: Overflow detected when casting " +
+                     real_name + " = " + std::to_string(x) + " to int";
     } else {
         error_detected = true;
         assert_msg =  "Error: NaN detected when casting " + real_name + " to int";
@@ -48,7 +51,7 @@ safeCastToInt(const double x, const std::string& real_name) {
     return result;
 }
 
-inline amrex::Parser
+static amrex::Parser
 makeParser (std::string const& parse_function, amrex::Vector<std::string> const& varnames)
 {
     // Since queryWithParser recursively calls this routine, keep track of symbols
@@ -62,8 +65,7 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
     for (auto const& v : varnames) symbols.erase(v);
 
     // User can provide inputs under this name, through which expressions
-    // can be provided for arbitrary variables. PICMI inputs are aware of
-    // this convention and use the same prefix as well. This potentially
+    // can be provided for arbitrary variables. This potentially
     // includes variable names that match physical or mathematical
     // constants, in case the user wishes to enforce a different
     // system of units or some form of quasi-physical behavior in the
@@ -75,7 +77,7 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
     static std::map<std::string, double> my_constants_cache{};
 
     // Physical / Numerical Constants available to parsed expressions
-    const auto phys_const = make_constants_SI();
+    const auto phys_const = get_phys_const();
 
     static std::map<std::string, double> hipace_constants
         {
@@ -96,7 +98,8 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
             continue;
         }
 
-        //AmrexAlwaysAssert(recursive_symbols.count(*it)==0, "Expressions contains recursive symbol "+*it);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(recursive_symbols.count(*it)==0,
+                                         "Expressions contains recursive symbol " + *it);
         double v;
         recursive_symbols.insert(s);
         const bool is_input = queryWithParser(pp_my_constants, s.c_str(), v);
@@ -123,8 +126,8 @@ makeParser (std::string const& parse_function, amrex::Vector<std::string> const&
 template<int N>
 inline auto
 getFunctionWithParser (const amrex::ParmParse& pp,
-                          char const * const str,
-                          amrex::Vector<std::string> const& varnames)
+                       char const * const str,
+                       amrex::Vector<std::string> const& varnames)
 {
     std::string func_str{};
     std::vector<std::string> f;
@@ -147,7 +150,7 @@ fillWithParser (std::string const& str, float& val) {
 
 inline void
 fillWithParser (std::string const& str, int& val) {
-    val = safeCastToInt(makeParser(str, {}).compileHost<0>()(),str);
+    val = safeCastToInt(std::round(makeParser(str, {}).compileHost<0>()()),str);
 }
 
 template<class T>
