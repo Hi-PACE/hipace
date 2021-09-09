@@ -1237,6 +1237,8 @@ Hipace::Notify (const int step, const int it,
 void
 Hipace::NotifyFinish (const int it, bool only_ghost)
 {
+    HIPACE_PROFILE("Hipace::NotifyFinish()");
+
 #ifdef AMREX_USE_MPI
     if (only_ghost) {
         if (m_np_snd_ghost.size() > 0) {
