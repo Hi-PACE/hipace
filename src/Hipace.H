@@ -190,6 +190,15 @@ public:
     /** status of the physical time send request */
     MPI_Request m_tsend_request = MPI_REQUEST_NULL;
 
+private:
+    /** Pointer to current (and only) instance of class Hipace */
+    static Hipace* m_instance;
+public:
+    /** Whether to use normalized units */
+    static bool m_normalized_units;
+    /** Struct containing physical constants (which values depends on the unit system, determined
+     * at runtime): SI or normalized units. */
+    PhysConst m_phys_const;
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Contains all beam species */
@@ -208,11 +217,6 @@ public:
     static amrex::Real m_physical_time;
     /** Level of verbosity */
     static int m_verbose;
-    /** Whether to use normalized units */
-    static bool m_normalized_units;
-    /** Struct containing physical constants (which values depends on the unit system, determined
-     * at runtime): SI or normalized units. */
-    PhysConst m_phys_const;
     /** Order of the field gather and current deposition shape factor in the transverse directions
      */
     static int m_depos_order_xy;
@@ -292,9 +296,6 @@ public:
     amrex::RealVect patch_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
     amrex::RealVect patch_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
 private:
-    /** Pointer to current (and only) instance of class Hipace */
-    static Hipace* m_instance;
-
     amrex::Vector<amrex::Geometry> m_slice_geom;
     amrex::Vector<amrex::DistributionMapping> m_slice_dm;
     amrex::Vector<amrex::BoxArray> m_slice_ba;
@@ -347,8 +348,6 @@ private:
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
                         const amrex::Box bx, amrex::Vector<BeamBins> bins, const int ibox);
-
-    void Ionisation (const int lev);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.
