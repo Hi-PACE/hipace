@@ -323,10 +323,9 @@ namespace AnyDST
         // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
         // 2nd argument type still wrong, should be void*
         // reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()), //3rd arg
-        result = rocfft_execute(dst_plan.m_plan,
-                                (void**)&(dst_plan.m_expanded_position_array),
-                                (void**)&(dst_plan.m_expanded_fourier_array),
-                                execinfo);
+        void* in[2] = {dst_plan.m_expanded_position_array->dataPtr(), nullptr};
+        void* out[2] = {dst_plan.m_expanded_fourier_array->dataPtr(), nullptr};
+        result = rocfft_execute(dst_plan.m_plan, in, out, execinfo);
 
         RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
 
