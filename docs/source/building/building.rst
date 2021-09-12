@@ -218,3 +218,4 @@ HPC platforms
 
    platforms/booster_jsc.rst
    platforms/maxwell_desy.rst
+   platforms/spock_olcf.rst
