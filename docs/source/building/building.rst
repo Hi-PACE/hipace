@@ -32,10 +32,10 @@ Please see installation instructions below in the Developers section.
 - a mature `C++14 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 5, Clang 3.6 or newer
 - `CMake 3.15.0+ <https://cmake.org/>`__
 - `AMReX development <https://amrex-codes.github.io>`__: we automatically download and compile a copy of AMReX
-- `openPMD-api dev <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
+- `openPMD-api 0.14.2+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
-  - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.6.0+ (optional; for ``.bp`` file support)
+  - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
 - Nvidia GPU support: `CUDA Toolkit 9.0+ <https://developer.nvidia.com/cuda-downloads>`__ (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
 - CPU-only: `FFTW3 <http://www.fftw.org/>`__ (only used serially; *not* needed for Nvidia GPUs)
 
@@ -171,19 +171,19 @@ HiPACE++ can be configured in further detail with options from AMReX, which are 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
 
-===========================  =============================================  ============================================================
-CMake Option                 Default & Values                               Description
----------------------------  ---------------------------------------------  ------------------------------------------------------------
-``HiPACE_amrex_src``         *None*                                         Path to AMReX source directory (preferred if set)
-``HiPACE_amrex_repo``        `https://github.com/AMReX-Codes/amrex.git`     Repository URI to pull and build AMReX from
-``HiPACE_amrex_branch``      ``development``                                Repository branch for ``HiPACE_amrex_repo``
-``HiPACE_amrex_internal``    **ON**/OFF                                     Needs a pre-installed AMReX library if set to ``OFF``
-``HiPACE_openpmd_src``       *None*                                         Path to openPMD-api source directory (preferred if set)
-``HiPACE_openpmd_repo``      `https://github.com/openPMD/openPMD-api.git`   Repository URI to pull and build openPMD-api from
-``HiPACE_openpmd_branch``    `0.13.2`                                       Repository branch for ``HiPACE_openpmd_repo``
-``HiPACE_openpmd_internal``  **ON**/OFF                                     Needs a pre-installed openPMD-api library if set to ``OFF``
-``AMReX_LINEAR_SOLVERS``     **ON**/OFF                                     Compile AMReX multigrid solver. Required for explicit solver
-===========================  =============================================  ============================================================
+===========================  ==============================================  ============================================================
+CMake Option                 Default & Values                                Description
+---------------------------  ----------------------------------------------  ------------------------------------------------------------
+``HiPACE_amrex_src``         *None*                                          Path to AMReX source directory (preferred if set)
+``HiPACE_amrex_repo``        ``https://github.com/AMReX-Codes/amrex.git``    Repository URI to pull and build AMReX from
+``HiPACE_amrex_branch``      ``development``                                 Repository branch for ``HiPACE_amrex_repo``
+``HiPACE_amrex_internal``    **ON**/OFF                                      Needs a pre-installed AMReX library if set to ``OFF``
+``HiPACE_openpmd_src``       *None*                                          Path to openPMD-api source directory (preferred if set)
+``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``  Repository URI to pull and build openPMD-api from
+``HiPACE_openpmd_branch``    ``0.14.2``                                      Repository branch for ``HiPACE_openpmd_repo``
+``HiPACE_openpmd_internal``  **ON**/OFF                                      Needs a pre-installed openPMD-api library if set to ``OFF``
+``AMReX_LINEAR_SOLVERS``     **ON**/OFF                                      Compile AMReX multigrid solver. Required for explicit solver
+===========================  ==============================================  ============================================================
 
 For example, one can also build against a local AMReX copy.
 Assuming AMReX' source is located in ``$HOME/src/amrex``, add the ``cmake`` argument ``-DHiPACE_amrex_src=$HOME/src/amrex``.

@@ -7,13 +7,7 @@ namespace
 {
     void QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real& mass)
     {
-        // normalized_units is directly queried here so we can defined the appropriate PhysConst
-        // locally. We cannot use Hipace::m_phys_const as it has not been initialized when the
-        // PlasmaParticleContainer constructor is called.
-        amrex::ParmParse pph("hipace");
-        bool normalized_units = false;
-        pph.query("normalized_units", normalized_units);
-        PhysConst phys_const = normalized_units ? make_constants_normalized() : make_constants_SI();
+        PhysConst phys_const = get_phys_const();
 
         std::string element = "electron";
         pp.query("element", element);
