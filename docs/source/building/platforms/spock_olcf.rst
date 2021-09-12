@@ -49,5 +49,5 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
 
    export OMP_NUM_THREADS=1
    srun -n 1 -c 1 --ntasks-per-node=1 <path/to/executable>/hipace.MPI.HIP.DP inputs &> output.txt
-   
+
 and use it to submit a simulation.
