@@ -25,8 +25,21 @@
 
 #include <memory>
 
+
+/** \brief Helper struct to initialize m_phys_const and Parser before amrex::AmrCore */
+struct Hipace_early_init
+{
+    /** Constructor of m_phys_const, initialize Hipace::m_instance, Hipace::m_normalized_units
+     * and Parser Constants */
+    Hipace_early_init (Hipace* instance);
+
+    /** Struct containing physical constants (which values depends on the unit system, determined
+     * at runtime): SI or normalized units. */
+    PhysConst m_phys_const;
+};
+
 /** \brief Singleton class, that intialize, runs and finalizes the simulation */
-class Hipace final : public amrex::AmrCore
+class Hipace final : public Hipace_early_init, public amrex::AmrCore
 {
 public:
     /** Ctor: read general input parameters, call constructors of main member variables
@@ -191,15 +204,10 @@ public:
     /** status of the physical time send request */
     MPI_Request m_tsend_request = MPI_REQUEST_NULL;
 
-private:
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
-public:
     /** Whether to use normalized units */
     static bool m_normalized_units;
-    /** Struct containing physical constants (which values depends on the unit system, determined
-     * at runtime): SI or normalized units. */
-    PhysConst m_phys_const;
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Contains all beam species */

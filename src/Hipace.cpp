@@ -51,6 +51,20 @@ bool Hipace::m_do_tiling = false;
 bool Hipace::m_do_tiling = true;
 #endif
 
+Hipace_early_init::Hipace_early_init (Hipace* instance)
+{
+    Hipace::m_instance = instance;
+    amrex::ParmParse pph("hipace");
+    queryWithParser(pph ,"normalized_units", Hipace::m_normalized_units);
+    if (Hipace::m_normalized_units) {
+        m_phys_const = make_constants_normalized();
+    } else {
+        m_phys_const = make_constants_SI();
+    }
+    Parser::addConstantsToParser(m_phys_const);
+    Parser::replaceAmrexParamsWithParser();
+}
+
 Hipace&
 Hipace::GetInstance ()
 {
@@ -59,16 +73,8 @@ Hipace::GetInstance ()
 }
 
 Hipace::Hipace () :
-    m_phys_const([this](){
-        m_instance = this;
-        amrex::ParmParse pph("hipace");
-        pph.query("normalized_units", this->m_normalized_units);
-        if (this->m_normalized_units){
-            return make_constants_normalized();
-        } else {
-            return make_constants_SI();
-        }
-    }()),
+    Hipace_early_init(this),
+    amrex::AmrCore(),
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
@@ -83,10 +89,6 @@ Hipace::Hipace () :
 #endif
 
     amrex::ParmParse pph("hipace");
-
-    amrex::Parser parser;
-    auto test_func = getFunctionWithParser<3>(pph, "function", parser, {"x","y","z"});
-    amrex::Print() << "function : " << test_func(1.,2.,3.) << '\n';
 
     queryWithParser(pph, "dt", m_dt);
     queryWithParser(pph, "verbose", m_verbose);
