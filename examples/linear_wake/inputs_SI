@@ -1,5 +1,10 @@
 amr.n_cell = 32 32 200
 
+my_constants.kp_inv = 10e-6
+my_constants.kp = 1 / kp_inv
+my_constants.wp = clight * kp
+my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
+
 amr.blocking_factor = 2
 amr.max_level = 0
 
@@ -12,7 +17,7 @@ hipace.numprocs_y = 1
 hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
-geometry.is_periodic = 1     1     0      # Is periodic?
+geometry.is_periodic = true  true  false  # Is periodic?
 geometry.prob_lo     = -100.e-6   -100.e-6   -75.e-6    # physical domain
 geometry.prob_hi     =  100.e-6    100.e-6    20.e-6
 
@@ -22,13 +27,13 @@ beam.profile = flattop
 beam.zmin = -10.e-6
 beam.zmax = 10.e-6
 beam.radius = 30.e-6
-beam.density = 2.8239587008591567e21
+beam.density = 0.01 * ne
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
 beam.ppc = 1 1 1
 
 plasmas.names = plasma
-plasma.density =  2.8239587008591567e23 # at this density, 1/kp = 10um
+plasma.density = ne
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
 plasma.element = electron
