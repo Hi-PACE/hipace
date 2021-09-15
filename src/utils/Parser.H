@@ -311,7 +311,7 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
  * \param[in] pp ParmParse that is searched for the function
  * \param[in] str name of the function in pp
  * \param[out] parser Parser which owns the data of the returned function
- * \param[in] varnemes names of the N arguments used in the parsed function
+ * \param[in] varnames names of the N arguments used in the parsed function
  */
 template<int N>
 inline auto
