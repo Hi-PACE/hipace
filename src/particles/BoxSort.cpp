@@ -38,7 +38,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
 
     amrex::Gpu::exclusive_scan(m_box_counts.begin(), m_box_counts.end(), m_box_offsets.begin());
 
-    BeamParticleContainer tmp(a_beam.get_name());
+    amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0> tmp{};
     tmp.resize(np);
 
     auto p_box_offsets = m_box_offsets.dataPtr();
@@ -49,7 +49,8 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
         p_dst_indices[i] += p_box_offsets[dst_box];
     });
 
-    amrex::scatterParticles(tmp, a_beam, np, dst_indices.dataPtr());
+    amrex::scatterParticles<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>>(tmp, a_beam, np,
+                                                                             dst_indices.dataPtr());
 
     a_beam.swap(tmp);
 }
