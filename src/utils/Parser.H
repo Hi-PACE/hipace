@@ -28,8 +28,8 @@ namespace Parser
     static std::map<std::string, double> hipace_constants
         {
             {"pi", MathConst::pi},
-            {"true", 1.},
-            {"false", 0.}
+            {"true", 1},
+            {"false", 0}
         };
 
     /** \brief add Physical constants to Parser constants
@@ -125,18 +125,17 @@ namespace Parser
         return result;
     }
 
-    /** \brief return Parser ready to compile
+    /** \brief init Parser ready to compile
      *
      * \param[in,out] parser Parser that has been defined
      * \param[in] varnames names of input variables if a function is Parsed
      */
-    static amrex::Parser&
+    static void
     initParser (amrex::Parser& parser, amrex::Vector<std::string> const& varnames) {
         // Since queryWithParser recursively calls this routine, keep track of symbols
         // in case an infinite recursion is found (a symbol's value depending on itself).
         static std::set<std::string> recursive_symbols{};
 
-        //amrex::Parser parser(parse_function);
         parser.registerVariables(varnames);
 
         std::set<std::string> symbols = parser.symbols();
@@ -181,7 +180,6 @@ namespace Parser
 
             amrex::Abort("makeParser::Unknown symbol " + s);
         }
-        return parser;
     }
 
     /** \brief fill second argument val with a value obtained through Parsing str
@@ -193,25 +191,29 @@ namespace Parser
     inline void
     fillWithParser (std::string const& str, double& val) {
         amrex::Parser parser(str);
-        val = initParser(parser, {}).compileHost<0>()();
+        initParser(parser, {});
+        val = parser.compileHost<0>()();
     }
 
     inline void
     fillWithParser (std::string const& str, float& val) {
         amrex::Parser parser(str);
-        val = static_cast<float>(initParser(parser, {}).compileHost<0>()());
+        initParser(parser, {});
+        val = static_cast<float>(parser.compileHost<0>()());
     }
 
     inline void
     fillWithParser (std::string const& str, int& val) {
         amrex::Parser parser(str);
-        val = safeCastToInt(std::round(initParser(parser, {}).compileHost<0>()()),str);
+        initParser(parser, {});
+        val = safeCastToInt(std::round(parser.compileHost<0>()()),str);
     }
 
     inline void
     fillWithParser (std::string const& str, bool& val) {
         amrex::Parser parser(str);
-        val = initParser(parser, {}).compileHost<0>()();
+        initParser(parser, {});
+        val = parser.compileHost<0>()();
     }
 
     inline void

@@ -8,7 +8,7 @@ hipace.predcorr_B_error_tolerance = -1
 my_constants.ne = 1.25e24
 my_constants.wp = sqrt(ne * q_e^2  / (epsilon0 * m_e))
 my_constants.kp = wp / clight
-my_constants.kp_inv = 1 / kp # =4.753069541um
+my_constants.kp_inv = 1. / kp # =4.753069541um
 
 amr.blocking_factor = 2
 amr.max_level = 0
@@ -29,10 +29,10 @@ geometry.prob_hi     =  20.e-6    20.e-6    30.e-6
 beams.names = beam
 beam.injection_type = fixed_ppc
 beam.profile = flattop
-beam.zmin = 25e-6 - 2 * kp_inv
-beam.zmax = 25e-6
+beam.zmin = 25.e-6 - 2. * kp_inv
+beam.zmax = 25.e-6
 beam.radius = kp_inv / 2
-beam.density = 4 * ne
+beam.density = 4. * ne
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
 beam.ppc = 1 1 1

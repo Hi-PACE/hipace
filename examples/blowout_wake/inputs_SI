@@ -4,8 +4,8 @@ hipace.predcorr_max_iterations = 1
 hipace.predcorr_B_mixing_factor = 0.12
 hipace.predcorr_B_error_tolerance = -1
 
-my_constants.kp_inv = 10e-6
-my_constants.kp = 1 / kp_inv
+my_constants.kp_inv = 10.e-6
+my_constants.kp = 1. / kp_inv
 my_constants.wp = clight * kp
 my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
 
@@ -22,8 +22,8 @@ hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
-geometry.prob_lo     = -8*kp_inv -8*kp_inv -6*kp_inv  # physical domain
-geometry.prob_hi     =  8*kp_inv  8*kp_inv  6*kp_inv
+geometry.prob_lo     = -8.*kp_inv -8.*kp_inv -6.*kp_inv  # physical domain
+geometry.prob_hi     =  8.*kp_inv  8.*kp_inv  6.*kp_inv
 
 beams.names = beam
 beam.injection_type = fixed_ppc
@@ -31,7 +31,7 @@ beam.profile = gaussian
 beam.zmin = -59.e-6
 beam.zmax = 59.e-6
 beam.radius = 12.e-6
-beam.density = 3*ne
+beam.density = 3.*ne
 beam.u_mean = 0. 0. 2000
 beam.u_std = 0. 0. 0.
 beam.position_mean = 0. 0. 0
