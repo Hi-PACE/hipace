@@ -17,8 +17,8 @@ hipace.numprocs_y = 1
 hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
-geometry.is_periodic = 1     1     0      # Is periodic?
-geometry.prob_lo     = -8.   -8.   -6    # physical domain
+geometry.is_periodic = true  true  false  # Is periodic?
+geometry.prob_lo     = -8.   -8.   -6     # physical domain
 geometry.prob_hi     =  8.    8.    6
 
 beams.names = beam

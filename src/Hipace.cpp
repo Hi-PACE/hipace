@@ -51,6 +51,20 @@ bool Hipace::m_do_tiling = false;
 bool Hipace::m_do_tiling = true;
 #endif
 
+Hipace_early_init::Hipace_early_init (Hipace* instance)
+{
+    Hipace::m_instance = instance;
+    amrex::ParmParse pph("hipace");
+    queryWithParser(pph ,"normalized_units", Hipace::m_normalized_units);
+    if (Hipace::m_normalized_units) {
+        m_phys_const = make_constants_normalized();
+    } else {
+        m_phys_const = make_constants_SI();
+    }
+    Parser::addConstantsToParser(m_phys_const);
+    Parser::replaceAmrexParamsWithParser();
+}
+
 Hipace&
 Hipace::GetInstance ()
 {
@@ -59,59 +73,52 @@ Hipace::GetInstance ()
 }
 
 Hipace::Hipace () :
-    m_phys_const([this](){
-        m_instance = this;
-        amrex::ParmParse pph("hipace");
-        pph.query("normalized_units", this->m_normalized_units);
-        if (this->m_normalized_units){
-            return make_constants_normalized();
-        } else {
-            return make_constants_SI();
-        }
-    }()),
+    Hipace_early_init(this),
+    amrex::AmrCore(),
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
     m_diags(this->maxLevel()+1)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
-    pp.query("max_step", m_max_step);
+    queryWithParser(pp, "max_step", m_max_step);
 
 #ifndef AMREX_USE_GPU
     int seed;
-    if (pp.query("random_seed", seed)) amrex::ResetRandomSeed(seed);
+    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed);
 #endif
 
     amrex::ParmParse pph("hipace");
-    pph.query("dt", m_dt);
-    pph.query("verbose", m_verbose);
-    pph.query("numprocs_x", m_numprocs_x);
-    pph.query("numprocs_y", m_numprocs_y);
+
+    queryWithParser(pph, "dt", m_dt);
+    queryWithParser(pph, "verbose", m_verbose);
+    queryWithParser(pph, "numprocs_x", m_numprocs_x);
+    queryWithParser(pph, "numprocs_y", m_numprocs_y);
     m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step+1,
                                      "Please use more or equal time steps than number of ranks");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
                                      == amrex::ParallelDescriptor::NProcs(),
                                      "Check hipace.numprocs_x and hipace.numprocs_y");
-    pph.query("boxes_in_z", m_boxes_in_z);
+    queryWithParser(pph, "boxes_in_z", m_boxes_in_z);
     if (m_boxes_in_z > 1) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_numprocs_z == 1,
                             "Multiple boxes per rank only implemented for one rank.");
-    pph.query("depos_order_xy", m_depos_order_xy);
-    pph.query("depos_order_z", m_depos_order_z);
-    pph.query("predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
-    pph.query("predcorr_max_iterations", m_predcorr_max_iterations);
-    pph.query("predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
-    pph.query("output_period", m_output_period);
+    queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
+    queryWithParser(pph, "depos_order_z", m_depos_order_z);
+    queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
+    queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
+    queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
+    queryWithParser(pph, "output_period", m_output_period);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_period != 0,
                                      "To avoid output, please use output_period = -1.");
-    pph.query("beam_injection_cr", m_beam_injection_cr);
-    pph.query("do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
-    pph.query("do_device_synchronize", m_do_device_synchronize);
-    pph.query("external_ExmBy_slope", m_external_ExmBy_slope);
-    pph.query("external_Ez_slope", m_external_Ez_slope);
-    pph.query("external_Ez_uniform", m_external_Ez_uniform);
+    queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
+    queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
+    queryWithParser(pph, "do_device_synchronize", m_do_device_synchronize);
+    queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
+    queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
+    queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
     std::string solver = "predictor-corrector";
-    pph.query("bxby_solver", solver);
+    queryWithParser(pph, "bxby_solver", solver);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         solver == "predictor-corrector" ||
         solver == "explicit",
@@ -121,9 +128,9 @@ Hipace::Hipace () :
         !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
 
-    pph.query("MG_tolerance_rel", m_MG_tolerance_rel);
-    pph.query("MG_tolerance_abs", m_MG_tolerance_abs);
-    pph.query("do_tiling", m_do_tiling);
+    queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
+    queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
+    queryWithParser(pph, "do_tiling", m_do_tiling);
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
@@ -133,14 +140,14 @@ Hipace::Hipace () :
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_explicit, "Mesh refinement + explicit solver is not yet"
                                 " supported! Please use hipace.bxby_solver = predictor-corrector");
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        pph.get("patch_lo", loc_array);
+        getWithParser(pph, "patch_lo", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
-        pph.get("patch_hi", loc_array);
+        getWithParser(pph, "patch_hi", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
     }
 
 #ifdef AMREX_USE_MPI
-    pph.query("skip_empty_comms", m_skip_empty_comms);
+    queryWithParser(pph, "skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();
     m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_z, myproc, &m_comm_xy);

@@ -207,7 +207,7 @@ InitIonizationModule (const amrex::Geometry& geom,
     m_product_pc = product_pc;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
-    pp.get("element", physical_element);
+    getWithParser(pp, "element", physical_element);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0,
         "There are no ionization energies available for this element. "
         "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");

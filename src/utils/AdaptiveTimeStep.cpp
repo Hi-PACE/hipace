@@ -17,8 +17,8 @@ struct WhichDouble {
 AdaptiveTimeStep::AdaptiveTimeStep ()
 {
     amrex::ParmParse ppa("hipace");
-    ppa.query("do_adaptive_time_step", m_do_adaptive_time_step);
-    ppa.query("nt_per_omega_betatron", m_nt_per_omega_betatron);
+    queryWithParser(ppa, "do_adaptive_time_step", m_do_adaptive_time_step);
+    queryWithParser(ppa, "nt_per_omega_betatron", m_nt_per_omega_betatron);
 }
 
 #ifdef AMREX_USE_MPI

@@ -9,7 +9,7 @@ Diagnostic::Diagnostic (int nlev)
 {
     amrex::ParmParse ppd("diagnostic");
     std::string str_type;
-    ppd.get("diag_type", str_type);
+    getWithParser(ppd, "diag_type", str_type);
     if        (str_type == "xyz"){
         m_diag_type = DiagType::xyz;
         m_slice_dir = -1;
@@ -26,7 +26,7 @@ Diagnostic::Diagnostic (int nlev)
     for(int ilev = 0; ilev<nlev; ++ilev) {
         amrex::Array<int,3> diag_coarsen_arr{1,1,1};
         // set all levels the same for now
-        ppd.query("coarsening", diag_coarsen_arr);
+        queryWithParser(ppd, "coarsening", diag_coarsen_arr);
         if(m_slice_dir == 0 || m_slice_dir == 1) {
             diag_coarsen_arr[m_slice_dir] = 1;
         }
@@ -35,7 +35,7 @@ Diagnostic::Diagnostic (int nlev)
             "Coarsening ratio must be >= 1");
     }
 
-    ppd.queryarr("field_data", m_comps_output);
+    queryWithParser(ppd, "field_data", m_comps_output);
     const amrex::Vector<std::string> all_field_comps
             {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam", "jz",
              "jz_beam", "rho", "Psi"};
@@ -68,9 +68,9 @@ Diagnostic::Diagnostic (int nlev)
     amrex::ParmParse ppb("beams");
     // read in all beam names
     amrex::Vector<std::string> all_beam_names;
-    ppb.queryarr("names", all_beam_names);
+    queryWithParser(ppb, "names", all_beam_names);
     // read in which beam should be written to file
-    ppd.queryarr("beam_data", m_output_beam_names);
+    queryWithParser(ppd, "beam_data", m_output_beam_names);
 
     if(m_output_beam_names.empty()) {
         m_output_beam_names = all_beam_names;

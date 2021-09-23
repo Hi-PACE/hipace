@@ -8,9 +8,9 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 {
 
     amrex::ParmParse pp("plasmas");
-    pp.getarr("names", m_names);
-    pp.query("adaptive_density", m_adaptive_density);
-    pp.query("sort_bin_size", m_sort_bin_size);
+    getWithParser(pp, "names", m_names);
+    queryWithParser(pp, "adaptive_density", m_adaptive_density);
+    queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();

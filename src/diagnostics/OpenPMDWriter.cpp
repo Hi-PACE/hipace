@@ -12,12 +12,12 @@ OpenPMDWriter::OpenPMDWriter ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
         "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
     amrex::ParmParse pp("hipace");
-    pp.query("file_prefix", m_file_prefix);
-    pp.query("openpmd_backend", m_openpmd_backend);
+    queryWithParser(pp, "file_prefix", m_file_prefix);
+    queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");
-    ppd.query("openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
+    queryWithParser(ppd, "openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
 }
 
 void

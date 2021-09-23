@@ -12,7 +12,7 @@ Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
 {
     amrex::ParmParse ppf("fields");
-    ppf.query("do_dirichlet_poisson", m_do_dirichlet_poisson);
+    queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
 }
 
 void
