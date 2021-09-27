@@ -204,7 +204,8 @@ The documentation is written at the `RST <https://sphinx-tutorial.readthedocs.io
 .. code-block:: bash
 
    cd docs
-   pip install -r requirements.txt # only the first time
+   # optional:                                 --user
+   python3 -m pip install -r requirements.txt          # only the first time
    make html
    open build/html/index.html
 
