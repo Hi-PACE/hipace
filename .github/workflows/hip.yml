@@ -1,0 +1,32 @@
+name: 🐧 HIP
+
+on: [push, pull_request]
+
+jobs:
+  build_hip:
+    name: HIP SP
+    runs-on: ubuntu-20.04
+    # -Werror
+    env: {CXXFLAGS: "-Wno-deprecated-declarations -Wno-error=pass-failed"}
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      shell: bash
+      run: .github/workflows/setup/hip.sh
+    - name: build HiPACE
+      shell: bash
+      run: |
+        source /etc/profile.d/rocm.sh
+        hipcc --version
+        which clang
+        which clang++
+        export CXX=$(which clang++)
+        export CC=$(which clang)
+
+        cmake -S . -B build_sp \
+          -DCMAKE_VERBOSE_MAKEFILE=ON \
+          -DAMReX_AMD_ARCH=gfx900     \
+          -DHiPACE_COMPUTE=HIP        \
+          -DHiPACE_MPI=ON             \
+          -DHiPACE_PRECISION=SINGLE
+        cmake --build build_sp -j 2

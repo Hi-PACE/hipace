@@ -1,4 +1,5 @@
 #include "FFTPoissonSolverDirichlet.H"
+#include "fft/AnyDST.H"
 #include "utils/Constants.H"
 #include "utils/HipaceProfilerWrapper.H"
 
