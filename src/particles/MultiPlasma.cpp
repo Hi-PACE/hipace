@@ -52,7 +52,8 @@ MultiPlasma::maxDensity ()
 {
     amrex::Real max_density = 0;
     for (auto& plasma : m_all_plasmas) {
-        max_density = amrex::max(max_density, plasma.m_density);
+        // TODO: propper max along path
+        max_density = amrex::max(max_density, plasma.m_density_func(0.,0.,0.));
     }
     return amrex::max(max_density, m_adaptive_density);
 }

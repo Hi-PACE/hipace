@@ -63,7 +63,7 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge *= m_init_ion_lev;
     }
     queryWithParser(pp, "ionization_product", m_product_name);
-    queryWithParser(pp, "density", m_density);
+    m_density_func = getFunctionWithParser(pp, "density", m_parser, {"x", "y", "z"});
     queryWithParser(pp, "level", m_level);
     queryWithParser(pp, "radius", m_radius);
     queryWithParser(pp, "hollow_core_radius", m_hollow_core_radius);
@@ -99,7 +99,7 @@ PlasmaParticleContainer::InitData ()
     reserveData();
     resizeData();
 
-    InitParticles(m_ppc, m_u_std, m_u_mean, m_density, m_radius, m_hollow_core_radius);
+    InitParticles(m_ppc, m_u_std, m_u_mean, m_density_func, m_radius, m_hollow_core_radius);
 
     m_num_exchange = TotalNumberOfParticles();
 }

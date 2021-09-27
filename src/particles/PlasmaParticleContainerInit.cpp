@@ -11,7 +11,7 @@ PlasmaParticleContainer::
 InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
-               const amrex::Real a_density,
+               const amrex::ParserExecutor<3>& a_density_func,
                const amrex::Real a_radius,
                const amrex::Real a_hollow_core_radius)
 {
@@ -146,10 +146,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                arrdata[PlasmaIdx::w        ][pidx] =
-                        a_density*(1. + parabolic_curvature*rp*rp) * scale_fac;
-                arrdata[PlasmaIdx::w0       ][pidx] =
-                        a_density*(1. + parabolic_curvature*rp*rp) * scale_fac;
+                // TODO: convert z
+                amrex::Real density = a_density_func(x,y,z) * (1. + parabolic_curvature*rp*rp)
+                                      * scale_fac;
+
+                arrdata[PlasmaIdx::w        ][pidx] = density;
+                arrdata[PlasmaIdx::w0       ][pidx] = density;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
                 arrdata[PlasmaIdx::psi      ][pidx] = 0.;
