@@ -11,6 +11,11 @@
 
 #ifdef AMREX_USE_CUDA
 #  include <cufft.h>
+#elif defined(AMREX_USE_HIP)
+// cstddef: work-around for ROCm/rocFFT <=4.3.0
+// https://github.com/ROCmSoftwarePlatform/rocFFT/blob/rocm-4.3.0/library/include/rocfft.h#L36-L42
+#  include <cstddef>
+#  include <rocfft.h>
 #else
 #  include <fftw3.h>
 #endif
@@ -36,6 +41,12 @@ namespace AnyFFT
 #  else
     using Complex = cuDoubleComplex;
 #  endif
+#elif defined(AMREX_USE_HIP)
+#  ifdef AMREX_USE_FLOAT
+    using Complex = float2;
+#  else
+    using Complex = double2;
+#  endif
 #else
 #  ifdef AMREX_USE_FLOAT
     using Complex = fftwf_complex;
@@ -49,6 +60,8 @@ namespace AnyFFT
      */
 #ifdef AMREX_USE_CUDA
     using VendorFFTPlan = cufftHandle;
+#elif defined(AMREX_USE_HIP)
+    using VendorFFTPlan = rocfft_plan;
 #else
 #  ifdef AMREX_USE_FLOAT
     using VendorFFTPlan = fftwf_plan;

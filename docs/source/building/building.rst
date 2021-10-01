@@ -42,7 +42,7 @@ Please see installation instructions below in the Developers section.
 Optional dependencies include:
 
 - `MPI 3.0+ <https://www.mpi-forum.org/docs/>`__: for multi-node and/or multi-GPU execution
-- `OpenMP 3.1+ <https://www.openmp.org>`__: for threaded CPU execution (currently not fully accelerated)
+- `OpenMP 3.1+ <https://www.openmp.org>`__: for threaded CPU execution
 - `CCache <https://ccache.dev>`__: to speed up rebuilds (needs 3.7.9+ for CUDA)
 
 Please choose **one** of the installation methods below to get started:
@@ -201,10 +201,11 @@ Documentation
 
 The documentation is written at the `RST <https://sphinx-tutorial.readthedocs.io/step-1/>`__ format, to compile the documentation locally use
 
-.. code-block::bash
+.. code-block:: bash
 
    cd docs
-   pip install -r requirements.txt # only the first time
+   # optional:                                 --user
+   python3 -m pip install -r requirements.txt          # only the first time
    make html
    open build/html/index.html
 
@@ -218,3 +219,4 @@ HPC platforms
 
    platforms/booster_jsc.rst
    platforms/maxwell_desy.rst
+   platforms/spock_olcf.rst
