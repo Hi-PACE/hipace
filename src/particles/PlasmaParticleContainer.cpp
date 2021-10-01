@@ -63,7 +63,7 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge *= m_init_ion_lev;
     }
     queryWithParser(pp, "ionization_product", m_product_name);
-    m_density_func = getFunctionWithParser<3>(pp, "density", m_parser, {"x", "y", "z"});
+    m_density_func = getFunctionWithParser<3>(pp, "density(x,y,z)", m_parser, {"x", "y", "z"});
     queryWithParser(pp, "level", m_level);
     queryWithParser(pp, "radius", m_radius);
     queryWithParser(pp, "hollow_core_radius", m_hollow_core_radius);
