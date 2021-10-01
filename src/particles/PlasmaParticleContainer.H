@@ -2,6 +2,7 @@
 #define HIPACE_PlasmaParticleContainer_H_
 
 #include "fields/Fields.H"
+#include "utils/Parser.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>

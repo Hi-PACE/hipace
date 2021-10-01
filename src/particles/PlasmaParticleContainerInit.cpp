@@ -97,6 +97,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         ParticleType::NextID(pid + num_to_add);
 
         PhysConst phys_const = get_phys_const();
+        amrex::Real time = Hipace::m_physical_time;
 
         const amrex::Real parabolic_curvature = m_parabolic_curvature;
 
@@ -146,8 +147,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                // TODO: convert z
-                amrex::Real density = a_density_func(x,y,z) * (1. + parabolic_curvature*rp*rp)
+                amrex::Real density = a_density_func(x,y,phys_const.c * time) * (1. + parabolic_curvature*rp*rp)
                                       * scale_fac;
 
                 arrdata[PlasmaIdx::w        ][pidx] = density;
