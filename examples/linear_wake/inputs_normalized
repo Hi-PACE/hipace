@@ -31,7 +31,7 @@ beam.u_std = 0. 0. 0.
 beam.ppc = 1 1 1
 
 plasmas.names = plasma
-plasma.density = 1.
+plasma.density(x,y,z) = 1.
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
 plasma.element = electron

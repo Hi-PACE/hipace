@@ -317,7 +317,7 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
  */
 template<int N>
 inline auto
-makeFunctionWithParser (std::string func_str,
+makeFunctionWithParser (std::string const& func_str,
                         amrex::Parser& parser,
                         amrex::Vector<std::string> const& varnames)
 {

@@ -33,7 +33,7 @@ beam.u_std = 0. 0. 0.                   # normalized rms of the momentum in x,y,
 ################################
 plasmas.names = plasma                  # name(s) of the plasma(s)
 plasma.element = electron               # type of plasma: electron, proton, or an element e.g. He
-plasma.density = 1.                     # peak density in the respective unit systems
+plasma.density(x,y,z) = 1.              # density function in the respective unit systems
 plasma.ppc = 1 1                        # particles per cell in x,y
 
 ### Diagnostics

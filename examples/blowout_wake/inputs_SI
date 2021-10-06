@@ -39,7 +39,7 @@ beam.position_std = 3.e-6 3.e-6 14.1e-6
 beam.ppc = 1 1 1
 
 plasmas.names = plasma
-plasma.density = ne
+plasma.density(x,y,z) = ne
 plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
 plasma.element = electron

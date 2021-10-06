@@ -28,7 +28,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.dx_per_dzeta = 0.2 \
         plasmas.names = plasma ions \
         plasma.neutralize_background = 0 \
-        ions.density = 1. \
+        "ions.density(x,y,z)" = 1. \
         ions.ppc = 1 1 \
         ions.charge = 1 \
         ions.mass = 1836 \
