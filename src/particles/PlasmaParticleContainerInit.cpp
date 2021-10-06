@@ -96,8 +96,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
-        PhysConst phys_const = get_phys_const();
-        amrex::Real time = Hipace::m_physical_time;
+        amrex::Real c_light = get_phys_const().c;
+        amrex::Real c_t = c_light * Hipace::m_physical_time;
 
         const amrex::Real parabolic_curvature = m_parabolic_curvature;
 
@@ -147,18 +147,17 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                amrex::Real density = a_density_func(x,y,phys_const.c * time) * (1. + parabolic_curvature*rp*rp)
-                                      * scale_fac;
+                amrex::Real base_density = (1. + parabolic_curvature*rp*rp) * scale_fac;
 
-                arrdata[PlasmaIdx::w        ][pidx] = density;
-                arrdata[PlasmaIdx::w0       ][pidx] = density;
-                arrdata[PlasmaIdx::ux       ][pidx] = u[0] * phys_const.c;
-                arrdata[PlasmaIdx::uy       ][pidx] = u[1] * phys_const.c;
+                arrdata[PlasmaIdx::w        ][pidx] = base_density * a_density_func(x, y, c_t);
+                arrdata[PlasmaIdx::w0       ][pidx] = base_density;
+                arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi      ][pidx] = 0.;
                 arrdata[PlasmaIdx::x_prev   ][pidx] = 0.;
                 arrdata[PlasmaIdx::y_prev   ][pidx] = 0.;
-                arrdata[PlasmaIdx::ux_temp  ][pidx] = u[0] * phys_const.c;
-                arrdata[PlasmaIdx::uy_temp  ][pidx] = u[1] * phys_const.c;
+                arrdata[PlasmaIdx::ux_temp  ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy_temp  ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi_temp ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx1      ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx2      ][pidx] = 0.;
