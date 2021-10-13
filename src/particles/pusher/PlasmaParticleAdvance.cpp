@@ -255,6 +255,9 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         const auto SetPosition =
             SetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
 
+        auto density_func = plasma.m_density_func;
+        const amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
+
         amrex::ParallelFor(
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (long ip) {
@@ -266,7 +269,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     SetPosition(ip, x_prev[ip], y_prev[ip], zp);
                 } else {
                     SetPosition(ip, x0[ip], y0[ip], zp, std::abs(pid));
-                    w[ip] = w0[ip];
+                    w[ip] = w0[ip] * density_func(x0[ip], y0[ip], c_t);
                     uxp[ip] = 0._rt;
                     uyp[ip] = 0._rt;
                     psip[ip] = 0._rt;

@@ -183,7 +183,7 @@ namespace Parser
     }
 
     /** \brief fill second argument val with a value obtained through Parsing str
-     * for std::string: val is same as str without spaces
+     * for std::string: val is same as str
      *
      * \param[in] str expression in string form
      * \param[out] val value parsed, can be double, float, int, bool or std::string
@@ -219,8 +219,6 @@ namespace Parser
     inline void
     fillWithParser (std::string const& str, std::string& val) {
         val = str;
-        auto end_pos = std::remove(val.begin(), val.end(), ' ');
-        val.erase(end_pos, val.end());
     }
 
     /** \brief fill second argument val of array type with a value obtained through Parsing str_arr
@@ -234,8 +232,11 @@ namespace Parser
     inline void
     fillWithParserArr (std::vector<std::string> const& str_arr, T& val) {
         std::string str{};
-        for (auto const& s : str_arr) {
-            str += s + ' ';
+        if (!str_arr.empty()) {
+            str = str_arr[0];
+            for (auto i=1ul ; i != str_arr.size() ; ++i) {
+                str += ' ' + str_arr[i];
+            }
         }
         fillWithParser(str, val);
     }
@@ -310,24 +311,16 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
 
 /** \brief return function object for Host and Device from the input file
  *
- * \param[in] pp ParmParse that is searched for the function
- * \param[in] str name of the function in pp
+ * \param[in] func_str string that gets Parsed to a function
  * \param[out] parser Parser which owns the data of the returned function
  * \param[in] varnames names of the N arguments used in the parsed function
  */
 template<int N>
 inline auto
-getFunctionWithParser (const amrex::ParmParse& pp,
-                       char const * const str,
-                       amrex::Parser& parser,
-                       amrex::Vector<std::string> const& varnames)
+makeFunctionWithParser (std::string const& func_str,
+                        amrex::Parser& parser,
+                        amrex::Vector<std::string> const& varnames)
 {
-    std::string func_str{};
-    std::vector<std::string> f;
-    pp.getarr(str, f);
-    for (auto const& s : f) {
-        func_str += s + ' ';
-    }
     parser.define(func_str);
     Parser::initParser(parser, varnames);
     return parser.compile<N>();

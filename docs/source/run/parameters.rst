@@ -153,8 +153,11 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     The names of the plasmas, separated by a space.
     To run without plasma, choose the name `no_plasma`.
 
-* ``<plasma name>.density`` (`float`) optional (default `0.`)
-    The plasma density.
+* ``<plasma name>.density(x,y,z)`` (`float`) optional (default `0.`)
+    The plasma density as function of `x`, `y` and `z`. `x` and `y` coordinates are taken from
+    the simulation box and :math:`z = time \cdot c`. The density gets recalculated at the beginning
+    of every timestep. If specified as a command line parameter, quotation marks must be added:
+    ``"<plasma name>.density(x,y,z)" = "1."``.
 
 * ``<plasma name>.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
@@ -173,7 +176,7 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 
 * ``<plasma name>.parabolic_curvature`` (`float`) optional (default `0.`)
     Curvature of a parabolic plasma profile. The plasma density is set to
-    :math:`\mathrm{plasma.density} * (1 + \mathrm{plasma.parabolic\_curvature}*r^2)`.
+    :math:`\mathrm{plasma.density(x,y,z)} * (1 + \mathrm{plasma.parabolic\_curvature}*r^2)`.
 
 * ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
