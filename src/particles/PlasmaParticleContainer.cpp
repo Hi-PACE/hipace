@@ -7,6 +7,8 @@
 #include "pusher/FieldGather.H"
 #include "pusher/GetAndSetPosition.H"
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
 void
 PlasmaParticleContainer::ReadParameters ()
@@ -63,9 +65,32 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge *= m_init_ion_lev;
     }
     queryWithParser(pp, "ionization_product", m_product_name);
+
     std::string density_func_str = "0.";
-    queryWithParser(pp, "density(x,y,z)", density_func_str);
+    bool density_func_specified = queryWithParser(pp, "density(x,y,z)", density_func_str);
     m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
+
+    std::string density_table_file_name{};
+    m_use_density_table = queryWithParser(pp, "density_table_file", density_table_file_name);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!(density_func_specified && m_use_density_table),
+                                     "Can only use one plasma density from either 'density(x,y,z)'"
+                                     " or 'desity_table_file', not both");
+    if (m_use_density_table) {
+        std::ifstream file(density_table_file_name);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(file.is_open(), "Unable to open 'density_table_file'");
+        std::string line;
+        while (std::getline(file, line)) {
+            amrex::Real pos;
+            std::string density;
+            if (std::getline(std::stringstream(line) >> pos, density)) {
+                m_density_table.emplace(pos, density);
+            }
+        }
+        file.close();
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_density_table.empty(),
+                                         "Unable to get any data out of 'density_table_file'");
+    }
+
     queryWithParser(pp, "level", m_level);
     queryWithParser(pp, "radius", m_radius);
     queryWithParser(pp, "hollow_core_radius", m_hollow_core_radius);
@@ -101,9 +126,19 @@ PlasmaParticleContainer::InitData ()
     reserveData();
     resizeData();
 
-    InitParticles(m_ppc, m_u_std, m_u_mean, m_density_func, m_radius, m_hollow_core_radius);
+    InitParticles(m_ppc, m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
 
     m_num_exchange = TotalNumberOfParticles();
+}
+
+void
+PlasmaParticleContainer::UpdateDensityFunction ()
+{
+    if (!m_use_density_table) return;
+    amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
+    auto iter = m_density_table.lower_bound(c_t);
+    if (iter == m_density_table.end()) --iter;
+    m_density_func = makeFunctionWithParser<3>(iter->second, m_parser, {"x", "y", "z"});
 }
 
 void

@@ -255,6 +255,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         const auto SetPosition =
             SetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
 
+        if (initial) plasma.UpdateDensityFunction();
         auto density_func = plasma.m_density_func;
         const amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
 

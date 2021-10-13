@@ -159,6 +159,14 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     of every timestep. If specified as a command line parameter, quotation marks must be added:
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
+* ``<plasma name>.density_table_file`` (`string`) optional (default "")
+    Alternative to `<plasma name>.density(x,y,z)`. Specify the name of a text file containing
+    multiple densities for different positions. File syntax: ``<position> <density function>`` for
+    every line. If a line doesn't start with a position it is ignored (comments can be made
+    with `#`). `<density function>` is evaluated like `<plasma name>.density(x,y,z)`. The simulation
+    position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
+    `<density function>` which is used for that time step.
+
 * ``<plasma name>.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal

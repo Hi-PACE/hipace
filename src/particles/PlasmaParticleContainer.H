@@ -59,7 +59,6 @@ public:
      * \param[in] a_num_particles_per_cell number of particles per cell in x and y
      * \param[in] a_thermal_momentum_std standard deviation of the momentum distribution (3d)
      * \param[in] a_thermal_momentum_mean average momentum (3d)
-     * \param[in] a_density_func plasma density function (SI)
      * \param[in] a_radius plasma radius. Only particles with x**2+y**2<a_radius**2 are injected
      * \param[in] a_hollow_core_radius hollow core plasma radius.
      *            Only particles with x**2+y**2>a_hollow_core_radius**2 are injected
@@ -68,7 +67,6 @@ public:
         const amrex::IntVect& a_num_particles_per_cell,
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
-        const amrex::ParserExecutor<3>& a_density_func,
         const amrex::Real a_radius,
         const amrex::Real a_hollow_core_radius);
 
@@ -90,8 +88,15 @@ public:
                            const amrex::Geometry& geom,
                            Fields& fields);
 
+    /** Update m_density_func with m_density_table if applicable
+     */
+    void UpdateDensityFunction ();
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
+    bool m_use_density_table; /**< if a density value table was specified */
+    /** plasma density value table, key: position=c*time, value=density funciton string */
+    std::map<amrex::Real, std::string> m_density_table;
     int m_level {0}; /**< mesh refinement level on which the plasma lives */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
