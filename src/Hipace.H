@@ -250,7 +250,7 @@ public:
     /** Whether the beams deposit Jx and Jy */
     static bool m_do_beam_jx_jy_deposition;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
-    static bool m_do_device_synchronize;
+    static int m_do_device_synchronize;
     /** Whether to use tiling for particle operations */
     static bool m_do_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
