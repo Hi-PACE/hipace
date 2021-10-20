@@ -55,11 +55,11 @@ elif args.beam_py == '' and args.beam_out1 != '' and args.beam_out2 != '':
 else:
     raise AssertionError("Invalid input")
 
-all_comps = [["r", "position", [["x", "x"], ["y", "y"], ["z", "z"]]], \
-             ["u", "momentum", [["x", "x"], ["y", "y"], ["z", "z"]]], \
-             ["q", "weighting", [["q", io.Mesh_Record_Component.SCALAR]]]]
+all_comps = [["position", "position", [["x", "x"], ["y", "y"], ["z", "z"]]], \
+             ["momentum", "momentum", [["x", "x"], ["y", "y"], ["z", "z"]]], \
+             ["charge", "weighting", [["charge", io.Mesh_Record_Component.SCALAR]]]]
 
-units_py = {"r" : 1. , "u": scc.c * scc.m_e, "q": 1./scc.e}
+units_py = {"position" : 1. , "momentum": scc.c * scc.m_e, "charge": 1./scc.e}
 
 for comp in all_comps:
     for axes in comp[2]:
@@ -73,7 +73,7 @@ for comp in all_comps:
                 beam_arr[i] *= beam_data.unit_SI
                 if beam_type[i] == 0:
                     beam_arr[i] *= units_py[comp[0]]
-            elif comp[0] == "q":
+            elif comp[0] == "charge":
                 beam_arr[i] *= np.sqrt(beam_par[i].get_attribute("HiPACE++_Plasma_Density"))
                 if beam_type[i] == 0:
                     beam_arr[i] *= beam_data.unit_SI * units_py[comp[0]]
