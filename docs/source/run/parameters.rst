@@ -3,6 +3,24 @@
 Input parameters
 ================
 
+Parser
+------
+
+In HiPACE++ all input parameters are obtained through `amrex::Parser`, making it possible to
+specify input parameters with expressions and not just numbers. User constants can be defined
+in the input script with `my_constants`. Some Physical constants are already provided.
+
+.. code-block:: bash
+
+    my_constants.ne = 1.25e24
+    my_constants.kp_inv = "clight / sqrt(ne * q_e^2  / (epsilon0 * m_e))"
+    beam.radius = "kp_inv / 2"
+
+For a list of supported functions see the
+`AMReX documentation <https://amrex-codes.github.io/amrex/docs_html/Basics.html#parser>`__.
+Sometimes it is necessary to use double-quotes around expressions, especially when providing them
+as command line parameters. Multi-line expressions are allowed if surrounded by double-quotes.
+
 General parameters
 ------------------
 
