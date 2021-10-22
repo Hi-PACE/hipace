@@ -10,7 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os, sys, subprocess
+import os, sys, urllib.request, subprocess
 sys.path.insert(0, os.path.abspath('../../src/'))
 
 
@@ -62,4 +62,9 @@ primary_domain = 'cpp'
 # Tell sphinx what the pygments highlight language should be.
 highlight_language = 'cpp'
 
+# Download AMReX Doxygen Tagfile to interlink Doxygen docs
+url = 'https://amrex-codes.github.io/amrex/docs_xml/doxygen/amrex-doxygen-web.tag.xml'
+urllib.request.urlretrieve(url, '../amrex-doxygen-web.tag.xml')
+
+# Build Doxygen
 subprocess.call('cd ../; doxygen; mkdir -p source/_static; cp -r doxyhtml source/_static/', shell=True)
