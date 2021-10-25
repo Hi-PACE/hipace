@@ -154,6 +154,8 @@ Hipace::Hipace () :
     MPI_Comm_rank(m_comm_xy, &m_rank_xy);
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
 #endif
+
+    BackwardCompatibility();
 }
 
 Hipace::~Hipace ()
@@ -1402,4 +1404,10 @@ Hipace::CheckGhostSlice (int it)
             }
             );
     }
+}
+
+void
+Hipace::BackwardCompatibility () const
+{
+    m_multi_plasma.BackwardCompatibility();
 }

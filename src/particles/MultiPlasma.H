@@ -103,6 +103,9 @@ public:
      */
     void TileSort (amrex::Box bx, amrex::Geometry geom);
 
+    /** Crash with error message if old input parameters are used. */
+    void BackwardCompatibility () const;
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
 private:

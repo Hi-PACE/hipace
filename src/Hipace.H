@@ -369,6 +369,9 @@ private:
                          const amrex::DistributionMapping& dm);
 
     int leftmostBoxWithParticles () const;
+
+    /** Crash with error message if old input parameters are used. */
+    void BackwardCompatibility () const;
 };
 
 #endif

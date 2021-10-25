@@ -92,6 +92,9 @@ public:
      */
     void UpdateDensityFunction ();
 
+    /** Crash with error message if old input parameters are used. */
+    void BackwardCompatibility () const;
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     bool m_use_density_table; /**< if a density value table was specified */

@@ -144,3 +144,11 @@ MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
             findParticlesInEachTile(lev, bx, m_sort_bin_size, plasma, geom));
     }
 }
+
+void
+MultiPlasma::BackwardCompatibility () const
+{
+    for (auto& plasma : m_all_plasmas) {
+        plasma.BackwardCompatibility();
+    }
+}

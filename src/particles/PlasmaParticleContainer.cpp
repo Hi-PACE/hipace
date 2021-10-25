@@ -359,3 +359,16 @@ IonizationModule (const int lev,
         amrex::Gpu::synchronize();
     }
 }
+
+void
+PlasmaParticleContainer::BackwardCompatibility () const
+{
+    amrex::ParmParse pp(m_name);
+    std::string tmp_str = "0.";
+    if (queryWithParser(pp, "density", tmp_str)) {
+        amrex::Abort(
+            "DEPRECATED INPUT ERROR:\n"
+            "Input parameter <plasma species>.density is no longer supported.\n"
+            "Use <plasma species>.density(x,y,z) instead. See documentation for more information.");
+    }
+}
