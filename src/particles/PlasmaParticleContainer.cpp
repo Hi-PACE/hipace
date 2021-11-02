@@ -2,6 +2,7 @@
 #include "PlasmaParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/AtomicWeightTable.H"
+#include "utils/DeprecatedInput.H"
 #include "pusher/PlasmaParticleAdvance.H"
 #include "pusher/BeamParticleAdvance.H"
 #include "pusher/FieldGather.H"
@@ -67,6 +68,8 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "ionization_product", m_product_name);
 
     std::string density_func_str = "0.";
+    DeprecatedInput(m_name, "density", "density(x,y,z)");
+
     bool density_func_specified = queryWithParser(pp, "density(x,y,z)", density_func_str);
     m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
 
