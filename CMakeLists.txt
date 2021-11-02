@@ -1,7 +1,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.15.0)
-project(HiPACE VERSION 21.09)
+project(HiPACE VERSION 21.11)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
