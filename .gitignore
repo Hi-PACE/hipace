@@ -48,3 +48,10 @@ spack-build*
 build/
 debug/
 __pycache__
+
+# Sphinx
+docs/amrex-doxygen-web.tag.xml
+docs/hipace-doxygen-web.tag.xml
+docs/doxyhtml/
+docs/doxyxml/
+docs/source/_static/
