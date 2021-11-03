@@ -45,6 +45,7 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
+int Hipace::m_MG_verbose = 0;
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
 #else
@@ -130,6 +131,7 @@ Hipace::Hipace () :
 
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
+    queryWithParser(pph, "MG_verbose", m_MG_verbose);
     queryWithParser(pph, "do_tiling", m_do_tiling);
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
@@ -802,6 +804,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
                           amrex::LinOpBCType::Dirichlet)});
 
         m_mlmg = std::make_unique<amrex::MLMG>(*m_mlalaplacian);
+        m_mlmg->setVerbose(m_MG_verbose);
     }
 
     // BxBy is assumed to have at least one ghost cell in x and y.

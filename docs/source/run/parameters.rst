@@ -161,6 +161,9 @@ Explicit solver parameters
 * ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
     Absolute error tolerance of the AMReX multigrid solver.
 
+* ``hipace.MG_verbose`` (`int`) optional (default `0`)
+    Level of verbosity of the AMReX multigrid solver.
+
 Plasma parameters
 -----------------
 
