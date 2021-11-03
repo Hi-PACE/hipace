@@ -45,7 +45,7 @@ amrex::Real Hipace::m_external_Ez_slope = 0.;
 amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-int Hipace::m_MG_verbose = 1;
+int Hipace::m_MG_verbose = 0;
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
 #else
