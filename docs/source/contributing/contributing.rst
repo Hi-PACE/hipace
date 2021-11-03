@@ -36,3 +36,19 @@ Style and conventions
 - Lines should not have >100 characters
 - The declaration and definition of a function should have a space between the function name and the first bracket (``my_function (...)``), function calls should not (``my_function(...)``).
   This is a convention introduce in AMReX so ``git grep "my_function ("`` returns only the declaration and definition, not the many function calls.
+
+How-to
+------
+
+Make a new release
+~~~~~~~~~~~~~~~~~~
+
+- Get the formatted list of PRs merged since last release with ``git log --since="2021-09-01" | grep -A 3 "Author: " | grep -B 1 "\-\-" | sed '/--/d' | sed -e 's/^    /- /'`` (adapt the date)
+- Update the release tag in all files with something like ``git grep -l '21.09' | xargs sed -i '' -e 's/21.09/21.11/g'`` (adapt the tags, and check that this didn't cause unwanted changes)
+- On the main repo page, go to Releases > Draft new release, and
+    * Update the AMReX and openPMD-api versions
+    * Enter the list of PRs
+    * Update the commands that you used
+    * Add any additional comments
+    * confirm the release
+- Once the release is done, Zenodo will generate a DOI. Go to zenodo.org > My Account > Github > HiPACE++, and get the DOI of the last release and copy-paste to the release description
