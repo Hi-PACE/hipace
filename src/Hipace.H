@@ -268,6 +268,8 @@ public:
     static amrex::Real m_MG_tolerance_rel;
     /** Absolute tolerance for the multigrid solver, when using the explicit solver */
     static amrex::Real m_MG_tolerance_abs;
+    /** Level of verbosity for the MG solver */
+    static int m_MG_verbose;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** GridCurrent instance */
