@@ -12,7 +12,7 @@ HiPACE++:
 
    module purge
    module load maxwell gcc/9.3 openmpi/4
-   module load maxwell cuda/11.1 # cuda/11.0
+   module load maxwell cuda/11.3
    module load hdf5/1.10.6
    # pick correct GPU setting (this may differ for V100 nodes)
    export GPUS_PER_SOCKET=2
