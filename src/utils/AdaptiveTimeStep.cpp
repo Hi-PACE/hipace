@@ -17,7 +17,9 @@ struct WhichDouble {
 AdaptiveTimeStep::AdaptiveTimeStep ()
 {
     amrex::ParmParse ppa("hipace");
-    queryWithParser(ppa, "do_adaptive_time_step", m_do_adaptive_time_step);
+    std::string str_dt = "";
+    queryWithParser(ppa, "dt", str_dt);
+    if (str_dt == "adaptive") m_do_adaptive_time_step = true;
     queryWithParser(ppa, "nt_per_omega_betatron", m_nt_per_omega_betatron);
 }
 

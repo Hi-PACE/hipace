@@ -44,8 +44,8 @@ General parameters
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
 
-* ``hipace.dt`` (`float`) optional (default `0.`)
-    Time step to advance the particle beam.
+* ``hipace.dt`` (`float` or `string`) optional (default `0.`)
+    Time step to advance the particle beam. For adaptive time step, use ``"adaptive"``.
 
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.

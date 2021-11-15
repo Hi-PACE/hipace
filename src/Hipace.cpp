@@ -91,7 +91,9 @@ Hipace::Hipace () :
 
     amrex::ParmParse pph("hipace");
 
-    queryWithParser(pph, "dt", m_dt);
+    std::string str_dt {""};
+    queryWithParser(pph, "dt", str_dt);
+    if (str_dt != "adaptive") queryWithParser(pph, "dt", m_dt);
     queryWithParser(pph, "verbose", m_verbose);
     queryWithParser(pph, "numprocs_x", m_numprocs_x);
     queryWithParser(pph, "numprocs_y", m_numprocs_y);
