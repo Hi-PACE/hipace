@@ -19,8 +19,10 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
     amrex::ParmParse ppa("hipace");
     std::string str_dt = "";
     queryWithParser(ppa, "dt", str_dt);
-    if (str_dt == "adaptive") m_do_adaptive_time_step = true;
-    queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
+    if (str_dt == "adaptive"){
+        m_do_adaptive_time_step = true;
+        queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
+    }
 }
 
 #ifdef AMREX_USE_MPI
