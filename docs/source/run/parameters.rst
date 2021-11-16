@@ -101,6 +101,11 @@ General parameters
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.
 
+* ``hipace.nt_per_omega_betatron`` (`Real`) optional (default `0.07`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    Time step, normalized to the betatron angular frequency (of the full blowout regime).
+    The time step is given by :math:`\omega_{\beta}\Delta t =` ``nt_per_omega_betatron`` where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz factor of the slowest particles in all beams.
+
 Field solver parameters
 -----------------------
 
