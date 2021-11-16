@@ -16,7 +16,7 @@ print(dt1)
 print(dt2)
 
 uz = 1000
-nt_per_omega_betatron = 0.07
+nt_per_betatron = 40.
 dt_analytic = np.sqrt(2*uz)*nt_per_omega_betatron
 error_analytic = (dt1[0]-dt_analytic)/dt_analytic
 assert(error_analytic < 1e-5)
