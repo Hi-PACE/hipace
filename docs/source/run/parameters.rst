@@ -44,8 +44,8 @@ General parameters
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
 
-* ``hipace.dt`` (`float`) optional (default `0.`)
-    Time step to advance the particle beam.
+* ``hipace.dt`` (`float` or `string`) optional (default `0.`)
+    Time step to advance the particle beam. For adaptive time step, use ``"adaptive"``.
 
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.
@@ -100,6 +100,11 @@ General parameters
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.
+
+* ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    Number of time steps per betatron period (of the full blowout regime).
+    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N` (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz factors of the slowest particles in all beams.
 
 Field solver parameters
 -----------------------

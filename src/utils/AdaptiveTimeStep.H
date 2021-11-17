@@ -16,7 +16,7 @@ private:
     /** Whether to use an adaptive time step */
     bool m_do_adaptive_time_step = false;
     /** Number of time steps per betatron period for the adaptive time step */
-    amrex::Real m_nt_per_omega_betatron = 0.07;
+    amrex::Real m_nt_per_betatron = 40.;
 
 public:
     /** Constructor */

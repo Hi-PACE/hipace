@@ -17,8 +17,12 @@ struct WhichDouble {
 AdaptiveTimeStep::AdaptiveTimeStep ()
 {
     amrex::ParmParse ppa("hipace");
-    queryWithParser(ppa, "do_adaptive_time_step", m_do_adaptive_time_step);
-    queryWithParser(ppa, "nt_per_omega_betatron", m_nt_per_omega_betatron);
+    std::string str_dt = "";
+    queryWithParser(ppa, "dt", str_dt);
+    if (str_dt == "adaptive"){
+        m_do_adaptive_time_step = true;
+        queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
+    }
 }
 
 #ifdef AMREX_USE_MPI
@@ -150,7 +154,8 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         {
             const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
                                           / ( phys_const.ep0*phys_const.m_e ));
-            new_dt = std::sqrt(2.*chosen_min_uz)/omega_p * m_nt_per_omega_betatron;
+            amrex::Real omega_betatron = omega_p / std::sqrt(2.*chosen_min_uz);
+            new_dt = 2.*MathConst::pi/omega_betatron / m_nt_per_betatron;
         }
 
         /* set the new time step */

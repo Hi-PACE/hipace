@@ -32,8 +32,9 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.ppc = 4 4 1 \
         hipace.external_Ez_slope = -.5 \
         hipace.verbose=1\
-        hipace.do_adaptive_time_step=1\
+        hipace.dt=adaptive\
         plasmas.adaptive_density=1 \
+        hipace.nt_per_betatron = 89.7597901025655 \
         > negative_gradient.txt
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
@@ -50,8 +51,9 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.ppc = 4 4 1 \
         hipace.external_Ez_slope = .5 \
         hipace.verbose=1\
-        hipace.do_adaptive_time_step=1\
+        hipace.dt = adaptive\
         plasmas.adaptive_density=1 \
+        hipace.nt_per_betatron = 89.7597901025655 \
         > positive_gradient.txt
 
 # Compare the result with theory
