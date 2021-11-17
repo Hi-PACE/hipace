@@ -1,4 +1,5 @@
 #include "AdaptiveTimeStep.H"
+#include "utils/DeprecatedInput.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
 #include "Constants.H"
@@ -23,6 +24,7 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
         m_do_adaptive_time_step = true;
         queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
     }
+    DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
 }
 
 #ifdef AMREX_USE_MPI
