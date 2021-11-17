@@ -15,7 +15,7 @@ DeprecatedInput(std::string const& pp_name, char const * const str,
         amrex::Abort(
             "DEPRECATED INPUT ERROR:\n"
             "Input parameter " + pp_name + "." + str + " no longer supported.\n"
-            "Use " + pp_name + "." + replacement + " instead (more info in the documentation). "
+            "See " + pp_name + "." + replacement + " instead (more info in the documentation). "
             + msg
             );
     }
