@@ -192,6 +192,7 @@ public:
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
     char* m_psend_buffer_ghost = nullptr;
+    amrex::Real m_tsend_buffer {-1.};
     /** Send buffer for the number of particles for each beam (pipeline) */
     amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
     amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);

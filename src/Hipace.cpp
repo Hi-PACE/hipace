@@ -30,7 +30,7 @@ Hipace* Hipace::m_instance = nullptr;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
-amrex::Real Hipace::m_physical_time = 0.0;
+amrex::Real Hipace::m_physical_time = 0.0; // MUST start at 0, test in NotifyFinish depends on that.
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
@@ -1130,8 +1130,8 @@ Hipace::Notify (const int step, const int it,
 
     // send physical time
     if (it == m_numprocs_z - 1 && !only_ghost){
-        const amrex::Real t = m_physical_time + m_dt;
-        MPI_Isend(&t, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+        m_tsend_buffer = m_physical_time + m_dt;
+        MPI_Isend(&m_tsend_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, tcomm_z_tag, m_comm_z, &m_tsend_request);
     }
 
@@ -1271,8 +1271,11 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
         }
     } else {
         if (it == m_numprocs_z - 1) {
-            MPI_Status status;
-            MPI_Wait(&m_tsend_request, &status);
+            if (m_tsend_buffer >= 0.) {
+                MPI_Status status;
+                MPI_Wait(&m_tsend_request, &status);
+                m_tsend_buffer = -1.;
+            }
         }
 
         if (m_np_snd.size() > 0) {
