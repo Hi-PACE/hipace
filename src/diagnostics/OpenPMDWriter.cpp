@@ -143,10 +143,10 @@ OpenPMDWriter::WriteFieldData (
         openPMD::Datatype datatype = openPMD::determineDatatype< amrex::Real >();
         amrex::IntVect prob_size = data_box.bigEnd() - data_box.smallEnd()
                                    + amrex::IntVect::TheUnitVector();
-        amrex::Vector<long long unsigned int> probsize_reformat = {AMREX_D_DECL(
-                     static_cast<long long unsigned int>(geom[lev].Domain().size()[2]),
-                     static_cast<long long unsigned int>(prob_size[1]),
-                     static_cast<long long unsigned int>(prob_size[0])
+        amrex::Vector<std::uint64_t> probsize_reformat = {AMREX_D_DECL(
+                     static_cast<std::uint64_t>(geom[lev].Domain().size()[2]),
+                     static_cast<std::uint64_t>(prob_size[1]),
+                     static_cast<std::uint64_t>(prob_size[0])
                       )};
         openPMD::Extent global_size = probsize_reformat; //geom[lev].Domain().size());
         // If slicing requested, remove number of points for the slicing direction
