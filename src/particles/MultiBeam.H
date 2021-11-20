@@ -78,7 +78,7 @@ public:
 
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
-     * \param[out] physical time at which the simulation will start
+     * \return physical time at which the simulation will start
      */
     amrex::Real InitData (const amrex::Geometry& geom);
 
