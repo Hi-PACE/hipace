@@ -30,7 +30,8 @@ Hipace* Hipace::m_instance = nullptr;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
-amrex::Real Hipace::m_physical_time = 0.0; // MUST start at 0, test in NotifyFinish depends on that.
+amrex::Real Hipace::m_physical_time = 0.0;
+amrex::Real Hipace::m_initial_time = 0.0;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
@@ -260,13 +261,14 @@ Hipace::InitData ()
 
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
-    m_physical_time = m_multi_beam.InitData(geom[lev]);
+    m_initial_time = m_multi_beam.InitData(geom[lev]);
     m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
     m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
 #endif
+    m_physical_time = m_initial_time;
 }
 
 void
@@ -1271,10 +1273,11 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
         }
     } else {
         if (it == m_numprocs_z - 1) {
-            if (m_tsend_buffer >= 0.) {
+            AMREX_ALWAYS_ASSERT(m_dt >= 0.);
+            if (m_tsend_buffer >= m_initial_time) {
                 MPI_Status status;
                 MPI_Wait(&m_tsend_request, &status);
-                m_tsend_buffer = -1.;
+                m_tsend_buffer = m_initial_time - 1.;
             }
         }
 

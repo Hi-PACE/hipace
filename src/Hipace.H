@@ -225,6 +225,8 @@ public:
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     static amrex::Real m_physical_time;
+    /** Physical time at the beginning of the simulation */
+    static amrex::Real m_initial_time;
     /** Level of verbosity */
     static int m_verbose;
     /** Order of the field gather and current deposition shape factor in the transverse directions
