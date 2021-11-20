@@ -260,7 +260,7 @@ Hipace::InitData ()
 
     AmrCore::InitFromScratch(0.0); // function argument is time
     constexpr int lev = 0;
-    m_multi_beam.InitData(geom[lev]);
+    m_physical_time = m_multi_beam.InitData(geom[lev]);
     m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
     m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI

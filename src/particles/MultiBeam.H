@@ -79,7 +79,7 @@ public:
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      */
-    void InitData (const amrex::Geometry& geom);
+    amrex::Real InitData (const amrex::Geometry& geom);
 
     /** Return 1 species
      * \param[in] i index of the beam

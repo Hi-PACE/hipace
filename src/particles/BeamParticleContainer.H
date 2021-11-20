@@ -35,7 +35,7 @@ public:
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
      */
-    void InitData (const amrex::Geometry& geom);
+    amrex::Real InitData (const amrex::Geometry& geom);
 
     /** Initialize a beam with a fix number of particles per cell */
     void InitBeamFixedPPC (
@@ -62,25 +62,25 @@ public:
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype*/
-    void InitBeamFromFileHelper (const std::string input_file,
-                                 const bool coordinates_specified,
-                                 const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
-                                 const amrex::Geometry& geom,
-                                 amrex::Real n_0,
-                                 const int num_iteration,
-                                 const std::string species_name,
-                                 const bool species_specified);
+    amrex::Real InitBeamFromFileHelper (const std::string input_file,
+                                        const bool coordinates_specified,
+                                        const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                        const amrex::Geometry& geom,
+                                        amrex::Real n_0,
+                                        const int num_iteration,
+                                        const std::string species_name,
+                                        const bool species_specified);
 
     /** Initialize a beam from an external input file using openPMD and HDF5 */
     template<typename input_type>
-    void InitBeamFromFile (const std::string input_file,
-                           const bool coordinates_specified,
-                           const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
-                           const amrex::Geometry& geom,
-                           amrex::Real n_0,
-                           const int num_iteration,
-                           const std::string species_name,
-                           const bool species_specified);
+    amrex::Real InitBeamFromFile (const std::string input_file,
+                                  const bool coordinates_specified,
+                                  const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                  const amrex::Geometry& geom,
+                                  amrex::Real n_0,
+                                  const int num_iteration,
+                                  const std::string species_name,
+                                  const bool species_specified);
 #endif
 
     std::string get_name () const {return m_name;}

@@ -18,12 +18,14 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     m_n_real_particles.resize(m_nbeams, 0);
 }
 
-void
+amrex::Real
 MultiBeam::InitData (const amrex::Geometry& geom)
 {
+    amrex::Real ptime {0.};
     for (auto& beam : m_all_beams) {
-        beam.InitData(geom);
+        ptime = beam.InitData(geom);
     }
+    return ptime;
 }
 
 void
