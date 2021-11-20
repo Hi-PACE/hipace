@@ -33,7 +33,8 @@ public:
     /** Read parameters in the input file */
     void ReadParameters ();
 
-    /** Allocate data for the beam particles and initialize particles with requested beam profile
+    /** \brief Allocate beam particle data and initialize particles with requested beam profile
+     * \param[out] physical time at which the simulation will start
      */
     amrex::Real InitData (const amrex::Geometry& geom);
 
@@ -61,7 +62,9 @@ public:
                               const bool can, const amrex::Real zmin, const amrex::Real zmax);
 
 #ifdef HIPACE_USE_OPENPMD
-    /** Checks the input file first to determine its Datatype*/
+    /** Checks the input file first to determine its Datatype
+     * \param[out] physical time at which the simulation will start
+     */
     amrex::Real InitBeamFromFileHelper (const std::string input_file,
                                         const bool coordinates_specified,
                                         const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
@@ -71,7 +74,9 @@ public:
                                         const std::string species_name,
                                         const bool species_specified);
 
-    /** Initialize a beam from an external input file using openPMD and HDF5 */
+    /** Initialize a beam from an external input file using openPMD and HDF5
+     * \param[out] physical time at which the simulation will start
+     */
     template<typename input_type>
     amrex::Real InitBeamFromFile (const std::string input_file,
                                   const bool coordinates_specified,

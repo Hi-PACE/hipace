@@ -78,10 +78,11 @@ public:
 
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
+     * \param[out] physical time at which the simulation will start
      */
     amrex::Real InitData (const amrex::Geometry& geom);
 
-    /** Return 1 species
+    /** \brief Return 1 species
      * \param[in] i index of the beam
      */
     BeamParticleContainer& getBeam (int i) {return m_all_beams[i];}
