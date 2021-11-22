@@ -315,7 +315,7 @@ InitBeamFixedWeight (int num_to_add,
 }
 
 #ifdef HIPACE_USE_OPENPMD
-void
+amrex::Real
 BeamParticleContainer::
 InitBeamFromFileHelper (const std::string input_file,
                         const bool coordinates_specified,
@@ -367,22 +367,23 @@ InitBeamFromFileHelper (const std::string input_file,
 
     }
 
+    amrex::Real ptime {0.};
     if( input_type == openPMD::Datatype::FLOAT ) {
-        InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz,
-                                geom, n_0, num_iteration, species_name, species_known);
+        ptime = InitBeamFromFile<float>(input_file, coordinates_specified, file_coordinates_xyz,
+                                        geom, n_0, num_iteration, species_name, species_known);
     }
     else if( input_type == openPMD::Datatype::DOUBLE ) {
-        InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz,
-                                 geom, n_0, num_iteration, species_name, species_known);
+        ptime = InitBeamFromFile<double>(input_file, coordinates_specified, file_coordinates_xyz,
+                                         geom, n_0, num_iteration, species_name, species_known);
     }
     else{
         amrex::Abort("Unknown Datatype used in Beam Input file. Must use double or float\n");
     }
-    return;
+    return ptime;
 }
 
 template <typename input_type>
-void
+amrex::Real
 BeamParticleContainer::
 InitBeamFromFile (const std::string input_file,
                   const bool coordinates_specified,
@@ -395,10 +396,12 @@ InitBeamFromFile (const std::string input_file,
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
 
+    amrex::Real physical_time {0.};
+
     auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
 
     if( series.iterations[num_iteration].containsAttribute("time") ) {
-        Hipace::m_physical_time = series.iterations[num_iteration].time<input_type>();
+        physical_time = series.iterations[num_iteration].time<input_type>();
     }
 
     // Initialize variables to translate between names from the file and names in Hipace
@@ -673,6 +676,6 @@ InitBeamFromFile (const std::string input_file,
         }
     }
 
-    return;
+    return physical_time;
 }
 #endif // HIPACE_USE_OPENPMD

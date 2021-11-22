@@ -55,11 +55,11 @@ BeamParticleContainer::ReadParameters ()
     }
 }
 
-void
+amrex::Real
 BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     PhysConst phys_const = get_phys_const();
-
+    amrex::Real ptime {0.};
     if (m_injection_type == "fixed_ppc") {
 
         amrex::ParmParse pp(m_name);
@@ -138,8 +138,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             m_plasma_density = 0;
         }
 
-        InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz, geom,
-                          m_plasma_density, m_num_iteration, m_species_name, species_specified);
+        ptime = InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz,
+                                       geom, m_plasma_density, m_num_iteration, m_species_name,
+                                       species_specified);
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
@@ -153,6 +154,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
 
+    return ptime;
 }
 
 amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool only_local) const
