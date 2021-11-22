@@ -1,5 +1,8 @@
-HiPACE++ documentation
-======================
+HiPACE++
+========
+
+.. image:: image.png
+ :alt: HiPACE++
 
 HiPACE++ is an open-source portable (GPU-capable) quasistatic particle-in-cell code written in C++, available `here <https://github.com/Hi-PACE/hipace>`__.
 It is a full re-writing of the DESY-LBNL legacy code `HiPACE <http://dx.doi.org/10.1088/0741-3335/56/8/084012>`__, the Highly efficient Plasma Accelerator Emulator.
