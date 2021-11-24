@@ -152,24 +152,15 @@ public:
      */
     void AddBeamCurrents (const int lev, const int which_slice);
 
-    /** Copy or add array to staging area
-     *
-     * \param[in] src multifab to be copied or added
-     * \param[in] slice_operator operation: SliceOperatorType::Assign or Add
-     * \param[in] scomp compent of source MF
-     * \param[in] lev level of mesh refinement
-     */
     /*void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
                             const int scomp, const int lev);*/
 
-    /** Compute transverse derivative of 1 slice*/
     /*void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
                                const int direction, const amrex::Real dx, const int lev,
                                const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
                                const int scomp=0, const int dcomp=0, const bool use_offset=false);*/
 
-    /** Compute longitudinal derivative (difference between two slices) */
     /*void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
                                  amrex::MultiFab& dst, const amrex::Real dz, const int lev,
                                  const amrex::Real mult_coeff=1.,

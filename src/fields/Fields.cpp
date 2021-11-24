@@ -36,7 +36,7 @@ Fields::AllocData (
         "Parallel field solvers not supported yet");
 
     // Need 1 extra guard cell transversally for transverse derivative of Psi
-    int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+    int nguards_xy = Hipace::m_depos_order_xy;
     m_valid_nguards = {nguards_xy, nguards_xy, 0};
     m_slices_nguards = {nguards_xy + 1, nguards_xy + 1, 0};
 
