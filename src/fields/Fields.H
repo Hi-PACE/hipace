@@ -44,10 +44,14 @@ static std::array<std::map<std::string, int>, 5> Comps
             }}
     }};
 
-/** \brief Operation performed in the TransverseDerivative function:
- * either assign or add to the destination array
- */
-enum struct SliceOperatorType { Assign, Add };
+ struct FieldView {
+     amrex::MultiFab& m_mfab;
+     int m_comp;
+
+     auto array (amrex::MFIter& mfi) const {
+         return m_mfab.array(mfi, m_comp);
+     }
+ };
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
@@ -94,6 +98,15 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+
+    FieldView getField (const int lev, const int islice, const std::string comp) {
+        return FieldView{getSlices(lev, islice), Comps[islice][comp]};
+    }
+
+    FieldView getStagingArea (const int lev) {
+        return FieldView{m_poisson_solver[lev]->StagingArea(), 0};
+    }
+
     /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
@@ -146,22 +159,22 @@ public:
      * \param[in] scomp compent of source MF
      * \param[in] lev level of mesh refinement
      */
-    void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
-                            const int scomp, const int lev);
+    /*void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
+                            const int scomp, const int lev);*/
 
     /** Compute transverse derivative of 1 slice*/
-    void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
-                               const int direction, const amrex::Real dx,
+    /*void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
+                               const int direction, const amrex::Real dx, const int lev,
                                const amrex::Real mult_coeff=1.,
                                const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0, const bool use_offset=false);
+                               const int scomp=0, const int dcomp=0, const bool use_offset=false);*/
 
     /** Compute longitudinal derivative (difference between two slices) */
-    void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
-                                 amrex::MultiFab& dst, const amrex::Real dz,
+    /*void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
+                                 amrex::MultiFab& dst, const amrex::Real dz, const int lev,
                                  const amrex::Real mult_coeff=1.,
                                  const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                                 const int sc1omp=0, const int s2comp=0, const int dcomp=0);
+                                 const int sc1omp=0, const int s2comp=0, const int dcomp=0);*/
 
     /** \brief Interpolate values at boundaries from coarse grid to the fine grid
      *
@@ -288,6 +301,12 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
+    static amrex::IntVect m_valid_nguards;
+
+    static amrex::Vector<amrex::Box> m_box_problem;
+    static amrex::Vector<amrex::Box> m_box_source;
+    static amrex::Vector<amrex::Box> m_box_valid;
+    static amrex::Vector<amrex::Box> m_box_all;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
