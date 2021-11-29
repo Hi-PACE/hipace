@@ -30,7 +30,7 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
         // are the same as real space boxes, but have one less ghoast cell
         // Define the corresponding box
         amrex::Box space_bx = a_realspace_ba[i];
-        space_bx.grow(Fields::m_valid_nguards);
+        space_bx.grow(Fields::m_slices_nguards);
         real_and_spectral_bl.push_back( space_bx );
     }
     m_spectralspace_ba.define( std::move(real_and_spectral_bl) );
@@ -130,15 +130,10 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
                                          "Slice MFs must be defined on one box only");
         const amrex::FArrayBox& lhs_fab = lhs_mf[0];
         amrex::Box lhs_bx = lhs_fab.box();
-        amrex::Box fft_box = m_spectralspace_ba[mfi];
         amrex::ParallelFor( lhs_bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy field
-                if(fft_box.contains(i,j,k)) {
-                    lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
-                } else {
-                    lhs_arr(i,j,k) = 0;
-                }
+                lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
             });
     }
 }

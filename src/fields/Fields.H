@@ -292,12 +292,10 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
-    static amrex::IntVect m_valid_nguards;
 
     static amrex::Vector<amrex::Box> m_box_problem;
-    static amrex::Vector<amrex::Box> m_box_source;
-    static amrex::Vector<amrex::Box> m_box_valid;
-    static amrex::Vector<amrex::Box> m_box_all;
+    static amrex::Vector<amrex::Box> m_box_extended;
+    static amrex::Vector<amrex::Box> m_box_narrow;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
