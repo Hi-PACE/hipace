@@ -28,7 +28,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     // Extract properties associated with the extent of the current box
     const int depos_order_xy = Hipace::m_depos_order_xy;
     amrex::Box tilebox = box;
-    tilebox.grow({depos_order_xy, depos_order_xy, Hipace::m_depos_order_z});
+    tilebox.grow(Fields::m_slices_nguards + amrex::IntVect{0, 0, Hipace::m_depos_order_z});
 
     amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
     amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();

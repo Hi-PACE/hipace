@@ -37,7 +37,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     {
         // Extract properties associated with the extent of the current box
         amrex::Box tilebox = pti.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+            Fields::m_slices_nguards);
 
         amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();

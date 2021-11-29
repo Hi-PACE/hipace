@@ -164,8 +164,7 @@ IonizationModule (const int lev,
     {
         // Extract properties associated with the extent of the current box
         // Grow to capture the extent of the particle shape
-        amrex::Box tilebox = mfi_ion.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+        amrex::Box tilebox = mfi_ion.tilebox().grow(Fields::m_slices_nguards);
 
         amrex::RealBox const grid_box{tilebox, geom.CellSize(), geom.ProbLo()};
         amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();

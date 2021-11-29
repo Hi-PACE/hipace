@@ -574,7 +574,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
 void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                   const MPI_Comm& m_comm_xy, const int lev, const int islice)
+                                   const int lev, const int islice)
 {
     /* Solves Laplacian(Psi) =  1/episilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -757,13 +757,13 @@ Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
         getSlices(lev, WhichSlice::This),
         1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
         -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
-        Comps[WhichSlice::This]["Bx"], 1, 0);
+        Comps[WhichSlice::This]["Bx"], 1, m_slices_nguards);
 
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
         1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
         -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
-        Comps[WhichSlice::This]["By"], 1, 0);
+        Comps[WhichSlice::This]["By"], 1, m_slices_nguards);
 }
 
 void
@@ -802,17 +802,17 @@ Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_pr
         B_prev_iter,
         weight_B_iter, B_iter, 0,
         weight_B_prev_iter, B_prev_iter, 0,
-        0, 1, 0);
+        0, 1, m_slices_nguards);
 
     /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
         1-predcorr_B_mixing_factor, getSlices(lev, WhichSlice::This), field_comp,
         predcorr_B_mixing_factor, B_prev_iter, 0,
-        field_comp, 1, 0);
+        field_comp, 1, m_slices_nguards);
 
     /* Shifting the B field from the current iteration to the previous iteration */
-    amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, 0);
+    amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, m_slices_nguards);
 
 }
 
