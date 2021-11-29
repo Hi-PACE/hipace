@@ -152,21 +152,6 @@ public:
      */
     void AddBeamCurrents (const int lev, const int which_slice);
 
-    /*void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
-                            const int scomp, const int lev);*/
-
-    /*void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
-                               const int direction, const amrex::Real dx, const int lev,
-                               const amrex::Real mult_coeff=1.,
-                               const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0, const bool use_offset=false);*/
-
-    /*void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
-                                 amrex::MultiFab& dst, const amrex::Real dz, const int lev,
-                                 const amrex::Real mult_coeff=1.,
-                                 const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                                 const int sc1omp=0, const int s2comp=0, const int dcomp=0);*/
-
     /** \brief Interpolate values at boundaries from coarse grid to the fine grid
      *
      * \param[in] geom Geometry
