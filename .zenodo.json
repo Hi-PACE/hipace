@@ -58,11 +58,6 @@
             "scheme": "url",
             "identifier": "https://github.com/Hi-PACE/hipace/tree/v21.09",
             "relation": "isSupplementTo"
-        },
-        {
-            "scheme": "doi",
-            "identifier": "10.5281/zenodo.5358483",
-            "relation": "isVersionOf"
         }
     ]
 }
