@@ -1,9 +1,9 @@
 {
     "license": "other-open",
-    "title": "Hi-PACE/hipace: v21.11",
-    "version": "v21.11",
+    "title": "Hi-PACE/hipace: v21.12",
+    "version": "v21.12",
     "upload_type": "software",
-    "publication_date": "2021-11-01",
+    "publication_date": "2021-12-02",
     "creators": [
         {
             "affiliation": "Deutsches Elektronen-Synchrotron, previously LBNL",
@@ -56,7 +56,7 @@
     "related_identifiers": [
         {
             "scheme": "url",
-            "identifier": "https://github.com/Hi-PACE/hipace/tree/v21.11",
+            "identifier": "https://github.com/Hi-PACE/hipace/tree/v21.12",
             "relation": "isSupplementTo"
         },
         {
