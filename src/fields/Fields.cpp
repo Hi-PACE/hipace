@@ -221,8 +221,8 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
         const int ncells_x = ncells_global[0];
         const int ncells_y = ncells_global[1];
 
-        const int cpyboxlo_x = copy_box.smallEnd(0);
-        const int cpyboxlo_y = copy_box.smallEnd(1);
+        const int cpyboxlo_x = Diagnostic::m_include_ghost_cells ? -m_slices_nguards[0] : 0;
+        const int cpyboxlo_y = Diagnostic::m_include_ghost_cells ? -m_slices_nguards[1] : 0;
 
         const int *diag_comps = diag_comps_vect.data();
 
