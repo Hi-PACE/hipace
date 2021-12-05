@@ -22,28 +22,17 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(a_realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
-    // Create the box array that corresponds to spectral space
-    amrex::BoxList real_and_spectral_bl; // Create empty box list
-    // Loop over boxes and fill the box list
-    for (int i=0; i < a_realspace_ba.size(); i++ ) {
-        // For local FFTs, boxes in spectral space
-        // are the same as real space boxes, but have one less ghoast cell
-        // Define the corresponding box
-        amrex::Box space_bx = a_realspace_ba[i];
-        space_bx.grow(Fields::m_slices_nguards);
-        real_and_spectral_bl.push_back( space_bx );
-    }
-    m_spectralspace_ba.define( std::move(real_and_spectral_bl) );
+    m_spectralspace_ba = a_realspace_ba;
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
     // The stagingArea is also created from 0 to nx, because the real space array may have
     // an offset for levels > 0
-    m_stagingArea = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
-    m_tmpSpectralField = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
-    m_eigenvalue_matrix = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
-    m_stagingArea.setVal(0.0); // this is not required
-    m_tmpSpectralField.setVal(0.0);
+    m_stagingArea = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_slices_nguards);
+    m_tmpSpectralField = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_slices_nguards);
+    m_eigenvalue_matrix = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_slices_nguards);
+    m_stagingArea.setVal(0.0, Fields::m_slices_nguards); // this is not required
+    m_tmpSpectralField.setVal(0.0, Fields::m_slices_nguards);
 
     // This must be true even for parallel FFT.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_stagingArea.local_size() == 1,
@@ -51,7 +40,7 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_tmpSpectralField.local_size() == 1,
                                      "There should be only one box locally.");
 
-    const amrex::Box fft_box = m_spectralspace_ba[0];
+    const amrex::Box fft_box = m_stagingArea[0].box();
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
@@ -115,7 +104,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::Array4<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         amrex::Array4<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
 
-        amrex::ParallelFor( m_spectralspace_ba[mfi],
+        amrex::ParallelFor( m_tmpSpectralField[mfi].box(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 tmp_cmplx_arr(i,j,k) *= eigenvalue_matrix(i,j,k);
             });
@@ -128,9 +117,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
-        const amrex::FArrayBox& lhs_fab = lhs_mf[0];
-        amrex::Box lhs_bx = lhs_fab.box();
-        amrex::ParallelFor( lhs_bx,
+        amrex::ParallelFor( lhs_mf[mfi].box(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy field
                 lhs_arr(i,j,k) = tmp_real_arr(i,j,k);

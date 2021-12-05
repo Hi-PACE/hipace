@@ -2,7 +2,7 @@ amr.n_cell = 64 64 100
 
 hipace.normalized_units=1
 hipace.predcorr_max_iterations = 1
-hipace.predcorr_B_mixing_factor = 0.12
+hipace.predcorr_B_mixing_factor = 0.10
 hipace.predcorr_B_error_tolerance = -1
 
 amr.blocking_factor = 2

@@ -2,6 +2,8 @@
 #include "Hipace.H"
 #include <AMReX_ParmParse.H>
 
+bool Diagnostic::m_include_ghost_cells = false;
+
 Diagnostic::Diagnostic (int nlev)
     : m_F(nlev),
       m_diag_coarsen(nlev),
@@ -33,6 +35,10 @@ Diagnostic::Diagnostic (int nlev)
         m_diag_coarsen[ilev] = amrex::IntVect(diag_coarsen_arr);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_diag_coarsen[ilev].min() >= 1,
             "Coarsening ratio must be >= 1");
+
+        if(diag_coarsen_arr == amrex::Array<int,3>{1,1,1}) {
+           queryWithParser(ppd, "include_ghost_cells", m_include_ghost_cells);
+        }
     }
 
     queryWithParser(ppd, "field_data", m_comps_output);

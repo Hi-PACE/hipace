@@ -531,7 +531,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                                  WhichSlice::Next);
                 m_fields.AddBeamCurrents(lev, WhichSlice::Next);
                 // need to exchange jx jy jx_beam jy_beam
-                j_slice_next.FillBoundary(Geom(lev).periodicity());
+                //j_slice_next.FillBoundary(Geom(lev).periodicity());
             }
 
             m_fields.AddRhoIons(lev);
@@ -551,7 +551,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                  ijz == ijx+4 && ijz_beam == ijx+5 && irho == ijx+6 );
             amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                     amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
-            j_slice.FillBoundary(Geom(lev).periodicity());
+            //j_slice.FillBoundary(Geom(lev).periodicity());
 
             m_fields.SolvePoissonExmByAndEypBx(Geom(), lev, islice);
 
@@ -561,7 +561,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                              WhichSlice::This);
             m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
-            j_slice.FillBoundary(Geom(lev).periodicity());
+            //j_slice.FillBoundary(Geom(lev).periodicity());
 
             m_fields.SolvePoissonEz(Geom(), lev, islice);
             m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -918,7 +918,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         // need to exchange jx jy jx_beam jy_beam
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                      amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
-        j_slice_next.FillBoundary(Geom(lev).periodicity());
+        //j_slice_next.FillBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
@@ -1301,6 +1301,9 @@ Hipace::ResizeFDiagFAB (const int it)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         amrex::Box bx = boxArray(lev)[it];
+        if(Diagnostic::m_include_ghost_cells) {
+            bx.grow(Fields::m_slices_nguards);
+        }
 
         if (lev == 1) {
             const amrex::Box& bx_lev0 = boxArray(0)[it];
