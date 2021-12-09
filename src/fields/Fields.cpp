@@ -12,7 +12,6 @@ amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
 {
-    const int max_lev = a_hipace->maxLevel()+1;
     amrex::ParmParse ppf("fields");
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
 }
@@ -389,10 +388,10 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
             const bool i_is_changing = (i < box_len0);
-            const bool i_lo_edge = (!i_is_changing)*(!j);
-            const bool i_hi_edge = (!i_is_changing)*j;
-            const bool j_lo_edge = i_is_changing*(!j);
-            const bool j_hi_edge = i_is_changing*j;
+            const bool i_lo_edge = (!i_is_changing) && (!j);
+            const bool i_hi_edge = (!i_is_changing) && j;
+            const bool j_lo_edge = i_is_changing && (!j);
+            const bool j_hi_edge = i_is_changing && j;
 
             const int i_idx = box_lo0 + i_hi_edge*(box_len0-1) + i_is_changing*i;
             const int j_idx = box_lo1 + j_hi_edge*(box_len1-1) + (!i_is_changing)*(i-box_len0);
@@ -492,7 +491,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
 void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                   const int lev, const int islice)
+                                   const MPI_Comm& m_comm_xy, const int lev, const int islice)
 {
     /* Solves Laplacian(Psi) =  1/episilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -516,6 +515,9 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */
+    amrex::ParallelContext::push(m_comm_xy);
+    lhs.FillBoundary(geom[lev].periodicity());
+    amrex::ParallelContext::pop();
 
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
 

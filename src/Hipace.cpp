@@ -531,7 +531,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                                  WhichSlice::Next);
                 m_fields.AddBeamCurrents(lev, WhichSlice::Next);
                 // need to exchange jx jy jx_beam jy_beam
-                //j_slice_next.FillBoundary(Geom(lev).periodicity());
+                j_slice_next.FillBoundary(Geom(lev).periodicity());
             }
 
             m_fields.AddRhoIons(lev);
@@ -551,9 +551,9 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                  ijz == ijx+4 && ijz_beam == ijx+5 && irho == ijx+6 );
             amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                     amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
-            //j_slice.FillBoundary(Geom(lev).periodicity());
+            j_slice.FillBoundary(Geom(lev).periodicity());
 
-            m_fields.SolvePoissonExmByAndEypBx(Geom(), lev, islice);
+            m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
 
             m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
             m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
@@ -561,7 +561,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                              WhichSlice::This);
             m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
-            //j_slice.FillBoundary(Geom(lev).periodicity());
+            j_slice.FillBoundary(Geom(lev).periodicity());
 
             m_fields.SolvePoissonEz(Geom(), lev, islice);
             m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -850,10 +850,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
-    //amrex::ParallelContext::push(m_comm_xy);
+    amrex::ParallelContext::push(m_comm_xy);
      // exchange ExmBy EypBx Ez Bx By Bz
-    //m_fields.getSlices(lev, WhichSlice::This).FillBoundary(Geom(lev).periodicity());
-    //amrex::ParallelContext::pop();
+    m_fields.getSlices(lev, WhichSlice::This).FillBoundary(Geom(lev).periodicity());
+    amrex::ParallelContext::pop();
 
     /* creating temporary Bx and By arrays for the current and previous iteration */
     amrex::MultiFab Bx_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
@@ -918,7 +918,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         // need to exchange jx jy jx_beam jy_beam
         amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                      amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
-        //j_slice_next.FillBoundary(Geom(lev).periodicity());
+        j_slice_next.FillBoundary(Geom(lev).periodicity());
         amrex::ParallelContext::pop();
 
         /* Calculate Bx and By */
@@ -948,10 +948,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         jx_beam_next.setVal(0., m_fields.m_slices_nguards);
         jy_beam_next.setVal(0., m_fields.m_slices_nguards);
 
-        //amrex::ParallelContext::push(m_comm_xy);
+        amrex::ParallelContext::push(m_comm_xy);
          // exchange Bx By
-        //m_fields.getSlices(lev, WhichSlice::This).FillBoundary(Geom(lev).periodicity());
-        //amrex::ParallelContext::pop();
+        m_fields.getSlices(lev, WhichSlice::This).FillBoundary(Geom(lev).periodicity());
+        amrex::ParallelContext::pop();
 
         /* Update force terms using the calculated Bx and By */
         m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, false, true, false, lev);
