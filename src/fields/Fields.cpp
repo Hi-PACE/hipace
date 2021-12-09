@@ -533,7 +533,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
-        const amrex::Box bx = mfi.growntilebox(m_slices_nguards - amrex::IntVect{1, 1, 0});
+        const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
         const amrex::Real dx_inv = 1./(2*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1./(2*geom[lev].CellSize(Direction::y));
 
