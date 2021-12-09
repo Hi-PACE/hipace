@@ -159,8 +159,8 @@ public:
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in] islice longitudinal slice
      */
-    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                std::string component, const int islice);
+    void SetRefinedBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                               std::string component, const int islice);
 
     /** \brief Interpolate values from coarse grid to the fine grid
      *
@@ -172,14 +172,6 @@ public:
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                     std::string component, const int islice);
 
-    /** \brief Interpolate values from coarse grid to the fine grid
-     *
-     * \param[in] geom Geometry
-     * \param[in] lev current level
-     * \param[in] component which can be Psi or rho
-     */
-    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
@@ -276,10 +268,6 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
-
-    static amrex::Vector<amrex::Box> m_box_problem;
-    static amrex::Vector<amrex::Box> m_box_extended;
-    static amrex::Vector<amrex::Box> m_box_narrow;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
