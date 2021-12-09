@@ -504,8 +504,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 const int iby = Comps[WhichSlice::This]["By"];
                 const int nc = Comps[WhichSlice::This]["N"];
                 AMREX_ALWAYS_ASSERT( iby == ibx+1 );
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx, m_fields.m_slices_nguards);
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1, m_fields.m_slices_nguards);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx /*, m_fields.m_slices_nguards*/);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1 /*, m_fields.m_slices_nguards*/);
             } else {
                 m_fields.getSlices(lev, WhichSlice::This).setVal(0., m_fields.m_slices_nguards);
             }

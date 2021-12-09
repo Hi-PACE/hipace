@@ -180,6 +180,7 @@ public:
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
      * \param[in] geom Geometry
+     * \param[in] m_comm_xy transverse communicator on the slice
      * \param[in] lev current level
      * \param[in] islice longitudinal slice
      */
