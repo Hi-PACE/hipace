@@ -168,10 +168,13 @@ public:
      * \param[in] lev current level
      * \param[in] component which can be Psi or rho
      * \param[in] islice longitudinal slice
+     * \param[in] outer_edge number of ghost cells to write to
+     * \param[in] inner_edge number of problem cells to write to
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component, const int islice);
-
+                                    std::string component, const int islice,
+                                    const amrex::IntVect outer_edge,
+                                    const amrex::IntVect inner_edge);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
@@ -268,6 +271,7 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
+    static amrex::IntVect m_poisson_nguards;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
