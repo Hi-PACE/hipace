@@ -74,14 +74,16 @@ Fields::AllocData (
     }
 }
 
-
 template<int dir>
 struct derivative_GPU {
+    // captured variables for GPU
     amrex::Array4<amrex::Real const> array;
     amrex::Real dx_inv;
     int box_lo;
     int box_hi;
 
+    // derivative of field in dir direction (x or y)
+    // the field is zero-extended such that this derivative can be accessed on the same box
     AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
         constexpr bool is_x_dir = dir == Direction::x;
         constexpr bool is_y_dir = dir == Direction::y;
@@ -95,21 +97,24 @@ struct derivative_GPU {
 
 template<>
 struct derivative_GPU<Direction::z> {
+    // captured variables for GPU
     amrex::Array4<amrex::Real const> array1;
     amrex::Array4<amrex::Real const> array2;
     amrex::Real dz_inv;
 
+    // derivative of field in z direction
     AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
         return (array1(i,j,k) - array2(i,j,k)) * dz_inv;
     }
 };
 
-
 template<int dir>
 struct derivative {
-    FieldView f_view;
-    const amrex::Geometry& geom;
+    // use brace initialization as constructor
+    FieldView f_view; // field to calculate its derivative
+    const amrex::Geometry& geom; // geometry of field
 
+    // use .array(mfi) like with amrex::MultiFab or FieldView
     derivative_GPU<dir> array (amrex::MFIter& mfi) const {
         amrex::Box bx = f_view.m_mfab[mfi].box();
         return derivative_GPU<dir>{f_view.array(mfi),
@@ -119,10 +124,12 @@ struct derivative {
 
 template<>
 struct derivative<Direction::z> {
-    FieldView f_view1;
-    FieldView f_view2;
-    const amrex::Geometry& geom;
+    // use brace initialization as constructor
+    FieldView f_view1; // field on previous slice to calculate its derivative
+    FieldView f_view2; // field on next slice to calculate its derivative
+    const amrex::Geometry& geom; // geometry of field
 
+    // use .array(mfi) like with amrex::MultiFab or FieldView
     derivative_GPU<Direction::z> array (amrex::MFIter& mfi) const {
         return derivative_GPU<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
             1/(2*geom.CellSize(Direction::z))};
@@ -131,6 +138,7 @@ struct derivative<Direction::z> {
 
 template<int interp_order_xy>
 struct interpolated_field_GPU {
+    // captured variables for GPU
     amrex::Array4<amrex::Real const> arr_this;
     amrex::Array4<amrex::Real const> arr_prev;
     amrex::Real dx_inv;
@@ -140,6 +148,8 @@ struct interpolated_field_GPU {
     amrex::Real rel_z;
     int lo2;
 
+    // interpolate field in x, y with <interp_order_xy> order transversely
+    // and linear order longitudinally. x and y must be inside field box
     AMREX_GPU_DEVICE amrex::Real operator() (amrex::Real x, amrex::Real y) const noexcept {
         using namespace amrex::literals;
 
@@ -154,7 +164,6 @@ struct interpolated_field_GPU {
         const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
         amrex::Real field_value = 0.0_rt;
-        // add interpolated contribution to boundary value
         for (int iy=0; iy<=interp_order_xy; iy++){
             for (int ix=0; ix<=interp_order_xy; ix++){
                 field_value += sx_cell[ix]*sy_cell[iy]*
@@ -170,11 +179,13 @@ struct interpolated_field_GPU {
 
 template<int interp_order_xy>
 struct interpolated_field {
-    FieldView f_view_this;
-    FieldView f_view_prev;
-    const amrex::Geometry& geom;
-    amrex::Real rel_z;
+    // use brace initialization as constructor
+    FieldView f_view_this; // field to interpolate on this slice
+    FieldView f_view_prev; // field to interpolate on previous slice
+    const amrex::Geometry& geom; // geometry of field
+    amrex::Real rel_z; // mixing factor between f_view_this and f_view_prev for z interpolation
 
+    // use .array(mfi) like with amrex::MultiFab or FieldView
     interpolated_field_GPU<interp_order_xy> array (amrex::MFIter& mfi) const {
         amrex::Box bx = f_view_this.m_mfab[mfi].box();
         return interpolated_field_GPU<interp_order_xy>{
@@ -185,6 +196,15 @@ struct interpolated_field {
     }
 };
 
+/** \brief Calculates dst = factor_a*src_a + factor_b*src_b. src_a and src_b can be derivatives
+ *
+ * \param[in] box_grow how much the domain of dst should be grown
+ * \param[in] dst destination
+ * \param[in] factor_a factor before src_a
+ * \param[in] src_a first source
+ * \param[in] factor_b factor before src_b
+ * \param[in] src_a second source
+ */
 template<class FVA, class FVB>
 void
 LinCombination (const amrex::IntVect box_grow, FieldView dst,
@@ -358,13 +378,25 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
     }
 }
 
-
-
+/** \brief Sets non zero Dirichlet Boundary conditions in dst which is the source of the Poisson
+ * equation: laplace potential = dst
+ *
+ * \param[in] dst source of the Poisson equation: laplace potential = dst
+ * \param[in] solver_size size of dst/poisson solver (no tiling)
+ * \param[in] geom geometry of of dst/poisson solver
+ * \param[in] boundary_value functional object (Real x, Real y) -> Real value_of_potential
+ */
 template<class Functional>
 void
 SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver_size,
                         const amrex::Geometry& geom, const Functional& boundary_value)
 {
+    // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
+    // must be corrected at the outmost grid points in x by -field_value_at_guard_cell / dx^2 and
+    // in y by -field_value_at_guard_cell / dy^2, where dx and dy are those of the fine grid
+    // This follows Van Loan, C. (1992). Computational frameworks for the fast Fourier transform.
+    // Page 254 ff.
+    // The interpolation is done in second order transversely and linearly in longitudinal direction
     const int box_len0 = solver_size.length(0);
     const int box_len1 = solver_size.length(1);
     const int box_lo0 = solver_size.smallEnd(0);
@@ -377,6 +409,7 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver
 
     const amrex::Box edge_box = {{0, 0, 0}, {box_len0 + box_len1 - 1, 1, 0}};
 
+    // ParallelFor only over the edge of the box
     amrex::ParallelFor(edge_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
@@ -397,6 +430,7 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver
 
             const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
 
+            // atomic add because the corners of dst get two values
             amrex::Gpu::Atomic::AddNoRet(&(dst(i_idx, j_idx, box_lo2)),
                                          - boundary_value(x, y) / dxdx);
         });
@@ -406,7 +440,7 @@ void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               std::string component, const int islice)
 {
-    if (lev == 0) return; // keep lev=0 boundaries zero
+    if (lev == 0) return; // keep lev==0 boundaries zero
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     constexpr int interp_order = 2;
 
@@ -471,6 +505,8 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         amrex::ParallelFor(fine_box_extended,
             [=] AMREX_GPU_DEVICE (int i, int j , int k) noexcept
             {
+                // set interpolated values near edge of fine field between outer_edge and inner_edge
+                // to compensate for incomplete charge/current deposition in those cells
                 if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
                     amrex::Real x = i * dx + offset0;
                     amrex::Real y = j * dy + offset1;

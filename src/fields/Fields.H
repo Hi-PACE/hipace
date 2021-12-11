@@ -179,7 +179,9 @@ public:
      */
     void AddBeamCurrents (const int lev, const int which_slice);
 
-    /** \brief Interpolate values at boundaries from coarse grid to the fine grid
+    /** \brief Set up boundary conditions before poisson solve
+     * lev==0: leave at zero
+     * lev!=0: interpolate boundaries from lev-1
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
@@ -195,8 +197,8 @@ public:
      * \param[in] lev current level
      * \param[in] component which can be Psi or rho
      * \param[in] islice longitudinal slice
-     * \param[in] outer_edge number of ghost cells to write to
-     * \param[in] inner_edge number of problem cells to write to
+     * \param[in] outer_edge start writing interpolated values at domain + outer_edge
+     * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                     std::string component, const int islice,
