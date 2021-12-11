@@ -56,7 +56,7 @@ struct FieldView {
     int m_comp;
 
     /** \brief get amrex::Array4<const? amrex::Real> of the specific Field component
-     * \param[in] lev MR level
+     * \param[in] mfi MFIter object of this or a related field
      */
     auto array (const amrex::MFIter& mfi) const {
         return m_mfab.array(mfi, m_comp);
@@ -71,7 +71,8 @@ struct FieldView {
  * \param[in] geom geometry of the field
  * \param[in] box box the filed, can be with or without ghost cells
  */
-amrex::Real GetPosOffset (const int direction, const amrex::Geometry& geom, const amrex::Box& box) {
+inline amrex::Real
+GetPosOffset (const int direction, const amrex::Geometry& geom, const amrex::Box& box) {
     using namespace amrex::literals;
     // match boxes at center point
     return 0.5_rt * (geom.ProbLo(direction) + geom.ProbHi(direction)
