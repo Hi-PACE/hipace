@@ -21,21 +21,22 @@ namespace AnyDST
         const amrex::Box bx = src.box();
         const int nx = bx.length(0);
         const int ny = bx.length(1);
+        const amrex::IntVect lo = bx.smallEnd();
         amrex::Array4<amrex::Real const> const & src_array = src.array();
         amrex::Array4<amrex::Real> const & dst_array = dst.array();
 
         amrex::ParallelFor(
             bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            [=] AMREX_GPU_DEVICE(int i, int j, int)
             {
                 /* upper left quadrant */
-                dst_array(i+1,j+1,0,dcomp) = src_array(i, j, k, scomp);
+                dst_array(i+1,j+1,lo[2],dcomp) = src_array(i, j, lo[2], scomp);
                 /* lower left quadrant */
-                dst_array(i+1,j+ny+2,0,dcomp) = -src_array(i, ny-1-j, k, scomp);
+                dst_array(i+1,j+ny+2,lo[2],dcomp) = -src_array(i, ny-1-j+2*lo[1], lo[2], scomp);
                 /* upper right quadrant */
-                dst_array(i+nx+2,j+1,0,dcomp) = -src_array(nx-1-i, j, k, scomp);
+                dst_array(i+nx+2,j+1,lo[2],dcomp) = -src_array(nx-1-i+2*lo[0], j, lo[2], scomp);
                 /* lower right quadrant */
-                dst_array(i+nx+2,j+ny+2,0,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
+                dst_array(i+nx+2,j+ny+2,lo[2],dcomp) = src_array(nx-1-i+2*lo[0], ny-1-j+2*lo[1], lo[2], scomp);
             }
             );
     }
@@ -244,6 +245,9 @@ namespace AnyDST
         // Allocate expanded_fourier_array Complex of size (nx+2, 2*ny+2)
         amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
         amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
+        // shift box to match rest of fields
+        expanded_position_box += position_array->box().smallEnd();
+        expanded_fourier_box += fourier_array->box().smallEnd();
         dst_plan.m_expanded_position_array =
             std::make_unique<amrex::FArrayBox>(
                 expanded_position_box, 1);

@@ -203,7 +203,7 @@ struct interpolated_field {
  * \param[in] factor_a factor before src_a
  * \param[in] src_a first source
  * \param[in] factor_b factor before src_b
- * \param[in] src_a second source
+ * \param[in] src_b second source
  */
 template<class FVA, class FVB>
 void
