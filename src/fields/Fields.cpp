@@ -28,6 +28,7 @@ Fields::AllocData (
     // Need 1 extra guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
+    // Poisson solver same size as domain, no ghost cells
     m_poisson_nguards = {0, 0, 0};
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
@@ -73,13 +74,6 @@ Fields::AllocData (
     }
 }
 
-// x = i * dx + GetPosOffset(0, geom, box);
-// i = (x - GetPosOffset(0, geom, box))/dx;
-amrex::Real GetPosOffset (const int direction, const amrex::Geometry& geom, const amrex::Box& box) {
-    using namespace amrex::literals;
-    return 0.5_rt*(geom.ProbLo(direction) + geom.ProbHi(direction)
-           - geom.CellSize(direction) * (box.smallEnd(direction) + box.bigEnd(direction)));
-}
 
 template<int dir>
 struct derivative_GPU {
@@ -193,11 +187,11 @@ struct interpolated_field {
 
 template<class FVA, class FVB>
 void
-FieldOperation (const amrex::IntVect box_grow, FieldView dst,
+LinCombination (const amrex::IntVect box_grow, FieldView dst,
                 const amrex::Real factor_a, const FVA& src_a,
                 const amrex::Real factor_b, const FVB& src_b)
 {
-    HIPACE_PROFILE("Fields::FieldOperation()");
+    HIPACE_PROFILE("Fields::LinCombination()");
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -207,8 +201,7 @@ FieldOperation (const amrex::IntVect box_grow, FieldView dst,
         const auto src_a_array = src_a.array(mfi);
         const auto src_b_array = src_b.array(mfi);
         const amrex::Box bx = mfi.growntilebox(box_grow);
-        amrex::ParallelFor(
-            bx,
+        amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 dst_array(i,j,k) = factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k);
@@ -410,17 +403,16 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver
 }
 
 void
-Fields::SetRefinedBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               std::string component, const int islice)
 {
-    HIPACE_PROFILE("Fields::SetRefinedBoundaries()");
-    if (lev == 0) return; // only interpolate boundaries to lev 1
+    if (lev == 0) return; // keep lev=0 boundaries zero
+    HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     constexpr int interp_order = 2;
 
     const amrex::Real ref_ratio_z = geom[lev-1].CellSize(2) / geom[lev].CellSize(2);
-    const amrex::Real islice_coarse_real = islice / ref_ratio_z;
-    const int islice_coarse_int = islice_coarse_real;
-    const amrex::Real rel_z = islice_coarse_real - islice_coarse_int;
+    const amrex::Real islice_coarse = islice / ref_ratio_z;
+    const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
     auto solution_interp = interpolated_field<interp_order>{
         getField(lev-1, WhichSlice::This, component),
@@ -445,13 +437,13 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                                    const amrex::IntVect outer_edge, const amrex::IntVect inner_edge)
 {
     if (lev == 0) return; // only interpolate boundaries to lev 1
+    HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
     constexpr int interp_order = 2;
     if (outer_edge == inner_edge) return;
 
     const amrex::Real ref_ratio_z = geom[lev-1].CellSize(2) / geom[lev].CellSize(2);
-    const amrex::Real islice_coarse_real = islice / ref_ratio_z;
-    const int islice_coarse_int = islice_coarse_real;
-    const amrex::Real rel_z = islice_coarse_real - islice_coarse_int;
+    const amrex::Real islice_coarse = islice / ref_ratio_z;
+    const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
     auto field_coarse_interp = interpolated_field<interp_order>{
         getField(lev-1, WhichSlice::This, component),
@@ -507,11 +499,11 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    FieldOperation(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_poisson_nguards, getStagingArea(lev),
                    1./(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1./(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
 
-    SetRefinedBoundaries(geom, lev, "Psi", islice);
+    SetBoundaryCondition(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     /* ---------- Transverse FillBoundary Psi ---------- */
@@ -560,14 +552,13 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
-    FieldOperation(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_poisson_nguards, getStagingArea(lev),
                    1./(phys_const.ep0*phys_const.c),
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
                    1./(phys_const.ep0*phys_const.c),
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-
-    SetRefinedBoundaries(geom, lev, "Ez", islice);
+    SetBoundaryCondition(geom, lev, "Ez", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -585,18 +576,17 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
 
     // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
     // and store in the staging area of poisson_solver
-    FieldOperation(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_poisson_nguards, getStagingArea(lev),
                    -phys_const.mu0,
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    phys_const.mu0,
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous1, "jy"),
                    getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-
-    SetRefinedBoundaries(geom, lev, "Bx", islice);
+    SetBoundaryCondition(geom, lev, "Bx", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
-    // The LHS will be returned as lhs.
+    // The LHS will be returned as Bx_iter.
     m_poisson_solver[lev]->SolvePoissonEquation(Bx_iter);
 }
 
@@ -611,18 +601,17 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
 
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of poisson_solver
-    FieldOperation(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_poisson_nguards, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    -phys_const.mu0,
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous1, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-
-    SetRefinedBoundaries(geom, lev, "By", islice);
+    SetBoundaryCondition(geom, lev, "By", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
-    // The LHS will be returned as lhs.
+    // The LHS will be returned as By_iter.
     m_poisson_solver[lev]->SolvePoissonEquation(By_iter);
 }
 
@@ -639,14 +628,13 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
-    FieldOperation(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_poisson_nguards, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
                    -phys_const.mu0,
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-
-    SetRefinedBoundaries(geom, lev, "Bz", islice);
+    SetBoundaryCondition(geom, lev, "Bz", islice);
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.

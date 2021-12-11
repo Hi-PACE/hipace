@@ -44,19 +44,40 @@ static std::array<std::map<std::string, int>, 5> Comps
             }}
     }};
 
- struct FieldView {
-     amrex::MultiFab& m_mfab;
-     int m_comp;
-
-     auto array (amrex::MFIter& mfi) const {
-         return m_mfab.array(mfi, m_comp);
-     }
- };
-
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
     enum dir{x=0, y, z};
 };
+
+/** \brief Helper class to pass non-owning, lightweight views of specific Fields around */
+struct FieldView {
+    // use brace initialization or getField/getStagingArea as constructor
+    amrex::MultiFab& m_mfab;
+    int m_comp;
+
+    /** \brief get amrex::Array4<const? amrex::Real> of the specific Field component
+     * \param[in] lev MR level
+     */
+    auto array (const amrex::MFIter& mfi) const {
+        return m_mfab.array(mfi, m_comp);
+    }
+};
+
+/** \brief Function to help converting field indexes to positions and backwards. Usage:
+ * x = i * dx + GetPosOffset(0, geom, box)
+ * i = round( (x - GetPosOffset(0, geom, box)) / dx )
+ *
+ * \param[in] direction 0, 1 or 2 for x, y or z respectively
+ * \param[in] geom geometry of the field
+ * \param[in] box box the filed, can be with or without ghost cells
+ */
+amrex::Real GetPosOffset (const int direction, const amrex::Geometry& geom, const amrex::Box& box) {
+    using namespace amrex::literals;
+    // match boxes at center point
+    return 0.5_rt * (geom.ProbLo(direction) + geom.ProbHi(direction)
+           - geom.CellSize(direction) * (box.smallEnd(direction) + box.bigEnd(direction)));
+}
+
 
 /** \brief Main class handling all field data structures and operations
  *
@@ -98,15 +119,20 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
-
+    /** get FieldView of a field in a slice
+     * \param[in] lev MR level
+     * \param[in] islice slice index
+     * \param[in] comp component name of field (see Comps)
+     */
     FieldView getField (const int lev, const int islice, const std::string comp) {
         return FieldView{getSlices(lev, islice), Comps[islice][comp]};
     }
-
+    /** get FieldView of the poisson staging area
+     * \param[in] lev MR level
+     */
     FieldView getStagingArea (const int lev) {
         return FieldView{m_poisson_solver[lev]->StagingArea(), 0};
     }
-
     /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
@@ -159,7 +185,7 @@ public:
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in] islice longitudinal slice
      */
-    void SetRefinedBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+    void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                std::string component, const int islice);
 
     /** \brief Interpolate values from coarse grid to the fine grid
@@ -272,6 +298,7 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
+    /** Number of guard cells for poisson solver MultiFab */
     static amrex::IntVect m_poisson_nguards;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
