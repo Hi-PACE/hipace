@@ -1,9 +1,5 @@
 {
-    "license": "other-open",
-    "title": "Hi-PACE/hipace: v21.12",
-    "version": "v21.12",
     "upload_type": "software",
-    "publication_date": "2021-12-02",
     "creators": [
         {
             "affiliation": "Deutsches Elektronen-Synchrotron, previously LBNL",
@@ -42,6 +38,9 @@
         }
     ],
     "access_right": "open",
+    "license": {
+      "id": "BSD-3-Clause-LBNL"
+    },
     "language": "eng",
     "keywords": [
         "research",
@@ -52,12 +51,5 @@
         "gpu",
         "physics",
         "pic"
-    ],
-    "related_identifiers": [
-        {
-            "scheme": "url",
-            "identifier": "https://github.com/Hi-PACE/hipace/tree/v21.09",
-            "relation": "isSupplementTo"
-        }
     ]
 }
