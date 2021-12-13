@@ -242,20 +242,14 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto& slice_fab = slice_mf[mfi];
         amrex::Box slice_box = slice_fab.box();
-        slice_box -= amrex::IntVect(slice_box.smallEnd());
-        if (!Diagnostic::m_include_ghost_cells) {
-            slice_box -= m_slices_nguards;
-        }
+        slice_box.setSmall(Direction::z, i_slice);
+        slice_box.setBig  (Direction::z, i_slice);
         slice_array = amrex::makeArray4(slice_fab.dataPtr(), slice_box, slice_fab.nComp());
-        // slice_array's longitude index is 0.
+        // slice_array's longitude index is i_slice.
     }
 
     const int full_array_z = i_slice / diag_coarsen[2];
-    amrex::Box domain = geom.Domain();
-    if (Diagnostic::m_include_ghost_cells) {
-        domain.grow(m_slices_nguards);
-    }
-    const amrex::IntVect ncells_global = domain.length();
+    const amrex::IntVect ncells_global = geom.Domain().length();
 
     amrex::Box const& vbx = fab.box();
     if (vbx.smallEnd(Direction::z) <= full_array_z and
@@ -267,47 +261,37 @@ Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int 
         amrex::Box copy_box = vbx;
         copy_box.setSmall(Direction::z, full_array_z);
         copy_box.setBig  (Direction::z, full_array_z);
-
         amrex::Array4<amrex::Real> const& full_array = fab.array();
-
         const int even_slice_x = ncells_global[0] % 2 == 0 and slice_dir == 0;
         const int even_slice_y = ncells_global[1] % 2 == 0 and slice_dir == 1;
-
         const int coarse_x = diag_coarsen[0];
         const int coarse_y = diag_coarsen[1];
-
         const int ncells_x = ncells_global[0];
         const int ncells_y = ncells_global[1];
-
-        const int cpyboxlo_x = Diagnostic::m_include_ghost_cells ? -m_slices_nguards[0] : 0;
-        const int cpyboxlo_y = Diagnostic::m_include_ghost_cells ? -m_slices_nguards[1] : 0;
 
         const int *diag_comps = diag_comps_vect.data();
 
         amrex::ParallelFor(copy_box, ncomp,
-        [=] AMREX_GPU_DEVICE (int i_l, int j_l, int k, int n) noexcept
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             const int m = n[diag_comps];
-            const int i = i_l - cpyboxlo_x;
-            const int j = j_l - cpyboxlo_y;
 
             // coarsening in slice direction is always 1
             const int i_c_start = amrex::min(i*coarse_x +(coarse_x-1)/2 -even_slice_x, ncells_x-1);
             const int i_c_stop  = amrex::min(i*coarse_x +coarse_x/2+1, ncells_x);
             const int j_c_start = amrex::min(j*coarse_y +(coarse_y-1)/2 -even_slice_y, ncells_y-1);
             const int j_c_stop  = amrex::min(j*coarse_y +coarse_y/2+1, ncells_y);
-
             amrex::Real field_value = 0._rt;
             int n_values = 0;
 
             for (int j_c = j_c_start; j_c != j_c_stop; ++j_c) {
                 for (int i_c = i_c_start; i_c != i_c_stop; ++i_c) {
-                    field_value += slice_array(i_c, j_c, 0, m+slice_comp);
+                    field_value += slice_array(i_c, j_c, i_slice, m+slice_comp);
                     ++n_values;
                 }
             }
 
-            full_array(i_l,j_l,k,n+full_comp) = field_value / amrex::max(n_values,1);
+            full_array(i,j,k,n+full_comp) = field_value / amrex::max(n_values,1);
         });
     }
 }

@@ -67,8 +67,6 @@ public:
      */
     void ResizeFDiagFAB (const amrex::Box box, const int lev);
 
-    static bool m_include_ghost_cells; /**< Include ghost cells in diagnostic output */
-
 private:
 
     /** Vector over levels, all fields */

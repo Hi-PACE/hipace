@@ -69,7 +69,7 @@ struct FieldView {
  *
  * \param[in] direction 0, 1 or 2 for x, y or z respectively
  * \param[in] geom geometry of the field
- * \param[in] box box the filed, can be with or without ghost cells
+ * \param[in] box box of the filed, can be with or without ghost cells
  */
 inline amrex::Real
 GetPosOffset (const int direction, const amrex::Geometry& geom, const amrex::Box& box) {

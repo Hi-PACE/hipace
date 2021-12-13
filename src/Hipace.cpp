@@ -1301,9 +1301,6 @@ Hipace::ResizeFDiagFAB (const int it)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         amrex::Box bx = boxArray(lev)[it];
-        if(Diagnostic::m_include_ghost_cells) {
-            bx.grow(Fields::m_slices_nguards);
-        }
 
         if (lev == 1) {
             const amrex::Box& bx_lev0 = boxArray(0)[it];
