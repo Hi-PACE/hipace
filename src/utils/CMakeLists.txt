@@ -4,4 +4,5 @@ target_sources(HiPACE
     AdaptiveTimeStep.cpp
     IOUtil.cpp
     GridCurrent.cpp
+    Laser.cpp
 )

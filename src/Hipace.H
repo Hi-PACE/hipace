@@ -8,6 +8,7 @@
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
+#include "utils/Laser.H"
 #include "utils/Constants.H"
 #include "utils/Parser.H"
 #include "diagnostics/Diagnostic.H"
@@ -215,6 +216,8 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
+    /** Laser instance (soon to be multi laser container) */
+    Laser m_laser;
     /** Number of time iterations */
     static int m_max_step;
     /** Time step for the beam evolution */
