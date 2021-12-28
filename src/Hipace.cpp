@@ -515,7 +515,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             }
 
             if (!m_explicit) {
-                m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
+                m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
                                                 true, false, false, lev);
             }
 
@@ -574,7 +574,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             if (m_explicit){
                 m_fields.AddRhoIons(lev, true);
                 ExplicitSolveBxBy(lev);
-                m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
+                m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
+                                                true, lev);
                 m_fields.AddRhoIons(lev);
             } else {
                 PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bx, bins[lev], ibox);
@@ -892,7 +893,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
 
     /* shift force terms, update force terms using guessed Bx and By */
-    m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, false, true, true, lev);
 
     const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
 
@@ -907,7 +908,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_predcorr_avg_iterations += 1.0;
 
         /* Push particles to the next slice */
-        m_multi_plasma.AdvanceParticles(m_fields, geom[lev], true, true, false, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], true, true, false, false, lev);
 
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         /* deposit current to next slice */
@@ -958,7 +959,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         amrex::ParallelContext::pop();
 
         /* Update force terms using the calculated Bx and By */
-        m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, false, true, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, false, true, false, lev);
 
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;

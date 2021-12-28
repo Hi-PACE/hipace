@@ -72,12 +72,12 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::AdvanceParticles (
-    Fields & fields, amrex::Geometry const& gm, bool temp_slice, bool do_push,
+    Fields & fields, Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
     bool do_update, bool do_shift, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
-                               do_push, do_update, do_shift, lev, m_all_bins[i]);
+                               do_push, do_update, do_shift, lev, m_all_bins[i], laser);
     }
 }
 

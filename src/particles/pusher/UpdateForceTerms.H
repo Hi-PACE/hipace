@@ -34,6 +34,9 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
                       const amrex::ParticleReal& Bxp,
                       const amrex::ParticleReal& Byp,
                       const amrex::ParticleReal& Bzp,
+                      const amrex::ParticleReal& Aabssqp,
+                      const amrex::ParticleReal& AabssqDxp,
+                      const amrex::ParticleReal& AabssqDyp,
                       amrex::ParticleReal& Fx1,
                       amrex::ParticleReal& Fy1,
                       amrex::ParticleReal& Fux1,
@@ -49,7 +52,8 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
 
     const amrex::Real gammap = (1.0_rt + uxp*uxp*clightsq
                                        + uyp*uyp*clightsq
-                                       + (psip+1.0_rt)*(psip+1.0_rt))/(2.0_rt * (psip + 1.0_rt) );
+                                       + (psip+1.0_rt)*(psip+1.0_rt)
+                                       + 0.5_rt*Aabssqp)/(2.0_rt * (psip + 1.0_rt) );
 
     const amrex::Real charge_mass_ratio = charge / mass;
     /* Change for x-position along zeta */
@@ -58,10 +62,12 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
     Fy1 = -uyp / (psip + 1.0_rt) / phys_const.c;
     /* Change for ux along zeta */
     Fux1 = -charge_mass_ratio/phys_const.c * (gammap * ExmByp / (psip + 1.0_rt) +
-            phys_const.c * Byp + ( uyp * Bzp ) / (psip + 1.0_rt) );
+            phys_const.c * Byp + ( uyp * Bzp ) / (psip + 1.0_rt)
+            +0.25_rt*phys_const.m_e*clightsq/gammap*AabssqDxp);
     /* Change for uy along zeta */
     Fuy1 = -charge_mass_ratio/phys_const.c * ( gammap * EypBxp / (psip + 1.0_rt) -
-            phys_const.c * Bxp - ( uxp * Bzp ) / (psip + 1.0_rt) );
+            phys_const.c * Bxp - ( uxp * Bzp ) / (psip + 1.0_rt)
+            +0.25_rt*phys_const.m_e*clightsq/gammap*AabssqDyp);
     /* Change for psi along zeta */
     Fpsi1 = -charge_mass_ratio * phys_const.m_e / phys_const.q_e *
             (1.0_rt / phys_const.c * ( uxp * ExmByp + uyp * EypBxp ) / (psip + 1.0_rt) - Ezp );
