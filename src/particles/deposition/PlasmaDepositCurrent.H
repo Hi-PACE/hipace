@@ -5,6 +5,7 @@
 #include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
+#include "utils/Laser.H"
 #include "Hipace.H"
 
 /** Depose current of particles in species plasma into the current 2D slice in fields
@@ -22,7 +23,7 @@
  * \param[in] bin_size tile size (square)
  */
 void
-DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
+DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, Laser& laser,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 bool deposit_j_squared, amrex::Geometry const& gm, int const lev,

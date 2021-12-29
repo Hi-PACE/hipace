@@ -396,7 +396,7 @@ Hipace::Evolve ()
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
-        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, m_laser, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
         // Loop over longitudinal boxes on this rank, from head to tail
@@ -524,7 +524,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
             m_multi_plasma.DepositCurrent(
-                m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+                m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
             if (m_explicit){
                 amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
@@ -913,7 +913,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
-            m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
+            m_fields, m_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
         m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);

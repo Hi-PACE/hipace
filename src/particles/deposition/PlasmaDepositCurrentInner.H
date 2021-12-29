@@ -10,6 +10,7 @@
 
 #include "particles/ShapeFactors.H"
 #include "particles/TileSort.H"
+#include "particles/pusher/FieldGather.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
 
@@ -60,6 +61,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jxx_fab,
                          amrex::FArrayBox& jxy_fab,
                          amrex::FArrayBox& jyy_fab,
+                         const amrex::FArrayBox& a_sqrd_fab,
                          amrex::Vector<amrex::FArrayBox>& tmp_densities,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real const * const AMREX_RESTRICT xyzmin,
@@ -98,6 +100,10 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const amrex::Real invvol = Hipace::m_normalized_units ? 1. : dxi*dyi*dzi;
     const amrex::Real xmin = xyzmin[0];
     const amrex::Real ymin = xyzmin[1];
+    const amrex::Real zmin = xyzmin[2];
+
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+    const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 
     // slice is only one cell thick
     AMREX_ASSERT(pti.tilebox().smallEnd(2) == pti.tilebox().bigEnd(2));
@@ -122,6 +128,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
     BeamBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
     BeamBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
+
+    // Extract laser array from FabArray
+    amrex::Array4<const amrex::Real> const& a_sqrd_arr = a_sqrd_fab.array();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -180,11 +189,18 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     const amrex::Real psi = psip[ip] *
                         phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c);
 
+                    const amrex::ParticleReal xp = pos_structs[ip].pos(0);
+                    const amrex::ParticleReal yp = pos_structs[ip].pos(1);
+                    amrex::ParticleReal Aabssqp = 0._rt;
+                    doLaserGatherShapeN(xp, yp, zmin, Aabssqp, a_sqrd_arr,
+                                        dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+
                     // calculate 1/gamma for plasma particles
                     const amrex::Real gaminv = (2.0_rt * (psi+1.0_rt) ) /(1.0_rt
                                                                           + uxp[ip]*uxp[ip]*clightsq
                                                                           + uyp[ip]*uyp[ip]*clightsq
-                                                                          + (psi+1.0_rt)*(psi+1.0_rt));
+                                                                          + (psi+1.0_rt)*(psi+1.0_rt)
+                                                                          + 0.5_rt*Aabssqp);
 
                     if (( 1.0_rt/(gaminv*(psi+1.0_rt)) < 0.0_rt) ||
                         ( 1.0_rt/(gaminv*(psi+1.0_rt)) > max_qsa_weighting_factor))

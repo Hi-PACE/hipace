@@ -44,7 +44,7 @@ public:
      * \param[in] lev MR level
      */
     void DepositCurrent (
-        Fields & fields, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
+        Fields & fields, Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
         bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm, int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
@@ -83,7 +83,7 @@ public:
      * \param[in] nlev number of MR levels
      */
     void DepositNeutralizingBackground (
-        Fields & fields, int which_slice, amrex::Geometry const& gm, int const nlev);
+        Fields & fields, Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev); // FIXME: laser not necessary in NeutralizingBackground, but easier to keep it
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *

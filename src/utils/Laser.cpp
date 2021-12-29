@@ -48,10 +48,8 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     using namespace amrex::literals;
 
     const amrex::Real a0 = m_a0;
-    // const amrex::Real w0 = m_w0;
-    // const amrex::Real l0 = m_L0;
 
-    const amrex::Real* problo = geom.ProbLo();
+    const auto plo = geom.ProbLoArray();
     const amrex::Real* dx = geom.CellSize();
     amrex::IntVect lo = {0, 0, 0};
 
@@ -61,7 +59,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
                                                      m_position_std[2]};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
-    const amrex::Real z = problo[2] + (islice+0.5_rt)*dx_arr[2];
+    const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
     const amrex::Real long_pos_factor =  std::exp( -0.5_rt*(delta_z*delta_z) );
 
@@ -89,15 +87,15 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                const amrex::Real x = (i+0.5)*dx[0]+problo[0];
-                const amrex::Real y = (j+0.5)*dx[1]+problo[1];
+                const amrex::Real x = (i+0.5)*dx_arr[0]+plo[0];
+                const amrex::Real y = (j+0.5)*dx_arr[1]+plo[1];
 
                 const amrex::Real delta_x = (x - pos_mean[0]) / pos_std[0];
                 const amrex::Real delta_y = (y - pos_mean[1]) / pos_std[1];
-                const amrex::Real trans_pos_factor =  std::exp( -0.5_rt*(delta_x*delta_x
+                const amrex::Real trans_pos_factor =  std::exp( -(delta_x*delta_x
                                                                         + delta_y*delta_y) );
 
-                array_this(i,j,k,dcomp) = a0*trans_pos_factor*long_pos_factor;
+                array_this(i,j,k,dcomp) =  a0*trans_pos_factor*long_pos_factor;
 
             }
             );
@@ -116,7 +114,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 /* finite difference along x */
-                array_AbsSqDx(i,j,k,dcomp) = 1._rt / (2.0_rt*dx[0]) *
+                array_AbsSqDx(i,j,k,dcomp) = 1._rt / (2.0_rt*dx_arr[0]) *
                                          (array_AbsSq(i+1+lo[0], j+lo[1], k, scomp)
                                           - array_AbsSq(i-1+lo[0], j+lo[1], k, scomp));
             }
@@ -127,7 +125,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 /* finite difference along y */
-                array_AbsSqDy(i,j,k,dcomp) = 1._rt  / (2.0_rt*dx[1]) *
+                array_AbsSqDy(i,j,k,dcomp) = 1._rt  / (2.0_rt*dx_arr[1]) *
                                          (array_AbsSq(i+lo[0], j+1+lo[1], k, scomp)
                                          - array_AbsSq(i+lo[0], j-1+lo[1], k, scomp));
             }
