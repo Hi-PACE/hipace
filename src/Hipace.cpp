@@ -655,6 +655,10 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::MultiFab next_Jyb(nslicemf, amrex::make_alias, Comps[nsl]["jy_beam"], 1);
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
 
+    // extract |a|^2 from the Laser
+    const amrex::MultiFab& A_sq_mf = m_laser.getSlices(WhichLaserSlice::AbsSq);
+    const amrex::MultiFab A_sq(A_sq_mf, amrex::make_alias, 0, 1);
+
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
     const amrex::Real n0 = m_multi_plasma.maxDensity();
@@ -695,6 +699,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real const> const & prev_jyb = prev_Jyb.array(mfi);
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
+        amrex::Array4<amrex::Real const> const & a_sq = A_sq.array(mfi);
 
         amrex::ParallelFor(
             bx,
@@ -738,12 +743,13 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
+                const amrex::Real casq    =   a_sq(i,j,k);
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
 
                 const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt * nstar/(1._rt+cpsi);
+                                                + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)/(1._rt+cpsi);
 
                 const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
                     (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
