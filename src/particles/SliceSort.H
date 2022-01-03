@@ -16,13 +16,12 @@ using BeamBins = amrex::DenseBins<BeamParticleContainer::ParticleType>;
  * \param[in] ibox index of the box
  * \param[in] bx 3d box in which particles are sorted per slice
  * \param[in] beam Beam particle container
- * \param[in] ref_ratio refinement ratio in (x,y,z)
  * \param[in] geom Geometry
  * \param[in] a_box_sorter object that sorts particles by box
  */
 BeamBins
 findParticlesInEachSlice (
-    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam, const amrex::IntVect& ref_ratio,
+    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam,
     amrex::Vector<amrex::Geometry> const& geom, const BoxSorter& a_box_sorter);
 
 #endif // HIPACE_SLICESORT_H_
