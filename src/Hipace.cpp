@@ -489,7 +489,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
         const amrex::Box& bx = boxArray(lev)[ibox];
 
-        const int nsubslice = (lev == 1) ? GetRefRatio(lev)[Direction::z] : 1;
+        const int nsubslice = GetRefRatio(lev)[Direction::z];
 
         for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
 
