@@ -489,8 +489,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
         const amrex::Box& bx = boxArray(lev)[ibox];
 
-        static amrex::IntVect tmp_ref_ratio = GetRefRatio(lev);
-        const int nsubslice = (lev == 1) ? tmp_ref_ratio[Direction::z] : 1;
+        const int nsubslice = (lev == 1) ? GetRefRatio(lev)[Direction::z] : 1;
 
         for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
 
@@ -1305,8 +1304,7 @@ Hipace::ResizeFDiagFAB (const int it)
 
         if (lev == 1) {
             const amrex::Box& bx_lev0 = boxArray(0)[it];
-            static amrex::IntVect tmp_ref_ratio = GetRefRatio(lev);
-            const int ref_ratio_z = tmp_ref_ratio[Direction::z];
+            const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
             // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
             bx.setSmall(Direction::z, ref_ratio_z*bx_lev0.smallEnd(Direction::z));
             bx.setBig  (Direction::z, ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1));
