@@ -231,6 +231,8 @@ IonizationModule (const int lev,
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
+        const amrex::Real * const const_of_motion = soa_ion.GetRealData(
+                                                                PlasmaIdx::const_of_motion).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -268,7 +270,7 @@ IonizationModule (const int lev,
 
             // Compute probability of ionization p
             const amrex::Real psi_1 = ( psip[ip] *
-                phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c) ) + 1._rt;
+                phys_const.q_e / (phys_const.m_e * clightsq) ) + const_of_motion[ip];
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
                                                + uyp[ip] * uyp[ip] * clightsq
                                                + psi_1 * psi_1 ) / ( 2.0_rt * psi_1 );
@@ -371,6 +373,8 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::Fpsi5   ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::x0      ][pidx] = arrdata_ion[PlasmaIdx::x0    ][ip];
                 arrdata_elec[PlasmaIdx::y0      ][pidx] = arrdata_ion[PlasmaIdx::y0    ][ip];
+                // later we could consider adding a finite temperature to the ionized electrons
+                arrdata_elec[PlasmaIdx::const_of_motion][pidx] = 1._rt;
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });
