@@ -29,7 +29,7 @@ Fields::AllocData (
         m_slices[lev][islice].define(
             slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[lev][islice].setVal(0.0);
+        m_slices[lev][islice].setVal(0.0, m_slices_nguards);
     }
 
     // The Poisson solver operates on transverse slices only.
