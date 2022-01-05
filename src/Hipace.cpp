@@ -421,7 +421,7 @@ Hipace::Evolve ()
             ResizeFDiagFAB(it);
 
             amrex::Vector<amrex::Vector<BeamBins>> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx, ref_ratio[0],
+            bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx,
                                                          geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
@@ -489,7 +489,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
         const amrex::Box& bx = boxArray(lev)[ibox];
 
-        const int nsubslice = (lev == 1) ? ref_ratio[0][Direction::z] : 1;
+        const int nsubslice = GetRefRatio(lev)[Direction::z];
 
         for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
 
@@ -1304,13 +1304,23 @@ Hipace::ResizeFDiagFAB (const int it)
 
         if (lev == 1) {
             const amrex::Box& bx_lev0 = boxArray(0)[it];
-            const int ref_ratio_z = ref_ratio[0][Direction::z];
+            const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
             // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
             bx.setSmall(Direction::z, ref_ratio_z*bx_lev0.smallEnd(Direction::z));
             bx.setBig  (Direction::z, ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1));
         }
 
         m_diags.ResizeFDiagFAB(bx, lev);
+    }
+}
+
+amrex::IntVect
+Hipace::GetRefRatio (int lev)
+{
+    if (lev==0) {
+        return amrex::IntVect{1,1,1};
+    } else {
+        return GetInstance().ref_ratio[lev-1];
     }
 }
 

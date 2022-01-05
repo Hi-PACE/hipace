@@ -1,18 +1,19 @@
 #include "SliceSort.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "Hipace.H"
 
 #include <AMReX_ParticleTransformation.H>
 
 BeamBins
 findParticlesInEachSlice (
-    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam, const amrex::IntVect& ref_ratio,
+    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam,
     amrex::Vector<amrex::Geometry> const& geom, const BoxSorter& a_box_sorter)
 {
     HIPACE_PROFILE("findParticlesInEachSlice()");
 
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
-    if (lev == 1) cbx.refine(ref_ratio);
+    if (lev == 1) cbx.refine(Hipace::GetRefRatio(lev));
 
     const int np = a_box_sorter.boxCountsPtr()[ibox];
     const int offset = a_box_sorter.boxOffsetsPtr()[ibox];

@@ -1,7 +1,7 @@
 HiPACE++
 ========
 
-.. image:: image.png
+.. figure:: https://user-images.githubusercontent.com/26292713/144571005-b0ba2624-48ad-4293-a8c1-a19d577c44df.png
  :alt: HiPACE++
 
 HiPACE++ is an open-source portable (GPU-capable) quasistatic particle-in-cell code written in C++, available `here <https://github.com/Hi-PACE/hipace>`__.

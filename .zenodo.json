@@ -1,9 +1,5 @@
 {
-    "license": "other-open",
-    "title": "Hi-PACE/hipace: v21.11",
-    "version": "v21.11",
     "upload_type": "software",
-    "publication_date": "2021-11-01",
     "creators": [
         {
             "affiliation": "Deutsches Elektronen-Synchrotron, previously LBNL",
@@ -24,7 +20,7 @@
             "affiliation": "Lawrence Berkeley National Laboratory",
             "name": "Lehe, Remi",
             "orcid": "0000-0002-3656-9659"
-        }
+        },
         {
             "affiliation": "Lawrence Berkeley National Laboratory",
             "name": "Myers, Andrew",
@@ -42,6 +38,9 @@
         }
     ],
     "access_right": "open",
+    "license": {
+      "id": "BSD-3-Clause-LBNL"
+    },
     "language": "eng",
     "keywords": [
         "research",
@@ -52,17 +51,5 @@
         "gpu",
         "physics",
         "pic"
-    ],
-    "related_identifiers": [
-        {
-            "scheme": "url",
-            "identifier": "https://github.com/Hi-PACE/hipace/tree/v21.11",
-            "relation": "isSupplementTo"
-        },
-        {
-            "scheme": "doi",
-            "identifier": "10.5281/zenodo.5358483",
-            "relation": "isVersionOf"
-        }
     ]
 }

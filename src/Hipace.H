@@ -85,6 +85,9 @@ public:
      * the coarsest refinement level. */
     void PostProcessBaseGrids (amrex::BoxArray& ba0) const override;
 
+    /** returns refinement ratio for lev = 1 or {1,1,1} for lev = 0 */
+    static amrex::IntVect GetRefRatio (int lev);
+
     /** Init AmrCore and allocate beam and plasma containers */
     void InitData ();
 

@@ -43,11 +43,10 @@ How-to
 Make a new release
 ~~~~~~~~~~~~~~~~~~
 
-- Get the formatted list of PRs merged since last release with ``git log --since="2021-09-01" | grep -A 3 "Author: " | grep -B 1 "\-\-" | sed '/--/d' | sed -e 's/^    /- /'`` (adapt the date)
-- Update the release tag in all files with something like ``git grep -l '21.09' | xargs sed -i '' -e 's/21.09/21.11/g'`` (adapt the tags, and check that this didn't cause unwanted changes)
+- Find the release tag in all files with something like ``git grep '22\.01'`` and modify where relevant (be careful with automated search & replace operations, they may cause unwanted changes).
 - On the main repo page, go to Releases > Draft new release, and
     * Update the AMReX and openPMD-api versions
-    * Enter the list of PRs
+    * Click button "Auto-generate release notes" to get a well-formatted list of PRs
     * Update the commands that you used
     * Add any additional comments
     * confirm the release
