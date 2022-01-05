@@ -61,7 +61,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
-    const amrex::Real long_pos_factor =  std::exp( -0.5_rt*(delta_z*delta_z) );
+    const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
     amrex::MultiFab& slice_this    = getSlices(WhichLaserSlice::This);
     amrex::MultiFab& slice_AbsSq   = getSlices(WhichLaserSlice::AbsSq);
