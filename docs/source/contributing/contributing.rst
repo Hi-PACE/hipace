@@ -43,7 +43,7 @@ How-to
 Make a new release
 ~~~~~~~~~~~~~~~~~~
 
-- Find the release tag in all files with something like ``git grep '21.12'`` and modify where relevant (be careful with automated search & replace operations, they may cause unwanted changes).
+- Find the release tag in all files with something like ``git grep '22\.01'`` and modify where relevant (be careful with automated search & replace operations, they may cause unwanted changes).
 - On the main repo page, go to Releases > Draft new release, and
     * Update the AMReX and openPMD-api versions
     * Click button "Auto-generate release notes" to get a well-formatted list of PRs
