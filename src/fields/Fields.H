@@ -72,11 +72,11 @@ struct FieldView {
  * \param[in] box box of the filed, can be with or without ghost cells
  */
 inline amrex::Real
-GetPosOffset (const int direction, const amrex::Geometry& geom, const amrex::Box& box) {
+GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box) {
     using namespace amrex::literals;
     // match boxes at center point
-    return 0.5_rt * (geom.ProbLo(direction) + geom.ProbHi(direction)
-           - geom.CellSize(direction) * (box.smallEnd(direction) + box.bigEnd(direction)));
+    return 0.5_rt * (geom.ProbLo(dir) + geom.ProbHi(dir)
+           - geom.CellSize(dir) * (box.smallEnd(dir) + box.bigEnd(dir)));
 }
 
 

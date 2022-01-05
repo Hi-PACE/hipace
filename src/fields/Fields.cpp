@@ -75,7 +75,7 @@ Fields::AllocData (
 }
 
 template<int dir>
-struct derivative_GPU {
+struct derivative_inner {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> array;
     amrex::Real dx_inv;
@@ -96,7 +96,7 @@ struct derivative_GPU {
 };
 
 template<>
-struct derivative_GPU<Direction::z> {
+struct derivative_inner<Direction::z> {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> array1;
     amrex::Array4<amrex::Real const> array2;
@@ -115,9 +115,9 @@ struct derivative {
     const amrex::Geometry& geom; // geometry of field
 
     // use .array(mfi) like with amrex::MultiFab or FieldView
-    derivative_GPU<dir> array (amrex::MFIter& mfi) const {
+    derivative_inner<dir> array (amrex::MFIter& mfi) const {
         amrex::Box bx = f_view.m_mfab[mfi].box();
-        return derivative_GPU<dir>{f_view.array(mfi),
+        return derivative_inner<dir>{f_view.array(mfi),
             1/(2*geom.CellSize(dir)), bx.smallEnd(dir), bx.bigEnd(dir)};
     }
 };
@@ -130,14 +130,14 @@ struct derivative<Direction::z> {
     const amrex::Geometry& geom; // geometry of field
 
     // use .array(mfi) like with amrex::MultiFab or FieldView
-    derivative_GPU<Direction::z> array (amrex::MFIter& mfi) const {
-        return derivative_GPU<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
+    derivative_inner<Direction::z> array (amrex::MFIter& mfi) const {
+        return derivative_inner<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
             1/(2*geom.CellSize(Direction::z))};
     }
 };
 
 template<int interp_order_xy>
-struct interpolated_field_GPU {
+struct interpolated_field_inner {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> arr_this;
     amrex::Array4<amrex::Real const> arr_prev;
@@ -186,12 +186,12 @@ struct interpolated_field {
     amrex::Real rel_z; // mixing factor between f_view_this and f_view_prev for z interpolation
 
     // use .array(mfi) like with amrex::MultiFab or FieldView
-    interpolated_field_GPU<interp_order_xy> array (amrex::MFIter& mfi) const {
+    interpolated_field_inner<interp_order_xy> array (amrex::MFIter& mfi) const {
         amrex::Box bx = f_view_this.m_mfab[mfi].box();
-        return interpolated_field_GPU<interp_order_xy>{
+        return interpolated_field_inner<interp_order_xy>{
             f_view_this.array(mfi), f_view_prev.array(mfi),
             1/geom.CellSize(0), 1/geom.CellSize(1),
-            GetPosOffset(0, geom, bx), GetPosOffset(0, geom, bx),
+            GetPosOffset(0, geom, bx), GetPosOffset(1, geom, bx),
             rel_z, bx.smallEnd(2)};
     }
 };
@@ -362,17 +362,17 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
     }
 }
 
-/** \brief Sets non zero Dirichlet Boundary conditions in dst which is the source of the Poisson
- * equation: laplace potential = dst
+/** \brief Sets non zero Dirichlet Boundary conditions in RHS which is the source of the Poisson
+ * equation: laplace LHS = RHS
  *
- * \param[in] dst source of the Poisson equation: laplace potential = dst
- * \param[in] solver_size size of dst/poisson solver (no tiling)
- * \param[in] geom geometry of of dst/poisson solver
+ * \param[in] RHS source of the Poisson equation: laplace LHS = RHS
+ * \param[in] solver_size size of RHS/poisson solver (no tiling)
+ * \param[in] geom geometry of of RHS/poisson solver
  * \param[in] boundary_value functional object (Real x, Real y) -> Real value_of_potential
  */
 template<class Functional>
 void
-SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver_size,
+SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver_size,
                         const amrex::Geometry& geom, const Functional& boundary_value)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
@@ -414,8 +414,8 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> dst, const amrex::Box& solver
 
             const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
 
-            // atomic add because the corners of dst get two values
-            amrex::Gpu::Atomic::AddNoRet(&(dst(i_idx, j_idx, box_lo2)),
+            // atomic add because the corners of RHS get two values
+            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx, box_lo2)),
                                          - boundary_value(x, y) / dxdx);
         });
 }
@@ -533,7 +533,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
 
-    /* Compute ExmBy and Eypbx from grad(-psi) */
+    // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
     FieldView f_ExmBy = getField(lev, WhichSlice::This, "ExmBy");
     FieldView f_EypBx = getField(lev, WhichSlice::This, "EypBx");
     FieldView f_Psi = getField(lev, WhichSlice::This, "Psi");
@@ -545,6 +545,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
+        // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
         const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
         const amrex::Real dx_inv = 1./(2*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1./(2*geom[lev].CellSize(Direction::y));
@@ -552,6 +553,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
+                // derivatives in x and y direction, no guards needed
                 array_ExmBy(i,j,k) = - (array_Psi(i+1,j,k) - array_Psi(i-1,j,k))*dx_inv;
                 array_EypBx(i,j,k) = - (array_Psi(i,j+1,k) - array_Psi(i,j-1,k))*dy_inv;
             });
