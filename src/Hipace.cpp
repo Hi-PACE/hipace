@@ -504,10 +504,12 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 const int iby = Comps[WhichSlice::This]["By"];
                 const int nc = Comps[WhichSlice::This]["N"];
                 AMREX_ALWAYS_ASSERT( iby == ibx+1 );
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx);
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(
+                    0., 0, ibx, m_fields.m_slices_nguards);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(
+                    0., iby+1, nc-iby-1, m_fields.m_slices_nguards);
             } else {
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(0., m_fields.m_slices_nguards);
             }
 
             if (!m_explicit) {
@@ -525,7 +527,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             if (m_explicit){
                 amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                              amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
-                j_slice_next.setVal(0.);
+                j_slice_next.setVal(0., m_fields.m_slices_nguards);
                 m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
                                                  m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                                  WhichSlice::Next);
@@ -603,7 +605,7 @@ Hipace::ResetAllQuantities ()
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);
         for (int islice=0; islice<WhichSlice::N; islice++) {
-            m_fields.getSlices(lev, islice).setVal(0.);
+            m_fields.getSlices(lev, islice).setVal(0., m_fields.m_slices_nguards);
         }
     }
 }
@@ -628,8 +630,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // Later this should have only 1 component, but we have 2 for now, with always the same values.
     amrex::MultiFab Mult(ba, dm, 2, ngv);
     amrex::MultiFab S(ba, dm, 2, ngv);
-    Mult.setVal(0.);
-    S.setVal(0.);
+    Mult.setVal(0., ngv);
+    S.setVal(0., ngv);
 
     const amrex::MultiFab Rho(slicemf, amrex::make_alias, Comps[isl]["rho"    ], 1);
     const amrex::MultiFab Jx (slicemf, amrex::make_alias, Comps[isl]["jx"     ], 1);
@@ -664,6 +666,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dz = Geom(lev).CellSize(Direction::z)/kpinv;
 
     // transforming BxBy array to normalized units for use as initial guess
+    // TODO: include ghost cells in .mult (currently not supported by amrex)
     BxBy.mult(pc.c/E0);
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
@@ -828,6 +831,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 #endif
 
     // converting BxBy to SI units, if applicable
+    // TODO: include ghost cells in .mult (currently not supported by amrex)
     BxBy.mult(E0/pc.c);
     amrex::ParallelContext::pop();
 }
@@ -862,18 +866,18 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     amrex::MultiFab By_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                             m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                             m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    Bx_iter.setVal(0.0);
-    By_iter.setVal(0.0);
+    Bx_iter.setVal(0.0, m_fields.m_slices_nguards);
+    By_iter.setVal(0.0, m_fields.m_slices_nguards);
     amrex::MultiFab Bx_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(Bx_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["Bx"], 0, 1, 0);
+                          Comps[WhichSlice::This]["Bx"], 0, 1, m_fields.m_slices_nguards);
     amrex::MultiFab By_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["By"], 0, 1, 0);
+                          Comps[WhichSlice::This]["By"], 0, 1, m_fields.m_slices_nguards);
 
     /* creating aliases to the current in the next slice.
      * This needs to be reset after each push to the next slice */
@@ -943,10 +947,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
-        jx_next.setVal(0.);
-        jy_next.setVal(0.);
-        jx_beam_next.setVal(0.);
-        jy_beam_next.setVal(0.);
+        jx_next.setVal(0., m_fields.m_slices_nguards);
+        jy_next.setVal(0., m_fields.m_slices_nguards);
+        jx_beam_next.setVal(0., m_fields.m_slices_nguards);
+        jy_beam_next.setVal(0., m_fields.m_slices_nguards);
 
         amrex::ParallelContext::push(m_comm_xy);
          // exchange Bx By

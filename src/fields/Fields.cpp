@@ -345,10 +345,10 @@ Fields::AddRhoIons (const int lev, bool inverse)
     HIPACE_PROFILE("Fields::AddRhoIons()");
     if (!inverse){
         amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-                             Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, 0);
+            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, m_slices_nguards);
     } else {
         amrex::MultiFab::Subtract(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-                                  Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, 0);
+            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, m_slices_nguards);
     }
 }
 
@@ -359,12 +359,12 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
     amrex::MultiFab& S = getSlices(lev, which_slice);
     // we add the beam currents to the full currents, as mostly the full currents are needed
     amrex::MultiFab::Add(S, S, Comps[which_slice]["jx_beam"], Comps[which_slice]["jx"], 1,
-                         {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+                         m_slices_nguards);
     amrex::MultiFab::Add(S, S, Comps[which_slice]["jy_beam"], Comps[which_slice]["jy"], 1,
-                         {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+                         m_slices_nguards);
     if (which_slice == WhichSlice::This) {
         amrex::MultiFab::Add(S, S, Comps[which_slice]["jz_beam"], Comps[which_slice]["jz"], 1,
-                             {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
+                             m_slices_nguards);
     }
 }
 
@@ -650,9 +650,11 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Assign,
                        Comps[WhichSlice::This]["jz"], lev);
+    // TODO: include ghost cells in .mult (currently not supported by amrex)
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.c);
     CopyToStagingArea(getSlices(lev,WhichSlice::This), SliceOperatorType::Add,
                        Comps[WhichSlice::This]["rho"], lev);
+    // TODO: include ghost cells in .mult (currently not supported by amrex)
     m_poisson_solver[lev]->StagingArea().mult(-1./phys_const.ep0);
 
     InterpolateBoundaries(geom, lev, "Psi", islice);
@@ -849,13 +851,13 @@ Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
         getSlices(lev, WhichSlice::This),
         1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
         -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
-        Comps[WhichSlice::This]["Bx"], 1, 0);
+        Comps[WhichSlice::This]["Bx"], 1, m_slices_nguards);
 
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
         1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
         -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
-        Comps[WhichSlice::This]["By"], 1, 0);
+        Comps[WhichSlice::This]["By"], 1, m_slices_nguards);
 }
 
 void
@@ -894,17 +896,17 @@ Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_pr
         B_prev_iter,
         weight_B_iter, B_iter, 0,
         weight_B_prev_iter, B_prev_iter, 0,
-        0, 1, 0);
+        0, 1, m_slices_nguards);
 
     /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
         1-predcorr_B_mixing_factor, getSlices(lev, WhichSlice::This), field_comp,
         predcorr_B_mixing_factor, B_prev_iter, 0,
-        field_comp, 1, 0);
+        field_comp, 1, m_slices_nguards);
 
     /* Shifting the B field from the current iteration to the previous iteration */
-    amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, 0);
+    amrex::MultiFab::Copy(B_prev_iter, B_iter, 0, 0, 1, m_slices_nguards);
 
 }
 
