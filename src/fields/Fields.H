@@ -67,7 +67,7 @@ struct FieldView {
  * x = i * dx + GetPosOffset(0, geom, box)
  * i = round( (x - GetPosOffset(0, geom, box)) / dx )
  *
- * \param[in] direction 0, 1 or 2 for x, y or z respectively
+ * \param[in] dir 0, 1 or 2 for x, y or z respectively
  * \param[in] geom geometry of the field
  * \param[in] box box of the filed, can be with or without ghost cells
  */
