@@ -657,7 +657,11 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     // extract |a|^2 from the Laser
     const amrex::MultiFab& A_sq_mf = m_laser.getSlices(WhichLaserSlice::AbsSq);
+    const amrex::MultiFab& A_sqdx_mf = m_laser.getSlices(WhichLaserSlice::AbsSqDx);
+    const amrex::MultiFab& A_sqdy_mf = m_laser.getSlices(WhichLaserSlice::AbsSqDy);
     const amrex::MultiFab A_sq(A_sq_mf, amrex::make_alias, 0, 1);
+    const amrex::MultiFab A_sqdx(A_sqdx_mf, amrex::make_alias, 0, 1);
+    const amrex::MultiFab A_sqdy(A_sqdy_mf, amrex::make_alias, 0, 1);
 
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
@@ -700,6 +704,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
         amrex::Array4<amrex::Real const> const & a_sq = A_sq.array(mfi);
+        amrex::Array4<amrex::Real const> const & a_sq_dx = A_sqdx.array(mfi);
+        amrex::Array4<amrex::Real const> const & a_sq_dy = A_sqdy.array(mfi);
+
 
         amrex::ParallelFor(
             bx,
@@ -744,6 +751,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
                 const amrex::Real casq    =   a_sq(i,j,k);
+                const amrex::Real casqdx    =   a_sq_dx(i,j,k);
+                const amrex::Real casqdy    =   a_sq_dy(i,j,k);
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
@@ -752,10 +761,10 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                                 + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)/(1._rt+cpsi);
 
                 const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+                    ( (nstar_gamma*cdx_psi -0.25_rt*casqdx )/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
 
                 const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdy_psi/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                    ( (nstar_gamma*cdy_psi -0.25_rt*casqdy)/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
                 mult(i,j,k,0) = nstar / (1._rt + cpsi);
