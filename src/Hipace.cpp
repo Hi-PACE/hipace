@@ -761,10 +761,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                                 + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)/(1._rt+cpsi);
 
                 const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
-                    ( (nstar_gamma*cdx_psi -0.25_rt*casqdx )/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+                                        ( (nstar_gamma*cdx_psi -0.25_rt*casqdx*nstar)/(1._rt+cpsi)
+                                        - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
 
                 const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
-                    ( (nstar_gamma*cdy_psi -0.25_rt*casqdy)/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                                        ( (nstar_gamma*cdy_psi -0.25_rt*casqdy*nstar)/(1._rt+cpsi)
+                                        - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
                 mult(i,j,k,0) = nstar / (1._rt + cpsi);
