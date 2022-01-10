@@ -65,6 +65,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
 
         // extract the laser Fields
+        const bool use_laser = laser.m_use_laser;
         const amrex::MultiFab& a_sqrd_mf = laser.getSlices(WhichLaserSlice::AbsSq);
         const amrex::MultiFab& a_sqrd_dx_mf = laser.getSlices(WhichLaserSlice::AbsSqDx);
         const amrex::MultiFab& a_sqrd_dy_mf = laser.getSlices(WhichLaserSlice::AbsSqDy);
@@ -182,10 +183,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                        exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                        dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
-                        doLaserGatherShapeN(xp, yp, zmin,
-                                      Aabssqp, AabssqDxp, AabssqDyp,
-                                      a_sqrd_arr, a_sqrd_dx_arr, a_sqrd_dy_arr,
-                                      dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                        if (use_laser) {
+                            doLaserGatherShapeN(xp, yp, zmin,
+                                                Aabssqp, AabssqDxp, AabssqDyp,
+                                                a_sqrd_arr, a_sqrd_dx_arr, a_sqrd_dy_arr,
+                                                dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                        }
 
                         // update force terms for a single particle
                         const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;

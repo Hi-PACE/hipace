@@ -676,6 +676,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dy = Geom(lev).CellSize(Direction::y)/kpinv;
     const amrex::Real dz = Geom(lev).CellSize(Direction::z)/kpinv;
 
+    const bool use_laser = m_laser.m_use_laser;
+
     // transforming BxBy array to normalized units for use as initial guess
     BxBy.mult(pc.c/E0);
 
@@ -750,9 +752,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
-                const amrex::Real casq    =   a_sq(i,j,k);
-                const amrex::Real casqdx    =   a_sq_dx(i,j,k);
-                const amrex::Real casqdy    =   a_sq_dy(i,j,k);
+                const amrex::Real casq    =   use_laser ? a_sq(i,j,k) : 0._rt;
+                const amrex::Real casqdx  =   use_laser ? a_sq_dx(i,j,k) : 0._rt;
+                const amrex::Real casqdy  =   use_laser ? a_sq_dy(i,j,k) : 0._rt;
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;

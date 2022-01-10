@@ -9,7 +9,7 @@ void
 Laser::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
-    queryWithParser(pp, "a0", m_a0);
+    m_use_laser = queryWithParser(pp, "a0", m_a0);
     queryWithParser(pp, "w0", m_w0);
     queryWithParser(pp, "L0", m_L0);
     queryWithParser(pp, "lambda0", m_lambda0);
@@ -33,10 +33,16 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
 
     for (int islice=0; islice<WhichLaserSlice::N; islice++) {
-        m_slices[islice].define(
-            slice_ba, slice_dm, 1, m_slices_nguards, // prev Comps[islice]["N"] instead of 1
-            amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[islice].setVal(0.0);
+        if (m_use_laser) {
+            m_slices[islice].define(
+                slice_ba, slice_dm, 1, m_slices_nguards, // prev Comps[islice]["N"] instead of 1
+                amrex::MFInfo().SetArena(amrex::The_Arena()));
+            m_slices[islice].setVal(0.0);
+        } else {
+            m_slices[islice].define(
+                slice_ba, slice_dm, 1, m_slices_nguards,
+                amrex::MFInfo().SetAlloc(false));
+        }
     }
 }
 
@@ -44,6 +50,7 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
 void
 Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 {
+    if (!m_use_laser) return;
     HIPACE_PROFILE("Laser::PrepareLaserSlice()");
     using namespace amrex::literals;
 

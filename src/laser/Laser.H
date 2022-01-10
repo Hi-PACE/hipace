@@ -16,7 +16,7 @@ private:
         static constexpr int m_nslices = 8; /**< 0: use laser envelope. 1: use E and B fields */
 public:
     /** Constructor */
-    explicit Laser () //std::string name) :         // m_name(name)
+    explicit Laser ()
     {
         ReadParameters();
     };
@@ -35,6 +35,8 @@ public:
                    const amrex::DistributionMapping& slice_dm);
 
     void PrepareLaserSlice (const amrex::Geometry& geom, const int islice);
+
+    bool m_use_laser {false}; /**< whether a laser is used or not */
 
     // Same function whether the full fields are specified or just the envelope.
     // Just somewhere: if (m_EB) { F *= cos (k0 * z) }
