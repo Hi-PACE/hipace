@@ -5,7 +5,7 @@
 #include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "Hipace.H"
-#include "utils/Laser.H"
+#include "laser/Laser.H"
 
 /** \brief Gather field values for particles, update the force terms, and push the particles
  * \param[in,out] plasma plasma species to push

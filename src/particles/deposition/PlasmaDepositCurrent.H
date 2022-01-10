@@ -5,7 +5,7 @@
 #include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-#include "utils/Laser.H"
+#include "laser/Laser.H"
 #include "Hipace.H"
 
 /** Depose current of particles in species plasma into the current 2D slice in fields

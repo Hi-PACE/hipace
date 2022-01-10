@@ -4,7 +4,7 @@
 #include "PlasmaParticleContainer.H"
 #include "TileSort.H"
 #include "fields/Fields.H"
-#include "utils/Laser.H"
+#include "laser/Laser.H"
 
 class MultiPlasma
 {

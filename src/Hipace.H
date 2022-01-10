@@ -8,7 +8,7 @@
 #include "particles/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
-#include "utils/Laser.H"
+#include "laser/Laser.H"
 #include "utils/Constants.H"
 #include "utils/Parser.H"
 #include "diagnostics/Diagnostic.H"

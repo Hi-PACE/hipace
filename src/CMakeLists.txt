@@ -6,5 +6,6 @@ target_sources(HiPACE
 
 add_subdirectory(fields)
 add_subdirectory(particles)
+add_subdirectory(laser)
 add_subdirectory(utils)
 add_subdirectory(diagnostics)
