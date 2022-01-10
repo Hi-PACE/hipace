@@ -23,7 +23,7 @@ Laser::ReadParameters ()
 
 
 void
-Laser::InitData (const amrex::Geometry& geom, const amrex::BoxArray& slice_ba,
+Laser::InitData (const amrex::BoxArray& slice_ba,
                  const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Laser::InitData()");

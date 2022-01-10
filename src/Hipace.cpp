@@ -308,7 +308,7 @@ Hipace::MakeNewLevelFromScratch (
     m_diags.AllocData(lev, ba[0], Geom(lev));
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
-    m_laser.InitData(Geom(0), m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
+    m_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
 }
 
 void
