@@ -26,6 +26,7 @@ void
 Laser::InitData (const amrex::BoxArray& slice_ba,
                  const amrex::DistributionMapping& slice_dm)
 {
+    if (!m_use_laser) return;
     HIPACE_PROFILE("Laser::InitData()");
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
@@ -33,16 +34,10 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
 
     for (int islice=0; islice<WhichLaserSlice::N; islice++) {
-        if (m_use_laser) {
-            m_slices[islice].define(
-                slice_ba, slice_dm, 1, m_slices_nguards, // prev Comps[islice]["N"] instead of 1
-                amrex::MFInfo().SetArena(amrex::The_Arena()));
-            m_slices[islice].setVal(0.0);
-        } else {
-            m_slices[islice].define(
-                slice_ba, slice_dm, 1, m_slices_nguards,
-                amrex::MFInfo().SetAlloc(false));
-        }
+        m_slices[islice].define(
+            slice_ba, slice_dm, 1, m_slices_nguards, // prev Comps[islice]["N"] instead of 1
+            amrex::MFInfo().SetArena(amrex::The_Arena()));
+        m_slices[islice].setVal(0.0);
     }
 }
 

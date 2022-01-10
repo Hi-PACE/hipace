@@ -69,17 +69,14 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::MultiFab& a_sqrd_mf = laser.getSlices(WhichLaserSlice::AbsSq);
         const amrex::MultiFab& a_sqrd_dx_mf = laser.getSlices(WhichLaserSlice::AbsSqDx);
         const amrex::MultiFab& a_sqrd_dy_mf = laser.getSlices(WhichLaserSlice::AbsSqDy);
-        const amrex::MultiFab a_sqrd(a_sqrd_mf, amrex::make_alias, 0, 1);
-        const amrex::MultiFab a_sqrd_dx(a_sqrd_dx_mf, amrex::make_alias, 0, 1);
-        const amrex::MultiFab a_sqrd_dy(a_sqrd_dy_mf, amrex::make_alias, 0, 1);
-        // Extract FabArray for this box
-        const amrex::FArrayBox& a_sqrd_fab = a_sqrd[pti];
-        const amrex::FArrayBox& a_sqrd_dx_fab = a_sqrd_dx[pti];
-        const amrex::FArrayBox& a_sqrd_dy_fab = a_sqrd_dy[pti];
-        // Extract field array from FabArray
-        amrex::Array4<const amrex::Real> const& a_sqrd_arr = a_sqrd_fab.array();
-        amrex::Array4<const amrex::Real> const& a_sqrd_dx_arr = a_sqrd_dx_fab.array();
-        amrex::Array4<const amrex::Real> const& a_sqrd_dy_arr = a_sqrd_dy_fab.array();
+
+        // Extract field array from MultiFab
+        amrex::Array4<const amrex::Real> const& a_sqrd_arr = use_laser ?
+                                    a_sqrd_mf[pti].array() : amrex::Array4<const amrex::Real>();
+        amrex::Array4<const amrex::Real> const& a_sqrd_dx_arr = use_laser ?
+                                    a_sqrd_dx_mf[pti].array() : amrex::Array4<const amrex::Real>();
+        amrex::Array4<const amrex::Real> const& a_sqrd_dy_arr = use_laser ?
+                                    a_sqrd_dy_mf[pti].array() : amrex::Array4<const amrex::Real>();
 
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};

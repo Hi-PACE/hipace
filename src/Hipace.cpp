@@ -659,9 +659,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::MultiFab& A_sq_mf = m_laser.getSlices(WhichLaserSlice::AbsSq);
     const amrex::MultiFab& A_sqdx_mf = m_laser.getSlices(WhichLaserSlice::AbsSqDx);
     const amrex::MultiFab& A_sqdy_mf = m_laser.getSlices(WhichLaserSlice::AbsSqDy);
-    const amrex::MultiFab A_sq(A_sq_mf, amrex::make_alias, 0, 1);
-    const amrex::MultiFab A_sqdx(A_sqdx_mf, amrex::make_alias, 0, 1);
-    const amrex::MultiFab A_sqdy(A_sqdy_mf, amrex::make_alias, 0, 1);
+    // const amrex::MultiFab A_sq(A_sq_mf, amrex::make_alias, 0, 1);
+    // const amrex::MultiFab A_sqdx(A_sqdx_mf, amrex::make_alias, 0, 1);
+    // const amrex::MultiFab A_sqdy(A_sqdy_mf, amrex::make_alias, 0, 1);
 
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
@@ -705,9 +705,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real const> const & prev_jyb = prev_Jyb.array(mfi);
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
-        amrex::Array4<amrex::Real const> const & a_sq = A_sq.array(mfi);
-        amrex::Array4<amrex::Real const> const & a_sq_dx = A_sqdx.array(mfi);
-        amrex::Array4<amrex::Real const> const & a_sq_dy = A_sqdy.array(mfi);
+        amrex::Array4<amrex::Real const> const & a_sq = use_laser ? A_sq_mf.array(mfi) : amrex::Array4<const amrex::Real>();
+        amrex::Array4<amrex::Real const> const & a_sq_dx = use_laser ? A_sqdx_mf.array(mfi) : amrex::Array4<const amrex::Real>();
+        amrex::Array4<amrex::Real const> const & a_sq_dy = use_laser ? A_sqdy_mf.array(mfi) : amrex::Array4<const amrex::Real>();
 
 
         amrex::ParallelFor(
