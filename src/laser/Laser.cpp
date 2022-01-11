@@ -10,14 +10,23 @@ Laser::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
     m_use_laser = queryWithParser(pp, "a0", m_a0);
-    queryWithParser(pp, "w0", m_w0);
-    queryWithParser(pp, "L0", m_L0);
+    amrex::Vector<amrex::Real> tmp_vector;
+    if (queryWithParser(pp, "W0", tmp_vector)){
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == 2,
+        "The laser waist W0 must be provided in x and y, "
+        "so laser.W0 should contain 2 values");
+        for (int i=0; i<2; i++) m_W0[i] = tmp_vector[i];
+    }
+
+    bool length_is_specified = queryWithParser(pp, "L0", m_L0);;
+    bool duration_is_specified = queryWithParser(pp, "tau", m_tau);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
+        "Please specify exlusively either the pulse length L0 or the duration tau of the laser");
+    if (duration_is_specified) m_L0 = m_tau/get_phys_const().c;
     queryWithParser(pp, "lambda0", m_lambda0);
     amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-    queryWithParser(pp, "position_mean", loc_array); // could potentially be getWithParser
+    queryWithParser(pp, "position_mean", loc_array);
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
-    queryWithParser(pp, "position_std", loc_array); // could potentially be getWithParser
-    for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
 
 }
 
@@ -57,12 +66,11 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
     const amrex::GpuArray<amrex::Real, 3> pos_mean = {m_position_mean[0], m_position_mean[1],
                                                       m_position_mean[2]};
-    const amrex::GpuArray<amrex::Real, 3> pos_std = {m_position_std[0], m_position_std[1],
-                                                     m_position_std[2]};
+    const amrex::GpuArray<amrex::Real, 3> pos_size = {m_W0[0], m_W0[1], m_L0};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
-    const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
+    const amrex::Real delta_z = (z - pos_mean[2]) / pos_size[2];
     const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
     amrex::MultiFab& slice_this    = getSlices(WhichLaserSlice::This);
@@ -92,8 +100,8 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
                 const amrex::Real x = (i+0.5)*dx_arr[0]+plo[0];
                 const amrex::Real y = (j+0.5)*dx_arr[1]+plo[1];
 
-                const amrex::Real delta_x = (x - pos_mean[0]) / pos_std[0];
-                const amrex::Real delta_y = (y - pos_mean[1]) / pos_std[1];
+                const amrex::Real delta_x = (x - pos_mean[0]) / pos_size[0];
+                const amrex::Real delta_y = (y - pos_mean[1]) / pos_size[1];
                 const amrex::Real trans_pos_factor =  std::exp( -(delta_x*delta_x
                                                                         + delta_y*delta_y) );
 

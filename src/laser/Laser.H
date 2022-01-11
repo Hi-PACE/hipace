@@ -13,7 +13,7 @@ struct WhichLaserSlice {
 class Laser
 {
 private:
-        static constexpr int m_nslices = 8; /**< 0: use laser envelope. 1: use E and B fields */
+        static constexpr int m_nslices = 8;
 public:
     /** Constructor */
     explicit Laser ()
@@ -46,18 +46,16 @@ public:
 private:
     std::string m_name = "laser"; /**< name of the laser */
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
-    amrex::Real m_w0 {0.}; /**< Laser waist */
+    amrex::RealVect m_W0 {0., 0., 0.}; /**< Laser waist in x and y (the third value is omitted) */
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
+    amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
     amrex::Real m_lambda0 {0.}; /**< Laser central wavelength */
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
-    /** Width of the Gaussian laser pulse */
-    amrex::RealVect m_position_std {0., 0., 0.};
     int m_EB; /**< 0: use laser envelope. 1: use E and B fields */
 
     /** Vector over levels, all fields */
-    // amrex::Vector<amrex::FArrayBox> m_F;
-    amrex::Vector<std::array<amrex::FArrayBox, 3>> m_3D_F; // used to be amrex::MultiFab
+    amrex::Vector<std::array<amrex::FArrayBox, 3>> m_3D_F;
     /** Vector over levels, array of 4 slices required to compute current slice */
     std::array<amrex::MultiFab, m_nslices> m_slices;
 };
