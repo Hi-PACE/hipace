@@ -219,18 +219,12 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] xp Particle position x
  * \param[in] yp Particle position y
  * \param[in] zp Particle position z
- * \param[in,out] ExmByp Field on particle: Ex - c*By
- * \param[in,out] EypBxp Field on particle: Ey + c*Bx
- * \param[in,out] Ezp Field on particle: Ez
- * \param[in,out] Bxp Magnetic field on particles: Bx
- * \param[in,out] Byp Magnetic field on particles: By
- * \param[in,out] Bzp Magnetic field on particles: Bz
- * \param[in] exmby_arr field array for field Ex - c*By
- * \param[in] eypbx_arr field array for field  Ey + c*Bx
- * \param[in] ez_arr field array for field  Ez
- * \param[in] bx_arr field array for field  Bx
- * \param[in] by_arr field array for field  By
- * \param[in] bz_arr field array for field  Bz
+ * \param[in] Aabssqp |a|^2 field at particle position
+ * \param[in] AabssqDxp d/dx |a|^2 field at particle position
+ * \param[in] AabssqDyp d/dy |a|^2 field at particle position
+ * \param[in] aabssq_arr |a|^2 field array
+ * \param[in] aabssqdx_arr d/dx |a|^2 field array
+ * \param[in] aabssqdy_arr d/dy |a|^2 field array
  * \param[in] dx 3D cell spacing
  * \param[in] xyzmin Physical lower bounds of domain in x, y, z
  * \param[in] lo Index lower bounds of domain
@@ -238,17 +232,17 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doLaserGatherShapeN (const amrex::ParticleReal xp,
-                     const amrex::ParticleReal yp,
-                     const amrex::ParticleReal zp,
-                     amrex::ParticleReal& Aabssqp,
-                     amrex::ParticleReal& AabssqDxp,
-                     amrex::ParticleReal& AabssqDyp,
-                     amrex::Array4<amrex::Real const> const& aabssq_arr,
-                     amrex::Array4<amrex::Real const> const& aabssqdx_arr,
-                     amrex::Array4<amrex::Real const> const& aabssqdy_arr,
-                     const amrex::GpuArray<amrex::Real, 3>& dx,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                     const amrex::Dim3& lo)
+                          const amrex::ParticleReal yp,
+                          const amrex::ParticleReal zp,
+                          amrex::ParticleReal& Aabssqp,
+                          amrex::ParticleReal& AabssqDxp,
+                          amrex::ParticleReal& AabssqDyp,
+                          amrex::Array4<amrex::Real const> const& aabssq_arr,
+                          amrex::Array4<amrex::Real const> const& aabssqdx_arr,
+                          amrex::Array4<amrex::Real const> const& aabssqdy_arr,
+                          const amrex::GpuArray<amrex::Real, 3>& dx,
+                          const amrex::GpuArray<amrex::Real, 3>& xyzmin,
+                          const amrex::Dim3& lo)
 {
     using namespace amrex::literals;
 
@@ -369,18 +363,8 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] xp Particle position x
  * \param[in] yp Particle position y
  * \param[in] zp Particle position z
- * \param[in,out] ExmByp Field on particle: Ex - c*By
- * \param[in,out] EypBxp Field on particle: Ey + c*Bx
- * \param[in,out] Ezp Field on particle: Ez
- * \param[in,out] Bxp Magnetic field on particles: Bx
- * \param[in,out] Byp Magnetic field on particles: By
- * \param[in,out] Bzp Magnetic field on particles: Bz
- * \param[in] exmby_arr field array for field Ex - c*By
- * \param[in] eypbx_arr field array for field  Ey + c*Bx
- * \param[in] ez_arr field array for field  Ez
- * \param[in] bx_arr field array for field  Bx
- * \param[in] by_arr field array for field  By
- * \param[in] bz_arr field array for field  Bz
+ * \param[in,out] Aabssqp Field on particle: |a|^2
+ * \param[in] aabssq_arr field array for field |a|^2
  * \param[in] dx 3D cell spacing
  * \param[in] xyzmin Physical lower bounds of domain in x, y, z
  * \param[in] lo Index lower bounds of domain
@@ -447,11 +431,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] yp Particle position y
  * \param[in] zp Particle position z
  * \param[in,out] Aabssqp Field on particle: |a|^2
- * \param[in,out] AabssqDxp Field on particle: d/dx |a|^2
- * \param[in,out] AabssqDyp Field on particle: d/dy |a|^2
  * \param[in] aabssq_arr field array for field |a|^2
- * \param[in] aabssqdx_arr field array for field  d/dx |a|^2
- * \param[in] aabssqdy_arr field array for field  d/dx |a|^2
  * \param[in] dx 3D cell spacing
  * \param[in] xyzmin Physical lower bounds of domain in x, y, z
  * \param[in] lo Index lower bounds of domain

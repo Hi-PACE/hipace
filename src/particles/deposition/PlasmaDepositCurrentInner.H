@@ -37,6 +37,7 @@
  * \param[in,out] jxx_fab array of current density jxx, on the box corresponding to pti
  * \param[in,out] jxy_fab array of current density jxy, on the box corresponding to pti
  * \param[in,out] jyy_fab array of current density jyy, on the box corresponding to pti
+ * \param[in] a_sqrd_mf MultiFab containing |a|^2
  * \param[in] use_laser whether a laser is used or not
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
  * \param[in] dx cell size in each dimension

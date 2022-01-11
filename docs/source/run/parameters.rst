@@ -371,3 +371,30 @@ Diagnostic parameters
     `none` or a subset of `beams.names`.
     **Note:** The option `none` only suppressed the output of the beam data. To suppress any
     output, please use `hipace.output_period = -1`.
+
+Laser parameters
+----------------
+
+Currently, only a single, static laser pulse is available. The laser profile is defined by
+:math:`a(x,y,z) = a_0 * \mathrm{exp}(-(x^2/W0_x^2 + y^2/W0_y^2 + z^2/L0^2))`.
+If no `laser.a0` is provided, no laser will be initialized.
+
+* ``laser.a0`` (`float`) optional (default `0`)
+    The names of the particle beams, separated by a space.
+    To run without beams, choose the name `no_beam`.
+
+* ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
+    The mean position of the laser in `x, y, z`, separated by a space.
+
+* ``laser.W0`` (2 `float`) optional (default `0 0`)
+    The laser waist in `x, y`, separated by a space.
+
+* ``laser.L0`` (`float`) optional (default `0`)
+    The laser pulse length in `z`. Use either the pulse length or the pulse duration.
+
+* ``laser.tau`` (`float`) optional (default `0`)
+    The laser pulse duration. The pulse length will be set to `laser.tau/c_0`.
+    Use either the pulse length or the pulse duration.
+
+* ``laser.lambda0`` (`float`) optional (default `0`)
+    The laser pulse wavelength. Currently not used in the code.

@@ -17,6 +17,7 @@
  * \param[in] do_shift boolean to define if the force terms are shifted
  * \param[in] lev MR level
  * \param[in] bins objects containing indices of plasma particles in each tile
+ * \param[in] laser laser pulse, which affects the plasma via the ponderomotive force
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,

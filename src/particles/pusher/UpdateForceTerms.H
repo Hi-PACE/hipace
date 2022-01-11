@@ -14,6 +14,9 @@
  * \param[in] Bxp Bx field at particle position
  * \param[in] Byp By field at particle position
  * \param[in] Bzp Bz field at particle position
+ * \param[in] Aabssqp |a|^2 field at particle position
+ * \param[in] AabssqDxp d/dx |a|^2 field at particle position
+ * \param[in] AabssqDyp d/dy |a|^2 field at particle position
  * \param[in,out] Fx1 force term acting on x position of the particle
  * \param[in,out] Fy1 force term acting on y position of the particle
  * \param[in,out] Fux1 force term acting on x momentum of the particle

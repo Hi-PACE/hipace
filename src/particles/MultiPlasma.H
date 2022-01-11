@@ -34,6 +34,7 @@ public:
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
      * \param[in] which_slice defines if this or the next slice is handled
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
      * \param[in] deposit_jx_jy if true, deposit to jx and jy
@@ -57,6 +58,7 @@ public:
     /** \brief Loop over plasma species and Gather fields, update forces and push particles
      *
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
      * \param[in] do_push boolean to define if plasma particles are pushed
@@ -78,12 +80,13 @@ public:
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
      * \param[in] which_slice slice in which the densities are deposited
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] nlev number of MR levels
      */
     void DepositNeutralizingBackground (
-        Fields & fields, Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev); // FIXME: laser not necessary in NeutralizingBackground, but easier to keep it
+        Fields & fields, Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *
