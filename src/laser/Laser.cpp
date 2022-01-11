@@ -10,6 +10,7 @@ Laser::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
     m_use_laser = queryWithParser(pp, "a0", m_a0);
+    if (!m_use_laser) return;
     amrex::Vector<amrex::Real> tmp_vector;
     if (queryWithParser(pp, "W0", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == 2,
