@@ -45,8 +45,9 @@ public:
      * \param[in] lev MR level
      */
     void DepositCurrent (
-        Fields & fields, Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
-        bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm, int const lev);
+        Fields & fields, Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
+        bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
+        int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *

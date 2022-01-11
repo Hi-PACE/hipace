@@ -191,8 +191,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
                         const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
                         UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
-                                         Bxp, Byp, Bzp, Aabssqp, AabssqDxp, AabssqDyp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                         Fpsi1[ip], clightsq, phys_const, q, mass);
+                                         Bxp, Byp, Bzp, Aabssqp, AabssqDxp, AabssqDyp, Fx1[ip],
+                                         Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq,
+                                         phys_const, q, mass);
                     }
 
                     if (do_push)

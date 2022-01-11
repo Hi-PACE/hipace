@@ -78,8 +78,8 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     amrex::MultiFab& slice_AbsSqDx = getSlices(WhichLaserSlice::AbsSqDx);
     amrex::MultiFab& slice_AbsSqDy = getSlices(WhichLaserSlice::AbsSqDy);
 
-    const int dcomp = 0; // NOTE, this may not always be true, to be checked
-    const int scomp = 0; // NOTE, this may not always be true, to be checked
+    const int dcomp = 0; // NOTE, this may change when we use slices with Comps
+    const int scomp = 0; // NOTE, this may change when we use slices with Comps
 
 
 #ifdef AMREX_USE_OMP

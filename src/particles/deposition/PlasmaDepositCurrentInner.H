@@ -132,10 +132,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     BeamBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
     BeamBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
-    // Extract laser array from FabArray
-    // const amrex::FArrayBox& a_sqrd_fab = use_laser ? a_sqrd_mf[pti] : ;
-
-    amrex::Array4<const amrex::Real> const& a_sqrd_arr = use_laser ? a_sqrd_mf[pti].array() : amrex::Array4<const amrex::Real>();
+    // Extract laser array from MultiFab
+    amrex::Array4<const amrex::Real> const& a_sqrd_arr = use_laser ? a_sqrd_mf[pti].array()
+                                                         : amrex::Array4<const amrex::Real>();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

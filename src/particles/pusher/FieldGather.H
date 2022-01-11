@@ -275,7 +275,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
     const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
     amrex::ignore_unused(l_cell);
 
-    // Gather field on particle ExmByp from field on grid exmby_arr
+    // Gather field on particle Aabssqp from field on grid aabssq_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
@@ -284,7 +284,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
             }
         }
     }
-    // Gather field on particle EypBxp from field on grid eypbx_arr
+    // Gather field on particle AabssqDxp from field on grid aabssqdx_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
@@ -293,7 +293,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
             }
         }
     }
-    // Gather field on particle Ezp from field on grid ez_arr
+    // Gather field on particle AabssqDyp from field on grid aabssqdy_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
@@ -411,7 +411,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
     const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
     amrex::ignore_unused(l_cell);
 
-    // Gather field on particle ExmByp from field on grid exmby_arr
+    // Gather field on particle Aabssqp from field on grid aabssq_arr
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
