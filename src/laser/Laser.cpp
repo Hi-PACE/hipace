@@ -63,7 +63,6 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
     const auto plo = geom.ProbLoArray();
     const amrex::Real* dx = geom.CellSize();
-    amrex::IntVect lo = {0, 0, 0};
 
     const amrex::GpuArray<amrex::Real, 3> pos_mean = {m_position_mean[0], m_position_mean[1],
                                                       m_position_mean[2]};
@@ -126,8 +125,8 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
             {
                 /* finite difference along x */
                 array_AbsSqDx(i,j,k,dcomp) = 1._rt / (2.0_rt*dx_arr[0]) *
-                                         (array_AbsSq(i+1+lo[0], j+lo[1], k, scomp)
-                                          - array_AbsSq(i-1+lo[0], j+lo[1], k, scomp));
+                                         (array_AbsSq(i+1, j, k, scomp)
+                                          - array_AbsSq(i-1, j, k, scomp));
             }
             );
 
@@ -137,8 +136,8 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
             {
                 /* finite difference along y */
                 array_AbsSqDy(i,j,k,dcomp) = 1._rt  / (2.0_rt*dx_arr[1]) *
-                                         (array_AbsSq(i+lo[0], j+1+lo[1], k, scomp)
-                                         - array_AbsSq(i+lo[0], j-1+lo[1], k, scomp));
+                                         (array_AbsSq(i, j+1, k, scomp)
+                                         - array_AbsSq(i, j-1, k, scomp));
             }
             );
     }
