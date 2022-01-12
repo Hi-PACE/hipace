@@ -269,6 +269,8 @@ Hipace::InitData ()
     m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
 #endif
     m_physical_time = m_initial_time;
+
+    m_fields.checkInit();
 }
 
 void
