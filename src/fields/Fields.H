@@ -54,6 +54,22 @@ struct Direction{
     enum dir{x=0, y, z};
 };
 
+/** \brief Function to help converting field indexes to positions and backwards. Usage:
+ * x = i * dx + GetPosOffset(0, geom, box)
+ * i = round( (x - GetPosOffset(0, geom, box)) / dx )
+ *
+ * \param[in] dir 0, 1 or 2 for x, y or z respectively
+ * \param[in] geom geometry of the field
+ * \param[in] box box of the field, can be with or without ghost cells
+ */
+inline amrex::Real
+GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box) {
+    using namespace amrex::literals;
+    // match boxes at center point
+    return 0.5_rt * (geom.ProbLo(dir) + geom.ProbHi(dir)
+           - geom.CellSize(dir) * (box.smallEnd(dir) + box.bigEnd(dir)));
+}
+
 /** \brief Main class handling all field data structures and operations
  *
  * This is a fundamental class of Hipace, handling initialization of the fields,

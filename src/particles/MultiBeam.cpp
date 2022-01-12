@@ -38,7 +38,7 @@ MultiBeam::DepositCurrentSlice (
 {
     for (int i=0; i<m_nbeams; i++) {
         const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
-        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice, bx,
+        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
                               a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
                               do_beam_jx_jy_deposition, which_slice, nghost);
     }

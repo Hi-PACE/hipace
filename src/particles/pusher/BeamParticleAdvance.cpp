@@ -24,15 +24,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const amrex::Real dt = Hipace::m_dt / n_subcycles;
-
-    // Extract properties associated with the extent of the current box
     const int depos_order_xy = Hipace::m_depos_order_xy;
-    amrex::Box tilebox = box;
-    tilebox.grow({depos_order_xy, depos_order_xy, Hipace::m_depos_order_z});
-
-    amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
-    amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-    amrex::Dim3 const lo = amrex::lbound(tilebox);
 
     // Extract the fields
     const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
@@ -54,7 +46,11 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     amrex::Array4<const amrex::Real> const& bz_arr = bz[0].array();
 
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-    const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+
+    // Offset for converting positions to indexes
+    amrex::Real const x_pos_offset = GetPosOffset(0, gm, ez[0].box());
+    const amrex::Real y_pos_offset = GetPosOffset(1, gm, ez[0].box());
+    amrex::Real const z_pos_offset = GetPosOffset(2, gm, ez[0].box());
 
     // Extract particle properties
     auto& soa = beam.GetStructOfArrays(); // For momenta and weights
@@ -67,7 +63,6 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
     const auto enforceBC = EnforceBC<BeamParticleContainer>(
         beam, GetDomainLev(gm, box, 1, lev), GetDomainLev(gm, box, 0, lev),
         gm.isPeriodicArray(), offset);
-    const amrex::Real zmin = xyzmin[2];
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
     BeamBins::index_type*
@@ -119,10 +114,11 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                doGatherShapeN(xp, yp, zmin,
+                doGatherShapeN(xp, yp, 0 /* zp not used */,
                                ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                               dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                               dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
+                               depos_order_xy, 0);
 
                 ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
                                    external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
