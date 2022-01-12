@@ -96,7 +96,7 @@ public:
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
     /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
-    /** check whether the fileds are initialized correctly */
+    /** check whether the fields are initialized correctly */
     void checkInit() {
         for (auto& slices_lev : m_slices) {
             for (auto& slice : slices_lev) {
