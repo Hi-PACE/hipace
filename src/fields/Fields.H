@@ -136,6 +136,15 @@ public:
     }
     /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
+    /** check whether the fields are initialized correctly */
+    void checkInit() {
+        for (auto& slices_lev : m_slices) {
+            for (auto& slice : slices_lev) {
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice.nGrowVect() == m_slices_nguards,
+                    "m_slices[lev][islice].nGrowVect() must be equal to m_slices_nguards");
+            }
+        }
+    }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
      * \param[in] lev MR level

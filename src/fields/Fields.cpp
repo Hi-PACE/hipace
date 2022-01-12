@@ -35,7 +35,7 @@ Fields::AllocData (
         m_slices[lev][islice].define(
             slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[lev][islice].setVal(0.0);
+        m_slices[lev][islice].setVal(0.0, m_slices_nguards);
     }
 
     // The Poisson solver operates on transverse slices only.
@@ -337,12 +337,10 @@ Fields::AddRhoIons (const int lev, bool inverse)
     HIPACE_PROFILE("Fields::AddRhoIons()");
     if (!inverse){
         amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-                             Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1,
-                             m_slices_nguards);
+            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, m_slices_nguards);
     } else {
         amrex::MultiFab::Subtract(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-                                  Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1,
-                                  m_slices_nguards);
+            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"], 1, m_slices_nguards);
     }
 }
 
@@ -353,12 +351,12 @@ Fields::AddBeamCurrents (const int lev, const int which_slice)
     amrex::MultiFab& S = getSlices(lev, which_slice);
     // we add the beam currents to the full currents, as mostly the full currents are needed
     amrex::MultiFab::Add(S, S, Comps[which_slice]["jx_beam"], Comps[which_slice]["jx"], 1,
-        m_slices_nguards);
+                         m_slices_nguards);
     amrex::MultiFab::Add(S, S, Comps[which_slice]["jy_beam"], Comps[which_slice]["jy"], 1,
-        m_slices_nguards);
+                         m_slices_nguards);
     if (which_slice == WhichSlice::This) {
         amrex::MultiFab::Add(S, S, Comps[which_slice]["jz_beam"], Comps[which_slice]["jz"], 1,
-            m_slices_nguards);
+                             m_slices_nguards);
     }
 }
 
