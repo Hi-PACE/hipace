@@ -1,6 +1,7 @@
 #ifndef UPDATEFORCETERMS_H_
 #define UPDATEFORCETERMS_H_
 
+#include "particles/PlasmaParticleContainer.H"
 
 
 /** \brief updating the force terms on a single plasma particle
@@ -70,60 +71,16 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
 
 /** \brief Shifting the force term coefficients
  *
- * \param[in] Fx1 force term acting on x position of the particle
- * \param[in] Fy1 force term acting on y position of the particle
- * \param[in] Fux1 force term acting on x momentum of the particle
- * \param[in] Fuy1 force term acting on y momentum of the particle
- * \param[in] Fpsi1 force term acting on the plasma pseudo-potential of the particle
- * \param[in,out] Fx2 force term acting on x position of the particle
- * \param[in,out] Fy2 force term acting on y position of the particle
- * \param[in,out] Fux2 force term acting on x momentum of the particle
- * \param[in,out] Fuy2 force term acting on y momentum of the particle
- * \param[in,out] Fpsi2 force term acting on the plasma pseudo-potential of the particle
- * \param[in,out] Fx3 force term acting on x position of the particle
- * \param[in,out] Fy3 force term acting on y position of the particle
- * \param[in,out] Fux3 force term acting on x momentum of the particle
- * \param[in,out] Fuy3 force term acting on y momentum of the particle
- * \param[in,out] Fpsi3 force term acting on the plasma pseudo-potential of the particle
- * \param[in,out] Fx4 force term acting on x position of the particle
- * \param[in,out] Fy4 force term acting on y position of the particle
- * \param[in,out] Fux4 force term acting on x momentum of the particle
- * \param[in,out] Fuy4 force term acting on y momentum of the particle
- * \param[in,out] Fpsi4 force term acting on the plasma pseudo-potential of the particle
- * \param[in,out] Fx5 force term acting on x position of the particle
- * \param[in,out] Fy5 force term acting on y position of the particle
- * \param[in,out] Fux5 force term acting on x momentum of the particle
- * \param[in,out] Fuy5 force term acting on y momentum of the particle
- * \param[in,out] Fpsi5 force term acting on the plasma pseudo-potential of the particle
-  */
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void ShiftForceTerms (const amrex::ParticleReal& Fx1,
-                      const amrex::ParticleReal& Fy1,
-                      const amrex::ParticleReal& Fux1,
-                      const amrex::ParticleReal& Fuy1,
-                      const amrex::ParticleReal& Fpsi1,
-                      amrex::ParticleReal& Fx2,
-                      amrex::ParticleReal& Fy2,
-                      amrex::ParticleReal& Fux2,
-                      amrex::ParticleReal& Fuy2,
-                      amrex::ParticleReal& Fpsi2,
-                      amrex::ParticleReal& Fx3,
-                      amrex::ParticleReal& Fy3,
-                      amrex::ParticleReal& Fux3,
-                      amrex::ParticleReal& Fuy3,
-                      amrex::ParticleReal& Fpsi3,
-                      amrex::ParticleReal& Fx4,
-                      amrex::ParticleReal& Fy4,
-                      amrex::ParticleReal& Fux4,
-                      amrex::ParticleReal& Fuy4,
-                      amrex::ParticleReal& Fpsi4,
-                      amrex::ParticleReal& Fx5,
-                      amrex::ParticleReal& Fy5,
-                      amrex::ParticleReal& Fux5,
-                      amrex::ParticleReal& Fuy5,
-                      amrex::ParticleReal& Fpsi5 )
-
+ */
+void ShiftForceTerms ()
 {
+    using namespace PlasmaIdx;
+
+    int Fxtmp = Fx5;
+    int Fytmp = Fy5;
+    int Fuxtmp = Fux5;
+    int Fuytmp = Fuy5;
+    int Fpsitmp = Fpsi5;
 
     Fx5 = Fx4;
     Fy5 = Fy4;
@@ -148,6 +105,12 @@ void ShiftForceTerms (const amrex::ParticleReal& Fx1,
     Fux2 = Fux1;
     Fuy2 = Fuy1;
     Fpsi2 = Fpsi1;
+
+    Fx1 = Fxtmp;
+    Fy1 = Fytmp;
+    Fux1 = Fuxtmp;
+    Fuy1 = Fuytmp;
+    Fpsi1 = Fpsitmp;
 
 }
 

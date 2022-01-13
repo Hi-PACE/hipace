@@ -29,6 +29,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
 
+    if (do_shift)
+    {
+        ShiftForceTerms();
+    }
+
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
@@ -148,15 +153,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     // define field at particle position reals
                     amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                     amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
-
-                    if (do_shift)
-                    {
-                        ShiftForceTerms(Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                                        Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                                        Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                                        Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                                        Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip] );
-                    }
 
                     if (do_update)
                     {
