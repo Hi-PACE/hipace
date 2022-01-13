@@ -29,11 +29,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
 
-    if (do_shift)
-    {
-        ShiftForceTerms();
-    }
-
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
@@ -73,6 +68,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
 
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+
+        if (do_shift)
+        {
+            ShiftForceTerms(soa);
+        }
 
         // loading the data
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();

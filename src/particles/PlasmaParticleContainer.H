@@ -9,59 +9,29 @@
 #include <map>
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
-namespace PlasmaIdx
+struct PlasmaIdx
 {
     enum {
-        w = 0,                                  // weight
-        w0,                                     // initial weight
-        ux, uy,                                 // momentum
-        psi,                                    //
-        x_prev, y_prev,                         // temporary position
-        ux_temp, uy_temp,                       // momentum
-        psi_temp,                               //
-        Fx1_, Fx2_, Fx3_, Fx4_, Fx5_,           //
-        Fy1_, Fy2_, Fy3_, Fy4_, Fy5_,           //
-        Fux1_, Fux2_, Fux3_, Fux4_, Fux5_,      //
-        Fuy1_, Fuy2_, Fuy3_, Fuy4_, Fuy5_,      //
-        Fpsi1_, Fpsi2_, Fpsi3_, Fpsi4_, Fpsi5_, //
-        x0, y0,                                 // initial positions
+        w = 0,                               // weight
+        w0,                                  // initial weight
+        ux, uy,                              // momentum
+        psi,                                 //
+        x_prev, y_prev,                      // temporary position
+        ux_temp, uy_temp,                    // momentum
+        psi_temp,                            //
+        Fx1, Fx2, Fx3, Fx4, Fx5,             //
+        Fy1, Fy2, Fy3, Fy4, Fy5,             //
+        Fux1, Fux2, Fux3, Fux4, Fux5,        //
+        Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
+        Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
+        x0, y0,                              // initial positions
         nattribs
     };
     enum {
-        ion_lev = 0,                            // ionization level
+        ion_lev = 0,                         // ionization level
         int_nattribs
     };
-
-    static int Fx1 = Fx1_;
-    static int Fx2 = Fx2_;
-    static int Fx3 = Fx3_;
-    static int Fx4 = Fx4_;
-    static int Fx5 = Fx5_;
-
-    static int Fy1 = Fy1_;
-    static int Fy2 = Fy2_;
-    static int Fy3 = Fy3_;
-    static int Fy4 = Fy4_;
-    static int Fy5 = Fy5_;
-
-    static int Fux1 = Fux1_;
-    static int Fux2 = Fux2_;
-    static int Fux3 = Fux3_;
-    static int Fux4 = Fux4_;
-    static int Fux5 = Fux5_;
-
-    static int Fuy1 = Fuy1_;
-    static int Fuy2 = Fuy2_;
-    static int Fuy3 = Fuy3_;
-    static int Fuy4 = Fuy4_;
-    static int Fuy5 = Fuy5_;
-
-    static int Fpsi1 = Fpsi1_;
-    static int Fpsi2 = Fpsi2_;
-    static int Fpsi3 = Fpsi3_;
-    static int Fpsi4 = Fpsi4_;
-    static int Fpsi5 = Fpsi5_;
-}
+};
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer

@@ -1,8 +1,6 @@
 #ifndef UPDATEFORCETERMS_H_
 #define UPDATEFORCETERMS_H_
 
-#include "particles/PlasmaParticleContainer.H"
-
 
 /** \brief updating the force terms on a single plasma particle
  *
@@ -71,46 +69,36 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
 
 /** \brief Shifting the force term coefficients
  *
+ * \param[in] soa struct of arrays with force terms
  */
-void ShiftForceTerms ()
+template<class StructOfArrays>
+void ShiftForceTerms (StructOfArrays& soa)
 {
-    using namespace PlasmaIdx;
+    auto& rd = soa.GetRealData();
 
-    int Fxtmp = Fx5;
-    int Fytmp = Fy5;
-    int Fuxtmp = Fux5;
-    int Fuytmp = Fuy5;
-    int Fpsitmp = Fpsi5;
+    rd[PlasmaIdx::Fx5].swap(rd[PlasmaIdx::Fx4]);
+    rd[PlasmaIdx::Fy5].swap(rd[PlasmaIdx::Fy4]);
+    rd[PlasmaIdx::Fux5].swap(rd[PlasmaIdx::Fux4]);
+    rd[PlasmaIdx::Fuy5].swap(rd[PlasmaIdx::Fuy4]);
+    rd[PlasmaIdx::Fpsi5].swap(rd[PlasmaIdx::Fpsi4]);
 
-    Fx5 = Fx4;
-    Fy5 = Fy4;
-    Fux5 = Fux4;
-    Fuy5 = Fuy4;
-    Fpsi5 = Fpsi4;
+    rd[PlasmaIdx::Fx4].swap(rd[PlasmaIdx::Fx3]);
+    rd[PlasmaIdx::Fy4].swap(rd[PlasmaIdx::Fy3]);
+    rd[PlasmaIdx::Fux4].swap(rd[PlasmaIdx::Fux3]);
+    rd[PlasmaIdx::Fuy4].swap(rd[PlasmaIdx::Fuy3]);
+    rd[PlasmaIdx::Fpsi4].swap(rd[PlasmaIdx::Fpsi3]);
 
-    Fx4 = Fx3;
-    Fy4 = Fy3;
-    Fux4 = Fux3;
-    Fuy4 = Fuy3;
-    Fpsi4 = Fpsi3;
+    rd[PlasmaIdx::Fx3].swap(rd[PlasmaIdx::Fx2]);
+    rd[PlasmaIdx::Fy3].swap(rd[PlasmaIdx::Fy2]);
+    rd[PlasmaIdx::Fux3].swap(rd[PlasmaIdx::Fux2]);
+    rd[PlasmaIdx::Fuy3].swap(rd[PlasmaIdx::Fuy2]);
+    rd[PlasmaIdx::Fpsi3].swap(rd[PlasmaIdx::Fpsi2]);
 
-    Fx3 = Fx2;
-    Fy3 = Fy2;
-    Fux3 = Fux2;
-    Fuy3 = Fuy2;
-    Fpsi3 = Fpsi2;
-
-    Fx2 = Fx1;
-    Fy2 = Fy1;
-    Fux2 = Fux1;
-    Fuy2 = Fuy1;
-    Fpsi2 = Fpsi1;
-
-    Fx1 = Fxtmp;
-    Fy1 = Fytmp;
-    Fux1 = Fuxtmp;
-    Fuy1 = Fuytmp;
-    Fpsi1 = Fpsitmp;
+    rd[PlasmaIdx::Fx2].swap(rd[PlasmaIdx::Fx1]);
+    rd[PlasmaIdx::Fy2].swap(rd[PlasmaIdx::Fy1]);
+    rd[PlasmaIdx::Fux2].swap(rd[PlasmaIdx::Fux1]);
+    rd[PlasmaIdx::Fuy2].swap(rd[PlasmaIdx::Fuy1]);
+    rd[PlasmaIdx::Fpsi2].swap(rd[PlasmaIdx::Fpsi1]);
 
 }
 
