@@ -658,6 +658,11 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real kpinv = 1./kp;
     const amrex::Real E0 = omegap * pc.m_e * pc.c / pc.q_e;
 
+    // getting the constant of motion for finite temperatures
+    const amrex::RealVect u_std = m_multi_plasma.get_u_std();
+    const amrex::Real const_of_motion = sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1]
+                                             + u_std[2]*u_std[2]);
+
     // dx, dy, dz in normalized units
     const amrex::Real dx = Geom(lev).CellSize(Direction::x)/kpinv;
     const amrex::Real dy = Geom(lev).CellSize(Direction::y)/kpinv;
@@ -737,24 +742,24 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
 
-                const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt * nstar/(1._rt+cpsi);
+                const amrex::Real nstar_gamma = 0.5_rt* (const_of_motion+cpsi)*(cjxx + cjyy + nstar)
+                                                + 0.5_rt * nstar/(const_of_motion+cpsi);
 
-                const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdx_psi/(1._rt+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+                const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) *
+                    (nstar_gamma*cdx_psi/(const_of_motion+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
 
-                const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
-                    (nstar_gamma*cdy_psi/(1._rt+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                const amrex::Real nstar_ay = 1._rt/(const_of_motion + cpsi) *
+                    (nstar_gamma*cdy_psi/(const_of_motion+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
-                mult(i,j,k,0) = nstar / (1._rt + cpsi);
-                mult(i,j,k,1) = nstar / (1._rt + cpsi);
+                mult(i,j,k,0) = nstar / (const_of_motion + cpsi);
+                mult(i,j,k,1) = nstar / (const_of_motion + cpsi);
 
                 // sy, to compute Bx
-                s(i,j,k,0) = + cbz * cjxp / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
+                s(i,j,k,0) = + cbz * cjxp / (const_of_motion+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
                              + cdz_jyb;
                 // sx, to compute By
-                s(i,j,k,1) = - cbz * cjyp / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
+                s(i,j,k,1) = - cbz * cjyp / (const_of_motion+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
                              + cdz_jxb;
                 s(i,j,k,1) *= -1;
 

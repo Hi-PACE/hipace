@@ -144,3 +144,20 @@ MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
             findParticlesInEachTile(lev, bx, m_sort_bin_size, plasma, geom));
     }
 }
+
+amrex::RealVect
+MultiPlasma::get_u_std () const
+{
+    amrex::RealVect u_std = {0.,0.,0.};
+
+    for (auto& plasma : m_all_plasmas) {
+        u_std = plasma.get_u_std();
+        if (m_nplasmas > 1) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (std::abs(u_std[0]) + std::abs(u_std[1])
+                                               + std::abs(u_std[2])) < 1e-7,
+                "Explicit solver with temperature is currently limited to one plasma only");
+        }
+    }
+
+    return u_std;
+}
