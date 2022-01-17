@@ -85,10 +85,8 @@ Hipace::Hipace () :
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
 
-#ifndef AMREX_USE_GPU
     int seed;
     if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed);
-#endif
 
     amrex::ParmParse pph("hipace");
 
