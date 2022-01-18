@@ -11,7 +11,7 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Vector<amrex::Geometry> const& gm, int const lev ,const int islice,
-                     const amrex::Box bx, int const offset, BeamBins& bins,
+                     int const offset, BeamBins& bins,
                      const bool do_beam_jx_jy_deposition, const int which_slice, int nghost)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
@@ -29,14 +29,6 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
         "Only order 0 deposition is allowed for beam per-slice deposition");
 
-    // Extract properties associated with the extent of the current box
-    amrex::Box tilebox = bx;
-    tilebox.grow({Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, Hipace::m_depos_order_z});
-
-    amrex::RealBox const grid_box{tilebox, gm[lev].CellSize(), gm[lev].ProbLo()};
-    amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-    amrex::Dim3 const lo = amrex::lbound(tilebox);
-
     // Extract the fields currents
     amrex::MultiFab& S = fields.getSlices(lev, which_slice);
     // we deposit to the beam currents, because the explicit solver
@@ -52,6 +44,11 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     amrex::FArrayBox& jyb_fab = jy_beam[0];
     amrex::FArrayBox& jzb_fab = jz_beam[0];
 
+    // Offset for converting positions to indexes
+    amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], jxb_fab.box());
+    const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], jxb_fab.box());
+    amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev], jxb_fab.box());
+
     amrex::Real lev_weight_fac = 1.;
     if (lev == 1 && Hipace::m_normalized_units) {
         // re-scaling the weight in normalized units to get the same charge density on lev 1
@@ -65,17 +62,21 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){
-        doDepositionShapeN<0, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
-                                  bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
+        doDepositionShapeN<0, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, x_pos_offset, y_pos_offset,
+                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
+                                  which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 1){
-        doDepositionShapeN<1, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
-                                  bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
+        doDepositionShapeN<1, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, x_pos_offset, y_pos_offset,
+                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
+                                  which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 2){
-        doDepositionShapeN<2, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
-                                  bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
+        doDepositionShapeN<2, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, x_pos_offset, y_pos_offset,
+                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
+                                  which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 3){
-        doDepositionShapeN<3, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, xyzmin, lo, q, islice,
-                                  bins, offset, do_beam_jx_jy_deposition, which_slice, nghost);
+        doDepositionShapeN<3, 0>( beam, jxb_fab, jyb_fab, jzb_fab, dx, x_pos_offset, y_pos_offset,
+                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
+                                  which_slice, nghost);
     } else {
         amrex::Abort("unknown deposition order");
     }

@@ -32,15 +32,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
-        // Extract properties associated with the extent of the current box
-        // Grow to capture the extent of the particle shape
-        amrex::Box tilebox = pti.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-
-        amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
-        amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-        amrex::Dim3 const lo = amrex::lbound(tilebox);
-
         // Extract the fields
         const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
         const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
@@ -65,7 +56,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
 
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-        const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, gm, ez_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm, ez_fab.box());
+        amrex::Real const z_pos_offset = GetPosOffset(2, gm, ez_fab.box());
 
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
@@ -116,7 +111,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         const auto enforceBC = EnforceBC<PTileType>(
             pti.GetParticleTile(), GetDomainLev(gm, pti.tilebox(), 1, lev),
             GetDomainLev(gm, pti.tilebox(), 0, lev), gm.isPeriodicArray());
-        const amrex::Real zmin = xyzmin[2];
         const amrex::Real dz = dx[2];
 
         const amrex::Real charge = plasma.m_charge;
@@ -161,10 +155,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     if (do_update)
                     {
                         // field gather for a single particle
-                        doGatherShapeN(xp, yp, zmin,
+                        doGatherShapeN(xp, yp, 0 /* zp not used */,
                                        ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                                        exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                                       dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                                       dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
+                                       depos_order_xy, 0);
                         // update force terms for a single particle
                         const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
                         const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);

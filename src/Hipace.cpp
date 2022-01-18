@@ -528,7 +528,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                              amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
                 j_slice_next.setVal(0., m_fields.m_slices_nguards);
-                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
+                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                                  m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                                  WhichSlice::Next);
                 m_fields.AddBeamCurrents(lev, WhichSlice::Next);
@@ -558,7 +558,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
 
             m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
+            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                              m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                              WhichSlice::This);
             m_fields.AddBeamCurrents(lev, WhichSlice::This);
@@ -575,7 +575,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
                 m_fields.AddRhoIons(lev);
             } else {
-                PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bx, bins[lev], ibox);
+                PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bins[lev], ibox);
             }
 
             // Push beam particles
@@ -838,7 +838,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 void
 Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
-                                const amrex::Box bx, amrex::Vector<BeamBins> bins, const int ibox)
+                                           amrex::Vector<BeamBins> bins, const int ibox)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -914,7 +914,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
-        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 
