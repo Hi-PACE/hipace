@@ -111,12 +111,12 @@ struct derivative_inner<Direction::z> {
 template<int dir>
 struct derivative {
     // use brace initialization as constructor
-    FieldView f_view; // field to calculate its derivative
+    amrex::MultiFab f_view; // field to calculate its derivative
     const amrex::Geometry& geom; // geometry of field
 
-    // use .array(mfi) like with amrex::MultiFab or FieldView
+    // use .array(mfi) like with amrex::MultiFab
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
-        amrex::Box bx = f_view.m_mfab[mfi].box();
+        amrex::Box bx = f_view[mfi].box();
         return derivative_inner<dir>{f_view.array(mfi),
             1/(2*geom.CellSize(dir)), bx.smallEnd(dir), bx.bigEnd(dir)};
     }
@@ -125,11 +125,11 @@ struct derivative {
 template<>
 struct derivative<Direction::z> {
     // use brace initialization as constructor
-    FieldView f_view1; // field on previous slice to calculate its derivative
-    FieldView f_view2; // field on next slice to calculate its derivative
+    amrex::MultiFab f_view1; // field on previous slice to calculate its derivative
+    amrex::MultiFab f_view2; // field on next slice to calculate its derivative
     const amrex::Geometry& geom; // geometry of field
 
-    // use .array(mfi) like with amrex::MultiFab or FieldView
+    // use .array(mfi) like with amrex::MultiFab
     derivative_inner<Direction::z> array (amrex::MFIter& mfi) const {
         return derivative_inner<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
             1/(2*geom.CellSize(Direction::z))};
@@ -180,14 +180,14 @@ struct interpolated_field_inner {
 template<int interp_order_xy>
 struct interpolated_field {
     // use brace initialization as constructor
-    FieldView f_view_this; // field to interpolate on this slice
-    FieldView f_view_prev; // field to interpolate on previous slice
+    amrex::MultiFab f_view_this; // field to interpolate on this slice
+    amrex::MultiFab f_view_prev; // field to interpolate on previous slice
     const amrex::Geometry& geom; // geometry of field
     amrex::Real rel_z; // mixing factor between f_view_this and f_view_prev for z interpolation
 
-    // use .array(mfi) like with amrex::MultiFab or FieldView
+    // use .array(mfi) like with amrex::MultiFab
     interpolated_field_inner<interp_order_xy> array (amrex::MFIter& mfi) const {
-        amrex::Box bx = f_view_this.m_mfab[mfi].box();
+        amrex::Box bx = f_view_this[mfi].box();
         return interpolated_field_inner<interp_order_xy>{
             f_view_this.array(mfi), f_view_prev.array(mfi),
             1/geom.CellSize(0), 1/geom.CellSize(1),
@@ -207,7 +207,7 @@ struct interpolated_field {
  */
 template<class FVA, class FVB>
 void
-LinCombination (const amrex::IntVect box_grow, FieldView dst,
+LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
                 const amrex::Real factor_b, const FVB& src_b)
 {
@@ -216,7 +216,7 @@ LinCombination (const amrex::IntVect box_grow, FieldView dst,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(dst.m_mfab, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const auto dst_array = dst.array(mfi);
         const auto src_a_array = src_a.array(mfi);
         const auto src_b_array = src_b.array(mfi);
@@ -424,23 +424,24 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 {
     if (lev == 0) return; // keep lev==0 boundaries zero
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
+    using namespace amrex::literals;
     constexpr int interp_order = 2;
 
-    const amrex::Real ref_ratio_z = geom[lev-1].CellSize(2) / geom[lev].CellSize(2);
-    const amrex::Real islice_coarse = islice / ref_ratio_z;
+    const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
+    const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
     const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
     auto solution_interp = interpolated_field<interp_order>{
         getField(lev-1, WhichSlice::This, component),
         getField(lev-1, WhichSlice::Previous1, component),
         geom[lev-1], rel_z};
-    FieldView staging_area = getStagingArea(lev);
+    amrex::MultiFab staging_area = getStagingArea(lev);
 
-    for (amrex::MFIter mfi(staging_area.m_mfab, false); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
     {
         const auto arr_solution_interp = solution_interp.array(mfi);
         const auto arr_staging_area = staging_area.array(mfi);
-        const amrex::Box fine_staging_box = staging_area.m_mfab[mfi].box();
+        const amrex::Box fine_staging_box = staging_area[mfi].box();
 
         SetDirichletBoundaries(arr_staging_area, fine_staging_box, geom[lev], arr_solution_interp);
     }
@@ -453,21 +454,22 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
                                    const amrex::IntVect outer_edge, const amrex::IntVect inner_edge)
 {
     if (lev == 0) return; // only interpolate boundaries to lev 1
-    HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
-    constexpr int interp_order = 2;
     if (outer_edge == inner_edge) return;
+    HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
+    using namespace amrex::literals;
+    constexpr int interp_order = 2;
 
-    const amrex::Real ref_ratio_z = geom[lev-1].CellSize(2) / geom[lev].CellSize(2);
-    const amrex::Real islice_coarse = islice / ref_ratio_z;
+    const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
+    const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
     const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
     auto field_coarse_interp = interpolated_field<interp_order>{
         getField(lev-1, WhichSlice::This, component),
         getField(lev-1, WhichSlice::Previous1, component),
         geom[lev-1], rel_z};
-    FieldView field_fine = getField(lev, WhichSlice::This, component);
+    amrex::MultiFab field_fine = getField(lev, WhichSlice::This, component);
 
-    for (amrex::MFIter mfi( field_fine.m_mfab, false); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi( field_fine, false); mfi.isValid(); ++mfi)
     {
         auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
         auto arr_field_fine = field_fine.array(mfi);
@@ -532,14 +534,14 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
 
     // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
-    FieldView f_ExmBy = getField(lev, WhichSlice::This, "ExmBy");
-    FieldView f_EypBx = getField(lev, WhichSlice::This, "EypBx");
-    FieldView f_Psi = getField(lev, WhichSlice::This, "Psi");
+    amrex::MultiFab f_ExmBy = getField(lev, WhichSlice::This, "ExmBy");
+    amrex::MultiFab f_EypBx = getField(lev, WhichSlice::This, "EypBx");
+    amrex::MultiFab f_Psi = getField(lev, WhichSlice::This, "Psi");
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(f_ExmBy.m_mfab, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(f_ExmBy, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Array4<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);

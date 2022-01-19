@@ -49,20 +49,6 @@ struct Direction{
     enum dir{x=0, y, z};
 };
 
-/** \brief Helper class to pass non-owning, lightweight views of specific Fields around */
-struct FieldView {
-    // use brace initialization or getField/getStagingArea as constructor
-    amrex::MultiFab& m_mfab;
-    int m_comp;
-
-    /** \brief get amrex::Array4<const? amrex::Real> of the specific Field component
-     * \param[in] mfi MFIter object of this or a related field
-     */
-    auto array (const amrex::MFIter& mfi) const {
-        return m_mfab.array(mfi, m_comp);
-    }
-};
-
 /** \brief Function to help converting field indexes to positions and backwards. Usage:
  * x = i * dx + GetPosOffset(0, geom, box)
  * i = round( (x - GetPosOffset(0, geom, box)) / dx )
@@ -120,19 +106,19 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
-    /** get FieldView of a field in a slice
+    /** get amrex::MultiFab of a field in a slice
      * \param[in] lev MR level
      * \param[in] islice slice index
      * \param[in] comp component name of field (see Comps)
      */
-    FieldView getField (const int lev, const int islice, const std::string comp) {
-        return FieldView{getSlices(lev, islice), Comps[islice][comp]};
+    amrex::MultiFab getField (const int lev, const int islice, const std::string comp) {
+        return amrex::MultiFab(getSlices(lev, islice), amrex::make_alias, Comps[islice][comp], 1);
     }
-    /** get FieldView of the poisson staging area
+    /** get amrex::MultiFab of the poisson staging area
      * \param[in] lev MR level
      */
-    FieldView getStagingArea (const int lev) {
-        return FieldView{m_poisson_solver[lev]->StagingArea(), 0};
+    amrex::MultiFab getStagingArea (const int lev) {
+        return amrex::MultiFab(m_poisson_solver[lev]->StagingArea(), amrex::make_alias, 0, 1);
     }
     /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
