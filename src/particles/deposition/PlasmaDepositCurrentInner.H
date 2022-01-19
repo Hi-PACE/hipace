@@ -38,8 +38,8 @@
  * \param[in,out] jyy_fab array of current density jyy, on the box corresponding to pti
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
  * \param[in] dx cell size in each dimension
- * \param[in] xyzmin lower corner of the box, in physical space
- * \param[in] lo lower corner of the box, in index space
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
  * \param[in] charge of a particle
  * \param[in] can_ionize whether charge needs to be multiplied by ion_lev
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
@@ -62,8 +62,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jyy_fab,
                          amrex::Vector<amrex::FArrayBox>& tmp_densities,
                          amrex::Real const * const AMREX_RESTRICT dx,
-                         amrex::Real const * const AMREX_RESTRICT xyzmin,
-                         amrex::Dim3 const lo,
+                         amrex::Real const x_pos_offset,
+                         amrex::Real const y_pos_offset,
                          amrex::Real const charge,
                          const bool can_ionize,
                          const bool temp_slice,
@@ -96,8 +96,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const amrex::Real dyi = 1.0/dx[1];
     const amrex::Real dzi = 1.0/dx[2];
     const amrex::Real invvol = Hipace::m_normalized_units ? 1. : dxi*dyi*dzi;
-    const amrex::Real xmin = xyzmin[0];
-    const amrex::Real ymin = xyzmin[1];
 
     // slice is only one cell thick
     AMREX_ASSERT(pti.tilebox().smallEnd(2) == pti.tilebox().bigEnd(2));
@@ -218,46 +216,46 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     // --- Compute shape factors
                     // x direction
                     // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-                    const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
+                    const amrex::Real xmid = (pos_structs[ip].pos(0) - x_pos_offset)*dxi;
                     amrex::Real sx_cell[depos_order_xy + 1];
                     const int j_cell = compute_shape_factor<depos_order_xy>(
-                        sx_cell, xmid - 0.5_rt - itilex*bin_size);
+                        sx_cell, xmid - itilex*bin_size);
 
                     // y direction
-                    const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
+                    const amrex::Real ymid = (pos_structs[ip].pos(1) - y_pos_offset)*dyi;
                     amrex::Real sy_cell[depos_order_xy + 1];
                     const int k_cell = compute_shape_factor<depos_order_xy>(
-                        sy_cell, ymid - 0.5_rt - itiley*bin_size);
+                        sy_cell, ymid - itiley*bin_size);
                     // Deposit current into jx_arr, jy_arr and jz_arr
                     for (int iy=0; iy<=depos_order_xy; iy++){
                         for (int ix=0; ix<=depos_order_xy; ix++){
                             if (deposit_jx_jy) {
                                 amrex::Gpu::Atomic::Add(
-                                    &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &jx_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wqx);
                                 amrex::Gpu::Atomic::Add(
-                                    &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &jy_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wqy);
                             }
                             if (deposit_jz) {
                                 amrex::Gpu::Atomic::Add(
-                                    &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &jz_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wqz);
                             }
                             if (deposit_rho) {
                                 amrex::Gpu::Atomic::Add(
-                                    &rho_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &rho_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wq);
                             }
                             if (deposit_j_squared) {
                                 amrex::Gpu::Atomic::Add(
-                                    &jxx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &jxx_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wqxx);
                                 amrex::Gpu::Atomic::Add(
-                                    &jxy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &jxy_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wqxy);
                                 amrex::Gpu::Atomic::Add(
-                                    &jyy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_index),
+                                    &jyy_arr(j_cell+ix, k_cell+iy, z_index),
                                     sx_cell[ix]*sy_cell[iy]*wqyy);
                             }
                         }
