@@ -54,6 +54,11 @@ macro(find_amrex)
         set(AMReX_TINY_PROFILE ON CACHE BOOL "")
         set(AMReX_LINEAR_SOLVERS ON CACHE INTERNAL "")
 
+        # we don't need RDC and disabling it simplifies the build
+        # complexity and potentially improves code optimization
+        # note: once we add & enable ASCENT and SENSEI, we need RDC
+        set(AMReX_GPU_RDC OFF CACHE BOOL "")
+
         # AMReX_ASCENT
         # AMReX_CONDUIT
         # AMReX_SENSEI
@@ -112,6 +117,7 @@ macro(find_amrex)
         mark_as_advanced(AMReX_BASE_PROFILE) # mutually exclusive to tiny profile
         mark_as_advanced(AMReX_DPCPP)
         mark_as_advanced(AMReX_CUDA)
+        mark_as_advanced(AMReX_GPU_RDC)
         mark_as_advanced(AMReX_PARTICLES_PRECISION)
         mark_as_advanced(AMReX_PRECISION)
         mark_as_advanced(AMReX_EB)
