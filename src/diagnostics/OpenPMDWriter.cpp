@@ -65,7 +65,7 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
 
 void
 OpenPMDWriter::WriteDiagnostics (
-    amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
+    amrex::Vector<amrex::FArrayBox>& a_mf, MultiBeam& a_multi_beam,
     amrex::Vector<amrex::Geometry> const& geom,
     const amrex::Real physical_time, const int output_step, const int nlev,
     const int slice_dir, const amrex::Vector< std::string > varnames,
@@ -86,6 +86,7 @@ OpenPMDWriter::WriteDiagnostics (
         } else if (call_type == OpenPMDWriterCallType::fields ) {
             WriteFieldData(a_mf[lev], geom, slice_dir, varnames, iteration, output_step, lev);
             m_outputSeries[lev]->flush();
+            a_mf[lev].setVal<amrex::RunOn::Device>(0);
             m_last_output_dumped[lev] = output_step;
         }
     }

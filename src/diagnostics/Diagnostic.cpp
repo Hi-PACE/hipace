@@ -121,6 +121,7 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
     amrex::Box io_box = TrimIOBox(box);
     io_box.coarsen(m_diag_coarsen[lev]);
     m_F[lev].resize(io_box, m_nfields);
+    m_F[lev].setVal<amrex::RunOn::Device>(0);
 }
 
 amrex::Box

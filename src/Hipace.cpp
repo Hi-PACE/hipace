@@ -1331,8 +1331,8 @@ Hipace::GetRefRatio (int lev)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    m_fields.Copy(lev, i_slice, 0, 0, m_diags.getCompsIdx(), m_diags.getNFields(),
-                  m_diags.getF(lev), m_diags.sliceDir(), m_diags.getCoarsening(lev), Geom(lev));
+    m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev), m_diags.getF(lev).box(),
+                  Geom(lev), m_diags.getCompsIdx(), m_diags.getNFields());
 }
 
 void
