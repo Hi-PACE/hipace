@@ -28,8 +28,8 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
    git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # only the first time
    cd $HOME/src/hipace
    rm -rf build
-   cmake3 -S . -B build -DHiPACE_COMPUTE=CUDA
-   cmake3 --build build -j 16
+   cmake -S . -B build -DHiPACE_COMPUTE=CUDA
+   cmake --build build -j 16
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started`
 section, to prepare an input file that suits your needs. You can then create your directory on
