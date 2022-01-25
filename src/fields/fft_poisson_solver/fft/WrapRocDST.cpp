@@ -237,7 +237,6 @@ namespace AnyDST
         DSTplan dst_plan;
         const int nx = real_size[0];
         const int ny = real_size[1];
-        rocfft_status status;
         int dim = 2;
 
         // Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
