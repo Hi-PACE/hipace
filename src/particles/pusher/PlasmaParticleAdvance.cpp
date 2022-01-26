@@ -17,11 +17,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         const bool do_update, const bool do_shift, int const lev,
                         PlasmaBins& bins)
 {
-    char str[60] = "UpdateForcePushParticles_PlasmaParticleContainer(    )";
-    if (temp_slice) str[49] = 't';
-    if (do_push) str[50] = 'p';
-    if (do_update) str[51] = 'u';
-    if (do_shift) str[52] = 's';
+    char str[38] = "UpdateForcePushParticles_Plasma(    )";
+    if (temp_slice) str[32] = 't';
+    if (do_push) str[33] = 'p';
+    if (do_update) str[34] = 'u';
+    if (do_shift) str[35] = 's';
     HIPACE_PROFILE(str);
     using namespace amrex::literals;
 
