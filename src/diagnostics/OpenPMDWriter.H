@@ -141,7 +141,7 @@ public:
      * \param[in] call_type whether the beams or the fields should be written to file
      */
     void WriteDiagnostics(
-        amrex::Vector<amrex::FArrayBox>& a_mf, MultiBeam& a_multi_beam,
+        amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
         amrex::Vector<amrex::Geometry> const& geom, std::vector<bool> const& write_fields,
         const amrex::Real physical_time, const int output_step, const int nlev,
         const int slice_dir, const amrex::Vector< std::string > varnames,

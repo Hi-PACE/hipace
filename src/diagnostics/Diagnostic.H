@@ -50,7 +50,7 @@ public:
     int sliceDir () {return m_slice_dir;}
 
     /**< return if there is field output to write */
-    std::vector<bool>& isActive () {return m_is_active;}
+    std::vector<bool>& hasField () {return m_has_field;}
 
     /** return coarsening ratio of diagnostics */
     amrex::IntVect getCoarsening (int lev) { return m_diag_coarsen[lev]; }
@@ -70,7 +70,8 @@ public:
      * \param[in] lev MR level
      * \param[in] geom geometry of the full simulation domain
      */
-    void ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev, amrex::Geometry const& geom);
+    void ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
+                         amrex::Geometry const& geom);
 
 private:
 
@@ -86,7 +87,7 @@ private:
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
-    std::vector<bool> m_is_active; /**< if there is field output to write */
+    std::vector<bool> m_has_field; /**< if there is field output to write */
 };
 
 #endif // DIAGNOSTIC_H_

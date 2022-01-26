@@ -6,7 +6,7 @@ Diagnostic::Diagnostic (int nlev)
     : m_F(nlev),
       m_diag_coarsen(nlev),
       m_geom_io(nlev),
-      m_is_active(nlev)
+      m_has_field(nlev)
 {
     amrex::ParmParse ppd("diagnostic");
     std::string str_type;
@@ -99,12 +99,13 @@ void
 Diagnostic::AllocData (int lev)
 {
     // only usable after ResizeFDiagFAB
-    amrex::Box dummy_bx = {{0,0,0}, {0,0,0}};
+    const amrex::Box dummy_bx = {{0,0,0}, {0,0,0}};
     m_F.push_back(amrex::FArrayBox(dummy_bx, m_nfields, amrex::The_Pinned_Arena()));
 }
 
 void
-Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev, amrex::Geometry const& geom)
+Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
+                            amrex::Geometry const& geom)
 {
     if (m_include_ghost_cells) {
         local_box.grow(Fields::m_slices_nguards);
@@ -127,13 +128,11 @@ Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int l
 
     m_geom_io[lev] = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-    std::cout << " Diag Domain: " << m_geom_io[lev].Domain().smallEnd() << " " << m_geom_io[lev].Domain().bigEnd() << std::endl;
+    m_has_field[lev] = local_box.ok();
 
-    m_is_active[lev] = local_box.ok();
-
-    if(m_is_active[lev]) {
+    if(m_has_field[lev]) {
         m_F[lev].resize(local_box, m_nfields);
-        m_F[lev].setVal<amrex::RunOn::Device>(0);
+        m_F[lev].setVal<amrex::RunOn::Host>(0);
     }
 }
 

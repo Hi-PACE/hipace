@@ -1307,10 +1307,13 @@ Hipace::ResizeFDiagFAB (const int it)
         amrex::Box domain = boxArray(lev).minimalBox();
 
         if (lev == 1) {
+            // boxArray(1) is not correct in z direction. We need to manually enforece a
+            // parent/child relationship between lev_0 and lev_1 boxes in z
             const amrex::Box& bx_lev0 = boxArray(0)[it];
             const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
 
-            domain.setBig(Direction::z, domain.bigEnd(Direction::z) - ref_ratio_z); // ???
+            // This seems to be required for some reason
+            domain.setBig(Direction::z, domain.bigEnd(Direction::z) - ref_ratio_z);
 
             // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
             local_box.setSmall(Direction::z, amrex::max(domain.smallEnd(Direction::z),
@@ -1319,7 +1322,6 @@ Hipace::ResizeFDiagFAB (const int it)
                                ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1)));
         }
 
-        std::cout << "lev: " << lev << "\nGeom: " << Geom(lev) << "\nlocal_box: " <<  local_box.smallEnd() << " " << local_box.bigEnd() << "\ndomain: " <<  domain.smallEnd() << " " << domain.bigEnd();
         m_diags.ResizeFDiagFAB(local_box, domain, lev, Geom(lev));
     }
 }
@@ -1337,9 +1339,11 @@ Hipace::GetRefRatio (int lev)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    if (!m_diags.isActive()[lev]) return;
-    m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev), m_diags.getF(lev).box(),
-                  Geom(lev), m_diags.getCompsIdx(), m_diags.getNFields());
+    if (m_diags.hasField()[lev]) {
+        m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev),
+                      m_diags.getF(lev).box(), Geom(lev),
+                      m_diags.getCompsIdx(), m_diags.getNFields());
+    }
 }
 
 void
@@ -1356,9 +1360,9 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.isActive(),
-                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames, beamnames,
-                        it, m_box_sorters, geom, call_type);
+    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.hasField(),
+                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames,
+                        beamnames, it, m_box_sorters, geom, call_type);
 #else
     amrex::ignore_unused(it, call_type);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
