@@ -235,7 +235,6 @@ struct guarded_field {
     guarded_field_inner array (amrex::MFIter& mfi) const {
         return guarded_field_inner{mfab.array(mfi), mfab[mfi].box()};
     }
-
 };
 
 /** \brief Calculates dst = factor_a*src_a + factor_b*src_b. src_a and src_b can be derivatives
@@ -336,7 +335,6 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
         std::cout << " (" << k << ", " << m_rel_z_vec[k-k_min] << ")";
     }
     std::cout << std::endl;
-
 
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto slice_array = slice_func.array(mfi);
