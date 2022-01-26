@@ -359,12 +359,11 @@ private:
      *
      * \param[in] islice_local index of calculated slice
      * \param[in] lev current level
-     * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
      * \param[in] ibox index of the current box
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
-                        const amrex::Box bx, amrex::Vector<BeamBins> bins, const int ibox);
+                                            amrex::Vector<BeamBins> bins, const int ibox);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.

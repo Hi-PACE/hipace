@@ -44,15 +44,26 @@ static std::array<std::map<std::string, int>, 5> Comps
             }}
     }};
 
-/** \brief Operation performed in the TransverseDerivative function:
- * either assign or add to the destination array
- */
-enum struct SliceOperatorType { Assign, Add };
-
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
     enum dir{x=0, y, z};
 };
+
+/** \brief Function to help converting field indexes to positions and backwards. Usage:
+ * x = i * dx + GetPosOffset(0, geom, box)
+ * i = round( (x - GetPosOffset(0, geom, box)) / dx )
+ *
+ * \param[in] dir 0, 1 or 2 for x, y or z respectively
+ * \param[in] geom geometry of the field
+ * \param[in] box box of the field, can be with or without ghost cells
+ */
+inline amrex::Real
+GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box) {
+    using namespace amrex::literals;
+    // match boxes at center point
+    return 0.5_rt * (geom.ProbLo(dir) + geom.ProbHi(dir)
+           - geom.CellSize(dir) * (box.smallEnd(dir) + box.bigEnd(dir)));
+}
 
 /** \brief Main class handling all field data structures and operations
  *
@@ -94,6 +105,20 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+    /** get amrex::MultiFab of a field in a slice
+     * \param[in] lev MR level
+     * \param[in] islice slice index
+     * \param[in] comp component name of field (see Comps)
+     */
+    amrex::MultiFab getField (const int lev, const int islice, const std::string comp) {
+        return amrex::MultiFab(getSlices(lev, islice), amrex::make_alias, Comps[islice][comp], 1);
+    }
+    /** get amrex::MultiFab of the poisson staging area
+     * \param[in] lev MR level
+     */
+    amrex::MultiFab getStagingArea (const int lev) {
+        return amrex::MultiFab(m_poisson_solver[lev]->StagingArea(), amrex::make_alias, 0, 1);
+    }
     /** Return reference to density tile arrays */
     amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
     /** check whether the fields are initialized correctly */
@@ -148,39 +173,17 @@ public:
      */
     void AddBeamCurrents (const int lev, const int which_slice);
 
-    /** Copy or add array to staging area
-     *
-     * \param[in] src multifab to be copied or added
-     * \param[in] slice_operator operation: SliceOperatorType::Assign or Add
-     * \param[in] scomp compent of source MF
-     * \param[in] lev level of mesh refinement
-     */
-    void CopyToStagingArea (const amrex::MultiFab& src, const SliceOperatorType slice_operator,
-                            const int scomp, const int lev);
-
-    /** Compute transverse derivative of 1 slice*/
-    void TransverseDerivative (const amrex::MultiFab& src, amrex::MultiFab& dst,
-                               const int direction, const amrex::Real dx,
-                               const amrex::Real mult_coeff=1.,
-                               const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                               const int scomp=0, const int dcomp=0, const bool use_offset=false);
-
-    /** Compute longitudinal derivative (difference between two slices) */
-    void LongitudinalDerivative (const amrex::MultiFab& src, const amrex::MultiFab& src2,
-                                 amrex::MultiFab& dst, const amrex::Real dz,
-                                 const amrex::Real mult_coeff=1.,
-                                 const SliceOperatorType slice_operator=SliceOperatorType::Assign,
-                                 const int sc1omp=0, const int s2comp=0, const int dcomp=0);
-
-    /** \brief Interpolate values at boundaries from coarse grid to the fine grid
+    /** \brief Set up boundary conditions before poisson solve
+     * lev==0: leave at zero
+     * lev!=0: interpolate boundaries from lev-1
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in] islice longitudinal slice
      */
-    void InterpolateBoundaries (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                std::string component, const int islice);
+    void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                               std::string component, const int islice);
 
     /** \brief Interpolate values from coarse grid to the fine grid
      *
@@ -188,18 +191,13 @@ public:
      * \param[in] lev current level
      * \param[in] component which can be Psi or rho
      * \param[in] islice longitudinal slice
+     * \param[in] outer_edge start writing interpolated values at domain + outer_edge
+     * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component, const int islice);
-
-    /** \brief Interpolate values from coarse grid to the fine grid
-     *
-     * \param[in] geom Geometry
-     * \param[in] lev current level
-     * \param[in] component which can be Psi or rho
-     */
-    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component);
+                                    std::string component, const int islice,
+                                    const amrex::IntVect outer_edge,
+                                    const amrex::IntVect inner_edge);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
@@ -297,6 +295,8 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
+    /** Number of guard cells for poisson solver MultiFab */
+    static amrex::IntVect m_poisson_nguards;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;

@@ -162,15 +162,6 @@ IonizationModule (const int lev,
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
     for (amrex::MFIter mfi_ion = MakeMFIter(lev); mfi_ion.isValid(); ++mfi_ion)
     {
-        // Extract properties associated with the extent of the current box
-        // Grow to capture the extent of the particle shape
-        amrex::Box tilebox = mfi_ion.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-
-        amrex::RealBox const grid_box{tilebox, geom.CellSize(), geom.ProbLo()};
-        amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-        amrex::Dim3 const lo = amrex::lbound(tilebox);
-
         // Extract the fields
         const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
         const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
@@ -195,7 +186,12 @@ IonizationModule (const int lev,
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
         // Extract particle data
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-        const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, ez_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, ez_fab.box());
+        amrex::Real const z_pos_offset = GetPosOffset(2, geom, ez_fab.box());
+
         const int depos_order_xy = Hipace::m_depos_order_xy;
 
         auto& plevel_ion = GetParticles(lev);
@@ -209,7 +205,6 @@ IonizationModule (const int lev,
         using PTileType = PlasmaParticleContainer::ParticleTileType;
         const auto getPosition = GetParticlePosition<PTileType>(ptile_ion);
 
-        const amrex::Real zmin = xyzmin[2];
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
@@ -242,10 +237,11 @@ IonizationModule (const int lev,
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
             amrex::ParticleReal Bxp = 0., Byp = 0., Bzp = 0.;
 
-            doGatherShapeN(xp, yp, zmin,
+            doGatherShapeN(xp, yp,  0 /* zp not used */,
                            ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                           dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                           dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
+                           depos_order_xy, 0);
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;

@@ -32,7 +32,7 @@ findParticlesInEachSlice (
     bins.build(
         np, particle_ptr, cbx,
         // Pass lambda function that returns the slice index
-        [=] AMREX_GPU_HOST_DEVICE (const BeamParticleContainer::ParticleType& p)
+        [=] AMREX_GPU_DEVICE (const BeamParticleContainer::ParticleType& p)
         noexcept -> amrex::IntVect
         {
             return amrex::IntVect(

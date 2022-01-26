@@ -20,6 +20,7 @@ template <int depos_order>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 int compute_shape_factor (amrex::Real* const sx, amrex::Real xint)
 {
+    amrex::ignore_unused(sx, xint);
     return 0;
 }
 
