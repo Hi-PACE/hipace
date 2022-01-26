@@ -143,7 +143,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         amrex::Array4<amrex::Real> const& jyy_arr =
             do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
 
-        const int ng = std::max(1, depos_order_xy);
+        const int ng = Fields::m_slices_nguards[0];
         int ntiley = 0;
         if (do_tiling) {
             const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
