@@ -294,33 +294,56 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     const int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)/diag_geom.CellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)/diag_geom.CellSize(2)));
 
-    amrex::Gpu::DeviceVector<amrex::Real> rel_z_vec(k_max+1-k_min, 0.);
+    m_rel_z_vec.resize(k_max+1-k_min);
 
-    for (int k=k_min; k<=k_max; ++k ) {
+    for (int k=k_min; k<=k_max; ++k) {
         amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
         amrex::Real mid_i_slice = (pos - poff_calc_z)/calc_geom.CellSize(2);
         amrex::Real sz_cell[depos_order_z + 1];
         int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
+        m_rel_z_vec[k-k_min] = 0;
         for (int i=0; i<=depos_order_z; ++i) {
             if (k_cell+i == i_slice) {
-                rel_z_vec[k-k_min] = sz_cell[i];
+                m_rel_z_vec[k-k_min] = sz_cell[i];
             }
         }
     }
 
-    diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_min));
-    diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_max));
+    int k_start = k_min;
+    int k_stop = k_max;
+
+    for (int k=k_min; k<=k_max; ++k) {
+        if (m_rel_z_vec[k-k_min] == 0) ++k_start;
+        else break;
+    }
+
+    for (int k=k_max; k>=k_min; --k) {
+        if (m_rel_z_vec[k-k_min] == 0) --k_stop;
+        else break;
+    }
+
+    diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
+    diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
+
+    if (diag_box.isEmpty()) return;
 
     auto& slice_mf = m_slices[lev][WhichSlice::This];
 
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{slice_mf, calc_geom};
+
+    std::cout << "Copy rel_z:";
+    for(int k=k_start; k<=k_stop; ++k) {
+        std::cout << " (" << k << ", " << m_rel_z_vec[k-k_min] << ")";
+    }
+    std::cout << std::endl;
+
 
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
         auto slice_array = slice_func.array(mfi);
         amrex::Array4<amrex::Real> diag_array = diag_fab.array();
 
         const int *diag_comps = diag_comps_vect.data();
-        const amrex::Real *rel_z_data = rel_z_vec.data();
+        const amrex::Real *rel_z_data = m_rel_z_vec.data();
         const int lo2 = slice_mf[mfi].box().smallEnd(2);
         const amrex::Real dx = diag_geom.CellSize(0);
         const amrex::Real dy = diag_geom.CellSize(1);
