@@ -357,8 +357,11 @@ Diagnostic parameters
     between the two inner grid points.
 
 * ``diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
-    Coarsening ratio of field output in x, y and z direction respectively. For x and y, the
-    value is subsampled at the cell center. For z, the slice nearest to the cell center is taken.
+    Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
+    obtained through first order interpolation.
+
+* ``diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
+    Whether the field diagnostics should include ghost cells.
 
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be `all`,

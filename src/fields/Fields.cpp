@@ -354,7 +354,6 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     }
 }
 
-
 void
 Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real patch_lo,
                      amrex::Real patch_hi)
