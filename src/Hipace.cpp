@@ -1113,9 +1113,9 @@ Hipace::Notify (const int step, const int it,
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
+#ifdef AMREX_USE_MPI
     constexpr int lev = 0;
 
-#ifdef AMREX_USE_MPI
     NotifyFinish(it, only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
