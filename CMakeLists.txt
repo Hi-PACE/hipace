@@ -1,6 +1,6 @@
 # Preamble ####################################################################
 #
-cmake_minimum_required(VERSION 3.15.0)
+cmake_minimum_required(VERSION 3.18.0)
 project(HiPACE VERSION 22.01)
 
 # helper functions
@@ -20,11 +20,23 @@ endif()
 # AMReX 21.06+ supports CUDA_ARCHITECTURES with CMake 3.20+
 # CMake 3.18+: CMAKE_CUDA_ARCHITECTURES
 # https://cmake.org/cmake/help/latest/policy/CMP0104.html
-if(CMAKE_VERSION VERSION_LESS 3.20)
-    if(POLICY CMP0104)
-        cmake_policy(SET CMP0104 OLD)
-    endif()
+if(POLICY CMP0104)
+    cmake_policy(SET CMP0104 OLD)
 endif()
+
+# We use simple syntax in cmake_dependent_option, so we are compatible with the
+# extended syntax in CMake 3.22+
+# https://cmake.org/cmake/help/v3.22/policy/CMP0127.html
+if(POLICY CMP0127)
+    cmake_policy(SET CMP0127 NEW)
+endif()
+
+
+# C++ Standard in Superbuilds #################################################
+#
+# This is the easiest way to push up a C++17 requirement for AMReX, PICSAR and
+# openPMD-api until they increase their requirement.
+set_cxx17_superbuild()
 
 
 # CCache Support ##############################################################
@@ -107,8 +119,8 @@ target_include_directories(HiPACE PRIVATE
 # add sources
 add_subdirectory(src)
 
-# C++ properties: at least a C++14 capable compiler is needed
-target_compile_features(HiPACE PUBLIC cxx_std_14)
+# C++ properties: at least a C++17 capable compiler is needed
+target_compile_features(HiPACE PUBLIC cxx_std_17)
 set_target_properties(HiPACE PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON
@@ -122,13 +134,11 @@ target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::FFT)
 # AMReX helper function: propagate CUDA specific target & source properties
 if(HiPACE_COMPUTE STREQUAL CUDA)
     setup_target_for_cuda_compilation(HiPACE)
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
-        target_compile_features(HiPACE PUBLIC cuda_std_14)
-        set_target_properties(HiPACE PROPERTIES
-            CUDA_EXTENSIONS OFF
-            CUDA_STANDARD_REQUIRED ON
-        )
-    endif()
+    target_compile_features(HiPACE PUBLIC cuda_std_17)
+    set_target_properties(HiPACE PROPERTIES
+        CUDA_EXTENSIONS OFF
+        CUDA_STANDARD_REQUIRED ON
+    )
 endif()
 
 if(HiPACE_OPENPMD)
