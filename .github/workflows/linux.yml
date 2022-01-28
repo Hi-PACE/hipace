@@ -44,20 +44,20 @@ jobs:
         export OMP_NUM_THREADS=2
         ctest --output-on-failure
 
-#  linux_gcc_cxx17:
-#    name: GNU@7.5 C++17 Serial
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: actions/checkout@v2
-#    - name: Dependencies
-#      run: .github/workflows/setup/ubuntu.sh
-#    - name: Build & Install
-#      run: |
-#        mkdir build
-#        cd build
-#        cmake .. -DHiPACE_MPI=OFF
-#        make -j 2 VERBOSE=ON
-#        ctest --output-on-failure
+  linux_gcc_cxx17:
+    name: GNU@7.5 C++17 Serial
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu.sh
+    - name: Build & Install
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DHiPACE_MPI=OFF
+        make -j 2 VERBOSE=ON
+        ctest --output-on-failure
 
 # enable again when we open-source (free core-hours for GH Actions)
 #
