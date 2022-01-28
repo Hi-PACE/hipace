@@ -2,18 +2,24 @@
 #include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichlet.H"
 #include "Hipace.H"
+#include "OpenBoundary.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "particles/ShapeFactors.H"
 
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
+amrex::IntVect Fields::m_exmby_eypbx_grow = {-1, -1, -1};
+bool Fields::m_extended_solve = false;
+bool Fields::m_open_boundary = false;
 
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
 {
     amrex::ParmParse ppf("fields");
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
+    queryWithParser(ppf, "extended_solve", m_extended_solve);
+    queryWithParser(ppf, "open_boundary", m_open_boundary);
 }
 
 void
@@ -25,11 +31,20 @@ Fields::AllocData (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice_ba.size() == 1,
         "Parallel field solvers not supported yet");
 
-    // Need 1 extra guard cell transversally for transverse derivative
-    int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-    m_slices_nguards = {nguards_xy, nguards_xy, 0};
-    // Poisson solver same size as domain, no ghost cells
-    m_poisson_nguards = {0, 0, 0};
+    if (m_extended_solve) {
+        // Need 1 extra guard cell transversally for transverse derivative
+        int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+        m_slices_nguards = {nguards_xy, nguards_xy, 0};
+        m_poisson_nguards = m_slices_nguards;
+        m_exmby_eypbx_grow = m_slices_nguards - amrex::IntVect{1, 1, 0};
+    } else {
+        // Need 1 extra guard cell transversally for transverse derivative
+        int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+        m_slices_nguards = {nguards_xy, nguards_xy, 0};
+        // Poisson solver same size as domain, no ghost cells
+        m_poisson_nguards = {0, 0, 0};
+        m_exmby_eypbx_grow = {0, 0, 0};
+    }
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -480,28 +495,76 @@ void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               std::string component, const int islice)
 {
-    if (lev == 0) return; // keep lev==0 boundaries zero
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     using namespace amrex::literals;
-    constexpr int interp_order = 2;
+    if (lev == 0 && m_open_boundary) {
+        m_multipole_coeffs.resize(37);
+        for (amrex::Real& coeff : m_multipole_coeffs) {
+            coeff = 0;
+        }
 
-    const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
-    const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
-    const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
+        amrex::MultiFab staging_area = getStagingArea(lev);
+        for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
+        {
+            const auto arr_staging_area = staging_area.array(mfi);
+            const amrex::Box staging_box = staging_area[mfi].box();
+            const int lo2 = staging_box.smallEnd(2);
+            amrex::Real * coeffs_ptr = m_multipole_coeffs.data();
 
-    auto solution_interp = interpolated_field_xyz<interp_order>{
-        getField(lev-1, WhichSlice::This, component),
-        getField(lev-1, WhichSlice::Previous1, component),
-        rel_z, geom[lev-1]};
-    amrex::MultiFab staging_area = getStagingArea(lev);
+            const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
+            const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
+            const amrex::Real dx = geom[lev].CellSize(0);
+            const amrex::Real dy = geom[lev].CellSize(1);
+            const amrex::Real scale = 3._rt/std::sqrt(geom[lev].ProbLength(0)*
+                geom[lev].ProbLength(0) + geom[lev].ProbLength(1)*geom[lev].ProbLength(1));
 
-    for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
-    {
-        const auto arr_solution_interp = solution_interp.array(mfi);
-        const auto arr_staging_area = staging_area.array(mfi);
-        const amrex::Box fine_staging_box = staging_area[mfi].box();
+            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), staging_box,
+                [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
+                {
+                    amrex::Real x = (i * dx + poff_x) * scale;
+                    amrex::Real y = (j * dy + poff_y) * scale;
+                    amrex::Real s_v = arr_staging_area(i, j, lo2);
+                    auto coeffs = GetMultipoleCoeffs<amrex::GpuArray<amrex::Real, 37>>(s_v, x, y);
 
-        SetDirichletBoundaries(arr_staging_area, fine_staging_box, geom[lev], arr_solution_interp);
+                    for (int n=0; n<37; ++n) {
+                        amrex::Gpu::deviceReduceSum(coeffs_ptr + n, coeffs[n], handler);
+                    }
+                }
+            );
+            amrex::Gpu::Device::synchronize();
+
+            std::cout << "Mcoeff: " << m_multipole_coeffs[0] << " " << m_multipole_coeffs[1] << " " << m_multipole_coeffs[2];
+            std::cout << std::endl;
+
+            SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
+                [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
+                {
+                    return dx*dy*GetFieldMultipole(coeffs_ptr, x*scale, y*scale);
+                }
+            );
+        }
+
+    } else if (lev == 1) {
+        constexpr int interp_order = 2;
+
+        const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
+        const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
+        const amrex::Real rel_z = islice_coarse-static_cast<int>(amrex::Math::floor(islice_coarse));
+
+        auto solution_interp = interpolated_field_xyz<interp_order>{
+            getField(lev-1, WhichSlice::This, component),
+            getField(lev-1, WhichSlice::Previous1, component),
+            rel_z, geom[lev-1]};
+        amrex::MultiFab staging_area = getStagingArea(lev);
+
+        for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
+        {
+            const auto arr_solution_interp = solution_interp.array(mfi);
+            const auto arr_staging_area = staging_area.array(mfi);
+            const amrex::Box fine_staging_box = staging_area[mfi].box();
+
+            SetDirichletBoundaries(arr_staging_area,fine_staging_box,geom[lev],arr_solution_interp);
+        }
     }
 }
 
@@ -584,10 +647,12 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     SetBoundaryCondition(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
-    /* ---------- Transverse FillBoundary Psi ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(geom[lev].periodicity());
-    amrex::ParallelContext::pop();
+    if (!m_extended_solve) {
+        /* ---------- Transverse FillBoundary Psi ---------- */
+        amrex::ParallelContext::push(m_comm_xy);
+        lhs.FillBoundary(geom[lev].periodicity());
+        amrex::ParallelContext::pop();
+    }
 
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
 
@@ -604,7 +669,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
-        const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
+        const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_grow);
         const amrex::Real dx_inv = 1./(2*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1./(2*geom[lev].CellSize(Direction::y));
 
