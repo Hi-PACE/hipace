@@ -4,6 +4,8 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
 
+#include <vector>
+
 /** type of diagnostics: full xyz array or xz slice or yz slice */
 enum struct DiagType{xyz, xz, yz};
 
@@ -15,12 +17,6 @@ public:
 
     /** \brief Constructor */
     explicit Diagnostic (int nlev);
-
-    /** \brief allocate arrays of this MF
-     *
-     * \param[in] lev MR level
-     */
-    void AllocData (int lev);
 
     /** \brief return the main diagnostics multifab */
     amrex::Vector<amrex::FArrayBox>& getF () { return m_F; }
