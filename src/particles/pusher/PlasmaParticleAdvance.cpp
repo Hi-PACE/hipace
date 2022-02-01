@@ -11,13 +11,20 @@
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
 
+#include <string>
+
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
                         PlasmaBins& bins)
 {
-    HIPACE_PROFILE("UpdateForcePushParticles_PlasmaParticleContainer()");
+    std::string str = "UpdateForcePushParticles_Plasma(    )";
+    if (temp_slice) str.at(32) = 't';
+    if (do_push) str.at(33) = 'p';
+    if (do_update) str.at(34) = 'u';
+    if (do_shift) str.at(35) = 's';
+    HIPACE_PROFILE(str);
     using namespace amrex::literals;
 
     // only push plasma particles on their according MR level
