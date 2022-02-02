@@ -55,8 +55,9 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DHiPACE_MPI=OFF -DHiPACE_COMPUTE=NOACC
+        cmake .. -DHiPACE_MPI=OFF
         make -j 2 VERBOSE=ON
+        export OMP_NUM_THREADS=2
         ctest --output-on-failure
 
 # enable again when we open-source (free core-hours for GH Actions)
