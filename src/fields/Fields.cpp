@@ -153,7 +153,7 @@ struct interpolated_field_xy_inner {
     amrex::Real offset0;
     amrex::Real offset1;
 
-    // interpolate field in x, y with <interp_order_xy> order transversely,
+    // interpolate field in x, y with interp_order_xy order transversely,
     // x and y must be inside field box
     template<class...Args> AMREX_GPU_DEVICE
     amrex::Real operator() (amrex::Real x, amrex::Real y, Args...args) const noexcept {
@@ -178,7 +178,7 @@ struct interpolated_field_xy_inner {
     }
 };
 
-/** \brief interpolate field in x, y with <interp_order_xy> order transversely,
+/** \brief interpolate field in x, y with interp_order_xy order transversely,
  * x and y must be inside field box */
 template<int interp_order_xy, class MfabType>
 struct interpolated_field_xy {
@@ -223,7 +223,7 @@ struct interpolated_field_z {
     }
 };
 
-/** \brief interpolate field in <interp_order_xy> order transversely and
+/** \brief interpolate field in interp_order_xy order transversely and
  * first order (linear) longitudinally */
 template<int interp_order_xy>
 using interpolated_field_xyz = interpolated_field_xy<interp_order_xy, interpolated_field_z>;
