@@ -55,7 +55,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DHiPACE_MPI=OFF
+        cmake .. -DHiPACE_MPI=OFF -DHiPACE_COMPUTE=NOACC
         make -j 2 VERBOSE=ON
         ctest --output-on-failure
 
