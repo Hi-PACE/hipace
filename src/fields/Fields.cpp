@@ -76,6 +76,7 @@ Fields::AllocData (
     }
 }
 
+/** \brief inner version of derivative */
 template<int dir>
 struct derivative_inner {
     // captured variables for GPU
@@ -97,6 +98,7 @@ struct derivative_inner {
     }
 };
 
+/** \brief inner version of derivative */
 template<>
 struct derivative_inner<Direction::z> {
     // captured variables for GPU
@@ -110,6 +112,8 @@ struct derivative_inner<Direction::z> {
     }
 };
 
+/** \brief derivative in x or y direction. Field is zero-extended by one cell such that this
+ * derivative can be accessed on the same box as the field */
 template<int dir>
 struct derivative {
     // use brace initialization as constructor
@@ -124,6 +128,7 @@ struct derivative {
     }
 };
 
+/** \brief derivative in z direction. Use fields from previous and next slice */
 template<>
 struct derivative<Direction::z> {
     // use brace initialization as constructor
@@ -138,6 +143,7 @@ struct derivative<Direction::z> {
     }
 };
 
+/** \brief inner version of interpolated_field_xy */
 template<int interp_order_xy, class ArrayType>
 struct interpolated_field_xy_inner {
     // captured variables for GPU
@@ -147,7 +153,7 @@ struct interpolated_field_xy_inner {
     amrex::Real offset0;
     amrex::Real offset1;
 
-    // interpolate field in x, y with <interp_order_xy> order transversely
+    // interpolate field in x, y with <interp_order_xy> order transversely,
     // x and y must be inside field box
     template<class...Args> AMREX_GPU_DEVICE
     amrex::Real operator() (amrex::Real x, amrex::Real y, Args...args) const noexcept {
@@ -172,6 +178,8 @@ struct interpolated_field_xy_inner {
     }
 };
 
+/** \brief interpolate field in x, y with <interp_order_xy> order transversely,
+ * x and y must be inside field box */
 template<int interp_order_xy, class MfabType>
 struct interpolated_field_xy {
     // use brace initialization as constructor
@@ -187,6 +195,7 @@ struct interpolated_field_xy {
     }
 };
 
+/** \brief inner version of interpolated_field_z */
 struct interpolated_field_z_inner {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> arr_this;
@@ -200,6 +209,7 @@ struct interpolated_field_z_inner {
     }
 };
 
+/** \brief linear longitudinal field interpolation */
 struct interpolated_field_z {
     // use brace initialization as constructor
     amrex::MultiFab mfab_this; // field to interpolate on this slice
@@ -213,9 +223,12 @@ struct interpolated_field_z {
     }
 };
 
+/** \brief interpolate field in <interp_order_xy> order transversely and
+ * first order (linear) longitudinally */
 template<int interp_order_xy>
 using interpolated_field_xyz = interpolated_field_xy<interp_order_xy, interpolated_field_z>;
 
+/** \brief inner version of guarded_field */
 struct guarded_field_inner {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> array;
@@ -229,6 +242,7 @@ struct guarded_field_inner {
     }
 };
 
+/** \brief if indices are outside of the fields box zero is returned */
 struct guarded_field {
     // use brace initialization as constructor
     amrex::MultiFab& mfab; // field to be guarded (zero extended)
