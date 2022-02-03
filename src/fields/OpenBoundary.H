@@ -64,8 +64,8 @@ T GetMultipoleCoeffs (amrex::Real s_v, amrex::Real x, amrex::Real y)
     };
 }
 
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-amrex::Real GetFieldMultipole (amrex::Real* m_c, amrex::Real x_domain, amrex::Real y_domain)
+template<class T> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real GetFieldMultipole (T m_c, amrex::Real x_domain, amrex::Real y_domain)
 {
     using namespace amrex::literals;
     amrex::Real radius_2 = pow<2>(x_domain) + pow<2>(y_domain);

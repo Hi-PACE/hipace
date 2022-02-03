@@ -511,225 +511,142 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     using namespace amrex::literals;
     if (lev == 0 && m_open_boundary) {
-        m_multipole_coeffs.resize(37);
-
-        amrex::MFIter::allowMultipleMFIters(true);
 
         amrex::MultiFab staging_area = getStagingArea(lev);
-        for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
-        {
-            const auto arr_staging_area = staging_area.array(mfi);
-            const amrex::Box staging_box = staging_area[mfi].box();
-            const int lo2 = staging_box.smallEnd(2);
-            amrex::Real * coeffs_ptr = m_multipole_coeffs.data();
+        amrex::FArrayBox& staging_area_fab = staging_area[0];
 
-            const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
-            const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
-            const amrex::Real dx = geom[lev].CellSize(0);
-            const amrex::Real dy = geom[lev].CellSize(1);
-            const amrex::Real scale = 3._rt/std::sqrt(pow<2>(geom[lev].ProbLength(0)) +
-                                                      pow<2>(geom[lev].ProbLength(1)));
+        const auto arr_staging_area = staging_area_fab.array();
+        const amrex::Box staging_box = staging_area_fab.box();
 
-            const amrex::Real radius = amrex::min(geom[lev].ProbLo(0), geom[lev].ProbHi(0),
-                                                  geom[lev].ProbLo(1), geom[lev].ProbHi(1));
-            const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale) * 100;
+        const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
+        const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
+        const amrex::Real dx = geom[lev].CellSize(0);
+        const amrex::Real dy = geom[lev].CellSize(1);
+        const amrex::Real scale = 3._rt/std::sqrt(pow<2>(geom[lev].ProbLength(0)) +
+                                                  pow<2>(geom[lev].ProbLength(1)));
 
-            amrex::ParallelFor(37,
-                [=] AMREX_GPU_DEVICE (int i) noexcept {
-                    coeffs_ptr[i] = 0;
-                });
+        const amrex::Real radius = amrex::min(geom[lev].ProbLo(0), geom[lev].ProbHi(0),
+                                              geom[lev].ProbLo(1), geom[lev].ProbHi(1));
+        const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale) * 100;
 
-            {HIPACE_PROFILE("BoundaryCutoffDeviceReduceSum()");
-            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), staging_box,
-                [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
-                {
-                    amrex::Real x = (i * dx + poff_x) * scale;
-                    amrex::Real y = (j * dy + poff_y) * scale;
-                    if (x*x + y*y > cutoff_sq) return;
-                    amrex::Real s_v = arr_staging_area(i, j, lo2);
-                    auto coeffs = GetMultipoleCoeffs<amrex::GpuArray<amrex::Real, 37>>(s_v, x, y);
-
-                    for (int n=0; n<37; ++n) {
-                        amrex::Gpu::deviceReduceSum(coeffs_ptr + n, coeffs[n], handler);
-                    }
-                }
-            );
-            amrex::Gpu::Device::synchronize();
-            std::cout << "MReduceSum: " << m_multipole_coeffs[0] << std::endl;
+        amrex::GpuTuple<amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real, amrex::Real, amrex::Real,
+                        amrex::Real> coeff_tuple{};
+        {HIPACE_PROFILE("Boundary::ParReduce()");
+        coeff_tuple =
+        amrex::ParReduce(amrex::TypeList<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                                         amrex::ReduceOpSum>{},
+                         amrex::TypeList<amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real, amrex::Real, amrex::Real,
+                                         amrex::Real>{},
+                         staging_area, m_poisson_nguards,
+            [=] AMREX_GPU_DEVICE (int, int i, int j, int k) noexcept
+            {
+                const amrex::Real x = (i * dx + poff_x) * scale;
+                const amrex::Real y = (j * dy + poff_y) * scale;
+                amrex::Real s_v = arr_staging_area(i, j, k);
+                if (x*x + y*y > cutoff_sq) s_v = 0._rt;
+                return GetMultipoleCoeffs<amrex::GpuTuple<amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real, amrex::Real, amrex::Real,
+                                                          amrex::Real>>(s_v, x, y);
             }
+        );}
 
-            amrex::ParallelFor(37,
-                [=] AMREX_GPU_DEVICE (int i) noexcept {
-                    coeffs_ptr[i] = 0;
-                });
+        amrex::GpuArray<amrex::Real, 37> coeff_array{};
 
-            {HIPACE_PROFILE("BoundaryNoCutoffDeviceReduceSum()");
-            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), staging_box,
-                [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
-                {
-                    amrex::Real x = (i * dx + poff_x) * scale;
-                    amrex::Real y = (j * dy + poff_y) * scale;
-                    amrex::Real s_v = arr_staging_area(i, j, lo2);
-                    auto coeffs = GetMultipoleCoeffs<amrex::GpuArray<amrex::Real, 37>>(s_v, x, y);
+        coeff_array[0] = amrex::get<0>(coeff_tuple);
+        coeff_array[1] = amrex::get<1>(coeff_tuple);
+        coeff_array[2] = amrex::get<2>(coeff_tuple);
+        coeff_array[3] = amrex::get<3>(coeff_tuple);
+        coeff_array[4] = amrex::get<4>(coeff_tuple);
+        coeff_array[5] = amrex::get<5>(coeff_tuple);
+        coeff_array[6] = amrex::get<6>(coeff_tuple);
+        coeff_array[7] = amrex::get<7>(coeff_tuple);
+        coeff_array[8] = amrex::get<8>(coeff_tuple);
+        coeff_array[9] = amrex::get<9>(coeff_tuple);
+        coeff_array[10] = amrex::get<10>(coeff_tuple);
+        coeff_array[11] = amrex::get<11>(coeff_tuple);
+        coeff_array[12] = amrex::get<12>(coeff_tuple);
+        coeff_array[13] = amrex::get<13>(coeff_tuple);
+        coeff_array[14] = amrex::get<14>(coeff_tuple);
+        coeff_array[15] = amrex::get<15>(coeff_tuple);
+        coeff_array[16] = amrex::get<16>(coeff_tuple);
+        coeff_array[17] = amrex::get<17>(coeff_tuple);
+        coeff_array[18] = amrex::get<18>(coeff_tuple);
+        coeff_array[19] = amrex::get<19>(coeff_tuple);
+        coeff_array[20] = amrex::get<20>(coeff_tuple);
+        coeff_array[21] = amrex::get<21>(coeff_tuple);
+        coeff_array[22] = amrex::get<22>(coeff_tuple);
+        coeff_array[23] = amrex::get<23>(coeff_tuple);
+        coeff_array[24] = amrex::get<24>(coeff_tuple);
+        coeff_array[25] = amrex::get<25>(coeff_tuple);
+        coeff_array[26] = amrex::get<26>(coeff_tuple);
+        coeff_array[27] = amrex::get<27>(coeff_tuple);
+        coeff_array[28] = amrex::get<28>(coeff_tuple);
+        coeff_array[29] = amrex::get<29>(coeff_tuple);
+        coeff_array[30] = amrex::get<30>(coeff_tuple);
+        coeff_array[31] = amrex::get<31>(coeff_tuple);
+        coeff_array[32] = amrex::get<32>(coeff_tuple);
+        coeff_array[33] = amrex::get<33>(coeff_tuple);
+        coeff_array[34] = amrex::get<34>(coeff_tuple);
+        coeff_array[35] = amrex::get<35>(coeff_tuple);
+        coeff_array[36] = amrex::get<36>(coeff_tuple);
 
-                    for (int n=0; n<37; ++n) {
-                        amrex::Gpu::deviceReduceSum(coeffs_ptr + n, coeffs[n], handler);
-                    }
-                }
-            );
-            amrex::Gpu::Device::synchronize();
-            std::cout << "MReduceSum: " << m_multipole_coeffs[0] << std::endl;
-            }
-
-            amrex::ParallelFor(37,
-                [=] AMREX_GPU_DEVICE (int i) noexcept {
-                    coeffs_ptr[i] = 0;
-                });
-
-            {HIPACE_PROFILE("BoundaryCutoffParReduce()");
-            auto result =
-            amrex::ParReduce(amrex::TypeList<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum>{},
-                             amrex::TypeList<amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real>{},
-                             staging_area, m_poisson_nguards,
-                [=] AMREX_GPU_DEVICE (int, int i, int j, int k) noexcept
-                {
-                    const amrex::Real x = (i * dx + poff_x) * scale;
-                    const amrex::Real y = (j * dy + poff_y) * scale;
-                    amrex::Real s_v = arr_staging_area(i, j, k);
-                    if (x*x + y*y > cutoff_sq) s_v = 0._rt;
-                    return GetMultipoleCoeffs<amrex::GpuTuple<amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real>>(s_v, x, y);
-                }
-            );
-            amrex::Gpu::Device::synchronize();
-            std::cout << "MParReduce: " << amrex::get<0>(result) << std::endl;
-            }
-
-
-            {HIPACE_PROFILE("BoundaryNoCutoffParReduce()");
-            auto result =
-            amrex::ParReduce(amrex::TypeList<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                             amrex::ReduceOpSum>{},
-                             amrex::TypeList<amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real, amrex::Real, amrex::Real,
-                                             amrex::Real>{},
-                             staging_area, m_poisson_nguards,
-                [=] AMREX_GPU_DEVICE (int, int i, int j, int k) noexcept
-                {
-                    const amrex::Real x = (i * dx + poff_x) * scale;
-                    const amrex::Real y = (j * dy + poff_y) * scale;
-                    amrex::Real s_v = arr_staging_area(i, j, k);
-                    return GetMultipoleCoeffs<amrex::GpuTuple<amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real, amrex::Real, amrex::Real,
-                                                              amrex::Real>>(s_v, x, y);
-                }
-            );
-            amrex::Gpu::Device::synchronize();
-            std::cout << "MParReduce: " << amrex::get<0>(result) << std::endl;
-            }
-
-            amrex::ParallelFor(37,
-                [=] AMREX_GPU_DEVICE (int i) noexcept {
-                    coeffs_ptr[i] = 0;
-                });
-
-
-            {HIPACE_PROFILE("BoundaryCutoffDeviceReduceSumControl()");
-            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), staging_box,
-                [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
-                {
-                    amrex::Real x = (i * dx + poff_x) * scale;
-                    amrex::Real y = (j * dy + poff_y) * scale;
-                    if (x*x + y*y > cutoff_sq) return;
-                    amrex::Real s_v = arr_staging_area(i, j, lo2);
-                    auto coeffs = GetMultipoleCoeffs<amrex::GpuArray<amrex::Real, 37>>(s_v, x, y);
-
-                    for (int n=0; n<37; ++n) {
-                        amrex::Gpu::deviceReduceSum(coeffs_ptr + n, coeffs[n], handler);
-                    }
-                }
-            );
-            amrex::Gpu::Device::synchronize();
-            std::cout << "MControl: " << m_multipole_coeffs[0] << std::endl;
-            }
-
-
-
-
-            {HIPACE_PROFILE("BoundarySetDirichlet()");
-            SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
-                [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
-                {
-                    return dx*dy*GetFieldMultipole(coeffs_ptr, x*scale, y*scale);
-                }
-            );}
+        std::cout << "Mcoeff:";
+        for (amrex::Real num : coeff_array) {
+            std::cout << " " << num;
         }
+        std::cout << std::endl;
+
+        {HIPACE_PROFILE("Boundary::Dirichlet()");
+        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
+            [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
+            {
+                return dx*dy*GetFieldMultipole(coeff_array, x*scale, y*scale);
+            }
+        );}
+
 
     } else if (lev == 1) {
         constexpr int interp_order = 2;
