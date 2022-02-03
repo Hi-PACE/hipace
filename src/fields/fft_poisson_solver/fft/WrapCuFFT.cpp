@@ -24,6 +24,12 @@ namespace AnyFFT
     {
         FFTplan fft_plan;
 
+        if (__CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ == 1) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::max(real_size[0], real_size[1]) <= 1024),
+                "Due to a bug in cuFFT, CUDA 11.1 supports only grid sizes <= 1024 grid points. "
+                "Please use CUDA version >= 11.2 (recommended) or <= 11.0 for larger grid sizes.");
+        }
+
         // Initialize fft_plan.m_plan with the vendor fft plan.
         cufftResult result;
         if (dir == direction::R2C){
