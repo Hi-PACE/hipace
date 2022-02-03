@@ -96,14 +96,6 @@ Diagnostic::Diagnostic (int nlev)
 }
 
 void
-Diagnostic::AllocData (int lev)
-{
-    // only usable after ResizeFDiagFAB
-    const amrex::Box dummy_bx = {{0,0,0}, {0,0,0}};
-    m_F.push_back(amrex::FArrayBox(dummy_bx, m_nfields, amrex::The_Pinned_Arena()));
-}
-
-void
 Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
                             amrex::Geometry const& geom)
 {
@@ -131,7 +123,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int l
     m_has_field[lev] = local_box.ok();
 
     if(m_has_field[lev]) {
-        m_F[lev].resize(local_box, m_nfields);
+        m_F[lev].resize(local_box, m_nfields, amrex::The_Pinned_Arena());
         m_F[lev].setVal<amrex::RunOn::Host>(0);
     }
 }

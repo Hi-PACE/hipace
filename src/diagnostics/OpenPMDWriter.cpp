@@ -3,7 +3,6 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
-#include "particles/pusher/GetDomainLev.H"
 
 #ifdef HIPACE_USE_OPENPMD
 
