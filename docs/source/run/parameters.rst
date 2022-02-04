@@ -28,7 +28,10 @@ General parameters
     Number of cells in x, y and z.
 
 * ``amr.max_level`` (`integer`)
-    Maximum level of mesh refinement. Mesh refinement is not yet implemented, therefore only
+    Maximum level of mesh refinement. Currently, mesh refinement is only supported up to the level
+    `1`. Note, that the current mesh refinement algorithm is not generally applicable and valid
+    only in certain scenarios.
+
     level `0` is supported.
 
 * ``hipace.patch_lo`` (3 `float`)
@@ -95,6 +98,9 @@ General parameters
     OpenPMD backend. This can either be `h5, bp`, or `json`. The default is chosen by what is
     available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
     slow and is not recommended for production runs.
+
+* ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
+    Path of the output.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
@@ -259,6 +265,13 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     The names of the particle beams, separated by a space.
     To run without beams, choose the name `no_beam`.
 
+General beam parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+The general beam parameters are applicable to all beam types. More specialized beam parameters,
+which are valid only for certain beam types, are introduced further below under
+"Option: ``<injection_type>``".
+
+
 * ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
     and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
@@ -266,9 +279,15 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Gaussian beam with a fixed number of particles with a constant weight.
     `from_file` reads a beam from openPMD files.
 
-* ``<beam name>.random_ppc`` (list of 3 `int`) optional (default `0 0 0`)
-    Whether to randomize the position of particles in each cell, per dimension.
-    Only used if ``<beam name>.injection_type = fixed_ppc``.
+* ``<beam name>.position_mean`` (3 `float`)
+    The mean position of the beam in `x, y, z`, separated by a space.
+
+* ``<beam name>.position_std`` (3 `float`)
+    The rms size of the of the beam in `x, y, z`, separated by a space.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
+    either `total_charge` or `density` must be specified.
 
 * ``<beam name>.profile`` (`string`)
     Beam profile.
@@ -280,23 +299,18 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     `n_subcycles` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
 
+* ``<beam name>.finest_level`` (`int`) optional (default `0`)
+    Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
+    up to its finest level. The beam will be pushed by the fields of the finest level.
+
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
-* ``<beam name>.position_mean`` (3 `float`)
-    The mean position of the beam in `x, y, z`, separated by a space.
-
-* ``<beam name>.position_std`` (3 `float`)
-    The rms size of the of the beam in `x, y, z`, separated by a space.
 
 * ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either `total_charge` or `density` must be specified.
-
-* ``<beam name>.density`` (`float`)
-    Peak density of the beam. Note: Either `total_charge` or `density` must be specified.
 
 * ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
     Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
@@ -322,6 +336,28 @@ Option: ``fixed_weight``
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using `do_z_push = 0` results in unphysical behavior.
+
+Option: ``fixed_ppc``
+^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
+    Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
+
+* ``<beam name>.zmin`` (`float`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`)
+    Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`)
+    Maximum radius `<beam name>.radius` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
+
+* ``<beam name>.min_density`` (`float`) optional (default `0`)
+    Minimum density. Particles with a lower density are not injected.
+
+* ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
+    Whether the position in `(x y z)` of the particles is randomized within the cell.
 
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
