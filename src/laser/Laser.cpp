@@ -3,8 +3,6 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-amrex::IntVect Laser::m_slices_nguards = {-1, -1, -1};
-
 void
 Laser::ReadParameters ()
 {

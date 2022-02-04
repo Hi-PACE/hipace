@@ -41,8 +41,6 @@ public:
     // Same function whether the full fields are specified or just the envelope.
     // Just somewhere: if (m_EB) { F *= cos (k0 * z) }
 
-    /** Number of guard cells for slices MultiFab */
-    static amrex::IntVect m_slices_nguards;
 private:
     std::string m_name = "laser"; /**< name of the laser */
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
@@ -53,6 +51,9 @@ private:
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
     int m_EB; /**< 0: use laser envelope. 1: use E and B fields */
+
+    /** Number of guard cells for slices MultiFab */
+    amrex::IntVect m_slices_nguards = {-1, -1, -1};
 
     /** Vector over levels, all fields */
     amrex::Vector<std::array<amrex::FArrayBox, 3>> m_3D_F;
