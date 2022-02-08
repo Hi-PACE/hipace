@@ -128,6 +128,7 @@ public:
      * \param[in] a_mf Vector (levels) of FArrayBoxes
      * \param[in] a_multi_beams multi beam container which is written to openPMD file
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] write_fields if there are fields to write
      * \param[in] physical_time Physical time of the currenerationt it.
      * \param[in] output_step current iteration to be written to file
      * \param[in] nlev number of MR levels
@@ -141,7 +142,7 @@ public:
      */
     void WriteDiagnostics(
         amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
-        amrex::Vector<amrex::Geometry> const& geom,
+        amrex::Vector<amrex::Geometry> const& geom, std::vector<bool> const& write_fields,
         const amrex::Real physical_time, const int output_step, const int nlev,
         const int slice_dir, const amrex::Vector< std::string > varnames,
         const amrex::Vector< std::string > beamnames, const int it,
@@ -152,7 +153,7 @@ public:
     void reset ();
 
     /** Prefix/path for the output files */
-    std::string m_file_prefix = "diags/hdf5";
+    std::string m_file_prefix;
 
     /** Temporary workaround to display normalized momentum correctly */
     bool m_openpmd_viewer_workaround = true;

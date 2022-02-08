@@ -236,6 +236,12 @@ namespace AnyDST
         dst_plan.use_small_dst = (std::max(real_size[0], real_size[1]) >= 511);
         queryWithParser(pp, "use_small_dst", dst_plan.use_small_dst);
 
+        if (__CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ == 1) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::max(real_size[0], real_size[1]) <= 1024),
+            "Due to a bug in cuFFT, CUDA 11.1 supports only nx, ny <= 1024. Please use CUDA "
+            "version >= 11.2 (recommended) or <= 11.0 for larger grid sizes.");
+        }
+
         if(!dst_plan.use_small_dst) {
             const int nx = real_size[0];
             const int ny = real_size[1];

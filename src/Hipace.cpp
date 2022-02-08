@@ -246,6 +246,10 @@ Hipace::InitData ()
 #else
     amrex::Print() << "HiPACE++ (" << Hipace::Version() << ") running in double precision\n";
 #endif
+#ifdef AMREX_USE_CUDA
+    amrex::Print() << "using CUDA version " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__
+                   << "." << __CUDACC_VER_BUILD__ << "\n";
+#endif
 
 
     amrex::Vector<amrex::IntVect> new_max_grid_size;
@@ -304,8 +308,6 @@ Hipace::MakeNewLevelFromScratch (
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
     DefineSliceGDB(lev, ba, dm);
-    // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
-    m_diags.AllocData(lev, ba[0], Geom(lev));
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
 }
@@ -1113,9 +1115,9 @@ Hipace::Notify (const int step, const int it,
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
+#ifdef AMREX_USE_MPI
     constexpr int lev = 0;
 
-#ifdef AMREX_USE_MPI
     NotifyFinish(it, only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
@@ -1304,17 +1306,26 @@ void
 Hipace::ResizeFDiagFAB (const int it)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        amrex::Box bx = boxArray(lev)[it];
+        amrex::Box local_box = boxArray(lev)[it];
+        amrex::Box domain = boxArray(lev).minimalBox();
 
         if (lev == 1) {
+            // boxArray(1) is not correct in z direction. We need to manually enforce a
+            // parent/child relationship between lev_0 and lev_1 boxes in z
             const amrex::Box& bx_lev0 = boxArray(0)[it];
             const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
+
+            // This seems to be required for some reason
+            domain.setBig(Direction::z, domain.bigEnd(Direction::z) - ref_ratio_z);
+
             // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
-            bx.setSmall(Direction::z, ref_ratio_z*bx_lev0.smallEnd(Direction::z));
-            bx.setBig  (Direction::z, ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1));
+            local_box.setSmall(Direction::z, amrex::max(domain.smallEnd(Direction::z),
+                               ref_ratio_z*bx_lev0.smallEnd(Direction::z)));
+            local_box.setBig  (Direction::z, amrex::min(domain.bigEnd(Direction::z),
+                               ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1)));
         }
 
-        m_diags.ResizeFDiagFAB(bx, lev);
+        m_diags.ResizeFDiagFAB(local_box, domain, lev, Geom(lev));
     }
 }
 
@@ -1331,8 +1342,11 @@ Hipace::GetRefRatio (int lev)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    m_fields.Copy(lev, i_slice, 0, 0, m_diags.getCompsIdx(), m_diags.getNFields(),
-                  m_diags.getF(lev), m_diags.sliceDir(), m_diags.getCoarsening(lev), Geom(lev));
+    if (m_diags.hasField()[lev]) {
+        m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev),
+                      m_diags.getF(lev).box(), Geom(lev),
+                      m_diags.getCompsIdx(), m_diags.getNFields());
+    }
 }
 
 void
@@ -1349,9 +1363,9 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
-                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames, beamnames,
-                        it, m_box_sorters, geom, call_type);
+    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.hasField(),
+                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames,
+                        beamnames, it, m_box_sorters, geom, call_type);
 #else
     amrex::ignore_unused(it, call_type);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";

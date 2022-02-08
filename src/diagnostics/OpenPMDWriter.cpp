@@ -3,7 +3,6 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
-#include "particles/pusher/GetDomainLev.H"
 
 #ifdef HIPACE_USE_OPENPMD
 
@@ -12,8 +11,28 @@ OpenPMDWriter::OpenPMDWriter ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
         "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
     amrex::ParmParse pp("hipace");
-    queryWithParser(pp, "file_prefix", m_file_prefix);
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
+    // pick first available backend if default is chosen
+    if( m_openpmd_backend == "default" ) {
+#if openPMD_HAVE_HDF5==1
+        m_openpmd_backend = "h5";
+#elif openPMD_HAVE_ADIOS2==1
+        m_openpmd_backend = "bp";
+#else
+        m_openpmd_backend = "json";
+#endif
+    }
+
+    // set default output path according to backend
+    if (m_openpmd_backend == "h5") {
+        m_file_prefix = "diags/hdf5";
+    } else if (m_openpmd_backend == "bp") {
+        m_file_prefix = "diags/adios2";
+    } else if (m_openpmd_backend == "json") {
+        m_file_prefix = "diags/json";
+    }
+    // overwrite output path by choice of the user
+    queryWithParser(pp, "file_prefix", m_file_prefix);
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");
@@ -29,17 +48,6 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     // Dump every m_output_period steps and after last step
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
-
-    // pick first available backend if default is chosen
-    if( m_openpmd_backend == "default" ) {
-#if openPMD_HAVE_HDF5==1
-        m_openpmd_backend = "h5";
-#elif openPMD_HAVE_ADIOS2==1
-        m_openpmd_backend = "bp";
-#else
-        m_openpmd_backend = "json";
-#endif
-    }
 
     if (nlev > 1) {
         for (int lev=0; lev<nlev; ++lev) {
@@ -66,7 +74,7 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
 void
 OpenPMDWriter::WriteDiagnostics (
     amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
-    amrex::Vector<amrex::Geometry> const& geom,
+    amrex::Vector<amrex::Geometry> const& geom, std::vector<bool> const& write_fields,
     const amrex::Real physical_time, const int output_step, const int nlev,
     const int slice_dir, const amrex::Vector< std::string > varnames,
     const amrex::Vector< std::string > beamnames, const int it,
@@ -79,11 +87,12 @@ OpenPMDWriter::WriteDiagnostics (
         if (call_type == OpenPMDWriterCallType::beams ) {
             iteration.setTime(physical_time);
             if (lev == 0) {
-                WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec, geom3D[lev], beamnames, lev);
+                WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec,
+                                      geom3D[lev], beamnames, lev);
             }
             m_outputSeries[lev]->flush();
 
-        } else if (call_type == OpenPMDWriterCallType::fields ) {
+        } else if (call_type == OpenPMDWriterCallType::fields && write_fields[lev]) {
             WriteFieldData(a_mf[lev], geom, slice_dir, varnames, iteration, output_step, lev);
             m_outputSeries[lev]->flush();
             m_last_output_dumped[lev] = output_step;
@@ -119,11 +128,10 @@ OpenPMDWriter::WriteFieldData (
         //   labels, spacing and offsets
         std::vector< std::string > axisLabels {"z", "y", "x"};
         auto dCells = utils::getReversedVec(geom[lev].CellSize()); // dx, dy, dz
-        amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> correct_problo = GetDomainLev(geom[lev], data_box, 1, lev);
         amrex::Vector<double> finalproblo = {AMREX_D_DECL(
                      static_cast<double>(geom[lev].ProbLo()[2]),
-                     static_cast<double>(correct_problo[1]),
-                     static_cast<double>(correct_problo[0])
+                     static_cast<double>(geom[lev].ProbLo()[1]),
+                     static_cast<double>(geom[lev].ProbLo()[0])
                       )};
         auto offWindow = finalproblo;
         if (slice_dir >= 0) {
