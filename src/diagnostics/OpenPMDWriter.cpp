@@ -11,8 +11,28 @@ OpenPMDWriter::OpenPMDWriter ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
         "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
     amrex::ParmParse pp("hipace");
-    queryWithParser(pp, "file_prefix", m_file_prefix);
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
+    // pick first available backend if default is chosen
+    if( m_openpmd_backend == "default" ) {
+#if openPMD_HAVE_HDF5==1
+        m_openpmd_backend = "h5";
+#elif openPMD_HAVE_ADIOS2==1
+        m_openpmd_backend = "bp";
+#else
+        m_openpmd_backend = "json";
+#endif
+    }
+
+    // set default output path according to backend
+    if (m_openpmd_backend == "h5") {
+        m_file_prefix = "diags/hdf5";
+    } else if (m_openpmd_backend == "bp") {
+        m_file_prefix = "diags/adios2";
+    } else if (m_openpmd_backend == "json") {
+        m_file_prefix = "diags/json";
+    }
+    // overwrite output path by choice of the user
+    queryWithParser(pp, "file_prefix", m_file_prefix);
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");
@@ -28,17 +48,6 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     // Dump every m_output_period steps and after last step
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
-
-    // pick first available backend if default is chosen
-    if( m_openpmd_backend == "default" ) {
-#if openPMD_HAVE_HDF5==1
-        m_openpmd_backend = "h5";
-#elif openPMD_HAVE_ADIOS2==1
-        m_openpmd_backend = "bp";
-#else
-        m_openpmd_backend = "json";
-#endif
-    }
 
     if (nlev > 1) {
         for (int lev=0; lev<nlev; ++lev) {
