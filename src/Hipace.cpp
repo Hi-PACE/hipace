@@ -246,6 +246,10 @@ Hipace::InitData ()
 #else
     amrex::Print() << "HiPACE++ (" << Hipace::Version() << ") running in double precision\n";
 #endif
+#ifdef AMREX_USE_CUDA
+    amrex::Print() << "using CUDA version " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__
+                   << "." << __CUDACC_VER_BUILD__ << "\n";
+#endif
 
 
     amrex::Vector<amrex::IntVect> new_max_grid_size;
@@ -1118,9 +1122,9 @@ Hipace::Notify (const int step, const int it,
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
+#ifdef AMREX_USE_MPI
     constexpr int lev = 0;
 
-#ifdef AMREX_USE_MPI
     NotifyFinish(it, only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
@@ -1313,7 +1317,7 @@ Hipace::ResizeFDiagFAB (const int it)
         amrex::Box domain = boxArray(lev).minimalBox();
 
         if (lev == 1) {
-            // boxArray(1) is not correct in z direction. We need to manually enforece a
+            // boxArray(1) is not correct in z direction. We need to manually enforce a
             // parent/child relationship between lev_0 and lev_1 boxes in z
             const amrex::Box& bx_lev0 = boxArray(0)[it];
             const int ref_ratio_z = GetRefRatio(lev)[Direction::z];

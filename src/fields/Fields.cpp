@@ -509,7 +509,6 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                               std::string component, const int islice)
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
-    using namespace amrex::literals;
     if (lev == 0 && m_open_boundary) {
 
         amrex::MultiFab staging_area = getStagingArea(lev);
@@ -772,7 +771,11 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
+<<<<<<< HEAD
         const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_grow);
+=======
+        const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
+>>>>>>> development
         const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright 2020 The HiPACE++ Community
+# Copyright 2020-2022 The HiPACE++ Community
 #
 # License: BSD-3-Clause-LBNL
 # Authors: Axel Huebl
@@ -11,6 +11,6 @@ sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
-    clang-4.0           \
+    clang-7             \
     libopenmpi-dev      \
     openmpi-bin

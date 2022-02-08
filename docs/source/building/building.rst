@@ -29,14 +29,14 @@ Dependencies
 HiPACE++ depends on the following popular third party software.
 Please see installation instructions below in the Developers section.
 
-- a mature `C++14 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 5, Clang 3.6 or newer
-- `CMake 3.15.0+ <https://cmake.org/>`__
+- a mature `C++17 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 7, Clang 7, NVCC 11.0, MSVC 19.15 or newer
+- `CMake 3.18.0+ <https://cmake.org/>`__
 - `AMReX development <https://amrex-codes.github.io>`__: we automatically download and compile a copy of AMReX
-- `openPMD-api 0.14.2+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
+- `openPMD-api 0.14.3+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
   - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
-- Nvidia GPU support: `CUDA Toolkit 9.0+ <https://developer.nvidia.com/cuda-downloads>`__ (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
+- Nvidia GPU support: `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__ (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
 - CPU-only: `FFTW3 <http://www.fftw.org/>`__ (only used serially; *not* needed for Nvidia GPUs)
 
 Optional dependencies include:
@@ -180,7 +180,7 @@ CMake Option                 Default & Values                                Des
 ``HiPACE_amrex_internal``    **ON**/OFF                                      Needs a pre-installed AMReX library if set to ``OFF``
 ``HiPACE_openpmd_src``       *None*                                          Path to openPMD-api source directory (preferred if set)
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``  Repository URI to pull and build openPMD-api from
-``HiPACE_openpmd_branch``    ``0.14.2``                                      Repository branch for ``HiPACE_openpmd_repo``
+``HiPACE_openpmd_branch``    ``0.14.3``                                      Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                      Needs a pre-installed openPMD-api library if set to ``OFF``
 ``AMReX_LINEAR_SOLVERS``     **ON**/OFF                                      Compile AMReX multigrid solver. Required for explicit solver
 ===========================  ==============================================  ============================================================

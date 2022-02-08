@@ -310,8 +310,6 @@ private:
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
-    /** Stores multipole coefficients for open boundaries */
-    amrex::Gpu::DeviceVector<amrex::Real> m_multipole_coeffs;
 };
 
 #endif
