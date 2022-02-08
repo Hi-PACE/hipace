@@ -246,6 +246,10 @@ Hipace::InitData ()
 #else
     amrex::Print() << "HiPACE++ (" << Hipace::Version() << ") running in double precision\n";
 #endif
+#ifdef AMREX_USE_CUDA
+    amrex::Print() << "using CUDA version " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__
+                   << "." << __CUDACC_VER_BUILD__ << "\n";
+#endif
 
 
     amrex::Vector<amrex::IntVect> new_max_grid_size;
