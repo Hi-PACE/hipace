@@ -16,18 +16,16 @@ in the input script with `my_constants`.
     my_constants.kp_inv = "clight / sqrt(ne * q_e^2  / (epsilon0 * m_e))"
     beam.radius = "kp_inv / 2"
 
-Thereby, the following constants are predefined:
+Thereby, the following constants are predefined (variable, name, SI value, normalized value):
 
-======== ===================
-q_e      elementary charge
-m_e      electron mass
-m_p      proton mass
-epsilon0 vacuum permittivity
-mu0      vacuum permeability
-clight   speed of light
-======== ===================
-
-See ``src/utils/Constants.H`` for the values.
+======== =================== ================= ============
+q_e      elementary charge   1.602176634e-19   1
+m_e      electron mass       9.1093837015e-31  1
+m_p      proton mass         1.67262192369e-27 1836.15267343
+epsilon0 vacuum permittivity 8.8541878128e-12  1
+mu0      vacuum permeability 1.25663706212e-06 1
+clight   speed of light      299'792'458.      1
+======== =================== ================= =============
 
 For a list of supported functions see the
 `AMReX documentation <https://amrex-codes.github.io/amrex/docs_html/Basics.html#parser>`__.
@@ -285,7 +283,7 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
 
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
-The general beam parameters are applicable to all beam types. More specialized beam parameters,
+The general beam parameters are applicable to all particle beam types. More specialized beam parameters,
 which are valid only for certain beam types, are introduced further below under
 "Option: ``<injection_type>``".
 
