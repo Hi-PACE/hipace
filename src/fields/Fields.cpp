@@ -6,6 +6,8 @@
 #include "utils/Constants.H"
 #include "particles/ShapeFactors.H"
 
+using namespace amrex::literals;
+
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
 
@@ -35,7 +37,7 @@ Fields::AllocData (
         m_slices[lev][islice].define(
             slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[lev][islice].setVal(0.0, m_slices_nguards);
+        m_slices[lev][islice].setVal(0._rt, m_slices_nguards);
     }
 
     // The Poisson solver operates on transverse slices only.
@@ -74,6 +76,7 @@ Fields::AllocData (
     }
 }
 
+/** \brief inner version of derivative */
 template<int dir>
 struct derivative_inner {
     // captured variables for GPU
@@ -95,6 +98,7 @@ struct derivative_inner {
     }
 };
 
+/** \brief inner version of derivative */
 template<>
 struct derivative_inner<Direction::z> {
     // captured variables for GPU
@@ -108,6 +112,8 @@ struct derivative_inner<Direction::z> {
     }
 };
 
+/** \brief derivative in x or y direction. Field is zero-extended by one cell such that this
+ * derivative can be accessed on the same box as the field */
 template<int dir>
 struct derivative {
     // use brace initialization as constructor
@@ -118,10 +124,11 @@ struct derivative {
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
         amrex::Box bx = f_view[mfi].box();
         return derivative_inner<dir>{f_view.array(mfi),
-            1/(2*geom.CellSize(dir)), bx.smallEnd(dir), bx.bigEnd(dir)};
+            1._rt/(2._rt*geom.CellSize(dir)), bx.smallEnd(dir), bx.bigEnd(dir)};
     }
 };
 
+/** \brief derivative in z direction. Use fields from previous and next slice */
 template<>
 struct derivative<Direction::z> {
     // use brace initialization as constructor
@@ -132,26 +139,24 @@ struct derivative<Direction::z> {
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<Direction::z> array (amrex::MFIter& mfi) const {
         return derivative_inner<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
-            1/(2*geom.CellSize(Direction::z))};
+            1._rt/(2._rt*geom.CellSize(Direction::z))};
     }
 };
 
-template<int interp_order_xy>
-struct interpolated_field_inner {
+/** \brief inner version of interpolated_field_xy */
+template<int interp_order_xy, class ArrayType>
+struct interpolated_field_xy_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> arr_this;
-    amrex::Array4<amrex::Real const> arr_prev;
+    ArrayType array;
     amrex::Real dx_inv;
     amrex::Real dy_inv;
     amrex::Real offset0;
     amrex::Real offset1;
-    amrex::Real rel_z;
-    int lo2;
 
-    // interpolate field in x, y with <interp_order_xy> order transversely
-    // and linear order longitudinally. x and y must be inside field box
-    AMREX_GPU_DEVICE amrex::Real operator() (amrex::Real x, amrex::Real y) const noexcept {
-        using namespace amrex::literals;
+    // interpolate field in x, y with interp_order_xy order transversely,
+    // x and y must be inside field box
+    template<class...Args> AMREX_GPU_DEVICE
+    amrex::Real operator() (amrex::Real x, amrex::Real y, Args...args) const noexcept {
 
         // x direction
         const amrex::Real xmid = (x - offset0)*dx_inv;
@@ -163,36 +168,88 @@ struct interpolated_field_inner {
         amrex::Real sy_cell[interp_order_xy + 1];
         const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
-        amrex::Real field_value = 0.0_rt;
+        amrex::Real field_value = 0._rt;
         for (int iy=0; iy<=interp_order_xy; iy++){
             for (int ix=0; ix<=interp_order_xy; ix++){
-                field_value += sx_cell[ix]*sy_cell[iy]*
-                    ((1.0_rt-rel_z)*arr_this(i_cell+ix,
-                                             j_cell+iy, lo2)
-                             +rel_z*arr_prev(i_cell+ix,
-                                             j_cell+iy, lo2));
+                field_value += sx_cell[ix] * sy_cell[iy] * array(i_cell+ix, j_cell+iy, args...);
             }
         }
         return field_value;
     }
 };
 
-template<int interp_order_xy>
-struct interpolated_field {
+/** \brief interpolate field in x, y with interp_order_xy order transversely,
+ * x and y must be inside field box */
+template<int interp_order_xy, class MfabType>
+struct interpolated_field_xy {
     // use brace initialization as constructor
-    amrex::MultiFab f_view_this; // field to interpolate on this slice
-    amrex::MultiFab f_view_prev; // field to interpolate on previous slice
-    const amrex::Geometry& geom; // geometry of field
+    MfabType mfab; // MultiFab type object of the field
+    amrex::Geometry geom; // geometry of field
+
+    // use .array(mfi) like with amrex::MultiFab
+    auto array (amrex::MFIter& mfi) const {
+        auto mfab_array = mfab.array(mfi);
+        return interpolated_field_xy_inner<interp_order_xy, decltype(mfab_array)>{
+            mfab_array, 1._rt/geom.CellSize(0), 1._rt/geom.CellSize(1),
+            GetPosOffset(0, geom, geom.Domain()), GetPosOffset(1, geom, geom.Domain())};
+    }
+};
+
+/** \brief inner version of interpolated_field_z */
+struct interpolated_field_z_inner {
+    // captured variables for GPU
+    amrex::Array4<amrex::Real const> arr_this;
+    amrex::Array4<amrex::Real const> arr_prev;
+    amrex::Real rel_z;
+    int lo2;
+
+    // linear longitudinal field interpolation
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
+        return (1._rt-rel_z)*arr_this(i, j, lo2) + rel_z*arr_prev(i, j, lo2);
+    }
+};
+
+/** \brief linear longitudinal field interpolation */
+struct interpolated_field_z {
+    // use brace initialization as constructor
+    amrex::MultiFab mfab_this; // field to interpolate on this slice
+    amrex::MultiFab mfab_prev; // field to interpolate on previous slice
     amrex::Real rel_z; // mixing factor between f_view_this and f_view_prev for z interpolation
 
     // use .array(mfi) like with amrex::MultiFab
-    interpolated_field_inner<interp_order_xy> array (amrex::MFIter& mfi) const {
-        amrex::Box bx = f_view_this[mfi].box();
-        return interpolated_field_inner<interp_order_xy>{
-            f_view_this.array(mfi), f_view_prev.array(mfi),
-            1/geom.CellSize(0), 1/geom.CellSize(1),
-            GetPosOffset(0, geom, bx), GetPosOffset(1, geom, bx),
-            rel_z, bx.smallEnd(2)};
+    interpolated_field_z_inner array (amrex::MFIter& mfi) const {
+        return interpolated_field_z_inner{
+            mfab_this.array(mfi), mfab_prev.array(mfi), rel_z, mfab_this[mfi].box().smallEnd(2)};
+    }
+};
+
+/** \brief interpolate field in interp_order_xy order transversely and
+ * first order (linear) longitudinally */
+template<int interp_order_xy>
+using interpolated_field_xyz = interpolated_field_xy<interp_order_xy, interpolated_field_z>;
+
+/** \brief inner version of guarded_field */
+struct guarded_field_inner {
+    // captured variables for GPU
+    amrex::Array4<amrex::Real const> array;
+    amrex::Box bx;
+
+    template<class...Args>
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k, Args...args) const noexcept {
+        if (bx.contains(i,j,k)) {
+            return array(i,j,k,args...);
+        } else return 0._rt;
+    }
+};
+
+/** \brief if indices are outside of the fields box zero is returned */
+struct guarded_field {
+    // use brace initialization as constructor
+    amrex::MultiFab& mfab; // field to be guarded (zero extended)
+
+    // use .array(mfi) like with amrex::MultiFab
+    guarded_field_inner array (amrex::MFIter& mfi) const {
+        return guarded_field_inner{mfab.array(mfi), mfab[mfi].box()};
     }
 };
 
@@ -222,7 +279,7 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
         const auto src_b_array = src_b.array(mfi);
         const amrex::Box bx = mfi.growntilebox(box_grow);
         amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
                 dst_array(i,j,k) = factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k);
             });
@@ -230,69 +287,83 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
 }
 
 void
-Fields::Copy (const int lev, const int i_slice, const int slice_comp, const int full_comp,
-              const amrex::Gpu::DeviceVector<int>& diag_comps_vect,
-              const int ncomp, amrex::FArrayBox& fab, const int slice_dir,
-              const amrex::IntVect diag_coarsen, const amrex::Geometry geom)
+Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
+              amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
+              const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp)
 {
-    using namespace amrex::literals;
     HIPACE_PROFILE("Fields::Copy()");
-    auto& slice_mf = m_slices[lev][WhichSlice::This]; // copy from the current slice
-    amrex::Array4<amrex::Real> slice_array; // There is only one Box.
-    for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
-        auto& slice_fab = slice_mf[mfi];
-        amrex::Box slice_box = slice_fab.box();
-        slice_box.setSmall(Direction::z, i_slice);
-        slice_box.setBig  (Direction::z, i_slice);
-        slice_array = amrex::makeArray4(slice_fab.dataPtr(), slice_box, slice_fab.nComp());
-        // slice_array's longitude index is i_slice.
+    constexpr int depos_order_xy = 1;
+    constexpr int depos_order_z = 1;
+    constexpr int depos_order_offset = depos_order_z / 2 + 1;
+
+    const amrex::Real poff_calc_z = GetPosOffset(2, calc_geom, calc_geom.Domain());
+    const amrex::Real poff_diag_x = GetPosOffset(0, diag_geom, diag_geom.Domain());
+    const amrex::Real poff_diag_y = GetPosOffset(1, diag_geom, diag_geom.Domain());
+    const amrex::Real poff_diag_z = GetPosOffset(2, diag_geom, diag_geom.Domain());
+
+    // Interpolation in z Direction, done as if looped over diag_fab not i_slice
+    // Calculate to which diag_fab slices this slice could contribute
+    const int i_slice_min = i_slice - depos_order_offset;
+    const int i_slice_max = i_slice + depos_order_offset;
+    const amrex::Real pos_slice_min = i_slice_min * calc_geom.CellSize(2) + poff_calc_z;
+    const amrex::Real pos_slice_max = i_slice_max * calc_geom.CellSize(2) + poff_calc_z;
+    const int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
+                                                          / diag_geom.CellSize(2)));
+    const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
+                                                          / diag_geom.CellSize(2)));
+
+    // Put contributions from i_slice to different diag_fab slices in GPU vector
+    m_rel_z_vec.resize(k_max+1-k_min);
+    for (int k=k_min; k<=k_max; ++k) {
+        const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
+        const amrex::Real mid_i_slice = (pos - poff_calc_z)/calc_geom.CellSize(2);
+        amrex::Real sz_cell[depos_order_z + 1];
+        const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
+        m_rel_z_vec[k-k_min] = 0;
+        for (int i=0; i<=depos_order_z; ++i) {
+            if (k_cell+i == i_slice) {
+                m_rel_z_vec[k-k_min] = sz_cell[i];
+            }
+        }
     }
 
-    const int full_array_z = i_slice / diag_coarsen[2];
-    const amrex::IntVect ncells_global = geom.Domain().length();
+    // Optimization: don’t loop over diag_fab slices with 0 contribution
+    int k_start = k_min;
+    int k_stop = k_max;
+    for (int k=k_min; k<=k_max; ++k) {
+        if (m_rel_z_vec[k-k_min] == 0) ++k_start;
+        else break;
+    }
+    for (int k=k_max; k>=k_min; --k) {
+        if (m_rel_z_vec[k-k_min] == 0) --k_stop;
+        else break;
+    }
+    diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
+    diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
+    if (diag_box.isEmpty()) return;
 
-    amrex::Box const& vbx = fab.box();
-    if (vbx.smallEnd(Direction::z) <= full_array_z and
-        vbx.bigEnd  (Direction::z) >= full_array_z and
-        ( i_slice % diag_coarsen[2] == diag_coarsen[2]/2 or
-        ( i_slice == ncells_global[2] - 1 and
-        ( ncells_global[2] - 1 ) % diag_coarsen[2] < diag_coarsen[2]/2 )))
-    {
-        amrex::Box copy_box = vbx;
-        copy_box.setSmall(Direction::z, full_array_z);
-        copy_box.setBig  (Direction::z, full_array_z);
-        amrex::Array4<amrex::Real> const& full_array = fab.array();
-        const int even_slice_x = ncells_global[0] % 2 == 0 and slice_dir == 0;
-        const int even_slice_y = ncells_global[1] % 2 == 0 and slice_dir == 1;
-        const int coarse_x = diag_coarsen[0];
-        const int coarse_y = diag_coarsen[1];
-        const int ncells_x = ncells_global[0];
-        const int ncells_y = ncells_global[1];
+    auto& slice_mf = m_slices[lev][WhichSlice::This];
+    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{slice_mf, calc_geom};
+
+    // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
+    for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
+        auto slice_array = slice_func.array(mfi);
+        amrex::Array4<amrex::Real> diag_array = diag_fab.array();
 
         const int *diag_comps = diag_comps_vect.data();
+        const amrex::Real *rel_z_data = m_rel_z_vec.data();
+        const int lo2 = slice_mf[mfi].box().smallEnd(2);
+        const amrex::Real dx = diag_geom.CellSize(0);
+        const amrex::Real dy = diag_geom.CellSize(1);
 
-        amrex::ParallelFor(copy_box, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            const int m = n[diag_comps];
-
-            // coarsening in slice direction is always 1
-            const int i_c_start = amrex::min(i*coarse_x +(coarse_x-1)/2 -even_slice_x, ncells_x-1);
-            const int i_c_stop  = amrex::min(i*coarse_x +coarse_x/2+1, ncells_x);
-            const int j_c_start = amrex::min(j*coarse_y +(coarse_y-1)/2 -even_slice_y, ncells_y-1);
-            const int j_c_stop  = amrex::min(j*coarse_y +coarse_y/2+1, ncells_y);
-            amrex::Real field_value = 0._rt;
-            int n_values = 0;
-
-            for (int j_c = j_c_start; j_c != j_c_stop; ++j_c) {
-                for (int i_c = i_c_start; i_c != i_c_stop; ++i_c) {
-                    field_value += slice_array(i_c, j_c, i_slice, m+slice_comp);
-                    ++n_values;
-                }
-            }
-
-            full_array(i,j,k,n+full_comp) = field_value / amrex::max(n_values,1);
-        });
+        amrex::ParallelFor(diag_box, ncomp,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+            {
+                const amrex::Real x = i * dx + poff_diag_x;
+                const amrex::Real y = j * dy + poff_diag_y;
+                const int m = n[diag_comps];
+                diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,lo2,m);
+            });
     }
 }
 
@@ -309,7 +380,7 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         // use geometry of coarse grid to determine whether slice is to be solved
         const amrex::Real* problo = geom.ProbLo();
         const amrex::Real* dx = geom.CellSize();
-        const amrex::Real pos = (islice+0.5)*dx[2]+problo[2];
+        const amrex::Real pos = (islice+0.5_rt)*dx[2]+problo[2];
         if (pos < patch_lo || pos > patch_hi) continue;
     }
 
@@ -424,17 +495,16 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 {
     if (lev == 0) return; // keep lev==0 boundaries zero
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
-    using namespace amrex::literals;
     constexpr int interp_order = 2;
 
     const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
     const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
     const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
-    auto solution_interp = interpolated_field<interp_order>{
+    auto solution_interp = interpolated_field_xyz<interp_order>{
         getField(lev-1, WhichSlice::This, component),
         getField(lev-1, WhichSlice::Previous1, component),
-        geom[lev-1], rel_z};
+        rel_z, geom[lev-1]};
     amrex::MultiFab staging_area = getStagingArea(lev);
 
     for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
@@ -456,17 +526,16 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     if (lev == 0) return; // only interpolate boundaries to lev 1
     if (outer_edge == inner_edge) return;
     HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
-    using namespace amrex::literals;
     constexpr int interp_order = 2;
 
     const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
     const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
     const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
-    auto field_coarse_interp = interpolated_field<interp_order>{
+    auto field_coarse_interp = interpolated_field_xyz<interp_order>{
         getField(lev-1, WhichSlice::This, component),
         getField(lev-1, WhichSlice::Previous1, component),
-        geom[lev-1], rel_z};
+        rel_z, geom[lev-1]};
     amrex::MultiFab field_fine = getField(lev, WhichSlice::This, component);
 
     for (amrex::MFIter mfi( field_fine, false); mfi.isValid(); ++mfi)
@@ -520,8 +589,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     LinCombination(m_poisson_nguards, getStagingArea(lev),
-                   1./(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
-                   -1./(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
+                   1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
+                   -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
 
     SetBoundaryCondition(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
@@ -547,8 +616,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
         const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
-        const amrex::Real dx_inv = 1./(2*geom[lev].CellSize(Direction::x));
-        const amrex::Real dy_inv = 1./(2*geom[lev].CellSize(Direction::y));
+        const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
+        const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -575,9 +644,9 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
     LinCombination(m_poisson_nguards, getStagingArea(lev),
-                   1./(phys_const.ep0*phys_const.c),
+                   1._rt/(phys_const.ep0*phys_const.c),
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
-                   1./(phys_const.ep0*phys_const.c),
+                   1._rt/(phys_const.ep0*phys_const.c),
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
     SetBoundaryCondition(geom, lev, "Ez", islice);
@@ -671,18 +740,18 @@ Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
      */
     HIPACE_PROFILE("Fields::InitialBfieldGuess()");
 
-    const amrex::Real mix_factor_init_guess = exp(-0.5 * pow(relative_Bfield_error /
-                                              ( 2.5 * predcorr_B_error_tolerance ), 2));
+    const amrex::Real mix_factor_init_guess = exp(-0.5_rt * pow(relative_Bfield_error /
+                                              ( 2.5_rt * predcorr_B_error_tolerance ), 2));
 
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
-        1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
+        1._rt+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
         -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
         Comps[WhichSlice::This]["Bx"], 1, m_slices_nguards);
 
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
-        1+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
+        1._rt+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
         -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
         Comps[WhichSlice::This]["By"], 1, m_slices_nguards);
 }
@@ -703,7 +772,7 @@ Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_pr
     amrex::Real weight_B_prev_iter;
     /* calculating the weight for mixing the current and previous iteration based
      * on their respective errors. Large errors will induce a small weight of and vice-versa  */
-    if (relative_Bfield_error != 0.0 || relative_Bfield_error_prev_iter != 0.0)
+    if (relative_Bfield_error != 0._rt || relative_Bfield_error_prev_iter != 0._rt)
     {
         weight_B_iter = relative_Bfield_error_prev_iter /
                         ( relative_Bfield_error + relative_Bfield_error_prev_iter );
@@ -712,8 +781,8 @@ Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_pr
     }
     else
     {
-        weight_B_iter = 0.5;
-        weight_B_prev_iter = 0.5;
+        weight_B_iter = 0.5_rt;
+        weight_B_prev_iter = 0.5_rt;
     }
 
     /* calculating the mixed temporary B field  B_prev_iter = c*B_iter + d*B_prev_iter.
@@ -728,7 +797,7 @@ Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_pr
     /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
     amrex::MultiFab::LinComb(
         getSlices(lev, WhichSlice::This),
-        1-predcorr_B_mixing_factor, getSlices(lev, WhichSlice::This), field_comp,
+        1._rt-predcorr_B_mixing_factor, getSlices(lev, WhichSlice::This), field_comp,
         predcorr_B_mixing_factor, B_prev_iter, 0,
         field_comp, 1, m_slices_nguards);
 
@@ -747,11 +816,11 @@ Fields::ComputeRelBFieldError (
     // for both Bx and By simultaneously
     HIPACE_PROFILE("Fields::ComputeRelBFieldError()");
 
-    amrex::Real norm_Bdiff = 0;
+    amrex::Real norm_Bdiff = 0._rt;
     amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_Bdiff(norm_Bdiff);
     amrex::Real* p_norm_Bdiff = gpu_norm_Bdiff.dataPtr();
 
-    amrex::Real norm_B = 0;
+    amrex::Real norm_B = 0._rt;
     amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_B(norm_B);
     amrex::Real* p_norm_B = gpu_norm_B.dataPtr();
 
@@ -786,8 +855,8 @@ Fields::ComputeRelBFieldError (
 
     // calculating the relative error
     // Warning: this test might be not working in SI units!
-    const amrex::Real relative_Bfield_error = (norm_B/numPts_transverse > 1e-10)
-                                               ? norm_Bdiff/norm_B : 0.;
+    const amrex::Real relative_Bfield_error = (norm_B/numPts_transverse > 1e-10_rt)
+                                               ? norm_Bdiff/norm_B : 0._rt;
 
     return relative_Bfield_error;
 }
