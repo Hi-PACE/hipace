@@ -13,7 +13,7 @@ sudo apt-get install -y --no-install-recommends \
     build-essential     \
     libfftw3-dev        \
     g++                 \
-    libhdf5-openmpi-dev \
+    libhdf5-dev         \
     python3             \
     python3-pip         \
     python3-setuptools
