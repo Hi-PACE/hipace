@@ -521,131 +521,39 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
         const amrex::Real dx = geom[lev].CellSize(0);
         const amrex::Real dy = geom[lev].CellSize(1);
-        const amrex::Real scale = 3._rt/std::sqrt(pow<2>(geom[lev].ProbLength(0)) +
-                                                  pow<2>(geom[lev].ProbLength(1)));
+        const amrex::Real scale = 3._rt/std::sqrt(
+            pow<2>(geom[lev].ProbLength(0)) + pow<2>(geom[lev].ProbLength(1)));
+        const amrex::Real radius = amrex::min(
+            std::abs(geom[lev].ProbLo(0)), std::abs(geom[lev].ProbHi(0)),
+            std::abs(geom[lev].ProbLo(1)), std::abs(geom[lev].ProbHi(1)));
+        const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale);
 
-        const amrex::Real radius = amrex::min(geom[lev].ProbLo(0), geom[lev].ProbHi(0),
-                                              geom[lev].ProbLo(1), geom[lev].ProbHi(1));
-        const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale) * 100;
-
-        amrex::GpuTuple<amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real, amrex::Real, amrex::Real,
-                        amrex::Real> coeff_tuple{};
-        {HIPACE_PROFILE("Boundary::ParReduce()");
-        coeff_tuple =
-        amrex::ParReduce(amrex::TypeList<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                                         amrex::ReduceOpSum>{},
-                         amrex::TypeList<amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real, amrex::Real, amrex::Real,
-                                         amrex::Real>{},
-                         staging_area, m_poisson_nguards,
-            [=] AMREX_GPU_DEVICE (int, int i, int j, int k) noexcept
-            {
-                const amrex::Real x = (i * dx + poff_x) * scale;
-                const amrex::Real y = (j * dy + poff_y) * scale;
-                amrex::Real s_v = arr_staging_area(i, j, k);
-                if (x*x + y*y > cutoff_sq) s_v = 0._rt;
-                return GetMultipoleCoeffs<amrex::GpuTuple<amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real, amrex::Real, amrex::Real,
-                                                          amrex::Real>>(s_v, x, y);
-            }
-        );}
-
-        amrex::GpuArray<amrex::Real, 37> coeff_array{};
-
-        coeff_array[0] = amrex::get<0>(coeff_tuple);
-        coeff_array[1] = amrex::get<1>(coeff_tuple);
-        coeff_array[2] = amrex::get<2>(coeff_tuple);
-        coeff_array[3] = amrex::get<3>(coeff_tuple);
-        coeff_array[4] = amrex::get<4>(coeff_tuple);
-        coeff_array[5] = amrex::get<5>(coeff_tuple);
-        coeff_array[6] = amrex::get<6>(coeff_tuple);
-        coeff_array[7] = amrex::get<7>(coeff_tuple);
-        coeff_array[8] = amrex::get<8>(coeff_tuple);
-        coeff_array[9] = amrex::get<9>(coeff_tuple);
-        coeff_array[10] = amrex::get<10>(coeff_tuple);
-        coeff_array[11] = amrex::get<11>(coeff_tuple);
-        coeff_array[12] = amrex::get<12>(coeff_tuple);
-        coeff_array[13] = amrex::get<13>(coeff_tuple);
-        coeff_array[14] = amrex::get<14>(coeff_tuple);
-        coeff_array[15] = amrex::get<15>(coeff_tuple);
-        coeff_array[16] = amrex::get<16>(coeff_tuple);
-        coeff_array[17] = amrex::get<17>(coeff_tuple);
-        coeff_array[18] = amrex::get<18>(coeff_tuple);
-        coeff_array[19] = amrex::get<19>(coeff_tuple);
-        coeff_array[20] = amrex::get<20>(coeff_tuple);
-        coeff_array[21] = amrex::get<21>(coeff_tuple);
-        coeff_array[22] = amrex::get<22>(coeff_tuple);
-        coeff_array[23] = amrex::get<23>(coeff_tuple);
-        coeff_array[24] = amrex::get<24>(coeff_tuple);
-        coeff_array[25] = amrex::get<25>(coeff_tuple);
-        coeff_array[26] = amrex::get<26>(coeff_tuple);
-        coeff_array[27] = amrex::get<27>(coeff_tuple);
-        coeff_array[28] = amrex::get<28>(coeff_tuple);
-        coeff_array[29] = amrex::get<29>(coeff_tuple);
-        coeff_array[30] = amrex::get<30>(coeff_tuple);
-        coeff_array[31] = amrex::get<31>(coeff_tuple);
-        coeff_array[32] = amrex::get<32>(coeff_tuple);
-        coeff_array[33] = amrex::get<33>(coeff_tuple);
-        coeff_array[34] = amrex::get<34>(coeff_tuple);
-        coeff_array[35] = amrex::get<35>(coeff_tuple);
-        coeff_array[36] = amrex::get<36>(coeff_tuple);
-
-        std::cout << "Mcoeff:";
-        for (amrex::Real num : coeff_array) {
-            std::cout << " " << num;
+        MultipoleTuple coeff_tuple{};
+        {
+            HIPACE_PROFILE("Boundary::ParReduce()");
+            coeff_tuple =
+            amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
+                             staging_area, m_poisson_nguards,
+                [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
+                {
+                    const amrex::Real x = (i * dx + poff_x) * scale;
+                    const amrex::Real y = (j * dy + poff_y) * scale;
+                    amrex::Real s_v = arr_staging_area(i, j, k);
+                    if (x*x + y*y > cutoff_sq) s_v = 0._rt;
+                    return GetMultipoleCoeffs(s_v, x, y);
+                }
+            );
         }
-        std::cout << std::endl;
 
-        {HIPACE_PROFILE("Boundary::Dirichlet()");
-        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
-            [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
-            {
-                return dx*dy*GetFieldMultipole(coeff_array, x*scale, y*scale);
-            }
-        );}
-
+        {
+            HIPACE_PROFILE("Boundary::SetDirichlet()");
+            SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
+                [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
+                {
+                    return dx*dy*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
+                }
+            );
+        }
 
     } else if (lev == 1) {
         constexpr int interp_order = 2;
@@ -771,11 +679,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
-<<<<<<< HEAD
         const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_grow);
-=======
-        const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
->>>>>>> development
         const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 
