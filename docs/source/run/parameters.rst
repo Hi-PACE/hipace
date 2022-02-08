@@ -110,7 +110,10 @@ General parameters
 * ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
     Only used when using adaptive time step (see ``hipace.dt`` above).
     Number of time steps per betatron period (of the full blowout regime).
-    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N` (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz factors of the slowest particles in all beams.
+    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N`
+    (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with
+    :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
+    factors of the slowest particles in all beams.
 
 Field solver parameters
 -----------------------
@@ -224,14 +227,14 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 
 * ``<plasma name>.mass`` (`float`) optional (default `0.`)
     The mass of plasma particle in SI units. Use `plasma_name.mass_Da` for Dalton.
-    Can also be set with `plasma_name.element`. Must be `>0`.
+    Can also be set with `<plasma name>.element`. Must be `>0`.
 
 * ``<plasma name>.mass_Da`` (`float`) optional (default `0.`)
     The mass of plasma particle in Dalton. Use `plasma_name.mass` for SI units.
-    Can also be set with `plasma_name.element`. Must be `>0`.
+    Can also be set with `<plasma name>.element`. Must be `>0`.
 
 * ``<plasma name>.charge`` (`float`) optional (default `0.`)
-    The charge of a plasma particle. Can also be set with `plasma_name.element`.
+    The charge of a plasma particle. Can also be set with `<plasma name>.element`.
     The charge gets multiplied by the current ionization level.
 
 * ``<plasma name>.element`` (`string`) optional (default "")
@@ -241,19 +244,21 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying
-    `plasma_name.ionization_product`.
+    `<plasma name>.ionization_product`.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial Ionization state of the plasma. `0` for neutral gasses.
     If set, the Plasma charge gets multiplied by this number.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
-    The `plasma_name` of the plasma that contains the new electrons that are produced
+    The `<plasma name>` of the plasma that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
     Tile size for plasma current deposition, when running on CPU.
-    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current arrays.
+    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
+    arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
+    arrays.
 
 Beam parameters
 ---------------
@@ -285,14 +290,27 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.position_std`` (3 `float`)
     The rms size of the of the beam in `x, y, z`, separated by a space.
 
+* ``<beam name>.element`` (`string`) optional (default `electron`)
+    The Physical Element of the plasma. Sets charge, mass and, if available,
+    the specific Ionization Energy of each state.
+    Currently available ptions are: `electron`, `positron`, and `proton`.
+
+* ``<beam name>.mass`` (`float`) optional (default `m_e`)
+    The mass of beam particles. Can also be set with `<beam name>.element`. Must be `>0`.
+
+* ``<beam name>.charge`` (`float`) optional (default `-q_e`)
+    The charge of a beam particles. Can also be set with `<beam name>.element`.
+
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
     either `total_charge` or `density` must be specified.
 
 * ``<beam name>.profile`` (`string`)
     Beam profile.
-    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop`` (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
-    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can`` (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
+    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
+    (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
+    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
+    (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
 * ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
