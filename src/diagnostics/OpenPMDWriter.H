@@ -152,7 +152,7 @@ public:
     void reset ();
 
     /** Prefix/path for the output files */
-    std::string m_file_prefix = "diags/hdf5";
+    std::string m_file_prefix;
 
     /** Temporary workaround to display normalized momentum correctly */
     bool m_openpmd_viewer_workaround = true;
