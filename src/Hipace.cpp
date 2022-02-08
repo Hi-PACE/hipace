@@ -1306,7 +1306,7 @@ Hipace::ResizeFDiagFAB (const int it)
         amrex::Box domain = boxArray(lev).minimalBox();
 
         if (lev == 1) {
-            // boxArray(1) is not correct in z direction. We need to manually enforece a
+            // boxArray(1) is not correct in z direction. We need to manually enforce a
             // parent/child relationship between lev_0 and lev_1 boxes in z
             const amrex::Box& bx_lev0 = boxArray(0)[it];
             const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
