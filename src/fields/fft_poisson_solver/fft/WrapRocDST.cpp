@@ -135,6 +135,11 @@ namespace AnyDST
         // C2R FFT in -> out
         // ???  2nd argument type still wrong, should be void*
         // ??? reinterpret_cast<AnyFFT::Complex*>(in->dataPtr()), //3rd arg
+
+        // FIXME: the execution should be done similarly to the other call in the large DST:
+        //         void* in[2] = {dst_plan.m_expanded_position_array->dataPtr(), nullptr};
+                // void* out[2] = {dst_plan.m_expanded_fourier_array->dataPtr(), nullptr};
+                // result = rocfft_execute(dst_plan.m_plan, in, out, execinfo);
         result = rocfft_execute(
             plan, (void**)&(in), (void**)&(out), execinfo);
 
@@ -315,6 +320,7 @@ namespace AnyDST
                     complex_box, 1);
 
             // Initialize fft_plan.m_plan with the vendor fft plan.
+            // FIXME REMOVE CUDA CALL
             int s_1 = nx+1;
             cufftResult result;
             cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed,
@@ -330,6 +336,7 @@ namespace AnyDST
 #endif
 
             // Initialize fft_plan.m_plan with the vendor fft plan.
+            // FIXME fix description. Maybe not even needed for n times 1D FFTs
             rocfft_status result;
             rocfft_plan_description description;
             result = rocfft_plan_description_create(&description);
@@ -358,6 +365,7 @@ namespace AnyDST
             RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 
             // Initialize transposed fft_plan.m_plan_b with the vendor fft plan.
+            // FIXME plan B: check that one is forward and the other one is backward
             int s_2 = ny+1;
             cufftResult resultb;
             resultb = cufftPlanMany(
@@ -440,6 +448,8 @@ namespace AnyDST
 
         // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
         ShrinkC2R(*fourier_array, *dst_plan.m_expanded_fourier_array);
+
+        // FIXME copy paste from cuda the small DST using ToComplex etc...
     }
 
     template void Execute<direction::forward>(DSTplan& dst_plan);
