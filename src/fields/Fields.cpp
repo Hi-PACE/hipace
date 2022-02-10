@@ -527,6 +527,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             std::abs(geom[lev].ProbLo(0)), std::abs(geom[lev].ProbHi(0)),
             std::abs(geom[lev].ProbLo(1)), std::abs(geom[lev].ProbHi(1)));
         const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale);
+        const amrex::Real dxdy_div_4pi = dx*dy/(4._rt * MathConst::pi);
 
         MultipoleTuple coeff_tuple{};
         {
@@ -550,7 +551,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
                 [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
                 {
-                    return dx*dy*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
+                    return dxdy_div_4pi*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
                 }
             );
         }
