@@ -280,8 +280,9 @@ namespace AnyDST
             result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan, &buffersize);
             RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
 
-            void* buffer = amrex::The_Arena()->alloc(buffersize);
-            result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, buffer, buffersize);
+            dst_plan.m_buffer = amrex::The_Arena()->alloc(buffersize);
+            result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, dst_plan.m_buffer,
+                                                           buffersize);
             RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_work_buffer", result);
 
             result = rocfft_execution_info_set_stream(dst_plan.m_execinfo, amrex::Gpu::gpuStream());
@@ -316,9 +317,8 @@ namespace AnyDST
 #endif
 
             rocfft_status result;
-            result = rocfft_plan_description_create(&description);
 
-            const std::size_t s_1[3] = {nx+1 ,0 ,0};
+            const std::size_t s_1[3] = {std::size_t(nx+1) ,0u ,0u};
 
             result = rocfft_plan_create(&(dst_plan.m_plan),
                                         rocfft_placement_notinplace,
@@ -331,7 +331,7 @@ namespace AnyDST
 
             RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 
-            const std::size_t s_2[3] = {ny+1 ,0 ,0};
+            const std::size_t s_2[3] = {std::size_t(ny+1) ,0u ,0u};
 
             result = rocfft_plan_create(&(dst_plan.m_plan_b),
                                         rocfft_placement_notinplace,
@@ -353,10 +353,11 @@ namespace AnyDST
             result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan_b, &work_size_b);
             RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
 
-            std::size_t buffersize = std::max(work_size, work_size_b)
-            void* buffer = amrex::The_Arena()->alloc(buffersize);
+            std::size_t buffersize = std::max(work_size, work_size_b);
+            dst_plan.m_buffer = amrex::The_Arena()->alloc(buffersize);
 
-            result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, buffer, buffersize);
+            result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, dst_plan.m_buffer,
+                                                           buffersize);
             RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_work_buffer", result);
 
             result = rocfft_execution_info_set_stream(dst_plan.m_execinfo, amrex::Gpu::gpuStream());
@@ -375,7 +376,7 @@ namespace AnyDST
         rocfft_plan_destroy( dst_plan.m_plan );
         rocfft_plan_destroy( dst_plan.m_plan_b );
 
-        amrex::The_Arena()->free(dst_plan.m_execinfo->workBuffer);
+        amrex::The_Arena()->free(dst_plan.m_buffer);
         rocfft_execution_info_destroy(dst_plan.m_execinfo);
     }
 

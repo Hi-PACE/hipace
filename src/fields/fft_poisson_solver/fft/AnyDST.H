@@ -47,6 +47,8 @@ namespace AnyDST
 #if defined(AMREX_USE_HIP)
         /** execution info for rocFFT */
         rocfft_execution_info m_execinfo;
+        /** work buffer for rocFFT */
+        void* m_buffer;
 #endif
     };
 
