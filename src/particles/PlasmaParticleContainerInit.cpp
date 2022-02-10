@@ -188,7 +188,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
-                arrdata[PlasmaIdx::const_of_motion ][pidx] = sqrt(1. + u[0]*u[0] + u[1]*u[1]
+                arrdata[PlasmaIdx::const_of_motion ][pidx] = sqrt(1._rt + u[0]*u[0] + u[1]*u[1]
                                                                      + u[2]*u[2]) - u[2];
                 ++pidx;
             }

@@ -155,7 +155,7 @@ MultiPlasma::GetUStd () const
         if (m_nplasmas > 1) {
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (std::abs(u_std[0]) + std::abs(u_std[1])
                                                + std::abs(u_std[2])) < 1e-7,
-                "Explicit solver with temperature is currently limited to one plasma only");
+                "Cannot use explicit solver + multiple plasma species + non-zero temperature");
         }
     }
 

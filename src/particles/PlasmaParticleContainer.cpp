@@ -118,17 +118,16 @@ PlasmaParticleContainer::ReadParameters ()
     }
     bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", loc_array);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !(temperature_is_specified && thermal_momentum_is_specified),
+         "Please specify exlusively either a temperature or the thermal momentum");
     if (thermal_momentum_is_specified) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( temperature_is_specified == 0,
-        "Please specify exlusively either a temperature or the thermal momentum");
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             m_u_std[idim] = loc_array[idim];
         }
     }
 
     if (temperature_is_specified) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( thermal_momentum_is_specified == 0,
-            "Please specify exlusively either a temperature or the thermal momentum");
         const PhysConst phys_const_SI = make_constants_SI();
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             m_u_std[idim] = sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
