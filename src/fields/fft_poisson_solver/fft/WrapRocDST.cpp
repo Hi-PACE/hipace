@@ -114,6 +114,7 @@ namespace AnyDST
      * \param[in] plan cuda fft plan for transformation
      * \param[in] in input complex array
      * \param[out] out output real array
+     * \param[in] execinfo execution info containing gpu stream and work buffer
      */
     void C2Rfft (AnyFFT::VendorFFTPlan& plan, amrex::GpuComplex<amrex::Real>* AMREX_RESTRICT in,
                  amrex::Real* const AMREX_RESTRICT out, rocfft_execution_info execinfo)
