@@ -15,7 +15,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                const amrex::Real a_hollow_core_radius)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
-
+    using namespace amrex::literals;
     const int lev = m_level;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
