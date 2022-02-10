@@ -116,37 +116,16 @@ namespace AnyDST
      * \param[out] out output real array
      */
     void C2Rfft (AnyFFT::VendorFFTPlan& plan, amrex::GpuComplex<amrex::Real>* AMREX_RESTRICT in,
-                 amrex::Real* const AMREX_RESTRICT out)
+                 amrex::Real* const AMREX_RESTRICT out, rocfft_execution_info execinfo)
     {
         HIPACE_DETAIL_PROFILE("AnyDST::C2Rfft()");
         rocfft_status result;
 
-        rocfft_execution_info execinfo = NULL;
-        result = rocfft_execution_info_create(&execinfo);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
-
-        std::size_t buffersize = 0;
-        result = rocfft_plan_get_work_buffer_size(plan, &buffersize);
-        RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
-
-        result = rocfft_execution_info_set_stream(execinfo, amrex::Gpu::gpuStream());
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
-
-        // C2R FFT in -> out
-        // ???  2nd argument type still wrong, should be void*
-        // ??? reinterpret_cast<AnyFFT::Complex*>(in->dataPtr()), //3rd arg
-
-        // FIXME: the execution should be done similarly to the other call in the large DST:
-        //         void* in[2] = {dst_plan.m_expanded_position_array->dataPtr(), nullptr};
-                // void* out[2] = {dst_plan.m_expanded_fourier_array->dataPtr(), nullptr};
-                // result = rocfft_execute(dst_plan.m_plan, in, out, execinfo);
-        result = rocfft_execute(
-            plan, (void**)&(in), (void**)&(out), execinfo);
+        void* in_arr[2] = {in, nullptr};
+        void* out_arr[2] = {out, nullptr};
+        result = rocfft_execute(plan, in_arr, out_arr, execinfo);
 
         RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
-
-        result = rocfft_execution_info_destroy(execinfo);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
     }
 
     /** \brief Make Sine-space Real array out of array from fft.
@@ -243,7 +222,7 @@ namespace AnyDST
         DSTplan dst_plan;
 
         amrex::ParmParse pp("hipace");
-        // dst_plan.use_small_dst = (std::max(real_size[0], real_size[1]) >= 511);
+        dst_plan.use_small_dst = (std::max(real_size[0], real_size[1]) >= 511);
         queryWithParser(pp, "use_small_dst", dst_plan.use_small_dst);
 
         if(!dst_plan.use_small_dst) {
@@ -296,6 +275,17 @@ namespace AnyDST
 
             RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 
+            std::size_t buffersize = 0;
+            result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan, &buffersize);
+            RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+
+            void* buffer = amrex::The_Arena()->alloc(buffersize);
+            result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, buffer, buffersize);
+            RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_work_buffer", result);
+
+            result = rocfft_execution_info_set_stream(dst_plan.m_execinfo, amrex::Gpu::gpuStream());
+            RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
+
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
             dst_plan.m_fourier_array = fourier_array;
@@ -305,7 +295,6 @@ namespace AnyDST
         else {
             const int nx = real_size[0]; // contiguous
             const int ny = real_size[1]; // not contiguous
-            int dim = 1; // The 2D DST is done by doing nx 1D FFTs, transposition, ny 1D FFts, transposition
 
             // Allocate 1d Array for 2d data or 2d transpose data
             const int real_1d_size = std::max((nx+1)*ny, (ny+1)*nx);
@@ -319,81 +308,58 @@ namespace AnyDST
                 std::make_unique<amrex::BaseFab<amrex::GpuComplex<amrex::Real>>>(
                     complex_box, 1);
 
-            // Initialize fft_plan.m_plan with the vendor fft plan.
-            // FIXME REMOVE CUDA CALL
-            int s_1 = nx+1;
-            cufftResult result;
-            cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed,
-                                      int istride, int idist, int *onembed, int ostride,
-                                      int odist, cufftType type, int batch);
-            result = cufftPlanMany(
-                &(dst_plan.m_plan), 1, &s_1, NULL, 1, (nx+1)/2+1, NULL, 1, nx+1, VendorC2R, ny);
-
 #ifdef AMREX_USE_FLOAT
             rocfft_precision precision = rocfft_precision_single;
 #else
             rocfft_precision precision = rocfft_precision_double;
 #endif
 
-            // Initialize fft_plan.m_plan with the vendor fft plan.
-            // FIXME fix description. Maybe not even needed for n times 1D FFTs
             rocfft_status result;
-            rocfft_plan_description description;
             result = rocfft_plan_description_create(&description);
 
-            result = rocfft_plan_description_set_data_layout(&description,
-                                                                  rocfft_array_type in_array_type,
-                                                                  rocfft_array_type out_array_type,
-                                                                  const size_t *in_offsets,
-                                                                  const size_t *out_offsets, size_t
-                                                                  in_strides_size, const size_t
-                                                                  *in_strides, size_t in_distance, size_t
-                                                                  out_strides_size, const size_t
-                                                                  *out_strides, size_t out_distance);
-            RocFFTUtils::assert_rocfft_status("description_set_data_layout plan a", result);
-
+            const std::size_t s_1[3] = {nx+1 ,0 ,0};
 
             result = rocfft_plan_create(&(dst_plan.m_plan),
                                         rocfft_placement_notinplace,
                                         rocfft_transform_type_real_forward,
                                         precision,
-                                        dim,
-                                        lengths,
-                                        nx,
-                                        &description);
+                                        1,
+                                        s_1,
+                                        ny,
+                                        nullptr);
 
             RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 
-            // Initialize transposed fft_plan.m_plan_b with the vendor fft plan.
-            // FIXME plan B: check that one is forward and the other one is backward
-            int s_2 = ny+1;
-            cufftResult resultb;
-            resultb = cufftPlanMany(
-                &(dst_plan.m_plan_b), 1, &s_2, NULL, 1, (ny+1)/2+1, NULL, 1, ny+1, VendorC2R, nx);
-
-            // Initialize fft_plan.m_plan with the vendor fft plan.
-            result = rocfft_plan_description_set_data_layout(rocfft_plan_description description,
-                                                                  rocfft_array_type in_array_type,
-                                                                  rocfft_array_type out_array_type,
-                                                                  const size_t *in_offsets,
-                                                                  const size_t *out_offsets, size_t
-                                                                  in_strides_size, const size_t
-                                                                  *in_strides, size_t in_distance, size_t
-                                                                  out_strides_size, const size_t
-                                                                  *out_strides, size_t out_distance);
-            RocFFTUtils::assert_rocfft_status("rocfft_plan_description_create plan b", result);
+            const std::size_t s_2[3] = {ny+1 ,0 ,0};
 
             result = rocfft_plan_create(&(dst_plan.m_plan_b),
                                         rocfft_placement_notinplace,
-                                        rocfft_transform_type_real_forward,
+                                        rocfft_transform_type_real_inverse,
                                         precision,
-                                        dim,
-                                        lengths,
-                                        ny,
-                                        &description);
+                                        1,
+                                        s_2,
+                                        nx,
+                                        nullptr);
 
             RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 
+            std::size_t work_size = 0;
+            std::size_t work_size_b = 0;
+
+            result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan, &work_size);
+            RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+
+            result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan_b, &work_size_b);
+            RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+
+            std::size_t buffersize = std::max(work_size, work_size_b)
+            void* buffer = amrex::The_Arena()->alloc(buffersize);
+
+            result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, buffer, buffersize);
+            RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_work_buffer", result);
+
+            result = rocfft_execution_info_set_stream(dst_plan.m_execinfo, amrex::Gpu::gpuStream());
+            RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
 
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
@@ -406,50 +372,69 @@ namespace AnyDST
     void DestroyPlan (DSTplan& dst_plan)
     {
         rocfft_plan_destroy( dst_plan.m_plan );
+        rocfft_plan_destroy( dst_plan.m_plan_b );
+
+        amrex::The_Arena()->free(dst_plan.m_execinfo->workBuffer);
+        rocfft_execution_info_destroy(dst_plan.m_execinfo);
     }
 
     template<direction d>
     void Execute (DSTplan& dst_plan){
         HIPACE_PROFILE("AnyDST::Execute()");
 
-        // Swap position and fourier space based on execute direction
-        amrex::FArrayBox* position_array =
-            (d == direction::forward) ? dst_plan.m_position_array : dst_plan.m_fourier_array;
-        amrex::FArrayBox* fourier_array =
-            (d == direction::forward) ? dst_plan.m_fourier_array : dst_plan.m_position_array;
+        if(!dst_plan.use_small_dst) {
+            // Swap position and fourier space based on execute direction
+            amrex::FArrayBox* position_array =
+                (d == direction::forward) ? dst_plan.m_position_array : dst_plan.m_fourier_array;
+            amrex::FArrayBox* fourier_array =
+                (d == direction::forward) ? dst_plan.m_fourier_array : dst_plan.m_position_array;
 
-        // Expand in position space m_position_array -> m_expanded_position_array
-        ExpandR2R(*dst_plan.m_expanded_position_array, *position_array);
+            // Expand in position space m_position_array -> m_expanded_position_array
+            ExpandR2R(*dst_plan.m_expanded_position_array, *position_array);
 
-        rocfft_status result;
+            rocfft_status result;
 
-        rocfft_execution_info execinfo = NULL;
-        result = rocfft_execution_info_create(&execinfo);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
+            // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
+            void* in[2] = {dst_plan.m_expanded_position_array->dataPtr(), nullptr};
+            void* out[2] = {dst_plan.m_expanded_fourier_array->dataPtr(), nullptr};
+            result = rocfft_execute(dst_plan.m_plan, in, out, dst_plan.m_execinfo);
 
-        std::size_t buffersize = 0;
-        result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan, &buffersize);
-        RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+            RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
 
-        result = rocfft_execution_info_set_stream(execinfo, amrex::Gpu::gpuStream());
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
+            // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
+            ShrinkC2R(*fourier_array, *dst_plan.m_expanded_fourier_array);
+        }
+        else {
+            const int nx = dst_plan.m_position_array->box().length(0); // initially contiguous
+            const int ny = dst_plan.m_position_array->box().length(1); // contiguous after transpose
 
-        // R2C FFT m_expanded_position_array -> m_expanded_fourier_array
-        // 2nd argument type still wrong, should be void*
-        // reinterpret_cast<AnyFFT::Complex*>(dst_plan.m_expanded_fourier_array->dataPtr()), //3rd arg
-        void* in[2] = {dst_plan.m_expanded_position_array->dataPtr(), nullptr};
-        void* out[2] = {dst_plan.m_expanded_fourier_array->dataPtr(), nullptr};
-        result = rocfft_execute(dst_plan.m_plan, in, out, execinfo);
+            amrex::Real* const tmp_pos_arr = dst_plan.m_position_array->dataPtr();
+            amrex::Real* const tmp_fourier_arr = dst_plan.m_fourier_array->dataPtr();
+            amrex::GpuComplex<amrex::Real>* comp_arr = dst_plan.m_expanded_fourier_array->dataPtr();
+            amrex::Real* const real_arr = dst_plan.m_expanded_position_array->dataPtr();
 
-        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
+            // Swap position and fourier space based on execute direction
+            amrex::Real* const pos_arr =
+                (d == direction::forward) ? tmp_pos_arr : tmp_fourier_arr;
+            amrex::Real* const fourier_arr =
+                (d == direction::forward) ? tmp_fourier_arr : tmp_pos_arr;
 
-        result = rocfft_execution_info_destroy(execinfo);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
+            ToComplex(pos_arr, comp_arr, nx, ny);
 
-        // Shrink in Fourier space m_expanded_fourier_array -> m_fourier_array
-        ShrinkC2R(*fourier_array, *dst_plan.m_expanded_fourier_array);
+            C2Rfft(dst_plan.m_plan, comp_arr, real_arr, dst_plan.m_execinfo);
 
-        // FIXME copy paste from cuda the small DST using ToComplex etc...
+            ToSine(real_arr, pos_arr, nx, ny);
+
+            Transpose(pos_arr, fourier_arr, nx, ny);
+
+            ToComplex(fourier_arr, comp_arr, ny, nx);
+
+            C2Rfft(dst_plan.m_plan_b, comp_arr, real_arr, dst_plan.m_execinfo);
+
+            ToSine(real_arr, pos_arr, ny, nx);
+
+            Transpose(pos_arr, fourier_arr, ny, nx);
+        }
     }
 
     template void Execute<direction::forward>(DSTplan& dst_plan);
