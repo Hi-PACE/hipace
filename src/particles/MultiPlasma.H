@@ -104,7 +104,7 @@ public:
     void TileSort (amrex::Box bx, amrex::Geometry geom);
 
     /** returns u_std of the plasma distribution */
-    amrex::RealVect get_u_std () const;
+    amrex::RealVect GetUStd () const;
 
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 

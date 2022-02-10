@@ -663,7 +663,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real E0 = omegap * pc.m_e * pc.c / pc.q_e;
 
     // getting the constant of motion for finite temperatures
-    const amrex::RealVect u_std = m_multi_plasma.get_u_std();
+    const amrex::RealVect u_std = m_multi_plasma.GetUStd();
     const amrex::Real const_of_motion = sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1]
                                              + u_std[2]*u_std[2]);
 

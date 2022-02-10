@@ -202,8 +202,8 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
     using namespace amrex::literals;
     const PhysConst phys_const = get_phys_const();
 
-    const amrex::RealVect u_mean = plasma.get_u_mean();
-    const amrex::RealVect u_std = plasma.get_u_std();
+    const amrex::RealVect u_mean = plasma.GetUMean();
+    const amrex::RealVect u_std = plasma.GetUStd();
     const int init_ion_lev = plasma.m_init_ion_lev;
 
     // Loop over particle boxes
