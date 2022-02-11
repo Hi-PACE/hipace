@@ -13,7 +13,7 @@ Create a file ``profile.hipace.spock`` and ``source`` it whenever you log in and
 
    module load cmake/3.20.2 # cmake
    module load craype-accel-amd-gfx908
-   module load rocm/4.1.0
+   module load rocm # rocm/4.5.0
    module load ccache
    module load ninja
    export AMREX_AMD_ARCH=gfx908
