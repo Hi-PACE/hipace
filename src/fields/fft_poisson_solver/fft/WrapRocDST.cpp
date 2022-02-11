@@ -280,6 +280,9 @@ namespace AnyDST
             result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan, &buffersize);
             RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
 
+            result = rocfft_execution_info_create(&(dst_plan.m_execinfo));
+            RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
+
             dst_plan.m_buffer = amrex::The_Arena()->alloc(buffersize);
             result = rocfft_execution_info_set_work_buffer(dst_plan.m_execinfo, dst_plan.m_buffer,
                                                            buffersize);
@@ -322,7 +325,7 @@ namespace AnyDST
 
             result = rocfft_plan_create(&(dst_plan.m_plan),
                                         rocfft_placement_notinplace,
-                                        rocfft_transform_type_real_forward,
+                                        rocfft_transform_type_real_inverse,
                                         precision,
                                         1,
                                         s_1,
@@ -352,6 +355,9 @@ namespace AnyDST
 
             result = rocfft_plan_get_work_buffer_size(dst_plan.m_plan_b, &work_size_b);
             RocFFTUtils::assert_rocfft_status("rocfft_plan_get_work_buffer_size", result);
+
+            result = rocfft_execution_info_create(&(dst_plan.m_execinfo));
+            RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
 
             std::size_t buffersize = std::max(work_size, work_size_b);
             dst_plan.m_buffer = amrex::The_Arena()->alloc(buffersize);
