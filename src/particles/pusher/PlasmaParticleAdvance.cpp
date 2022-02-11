@@ -10,6 +10,7 @@
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "particles/ParticleUtil.H"
 
 #include <string>
 
@@ -80,7 +81,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
-
+        const amrex::Real * const const_of_motionp = soa.GetRealData(
+                                                            PlasmaIdx::const_of_motion).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
         amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
@@ -166,9 +168,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         // update force terms for a single particle
                         const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
                         const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
-                        UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], ExmByp, EypBxp, Ezp,
-                                         Bxp, Byp, Bzp, Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip],
-                                         Fpsi1[ip], clightsq, phys_const, q, mass);
+                        UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], const_of_motionp[ip],
+                                         ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, Fx1[ip], Fy1[ip],
+                                         Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq, phys_const, q, mass);
                     }
 
                     if (do_push)
@@ -196,7 +198,10 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
     HIPACE_PROFILE("ResetPlasmaParticles()");
 
     using namespace amrex::literals;
+    const PhysConst phys_const = get_phys_const();
 
+    const amrex::RealVect u_mean = plasma.GetUMean();
+    const amrex::RealVect u_std = plasma.GetUStd();
     const int init_ion_lev = plasma.m_init_ion_lev;
 
     // Loop over particle boxes
@@ -212,6 +217,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
+        amrex::Real * const const_of_motionp = soa.GetRealData(PlasmaIdx::const_of_motion).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
         amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
@@ -255,11 +261,11 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
 
         if (initial) plasma.UpdateDensityFunction();
         auto density_func = plasma.m_density_func;
-        const amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
+        const amrex::Real c_t = phys_const.c * Hipace::m_physical_time;
 
-        amrex::ParallelFor(
+        amrex::ParallelForRNG(
             pti.numParticles(),
-            [=] AMREX_GPU_DEVICE (long ip) {
+            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
 
                 amrex::ParticleReal xp, yp, zp;
                 int pid;
@@ -267,10 +273,14 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                 if (initial == false){
                     SetPosition(ip, x_prev[ip], y_prev[ip], zp);
                 } else {
+
+                    amrex::Real u[3] = {0.,0.,0.};
+                    ParticleUtil::get_gaussian_random_momentum(u, u_mean, u_std, engine);
+
                     SetPosition(ip, x0[ip], y0[ip], zp, std::abs(pid));
                     w[ip] = w0[ip] * density_func(x0[ip], y0[ip], c_t);
-                    uxp[ip] = 0._rt;
-                    uyp[ip] = 0._rt;
+                    uxp[ip] = u[0]*phys_const.c;
+                    uyp[ip] = u[1]*phys_const.c;
                     psip[ip] = 0._rt;
                     x_prev[ip] = 0._rt;
                     y_prev[ip] = 0._rt;
@@ -303,6 +313,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     Fuy5[ip] = 0._rt;
                     Fpsi5[ip] = 0._rt;
                     ion_lev[ip] = init_ion_lev;
+                    const_of_motionp[ip]  = sqrt(1. + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
                 }
             }
             );
