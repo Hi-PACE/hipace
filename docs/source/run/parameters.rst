@@ -8,13 +8,25 @@ Parser
 
 In HiPACE++ all input parameters are obtained through `amrex::Parser`, making it possible to
 specify input parameters with expressions and not just numbers. User constants can be defined
-in the input script with `my_constants`. Some Physical constants are already provided.
+in the input script with `my_constants`.
 
 .. code-block:: bash
 
     my_constants.ne = 1.25e24
     my_constants.kp_inv = "clight / sqrt(ne * q_e^2  / (epsilon0 * m_e))"
     beam.radius = "kp_inv / 2"
+
+Thereby, the following constants are predefined:
+
+============ =================== ================= ====================
+**variable** **name**            **SI value**      **normalized value**
+q_e          elementary charge   1.602176634e-19   1
+m_e          electron mass       9.1093837015e-31  1
+m_p          proton mass         1.67262192369e-27 1836.15267343
+epsilon0     vacuum permittivity 8.8541878128e-12  1
+mu0          vacuum permeability 1.25663706212e-06 1
+clight       speed of light      299'792'458.      1
+============ =================== ================= ====================
 
 For a list of supported functions see the
 `AMReX documentation <https://amrex-codes.github.io/amrex/docs_html/Basics.html#parser>`__.
@@ -28,7 +40,10 @@ General parameters
     Number of cells in x, y and z.
 
 * ``amr.max_level`` (`integer`)
-    Maximum level of mesh refinement. Mesh refinement is not yet implemented, therefore only
+    Maximum level of mesh refinement. Currently, mesh refinement is only supported up to level
+    `1`. Note, that the current mesh refinement algorithm is not generally applicable and valid
+    only in certain scenarios.
+
     level `0` is supported.
 
 * ``hipace.patch_lo`` (3 `float`)
@@ -96,6 +111,9 @@ General parameters
     available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
     slow and is not recommended for production runs.
 
+* ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
+    Path of the output.
+
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
@@ -104,7 +122,10 @@ General parameters
 * ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
     Only used when using adaptive time step (see ``hipace.dt`` above).
     Number of time steps per betatron period (of the full blowout regime).
-    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N` (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz factors of the slowest particles in all beams.
+    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N`
+    (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with
+    :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
+    factors of the slowest particles in all beams.
 
 Field solver parameters
 -----------------------
@@ -218,14 +239,14 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 
 * ``<plasma name>.mass`` (`float`) optional (default `0.`)
     The mass of plasma particle in SI units. Use `plasma_name.mass_Da` for Dalton.
-    Can also be set with `plasma_name.element`. Must be `>0`.
+    Can also be set with `<plasma name>.element`. Must be `>0`.
 
 * ``<plasma name>.mass_Da`` (`float`) optional (default `0.`)
     The mass of plasma particle in Dalton. Use `plasma_name.mass` for SI units.
-    Can also be set with `plasma_name.element`. Must be `>0`.
+    Can also be set with `<plasma name>.element`. Must be `>0`.
 
 * ``<plasma name>.charge`` (`float`) optional (default `0.`)
-    The charge of a plasma particle. Can also be set with `plasma_name.element`.
+    The charge of a plasma particle. Can also be set with `<plasma name>.element`.
     The charge gets multiplied by the current ionization level.
 
 * ``<plasma name>.element`` (`string`) optional (default "")
@@ -235,19 +256,21 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying
-    `plasma_name.ionization_product`.
+    `<plasma name>.ionization_product`.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial Ionization state of the plasma. `0` for neutral gasses.
     If set, the Plasma charge gets multiplied by this number.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
-    The `plasma_name` of the plasma that contains the new electrons that are produced
+    The `<plasma name>` of the plasma that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
     Tile size for plasma current deposition, when running on CPU.
-    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current arrays.
+    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
+    arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
+    arrays.
 
 Beam parameters
 ---------------
@@ -259,6 +282,13 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     The names of the particle beams, separated by a space.
     To run without beams, choose the name `no_beam`.
 
+General beam parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+The general beam parameters are applicable to all particle beam types. More specialized beam parameters,
+which are valid only for certain beam types, are introduced further below under
+"Option: ``<injection_type>``".
+
+
 * ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
     and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
@@ -266,37 +296,51 @@ parameters for each beam are specified via `<beam name>.beam_property = ...`
     Gaussian beam with a fixed number of particles with a constant weight.
     `from_file` reads a beam from openPMD files.
 
-* ``<beam name>.random_ppc`` (list of 3 `int`) optional (default `0 0 0`)
-    Whether to randomize the position of particles in each cell, per dimension.
-    Only used if ``<beam name>.injection_type = fixed_ppc``.
-
-* ``<beam name>.profile`` (`string`)
-    Beam profile.
-    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop`` (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
-    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can`` (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
-
-* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
-    Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
-    `n_subcycles` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
-    in highly non-linear focusing fields.
-
-Option: ``fixed_weight``
-^^^^^^^^^^^^^^^^^^^^^^^^
-
 * ``<beam name>.position_mean`` (3 `float`)
     The mean position of the beam in `x, y, z`, separated by a space.
 
 * ``<beam name>.position_std`` (3 `float`)
     The rms size of the of the beam in `x, y, z`, separated by a space.
 
+* ``<beam name>.element`` (`string`) optional (default `electron`)
+    The Physical Element of the plasma. Sets charge, mass and, if available,
+    the specific Ionization Energy of each state.
+    Currently available ptions are: `electron`, `positron`, and `proton`.
+
+* ``<beam name>.mass`` (`float`) optional (default `m_e`)
+    The mass of beam particles. Can also be set with `<beam name>.element`. Must be `>0`.
+
+* ``<beam name>.charge`` (`float`) optional (default `-q_e`)
+    The charge of a beam particles. Can also be set with `<beam name>.element`.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
+    either `total_charge` or `density` must be specified.
+
+* ``<beam name>.profile`` (`string`)
+    Beam profile.
+    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
+    (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
+    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
+    (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
+
+* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
+    Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
+    `n_subcycles` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
+    in highly non-linear focusing fields.
+
+* ``<beam name>.finest_level`` (`int`) optional (default `0`)
+    Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
+    up to its finest level. The beam will be pushed by the fields of the finest level.
+
+Option: ``fixed_weight``
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 * ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either `total_charge` or `density` must be specified.
-
-* ``<beam name>.density`` (`float`)
-    Peak density of the beam. Note: Either `total_charge` or `density` must be specified.
 
 * ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
     Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
@@ -322,6 +366,28 @@ Option: ``fixed_weight``
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using `do_z_push = 0` results in unphysical behavior.
+
+Option: ``fixed_ppc``
+^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
+    Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
+
+* ``<beam name>.zmin`` (`float`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`)
+    Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`)
+    Maximum radius `<beam name>.radius` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
+
+* ``<beam name>.min_density`` (`float`) optional (default `0`)
+    Minimum density. Particles with a lower density are not injected.
+
+* ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
+    Whether the position in `(x y z)` of the particles is randomized within the cell.
 
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
@@ -357,8 +423,11 @@ Diagnostic parameters
     between the two inner grid points.
 
 * ``diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
-    Coarsening ratio of field output in x, y and z direction respectively. For x and y, the
-    value is subsampled at the cell center. For z, the slice nearest to the cell center is taken.
+    Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
+    obtained through first order interpolation.
+
+* ``diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
+    Whether the field diagnostics should include ghost cells.
 
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be `all`,
