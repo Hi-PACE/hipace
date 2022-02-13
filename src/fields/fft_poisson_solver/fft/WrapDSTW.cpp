@@ -44,6 +44,8 @@ namespace AnyDST
             ny, nx, fourier_array->dataPtr(), position_array->dataPtr(),
             FFTW_RODFT00, FFTW_RODFT00, FFTW_ESTIMATE);
 
+        amrex::Print() << "using R2R FFTW of size " << nx << " * " << ny << "\n";
+
         // Store meta-data in fft_plan
         dst_plan.m_position_array = position_array;
         dst_plan.m_fourier_array = fourier_array;
