@@ -3,6 +3,7 @@
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "Hipace.H"
 
 MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 {
@@ -11,6 +12,8 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     getWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
+    m_nominal_density = Hipace::m_normalized_units ? 1. : 1.e23;
+    queryWithParser(pp, "nominal_density", m_nominal_density);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
@@ -48,7 +51,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 }
 
 amrex::Real
-MultiPlasma::maxDensity ()
+MultiPlasma::maxDensity () const
 {
     amrex::Real max_density = 0;
     const amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
@@ -56,6 +59,24 @@ MultiPlasma::maxDensity ()
         max_density = amrex::max<amrex::Real>(max_density, plasma.m_density_func(0., 0., c_t));
     }
     return amrex::max(max_density, m_adaptive_density);
+}
+
+void
+MultiPlasma::CheckDensity () const
+{
+    amrex::Real real_epsilon = std::numeric_limits<amrex::Real>::epsilon();
+    if (maxDensity()/m_nominal_density < 1.e3 * real_epsilon ) {
+        amrex::Print()<<"WARNING: The on-axis plasma density at z = " <<
+            get_phys_const().c * Hipace::m_physical_time <<
+            " is " << maxDensity() << ", which is much lower than the nominal density of " <<
+            m_nominal_density <<". This is fine if this density is much below the highest density "
+            "in the simulation. Otherwise, consider setting plasmas.nominal_density to the typical "
+            "density used in your simulation.\n";
+    }
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        maxDensity() / m_nominal_density < 1.e-3/real_epsilon,
+        "Density much higher than nominal density. Consider increasing plasmas.nominal_density");
+    return;
 }
 
 void
