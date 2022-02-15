@@ -278,6 +278,14 @@ namespace AnyDST
                     CuFFTUtils::cufftErrorToString(result) << "\n";
             }
 
+            std::size_t buffersize = 0;
+            cufftGetSize(dst_plan.m_plan, &buffersize);
+
+            std::size_t mb = 1024*1024;
+
+            amrex::Print() << "using R2C cuFFT of size " << expanded_size[0] << " * "
+                << expanded_size[1] << " with " << (buffersize+mb-1)/mb << " MiB of work area\n";
+
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
             dst_plan.m_fourier_array = fourier_array;
@@ -321,6 +329,16 @@ namespace AnyDST
                 amrex::Print() << " cufftplan failed! Error: " <<
                     CuFFTUtils::cufftErrorToString(resultb) << "\n";
             }
+
+            std::size_t buffersize = 0;
+            std::size_t buffersize_b = 0;
+            cufftGetSize(dst_plan.m_plan, &buffersize);
+            cufftGetSize(dst_plan.m_plan_b, &buffersize_b);
+
+            std::size_t mb = 1024*1024;
+
+            amrex::Print() << "using C2R cuFFT of sizes " << s_1 << " and "
+                << s_2 << " with " << (buffersize+buffersize_b+mb-1)/mb << " MiB of work area\n";
 
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;

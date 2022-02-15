@@ -291,6 +291,11 @@ namespace AnyDST
             result = rocfft_execution_info_set_stream(dst_plan.m_execinfo, amrex::Gpu::gpuStream());
             RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
 
+            std::size_t mb = 1024*1024;
+
+            amrex::Print() << "using R2C rocFFT of size " << expanded_size[0] << " * "
+                << expanded_size[1] << " with " << (buffersize+mb-1)/mb << " MiB of work area\n";
+
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
             dst_plan.m_fourier_array = fourier_array;
@@ -368,6 +373,11 @@ namespace AnyDST
 
             result = rocfft_execution_info_set_stream(dst_plan.m_execinfo, amrex::Gpu::gpuStream());
             RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
+
+            std::size_t mb = 1024*1024;
+
+            amrex::Print() << "using C2R cuFFT of sizes " << s_1 << " and "
+                << s_2 << " with " << (buffersize+mb-1)/mb << " MiB of work area\n";
 
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
