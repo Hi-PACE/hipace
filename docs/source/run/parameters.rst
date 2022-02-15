@@ -200,6 +200,10 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     The names of the plasmas, separated by a space.
     To run without plasma, choose the name `no_plasma`.
 
+* ``plasmas.nominal_density`` (`string`) optional (default `1.` in normalized units, `1.e23` in SI units)
+    Nominal density (in number per cubic meter) by which quantities are normalized in the explicit solver.
+    This should be roughly the peak density of the unperturbed plasma.
+
 * ``<plasma name>.density(x,y,z)`` (`float`) optional (default `0.`)
     The plasma density as function of `x`, `y` and `z`. `x` and `y` coordinates are taken from
     the simulation box and :math:`z = time \cdot c`. The density gets recalculated at the beginning
