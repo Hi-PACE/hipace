@@ -393,7 +393,7 @@ Hipace::Evolve ()
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
-        m_multi_plasma.CheckDensity();
+        if (m_explicit) m_multi_plasma.CheckDensity();
 
         ResetAllQuantities();
 
