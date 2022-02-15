@@ -393,6 +393,8 @@ Hipace::Evolve ()
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
+        m_multi_plasma.CheckDensity();
+
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
@@ -656,7 +658,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
-    const amrex::Real n0 = m_multi_plasma.maxDensity();
+    const amrex::Real n0 = m_multi_plasma.GetNominalDensity();
     const amrex::Real omegap = std::sqrt(n0 * pc.q_e*pc.q_e/(pc.m_e*pc.ep0));
     const amrex::Real kp = omegap/pc.c;
     const amrex::Real kpinv = 1./kp;
