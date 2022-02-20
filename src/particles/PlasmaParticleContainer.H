@@ -99,6 +99,12 @@ public:
     /** returns u_std of the plasma distribution */
     amrex::RealVect GetUStd () const {return m_u_std;};
 
+    /** Returns charge of physical species */
+    amrex::Real GetCharge () const {return m_charge;};
+
+    /** Returns charge of physical species */
+    amrex::Real GetMass () const {return m_mass;};
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     bool m_use_density_table; /**< if a density value table was specified */

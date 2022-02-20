@@ -4,6 +4,7 @@
 #include "PlasmaParticleContainer.H"
 #include "TileSort.H"
 #include "fields/Fields.H"
+#include "CoulombCollision.H"
 
 class MultiPlasma
 {
@@ -113,7 +114,13 @@ public:
      * to avoid machine-precision problems. */
     void CheckDensity () const;
 
+    /** Perform Coulomb collisions */
+    void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
+
+    /** Number of binary collisions */
+    int m_ncollisions = 0;
 
 private:
 
@@ -124,6 +131,11 @@ private:
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
     amrex::Real m_nominal_density; /**< Density to normalize quantities in the explicit solver */
+
+    /** User-input names of the binary collisions to be used */
+    std::vector<std::string> m_collision_names;
+    /** Vector of binary collisions */
+    amrex::Vector< CoulombCollision > m_all_collisions;
 };
 
 #endif // MULTIPLASMA_H_

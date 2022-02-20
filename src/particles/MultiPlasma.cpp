@@ -14,12 +14,19 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
     m_nominal_density = Hipace::m_normalized_units ? 1. : 1.e23;
     queryWithParser(pp, "nominal_density", m_nominal_density);
+    queryWithParser(pp, "collisions", m_collision_names);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
         m_all_plasmas.emplace_back(PlasmaParticleContainer(amr_core, m_names[i]));
     }
+
+    /** Initialize the collision objects */
+    m_ncollisions = m_collision_names.size();
+     for (int i = 0; i < m_ncollisions; ++i) {
+         m_all_collisions.emplace_back(CoulombCollision(m_names, m_collision_names[i]));
+     }
 }
 
 void
@@ -181,4 +188,22 @@ MultiPlasma::GetUStd () const
     }
 
     return u_std;
+}
+
+void
+MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
+{
+    HIPACE_PROFILE("MultiPlasma::doCoulombCollision");
+    AMREX_ALWAYS_ASSERT(lev == 0);
+    for (int i = 0; i < m_ncollisions; ++i)
+    {
+        auto& species1 = m_all_plasmas[ m_all_collisions[i].m_species1_index ];
+        auto& species2 = m_all_plasmas[ m_all_collisions[i].m_species2_index ];
+
+        // TODO: enable tiling
+
+        CoulombCollision::doCoulombCollision(
+            lev, bx, geom, species1, species2,
+            m_all_collisions[i].m_isSameSpecies, m_all_collisions[i].m_CoulombLog);
+    }
 }

@@ -588,6 +588,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             FillDiagnostics(lev, islice);
 
+            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
             m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
