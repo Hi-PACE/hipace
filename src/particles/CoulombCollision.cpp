@@ -45,20 +45,19 @@ CoulombCollision::doCoulombCollision (
         PlasmaBins bins1 = findParticlesInEachTile(lev, bx, 1, species1, geom);
         int const n_cells = bins1.numBins();
         for (PlasmaParticleIterator pti(species1, lev); pti.isValid(); ++pti) {
+
             auto& aos1 = pti.GetArrayOfStructs();
             const auto& pos1 = aos1.begin();
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy).data();
             amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi).data();
-            // uz = c (gamma - psi - com)
             const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
-
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
             amrex::Real m1 = species1.GetMass();
-            // dt given by dz and psi
+
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
             
             amrex::ParallelFor(
@@ -78,6 +77,7 @@ CoulombCollision::doCoulombCollision (
                         ShuffleFisherYates(
                             indices1, cell_start1, cell_half1 );
 
+                        // TODO: FIX DT (currently = 0.)
                         // Call the function in order to perform collisions
                         ElasticCollisionPerez(
                             cell_start1, cell_half1,
@@ -92,32 +92,87 @@ CoulombCollision::doCoulombCollision (
             count++;
         }
         AMREX_ALWAYS_ASSERT(count == 1);
-/*
-// Extract low-level data
-int const n_cells = bins_1.numBins();
-// - Species 1
-auto& soa_1 = ptile_1.GetStructOfArrays();
-        ParticleReal * const AMREX_RESTRICT ux_1 =
-            soa_1.GetRealData(PIdx::ux).data();
-        ParticleReal * const AMREX_RESTRICT uy_1 =
-            soa_1.GetRealData(PIdx::uy).data();
-        ParticleReal * const AMREX_RESTRICT uz_1  =
-            soa_1.GetRealData(PIdx::uz).data();
-        ParticleReal const * const AMREX_RESTRICT w_1 =
-            soa_1.GetRealData(PIdx::w).data();
-        index_type* indices_1 = bins_1.permutationPtr();
-        index_type const* cell_offsets_1 = bins_1.offsetsPtr();
-        Real q1 = species_1->getCharge();
-        Real m1 = species_1->getMass();
-
-        const Real dt = WarpX::GetInstance().getdt(lev);
-        Geometry const& geom = WarpX::GetInstance().Geom(lev);
-        const Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-
-        // Loop over cells
-*/
     } else {
         PlasmaBins bins1 = findParticlesInEachTile(lev, bx, 1, species1, geom);
         PlasmaBins bins2 = findParticlesInEachTile(lev, bx, 1, species2, geom);
+
+        int const n_cells = bins1.numBins();
+
+        int count = 0;
+        for (PlasmaParticleIterator pti(species1, lev); pti.isValid(); ++pti) {
+
+            auto& aos1 = pti.GetArrayOfStructs();
+            const auto& pos1 = aos1.begin();
+            auto& soa1 = pti.GetStructOfArrays();
+            amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux).data();
+            amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy).data();
+            amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi).data();
+            const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
+            PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
+            PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
+            amrex::Real q1 = species1.GetCharge();
+            amrex::Real m1 = species1.GetMass();
+
+            auto index = std::make_pair(pti.index(), pti.LocalTileIndex());
+            // auto& ptile2 = species2.at(index);
+            auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
+            auto& aos2 = ptile2.GetArrayOfStructs();
+            const auto& pos2 = aos2.begin();
+            auto& soa2 = ptile2.GetStructOfArrays();
+            amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux).data();
+            amrex::Real* const uy2 = soa2.GetRealData(PlasmaIdx::uy).data();
+            amrex::Real* const psi2= soa2.GetRealData(PlasmaIdx::psi).data();
+            const amrex::Real* const w2 = soa2.GetRealData(PlasmaIdx::w).data();
+            PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
+            PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
+            amrex::Real q2 = species2.GetCharge();
+            amrex::Real m2 = species2.GetMass();
+            
+            const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
+        
+            // Extract particles in the tile that `mfi` points to
+            // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
+            // ParticleTileType& ptile_2 = species_2->ParticlesAt(lev, mfi);
+            // Loop over cells, and collide the particles in each cell
+
+            // Loop over cells
+            amrex::ParallelFor(
+                n_cells,
+                [=] AMREX_GPU_DEVICE (int i_cell) noexcept
+                {
+                    // The particles from species1 that are in the cell `i_cell` are
+                    // given by the `indices_1[cell_start_1:cell_stop_1]`
+                    PlasmaBins::index_type const cell_start1 = offsets1[i_cell];
+                    PlasmaBins::index_type const cell_stop1  = offsets1[i_cell+1];
+                    // Same for species 2
+                    PlasmaBins::index_type const cell_start2 = offsets2[i_cell];
+                    PlasmaBins::index_type const cell_stop2  = offsets2[i_cell+1];
+
+                    // ux from species1 can be accessed like this:
+                    // ux_1[ indices_1[i] ], where i is between
+                    // cell_start_1 (inclusive) and cell_start_2 (exclusive)
+
+                    // Do not collide if one species is missing in the cell
+                    if ( cell_stop1 - cell_start1 >= 1 &&
+                         cell_stop2 - cell_start2 >= 1 )
+                    {
+                        // shuffle
+                        ShuffleFisherYates(indices1, cell_start1, cell_stop1);
+                        ShuffleFisherYates(indices2, cell_start2, cell_stop2);
+
+                        // TODO: FIX DT.
+                        // Call the function in order to perform collisions
+                        ElasticCollisionPerez(
+                            cell_start1, cell_stop1, cell_start2, cell_stop2,
+                            indices1, indices2,
+                            ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
+                            q1, q2, m1, m2, -1.0_rt, -1.0_rt,
+                            0._rt, CoulombLog, dV );
+                    }
+                }
+                );
+            count++;
+        }
+        AMREX_ALWAYS_ASSERT(count == 1);        
     }
 };
