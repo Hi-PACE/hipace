@@ -33,21 +33,21 @@ void UpdateMomentumPerezElastic (
 
     // Convert from pseudo-potential to momentum
 
+    amrex::Real normpsi = PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
     // particle's normalized vector potential
-    amrex::Real psi = psi1 *
-        PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
+    amrex::Real psi = psi1 * normpsi;
     // particle's Lorentz factor
     const amrex::Real g1 = (1.0_rt + u1x*u1x*inv_c2 + u1y*u1y*inv_c2
                             + (psi+1._rt)*(psi+1._rt)) / (2.0_rt * (psi+1._rt) );
     amrex::Real u1z = PhysConstSI::c * (g1 - psi - 1._rt);
-    
+
     // particle's normalized vector potential
-    psi = psi2 * PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
+    psi = psi2 * normpsi;
     // particle's Lorentz factor
     const amrex::Real g2 = (1.0_rt + u2x*u2x*inv_c2 + u2y*u2y*inv_c2
                             + (psi+1._rt)*(psi+1._rt)) / (2.0_rt * (psi+1._rt) );
     amrex::Real u2z = PhysConstSI::c * (g2 - psi - 1._rt);
-    
+
     // If g = u1 - u2 = 0, do not collide.
     if ( std::abs(u1x-u2x) < std::numeric_limits<T_R>::min() &&
          std::abs(u1y-u2y) < std::numeric_limits<T_R>::min() &&
@@ -209,6 +209,7 @@ void UpdateMomentumPerezElastic (
         p1fsx = (-p1sp           ) * sinXs*cosphis +
                 ( T_R(0.0)       ) * sinXs*sinphis +
                 ( p1sx           ) * cosXs;
+
     }
 
     T_R const p2fsx = -p1fsx;
@@ -251,7 +252,7 @@ void UpdateMomentumPerezElastic (
         u1y  = p1fy / m1;
         u1z  = p1fz / m1;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
-        psi1 = ga - 1._rt - u1z;
+        psi1 = (ga - 1._rt - u1z/PhysConstSI::c)/normpsi;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
@@ -262,7 +263,7 @@ void UpdateMomentumPerezElastic (
         u2y  = p2fy / m2;
         u2z  = p2fz / m2;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
-        psi2 = ga - 1._rt - u2z;
+        psi2 = (ga - 1._rt - u2z/PhysConstSI::c)/normpsi;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
@@ -270,4 +271,3 @@ void UpdateMomentumPerezElastic (
 }
 
 #endif // HIPACE_UPDATE_MOMENTUM_PEREZ_ELASTIC_H_
-

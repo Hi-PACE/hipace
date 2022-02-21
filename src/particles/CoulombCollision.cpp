@@ -2,13 +2,17 @@
 #include "ShuffleFisherYates.H"
 #include "TileSort.H"
 #include "ElasticCollisionPerez.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 CoulombCollision::CoulombCollision(
     const std::vector<std::string>& species_names,
     std::string const collision_name)
 {
     using namespace amrex::literals;
-    
+
+    // TODO: ionization level
+    // DOTO: Fix dt
+
     // read collision species
     std::vector<std::string> collision_species;
     amrex::ParmParse pp(collision_name);
@@ -34,9 +38,9 @@ CoulombCollision::doCoulombCollision (
     int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
     PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog)
 {
+    HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
     using namespace amrex::literals;
-    amrex::Print()<<"here\n";
 
     if ( is_same_species ) // species_1 == species_2
     {
@@ -59,6 +63,7 @@ CoulombCollision::doCoulombCollision (
             amrex::Real m1 = species1.GetMass();
 
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
+            const amrex::Real dt = geom.CellSize(2)*PhysConstSI::c;
             
             amrex::ParallelFor(
                 n_cells,
@@ -77,7 +82,7 @@ CoulombCollision::doCoulombCollision (
                         ShuffleFisherYates(
                             indices1, cell_start1, cell_half1 );
 
-                        // TODO: FIX DT (currently = 0.)
+                        // TODO: FIX DT
                         // Call the function in order to perform collisions
                         ElasticCollisionPerez(
                             cell_start1, cell_half1,
@@ -85,7 +90,7 @@ CoulombCollision::doCoulombCollision (
                             indices1, indices1,
                             ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
                             q1, q1, m1, m1, -1.0_rt, -1.0_rt,
-                            0._rt, CoulombLog, dV );
+                            dt, CoulombLog, dV );
                     }
                 }
                 );
@@ -129,6 +134,7 @@ CoulombCollision::doCoulombCollision (
             amrex::Real m2 = species2.GetMass();
             
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
+            const amrex::Real dt = geom.CellSize(2)*PhysConstSI::c;
         
             // Extract particles in the tile that `mfi` points to
             // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
@@ -167,7 +173,7 @@ CoulombCollision::doCoulombCollision (
                             indices1, indices2,
                             ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
                             q1, q2, m1, m2, -1.0_rt, -1.0_rt,
-                            0._rt, CoulombLog, dV );
+                            dt, CoulombLog, dV );
                     }
                 }
                 );

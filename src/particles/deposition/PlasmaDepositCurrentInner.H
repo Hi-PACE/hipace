@@ -178,7 +178,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 
                     const amrex::Real psi = psip[ip] *
                         phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c);
-
                     // calculate 1/gamma for plasma particles
                     const amrex::Real gaminv = (2.0_rt * (psi+const_of_motion[ip]) )
                                                 /(1.0_rt + uxp[ip]*uxp[ip]*clightsq

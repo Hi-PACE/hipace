@@ -28,7 +28,6 @@ T_R ComputeTemperature (
         us = ( ux[ I[i] ] * ux[ I[i] ] +
                uy[ I[i] ] * uy[ I[i] ] +
                uz         * uz);
-        // gm = std::sqrt( T_R(1.0) + us*c2i );
         vx += ux[ I[i] ] / gm;
         vy += uy[ I[i] ] / gm;
         vz += uz         / gm;
