@@ -1,3 +1,10 @@
+/* Copyright 2019 Yinjian Zhao
+ *
+ * This file is part of WarpX.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
+
 #ifndef HIPACE_ELASTIC_COLLISION_PEREZ_H_
 #define HIPACE_ELASTIC_COLLISION_PEREZ_H_
 
