@@ -65,9 +65,9 @@ CoulombCollision::doCoulombCollision (
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
             const amrex::Real dt = geom.CellSize(2)*PhysConstSI::c;
             
-            amrex::ParallelFor(
+            amrex::ParallelForRNG(
                 n_cells,
-                [=] AMREX_GPU_DEVICE (int i_cell) noexcept
+                [=] AMREX_GPU_DEVICE (int i_cell, amrex::RandomEngine const& engine) noexcept
                 {
                     // The particles from species1 that are in the cell `i_cell` are
                     // given by the `indices_1[cell_start_1:cell_stop_1]`
@@ -80,7 +80,7 @@ CoulombCollision::doCoulombCollision (
                     {
                         // shuffle
                         ShuffleFisherYates(
-                            indices1, cell_start1, cell_half1 );
+                            indices1, cell_start1, cell_half1, engine );
 
                         // TODO: FIX DT
                         // Call the function in order to perform collisions
@@ -90,7 +90,7 @@ CoulombCollision::doCoulombCollision (
                             indices1, indices1,
                             ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
                             q1, q1, m1, m1, -1.0_rt, -1.0_rt,
-                            dt, CoulombLog, dV );
+                            dt, CoulombLog, dV, engine );
                     }
                 }
                 );
@@ -142,9 +142,9 @@ CoulombCollision::doCoulombCollision (
             // Loop over cells, and collide the particles in each cell
 
             // Loop over cells
-            amrex::ParallelFor(
+            amrex::ParallelForRNG(
                 n_cells,
-                [=] AMREX_GPU_DEVICE (int i_cell) noexcept
+                [=] AMREX_GPU_DEVICE (int i_cell, amrex::RandomEngine const& engine) noexcept
                 {
                     // The particles from species1 that are in the cell `i_cell` are
                     // given by the `indices_1[cell_start_1:cell_stop_1]`
@@ -163,8 +163,8 @@ CoulombCollision::doCoulombCollision (
                          cell_stop2 - cell_start2 >= 1 )
                     {
                         // shuffle
-                        ShuffleFisherYates(indices1, cell_start1, cell_stop1);
-                        ShuffleFisherYates(indices2, cell_start2, cell_stop2);
+                        ShuffleFisherYates(indices1, cell_start1, cell_stop1, engine);
+                        ShuffleFisherYates(indices2, cell_start2, cell_stop2, engine);
 
                         // TODO: FIX DT.
                         // Call the function in order to perform collisions
@@ -173,7 +173,7 @@ CoulombCollision::doCoulombCollision (
                             indices1, indices2,
                             ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
                             q1, q2, m1, m2, -1.0_rt, -1.0_rt,
-                            dt, CoulombLog, dV );
+                            dt, CoulombLog, dV, engine );
                     }
                 }
                 );

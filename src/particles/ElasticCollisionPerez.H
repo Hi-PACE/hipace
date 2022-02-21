@@ -39,7 +39,8 @@ void ElasticCollisionPerez (
     T_R const  q1, T_R const  q2,
     T_R const  m1, T_R const  m2,
     T_R const  T1, T_R const  T2,
-    T_R const  dt, T_R const   L, T_R const dV)
+    T_R const  dt, T_R const   L, T_R const dV,
+    amrex::RandomEngine const& engine)
 {
     T_R constexpr inv_c2 = T_R(1.0)/(PhysConstSI::c*PhysConstSI::c);
     int NI1 = I1e - I1s;
@@ -94,7 +95,7 @@ void ElasticCollisionPerez (
               u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
               n1, n2, n12,
               q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
-              dt, L, lmdD);
+              dt, L, lmdD, engine);
           ++i1; if ( i1 == I1e ) { i1 = I1s; }
           ++i2; if ( i2 == I2e ) { i2 = I2s; }
       }

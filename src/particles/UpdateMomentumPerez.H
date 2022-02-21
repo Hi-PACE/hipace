@@ -25,7 +25,8 @@ void UpdateMomentumPerezElastic (
     T_R const n1, T_R const n2, T_R const n12,
     T_R const q1, T_R const m1, T_R const w1,
     T_R const q2, T_R const m2, T_R const w2,
-    T_R const dt, T_R const L,  T_R const lmdD)
+    T_R const dt, T_R const L,  T_R const lmdD,
+    amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
 
@@ -133,7 +134,7 @@ void UpdateMomentumPerezElastic (
     s = amrex::min(s,sp);
 
     // Get random numbers
-    T_R r = amrex::Random();
+    T_R r = amrex::Random(engine);
 
     // Compute scattering angle
     T_R cosXs;
@@ -145,7 +146,7 @@ void UpdateMomentumPerezElastic (
             cosXs = T_R(1.0) + s * std::log(r);
             // Avoid the bug when r is too small such that cosXs < -1
             if ( cosXs >= T_R(-1.0) ) { break; }
-            r = amrex::Random();
+            r = amrex::Random(engine);
         }
     }
     else if ( s > T_R(0.1) && s <= T_R(3.0) )
@@ -168,7 +169,7 @@ void UpdateMomentumPerezElastic (
     sinXs = std::sqrt(T_R(1.0) - cosXs*cosXs);
 
     // Get random azimuthal angle
-    T_R const phis = amrex::Random() * T_R(2.0) * MathConst::pi;
+    T_R const phis = amrex::Random(engine) * T_R(2.0) * MathConst::pi;
     T_R const cosphis = std::cos(phis);
     T_R const sinphis = std::sin(phis);
 
@@ -245,7 +246,7 @@ void UpdateMomentumPerezElastic (
     }
 
     // Rejection method
-    r = amrex::Random();
+    r = amrex::Random(engine);
     if ( w2 > r*amrex::max(w1, w2) )
     {
         u1x  = p1fx / m1;
@@ -256,7 +257,7 @@ void UpdateMomentumPerezElastic (
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
-    r = amrex::Random();
+    r = amrex::Random(engine);
     if ( w1 > r*amrex::max(w1, w2) )
     {
         u2x  = p2fx / m2;
