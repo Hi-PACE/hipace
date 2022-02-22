@@ -11,9 +11,6 @@ using namespace amrex::literals;
 
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
-amrex::IntVect Fields::m_exmby_eypbx_grow = {-1, -1, -1};
-bool Fields::m_extended_solve = false;
-bool Fields::m_open_boundary = false;
 
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
@@ -39,6 +36,7 @@ Fields::AllocData (
         m_slices_nguards = {nguards_xy, nguards_xy, 0};
         m_poisson_nguards = m_slices_nguards;
         m_exmby_eypbx_grow = m_slices_nguards - amrex::IntVect{1, 1, 0};
+        m_source_nguard = -m_slices_nguards;
     } else {
         // Need 1 extra guard cell transversally for transverse derivative
         int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
@@ -46,6 +44,7 @@ Fields::AllocData (
         // Poisson solver same size as domain, no ghost cells
         m_poisson_nguards = {0, 0, 0};
         m_exmby_eypbx_grow = {0, 0, 0};
+        m_source_nguard = {0, 0, 0};
     }
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
@@ -97,19 +96,12 @@ struct derivative_inner {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> array;
     amrex::Real dx_inv;
-    int box_lo;
-    int box_hi;
 
     // derivative of field in dir direction (x or y)
-    // the field is zero-extended such that this derivative can be accessed on the same box
     AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
         constexpr bool is_x_dir = dir == Direction::x;
         constexpr bool is_y_dir = dir == Direction::y;
-        const int ij_along_dir = is_x_dir * i + is_y_dir * j;
-        const bool lo_guard = ij_along_dir != box_lo;
-        const bool hi_guard = ij_along_dir != box_hi;
-        return (array(i+is_x_dir*hi_guard,j+is_y_dir*hi_guard,k)*hi_guard
-               -array(i-is_x_dir*lo_guard,j-is_y_dir*lo_guard,k)*lo_guard) * dx_inv;
+        return (array(i+is_x_dir,j+is_y_dir,k) - array(i-is_x_dir,j-is_y_dir,k)) * dx_inv;
     }
 };
 
@@ -127,8 +119,7 @@ struct derivative_inner<Direction::z> {
     }
 };
 
-/** \brief derivative in x or y direction. Field is zero-extended by one cell such that this
- * derivative can be accessed on the same box as the field */
+/** \brief derivative in x or y direction */
 template<int dir>
 struct derivative {
     // use brace initialization as constructor
@@ -137,9 +128,7 @@ struct derivative {
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
-        amrex::Box bx = f_view[mfi].box();
-        return derivative_inner<dir>{f_view.array(mfi),
-            1._rt/(2._rt*geom.CellSize(dir)), bx.smallEnd(dir), bx.bigEnd(dir)};
+        return derivative_inner<dir>{f_view.array(mfi), 1._rt/(2._rt*geom.CellSize(dir))};
     }
 };
 
@@ -293,10 +282,16 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
         const auto src_a_array = src_a.array(mfi);
         const auto src_b_array = src_b.array(mfi);
         const amrex::Box bx = mfi.growntilebox(box_grow);
-        amrex::ParallelFor(bx,
+        const int box_i_lo = bx.smallEnd(Direction::x);
+        const int box_j_lo = bx.smallEnd(Direction::y);
+        const int box_i_hi = bx.bigEnd(Direction::x);
+        const int box_j_hi = bx.bigEnd(Direction::y);
+        amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
-                dst_array(i,j,k) = factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k);
+                const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
+                dst_array(i,j,k) =
+                    inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
             });
     }
 }
@@ -534,16 +529,20 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             HIPACE_PROFILE("Boundary::ParReduce()");
             coeff_tuple =
             amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
-                             staging_area, m_poisson_nguards,
+                             staging_area, m_source_nguard,
                 [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
                 {
                     const amrex::Real x = (i * dx + poff_x) * scale;
                     const amrex::Real y = (j * dy + poff_y) * scale;
                     amrex::Real s_v = arr_staging_area(i, j, k);
-                    if (x*x + y*y > cutoff_sq) s_v = 0._rt;
+                    if (x*x + y*y > cutoff_sq) return MultipoleTuple{}; //zero
                     return GetMultipoleCoeffs(s_v, x, y);
                 }
             );
+        }
+
+        if (component == "Ez" || component == "Bz") {
+            amrex::get<0>(coeff_tuple) = 0._rt;
         }
 
         {
@@ -651,7 +650,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
 
@@ -708,7 +707,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    1._rt/(phys_const.ep0*phys_const.c),
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
                    1._rt/(phys_const.ep0*phys_const.c),
@@ -732,7 +731,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
 
     // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
     // and store in the staging area of poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    -phys_const.mu0,
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    phys_const.mu0,
@@ -757,7 +756,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
 
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    -phys_const.mu0,
@@ -784,7 +783,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
                    -phys_const.mu0,

@@ -294,12 +294,8 @@ public:
     static amrex::IntVect m_slices_nguards;
     /** Number of guard cells for poisson solver MultiFab */
     static amrex::IntVect m_poisson_nguards;
-    /** Number of guard cells where ExmBy and EypBx are calculated */
-    static amrex::IntVect m_exmby_eypbx_grow;
     /** If the poisson solver should include the guard cells */
-    static bool m_extended_solve;
-    /** If lev_0 should be solved with open boundary conditions */
-    static bool m_open_boundary;
+    bool m_extended_solve = false;
 
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
@@ -310,6 +306,12 @@ private:
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
+    /** Number of guard cells where ExmBy and EypBx are calculated */
+    amrex::IntVect m_exmby_eypbx_grow;
+    /** Number of guard cells where sources for poisson equation are included */
+    amrex::IntVect m_source_nguard;
+    /** If lev_0 should be solved with open boundary conditions */
+    bool m_open_boundary = false;
 };
 
 #endif

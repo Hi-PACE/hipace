@@ -555,7 +555,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                  ijz == ijx+4 && ijz_beam == ijx+5 && irho == ijx+6 );
             amrex::MultiFab j_slice(m_fields.getSlices(lev, WhichSlice::This),
                                     amrex::make_alias, Comps[WhichSlice::This]["jx"], 7);
-            if (!Fields::m_extended_solve) j_slice.FillBoundary(Geom(lev).periodicity());
+            if (!m_fields.m_extended_solve) j_slice.FillBoundary(Geom(lev).periodicity());
 
             m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
 
@@ -565,7 +565,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                              WhichSlice::This);
             m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
-            if (!Fields::m_extended_solve) j_slice.FillBoundary(Geom(lev).periodicity());
+            if (!m_fields.m_extended_solve) j_slice.FillBoundary(Geom(lev).periodicity());
 
             m_fields.SolvePoissonEz(Geom(), lev, islice);
             m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -857,7 +857,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     /* Guess Bx and By */
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
 
-    if (!Fields::m_extended_solve) {
+    if (!m_fields.m_extended_solve) {
         amrex::ParallelContext::push(m_comm_xy);
         // exchange ExmBy EypBx Ez Bx By Bz
         m_fields.getSlices(lev, WhichSlice::This).FillBoundary(Geom(lev).periodicity());
@@ -923,7 +923,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 
-        if (!Fields::m_extended_solve) {
+        if (!m_fields.m_extended_solve) {
             amrex::ParallelContext::push(m_comm_xy);
             // need to exchange jx jy jx_beam jy_beam
             amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
@@ -959,7 +959,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         jx_beam_next.setVal(0., m_fields.m_slices_nguards);
         jy_beam_next.setVal(0., m_fields.m_slices_nguards);
 
-        if (!Fields::m_extended_solve) {
+        if (!m_fields.m_extended_solve) {
             amrex::ParallelContext::push(m_comm_xy);
             // exchange Bx By
             m_fields.getSlices(lev, WhichSlice::This).FillBoundary(Geom(lev).periodicity());
