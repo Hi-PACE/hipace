@@ -34,8 +34,11 @@ Fields::AllocData (
         // Need 1 extra guard cell transversally for transverse derivative
         int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
         m_slices_nguards = {nguards_xy, nguards_xy, 0};
+        // poisson solver same size as fields
         m_poisson_nguards = m_slices_nguards;
-        m_exmby_eypbx_grow = m_slices_nguards - amrex::IntVect{1, 1, 0};
+        // one cell less for transverse derivative
+        m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
+        // cut off anything near edge of charge/current deposition
         m_source_nguard = -m_slices_nguards;
     } else {
         // Need 1 extra guard cell transversally for transverse derivative
@@ -43,7 +46,7 @@ Fields::AllocData (
         m_slices_nguards = {nguards_xy, nguards_xy, 0};
         // Poisson solver same size as domain, no ghost cells
         m_poisson_nguards = {0, 0, 0};
-        m_exmby_eypbx_grow = {0, 0, 0};
+        m_exmby_eypbx_nguard = {0, 0, 0};
         m_source_nguard = {0, 0, 0};
     }
 
@@ -505,8 +508,11 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     if (lev == 0 && m_open_boundary) {
+        // Coarsest level: use Taylor expansion of the Green's function
+        // to get Dirichlet boundary conditions
 
         amrex::MultiFab staging_area = getStagingArea(lev);
+        // Open Boundaries only work for lev0 with everything in one box
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
         const auto arr_staging_area = staging_area_fab.array();
@@ -516,11 +522,18 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
         const amrex::Real dx = geom[lev].CellSize(0);
         const amrex::Real dy = geom[lev].CellSize(1);
+        // scale factor cancels out for all multipole coefficients except the 0th, for wich it adds
+        // a constant therm to the potential
         const amrex::Real scale = 3._rt/std::sqrt(
             pow<2>(geom[lev].ProbLength(0)) + pow<2>(geom[lev].ProbLength(1)));
         const amrex::Real radius = amrex::min(
             std::abs(geom[lev].ProbLo(0)), std::abs(geom[lev].ProbHi(0)),
             std::abs(geom[lev].ProbLo(1)), std::abs(geom[lev].ProbHi(1)));
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(radius > 0._rt, "The x=0, y=0 coordinate must be inside"
+            "the simulation box as it is used as the point of expansion for open boundaries");
+        // ignore everything outside of 95% the min radius as the Taylor expansion only converges
+        // outside of a circular patch containing the sources, i.e. the sources can't be further
+        // from the center than the closest boundary as it would be the case in the corners
         const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale);
         const amrex::Real dxdy_div_4pi = dx*dy/(4._rt * MathConst::pi);
 
@@ -542,6 +555,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         }
 
         if (component == "Ez" || component == "Bz") {
+            // Because Ez and Bz only have transverse derivatives of currents as sources, the
+            // integral over the whole box is zero, meaning they have no physical monopole component
             amrex::get<0>(coeff_tuple) = 0._rt;
         }
 
@@ -556,6 +571,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         }
 
     } else if (lev == 1) {
+        // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
         constexpr int interp_order = 2;
 
         const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
@@ -679,7 +695,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
-        const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_grow);
+        const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
         const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 

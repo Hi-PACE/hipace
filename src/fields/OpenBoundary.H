@@ -4,6 +4,9 @@
 #include <AMReX_AmrCore.H>
 #include <cmath>
 
+/** \brief calculate low integer powers base^exp
+ * \param[in] base base of power
+ */
 template<unsigned int exp> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 amrex::Real pow (amrex::Real base) {
     using namespace amrex::literals;
@@ -62,6 +65,32 @@ using MultipoleReduceTypeList = amrex::TypeList<
     amrex::Real, amrex::Real, amrex::Real,
     amrex::Real>;
 
+// To solve a poisson equation (d^2/dx^2 + d^2/dy^2)phi = source with open boundary conditions for
+// phi(x,y), the source field at (x',y') is integrated together with the Green's function
+// G(x,y,x',y') = 1/(2*pi) * ln(sqrt((x-x')^2 + (y-y')^2)) = 1/(4*pi) * ln((x-x')^2 + (y-y')^2)
+// over x' and y'. Doing this directly would be slow (O(n^2), n=nx*ny) so only the values at the
+// boundary are obtained in this way with the rest of phi being solved by a normal poisson solver
+// using the obtained values as Dirichlet boundary conditions. As this would still be O(n^(3/2))
+// the Green's function isn't used directly, instead it is approximated by a 18th order Taylor
+// expansion in x'=0 and y'=0. This reduces time complexity to O(n) because now the integral over
+// x', y' and sum over Taylor coefficients can be swapped such that the integral does not depend on
+// x, y only x', y'. In general, such a 2D Taylor expansion would have 2^o coefficients per order o,
+// here 524287 in total. Due to Schwarz's theorem this reduces to o+1 per order, 190 in total.
+// The amount of coefficients can be further reduced to just 2 per order (1 for 0th order), 37 in
+// total because (d^2/dx'^2 + d^2/dy'^2)G(x,y,x',y') = 0 for x, y outside of the region containing
+// sources. This makes d^2/dx'^2 G = - d^2/dy'^2 G the second derivatives proportional to each
+// other, only leaving coefficients with even and odd derivatives/powers of y separate. An important
+// note about the Taylor expansion is that it only converges if (x'^2 + y'^2) < (x^2 + y^2).
+// This means the sources in the corners have to be ignored es they are further away from
+// the center than some of the boundary.
+
+/** \brief get the multipole coefficients for open boundaries,
+ * these have to be integrated over all souces
+ *
+ * \param[in] s_v source value at this location
+ * \param[in] x (normalized) x coordinate
+ * \param[in] y (normalized) y coordinate
+ */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 MultipoleTuple GetMultipoleCoeffs (amrex::Real s_v, amrex::Real x, amrex::Real y)
 {
@@ -107,11 +136,18 @@ MultipoleTuple GetMultipoleCoeffs (amrex::Real s_v, amrex::Real x, amrex::Real y
     };
 }
 
+/** \brief get the solution field using the multipole coefficients
+ *
+ * \param[in] m_c multipole coefficients
+ * \param[in] x_domain (normalized) x coordinate
+ * \param[in] y_domain (normalized) y coordinate
+ */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 amrex::Real GetFieldMultipole (MultipoleTuple m_c, amrex::Real x_domain, amrex::Real y_domain)
 {
     using namespace amrex::literals;
     amrex::Real radius_2 = pow<2>(x_domain) + pow<2>(y_domain);
+    // the coordinate normalization cancels out here
     amrex::Real x = x_domain / radius_2;
     amrex::Real y = y_domain / radius_2;
     return

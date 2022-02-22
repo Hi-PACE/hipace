@@ -307,7 +307,7 @@ private:
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Number of guard cells where ExmBy and EypBx are calculated */
-    amrex::IntVect m_exmby_eypbx_grow;
+    amrex::IntVect m_exmby_eypbx_nguard;
     /** Number of guard cells where sources for poisson equation are included */
     amrex::IntVect m_source_nguard;
     /** If lev_0 should be solved with open boundary conditions */
