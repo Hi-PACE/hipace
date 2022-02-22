@@ -33,7 +33,7 @@ findParticlesInEachTile (
         bins.build(
             pti.numParticles(), pti.GetArrayOfStructs().begin(), cbx,
             // Pass lambda function that returns the tile index
-            [=] (const PlasmaParticleContainer::ParticleType& p)
+            [=] AMREX_GPU_DEVICE (const PlasmaParticleContainer::ParticleType& p)
             noexcept -> amrex::IntVect
             {
                 return amrex::IntVect(
