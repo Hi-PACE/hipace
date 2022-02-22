@@ -25,6 +25,7 @@ struct PlasmaIdx
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
         Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
         x0, y0,                              // initial positions
+        const_of_motion,                     // inital constant of motion (= 1 for a cold plasma)
         nattribs
     };
     enum {
@@ -92,6 +93,12 @@ public:
      */
     void UpdateDensityFunction ();
 
+    /** returns u_mean of the plasma distribution */
+    amrex::RealVect GetUMean () const {return m_u_mean;};
+
+    /** returns u_std of the plasma distribution */
+    amrex::RealVect GetUStd () const {return m_u_std;};
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     bool m_use_density_table; /**< if a density value table was specified */
@@ -108,6 +115,7 @@ public:
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
+    amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
