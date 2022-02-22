@@ -49,6 +49,8 @@ void ElasticCollisionPerez (
     T_R const  dt, T_R const   L, T_R const dV,
     amrex::RandomEngine const& engine)
 {
+    using namespace amrex::literals;
+
     T_R constexpr inv_c2 = T_R(1.0)/(PhysConstSI::c*PhysConstSI::c);
     int NI1 = I1e - I1s;
     int NI2 = I2e - I2s;
@@ -94,18 +96,39 @@ void ElasticCollisionPerez (
 
     // call UpdateMomentumPerezElastic()
     {
-      int i1 = I1s; int i2 = I2s;
-      for (int k = 0; k < amrex::max(NI1,NI2); ++k)
-      {
-          UpdateMomentumPerezElastic(
-              u1x[ I1[i1] ], u1y[ I1[i1] ], psi1[ I1[i1] ],
-              u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
-              n1, n2, n12,
-              q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
-              dt, L, lmdD, engine);
-          ++i1; if ( i1 == I1e ) { i1 = I1s; }
-          ++i2; if ( i2 == I2e ) { i2 = I2s; }
-      }
+        int i1 = I1s; int i2 = I2s;
+        for (int k = 0; k < amrex::max(NI1,NI2); ++k)
+        {
+            // particle's normalized vector potential
+            const amrex::Real psi1i = psi1[I1[i1]] *
+                PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
+            // particle's Lorentz factor
+            const amrex::Real g1 = (
+                1.0_rt +
+                u1x[I1[i1]]*u1x[I1[i1]]*inv_c2 + u1y[I1[i1]]*u1y[I1[i1]]*inv_c2 +
+                (psi1i+1._rt)*(psi1i+1._rt)) / (2.0_rt * (psi1i+1._rt) );
+            // particle's normalized vector potential
+            const amrex::Real psi2i = psi2[I2[i2]] *
+                PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
+            // particle's Lorentz factor
+            const amrex::Real g2 = (
+                1.0_rt +
+                u2x[I2[i2]]*u2x[I2[i2]]*inv_c2 + u2y[I2[i2]]*u2y[I2[i2]]*inv_c2 +
+                (psi2i+1._rt)*(psi2i+1._rt)) / (2.0_rt * (psi2i+1._rt) );
+            // In the longitudinal push of plasma particles, the dt is different for each particle.
+            // The dt applied for collision probability is the average (in the lab frame) of these
+            // dts. This is NOT clean. TODO FIXME.
+            const amrex::Real dt_fac = 0.5_rt * (g1/(psi1i+1._rt) + g2/(psi2i + 1._rt));
+
+            UpdateMomentumPerezElastic(
+                u1x[ I1[i1] ], u1y[ I1[i1] ], psi1[ I1[i1] ],
+                u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
+                n1, n2, n12,
+                q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
+                dt*dt_fac, L, lmdD, engine);
+            ++i1; if ( i1 == I1e ) { i1 = I1s; }
+            ++i2; if ( i2 == I2e ) { i2 = I2s; }
+        }
     }
 }
 
