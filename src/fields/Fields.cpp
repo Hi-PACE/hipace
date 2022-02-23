@@ -547,8 +547,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                 {
                     const amrex::Real x = (i * dx + poff_x) * scale;
                     const amrex::Real y = (j * dy + poff_y) * scale;
-                    amrex::Real s_v = arr_staging_area(i, j, k);
                     if (x*x + y*y > cutoff_sq) return MultipoleTuple{}; //zero
+                    amrex::Real s_v = arr_staging_area(i, j, k);
                     return GetMultipoleCoeffs(s_v, x, y);
                 }
             );

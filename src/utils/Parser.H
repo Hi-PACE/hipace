@@ -21,8 +21,16 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val);
 
 namespace Parser
 {
-    extern std::map<std::string, double> my_constants_cache;
-    extern std::map<std::string, double> hipace_constants;
+    // Cache for evaluated constants
+    static std::map<std::string, double> my_constants_cache{};
+
+    // Physical / Numerical Constants available to parsed expressions
+    static std::map<std::string, double> hipace_constants
+        {
+            {"pi", MathConst::pi},
+            {"true", 1},
+            {"false", 0}
+        };
 
     /** \brief add Physical constants to Parser constants
      *

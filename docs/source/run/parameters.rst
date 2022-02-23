@@ -146,6 +146,17 @@ Modeling ion motion is not yet supported by the explicit solver
     The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
     The default is set accordingly.
 
+* ``fields.extended_solve`` (`bool`) optional (default `0`)
+    Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artefacts
+    originating from the boundary for long simulations.
+
+* ``fields.open_boundary`` (`bool`) optional (default `0`)
+    Uses a Taylor approximation of the Greens function to solve the Poisson equations with
+    open boundary conditions. It's Recommended to use this together with
+    `fields.extended_solve = true` and `geometry.is_periodic = false false false`. Not implemented
+    for the explicit Helmholtz solver.
+
+
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
