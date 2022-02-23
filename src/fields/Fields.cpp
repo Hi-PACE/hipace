@@ -537,22 +537,18 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale);
         const amrex::Real dxdy_div_4pi = dx*dy/(4._rt * MathConst::pi);
 
-        MultipoleTuple coeff_tuple{};
-        {
-            HIPACE_PROFILE("Boundary::ParReduce()");
-            coeff_tuple =
-            amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
-                             staging_area, m_source_nguard,
-                [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
-                {
-                    const amrex::Real x = (i * dx + poff_x) * scale;
-                    const amrex::Real y = (j * dy + poff_y) * scale;
-                    if (x*x + y*y > cutoff_sq) return MultipoleTuple{}; //zero
-                    amrex::Real s_v = arr_staging_area(i, j, k);
-                    return GetMultipoleCoeffs(s_v, x, y);
-                }
-            );
-        }
+        MultipoleTuple coeff_tuple =
+        amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
+                         staging_area, m_source_nguard,
+            [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
+            {
+                const amrex::Real x = (i * dx + poff_x) * scale;
+                const amrex::Real y = (j * dy + poff_y) * scale;
+                if (x*x + y*y > cutoff_sq) return MultipoleTuple{}; //zero
+                amrex::Real s_v = arr_staging_area(i, j, k);
+                return GetMultipoleCoeffs(s_v, x, y);
+            }
+        );
 
         if (component == "Ez" || component == "Bz") {
             // Because Ez and Bz only have transverse derivatives of currents as sources, the
@@ -560,15 +556,12 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             amrex::get<0>(coeff_tuple) = 0._rt;
         }
 
-        {
-            HIPACE_PROFILE("Boundary::SetDirichlet()");
-            SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
-                [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
-                {
-                    return dxdy_div_4pi*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
-                }
-            );
-        }
+        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
+            [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
+            {
+                return dxdy_div_4pi*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
+            }
+        );
 
     } else if (lev == 1) {
         // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions

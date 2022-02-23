@@ -152,7 +152,7 @@ Modeling ion motion is not yet supported by the explicit solver
 
 * ``fields.open_boundary`` (`bool`) optional (default `0`)
     Uses a Taylor approximation of the Greens function to solve the Poisson equations with
-    open boundary conditions. It's Recommended to use this together with
+    open boundary conditions. It's recommended to use this together with
     `fields.extended_solve = true` and `geometry.is_periodic = false false false`. Not implemented
     for the explicit Helmholtz solver.
 
