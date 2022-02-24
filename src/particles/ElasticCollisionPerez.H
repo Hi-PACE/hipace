@@ -72,24 +72,29 @@ void ElasticCollisionPerez (
     T_R n1  = T_R(0.0);
     T_R n2  = T_R(0.0);
     T_R n12 = T_R(0.0);
-    for (int i1=I1s; i1<I1e; ++i1) { n1 += w1[ I1[i1] ]; }
-    for (int i2=I2s; i2<I2e; ++i2) { n2 += w2[ I2[i2] ]; }
+    for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) { n1 += w1[ I1[i1] ]; }
+    for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) { n2 += w2[ I2[i2] ]; }
     n1 = n1 / dV; n2 = n2 / dV;
     {
       int i1 = I1s; int i2 = I2s;
       for (int k = 0; k < amrex::max(NI1,NI2); ++k)
       {
         n12 += amrex::min( w1[ I1[i1] ], w2[ I2[i2] ] );
-        ++i1; if ( i1 == I1e ) { i1 = I1s; }
-        ++i2; if ( i2 == I2e ) { i2 = I2s; }
+        ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
+        ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
       }
       n12 = n12 / dV;
     }
 
     // compute Debye length lmdD
     T_R lmdD;
-    lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*PhysConstSI::ep0) +
-                         n2*q2*q2/(T2t*PhysConstSI::ep0) );
+    if ( T1t < T_R(0.0) || T2t < T_R(0.0) ) {
+        lmdD = T_R(0.0);
+    }
+    else {
+        lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*PhysConstSI::ep0) +
+                                   n2*q2*q2/(T2t*PhysConstSI::ep0) );
+    }
     T_R rmin = std::pow( T_R(4.0) * MathConst::pi / T_R(3.0) *
                amrex::max(n1,n2), T_R(-1.0/3.0) );
     lmdD = amrex::max(lmdD, rmin);
@@ -119,15 +124,15 @@ void ElasticCollisionPerez (
             // The dt applied for collision probability is the average (in the lab frame) of these
             // dts. This is NOT clean. TODO FIXME.
             const amrex::Real dt_fac = 0.5_rt * (g1/(psi1i+1._rt) + g2/(psi2i + 1._rt));
-
             UpdateMomentumPerezElastic(
                 u1x[ I1[i1] ], u1y[ I1[i1] ], psi1[ I1[i1] ],
                 u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
                 n1, n2, n12,
                 q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
-                dt*dt_fac, L, lmdD, engine);
-            ++i1; if ( i1 == I1e ) { i1 = I1s; }
-            ++i2; if ( i2 == I2e ) { i2 = I2s; }
+                dt * dt_fac, L, lmdD, engine);
+
+            ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
+            ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
         }
     }
 }

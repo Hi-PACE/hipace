@@ -41,26 +41,34 @@ void UpdateMomentumPerezElastic (
 
     // Convert from pseudo-potential to momentum
 
-    amrex::Real normpsi = PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
+    constexpr amrex::Real normpsi = PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
     // particle's normalized vector potential
     amrex::Real psi = psi1 * normpsi;
     // particle's Lorentz factor
-    const amrex::Real g1 = (1.0_rt + u1x*u1x*inv_c2 + u1y*u1y*inv_c2
+    const amrex::Real g1_tmp = (1.0_rt + u1x*u1x*inv_c2 + u1y*u1y*inv_c2
                             + (psi+1._rt)*(psi+1._rt)) / (2.0_rt * (psi+1._rt) );
-    amrex::Real u1z = PhysConstSI::c * (g1 - psi - 1._rt);
+    amrex::Real u1z = PhysConstSI::c * (g1_tmp - psi - 1._rt);
 
     // particle's normalized vector potential
     psi = psi2 * normpsi;
     // particle's Lorentz factor
-    const amrex::Real g2 = (1.0_rt + u2x*u2x*inv_c2 + u2y*u2y*inv_c2
+    const amrex::Real g2_tmp = (1.0_rt + u2x*u2x*inv_c2 + u2y*u2y*inv_c2
                             + (psi+1._rt)*(psi+1._rt)) / (2.0_rt * (psi+1._rt) );
-    amrex::Real u2z = PhysConstSI::c * (g2 - psi - 1._rt);
+    amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi - 1._rt);
 
+    T_R const diffx = amrex::Math::abs(u1x-u2x);
+    T_R const diffy = amrex::Math::abs(u1y-u2y);
+    T_R const diffz = amrex::Math::abs(u1z-u2z);
+    T_R const diffm = std::sqrt(diffx*diffx+diffy*diffy+diffz*diffz);
+    T_R const summm = std::sqrt(u1x*u1x+u1y*u1y+u1z*u1z) + std::sqrt(u2x*u2x+u2y*u2y+u2z*u2z);
     // If g = u1 - u2 = 0, do not collide.
-    if ( std::abs(u1x-u2x) < std::numeric_limits<T_R>::min() &&
-         std::abs(u1y-u2y) < std::numeric_limits<T_R>::min() &&
-         std::abs(u1z-u2z) < std::numeric_limits<T_R>::min() )
-    { return; }
+    // Or if the relative difference is less than 1.0e-10.
+    if ( diffm < std::numeric_limits<T_R>::min() || diffm/summm < 1.0e-10 ) {
+        return;
+    }
+    // Compute Lorentz factor gamma
+    T_R const g1 = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
+    T_R const g2 = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
 
     // Compute momenta
     T_R const p1x = u1x * m1;
@@ -112,7 +120,7 @@ void UpdateMomentumPerezElastic (
     else
     {
         // Compute b0
-        T_R const b0 = std::abs(q1*q2) * inv_c2 /
+        T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2 /
                (T_R(4.0)*MathConst::pi*PhysConstSI::ep0) * gc/mass_g *
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2) + T_R(1.0) );
 
@@ -125,17 +133,21 @@ void UpdateMomentumPerezElastic (
     }
 
     // Compute s
+    const auto tts = m1*g1s*m2*g2s/(inv_c2*p1sm*p1sm) + T_R(1.0);
+    const auto tts2 = tts*tts;
     T_R s = n1*n2/n12 * dt*lnLmd*q1*q1*q2*q2 /
           ( T_R(4.0) * MathConst::pi * PhysConstSI::ep0 * PhysConstSI::ep0 *
-            m1*g1*m2*g2/(inv_c2*inv_c2) ) * gc*p1sm/mass_g *
-            std::pow(m1*g1s*m2*g2s/(inv_c2*p1sm*p1sm) + T_R(1.0), 2.0);
+            m1*g1*m2*g2/(inv_c2*inv_c2) ) * gc*p1sm/mass_g * tts2;
 
     // Compute s'
+    const auto cbrt_n1 = std::cbrt(n1);
+    const auto cbrt_n2 = std::cbrt(n2);
+    const auto coeff = static_cast<T_R>(
+        std::pow(4.0*MathConst::pi/3.0,1.0/3.0));
     T_R const vrel = mass_g*p1sm/(m1*g1s*m2*g2s*gc);
-    T_R const sp = std::pow(T_R(4.0)*MathConst::pi/T_R(3.0),T_R(1.0/3.0)) *
-          n1*n2/n12 * dt * vrel * (m1+m2) /
-          amrex::max( m1*std::pow(n1,T_R(2.0/3.0)),
-                      m2*std::pow(n2,T_R(2.0/3.0)) );
+    T_R const sp = coeff * n1*n2/n12 * dt * vrel * (m1+m2) /
+          amrex::max( m1*cbrt_n1*cbrt_n1,
+                      m2*cbrt_n2*cbrt_n2);
 
     // Determine s
     s = amrex::min(s,sp);
@@ -158,8 +170,9 @@ void UpdateMomentumPerezElastic (
     }
     else if ( s > T_R(0.1) && s <= T_R(3.0) )
     {
-        T_R const Ainv = 0.0056958 + 0.9560202*s - 0.508139*s*s +
-            0.47913906*s*s*s - 0.12788975*s*s*s*s + 0.02389567*s*s*s*s*s;
+        T_R const Ainv = static_cast<T_R>(
+            0.0056958 + 0.9560202*s - 0.508139*s*s +
+            0.47913906*s*s*s - 0.12788975*s*s*s*s + 0.02389567*s*s*s*s*s);
         cosXs = Ainv * std::log( std::exp(T_R(-1.0)/Ainv) +
                 T_R(2.0) * r * std::sinh(T_R(1.0)/Ainv) );
     }
