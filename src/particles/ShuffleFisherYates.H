@@ -1,3 +1,9 @@
+/* Copyright 2019 Yinjian Zhao
+ *
+ * This file is part of WarpX.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_SHUFFLE_FISHER_YATES_H_
 #define HIPACE_SHUFFLE_FISHER_YATES_H_
 
@@ -16,7 +22,7 @@ void ShuffleFisherYates (T_index *array, T_index const is, T_index const ie,
 {
     int     j;
     T_index buf;
-    for (int i = ie-1; i >= is+1; --i)
+    for (int i = ie-1; i >= static_cast<int>(is+1); --i)
     {
         // get random number j: is <= j <= i
         j = amrex::Random_int(i-is+1, engine) + is;

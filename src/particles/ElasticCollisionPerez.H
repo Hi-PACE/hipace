@@ -4,7 +4,6 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-
 #ifndef HIPACE_ELASTIC_COLLISION_PEREZ_H_
 #define HIPACE_ELASTIC_COLLISION_PEREZ_H_
 

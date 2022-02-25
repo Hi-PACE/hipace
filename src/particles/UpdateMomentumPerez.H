@@ -288,7 +288,6 @@ void UpdateMomentumPerezElastic (
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
-
 }
 
 #endif // HIPACE_UPDATE_MOMENTUM_PEREZ_ELASTIC_H_

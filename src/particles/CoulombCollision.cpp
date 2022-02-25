@@ -63,8 +63,8 @@ CoulombCollision::doCoulombCollision (
             amrex::Real m1 = species1.GetMass();
 
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real dt = geom.CellSize(2)*PhysConstSI::c;
-            
+            const amrex::Real dt = geom.CellSize(2)/PhysConstSI::c;
+
             amrex::ParallelForRNG(
                 n_cells,
                 [=] AMREX_GPU_DEVICE (int i_cell, amrex::RandomEngine const& engine) noexcept
@@ -75,23 +75,21 @@ CoulombCollision::doCoulombCollision (
                     PlasmaBins::index_type const cell_stop1  = offsets1[i_cell+1];
                     PlasmaBins::index_type const cell_half1 = (cell_start1+cell_stop1)/2;
 
+                    if ( cell_stop1 - cell_start1 <= 1 ) return;
                     // Do not collide if there is only one particle in the cell
-                    if ( cell_stop1 - cell_start1 >= 2 )
-                    {
-                        // shuffle
-                        ShuffleFisherYates(
-                            indices1, cell_start1, cell_half1, engine );
+                    // shuffle
+                    ShuffleFisherYates(
+                        indices1, cell_start1, cell_half1, engine );
 
-                        // TODO: FIX DT
-                        // Call the function in order to perform collisions
-                        ElasticCollisionPerez(
-                            cell_start1, cell_half1,
-                            cell_half1, cell_stop1,
-                            indices1, indices1,
-                            ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
-                            q1, q1, m1, m1, -1.0_rt, -1.0_rt,
-                            dt, CoulombLog, dV, engine );
-                    }
+                    // TODO: FIX DT
+                    // Call the function in order to perform collisions
+                    ElasticCollisionPerez(
+                        cell_start1, cell_half1,
+                        cell_half1, cell_stop1,
+                        indices1, indices1,
+                        ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
+                        q1, q1, m1, m1, -1.0_rt, -1.0_rt,
+                        dt, CoulombLog, dV, engine );
                 }
                 );
             count++;
@@ -132,10 +130,10 @@ CoulombCollision::doCoulombCollision (
             PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
             amrex::Real q2 = species2.GetCharge();
             amrex::Real m2 = species2.GetMass();
-            
+
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real dt = geom.CellSize(2)*PhysConstSI::c;
-        
+            const amrex::Real dt = geom.CellSize(2)/PhysConstSI::c;
+
             // Extract particles in the tile that `mfi` points to
             // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
             // ParticleTileType& ptile_2 = species_2->ParticlesAt(lev, mfi);
@@ -159,26 +157,24 @@ CoulombCollision::doCoulombCollision (
                     // cell_start_1 (inclusive) and cell_start_2 (exclusive)
 
                     // Do not collide if one species is missing in the cell
-                    if ( cell_stop1 - cell_start1 >= 1 &&
-                         cell_stop2 - cell_start2 >= 1 )
-                    {
-                        // shuffle
-                        ShuffleFisherYates(indices1, cell_start1, cell_stop1, engine);
-                        ShuffleFisherYates(indices2, cell_start2, cell_stop2, engine);
+                    if ( cell_stop1 - cell_start1 < 1 ||
+                         cell_stop2 - cell_start2 < 1 ) return;
+                    // shuffle
+                    ShuffleFisherYates(indices1, cell_start1, cell_stop1, engine);
+                    ShuffleFisherYates(indices2, cell_start2, cell_stop2, engine);
 
-                        // TODO: FIX DT.
-                        // Call the function in order to perform collisions
-                        ElasticCollisionPerez(
-                            cell_start1, cell_stop1, cell_start2, cell_stop2,
-                            indices1, indices2,
-                            ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
-                            q1, q2, m1, m2, -1.0_rt, -1.0_rt,
-                            dt, CoulombLog, dV, engine );
-                    }
+                    // TODO: FIX DT.
+                    // Call the function in order to perform collisions
+                    ElasticCollisionPerez(
+                        cell_start1, cell_stop1, cell_start2, cell_stop2,
+                        indices1, indices2,
+                        ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
+                        q1, q2, m1, m2, -1.0_rt, -1.0_rt,
+                        dt, CoulombLog, dV, engine );
                 }
                 );
             count++;
         }
-        AMREX_ALWAYS_ASSERT(count == 1);        
+        AMREX_ALWAYS_ASSERT(count == 1);
     }
 };
