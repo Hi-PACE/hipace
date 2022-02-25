@@ -119,8 +119,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
-    BeamBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
-    BeamBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
+    PlasmaBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
+    PlasmaBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
