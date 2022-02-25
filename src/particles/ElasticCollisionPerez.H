@@ -15,25 +15,30 @@
 
 /** \brief Prepare information for and call
  *        UpdateMomentumPerezElastic().
- * @param[in] I1s,I2s is the start index for I1,I2 (inclusive).
- * @param[in] I1e,I2e is the start index for I1,I2 (exclusive).
- * @param[in] I1 and I2 are the index arrays.
+ * @param[in] I1s start index for I1 (inclusive).
+ * @param[in] I2s start index for I2 (inclusive).
+ * @param[in] I1e start index for I1 (exclusive).
+ * @param[in] I2e start index for I2 (exclusive).
+ * @param[in] I1 index array.
+ * @param[in] I2 index array.
  * @param[in,out] u1x x Proper velocity (u=v*gamma) array of species 1.
  * @param[in,out] u1y y Proper velocity (u=v*gamma) array of species 1.
  * @param[in,out] psi1 pseudo-potential array of species 1.
  * @param[in,out] u2x x Proper velocity (u=v*gamma) array of species 2.
  * @param[in,out] u2y y Proper velocity (u=v*gamma) array of species 2.
  * @param[in,out] psi2 pseudo-potential array of species 2.
- * @param[in] I1 and I2 determine all elements that will be used.
- * @param[in] w1 and w2 are arrays of weights.
- * @param[in] q1 and q2 are charges. m1 and m2 are masses.
- * @param[in] T1 and T2 are temperatures (Joule)
- *            and will be used if greater than zero,
- *            otherwise will be computed.
+ * @param[in] w1 array of weights.
+ * @param[in] w2 array of weights.
+ * @param[in] q1 Physical charge of species 1.
+ * @param[in] q2 Physical charge of species 2.
+ * @param[in] m1 Physical mass of species 1.
+ * @param[in] m2 Physical mass of species 2.
+ * @param[in] T1 temperature of species 1 (Joule). If <0, measured per-cell.
+ * @param[in] T2 temperature of species 2 (Joule). If <0, measured per-cell.
  * @param[in] dt is the time step length between two collision calls.
- * @param[in] L is the Coulomb log and will be used if greater than zero,
- *            otherwise will be computed.
- * @param[in] dV is the volume of the corresponding cell.
+ * @param[in] L Coulomb log. If <0, measured per cell.
+ * @param[in] dV Volume of the corresponding cell.
+ * @param[in] engine AMReX engine for the random number generator.
 */
 
 template <typename T_index, typename T_R>
