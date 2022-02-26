@@ -47,12 +47,12 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 PhysConst make_constants_SI ()
 {
     PhysConst const constants = {
-        /* c   */ 299'792'458.,
-        /* ep0 */ 8.8541878128e-12,
-        /* mu0 */ 1.25663706212e-06,
-        /* q_e */ 1.602176634e-19,
-        /* m_e */ 9.1093837015e-31,
-        /* m_p */ 1.67262192369e-27
+        /* c   */ PhysConstSI::c,
+        /* ep0 */ PhysConstSI::ep0,
+        /* mu0 */ PhysConstSI::mu0,
+        /* q_e */ PhysConstSI::q_e,
+        /* m_e */ PhysConstSI::m_e,
+        /* m_p */ PhysConstSI::m_p
     };
     return constants;
 }
