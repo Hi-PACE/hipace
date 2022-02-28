@@ -138,7 +138,7 @@ From the base of the HiPACE++ source directory, execute:
    # run tests
    (cd build; ctest --output-on-failure)
 
-
+Note: the from_file tests require the openPMD-api with python bindings. See the `documentation of the openPMD-api <https://openpmd-api.readthedocs.io/>`__.
 An executable HiPACE++ binary with the current compile-time options encoded in its file name will be created in ``bin/``.
 Additionally, a `symbolic link <https://en.wikipedia.org/wiki/Symbolic_link>`__ named ``hipace`` can be found in that directory, which points to the last built HiPACE++ executable. You can inspect and modify build options after running `cmake ..` with either
 
