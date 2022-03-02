@@ -117,7 +117,7 @@ public:
      * \param[in] bins slice indexing
      * \param[in] only_ghost whether to send only ghost particles
      */
-    void Notify (const int step, const int it, amrex::Vector<BeamBins>& bins, bool only_ghost=false);
+    void Notify (const int step, const int it, const amrex::Vector<BeamBins>& bins, bool only_ghost=false);
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
@@ -150,7 +150,7 @@ public:
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
     void SolveOneSlice (int islice_coarse, const int ibox,
-                        amrex::Vector<amrex::Vector<BeamBins>>& bins);
+                        const amrex::Vector<amrex::Vector<BeamBins>>& bins);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -363,7 +363,7 @@ private:
      * \param[in] ibox index of the current box
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
-                                            amrex::Vector<BeamBins> bins, const int ibox);
+                                            const amrex::Vector<BeamBins>& bins, const int ibox);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
      * The slice MultiFAB and the plasma particles are defined on this GDB.

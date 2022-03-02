@@ -473,7 +473,7 @@ Hipace::Evolve ()
 
 void
 Hipace::SolveOneSlice (int islice_coarse, const int ibox,
-                       amrex::Vector<amrex::Vector<BeamBins>>& bins)
+                       const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
@@ -847,7 +847,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 void
 Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
-                                           amrex::Vector<BeamBins> bins, const int ibox)
+                                           const amrex::Vector<BeamBins>& bins, const int ibox)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -1118,7 +1118,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
 void
 Hipace::Notify (const int step, const int it,
-                amrex::Vector<BeamBins>& bins, bool only_ghost)
+                const amrex::Vector<BeamBins>& bins, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
@@ -1200,12 +1200,9 @@ Hipace::Notify (const int step, const int it,
             const auto p_comm_int = comm_int.data();
             const auto p_psend_buffer = psend_buffer + offset_beam*psize;
 
-            BeamBins::index_type* indices = nullptr;
-            BeamBins::index_type const * offsets = 0;
+            BeamBins::index_type const * const indices = bins[ibeam].permutationPtr();
+            BeamBins::index_type const * const offsets = bins[ibeam].offsetsPtr();
             BeamBins::index_type cell_start = 0;
-
-            indices = bins[ibeam].permutationPtr();
-            offsets = bins[ibeam].offsetsPtr();
 
             // The particles that are in the last slice (sent as ghost particles) are
             // given by the indices[cell_start:cell_stop-1]
