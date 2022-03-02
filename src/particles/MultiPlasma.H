@@ -107,7 +107,7 @@ public:
     amrex::RealVect GetUStd () const;
 
     /** Return the nominal density */
-    amrex::Real GetNominalDensity () const {return m_nominal_density;};
+    amrex::Real GetNominalDensity () const {return m_nominal_density;}
 
     /** Check whether the on-axis density is close enough to the nominal density,
      * to avoid machine-precision problems. */

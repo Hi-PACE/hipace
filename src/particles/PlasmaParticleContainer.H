@@ -94,10 +94,10 @@ public:
     void UpdateDensityFunction ();
 
     /** returns u_mean of the plasma distribution */
-    amrex::RealVect GetUMean () const {return m_u_mean;};
+    amrex::RealVect GetUMean () const {return m_u_mean;}
 
     /** returns u_std of the plasma distribution */
-    amrex::RealVect GetUStd () const {return m_u_std;};
+    amrex::RealVect GetUStd () const {return m_u_std;}
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
