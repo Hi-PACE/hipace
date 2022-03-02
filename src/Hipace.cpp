@@ -1,3 +1,11 @@
+/* Copyright 2020-2022 AlexanderSinn, Andrew Myers, Axel Huebl
+ * MaxThevenet, Remi Lehe, Severin Diederichs
+ * WeiqunZhang, coulibaly-mouhamed
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/SliceSort.H"

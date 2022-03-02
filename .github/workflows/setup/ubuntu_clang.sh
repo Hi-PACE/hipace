@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+
+# Copyright 2020-2022 Axel Huebl, MaxThevenet, Severin Diederichs
+#
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 #
 # Copyright 2020-2022 The HiPACE++ Community
 #

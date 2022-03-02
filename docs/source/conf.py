@@ -1,3 +1,10 @@
+# Copyright 2021-2022 Axel Huebl, MaxThevenet, Severin Diederichs
+#
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full

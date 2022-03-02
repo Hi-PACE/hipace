@@ -1,3 +1,9 @@
+# Copyright 2021 MaxThevenet, Severin Diederichs
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 In order to kick-start HiPACE++, things were done in the simplest way possible, leaving obvious optimizations for later.
 This file lists these easy optimizations, to avoid missing low-hanging fruits.
 

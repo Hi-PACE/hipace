@@ -1,5 +1,13 @@
 #! /usr/bin/env bash
 
+# Copyright 2021 AlexanderSinn, Andrew Myers, Axel Huebl
+# MaxThevenet, Severin Diederichs
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation with in neutral hydrogen that gets ionized by the beam
 

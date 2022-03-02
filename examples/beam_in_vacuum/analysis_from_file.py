@@ -1,5 +1,12 @@
 #! /usr/bin/env python3
 
+# Copyright 2021 AlexanderSinn, Severin Diederichs
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This Python analysis script is part of the code HiPACE++
 #
 # It is used in the beam from_file test and compares three beams,

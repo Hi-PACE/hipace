@@ -1,3 +1,10 @@
+/* Copyright 2021-2022 AlexanderSinn, MaxThevenet, Severin Diederichs
+ *
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef MULTIPLASMA_H_
 #define MULTIPLASMA_H_
 

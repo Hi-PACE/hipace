@@ -1,3 +1,10 @@
+/* Copyright 2020 Axel Huebl, MaxThevenet, Remi Lehe
+ * WeiqunZhang
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef FFT_POISSON_SOLVER_PERIODIC_H_
 #define FFT_POISSON_SOLVER_PERIODIC_H_
 

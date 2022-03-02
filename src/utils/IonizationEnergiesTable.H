@@ -1,3 +1,9 @@
+/* Copyright 2021 AlexanderSinn
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 // This script was automatically generated!
 // Edit src/utils/write_atomic_data_cpp.py instead!
 #ifndef HIPACE_IONIZATION_TABLE_H_

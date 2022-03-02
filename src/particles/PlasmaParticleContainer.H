@@ -1,3 +1,11 @@
+/* Copyright 2020-2022 AlexanderSinn, Andrew Myers, Axel Huebl
+ * MaxThevenet, Severin Diederichs, atmyers
+ * Ángel Ferran Pousa
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_PlasmaParticleContainer_H_
 #define HIPACE_PlasmaParticleContainer_H_
 

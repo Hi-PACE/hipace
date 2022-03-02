@@ -1,3 +1,10 @@
+/* Copyright 2020-2022 AlexanderSinn, MaxThevenet, Remi Lehe
+ * Severin Diederichs
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef BEAMDEPOSITCURRENT_H_
 #define BEAMDEPOSITCURRENT_H_
 

@@ -1,3 +1,9 @@
+/* Copyright 2021-2022 MaxThevenet, Severin Diederichs
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_SLICESORT_H_
 #define HIPACE_SLICESORT_H_
 

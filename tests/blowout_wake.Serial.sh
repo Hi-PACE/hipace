@@ -1,5 +1,13 @@
 #! /usr/bin/env bash
 
+# Copyright 2020-2021 Axel Huebl, MaxThevenet, Severin Diederichs
+#
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation in the blowout regime and cand compares the result
 # of the simulation to a benchmark.

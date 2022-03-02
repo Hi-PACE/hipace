@@ -1,3 +1,10 @@
+/* Copyright 2021-2022 AlexanderSinn, Axel Huebl, MaxThevenet
+ * Severin Diederichs
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "AnyDST.H"
 #include "RocFFTUtils.H"
 #include "utils/HipaceProfilerWrapper.H"

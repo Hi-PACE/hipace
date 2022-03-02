@@ -1,3 +1,9 @@
+/* Copyright 2021 Axel Huebl
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "RocFFTUtils.H"
 #include <AMReX.H>
 

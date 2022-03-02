@@ -1,5 +1,12 @@
 #! /usr/bin/env bash
 
+# Copyright 2020-2021 MaxThevenet, Severin Diederichs
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation for a can beam in vacuum in serial and parallel and
 # checks that they give the same result

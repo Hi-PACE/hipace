@@ -1,3 +1,11 @@
+/* Copyright 2020-2022 AlexanderSinn, Andrew Myers, MaxThevenet
+ * Remi Lehe, Severin Diederichs, WeiqunZhang
+ *
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2019 Maxence Thevenet
  *
  * This file is part of WarpX.

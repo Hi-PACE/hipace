@@ -1,3 +1,10 @@
+# Copyright 2020-2021 Axel Huebl, MaxThevenet, Remi Lehe
+#
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 if (HiPACE_COMPUTE STREQUAL CUDA)
   target_sources(HiPACE
     PRIVATE

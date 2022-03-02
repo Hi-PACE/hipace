@@ -1,3 +1,11 @@
+/* Copyright 2020-2021 AlexanderSinn, Andrew Myers, Axel Huebl
+ * MaxThevenet, Remi Lehe, Severin Diederichs
+ * atmyers
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_BeamParticleContainer_H_
 #define HIPACE_BeamParticleContainer_H_
 

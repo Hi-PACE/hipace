@@ -1,3 +1,10 @@
+/* Copyright 2020-2021 AlexanderSinn, MaxThevenet, Severin Diederichs
+ *
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "GetInitialMomentum.H"
 #include "utils/Parser.H"
 

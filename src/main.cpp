@@ -1,3 +1,10 @@
+/* Copyright 2020-2022 AlexanderSinn, Axel Huebl, MaxThevenet
+ * Weiqun Zhang
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"

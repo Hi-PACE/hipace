@@ -1,5 +1,12 @@
 #! /usr/bin/env python3
 
+# Copyright 2020-2021 MaxThevenet
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This Python analysis script is part of the code Hipace
 #
 # It compares a field from a simulation with full IO and from a simulation with only slice IO

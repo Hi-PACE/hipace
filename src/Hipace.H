@@ -1,3 +1,11 @@
+/* Copyright 2020-2022 AlexanderSinn, Andrew Myers, Axel Huebl
+ * MaxThevenet, Remi Lehe, Severin Diederichs
+ * WeiqunZhang
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_H_
 #define HIPACE_H_
 

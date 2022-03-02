@@ -1,3 +1,9 @@
+/* Copyright 2020-2021 MaxThevenet, Severin Diederichs
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef PUSHPLASMAPARTICLES_H_
 #define PUSHPLASMAPARTICLES_H_
 

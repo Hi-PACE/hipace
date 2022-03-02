@@ -1,3 +1,9 @@
+/* Copyright 2021 AlexanderSinn
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_Parser_H_
 #define HIPACE_Parser_H_
 

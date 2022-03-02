@@ -1,3 +1,11 @@
+/* Copyright 2020-2022 AlexanderSinn, Andrew Myers, Axel Huebl
+ * MaxThevenet, Severin Diederichs, Weiqun Zhang
+ *
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "PlasmaParticleContainer.H"
 #include "utils/Constants.H"
 #include "ParticleUtil.H"

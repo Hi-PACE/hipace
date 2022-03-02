@@ -1,3 +1,11 @@
+/* Copyright 2020-2022 AlexanderSinn, Axel Huebl, MaxThevenet
+ * Remi Lehe, Severin Diederichs, WeiqunZhang
+ * coulibaly-mouhamed
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef FIELDS_H_
 #define FIELDS_H_
 

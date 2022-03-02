@@ -1,3 +1,9 @@
+/* Copyright 2021 AlexanderSinn, MaxThevenet
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "BoxSort.H"
 
 #include <AMReX_ParticleTransformation.H>

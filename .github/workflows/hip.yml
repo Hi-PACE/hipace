@@ -1,3 +1,9 @@
+# Copyright 2021-2022 Axel Huebl
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 name: 🐧 HIP
 
 on: [push, pull_request]

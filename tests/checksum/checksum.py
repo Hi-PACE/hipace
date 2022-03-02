@@ -1,3 +1,9 @@
+# Copyright 2020-2021 Axel Huebl, MaxThevenet
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 """
 Copyright 2020
 

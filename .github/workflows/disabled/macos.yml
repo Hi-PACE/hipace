@@ -1,3 +1,9 @@
+# Copyright 2020 Axel Huebl, MaxThevenet
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
 name: macos
 
 on: [pull_request]

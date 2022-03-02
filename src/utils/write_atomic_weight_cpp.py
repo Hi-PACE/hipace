@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+# Copyright 2021 AlexanderSinn
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 """
 This python script reads atomic masses tables in relative_atomic_masses.txt
 (generated from the NIST website) and extracts

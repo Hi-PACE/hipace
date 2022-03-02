@@ -1,3 +1,9 @@
+/* Copyright 2021 Severin Diederichs
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef GRIDCURRENT_H_
 #define GRIDCURRENT_H_
 

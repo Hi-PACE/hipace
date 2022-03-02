@@ -1,5 +1,13 @@
 #! /usr/bin/env bash
 
+# Copyright 2021 Andrew Myers, Axel Huebl, MaxThevenet
+# Severin Diederichs
+#
+# This file is part of HiPACE++.
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation in normalized units with the explicit solver
 # in the blowout regime and compares the checksum with a benchmark.

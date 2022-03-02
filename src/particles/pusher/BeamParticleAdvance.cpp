@@ -1,3 +1,10 @@
+/* Copyright 2020-2022 AlexanderSinn, Andrew Myers, MaxThevenet
+ * Severin Diederichs
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "BeamParticleAdvance.H"
 #include "particles/ExternalFields.H"
 #include "FieldGather.H"

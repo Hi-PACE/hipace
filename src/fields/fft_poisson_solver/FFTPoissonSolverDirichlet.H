@@ -1,3 +1,10 @@
+/* Copyright 2020-2021 AlexanderSinn, MaxThevenet, Severin Diederichs
+ *
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef FFT_POISSON_SOLVER_DIRICHLET_H_
 #define FFT_POISSON_SOLVER_DIRICHLET_H_
 

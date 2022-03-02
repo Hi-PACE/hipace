@@ -1,3 +1,10 @@
+/* Copyright 2020-2022 AlexanderSinn, MaxThevenet, Severin Diederichs
+ *
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef OPENPMDWRITER_H_
 #define OPENPMDWRITER_H_
 

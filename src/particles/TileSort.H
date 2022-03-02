@@ -1,3 +1,9 @@
+/* Copyright 2021 MaxThevenet
+ *
+ * This file is part of HiPACE++.
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_TILESORT_H_
 #define HIPACE_TILESORT_H_
 
