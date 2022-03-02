@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Severin Diederichs
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "FFTPoissonSolverDirichlet.H"
 #include "fft/AnyDST.H"
 #include "utils/Constants.H"

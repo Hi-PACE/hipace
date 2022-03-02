@@ -1,8 +1,15 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace
+# Copyright 2020-2021
 #
-# It compares a field from a simulation with full IO and from a simulation with only slice IO
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet
+# License: BSD-3-Clause-LBNL
+
+
+# This script compares a field from a simulation with
+# full IO and from a simulation with only slice IO
 
 import matplotlib.pyplot as plt
 import scipy.constants as scc

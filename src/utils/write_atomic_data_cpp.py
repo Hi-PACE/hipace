@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+
+# Copyright 2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn
+# License: BSD-3-Clause-LBNL
+
 #
 # Copyright 2019-2020 Axel Huebl, Luca Fedeli, Maxence Thevenet
 #

@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Remi Lehe
+ * Severin Diederichs, WeiqunZhang, coulibaly-mouhamed
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef FIELDS_H_
 #define FIELDS_H_
 

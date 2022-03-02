@@ -1,3 +1,11 @@
+/* Copyright 2020-2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: Andrew Myers, MaxThevenet, Remi Lehe, Severin Diederichs
+ * Weiqun Zhang
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_ParticleUtil_H_
 #define HIPACE_ParticleUtil_H_
 

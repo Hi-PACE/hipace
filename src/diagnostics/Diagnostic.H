@@ -1,3 +1,10 @@
+/* Copyright 2021-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef DIAGNOSTIC_H_
 #define DIAGNOSTIC_H_
 

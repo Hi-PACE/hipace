@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs, WeiqunZhang
+ * coulibaly-mouhamed
+ * License: BSD-3-Clause-LBNL
+ */
 #include "Fields.H"
 #include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichlet.H"

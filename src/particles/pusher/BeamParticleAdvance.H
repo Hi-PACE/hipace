@@ -1,3 +1,10 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef BEAMPARTICLEADVANCE_H_
 #define BEAMPARTICLEADVANCE_H_
 
