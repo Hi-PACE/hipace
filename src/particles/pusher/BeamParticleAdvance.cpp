@@ -9,7 +9,7 @@
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
                            int const lev, const int islice_local, const amrex::Box box,
-                           const int offset, BeamBins& bins)
+                           const int offset, const BeamBins& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -65,12 +65,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::G
         gm.isPeriodicArray(), offset);
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-    BeamBins::index_type*
-        indices = nullptr;
-    BeamBins::index_type const *
-        offsets = nullptr;
-    indices = bins.permutationPtr();
-    offsets = bins.offsetsPtr();
+    BeamBins::index_type const * const indices = bins.permutationPtr();
+    BeamBins::index_type const * const offsets = bins.offsetsPtr();
     BeamBins::index_type const
         cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
     // The particles that are in slice islice_local are
