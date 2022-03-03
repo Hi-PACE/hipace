@@ -249,6 +249,12 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME laser_blowout_wake_explicit.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME beam_evolution.1Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_evolution.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
