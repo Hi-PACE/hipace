@@ -1,9 +1,10 @@
 #! /usr/bin/env bash
 
 # This file is part of the HiPACE++ test suite.
-# It runs a Hipace simulation in normalized units with the explicit solver
+# It runs a Hipace simulation in SI units with the explicit solver
 # in the blowout regime of a laser driver and compares the checksum with a benchmark.
-# This case was benchmarked against INF&RNO simulations and therefore a change in the benchmark
+# This case was benchmarked against the normalized unit case, which itself has been benchmarked
+# INF&RNO simulations and therefore a change in the benchmark
 # should be accepted only with great care!
 
 # abort on first encounted error
