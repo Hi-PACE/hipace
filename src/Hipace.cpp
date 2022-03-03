@@ -753,8 +753,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
                 const amrex::Real casq    =   use_laser ? a_sq(i,j,k) : 0._rt;
-                const amrex::Real casqdx  =   use_laser ? a_sq_dx(i,j,k) : 0._rt;
-                const amrex::Real casqdy  =   use_laser ? a_sq_dy(i,j,k) : 0._rt;
+                const amrex::Real casqdx  =   use_laser ? a_sq_dx(i,j,k)*kpinv : 0._rt;
+                const amrex::Real casqdy  =   use_laser ? a_sq_dy(i,j,k)*kpinv : 0._rt;
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
