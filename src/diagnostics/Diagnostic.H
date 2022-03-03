@@ -4,6 +4,8 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
 
+#include <vector>
+
 /** type of diagnostics: full xyz array or xz slice or yz slice */
 enum struct DiagType{xyz, xz, yz};
 
@@ -15,14 +17,6 @@ public:
 
     /** \brief Constructor */
     explicit Diagnostic (int nlev);
-
-    /** \brief allocate arrays of this MF
-     *
-     * \param[in] lev MR level
-     * \param[in] bx Box for initialization
-     * \param[in] geom geometry of the full simulation domain
-     */
-    void AllocData (int lev, const amrex::Box& bx, amrex::Geometry const& geom);
 
     /** \brief return the main diagnostics multifab */
     amrex::Vector<amrex::FArrayBox>& getF () { return m_F; }
@@ -51,21 +45,29 @@ public:
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;}
 
+    /**< return if there is field output to write */
+    std::vector<bool>& hasField () {return m_has_field;}
+
     /** return coarsening ratio of diagnostics */
     amrex::IntVect getCoarsening (int lev) { return m_diag_coarsen[lev]; }
 
-    /** \brief return box which possibly was trimmed in case of slice IO
+    /** \brief calculate box which possibly was trimmed in case of slice IO
      *
-     * \param[in] box_3d box to be possibly trimmed to a slice box
+     * \param[in,out] box_3d local box to be possibly trimmed to a slice box
+     * \param[in,out] domain_3d domain box to be possibly trimmed to a slice box
+     * \param[in,out] rbox_3d real box to be possibly trimmed to a slice box
      */
-    amrex::Box TrimIOBox (const amrex::Box box_3d);
+    void TrimIOBox (amrex::Box& box_3d, amrex::Box& domain_3d, amrex::RealBox& rbox_3d);
 
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *
-     * \param[in] box box to which the FArrayBox of the diagnostics will be resized to
+     * \param[in] local_box box to which the FArrayBox of the diagnostics will be resized to
+     * \param[in] domain box to which the Geometry of the diagnostics will be resized to
      * \param[in] lev MR level
+     * \param[in] geom geometry of the full simulation domain
      */
-    void ResizeFDiagFAB (const amrex::Box box, const int lev);
+    void ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
+                         amrex::Geometry const& geom);
 
 private:
 
@@ -80,6 +82,8 @@ private:
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */
+    bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
+    std::vector<bool> m_has_field; /**< if there is field output to write */
 };
 
 #endif // DIAGNOSTIC_H_

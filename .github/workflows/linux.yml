@@ -8,8 +8,8 @@ on:
 jobs:
 # enable again when we open-source (free core-hours for GH Actions)
 #
-#  linux_gcc_cxx14_ompi:
-#    name: GNU@7.5 C++14 OMPI
+#  linux_gcc_cxx17_ompi:
+#    name: GNU@7.5 C++17 OMPI
 #    runs-on: ubuntu-latest
 #    steps:
 #    - uses: actions/checkout@v2
@@ -44,25 +44,26 @@ jobs:
         export OMP_NUM_THREADS=2
         ctest --output-on-failure
 
-#  linux_gcc_cxx14:
-#    name: GNU@7.5 C++14 Serial
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: actions/checkout@v2
-#    - name: Dependencies
-#      run: .github/workflows/setup/ubuntu.sh
-#    - name: Build & Install
-#      run: |
-#        mkdir build
-#        cd build
-#        cmake .. -DHiPACE_MPI=OFF
-#        make -j 2 VERBOSE=ON
-#        ctest --output-on-failure
+  linux_gcc_cxx17:
+    name: GNU@7.5 C++17 Serial
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu.sh
+    - name: Build & Install
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DHiPACE_MPI=OFF
+        make -j 2 VERBOSE=ON
+        export OMP_NUM_THREADS=2
+        ctest --output-on-failure
 
 # enable again when we open-source (free core-hours for GH Actions)
 #
-#  linux_clang_cxx14:
-#    name: Clang@4.0.1 C++14 OMPI
+#  linux_clang7:
+#    name: Clang@7 C++17 OMPI
 #    runs-on: ubuntu-latest
 #    steps:
 #    - uses: actions/checkout@v2
@@ -72,28 +73,8 @@ jobs:
 #      run: |
 #        mkdir build
 #        cd build
-#        cmake ..                                             \
-#            -DCMAKE_C_COMPILER=$(which clang-4.0)            \
-#            -DCMAKE_CXX_COMPILER=$(which clang++-4.0)
-#        make -j 2 VERBOSE=ON
-#        ctest --output-on-failure
-
-#  linux_gcc_cxx14_ompi_cuda:
-#    name: CUDA@10.1.243 GCC@8 C++14
-#    runs-on: ubuntu-20.04
-#    steps:
-#    - uses: actions/checkout@v2
-#    - name: Dependencies
-#      run: .github/workflows/setup/ubuntu_ompi_cuda.sh
-#    - name: Build & Install
-#      run: |
-#        mkdir build
-#        cd build
-#        cmake ..                                      \
-#            -DHiPACE_COMPUTE=CUDA                     \
-#            -DCMAKE_C_COMPILER=$(which gcc-8)         \
-#            -DCMAKE_CXX_COMPILER=$(which g++-8)       \
-#            -DCMAKE_CUDA_HOST_COMPILER=$(which g++-8) \
-#            -DAMReX_CUDA_ARCH=6.0
+#        cmake ..                                           \
+#            -DCMAKE_C_COMPILER=$(which clang-7)            \
+#            -DCMAKE_CXX_COMPILER=$(which clang++-7)
 #        make -j 2 VERBOSE=ON
 #        ctest --output-on-failure

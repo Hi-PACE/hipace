@@ -25,7 +25,6 @@ public:
      * \param[in] geom Geometry vector for all levels
      * \param[in] lev MR level
      * \param[in] islice slice index in which the current is stored
-     * \param[in] bx current box to calculate in loop over longutidinal boxes
      * \param[in] bins Vector (over species) of particles sorted by slices
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] ibox index of the current box
@@ -34,7 +33,7 @@ public:
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-        const amrex::Box bx, amrex::Vector<BeamBins> bins,
+        const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
         const bool do_beam_jx_jy_deposition, const int which_slice);
 
@@ -72,7 +71,7 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<BeamBins>& bins,
+        const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and init them
@@ -118,7 +117,7 @@ public:
      * \param[in] bins bins object to access particles per slice
      * \param[in] bx box in which we want to acce particles
      */
-    int NGhostParticles (int ibeam, amrex::Vector<BeamBins>& bins, amrex::Box bx);
+    int NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx);
 
     /** \brief remove ghost particles, in practice those after the last slice. */
     void RemoveGhosts ();

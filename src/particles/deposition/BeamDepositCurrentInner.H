@@ -29,8 +29,9 @@
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to ptile
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to ptile
  * \param[in] dx cell size in each dimension
- * \param[in] xyzmin lower corner of the box, in physical space
- * \param[in] lo lower corner of the box, in index space
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  * \param[in] q elementary charge
  * \param[in] islice Particles in slice islice will deposit
  * \param[in] bins Indices of particles arranged per slices.
@@ -47,11 +48,12 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
                          amrex::Real const * const AMREX_RESTRICT dx,
-                         amrex::Real const * const AMREX_RESTRICT xyzmin,
-                         amrex::Dim3 const lo,
+                         amrex::Real x_pos_offset,
+                         amrex::Real y_pos_offset,
+                         amrex::Real z_pos_offset,
                          amrex::Real const q,
                          int islice,
-                         BeamBins& bins,
+                         const BeamBins& bins,
                          int box_offset,
                          const bool do_beam_jx_jy_deposition,
                          const int which_slice,
@@ -82,9 +84,6 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     const amrex::Real dyi = 1.0/dx[1];
     const amrex::Real dzi = 1.0/dx[2];
     const amrex::Real invvol = Hipace::m_normalized_units? 1. : dxi*dyi*dzi;
-    const amrex::Real xmin = xyzmin[0];
-    const amrex::Real ymin = xyzmin[1];
-    const amrex::Real zmin = xyzmin[2];
 
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 
@@ -108,13 +107,9 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be exactly one cell thick in the z direction."
         );
 
-    BeamBins::index_type*
-        indices = nullptr;
-    BeamBins::index_type const * offsets = 0;
+    BeamBins::index_type const * const indices = bins.permutationPtr();
+    BeamBins::index_type const * const offsets = bins.offsetsPtr();
     BeamBins::index_type cell_start = 0, cell_stop = 0;
-
-    indices = bins.permutationPtr();
-    offsets = bins.offsetsPtr();
 
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]
@@ -160,20 +155,20 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
 
             // --- Compute shape factors
             // x direction
-            const amrex::Real xmid = (pos_structs[ip].pos(0) - xmin)*dxi;
+            const amrex::Real xmid = (pos_structs[ip].pos(0) - x_pos_offset)*dxi;
             // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
             amrex::Real sx_cell[depos_order_xy + 1];
-            const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid - 0.5_rt);
+            const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid);
 
             // y direction
-            const amrex::Real ymid = (pos_structs[ip].pos(1) - ymin)*dyi;
+            const amrex::Real ymid = (pos_structs[ip].pos(1) - y_pos_offset)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
-            const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid - 0.5_rt);
+            const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid);
 
             // z direction
-            const amrex::Real zmid = (pos_structs[ip].pos(2) - zmin)*dzi;
+            const amrex::Real zmid = (pos_structs[ip].pos(2) - z_pos_offset)*dzi;
             amrex::Real sz_cell[depos_order_z + 1]; // depos_order_z MUST be 0.
-            int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid - 0.5_rt);
+            int l_cell = compute_shape_factor<depos_order_z>(sz_cell, zmid);
             l_cell = 0;
             amrex::ignore_unused(l_cell);
 
@@ -183,15 +178,15 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                     for (int ix=0; ix<=depos_order_xy; ix++){
                         if (do_beam_jx_jy_deposition) {
                             amrex::Gpu::Atomic::Add(
-                                &jx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                &jx_arr(j_cell+ix, k_cell+iy, z_slice),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqx);
                             amrex::Gpu::Atomic::Add(
-                                &jy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                &jy_arr(j_cell+ix, k_cell+iy, z_slice),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqy);
                         }
                         if (which_slice == WhichSlice::This) {
                             amrex::Gpu::Atomic::Add(
-                                &jz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, z_slice),
+                                &jz_arr(j_cell+ix, k_cell+iy, z_slice),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
                         }
                     }

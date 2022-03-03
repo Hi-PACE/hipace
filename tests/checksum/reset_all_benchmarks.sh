@@ -67,41 +67,41 @@ then
     make -j 4
 fi
 
-# blowout_wake.Serial
-#if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.Serial" ]]
-#then
-#    cd $build_dir
-#    ctest --output-on-failure -R blowout_wake.Serial \
-#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-#    cd $checksum_dir
-#    ./checksumAPI.py --reset-benchmark \
-#                     --file_name ${build_dir}/bin/diags/hdf5 \
-#                     --test-name blowout_wake.Serial
-#fi
+#blowout_wake.Serial
+if [[ $all_tests = true ]] || [[ $one_test_name = "blowout_wake.Serial" ]]
+then
+   cd $build_dir
+   ctest --output-on-failure -R blowout_wake.Serial \
+       || echo "ctest command failed, maybe just because checksums are different. Keep going"
+   cd $checksum_dir
+   ./checksumAPI.py --reset-benchmark \
+                    --file_name ${build_dir}/bin/blowout_wake.Serial \
+                    --test-name blowout_wake.Serial
+fi
 
-# beam_in_vacuum.SI.Serial
-#if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.SI.Serial" ]]
-#then
-#    cd $build_dir
-#    ctest --output-on-failure -R beam_in_vacuum.SI.Serial \
-#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-#    cd $checksum_dir
-#    ./checksumAPI.py --reset-benchmark \
-#                     --file_name ${build_dir}/bin/diags/hdf5 \
-#                     --test-name beam_in_vacuum.SI.Serial
-#fi
+#beam_in_vacuum.SI.Serial
+if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.SI.Serial" ]]
+then
+   cd $build_dir
+   ctest --output-on-failure -R beam_in_vacuum.SI.Serial \
+       || echo "ctest command failed, maybe just because checksums are different. Keep going"
+   cd $checksum_dir
+   ./checksumAPI.py --reset-benchmark \
+                    --file_name ${build_dir}/bin/beam_in_vacuum.SI.Serial \
+                    --test-name beam_in_vacuum.SI.Serial
+fi
 
-# beam_in_vacuum.normalized.Serial
-#if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.normalized.Serial" ]]
-#then
-#    cd $build_dir
-#    ctest --output-on-failure -R beam_in_vacuum.normalized.Serial \
-#        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-#    cd $checksum_dir
-#    ./checksumAPI.py --reset-benchmark \
-#                     --file_name ${build_dir}/bin/diags/hdf5 \
-#                     --test-name beam_in_vacuum.normalized.Serial
-#fi
+#beam_in_vacuum.normalized.Serial
+if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum.normalized.Serial" ]]
+then
+   cd $build_dir
+   ctest --output-on-failure -R beam_in_vacuum.normalized.Serial \
+       || echo "ctest command failed, maybe just because checksums are different. Keep going"
+   cd $checksum_dir
+   ./checksumAPI.py --reset-benchmark \
+                    --file_name ${build_dir}/bin/beam_in_vacuum.normalized.Serial \
+                    --test-name beam_in_vacuum.normalized.Serial
+fi
 
 ### Compile code and reset benchmarks: parallel ###
 ###################################################

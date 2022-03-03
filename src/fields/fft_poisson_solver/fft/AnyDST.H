@@ -43,6 +43,13 @@ namespace AnyDST
 
         /** Use large R2C or small C2R dst */
         bool use_small_dst;
+
+#if defined(AMREX_USE_HIP)
+        /** execution info for rocFFT */
+        rocfft_execution_info m_execinfo;
+        /** work buffer for rocFFT */
+        void* m_buffer;
+#endif
     };
 
     /** Collection of FFT plans, one FFTplan per box */

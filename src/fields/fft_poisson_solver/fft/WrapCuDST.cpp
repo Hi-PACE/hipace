@@ -26,21 +26,22 @@ namespace AnyDST
         const amrex::Box bx = src.box();
         const int nx = bx.length(0);
         const int ny = bx.length(1);
+        const amrex::IntVect lo = bx.smallEnd();
         amrex::Array4<amrex::Real const> const & src_array = src.array();
         amrex::Array4<amrex::Real> const & dst_array = dst.array();
 
         amrex::ParallelFor(
             bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            [=] AMREX_GPU_DEVICE(int i, int j, int)
             {
                 /* upper left quadrant */
-                dst_array(i+1,j+1,0,dcomp) = src_array(i, j, k, scomp);
+                dst_array(i+1,j+1,lo[2],dcomp) = src_array(i, j, lo[2], scomp);
                 /* lower left quadrant */
-                dst_array(i+1,j+ny+2,0,dcomp) = -src_array(i, ny-1-j, k, scomp);
+                dst_array(i+1,j+ny+2,lo[2],dcomp) = -src_array(i, ny-1-j+2*lo[1], lo[2], scomp);
                 /* upper right quadrant */
-                dst_array(i+nx+2,j+1,0,dcomp) = -src_array(nx-1-i, j, k, scomp);
+                dst_array(i+nx+2,j+1,lo[2],dcomp) = -src_array(nx-1-i+2*lo[0], j, lo[2], scomp);
                 /* lower right quadrant */
-                dst_array(i+nx+2,j+ny+2,0,dcomp) = src_array(nx-1-i, ny-1-j, k, scomp);
+                dst_array(i+nx+2,j+ny+2,lo[2],dcomp) = src_array(nx-1-i+2*lo[0], ny-1-j+2*lo[1], lo[2], scomp);
             }
             );
     };
@@ -235,6 +236,12 @@ namespace AnyDST
         dst_plan.use_small_dst = (std::max(real_size[0], real_size[1]) >= 511);
         queryWithParser(pp, "use_small_dst", dst_plan.use_small_dst);
 
+        if (__CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ == 1) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::max(real_size[0], real_size[1]) <= 1024),
+            "Due to a bug in cuFFT, CUDA 11.1 supports only nx, ny <= 1024. Please use CUDA "
+            "version >= 11.2 (recommended) or <= 11.0 for larger grid sizes.");
+        }
+
         if(!dst_plan.use_small_dst) {
             const int nx = real_size[0];
             const int ny = real_size[1];
@@ -243,6 +250,9 @@ namespace AnyDST
             // Allocate expanded_fourier_array Complex of size (nx+2, 2*ny+2)
             amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
             amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
+            // shift box to match rest of fields
+            expanded_position_box += position_array->box().smallEnd();
+            expanded_fourier_box += fourier_array->box().smallEnd();
             dst_plan.m_expanded_position_array =
                 std::make_unique<amrex::FArrayBox>(
                     expanded_position_box, 1);
@@ -267,6 +277,14 @@ namespace AnyDST
                 amrex::Print() << " cufftplan failed! Error: " <<
                     CuFFTUtils::cufftErrorToString(result) << "\n";
             }
+
+            std::size_t buffersize = 0;
+            cufftGetSize(dst_plan.m_plan, &buffersize);
+
+            std::size_t mb = 1024*1024;
+
+            amrex::Print() << "using R2C cuFFT of size " << expanded_size[0] << " * "
+                << expanded_size[1] << " with " << (buffersize+mb-1)/mb << " MiB of work area\n";
 
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;
@@ -311,6 +329,16 @@ namespace AnyDST
                 amrex::Print() << " cufftplan failed! Error: " <<
                     CuFFTUtils::cufftErrorToString(resultb) << "\n";
             }
+
+            std::size_t buffersize = 0;
+            std::size_t buffersize_b = 0;
+            cufftGetSize(dst_plan.m_plan, &buffersize);
+            cufftGetSize(dst_plan.m_plan_b, &buffersize_b);
+
+            std::size_t mb = 1024*1024;
+
+            amrex::Print() << "using C2R cuFFT of sizes " << s_1 << " and "
+                << s_2 << " with " << (buffersize+buffersize_b+mb-1)/mb << " MiB of work area\n";
 
             // Store meta-data in dst_plan
             dst_plan.m_position_array = position_array;

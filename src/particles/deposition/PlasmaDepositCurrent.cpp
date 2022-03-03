@@ -35,14 +35,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, Laser& laser,
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
-        // Extract properties associated with the extent of the current box
-        amrex::Box tilebox = pti.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-
-        amrex::RealBox const grid_box{tilebox, gm.CellSize(), gm.ProbLo()};
-        amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-        amrex::Dim3 const lo = amrex::lbound(tilebox);
-
         // Extract the fields currents
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
         amrex::MultiFab jx(S, amrex::make_alias, Comps[which_slice]["jx"], 1);
@@ -67,28 +59,34 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, Laser& laser,
         const bool use_laser = laser.m_use_laser;
         const amrex::MultiFab& a_sqrd_mf = laser.getSlices(WhichLaserSlice::AbsSq);
 
+        // Offset for converting positions to indexes
+        const amrex::Real x_pos_offset = GetPosOffset(0, gm, jx_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm, jx_fab.box());
+        const amrex::Real z_pos_offset = GetPosOffset(2, gm, jx_fab.box());
+
+
         if        (Hipace::m_depos_order_xy == 0){
-                doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          jxx_fab, jxy_fab, jyy_fab, a_sqrd_mf, use_laser, tmp_dens,
-                                          dx, xyzmin, lo, q, can_ionize, temp_slice,
+                doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
+                                          jyy_fab, a_sqrd_mf, use_laser, tmp_dens, dx, x_pos_offset,
+                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                                           max_qsa_weighting_factor, bins, bin_size);
         } else if (Hipace::m_depos_order_xy == 1){
-                doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          jxx_fab, jxy_fab, jyy_fab, a_sqrd_mf, use_laser, tmp_dens,
-                                          dx, xyzmin, lo, q, can_ionize, temp_slice,
+                doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
+                                          jyy_fab, a_sqrd_mf, use_laser, tmp_dens, dx, x_pos_offset,
+                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                                           max_qsa_weighting_factor, bins, bin_size);
         } else if (Hipace::m_depos_order_xy == 2){
-                doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          jxx_fab, jxy_fab, jyy_fab, a_sqrd_mf, use_laser, tmp_dens,
-                                          dx, xyzmin, lo, q, can_ionize, temp_slice,
+                doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
+                                          jyy_fab, a_sqrd_mf, use_laser, tmp_dens, dx, x_pos_offset,
+                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                                           max_qsa_weighting_factor, bins, bin_size);
         } else if (Hipace::m_depos_order_xy == 3){
-                doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab,
-                                          jxx_fab, jxy_fab, jyy_fab, a_sqrd_mf, use_laser, tmp_dens,
-                                          dx, xyzmin, lo, q, can_ionize, temp_slice,
+                doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
+                                          jyy_fab, a_sqrd_mf, use_laser, tmp_dens, dx, x_pos_offset,
+                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
                                           deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                                           max_qsa_weighting_factor, bins, bin_size);
         } else {

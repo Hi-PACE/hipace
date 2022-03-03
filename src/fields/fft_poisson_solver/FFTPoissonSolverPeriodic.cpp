@@ -30,6 +30,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
         // each direction and have the same number of points as the
         // (cell-centered) real space box
         amrex::Box realspace_bx = realspace_ba[i];
+        realspace_bx.grow(Fields::m_poisson_nguards);
         amrex::IntVect fft_size = realspace_bx.length();
         // Because the spectral solver uses real-to-complex FFTs, we only
         // need the positive k values along the fastest axis
@@ -47,7 +48,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
-    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
+    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, Fields::m_poisson_nguards);
     m_tmpSpectralField = SpectralField(m_spectralspace_ba, dm, 1, 0);
 
     // This must be true even for parallel FFT.
@@ -90,7 +91,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
         // Note: the size of the real-space box and spectral-space box
         // differ when using real-to-complex FFT. When initializing
         // the FFT plan, the valid dimensions are those of the real-space box.
-        amrex::IntVect fft_size = mfi.validbox().length();
+        amrex::IntVect fft_size = m_stagingArea[mfi].box().length();
         m_forward_plan[mfi] = AnyFFT::CreatePlan(
             fft_size, m_stagingArea[mfi].dataPtr(),
             reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
@@ -130,8 +131,9 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Copy from the staging area to output array (and normalize)
         amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
-        const amrex::Real inv_N = 1./mfi.validbox().numPts();
-        amrex::ParallelFor( mfi.validbox(),
+        const amrex::Box fft_box = m_stagingArea[mfi].box();
+        const amrex::Real inv_N = 1./fft_box.numPts();
+        amrex::ParallelFor( fft_box,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
                 // Copy and normalize field
                 lhs_arr(i,j,k) = inv_N*tmp_real_arr(i,j,k);

@@ -5,7 +5,8 @@
 Diagnostic::Diagnostic (int nlev)
     : m_F(nlev),
       m_diag_coarsen(nlev),
-      m_geom_io(nlev)
+      m_geom_io(nlev),
+      m_has_field(nlev)
 {
     amrex::ParmParse ppd("diagnostic");
     std::string str_type;
@@ -22,6 +23,8 @@ Diagnostic::Diagnostic (int nlev)
     } else {
         amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
     }
+
+    queryWithParser(ppd, "include_ghost_cells", m_include_ghost_cells);
 
     for(int ilev = 0; ilev<nlev; ++ilev) {
         amrex::Array<int,3> diag_coarsen_arr{1,1,1};
@@ -93,49 +96,51 @@ Diagnostic::Diagnostic (int nlev)
 }
 
 void
-Diagnostic::AllocData (int lev, const amrex::Box& bx, amrex::Geometry const& geom)
+Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
+                            amrex::Geometry const& geom)
 {
-    // trim the 3D box to slice box for slice IO
-    amrex::Box F_bx = TrimIOBox(bx);
-
-    F_bx.coarsen(m_diag_coarsen[lev]);
-
-    m_F.push_back(amrex::FArrayBox(F_bx, m_nfields, amrex::The_Pinned_Arena()));
-
-    m_geom_io[lev] = geom;
-    amrex::RealBox prob_domain = geom.ProbDomain();
-    amrex::Box domain = geom.Domain();
-    // Define slice box
-    if (m_slice_dir >= 0){
-        int const icenter = domain.length(m_slice_dir)/2;
-        domain.setSmall(m_slice_dir, icenter);
-        domain.setBig(m_slice_dir, icenter);
-        m_geom_io[lev] = amrex::Geometry(domain, &prob_domain, geom.Coord());
+    if (m_include_ghost_cells) {
+        local_box.grow(Fields::m_slices_nguards);
+        domain.grow(Fields::m_slices_nguards);
     }
-    m_geom_io[lev].coarsen(m_diag_coarsen[lev]);
+
+    amrex::RealBox diag_domain = geom.ProbDomain();
+    for(int dir=0; dir<=2; ++dir) {
+        // make diag_domain correspond to box
+        diag_domain.setLo(dir, geom.ProbLo(dir)
+            + (domain.smallEnd(dir) - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
+        diag_domain.setHi(dir, geom.ProbHi(dir)
+            + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
+    }
+    // trim the 3D box to slice box for slice IO
+    TrimIOBox(local_box, domain, diag_domain);
+
+    local_box.coarsen(m_diag_coarsen[lev]);
+    domain.coarsen(m_diag_coarsen[lev]);
+
+    m_geom_io[lev] = amrex::Geometry(domain, &diag_domain, geom.Coord());
+
+    m_has_field[lev] = local_box.ok();
+
+    if(m_has_field[lev]) {
+        m_F[lev].resize(local_box, m_nfields, amrex::The_Pinned_Arena());
+        m_F[lev].setVal<amrex::RunOn::Host>(0);
+    }
 }
 
 void
-Diagnostic::ResizeFDiagFAB (const amrex::Box box, const int lev)
+Diagnostic::TrimIOBox (amrex::Box& box_3d, amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
 {
-    amrex::Box io_box = TrimIOBox(box);
-    io_box.coarsen(m_diag_coarsen[lev]);
-    m_F[lev].resize(io_box, m_nfields);
-}
-
-amrex::Box
-Diagnostic::TrimIOBox (const amrex::Box box_3d)
-{
-    // Create a xz slice Box
-    amrex::Box slice_bx = box_3d;
     if (m_slice_dir >= 0){
-            // Flatten the box down to 1 cell in the approprate direction.
-            const int idx = box_3d.smallEnd(m_slice_dir) + box_3d.length(m_slice_dir)/2;
-            slice_bx.setSmall(m_slice_dir, idx);
-            slice_bx.setBig  (m_slice_dir, idx);
+        const amrex::Real half_cell_size = rbox_3d.length(m_slice_dir) /
+                                           ( 2. * domain_3d.length(m_slice_dir) );
+        const amrex::Real mid = (rbox_3d.lo(m_slice_dir) + rbox_3d.hi(m_slice_dir)) / 2.;
+        // Flatten the box down to 1 cell in the approprate direction.
+        box_3d.setSmall(m_slice_dir, 0);
+        box_3d.setBig  (m_slice_dir, 0);
+        domain_3d.setSmall(m_slice_dir, 0);
+        domain_3d.setBig  (m_slice_dir, 0);
+        rbox_3d.setLo(m_slice_dir, mid - half_cell_size);
+        rbox_3d.setHi(m_slice_dir, mid + half_cell_size);
     }
-    // m_F is defined on F_bx, the full or the slice Box
-    amrex::Box F_bx = m_slice_dir >= 0 ? slice_bx : box_3d;
-
-    return F_bx;
 }

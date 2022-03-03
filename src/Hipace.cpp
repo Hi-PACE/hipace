@@ -85,10 +85,8 @@ Hipace::Hipace () :
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
 
-#ifndef AMREX_USE_GPU
     int seed;
     if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed);
-#endif
 
     amrex::ParmParse pph("hipace");
 
@@ -248,6 +246,10 @@ Hipace::InitData ()
 #else
     amrex::Print() << "HiPACE++ (" << Hipace::Version() << ") running in double precision\n";
 #endif
+#ifdef AMREX_USE_CUDA
+    amrex::Print() << "using CUDA version " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__
+                   << "." << __CUDACC_VER_BUILD__ << "\n";
+#endif
 
 
     amrex::Vector<amrex::IntVect> new_max_grid_size;
@@ -269,6 +271,8 @@ Hipace::InitData ()
     m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
 #endif
     m_physical_time = m_initial_time;
+
+    m_fields.checkInit();
 }
 
 void
@@ -304,8 +308,6 @@ Hipace::MakeNewLevelFromScratch (
     }
     SetDistributionMap(lev, dm); // Let AmrCore know
     DefineSliceGDB(lev, ba, dm);
-    // Note: we pass ba[0] as a dummy box, it will be resized properly in the loop over boxes in Evolve
-    m_diags.AllocData(lev, ba[0], Geom(lev));
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
     m_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
@@ -392,6 +394,8 @@ Hipace::Evolve ()
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
+        if (m_explicit) m_multi_plasma.CheckDensity();
+
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
@@ -470,7 +474,7 @@ Hipace::Evolve ()
 
 void
 Hipace::SolveOneSlice (int islice_coarse, const int ibox,
-                       amrex::Vector<amrex::Vector<BeamBins>>& bins)
+                       const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
@@ -508,10 +512,12 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 const int iby = Comps[WhichSlice::This]["By"];
                 const int nc = Comps[WhichSlice::This]["N"];
                 AMREX_ALWAYS_ASSERT( iby == ibx+1 );
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0., 0, ibx);
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0., iby+1, nc-iby-1);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(
+                    0., 0, ibx, m_fields.m_slices_nguards);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(
+                    0., iby+1, nc-iby-1, m_fields.m_slices_nguards);
             } else {
-                m_fields.getSlices(lev, WhichSlice::This).setVal(0.);
+                m_fields.getSlices(lev, WhichSlice::This).setVal(0., m_fields.m_slices_nguards);
             }
 
             if (!m_explicit) {
@@ -529,8 +535,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             if (m_explicit){
                 amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
                                              amrex::make_alias, Comps[WhichSlice::Next]["jx"], 4);
-                j_slice_next.setVal(0.);
-                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
+                j_slice_next.setVal(0., m_fields.m_slices_nguards);
+                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                                  m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                                  WhichSlice::Next);
                 m_fields.AddBeamCurrents(lev, WhichSlice::Next);
@@ -560,7 +566,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
 
             m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins[lev],
+            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                              m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                              WhichSlice::This);
             m_fields.AddBeamCurrents(lev, WhichSlice::This);
@@ -578,7 +584,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                                 true, lev);
                 m_fields.AddRhoIons(lev);
             } else {
-                PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bx, bins[lev], ibox);
+                PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bins[lev], ibox);
             }
 
             // Push beam particles
@@ -608,7 +614,7 @@ Hipace::ResetAllQuantities ()
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);
         for (int islice=0; islice<WhichSlice::N; islice++) {
-            m_fields.getSlices(lev, islice).setVal(0.);
+            m_fields.getSlices(lev, islice).setVal(0., m_fields.m_slices_nguards);
         }
     }
 }
@@ -633,8 +639,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // Later this should have only 1 component, but we have 2 for now, with always the same values.
     amrex::MultiFab Mult(ba, dm, 2, ngv);
     amrex::MultiFab S(ba, dm, 2, ngv);
-    Mult.setVal(0.);
-    S.setVal(0.);
+    Mult.setVal(0., ngv);
+    S.setVal(0., ngv);
 
     const amrex::MultiFab Rho(slicemf, amrex::make_alias, Comps[isl]["rho"    ], 1);
     const amrex::MultiFab Jx (slicemf, amrex::make_alias, Comps[isl]["jx"     ], 1);
@@ -662,11 +668,16 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
-    const amrex::Real n0 = m_multi_plasma.maxDensity();
+    const amrex::Real n0 = m_multi_plasma.GetNominalDensity();
     const amrex::Real omegap = std::sqrt(n0 * pc.q_e*pc.q_e/(pc.m_e*pc.ep0));
     const amrex::Real kp = omegap/pc.c;
     const amrex::Real kpinv = 1./kp;
     const amrex::Real E0 = omegap * pc.m_e * pc.c / pc.q_e;
+
+    // getting the constant of motion for finite temperatures
+    const amrex::RealVect u_std = m_multi_plasma.GetUStd();
+    const amrex::Real const_of_motion = sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1]
+                                             + u_std[2]*u_std[2]);
 
     // dx, dy, dz in normalized units
     const amrex::Real dx = Geom(lev).CellSize(Direction::x)/kpinv;
@@ -676,6 +687,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const bool use_laser = m_laser.m_use_laser;
 
     // transforming BxBy array to normalized units for use as initial guess
+    // TODO: include ghost cells in .mult (currently not supported by amrex)
     BxBy.mult(pc.c/E0);
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
@@ -759,26 +771,29 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
 
-                const amrex::Real nstar_gamma = 0.5_rt* (1._rt+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)/(1._rt+cpsi);
+                const amrex::Real nstar_gamma = 0.5_rt* (const_of_motion+cpsi)*(cjxx + cjyy + nstar)
+                                                + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)
+                                                /(const_of_motion + cpsi);
 
-                const amrex::Real nstar_ax = 1._rt/(1._rt + cpsi) *
-                                        ( (nstar_gamma*cdx_psi -0.25_rt*casqdx*nstar)/(1._rt+cpsi)
+                const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) *
+                                        ( (nstar_gamma*cdx_psi -0.25_rt*casqdx*nstar)
+                                        /(const_of_motion + cpsi)
                                         - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
 
-                const amrex::Real nstar_ay = 1._rt/(1._rt + cpsi) *
-                                        ( (nstar_gamma*cdy_psi -0.25_rt*casqdy*nstar)/(1._rt+cpsi)
+                const amrex::Real nstar_ay = 1._rt/(const_of_motion + cpsi) *
+                                        ( (nstar_gamma*cdy_psi -0.25_rt*casqdy*nstar)
+                                        /(const_of_motion+cpsi)
                                         - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
-                mult(i,j,k,0) = nstar / (1._rt + cpsi);
-                mult(i,j,k,1) = nstar / (1._rt + cpsi);
+                mult(i,j,k,0) = nstar / (const_of_motion + cpsi);
+                mult(i,j,k,1) = nstar / (const_of_motion + cpsi);
 
                 // sy, to compute Bx
-                s(i,j,k,0) = + cbz * cjxp / (1._rt+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
+                s(i,j,k,0) = + cbz * cjxp / (const_of_motion+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
                              + cdz_jyb;
                 // sx, to compute By
-                s(i,j,k,1) = - cbz * cjyp / (1._rt+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
+                s(i,j,k,1) = - cbz * cjyp / (const_of_motion+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
                              + cdz_jxb;
                 s(i,j,k,1) *= -1;
 
@@ -852,13 +867,14 @@ Hipace::ExplicitSolveBxBy (const int lev)
 #endif
 
     // converting BxBy to SI units, if applicable
+    // TODO: include ghost cells in .mult (currently not supported by amrex)
     BxBy.mult(E0/pc.c);
     amrex::ParallelContext::pop();
 }
 
 void
 Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
-                                const amrex::Box bx, amrex::Vector<BeamBins> bins, const int ibox)
+                                           const amrex::Vector<BeamBins>& bins, const int ibox)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -886,18 +902,18 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     amrex::MultiFab By_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                             m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                             m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    Bx_iter.setVal(0.0);
-    By_iter.setVal(0.0);
+    Bx_iter.setVal(0.0, m_fields.m_slices_nguards);
+    By_iter.setVal(0.0, m_fields.m_slices_nguards);
     amrex::MultiFab Bx_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(Bx_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["Bx"], 0, 1, 0);
+                          Comps[WhichSlice::This]["Bx"], 0, 1, m_fields.m_slices_nguards);
     amrex::MultiFab By_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
                                  m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
                                  m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
     amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
-                          Comps[WhichSlice::This]["By"], 0, 1, 0);
+                          Comps[WhichSlice::This]["By"], 0, 1, m_fields.m_slices_nguards);
 
     /* creating aliases to the current in the next slice.
      * This needs to be reset after each push to the next slice */
@@ -934,7 +950,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_multi_plasma.DepositCurrent(
             m_fields, m_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
-        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bx, bins, m_box_sorters,
+        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
         m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 
@@ -967,10 +983,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
-        jx_next.setVal(0.);
-        jy_next.setVal(0.);
-        jx_beam_next.setVal(0.);
-        jy_beam_next.setVal(0.);
+        jx_next.setVal(0., m_fields.m_slices_nguards);
+        jy_next.setVal(0., m_fields.m_slices_nguards);
+        jx_beam_next.setVal(0., m_fields.m_slices_nguards);
+        jy_beam_next.setVal(0., m_fields.m_slices_nguards);
 
         amrex::ParallelContext::push(m_comm_xy);
          // exchange Bx By
@@ -1071,8 +1087,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             ptile.resize(new_size);
             const auto ptd = ptile.getParticleTileData();
 
-            const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
-            const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
+            const amrex::Gpu::DeviceVector<int> comm_real(AMREX_SPACEDIM + m_multi_beam.NumRealComps(), 1);
+            const amrex::Gpu::DeviceVector<int> comm_int (AMREX_SPACEDIM + m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
 
@@ -1130,13 +1146,13 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
 void
 Hipace::Notify (const int step, const int it,
-                amrex::Vector<BeamBins>& bins, bool only_ghost)
+                const amrex::Vector<BeamBins>& bins, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
+#ifdef AMREX_USE_MPI
     constexpr int lev = 0;
 
-#ifdef AMREX_USE_MPI
     NotifyFinish(it, only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
@@ -1206,18 +1222,15 @@ Hipace::Notify (const int step, const int it,
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const auto ptd = ptile.getConstParticleTileData();
 
-            const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
-            const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
+            const amrex::Gpu::DeviceVector<int> comm_real(AMREX_SPACEDIM + m_multi_beam.NumRealComps(), 1);
+            const amrex::Gpu::DeviceVector<int> comm_int (AMREX_SPACEDIM + m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
             const auto p_psend_buffer = psend_buffer + offset_beam*psize;
 
-            BeamBins::index_type* indices = nullptr;
-            BeamBins::index_type const * offsets = 0;
+            BeamBins::index_type const * const indices = bins[ibeam].permutationPtr();
+            BeamBins::index_type const * const offsets = bins[ibeam].offsetsPtr();
             BeamBins::index_type cell_start = 0;
-
-            indices = bins[ibeam].permutationPtr();
-            offsets = bins[ibeam].offsetsPtr();
 
             // The particles that are in the last slice (sent as ghost particles) are
             // given by the indices[cell_start:cell_stop-1]
@@ -1325,17 +1338,26 @@ void
 Hipace::ResizeFDiagFAB (const int it)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        amrex::Box bx = boxArray(lev)[it];
+        amrex::Box local_box = boxArray(lev)[it];
+        amrex::Box domain = boxArray(lev).minimalBox();
 
         if (lev == 1) {
+            // boxArray(1) is not correct in z direction. We need to manually enforce a
+            // parent/child relationship between lev_0 and lev_1 boxes in z
             const amrex::Box& bx_lev0 = boxArray(0)[it];
             const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
+
+            // This seems to be required for some reason
+            domain.setBig(Direction::z, domain.bigEnd(Direction::z) - ref_ratio_z);
+
             // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
-            bx.setSmall(Direction::z, ref_ratio_z*bx_lev0.smallEnd(Direction::z));
-            bx.setBig  (Direction::z, ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1));
+            local_box.setSmall(Direction::z, amrex::max(domain.smallEnd(Direction::z),
+                               ref_ratio_z*bx_lev0.smallEnd(Direction::z)));
+            local_box.setBig  (Direction::z, amrex::min(domain.bigEnd(Direction::z),
+                               ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1)));
         }
 
-        m_diags.ResizeFDiagFAB(bx, lev);
+        m_diags.ResizeFDiagFAB(local_box, domain, lev, Geom(lev));
     }
 }
 
@@ -1352,8 +1374,11 @@ Hipace::GetRefRatio (int lev)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    m_fields.Copy(lev, i_slice, 0, 0, m_diags.getCompsIdx(), m_diags.getNFields(),
-                  m_diags.getF(lev), m_diags.sliceDir(), m_diags.getCoarsening(lev), Geom(lev));
+    if (m_diags.hasField()[lev]) {
+        m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev),
+                      m_diags.getF(lev).box(), Geom(lev),
+                      m_diags.getCompsIdx(), m_diags.getNFields());
+    }
 }
 
 void
@@ -1370,9 +1395,9 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(),
-                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames, beamnames,
-                        it, m_box_sorters, geom, call_type);
+    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.hasField(),
+                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames,
+                        beamnames, it, m_box_sorters, geom, call_type);
 #else
     amrex::ignore_unused(it, call_type);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";

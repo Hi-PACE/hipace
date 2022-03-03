@@ -116,11 +116,35 @@ PlasmaParticleContainer::ReadParameters ()
             m_u_mean[idim] = loc_array[idim];
         }
     }
-    if (queryWithParser(pp, "u_std", loc_array)) {
+    bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", loc_array);
+    bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !(temperature_is_specified && thermal_momentum_is_specified),
+         "Please specify exlusively either a temperature or the thermal momentum");
+    if (thermal_momentum_is_specified) {
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             m_u_std[idim] = loc_array[idim];
         }
     }
+
+    if (temperature_is_specified) {
+        const PhysConst phys_const_SI = make_constants_SI();
+        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+            m_u_std[idim] = sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
+                                /(phys_const_SI.m_e * phys_const_SI.c * phys_const_SI.c ) );
+        }
+    }
+
+    // FIXME assert to be removed once the bug in the explicit solver if fixed.
+    amrex::ParmParse pph("hipace");
+    std::string solver;
+    queryWithParser(pph, "bxby_solver", solver);
+    if (solver=="explicit") {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_u_std[Direction::z] < 0.01,
+        "Currently, the explicit solver does not work for plasma momentum spread > 0.01 in z "
+        "direction. Please use a lower <plasma name>.temperature_in_ev or <plasma name>.u_std.");
+    }
+
 }
 
 void
@@ -162,15 +186,6 @@ IonizationModule (const int lev,
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
     for (amrex::MFIter mfi_ion = MakeMFIter(lev); mfi_ion.isValid(); ++mfi_ion)
     {
-        // Extract properties associated with the extent of the current box
-        // Grow to capture the extent of the particle shape
-        amrex::Box tilebox = mfi_ion.tilebox().grow(
-            {Hipace::m_depos_order_xy, Hipace::m_depos_order_xy, 0});
-
-        amrex::RealBox const grid_box{tilebox, geom.CellSize(), geom.ProbLo()};
-        amrex::Real const * AMREX_RESTRICT xyzmin = grid_box.lo();
-        amrex::Dim3 const lo = amrex::lbound(tilebox);
-
         // Extract the fields
         const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
         const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
@@ -195,7 +210,12 @@ IonizationModule (const int lev,
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
         // Extract particle data
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-        const amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, ez_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, ez_fab.box());
+        amrex::Real const z_pos_offset = GetPosOffset(2, geom, ez_fab.box());
+
         const int depos_order_xy = Hipace::m_depos_order_xy;
 
         auto& plevel_ion = GetParticles(lev);
@@ -209,13 +229,14 @@ IonizationModule (const int lev,
         using PTileType = PlasmaParticleContainer::ParticleTileType;
         const auto getPosition = GetParticlePosition<PTileType>(ptile_ion);
 
-        const amrex::Real zmin = xyzmin[2];
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
+        const amrex::Real * const const_of_motion = soa_ion.GetRealData(
+                                                                PlasmaIdx::const_of_motion).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -242,10 +263,11 @@ IonizationModule (const int lev,
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
             amrex::ParticleReal Bxp = 0., Byp = 0., Bzp = 0.;
 
-            doGatherShapeN(xp, yp, zmin,
+            doGatherShapeN(xp, yp,  0 /* zp not used */,
                            ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                            exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                           dx_arr, xyzmin_arr, lo, depos_order_xy, 0);
+                           dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
+                           depos_order_xy, 0);
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
@@ -253,7 +275,7 @@ IonizationModule (const int lev,
 
             // Compute probability of ionization p
             const amrex::Real psi_1 = ( psip[ip] *
-                phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c) ) + 1._rt;
+                phys_const.q_e / (phys_const.m_e * clightsq) ) + const_of_motion[ip];
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
                                                + uyp[ip] * uyp[ip] * clightsq
                                                + psi_1 * psi_1 ) / ( 2.0_rt * psi_1 );
@@ -356,6 +378,8 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::Fpsi5   ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::x0      ][pidx] = arrdata_ion[PlasmaIdx::x0    ][ip];
                 arrdata_elec[PlasmaIdx::y0      ][pidx] = arrdata_ion[PlasmaIdx::y0    ][ip];
+                // later we could consider adding a finite temperature to the ionized electrons
+                arrdata_elec[PlasmaIdx::const_of_motion][pidx] = 1._rt;
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });

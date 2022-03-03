@@ -33,8 +33,9 @@
  * \param[in] by_arr field array for field  By
  * \param[in] bz_arr field array for field  Bz
  * \param[in] dx 3D cell spacing
- * \param[in] xyzmin Physical lower bounds of domain in x, y, z
- * \param[in] lo Index lower bounds of domain
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  */
 template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -54,38 +55,28 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      amrex::Array4<amrex::Real const> const& by_arr,
                      amrex::Array4<amrex::Real const> const& bz_arr,
                      const amrex::GpuArray<amrex::Real, 3>& dx,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                     const amrex::Dim3& lo)
+                     const amrex::Real x_pos_offset,
+                     const amrex::Real y_pos_offset,
+                     const amrex::Real z_pos_offset)
 {
-    using namespace amrex::literals;
-
-    const amrex::Real dxi = 1.0_rt/dx[0];
-    const amrex::Real dyi = 1.0_rt/dx[1];
-    const amrex::Real dzi = 1.0_rt/dx[2];
-
-    const amrex::Real xmin = xyzmin[0];
-    const amrex::Real ymin = xyzmin[1];
-    const amrex::Real zmin = xyzmin[2];
-
     // x,y,z direction
-    const amrex::Real x = (xp-xmin)*dxi;
-    const amrex::Real y = (yp-ymin)*dyi;
-    const amrex::Real z = (zp-zmin)*dzi;
-
+    const amrex::Real x = (xp-x_pos_offset)/dx[0];
+    const amrex::Real y = (yp-y_pos_offset)/dx[1];
+    const amrex::Real z = (zp-z_pos_offset)/dx[2];
 
     // --- Compute shape factors
     // x direction
     // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
     amrex::Real sx_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x - 0.5_rt);
+    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
 
     // y direction
     amrex::Real sy_cell[depos_order_xy + 1];
-    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y - 0.5_rt);
+    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
 
     // z direction;
     amrex::Real sz_cell[depos_order_z + 1];
-    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
+    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z);
     amrex::ignore_unused(l_cell);
 
     // Gather field on particle ExmByp from field on grid exmby_arr
@@ -93,7 +84,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 ExmByp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    exmby_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(exmby_arr).z);
+                    exmby_arr(j_cell+ix, k_cell+iy, amrex::lbound(exmby_arr).z);
             }
         }
     }
@@ -102,7 +93,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 EypBxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    eypbx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(eypbx_arr).z);
+                    eypbx_arr(j_cell+ix, k_cell+iy, amrex::lbound(eypbx_arr).z);
             }
         }
     }
@@ -111,7 +102,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Ezp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    ez_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(ez_arr).z);
+                    ez_arr(j_cell+ix, k_cell+iy, amrex::lbound(ez_arr).z);
             }
         }
     }
@@ -120,7 +111,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Bxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    bx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(bx_arr).z);
+                    bx_arr(j_cell+ix, k_cell+iy, amrex::lbound(bx_arr).z);
             }
         }
     }
@@ -129,7 +120,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Byp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    by_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(by_arr).z);
+                    by_arr(j_cell+ix, k_cell+iy, amrex::lbound(by_arr).z);
             }
         }
     }
@@ -138,7 +129,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Bzp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    bz_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(bz_arr).z);
+                    bz_arr(j_cell+ix, k_cell+iy, amrex::lbound(bz_arr).z);
             }
         }
     }
@@ -165,8 +156,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] by_arr field array for field  By
  * \param[in] bz_arr field array for field  Bz
  * \param[in] dx 3D cell spacing
- * \param[in] xyzmin Physical lower bounds of domain in x, y, z
- * \param[in] lo Index lower bounds of domain
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  * \param[in] depos_order_xy Order of the transverse shape factor for the field gather
  * \param[in] depos_order_z Order of the longitudinal shape factor for the field gather
  */
@@ -187,27 +179,28 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      amrex::Array4<amrex::Real const> const& by_arr,
                      amrex::Array4<amrex::Real const> const& bz_arr,
                      const amrex::GpuArray<amrex::Real, 3>& dx,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                     const amrex::Dim3& lo,
+                     const amrex::Real x_pos_offset,
+                     const amrex::Real y_pos_offset,
+                     const amrex::Real z_pos_offset,
                      const int depos_order_xy,
                      const int depos_order_z)
 {
     if (depos_order_xy == 0 && depos_order_z == 0) {
         doGatherShapeN<0,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx, xyzmin, lo);
+                            dx, x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 1 && depos_order_z == 0)  {
         doGatherShapeN<1,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx, xyzmin, lo);
+                            dx, x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 2 && depos_order_z == 0)  {
         doGatherShapeN<2,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx, xyzmin, lo);
+                            dx, x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 3 && depos_order_z == 0)  {
         doGatherShapeN<3,0>(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                            dx, xyzmin, lo);
+                            dx, x_pos_offset, y_pos_offset, z_pos_offset);
     }
 }
 
@@ -226,8 +219,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] aabssqdx_arr d/dx |a|^2 field array
  * \param[in] aabssqdy_arr d/dy |a|^2 field array
  * \param[in] dx 3D cell spacing
- * \param[in] xyzmin Physical lower bounds of domain in x, y, z
- * \param[in] lo Index lower bounds of domain
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  */
 template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -241,38 +235,30 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
                           amrex::Array4<amrex::Real const> const& aabssqdx_arr,
                           amrex::Array4<amrex::Real const> const& aabssqdy_arr,
                           const amrex::GpuArray<amrex::Real, 3>& dx,
-                          const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                          const amrex::Dim3& lo)
+                          const amrex::Real x_pos_offset,
+                          const amrex::Real y_pos_offset,
+                          const amrex::Real z_pos_offset)
 {
     using namespace amrex::literals;
 
-    const amrex::Real dxi = 1.0_rt/dx[0];
-    const amrex::Real dyi = 1.0_rt/dx[1];
-    const amrex::Real dzi = 1.0_rt/dx[2];
-
-    const amrex::Real xmin = xyzmin[0];
-    const amrex::Real ymin = xyzmin[1];
-    const amrex::Real zmin = xyzmin[2];
-
     // x,y,z direction
-    const amrex::Real x = (xp-xmin)*dxi;
-    const amrex::Real y = (yp-ymin)*dyi;
-    const amrex::Real z = (zp-zmin)*dzi;
-
+    const amrex::Real x = (xp-x_pos_offset)/dx[0];
+    const amrex::Real y = (yp-y_pos_offset)/dx[1];
+    const amrex::Real z = (zp-z_pos_offset)/dx[2];
 
     // --- Compute shape factors
     // x direction
     // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
     amrex::Real sx_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x - 0.5_rt);
+    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
 
     // y direction
     amrex::Real sy_cell[depos_order_xy + 1];
-    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y - 0.5_rt);
+    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
 
     // z direction;
     amrex::Real sz_cell[depos_order_z + 1];
-    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
+    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z);
     amrex::ignore_unused(l_cell);
 
     // Gather field on particle Aabssqp from field on grid aabssq_arr
@@ -280,7 +266,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Aabssqp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    aabssq_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(aabssq_arr).z);
+                    aabssq_arr(j_cell+ix, k_cell+iy, amrex::lbound(aabssq_arr).z);
             }
         }
     }
@@ -289,7 +275,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 AabssqDxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    aabssqdx_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(aabssqdx_arr).z);
+                    aabssqdx_arr(j_cell+ix, k_cell+iy, amrex::lbound(aabssqdx_arr).z);
             }
         }
     }
@@ -298,7 +284,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 AabssqDyp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    aabssqdy_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(aabssqdy_arr).z);
+                    aabssqdy_arr(j_cell+ix, k_cell+iy, amrex::lbound(aabssqdy_arr).z);
             }
         }
     }
@@ -319,8 +305,9 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
  * \param[in] aabssqdx_arr field array for field  d/dx |a|^2
  * \param[in] aabssqdy_arr field array for field  d/dx |a|^2
  * \param[in] dx 3D cell spacing
- * \param[in] xyzmin Physical lower bounds of domain in x, y, z
- * \param[in] lo Index lower bounds of domain
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  * \param[in] depos_order_xy Order of the transverse shape factor for the field gather
  * \param[in] depos_order_z Order of the longitudinal shape factor for the field gather
  */
@@ -335,23 +322,24 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
                      amrex::Array4<amrex::Real const> const& aabssqdx_arr,
                      amrex::Array4<amrex::Real const> const& aabssqdy_arr,
                      const amrex::GpuArray<amrex::Real, 3>& dx,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                     const amrex::Dim3& lo,
+                     const amrex::Real x_pos_offset,
+                     const amrex::Real y_pos_offset,
+                     const amrex::Real z_pos_offset,
                      const int depos_order_xy,
                      const int depos_order_z)
 {
     if (depos_order_xy == 0 && depos_order_z == 0) {
-        doLaserGatherShapeN<0,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp,
-                            aabssq_arr, aabssqdx_arr, aabssqdy_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<0,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp, aabssq_arr,
+                        aabssqdx_arr, aabssqdy_arr, dx, x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 1 && depos_order_z == 0)  {
-        doLaserGatherShapeN<1,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp,
-                            aabssq_arr, aabssqdx_arr, aabssqdy_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<1,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp, aabssq_arr,
+                        aabssqdx_arr, aabssqdy_arr, dx, x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 2 && depos_order_z == 0)  {
-        doLaserGatherShapeN<2,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp,
-                            aabssq_arr, aabssqdx_arr, aabssqdy_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<2,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp, aabssq_arr,
+                        aabssqdx_arr, aabssqdy_arr, dx, x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 3 && depos_order_z == 0)  {
-        doLaserGatherShapeN<3,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp,
-                            aabssq_arr, aabssqdx_arr, aabssqdy_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<3,0>(xp, yp, zp, Aabssqp, AabssqDxp, AabssqDyp, aabssq_arr,
+                        aabssqdx_arr, aabssqdy_arr, dx, x_pos_offset, y_pos_offset, z_pos_offset);
     }
 }
 
@@ -366,49 +354,42 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
  * \param[in,out] Aabssqp Field on particle: |a|^2
  * \param[in] aabssq_arr field array for field |a|^2
  * \param[in] dx 3D cell spacing
- * \param[in] xyzmin Physical lower bounds of domain in x, y, z
- * \param[in] lo Index lower bounds of domain
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  */
 template <int depos_order_xy, int depos_order_z>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doLaserGatherShapeN (const amrex::ParticleReal xp,
-                     const amrex::ParticleReal yp,
-                     const amrex::ParticleReal zp,
-                     amrex::ParticleReal& Aabssqp,
-                     amrex::Array4<amrex::Real const> const& aabssq_arr,
-                     const amrex::GpuArray<amrex::Real, 3>& dx,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                     const amrex::Dim3& lo)
+                          const amrex::ParticleReal yp,
+                          const amrex::ParticleReal zp,
+                          amrex::ParticleReal& Aabssqp,
+                          amrex::Array4<amrex::Real const> const& aabssq_arr,
+                          const amrex::GpuArray<amrex::Real, 3>& dx,
+                          const amrex::Real x_pos_offset,
+                          const amrex::Real y_pos_offset,
+                          const amrex::Real z_pos_offset)
 {
     using namespace amrex::literals;
 
-    const amrex::Real dxi = 1.0_rt/dx[0];
-    const amrex::Real dyi = 1.0_rt/dx[1];
-    const amrex::Real dzi = 1.0_rt/dx[2];
-
-    const amrex::Real xmin = xyzmin[0];
-    const amrex::Real ymin = xyzmin[1];
-    const amrex::Real zmin = xyzmin[2];
-
     // x,y,z direction
-    const amrex::Real x = (xp-xmin)*dxi;
-    const amrex::Real y = (yp-ymin)*dyi;
-    const amrex::Real z = (zp-zmin)*dzi;
-
+    const amrex::Real x = (xp-x_pos_offset)/dx[0];
+    const amrex::Real y = (yp-y_pos_offset)/dx[1];
+    const amrex::Real z = (zp-z_pos_offset)/dx[2];
 
     // --- Compute shape factors
     // x direction
     // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
     amrex::Real sx_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x - 0.5_rt);
+    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
 
     // y direction
     amrex::Real sy_cell[depos_order_xy + 1];
-    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y - 0.5_rt);
+    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
 
     // z direction;
     amrex::Real sz_cell[depos_order_z + 1];
-    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z - 0.5_rt);
+    const int l_cell = compute_shape_factor<depos_order_z>(sz_cell, z);
     amrex::ignore_unused(l_cell);
 
     // Gather field on particle Aabssqp from field on grid aabssq_arr
@@ -416,7 +397,7 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
                 Aabssqp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    aabssq_arr(lo.x+j_cell+ix, lo.y+k_cell+iy, amrex::lbound(aabssq_arr).z);
+                    aabssq_arr(j_cell+ix, k_cell+iy, amrex::lbound(aabssq_arr).z);
             }
         }
     }
@@ -433,31 +414,37 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
  * \param[in,out] Aabssqp Field on particle: |a|^2
  * \param[in] aabssq_arr field array for field |a|^2
  * \param[in] dx 3D cell spacing
- * \param[in] xyzmin Physical lower bounds of domain in x, y, z
- * \param[in] lo Index lower bounds of domain
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] z_pos_offset offset for converting positions to indexes
  * \param[in] depos_order_xy Order of the transverse shape factor for the field gather
  * \param[in] depos_order_z Order of the longitudinal shape factor for the field gather
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doLaserGatherShapeN (const amrex::ParticleReal xp,
-                     const amrex::ParticleReal yp,
-                     const amrex::ParticleReal zp,
-                     amrex::ParticleReal& Aabssqp,
-                     amrex::Array4<amrex::Real const> const& aabssq_arr,
-                     const amrex::GpuArray<amrex::Real, 3>& dx,
-                     const amrex::GpuArray<amrex::Real, 3>& xyzmin,
-                     const amrex::Dim3& lo,
-                     const int depos_order_xy,
-                     const int depos_order_z)
+                          const amrex::ParticleReal yp,
+                          const amrex::ParticleReal zp,
+                          amrex::ParticleReal& Aabssqp,
+                          amrex::Array4<amrex::Real const> const& aabssq_arr,
+                          const amrex::GpuArray<amrex::Real, 3>& dx,
+                          const amrex::Real x_pos_offset,
+                          const amrex::Real y_pos_offset,
+                          const amrex::Real z_pos_offset,
+                          const int depos_order_xy,
+                          const int depos_order_z)
 {
     if (depos_order_xy == 0 && depos_order_z == 0) {
-        doLaserGatherShapeN<0,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<0,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx,
+                                 x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 1 && depos_order_z == 0)  {
-        doLaserGatherShapeN<1,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<1,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx,
+                                 x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 2 && depos_order_z == 0)  {
-        doLaserGatherShapeN<2,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<2,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx,
+                                 x_pos_offset, y_pos_offset, z_pos_offset);
     } else if (depos_order_xy == 3 && depos_order_z == 0)  {
-        doLaserGatherShapeN<3,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx, xyzmin, lo);
+        doLaserGatherShapeN<3,0>(xp, yp, zp, Aabssqp, aabssq_arr, dx,
+                                 x_pos_offset, y_pos_offset, z_pos_offset);
     }
 }
 

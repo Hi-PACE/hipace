@@ -54,7 +54,7 @@ public:
      * the max is taken across species AND include m_adaptive_density, giving a way to
      * specify a density to the adaptive time step calculator even with no plasma species.
      */
-    amrex::Real maxDensity ();
+    amrex::Real maxDensity () const;
 
     /** \brief Loop over plasma species and Gather fields, update forces and push particles
      *
@@ -108,6 +108,16 @@ public:
      */
     void TileSort (amrex::Box bx, amrex::Geometry geom);
 
+    /** returns u_std of the plasma distribution */
+    amrex::RealVect GetUStd () const;
+
+    /** Return the nominal density */
+    amrex::Real GetNominalDensity () const {return m_nominal_density;}
+
+    /** Check whether the on-axis density is close enough to the nominal density,
+     * to avoid machine-precision problems. */
+    void CheckDensity () const;
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
 private:
@@ -118,6 +128,7 @@ private:
     int m_nplasmas = 0; /**< number of plasma containers */
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
+    amrex::Real m_nominal_density; /**< Density to normalize quantities in the explicit solver */
 };
 
 #endif // MULTIPLASMA_H_
