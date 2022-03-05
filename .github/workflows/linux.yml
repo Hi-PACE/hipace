@@ -16,6 +16,7 @@ jobs:
   linux_gcc_cxx17_omp_ompi:
     name: GNU@7.5 C++17 OMP OMPI
     runs-on: ubuntu-latest
+    env: {OMP_NUM_THREADS: 2}
     steps:
     - uses: actions/checkout@v2
     - name: Dependencies
@@ -34,19 +35,19 @@ jobs:
           ccache-linux-gccompompi-
     - name: Build & Install
       run: |
-        mkdir build
-        cd build
-        cmake ..                                   \
+        cmake -S . -B build                        \
             -DHiPACE_COMPUTE=OMP                   \
+            -DCMAKE_CXX_STANDARD=17                \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
-            -DCMAKE_CXX_STANDARD=17
-        make -j 2 VERBOSE=ON
-        export OMP_NUM_THREADS=2
-        ctest --output-on-failure
+            -DCMAKE_VERBOSE_MAKEFILE=ON
+        cmake --build build -j 2
+    - name: Run Tests
+      run: ctest --test-dir build --output-on-failure
 
   linux_gcc_cxx17:
     name: GNU@7.5 C++17 Serial
     runs-on: ubuntu-latest
+    env: {OMP_NUM_THREADS: 2}
     steps:
     - uses: actions/checkout@v2
     - name: Dependencies
@@ -65,12 +66,12 @@ jobs:
           ccache-linux-gccnompi-
     - name: Build & Install
       run: |
-        mkdir build
-        cd build
-        cmake .. -DHiPACE_MPI=OFF
-        make -j 2 VERBOSE=ON
-        export OMP_NUM_THREADS=2
-        ctest --output-on-failure
+        cmake -S . -B build             \
+            -DHiPACE_MPI=OFF            \
+            -DCMAKE_VERBOSE_MAKEFILE=ON
+        cmake --build build -j 2
+    - name: Run Tests
+      run: ctest --test-dir build --output-on-failure
 
 # enable again when we open-source (free core-hours for GH Actions)
 #
