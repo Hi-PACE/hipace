@@ -1,3 +1,11 @@
+/* Copyright 2020-2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+ * Severin Diederichs, Weiqun Zhang
+ * License: BSD-3-Clause-LBNL
+ */
 #include "BeamParticleContainer.H"
 #include "utils/Constants.H"
 #include "ParticleUtil.H"

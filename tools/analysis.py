@@ -1,5 +1,13 @@
 #! /usr/bin/env python
 
+# Copyright 2020
+#
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Remi Lehe, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
+
 # Plots Ex field and particles at the end of the run,
 # and save image to img.png
 # usage: ./analysis.py

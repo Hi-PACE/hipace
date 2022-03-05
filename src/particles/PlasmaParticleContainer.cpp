@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
+ * Weiqun Zhang, Angel Ferran Pousa
+ * License: BSD-3-Clause-LBNL
+ */
 #include "Hipace.H"
 #include "PlasmaParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"

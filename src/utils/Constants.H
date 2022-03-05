@@ -1,3 +1,10 @@
+/* Copyright 2020
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: Axel Huebl, MaxThevenet, Remi Lehe
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_Constants_H_
 #define HIPACE_Constants_H_
 

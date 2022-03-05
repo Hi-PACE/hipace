@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Remi Lehe
+ * WeiqunZhang
+ * License: BSD-3-Clause-LBNL
+ */
 #include "FFTPoissonSolverPeriodic.H"
 #include "fft/AnyFFT.H"
 #include "utils/Constants.H"

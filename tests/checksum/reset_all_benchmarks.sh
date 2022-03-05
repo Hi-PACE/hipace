@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+# Copyright 2020-2022
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Severin Diederichs
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It resets all checksum benchmarks one by one,
 # based on the current version of the code.

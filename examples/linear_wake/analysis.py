@@ -1,5 +1,14 @@
 #! /usr/bin/env python3
 
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: Axel Huebl, MathisMewes, MaxThevenet, Severin Diederichs
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This Python analysis script is part of the code Hipace
 #
 # It compares the transverse field By with the theoretical value, plots both
