@@ -77,7 +77,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
-                         PlasmaBins& bins, int bin_size)
+                         const PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
 
