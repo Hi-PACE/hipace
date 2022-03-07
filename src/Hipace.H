@@ -267,6 +267,7 @@ public:
     static int m_do_device_synchronize;
     /** Whether to use tiling for particle operations */
     static bool m_do_tiling;
+    static bool m_do_gpu_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     static int m_beam_injection_cr;

@@ -61,6 +61,7 @@ bool Hipace::m_do_tiling = false;
 #else
 bool Hipace::m_do_tiling = true;
 #endif
+bool Hipace::m_do_gpu_tiling = false;
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
@@ -144,6 +145,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
     queryWithParser(pph, "do_tiling", m_do_tiling);
 #ifdef AMREX_USE_GPU
+    queryWithParser(pph, "do_gpu_tiling", m_do_gpu_tiling);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
 
@@ -407,7 +409,7 @@ Hipace::Evolve ()
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
+        if (m_do_tiling || m_do_gpu_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
@@ -533,7 +535,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
                                 Comps[WhichSlice::This]["rho"], 1);
 
-            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+            if (m_do_tiling || m_do_gpu_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
             m_multi_plasma.DepositCurrent(
                 m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
@@ -927,7 +929,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         /* Push particles to the next slice */
         m_multi_plasma.AdvanceParticles(m_fields, geom[lev], true, true, false, false, lev);
 
-        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
+        if (m_do_tiling || m_do_gpu_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
             m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);

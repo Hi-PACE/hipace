@@ -84,6 +84,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const PhysConst phys_const = get_phys_const();
 
     const bool do_tiling = Hipace::m_do_tiling;
+    const bool do_gpu_tiling = Hipace::m_do_gpu_tiling;
 
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -127,7 +128,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
-    PlasmaBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
+    PlasmaBins::index_type const * const indices = do_tiling || do_gpu_tiling ? bins.permutationPtr() : nullptr;
     PlasmaBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
 #ifdef AMREX_USE_OMP
@@ -181,7 +182,11 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 num_particles,
                 [=] AMREX_GPU_DEVICE (long idx) {
 
+#ifndef AMREX_USE_GPU
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
+#else
+                    const int ip = do_gpu_tiling ? indices[idx] : idx;
+#endif
                     if (pos_structs[ip].id() < 0) return;
 
                     const amrex::Real psi = psip[ip] *
