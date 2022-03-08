@@ -512,7 +512,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         // to get Dirichlet boundary conditions
 
         amrex::MultiFab staging_area = getStagingArea(lev);
-        // Open Boundaries only work for lev0 with everything in one box
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(staging_area.size() == 1,
+            "Open Boundaries only work for lev0 with everything in one box");
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
         const auto arr_staging_area = staging_area_fab.array();
@@ -523,7 +524,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         const amrex::Real dx = geom[lev].CellSize(0);
         const amrex::Real dy = geom[lev].CellSize(1);
         // scale factor cancels out for all multipole coefficients except the 0th, for wich it adds
-        // a constant therm to the potential
+        // a constant term to the potential
         const amrex::Real scale = 3._rt/std::sqrt(
             pow<2>(geom[lev].ProbLength(0)) + pow<2>(geom[lev].ProbLength(1)));
         const amrex::Real radius = amrex::min(

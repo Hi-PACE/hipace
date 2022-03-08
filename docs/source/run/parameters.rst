@@ -147,14 +147,14 @@ Modeling ion motion is not yet supported by the explicit solver
     The default is set accordingly.
 
 * ``fields.extended_solve`` (`bool`) optional (default `0`)
-    Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artefacts
+    Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artifacts
     originating from the boundary for long simulations.
 
 * ``fields.open_boundary`` (`bool`) optional (default `0`)
     Uses a Taylor approximation of the Greens function to solve the Poisson equations with
     open boundary conditions. It's recommended to use this together with
-    `fields.extended_solve = true` and `geometry.is_periodic = false false false`. Not implemented
-    for the explicit Helmholtz solver.
+    ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
+    Not implemented for the explicit Helmholtz solver.
 
 
 Predictor-corrector loop parameters
