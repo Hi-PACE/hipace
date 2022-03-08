@@ -134,42 +134,47 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
     {
         const int ithread = omp_get_thread_num();
-#else
-        const int ithread = 0;
 #endif
-        amrex::Array4<amrex::Real> const& jx_arr  =
-            do_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
-        amrex::Array4<amrex::Real> const& jy_arr  =
-            do_tiling ? tmp_densities[ithread].array(1) : jy_fab.array();
-        amrex::Array4<amrex::Real> const& jz_arr  =
-            do_tiling ? tmp_densities[ithread].array(2) : jz_fab.array();
-        amrex::Array4<amrex::Real> const& rho_arr =
-            do_tiling ? tmp_densities[ithread].array(3) : rho_fab.array();
-        amrex::Array4<amrex::Real> const& jxx_arr =
-            do_tiling ? tmp_densities[ithread].array(4) : jxx_fab.array();
-        amrex::Array4<amrex::Real> const& jxy_arr =
-            do_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
-        amrex::Array4<amrex::Real> const& jyy_arr =
-            do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
-
-        const int ng = Fields::m_slices_nguards[0];
-        int ntiley = 0;
-        if (do_tiling) {
-            const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
-            const int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*ng;
-            AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
-            AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
-            ntiley = ncelly / bin_size;
-        }
 
         const int ntiles = do_tiling ? bins.numBins() : 1;
 #ifdef AMREX_USE_OMP
 #pragma omp for
 #endif
         for (int itile=0; itile<ntiles; itile++){
+#ifdef AMREX_USE_GPU
+            const int iarr = itile;
+#endif
+#ifdef AMREX_USE_OMP
+            const int iarr = ithread;
+#endif
+            amrex::Array4<amrex::Real> const& jx_arr  =
+                do_tiling ? tmp_densities[iarr].array(0) : jx_fab.array();
+            amrex::Array4<amrex::Real> const& jy_arr  =
+                do_tiling ? tmp_densities[iarr].array(1) : jy_fab.array();
+            amrex::Array4<amrex::Real> const& jz_arr  =
+                do_tiling ? tmp_densities[iarr].array(2) : jz_fab.array();
+            amrex::Array4<amrex::Real> const& rho_arr =
+                do_tiling ? tmp_densities[iarr].array(3) : rho_fab.array();
+            amrex::Array4<amrex::Real> const& jxx_arr =
+                do_tiling ? tmp_densities[iarr].array(4) : jxx_fab.array();
+            amrex::Array4<amrex::Real> const& jxy_arr =
+                do_tiling ? tmp_densities[iarr].array(5) : jxy_fab.array();
+            amrex::Array4<amrex::Real> const& jyy_arr =
+                do_tiling ? tmp_densities[iarr].array(6) : jyy_fab.array();
+
+            const int ng = Fields::m_slices_nguards[0];
+            int ntiley = 0;
+            if (do_tiling) {
+                const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
+                const int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*ng;
+                AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
+                AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
+                ntiley = ncelly / bin_size;
+            }
+
 
 #ifndef AMREX_USE_GPU
-            if (do_tiling) tmp_densities[ithread].setVal(0.);
+            if (do_tiling) tmp_densities[iarr].setVal(0.);
 #endif
             const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
             // Get the x and y indices of current tile from its linearized index itile = itiley + itilex * ntiley
@@ -283,19 +288,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 srcbx.grow({ng, ng, 0});
                 dstbx.grow({ng, ng, 0});
                 if (deposit_jx_jy) {
-                    jx_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 0, 0, 1);
-                    jy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 1, 0, 1);
+                    jx_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 0, 0, 1);
+                    jy_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 1, 0, 1);
                 }
                 if (deposit_jz) {
-                    jz_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 2, 0, 1);
+                    jz_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 2, 0, 1);
                 }
                 if (deposit_rho) {
-                    rho_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 3, 0, 1);
+                    rho_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 3, 0, 1);
                 }
                 if (deposit_j_squared) {
-                    jxx_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, 0, 1);
-                    jxy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 5, 0, 1);
-                    jyy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 6, 0, 1);
+                    jxx_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 4, 0, 1);
+                    jxy_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 5, 0, 1);
+                    jyy_fab.atomicAdd(tmp_densities[iarr], srcbx, dstbx, 6, 0, 1);
                 }
             }
 #endif

@@ -62,20 +62,27 @@ Fields::AllocData (
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
                                          geom[lev]))  );
     }
-    int num_threads = 1;
-#ifdef AMREX_USE_OMP
-#pragma omp parallel
-    {
-        num_threads = omp_get_num_threads();
-    }
-#endif
     if (Hipace::m_do_tiling) {
+        // Number of cells
         const amrex::Box dom_box = slice_ba[0];
         const amrex::IntVect ncell = dom_box.bigEnd() - dom_box.smallEnd() + 1;
         AMREX_ALWAYS_ASSERT(ncell[0] % bin_size == 0 && ncell[1] % bin_size == 0);
 
-        m_tmp_densities.resize(num_threads);
-        for (int i=0; i<num_threads; i++){
+        // Number of temporary arrays to be allocated
+        // With openMP threading: 1 per thread. On GPU: 1 per tile
+        int num_tmp_arrays = 1;
+#ifdef AMREX_USE_OMP
+#pragma omp parallel
+        {
+            num_tmp_arrays = omp_get_num_threads();
+        }
+#endif
+#ifdef AMREX_USE_GPU
+        num_tmp_arrays = ncell[0]*ncell[1]/bin_size/bin_size;
+#endif
+
+        m_tmp_densities.resize(num_tmp_arrays);
+        for (int i=0; i<num_tmp_arrays; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
             // jx jy jz rho jxx jxy jyy
