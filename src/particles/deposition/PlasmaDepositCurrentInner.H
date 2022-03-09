@@ -24,6 +24,37 @@
 #include <AMReX_Array4.H>
 #include <AMReX_REAL.H>
 
+namespace {
+#ifdef AMREX_USE_GPU
+#else
+    AMREX_FORCE_INLINE
+    void AddTileToArray (
+        const amrex::Box& dstbx, const amrex::Box& srcbx, amrex::FArrayBox& dst_jx,
+        amrex::FArrayBox& dst_jy, amrex::FArrayBox& dst_jz, amrex::FArrayBox& dst_rho,
+        amrex::FArrayBox& dst_jxx, amrex::FArrayBox& dst_jxy,
+        amrex::FArrayBox& dst_jyy, const amrex::FArrayBox& src, const bool do_jx_jy,
+        const bool do_jz, const bool do_rho, const bool do_j_squared)
+    {
+        if (do_jx_jy) {
+            dst_jx.atomicAdd(src, srcbx, dstbx, 0, 0, 1);
+            dst_jy.atomicAdd(src, srcbx, dstbx, 1, 0, 1);
+        }
+        if (do_jz) {
+            dst_jz.atomicAdd(src, srcbx, dstbx, 2, 0, 1);
+        }
+        if (do_rho) {
+            dst_rho.atomicAdd(src, srcbx, dstbx, 3, 0, 1);
+        }
+        if (do_j_squared) {
+            dst_jxx.atomicAdd(src, srcbx, dstbx, 4, 0, 1);
+            dst_jxy.atomicAdd(src, srcbx, dstbx, 5, 0, 1);
+            dst_jyy.atomicAdd(src, srcbx, dstbx, 6, 0, 1);
+        }
+        return;
+    }
+#endif
+}
+
 /** \brief Loop over plasma particles in iterator (=box) pti and deposit their current
  * into jx_fab, jy_fab and jz_fab and their density to rho_fab
  *
@@ -282,21 +313,9 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
                 srcbx.grow({ng, ng, 0});
                 dstbx.grow({ng, ng, 0});
-                if (deposit_jx_jy) {
-                    jx_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 0, 0, 1);
-                    jy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 1, 0, 1);
-                }
-                if (deposit_jz) {
-                    jz_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 2, 0, 1);
-                }
-                if (deposit_rho) {
-                    rho_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 3, 0, 1);
-                }
-                if (deposit_j_squared) {
-                    jxx_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, 0, 1);
-                    jxy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 5, 0, 1);
-                    jyy_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 6, 0, 1);
-                }
+                AddTileToArray(dstbx, srcbx, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
+                               jyy_fab, tmp_densities[ithread], deposit_jx_jy, deposit_jz,
+                               deposit_rho, deposit_j_squared);
             }
 #endif
         }
