@@ -61,6 +61,7 @@ bool Hipace::m_do_tiling = false;
 #else
 bool Hipace::m_do_tiling = true;
 #endif
+int Hipace::m_tiling_threadsperblock = 256;
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
@@ -143,6 +144,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
     queryWithParser(pph, "do_tiling", m_do_tiling);
+    queryWithParser(pph, "tiling_threadsperblock", m_tiling_threadsperblock);
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
