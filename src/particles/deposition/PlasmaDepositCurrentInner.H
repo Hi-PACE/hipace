@@ -238,6 +238,17 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     PlasmaBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
     PlasmaBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
+    const int ng = Fields::m_slices_nguards[0];
+    int ntiley = 0;
+    if (do_tiling) {
+        const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
+        const int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*ng;
+        AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
+        AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
+        ntiley = ncelly / bin_size;
+    }
+    const int ntiles = do_tiling ? bins.numBins() : 1;
+
 #ifdef AMREX_USE_GPU // on GPU
     amrex::Array4<amrex::Real> const& jx_arr  = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr  = jy_fab.array();
@@ -248,7 +259,16 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jyy_arr = jyy_fab.array();
 
     if (do_tiling) {
-
+        const int threads_per_block = 128;
+        std::size_t shared_mem_bytes = 0*sizeof(amrex::Real);
+        // nblocks = ntiles
+        amrex::launch(
+            ntiles, threads_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
+            [=] AMREX_GPU_DEVICE () noexcept 
+            {
+                
+            }
+            );
     } else {
         const int num_particles = pti.numParticles();
         const int itile = 0, itilex = 0, itiley = 0;
@@ -293,17 +313,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             do_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
         amrex::Array4<amrex::Real> const& jyy_arr =
             do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
-
-        const int ng = Fields::m_slices_nguards[0];
-        int ntiley = 0;
-        if (do_tiling) {
-            const int ncellx = jx_fab.box().bigEnd(0)-jx_fab.box().smallEnd(0)+1-2*ng;
-            const int ncelly = jx_fab.box().bigEnd(1)-jx_fab.box().smallEnd(1)+1-2*ng;
-            AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
-            AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
-            ntiley = ncelly / bin_size;
-        }
-        const int ntiles = do_tiling ? bins.numBins() : 1;
 
 #  ifdef AMREX_USE_OMP
 #   pragma omp for

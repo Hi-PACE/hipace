@@ -302,6 +302,7 @@ public:
     static amrex::IntVect m_slices_nguards;
     /** Number of guard cells for poisson solver MultiFab */
     static amrex::IntVect m_poisson_nguards;
+    static amrex::Box m_tilebox;
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;

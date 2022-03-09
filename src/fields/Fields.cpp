@@ -18,6 +18,7 @@ using namespace amrex::literals;
 
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
+amrex::Box Fields::m_tilebox = {{0, 0, 0}, {0, 0, 0}};;
 
 Fields::Fields (Hipace const* a_hipace)
     : m_slices(a_hipace->maxLevel()+1)
@@ -62,28 +63,31 @@ Fields::AllocData (
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
                                          geom[lev]))  );
     }
-#ifdef AMREX_USE_GPU
-    int num_threads = 1;
-#  ifdef AMREX_USE_OMP
-#   pragma omp parallel
-    {
-        num_threads = omp_get_num_threads();
-    }
-#  endif
     if (Hipace::m_do_tiling) {
+        // Check that tile size divides problem size
         const amrex::Box dom_box = slice_ba[0];
         const amrex::IntVect ncell = dom_box.bigEnd() - dom_box.smallEnd() + 1;
         AMREX_ALWAYS_ASSERT(ncell[0] % bin_size == 0 && ncell[1] % bin_size == 0);
 
+        // Initialize tilebox
+        m_tilebox = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
+        m_tilebox.grow(m_slices_nguards);
+
+#ifndef AMREX_USE_GPU
+        int num_threads = 1;
+#  ifdef AMREX_USE_OMP
+#   pragma omp parallel
+        {
+            num_threads = omp_get_num_threads();
+        }
+#  endif
         m_tmp_densities.resize(num_threads);
         for (int i=0; i<num_threads; i++){
-            amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
-            bx.grow(m_slices_nguards);
-            // jx jy jz rho jxx jxy jyy
-            m_tmp_densities[i].resize(bx, 7);
+            // 7: jx jy jz rho jxx jxy jyy
+            m_tmp_densities[i].resize(m_tilebox, 7);
         }
-    }
 #endif
+    }
 }
 
 /** \brief inner version of derivative */
