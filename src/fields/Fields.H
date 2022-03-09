@@ -16,6 +16,8 @@
 #include <AMReX_Vector.H>
 #include <AMReX_AmrCore.H>
 
+#include <algorithm>
+
 class Hipace;
 
 /** \brief describes which slice with respect to the currently calculated is used */
@@ -299,7 +301,7 @@ public:
                                        const int By_iter_comp, const amrex::Geometry& geom);
 
     template<class...Args>
-    void setVal(const amrex::Real val, const int lev, const int islice, Args...comps) {
+    void setVal (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
         amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
@@ -315,7 +317,7 @@ public:
     }
 
     template<class...Args>
-    void mult(const amrex::Real val, const int lev, const int islice, Args...comps) {
+    void mult (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
         amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
@@ -331,7 +333,7 @@ public:
     }
 
     template<class...Args>
-    void shift(const int lev, const int islice_src, const int islice_dst, Args...comps) {
+    void shift (const int lev, const int islice_src, const int islice_dst, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
         amrex::GpuArray<int, ncomps> c_idx_src = {Comps[islice_src][comps]...};
         amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
@@ -350,7 +352,7 @@ public:
     }
 
     template<class...Args>
-    void FillBoundary(const amrex::Periodicity& period, const int lev, const int islice, Args...comps) {
+    void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice, Args...comps) {
         std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
 
