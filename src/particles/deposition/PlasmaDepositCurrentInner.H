@@ -115,6 +115,16 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const PhysConst phys_const = get_phys_const();
 
     const bool do_tiling = Hipace::m_do_tiling;
+    bool do_gpu_tiling = false;
+    bool do_cpu_tiling = false;
+    if (do_tiling)
+    {
+#ifdef AMREX_USE_GPU
+        do_gpu_tiling = do_tiling;
+#else
+        do_cpu_tiling = do_tiling;
+#endif
+    }
 
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -169,19 +179,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         const int ithread = 0;
 #endif
         amrex::Array4<amrex::Real> const& jx_arr  =
-            do_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(0) : jx_fab.array();
         amrex::Array4<amrex::Real> const& jy_arr  =
-            do_tiling ? tmp_densities[ithread].array(1) : jy_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(1) : jy_fab.array();
         amrex::Array4<amrex::Real> const& jz_arr  =
-            do_tiling ? tmp_densities[ithread].array(2) : jz_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(2) : jz_fab.array();
         amrex::Array4<amrex::Real> const& rho_arr =
-            do_tiling ? tmp_densities[ithread].array(3) : rho_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(3) : rho_fab.array();
         amrex::Array4<amrex::Real> const& jxx_arr =
-            do_tiling ? tmp_densities[ithread].array(4) : jxx_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(4) : jxx_fab.array();
         amrex::Array4<amrex::Real> const& jxy_arr =
-            do_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(5) : jxy_fab.array();
         amrex::Array4<amrex::Real> const& jyy_arr =
-            do_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
+            do_cpu_tiling ? tmp_densities[ithread].array(6) : jyy_fab.array();
 
         const int ng = Fields::m_slices_nguards[0];
         int ntiley = 0;
@@ -200,7 +210,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         for (int itile=0; itile<ntiles; itile++){
 
 #ifndef AMREX_USE_GPU
-            if (do_tiling) tmp_densities[ithread].setVal(0.);
+            if (do_cpu_tiling) tmp_densities[ithread].setVal(0.);
 #endif
             const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
             // Get the x and y indices of current tile from its linearized index itile = itiley + itilex * ntiley
@@ -305,7 +315,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 }
                 );
 #ifndef AMREX_USE_GPU
-            if (do_tiling) {
+            if (do_cpu_tiling) {
                 // If tiling is on, the current was deposited (see above) in temporary tile arrays.
                 // Now, we atomic add from these temporary arrays to the main arrays
                 amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};

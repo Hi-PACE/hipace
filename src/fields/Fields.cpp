@@ -62,13 +62,14 @@ Fields::AllocData (
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
                                          geom[lev]))  );
     }
+#ifndef AMREX_USE_GPU
     int num_threads = 1;
-#ifdef AMREX_USE_OMP
-#pragma omp parallel
+#  ifdef AMREX_USE_OMP
+#  pragma omp parallel
     {
         num_threads = omp_get_num_threads();
     }
-#endif
+#  endif
     if (Hipace::m_do_tiling) {
         const amrex::Box dom_box = slice_ba[0];
         const amrex::IntVect ncell = dom_box.bigEnd() - dom_box.smallEnd() + 1;
@@ -82,6 +83,7 @@ Fields::AllocData (
             m_tmp_densities[i].resize(bx, 7);
         }
     }
+#endif // ndef AMREX_USE_GPU
 }
 
 /** \brief inner version of derivative */
