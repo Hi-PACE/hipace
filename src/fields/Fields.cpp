@@ -392,21 +392,10 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         if (pos < patch_lo || pos > patch_hi) continue;
     }
 
-    // shift Bx, By
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous2), getSlices(lev, WhichSlice::Previous1),
-        Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous2]["Bx"],
-        2, m_slices_nguards);
-    // shift Ez, Bx, By, Bz, jx, jx_beam, jy, jy_beam
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["Ez"], Comps[WhichSlice::Previous1]["Ez"],
-        8, m_slices_nguards);
-    // shift rho, Psi
-    amrex::MultiFab::Copy(
-        getSlices(lev, WhichSlice::Previous1), getSlices(lev, WhichSlice::This),
-        Comps[WhichSlice::This]["rho"], Comps[WhichSlice::Previous1]["rho"],
-        2, m_slices_nguards);
+    shift(lev, WhichSlice::Previous2, WhichSlice::Previous1,
+        "Bx", "By");
+    shift(lev, WhichSlice::Previous1, WhichSlice::This,
+        "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam", "rho", "Psi");
     }
 }
 

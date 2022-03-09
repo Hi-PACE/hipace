@@ -333,7 +333,7 @@ public:
     }
 
     template<class...Args>
-    void shift (const int lev, const int islice_src, const int islice_dst, Args...comps) {
+    void shift (const int lev, const int islice_dst, const int islice_src, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
         amrex::GpuArray<int, ncomps> c_idx_src = {Comps[islice_src][comps]...};
         amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
