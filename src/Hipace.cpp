@@ -671,8 +671,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dz = Geom(lev).CellSize(Direction::z)/kpinv;
 
     // transforming BxBy array to normalized units for use as initial guess
-    // TODO: include ghost cells in .mult (currently not supported by amrex)
-    BxBy.mult(pc.c/E0);
+    m_fields.mult(pc.c/E0, lev, isl, "Bx", "By");
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
@@ -836,8 +835,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 #endif
 
     // converting BxBy to SI units, if applicable
-    // TODO: include ghost cells in .mult (currently not supported by amrex)
-    BxBy.mult(E0/pc.c);
+    m_fields.mult(E0/pc.c, lev, isl, "Bx", "By");
     amrex::ParallelContext::pop();
 }
 
