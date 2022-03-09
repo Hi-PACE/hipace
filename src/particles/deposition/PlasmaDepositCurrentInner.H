@@ -27,6 +27,44 @@
 namespace
 {
     using namespace amrex;
+
+#ifdef AMREX_USE_GPU
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void AddTileToArray (
+        const amrex::Box& dstbx, const amrex::Box& tilebx, Array4<Real> const& dst_jx,
+        Array4<Real> const& dst_jy, Array4<Real> const& dst_jz, Array4<Real> const& dst_rho,
+        Array4<Real> const& dst_jxx, Array4<Real> const& dst_jxy,
+        Array4<Real> const& dst_jyy, Array4<Real> const& tile, const bool do_jx_jy,
+        const bool do_jz, const bool do_rho, const bool do_j_squared)
+    {
+        const auto lo  = amrex::lbound(dstbx);
+        const auto len = amrex::length(tilebx);
+        for (int icell = threadIdx.x; icell < tilebx.numPts(); icell += blockDim.x)
+        {
+            const int js = icell /    len.x;
+            const int is = icell - js*len.x;
+            const int id = is + lo.x;
+            const int jd = js + lo.y;
+            const int kd = lo.z;
+            if (do_jx_jy) {
+                amrex::Gpu::Atomic::AddNoRet( &dst_jx(id, jd, kd), tile(is, js, 0));
+                amrex::Gpu::Atomic::AddNoRet( &dst_jy(id, jd, kd), tile(is, js, 1));
+            }
+            if (do_jz) {
+                amrex::Gpu::Atomic::AddNoRet( &dst_jz(id, jd, kd), tile(is, js, 2));
+            }
+            if (do_rho) {
+                amrex::Gpu::Atomic::AddNoRet( &dst_rho(id, jd, kd), tile(is, js, 3));
+            }
+            if (do_j_squared) {
+                amrex::Gpu::Atomic::AddNoRet( &dst_jxx(id, jd, kd), tile(is, js, 4));
+                amrex::Gpu::Atomic::AddNoRet( &dst_jxy(id, jd, kd), tile(is, js, 5));
+                amrex::Gpu::Atomic::AddNoRet( &dst_jyy(id, jd, kd), tile(is, js, 6));
+            }
+        }
+    }
+#endif
+
     template <int depos_order_xy>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void doOneParticle (
@@ -41,7 +79,8 @@ namespace
         const bool deposit_rho, const bool deposit_j_squared,
         Array4<Real> const& jx_arr, Array4<Real> const& jy_arr, Array4<Real> const& jz_arr,
         Array4<Real> const& rho_arr, Array4<Real> const& jxx_arr, Array4<Real> const& jxy_arr,
-        Array4<Real> const& jyy_arr, const Real m_e, const Real q_e, const Real c)
+        Array4<Real> const& jyy_arr, const Real m_e, const Real q_e, const Real c,
+        const bool do_tiling)
     {
         const amrex::Real psi = psip[ip] * q_e / (m_e * c * c);
         const amrex::Real clightsq = 1./(c*c);
@@ -98,35 +137,43 @@ namespace
         // Deposit current into jx_arr, jy_arr and jz_arr
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                if (deposit_jx_jy) {
-                    amrex::Gpu::Atomic::Add(
-                        &jx_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wqx);
-                    amrex::Gpu::Atomic::Add(
-                        &jy_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wqy);
+#ifdef AMREX_USE_GPU
+                if (do_tiling) {
+                    if (deposit_jx_jy) {
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 0),sx_cell[ix]*sy_cell[iy]*wqx);
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 1),sx_cell[ix]*sy_cell[iy]*wqy);
+                    }
+                    if (deposit_jz) {
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 2),sx_cell[ix]*sy_cell[iy]*wqz);
+                    }
+                    if (deposit_rho) {
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 3),sx_cell[ix]*sy_cell[iy]*wq);
+                    }
+                    if (deposit_j_squared) {
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 4),sx_cell[ix]*sy_cell[iy]*wqxx);
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 5),sx_cell[ix]*sy_cell[iy]*wqxy);
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, 6),sx_cell[ix]*sy_cell[iy]*wqyy);
+                    }
+                } else {
+#endif
+                    if (deposit_jx_jy) {
+                        amrex::Gpu::Atomic::Add(&jx_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wqx);
+                        amrex::Gpu::Atomic::Add(&jy_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wqy);
+                    }
+                    if (deposit_jz) {
+                        amrex::Gpu::Atomic::Add(&jz_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wqz);
+                    }
+                    if (deposit_rho) {
+                        amrex::Gpu::Atomic::Add(&rho_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wq);
+                    }
+                    if (deposit_j_squared) {
+                        amrex::Gpu::Atomic::Add(&jxx_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wqxx);
+                        amrex::Gpu::Atomic::Add(&jxy_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wqxy);
+                        amrex::Gpu::Atomic::Add(&jyy_arr(j_cell+ix, k_cell+iy, z_index),sx_cell[ix]*sy_cell[iy]*wqyy);
+                    }
+#ifdef AMREX_USE_GPU
                 }
-                if (deposit_jz) {
-                    amrex::Gpu::Atomic::Add(
-                        &jz_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wqz);
-                }
-                if (deposit_rho) {
-                    amrex::Gpu::Atomic::Add(
-                        &rho_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wq);
-                }
-                if (deposit_j_squared) {
-                    amrex::Gpu::Atomic::Add(
-                        &jxx_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wqxx);
-                    amrex::Gpu::Atomic::Add(
-                        &jxy_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wqxy);
-                    amrex::Gpu::Atomic::Add(
-                        &jyy_arr(j_cell+ix, k_cell+iy, z_index),
-                        sx_cell[ix]*sy_cell[iy]*wqyy);
-                }
+#endif
             }
         }
         return;
@@ -259,14 +306,63 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     amrex::Array4<amrex::Real> const& jyy_arr = jyy_fab.array();
 
     if (do_tiling) {
+        constexpr int nj = 7;
+        amrex::Box tilebox = Fields::m_tilebox;
+        amrex::Box ptitilebox = pti.tilebox();
+        // amrex::Print()<<tilebox<<'\n';
+        tilebox.setBig(2,nj-1);
+        //amrex::Print()<<tilebox<<'\n';
         const int threads_per_block = 128;
-        std::size_t shared_mem_bytes = 0*sizeof(amrex::Real);
+        const std::size_t shared_mem_bytes = tilebox.numPts()*sizeof(amrex::Real);
+        // amrex::Print()<<"ntiles "<<ntiles<<" ntiley "<<ntiley<<" threads_per_block "<<threads_per_block<<" shared_mem_bytes "<<shared_mem_bytes<<'\n';
+        // amrex::Print()<<"amrex::Gpu::Device::sharedMemPerBlock() "<<amrex::Gpu::Device::sharedMemPerBlock()<<'\n';
+        AMREX_ALWAYS_ASSERT(shared_mem_bytes <= amrex::Gpu::Device::sharedMemPerBlock());
         // nblocks = ntiles
         amrex::launch(
             ntiles, threads_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-            [=] AMREX_GPU_DEVICE () noexcept 
-            {
-                
+            [=] AMREX_GPU_DEVICE () noexcept {
+                const int itile = blockIdx.x;
+                const int itilex = itile / ntiley;
+                const int itiley = itile % ntiley;
+                const int iplo = offsets[itile];
+                const int iphi = offsets[itile+1];
+                if (iplo == iphi) return;
+
+                amrex::Gpu::SharedMemory<amrex::Real> gsm;
+                amrex::Real * const shared = gsm.dataPtr();
+
+                amrex::Array4<amrex::Real> tile(shared, amrex::begin(tilebox), amrex::end(tilebox), 1);
+
+                // Set the tile to 0
+                // I do not understand why vs is defined, and why volatile.
+                volatile amrex::Real * const vs = shared;
+                for (int i = threadIdx.x; i < tilebox.numPts(); i += blockDim.x) vs[i] = 0._rt;
+                __syncthreads();
+
+                for (int idx=iplo+threadIdx.x; idx<iphi; idx+=blockDim.x) {
+                    const int ip = indices[idx];
+                    if (pos_structs[ip].id() < 0) return;
+                    doOneParticle<depos_order_xy>(
+                        ip, psip, const_of_motion, uxp, uyp, wp, ion_lev, pos_structs,
+                        max_qsa_weighting_factor, p_n_qsa_violation, can_ionize,
+                        charge, invvol, x_pos_offset, y_pos_offset, dxi, dyi,
+                        itilex, itiley, bin_size, z_index,
+                        deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
+                        tile, tile, tile, tile, tile, tile, tile,
+                        phys_const.m_e, phys_const.q_e, phys_const.c, do_tiling);
+                    return;
+                }
+                __syncthreads();
+
+                amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
+                amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, ptitilebox.smallEnd(2)},
+                                    {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, ptitilebox.smallEnd(2)}};
+                srcbx.grow({ng, ng, 0});
+                dstbx.grow({ng, ng, 0});
+
+                AddTileToArray(dstbx, srcbx, jx_arr, jy_arr, jz_arr, rho_arr, jxx_arr, jxy_arr,
+                               jyy_arr, tile, deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared);
+                __syncthreads();
             }
             );
     } else {
@@ -278,19 +374,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
             [=] AMREX_GPU_DEVICE (long idx) {
                 const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                 if (pos_structs[ip].id() < 0) return;
-                doOneParticle<depos_order_xy>(
+                  doOneParticle<depos_order_xy>(
                     ip, psip, const_of_motion, uxp, uyp, wp, ion_lev, pos_structs,
                     max_qsa_weighting_factor, p_n_qsa_violation, can_ionize,
                     charge, invvol, x_pos_offset, y_pos_offset, dxi, dyi,
                     itilex, itiley, bin_size, z_index,
                     deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                     jx_arr, jy_arr, jz_arr, rho_arr, jxx_arr, jxy_arr, jyy_arr,
-                    phys_const.m_e, phys_const.q_e, phys_const.c);
+                    phys_const.m_e, phys_const.q_e, phys_const.c, do_tiling);
                 return;
             }
             );
     }
-        
+
 #else // on CPU
 #  ifdef AMREX_USE_OMP
 #   pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -330,14 +426,14 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                 [=] AMREX_GPU_DEVICE (long idx) {
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                     if (pos_structs[ip].id() < 0) return;
-                    doOneParticle<depos_order_xy>(
+                      doOneParticle<depos_order_xy>(
                         ip, psip, const_of_motion, uxp, uyp, wp, ion_lev, pos_structs,
                         max_qsa_weighting_factor, p_n_qsa_violation, can_ionize,
                         charge, invvol, x_pos_offset, y_pos_offset, dxi, dyi,
                         itilex, itiley, bin_size, z_index,
                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                         jx_arr, jy_arr, jz_arr, rho_arr, jxx_arr, jxy_arr, jyy_arr,
-                        phys_const.m_e, phys_const.q_e, phys_const.c);
+                        phys_const.m_e, phys_const.q_e, phys_const.c, do_tiling);
                     return;
                 }
                 );
