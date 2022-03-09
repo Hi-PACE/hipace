@@ -279,6 +279,8 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
 Binary collisions for plasma species
 ------------------------------------
 
+WARNING: this module is in development. Currently only support electron-electron collisions in SI units.
+
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
 
 * ``plasmas.collisions`` (list of `strings`) optional
