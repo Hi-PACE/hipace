@@ -29,26 +29,26 @@ namespace {
 #else
     AMREX_FORCE_INLINE
     void AddTileToArray (
-        const amrex::Box& dstbx, const amrex::Box& srcbx, amrex::FArrayBox& dst_jx,
+        const amrex::Box& dstbx, const amrex::Box& tilebx, amrex::FArrayBox& dst_jx,
         amrex::FArrayBox& dst_jy, amrex::FArrayBox& dst_jz, amrex::FArrayBox& dst_rho,
         amrex::FArrayBox& dst_jxx, amrex::FArrayBox& dst_jxy,
-        amrex::FArrayBox& dst_jyy, const amrex::FArrayBox& src, const bool do_jx_jy,
+        amrex::FArrayBox& dst_jyy, const amrex::FArrayBox& tile, const bool do_jx_jy,
         const bool do_jz, const bool do_rho, const bool do_j_squared)
     {
         if (do_jx_jy) {
-            dst_jx.atomicAdd(src, srcbx, dstbx, 0, 0, 1);
-            dst_jy.atomicAdd(src, srcbx, dstbx, 1, 0, 1);
+            dst_jx.atomicAdd(tile, tilebx, dstbx, 0, 0, 1);
+            dst_jy.atomicAdd(tile, tilebx, dstbx, 1, 0, 1);
         }
         if (do_jz) {
-            dst_jz.atomicAdd(src, srcbx, dstbx, 2, 0, 1);
+            dst_jz.atomicAdd(tile, tilebx, dstbx, 2, 0, 1);
         }
         if (do_rho) {
-            dst_rho.atomicAdd(src, srcbx, dstbx, 3, 0, 1);
+            dst_rho.atomicAdd(tile, tilebx, dstbx, 3, 0, 1);
         }
         if (do_j_squared) {
-            dst_jxx.atomicAdd(src, srcbx, dstbx, 4, 0, 1);
-            dst_jxy.atomicAdd(src, srcbx, dstbx, 5, 0, 1);
-            dst_jyy.atomicAdd(src, srcbx, dstbx, 6, 0, 1);
+            dst_jxx.atomicAdd(tile, tilebx, dstbx, 4, 0, 1);
+            dst_jxy.atomicAdd(tile, tilebx, dstbx, 5, 0, 1);
+            dst_jyy.atomicAdd(tile, tilebx, dstbx, 6, 0, 1);
         }
         return;
     }
