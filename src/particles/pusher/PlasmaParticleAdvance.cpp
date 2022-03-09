@@ -37,8 +37,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
 
     // only push plasma particles on their according MR level
     if (plasma.m_level != lev) return;
-
+#ifdef AMREX_USE_GPU
+    const bool do_tiling = false;
+#else
     const bool do_tiling = Hipace::m_do_tiling;
+#endif
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
