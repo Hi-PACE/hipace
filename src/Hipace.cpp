@@ -61,7 +61,7 @@ bool Hipace::m_do_tiling = false;
 #else
 bool Hipace::m_do_tiling = true;
 #endif
-int Hipace::m_tiling_threadsperblock = 256;
+int Hipace::m_tiling_threadsperblock = 128;
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
