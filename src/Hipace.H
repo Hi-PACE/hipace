@@ -109,10 +109,10 @@ public:
      * slice multifabs of current rank.
      *
      * \param[in] step current time step
-     * \param[in] it index of the box for which data is received
+     * \param[in] islice index of the slice for which data is received
      * \param[in] only_ghost whether to recv only ghost particles
      */
-    void Wait (const int step, int it, bool only_ghost=false);
+    void Wait (const int step, int islice, bool only_ghost=false);
 
     /** \brief Send field slices to rank downstream
      *
@@ -125,7 +125,7 @@ public:
      * \param[in] bins slice indexing
      * \param[in] only_ghost whether to send only ghost particles
      */
-    void Notify (const int step, const int it, const amrex::Vector<BeamBins>& bins, bool only_ghost=false);
+    void Notify (const int step, const int it, const int islice, const amrex::Vector<BeamBins>& bins, bool only_ghost=false);
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
