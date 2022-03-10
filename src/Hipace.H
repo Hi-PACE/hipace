@@ -284,6 +284,8 @@ public:
     static amrex::Real m_MG_tolerance_abs;
     /** Level of verbosity for the MG solver */
     static int m_MG_verbose;
+    /** Whether to use amrex MLMG solver */
+    static bool m_use_amrex_mlmg;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** GridCurrent instance */
