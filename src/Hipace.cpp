@@ -26,7 +26,7 @@
 
 #ifdef AMREX_USE_MPI
 namespace {
-    constexpr int ncomm_z_tag = 1001;
+    constexpr int ncomm_z_tag = 3001;
     constexpr int pcomm_z_tag = 1002;
     constexpr int ncomm_z_tag_ghost = 1003;
     constexpr int pcomm_z_tag_ghost = 1004;
@@ -282,6 +282,20 @@ Hipace::InitData ()
     m_physical_time = m_initial_time;
 
     m_fields.checkInit();
+
+    // allocate buffer for the number of particles to be received per slice
+    const int nbeams = m_multi_beam.get_nbeams();
+    const int nz = Geom(lev).Domain().length()[2] ;
+    amrex::Print() << " number of grid points in z " << nz << "\n";
+    amrex::Print()<< " number of beams " << nbeams << "\n";
+    m_np_rcv.resize(nz, amrex::Vector<int>(nbeams,-1));
+    // for (int iz = 0; iz < nz; ++iz) {
+    //     amrex::Vector<int> beams_per_slice;
+    //     for (int i=0; i<nbeams; i++) {
+    //         beams_per_slice.emplace_back(-1);
+    //     }
+    //     m_np_rcv.emplace_back(beams_per_slice);
+    // }
 }
 
 void
@@ -1025,26 +1039,26 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
     const int nbeams = m_multi_beam.get_nbeams();
     // 1 element per beam species, and 1 for
     // the index of leftmost box with beam particles.
-    const int nint = nbeams + 1;
-    amrex::Vector<int> np_rcv(nint, 0);
+    const int nint = nbeams; // + 1; index of leftmost box is removed
+    // amrex::Vector<int> np_rcv(nint, 0);
     // if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
     //     if (m_verbose >= 2){
     //         amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
     //     }
     //     return;
     // }
+    // if (m_rank_z == 2)  amrex::AllPrint() << "BEFORE recv slice islice "<< islice << " size of m_np_rcv " << m_np_rcv.size()  <<" size of m_np_rcv[islice] " << m_np_rcv[islice].size()<<  " nint  " << nint << "\n";
+    // if (m_rank_z == 2)  amrex::AllPrint() << " numer of beam particles before recv " << m_np_rcv[islice][0]<<  "\n";
 
     // Receive particle counts
     {
         MPI_Status status;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        MPI_Recv(np_rcv.dataPtr(), nint,
+        MPI_Recv(m_np_rcv[islice].dataPtr(), nint,
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-                 (m_rank_z+1)%m_numprocs_z, ncomm_z_tag, m_comm_z, &status);
+                 (m_rank_z+1)%m_numprocs_z, ncomm_z_tag+islice, m_comm_z, &status);
     }
-    for (int i = 0; i < nbeams; ++i) {
-        // if (m_rank_z == 2)  amrex::AllPrint() << " slice islice "<< it << " beam i "<< i << " has received particles n " << np_rcv[i]<<  "\n";
-    }
+
     // if (!only_ghost) m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
 
 //     // Receive beam particles.
@@ -1140,7 +1154,7 @@ Hipace::Notify (const int step, const int it, const int islice,
     NotifyFinish(it, only_ghost); // finish the previous send
 
     const int nbeams = m_multi_beam.get_nbeams();
-    const int nint = nbeams + 1;
+    const int nint = nbeams;
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
     if (step == m_max_step)
@@ -1171,7 +1185,7 @@ Hipace::Notify (const int step, const int it, const int islice,
     // }
 
     // 1 element per beam species, and 1 for the index of leftmost box with beam particles.
-    amrex::Vector<int>& np_snd = only_ghost ? m_np_snd_ghost : m_np_snd;
+    amrex::Vector<int>& np_snd = m_np_snd;
     np_snd.resize(nint);
 
     // local slice because beam particles are sorted by local slice
@@ -1193,14 +1207,14 @@ Hipace::Notify (const int step, const int it, const int islice,
         np_snd[ibeam] = num_particles; //only_ghost ?
             // m_multi_beam.NGhostParticles(ibeam, bins, bx)
             // : m_box_sorters[ibeam].boxCountsPtr()[it];
-            // if (m_rank_z == 3)  amrex::AllPrint() << "slice "<< islice << " beam i "<< ibeam << " has n particles to send: n " << num_particles<<  "\n";
+            if (m_rank_z == 3)  amrex::AllPrint() << "slice "<< islice << " beam i "<< ibeam << " has n particles to send: n " << num_particles<<   " nint  " << nint <<  "\n";
 
     }
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-    MPI_Request* loc_nsend_request = only_ghost ? &m_nsend_request_ghost : &m_nsend_request;
+    MPI_Request* loc_nsend_request = &m_nsend_request;
     MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
-              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag, m_comm_z, loc_nsend_request);
+              (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag+islice, m_comm_z, loc_nsend_request);
 
 //     // Send beam particles. Currently only one tile.
 //     {
@@ -1294,40 +1308,27 @@ void
 Hipace::NotifyFinish (const int it, bool only_ghost)
 {
 #ifdef AMREX_USE_MPI
-    if (only_ghost) {
-        if (m_np_snd_ghost.size() > 0) {
+    if (it == m_numprocs_z - 1) {
+        AMREX_ALWAYS_ASSERT(m_dt >= 0.);
+        if (m_tsend_buffer >= m_initial_time) {
             MPI_Status status;
-            MPI_Wait(&m_nsend_request_ghost, &status);
-            m_np_snd_ghost.resize(0);
-        }
-        if (m_psend_buffer_ghost) {
-            MPI_Status status;
-            MPI_Wait(&m_psend_request_ghost, &status);
-            amrex::The_Pinned_Arena()->free(m_psend_buffer_ghost);
-            m_psend_buffer_ghost = nullptr;
-        }
-    } else {
-        if (it == m_numprocs_z - 1) {
-            AMREX_ALWAYS_ASSERT(m_dt >= 0.);
-            if (m_tsend_buffer >= m_initial_time) {
-                MPI_Status status;
-                MPI_Wait(&m_tsend_request, &status);
-                m_tsend_buffer = m_initial_time - 1.;
-            }
-        }
-
-        if (m_np_snd.size() > 0) {
-            MPI_Status status;
-            MPI_Wait(&m_nsend_request, &status);
-            m_np_snd.resize(0);
-        }
-        if (m_psend_buffer) {
-            MPI_Status status;
-            MPI_Wait(&m_psend_request, &status);
-            amrex::The_Pinned_Arena()->free(m_psend_buffer);
-            m_psend_buffer = nullptr;
+            MPI_Wait(&m_tsend_request, &status);
+            m_tsend_buffer = m_initial_time - 1.;
         }
     }
+
+    if (m_np_snd.size() > 0) {
+        MPI_Status status;
+        MPI_Wait(&m_nsend_request, &status);
+        m_np_snd.resize(0);
+    }
+    if (m_psend_buffer) {
+        MPI_Status status;
+        MPI_Wait(&m_psend_request, &status);
+        amrex::The_Pinned_Arena()->free(m_psend_buffer);
+        m_psend_buffer = nullptr;
+    }
+
 #endif
 }
 

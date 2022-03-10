@@ -206,7 +206,10 @@ public:
     amrex::Real m_tsend_buffer {-1.};
     /** Send buffer for the number of particles for each beam (pipeline) */
     amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
-    amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
+    amrex::Vector<amrex::Vector<int>> m_np_rcv;
+
+    //  ghost
+    // amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
     /** status of the number of particles send request */
     MPI_Request m_nsend_request = MPI_REQUEST_NULL;
     MPI_Request m_nsend_request_ghost = MPI_REQUEST_NULL;
