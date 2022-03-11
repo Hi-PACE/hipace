@@ -225,6 +225,12 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME collisions.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/collisions.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         #add_test(NAME hosing.2Rank
         #         COMMAND ${HiPACE_SOURCE_DIR}/tests/hosing.2Rank.sh
         #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
