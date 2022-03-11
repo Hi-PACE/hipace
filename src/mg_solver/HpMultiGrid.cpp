@@ -152,8 +152,7 @@ MultiGrid::MultiGrid (Geometry const& geom)
     }
 
     m_acf.reserve(m_num_mg_levels);
-    m_acf.emplace_back();
-    for (int ilev = 1; ilev < m_num_mg_levels; ++ilev) {
+    for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_acf.emplace_back(m_domain[ilev], 1);
         if (ilev >= m_single_block_level_begin) {
             m_h_array4.push_back(m_acf[ilev].array());
@@ -212,8 +211,7 @@ MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_a
     m_sol = FArrayBox(amrex::makeSlab(a_sol.box(), 2, 0), 2, a_sol.dataPtr());
     m_rhs = FArrayBox(amrex::makeSlab(a_rhs.box(), 2, 0), 2, a_rhs.dataPtr());
 
-    m_acf[0] = FArrayBox(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr());
-    average_down_acoef();
+    average_down_acoef(FArrayBox(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr()));
 
     compute_residual(m_domain[0], m_res[0].array(), m_sol.array(),
                      m_rhs.const_array(), m_acf[0].const_array(), m_dx, m_dy);
@@ -313,6 +311,11 @@ MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_a
 void
 MultiGrid::vcycle ()
 {
+#if defined(AMREX_USE_CUDA)
+    if (!m_cuda_graph_vcycle_created) {
+    cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+#endif
+
     for (int ilev = 0; ilev < m_single_block_level_begin; ++ilev) {
         Real * pcor = m_cor[ilev].dataPtr();
         ParallelFor(m_domain[ilev].numPts()*2, [=] AMREX_GPU_DEVICE (Long i) noexcept
@@ -348,6 +351,14 @@ MultiGrid::vcycle ()
                  m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy);
         }
     }
+
+#if defined(AMREX_USE_CUDA)
+    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_vcycle);
+    cudaGraphInstantiate(&m_cuda_graph_exe_vcycle, m_cuda_graph_vcycle, NULL, NULL, 0);
+    m_cuda_graph_vcycle_created = true;
+    }
+    cudaGraphLaunch(m_cuda_graph_exe_vcycle, Gpu::gpuStream());
+#endif
 
     auto const& sol = m_sol.array();
     auto const& cor = m_cor[0].const_array();
@@ -520,8 +531,19 @@ MultiGrid::bottomsolve ()
 }
 
 void
-MultiGrid::average_down_acoef ()
+MultiGrid::average_down_acoef (FArrayBox const& a_acf)
 {
+#if defined(AMREX_USE_GPU)
+    Gpu::dtod_memcpy_async(m_acf[0].dataPtr(), a_acf.dataPtr(), m_acf[0].nBytes());
+#else
+    std::memcpy(m_acf[0].dataPtr(), a_acf.dataPtr(), m_acf[0].nBytes());
+#endif
+
+#if defined(AMREX_USE_CUDA)
+    if (!m_cuda_graph_acf_created) {
+    cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+#endif
+
     for (int ilev = 1; ilev <= m_single_block_level_begin; ++ilev) {
         auto const& crse = m_acf[ilev].array();
         auto const& fine = m_acf[ilev-1].const_array();
@@ -564,6 +586,28 @@ MultiGrid::average_down_acoef ()
                 __syncthreads();
             }
         });
+    }
+#endif
+
+#if defined(AMREX_USE_CUDA)
+    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_acf);
+    cudaGraphInstantiate(&m_cuda_graph_exe_acf, m_cuda_graph_acf, NULL, NULL, 0);
+    m_cuda_graph_acf_created = true;
+    }
+    cudaGraphLaunch(m_cuda_graph_exe_acf, Gpu::gpuStream());
+#endif
+}
+
+MultiGrid::~MultiGrid ()
+{
+#if defined(AMREX_USE_CUDA)
+    if (m_cuda_graph_acf_created) {
+        cudaGraphDestroy(m_cuda_graph_acf);
+        cudaGraphExecDestroy(m_cuda_graph_exe_acf);
+    }
+    if (m_cuda_graph_vcycle_created) {
+        cudaGraphDestroy(m_cuda_graph_vcycle);
+        cudaGraphExecDestroy(m_cuda_graph_exe_vcycle);
     }
 #endif
 }

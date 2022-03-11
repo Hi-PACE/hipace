@@ -852,10 +852,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
 #endif
     {
         AMREX_ALWAYS_ASSERT(ba.size() == 1);
-        hpmg::MultiGrid mg(slice_geom);
+        if (!m_hpmg) {
+            m_hpmg = std::make_unique<hpmg::MultiGrid>(slice_geom);
+        }
         const int max_iters = 200;
-        mg.solve(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
-                 max_iters, m_MG_verbose);
+        m_hpmg->solve(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
+                      max_iters, m_MG_verbose);
     }
 
     // converting BxBy to SI units, if applicable

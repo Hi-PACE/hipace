@@ -14,11 +14,13 @@ public:
 
     explicit MultiGrid (amrex::Geometry const& a_domain);
 
+    ~MultiGrid ();
+
     void solve (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs, amrex::FArrayBox const& acoef,
                 amrex::Real tol_rel, amrex::Real tol_abs, int nummaxiter, int verbose);
 
 // public for cuda
-    void average_down_acoef ();
+    void average_down_acoef (amrex::FArrayBox const& a_acf);
     void vcycle ();
     void bottomsolve ();
 
@@ -48,6 +50,16 @@ private:
 
     amrex::Gpu::PinnedVector<amrex::Array4<amrex::Real> > m_h_array4;
     amrex::Gpu::DeviceVector<amrex::Array4<amrex::Real> > m_d_array4;
+
+#if defined(AMREX_USE_CUDA)
+    bool m_cuda_graph_acf_created = false;
+    cudaGraph_t m_cuda_graph_acf = NULL;
+    cudaGraphExec_t m_cuda_graph_exe_acf = NULL;
+
+    bool m_cuda_graph_vcycle_created = false;
+    cudaGraph_t m_cuda_graph_vcycle = NULL;
+    cudaGraphExec_t m_cuda_graph_exe_vcycle = NULL;
+#endif
 };
 
 }

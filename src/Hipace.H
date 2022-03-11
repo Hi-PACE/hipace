@@ -33,6 +33,7 @@
 
 #include <memory>
 
+namespace hpmg { class MultiGrid; }
 
 /** \brief Helper struct to initialize m_phys_const and Parser before amrex::AmrCore */
 struct Hipace_early_init
@@ -333,6 +334,9 @@ private:
     /** Geometric multigrid solver class, for the explicit Bx and By solver */
     std::unique_ptr<amrex::MLMG> m_mlmg;
 #endif
+    /** hpmg solver for the explicit Bx and by solver */
+    std::unique_ptr<hpmg::MultiGrid> m_hpmg;
+
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
 
