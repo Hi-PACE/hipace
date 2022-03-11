@@ -8,7 +8,7 @@ namespace hpmg {
 
 namespace {
 
-constexpr int n_cell_single = 64; // switch to single block when box is smaller than this
+constexpr int n_cell_single = 32; // switch to single block when box is smaller than this
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 Real residual (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
@@ -384,6 +384,7 @@ MultiGrid::bottomsolve ()
 #if defined(AMREX_USE_DPCPP)
     amrex::Abort("DPCPP todo");
 #else
+    static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
     amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
     [=] AMREX_GPU_DEVICE () noexcept
     {
@@ -392,17 +393,16 @@ MultiGrid::bottomsolve ()
         int lenx = cor[0].end.x - cor[0].begin.x;
         int leny = cor[0].end.y - cor[0].begin.y;
         int ncells = lenx*leny;
-        const int icell_begin = blockDim.x*blockIdx.x+threadIdx.x;
-        const int stride = blockDim.x*gridDim.x;
+        const int icell = threadIdx.x;
 
         for (int ilev = 0; ilev < nlevs-1; ++ilev) {
-            for (int icell = icell_begin; icell < ncells; icell += stride) {
+            if (icell < ncells) {
                 cor[ilev].p[icell] = Real(0.);
             }
             __syncthreads();
 
             for (int is = 0; is < 4; ++is) {
-                for (int icell = icell_begin; icell < ncells; icell += stride) {
+                if (icell < ncells) {
                     int j = icell /   lenx;
                     int i = icell - j*lenx;
                     j += cor[ilev].begin.y;
@@ -419,7 +419,7 @@ MultiGrid::bottomsolve ()
                 __syncthreads();
             }
 
-            for (int icell = icell_begin; icell < ncells; icell += stride) {
+            if (icell < ncells) {
                 int j = icell /   lenx;
                 int i = icell - j*lenx;
                 j += cor[ilev].begin.y;
@@ -437,7 +437,7 @@ MultiGrid::bottomsolve ()
             lenx = cor[ilev+1].end.x - cor[ilev+1].begin.x;
             leny = cor[ilev+1].end.y - cor[ilev+1].begin.y;
             ncells = lenx*leny;
-            for (int icell = icell_begin; icell < ncells; icell += stride) {
+            if (icell < ncells) {
                 int j = icell /   lenx;
                 int i = icell - j*lenx;
                 j += cor[ilev+1].begin.y;
@@ -458,13 +458,13 @@ MultiGrid::bottomsolve ()
         // bottom
         {
             const int ilev = nlevs-1;
-            for (int icell = icell_begin; icell < ncells; icell += stride) {
+            if (icell < ncells) {
                 cor[ilev].p[icell] = Real(0.);
             }
             __syncthreads();
 
             for (int is = 0; is < nsweeps; ++is) {
-                for (int icell = icell_begin; icell < ncells; icell += stride) {
+                if (icell < ncells) {
                     int j = icell /   lenx;
                     int i = icell - j*lenx;
                     j += cor[ilev].begin.y;
@@ -489,7 +489,7 @@ MultiGrid::bottomsolve ()
             facx *= Real(4.);
             facy *= Real(4.);
 
-            for (int icell = icell_begin; icell < ncells; icell += stride) {
+            if (icell < ncells) {
                 int j = icell /   lenx;
                 int i = icell - j*lenx;
                 j += cor[ilev].begin.y;
@@ -502,7 +502,7 @@ MultiGrid::bottomsolve ()
 
             for (int is = 0; is < 4; ++is) {
                 __syncthreads();
-                for (int icell = icell_begin; icell < ncells; icell += stride) {
+                if (icell < ncells) {
                     int j = icell /   lenx;
                     int i = icell - j*lenx;
                     j += cor[ilev].begin.y;
