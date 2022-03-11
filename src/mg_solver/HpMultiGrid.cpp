@@ -1,3 +1,10 @@
+/* Copyright 2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: Weiqun Zhang
+ * License: BSD-3-Clause-LBNL
+ */
 #include "HpMultiGrid.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include <algorithm>
@@ -11,6 +18,8 @@ namespace hpmg {
 using amrex::ParallelFor;
 
 #else
+
+// amrex::ParallelFor does not do OpenMP.  Thus we have hpmg::ParallelFor.
 
 template <typename T, typename F>
 void ParallelFor (T n, F&& f) noexcept
@@ -243,7 +252,8 @@ MultiGrid::MultiGrid (Geometry const& geom)
 
 void
 MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_acf,
-                  Real tol_rel, Real tol_abs, int nummaxiter, int verbose)
+                  Real const tol_rel, Real const tol_abs, int const nummaxiter,
+                  int const verbose)
 {
     HIPACE_PROFILE("hpmg::MultiGrid::solve()");
 
