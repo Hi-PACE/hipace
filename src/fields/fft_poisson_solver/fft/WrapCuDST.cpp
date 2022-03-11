@@ -72,7 +72,7 @@ namespace AnyDST
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 /* upper left quadrant */
-                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
+                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, k, scomp).real();
             }
             );
     };
