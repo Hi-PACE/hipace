@@ -1385,16 +1385,6 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 #endif
 }
 
-std::string
-Hipace::Version ()
-{
-#ifdef HIPACE_GIT_VERSION
-    return std::string(HIPACE_GIT_VERSION);
-#else
-    return std::string("Unknown");
-#endif
-}
-
 int
 Hipace::leftmostBoxWithParticles () const
 {
