@@ -6,6 +6,53 @@ using namespace amrex;
 
 namespace hpmg {
 
+#if defined(AMREX_USE_GPU) || !defined(AMREX_USE_OMP)
+
+using amrex::ParallelFor;
+
+#else
+
+template <typename T, typename F>
+void ParallelFor (T n, F&& f) noexcept
+{
+#pragma omp parallel for simd
+    for (T i = 0; i < n; ++i) {
+        f(i);
+    }
+}
+
+template <typename F>
+void ParallelFor (Box const& box, F&& f) noexcept
+{
+    const auto lo = amrex::lbound(box);
+    const auto hi = amrex::ubound(box);
+#pragma omp parallel for collapse(2)
+    for (int k = lo.z; k <= hi.z; ++k) {
+    for (int j = lo.y; j <= hi.y; ++j) {
+#pragma omp simd
+    for (int i = lo.x; i <= hi.x; ++i) {
+        f(i,j,k);
+    }}}
+}
+
+template <typename F>
+void ParallelFor (Box const& box, int ncomp, F&& f) noexcept
+{
+    const auto lo = amrex::lbound(box);
+    const auto hi = amrex::ubound(box);
+#pragma omp parallel for collapse(3)
+    for (int n = 0; n < ncomp; ++n) {
+        for (int k = lo.z; k <= hi.z; ++k) {
+        for (int j = lo.y; j <= hi.y; ++j) {
+#pragma omp simd
+        for (int i = lo.x; i <= hi.x; ++i) {
+            f(i,j,k,n);
+        }}}
+    }
+}
+
+#endif
+
 namespace {
 
 constexpr int n_cell_single = 32; // switch to single block when box is smaller than this
@@ -43,7 +90,7 @@ void compute_residual (Box const& box, Array4<Real> const& res,
     int const jhi = box.bigEnd(1);
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
-    ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+    hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
     {
         res(i,j,0,n) = residual(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n),
                                 acf(i,j,0), facx, facy);
@@ -87,7 +134,7 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
     int const jhi = box.bigEnd(1);
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
-    ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+    hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
     {
         if ((i+j+icolor)%2 == 0) {
             gs(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n), acf(i,j,0), facx, facy);
@@ -97,7 +144,7 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 
 void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine)
 {
-    amrex::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+    hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
     {
         crse(i,j,0,n) = Real(0.25)*(fine(2*i  ,2*j  ,0,n) +
                                     fine(2*i+1,2*j  ,0,n) +
@@ -109,7 +156,7 @@ void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> c
 
 void interpolation (Box const& box, Array4<Real> const& fine, Array4<Real const> const& crse)
 {
-    amrex::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+    hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
     {
         int ic = amrex::coarsen(i,2);
         int jc = amrex::coarsen(j,2);
@@ -253,8 +300,8 @@ MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_a
             amrex::Print() << "hpmg: No iterations needed\n";
         }
     } else {
-        Real norminf;
-        bool converged;
+        Real norminf = 0.;
+        bool converged = true;
 
         for (int iter = 0; iter < nummaxiter; ++iter) {
 
@@ -318,8 +365,8 @@ MultiGrid::vcycle ()
 
     for (int ilev = 0; ilev < m_single_block_level_begin; ++ilev) {
         Real * pcor = m_cor[ilev].dataPtr();
-        ParallelFor(m_domain[ilev].numPts()*2, [=] AMREX_GPU_DEVICE (Long i) noexcept
-                                                   { pcor[i] = Real(0.); });
+        hpmg::ParallelFor(m_domain[ilev].numPts()*2,
+                          [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor[i] = Real(0.); });
 
         Real fac = static_cast<Real>(1 << ilev);
         Real dx = m_dx * fac;
@@ -362,7 +409,7 @@ MultiGrid::vcycle ()
 
     auto const& sol = m_sol.array();
     auto const& cor = m_cor[0].const_array();
-    amrex::ParallelFor(m_domain[0], 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+    hpmg::ParallelFor(m_domain[0], 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
     {
         sol(i,j,0,n) += cor(i,j,0,n);
     });
@@ -536,7 +583,9 @@ MultiGrid::average_down_acoef (FArrayBox const& a_acf)
 #if defined(AMREX_USE_GPU)
     Gpu::dtod_memcpy_async(m_acf[0].dataPtr(), a_acf.dataPtr(), m_acf[0].nBytes());
 #else
-    std::memcpy(m_acf[0].dataPtr(), a_acf.dataPtr(), m_acf[0].nBytes());
+    Real const* psrc = a_acf.dataPtr();
+    Real * pdst = m_acf[0].dataPtr();
+    hpmg::ParallelFor(m_acf[0].size(), [=] (Long i) noexcept { pdst[i] = psrc[i]; });
 #endif
 
 #if defined(AMREX_USE_CUDA)
@@ -547,7 +596,7 @@ MultiGrid::average_down_acoef (FArrayBox const& a_acf)
     for (int ilev = 1; ilev <= m_single_block_level_begin; ++ilev) {
         auto const& crse = m_acf[ilev].array();
         auto const& fine = m_acf[ilev-1].const_array();
-        amrex::ParallelFor(m_domain[ilev], [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(m_domain[ilev], [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
             crse(i,j,0) = Real(0.25)*(fine(2*i  ,2*j  ,0) +
                                       fine(2*i+1,2*j  ,0) +
