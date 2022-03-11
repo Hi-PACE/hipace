@@ -1,3 +1,10 @@
+/* Copyright 2020
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef GETINTIALDENSITY_H_
 #define GETINTIALDENSITY_H_
 

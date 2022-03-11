@@ -1,3 +1,10 @@
+/* Copyright 2020-2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef EXTERNALFIELDS_H_
 #define EXTERNALFIELDS_H_
 

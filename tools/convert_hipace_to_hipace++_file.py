@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+
+# Copyright 2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
 # convert_hipace_to_hipace++_file.py
 """
 Conversion Script to convert hdf5 beam files to openPMD files that can be used by HiPACE++

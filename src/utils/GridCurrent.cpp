@@ -1,3 +1,10 @@
+/* Copyright 2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #include "GridCurrent.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"

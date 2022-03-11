@@ -1,3 +1,10 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef MULTIBEAM_H_
 #define MULTIBEAM_H_
 
@@ -33,7 +40,7 @@ public:
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-        amrex::Vector<BeamBins> bins,
+        const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
         const bool do_beam_jx_jy_deposition, const int which_slice);
 
@@ -71,7 +78,7 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        amrex::Vector<BeamBins>& bins,
+        const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and init them
@@ -117,7 +124,7 @@ public:
      * \param[in] bins bins object to access particles per slice
      * \param[in] bx box in which we want to acce particles
      */
-    int NGhostParticles (int ibeam, amrex::Vector<BeamBins>& bins, amrex::Box bx);
+    int NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx);
 
     /** \brief remove ghost particles, in practice those after the last slice. */
     void RemoveGhosts ();

@@ -22,7 +22,6 @@ HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which 
    :maxdepth: 1
 
    building/building.rst
-   run/run.rst
    run/parameters.rst
    run/get_started.rst
    visualize/visualization.rst

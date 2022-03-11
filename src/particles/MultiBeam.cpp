@@ -1,3 +1,10 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #include "MultiBeam.H"
 #include "deposition/BeamDepositCurrent.H"
 #include "particles/SliceSort.H"
@@ -31,7 +38,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-    amrex::Vector<BeamBins> bins,
+    const amrex::Vector<BeamBins>& bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
     const bool do_beam_jx_jy_deposition, const int which_slice)
 
@@ -75,7 +82,7 @@ MultiBeam::sortParticlesByBox (
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-    amrex::Vector<BeamBins>& bins,
+    const amrex::Vector<BeamBins>& bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -119,7 +126,7 @@ MultiBeam::StoreNRealParticles ()
 }
 
 int
-MultiBeam::NGhostParticles (int ibeam, amrex::Vector<BeamBins>& bins, amrex::Box bx)
+MultiBeam::NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx)
 {
     BeamBins::index_type const * offsets = 0;
     offsets = bins[ibeam].offsetsPtr();

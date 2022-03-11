@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Remi Lehe
+ * Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2019 Axel Huebl, David Grote, Maxence Thevenet
  * Remi Lehe, Weiqun Zhang, Michael Rowan
  *
@@ -53,7 +61,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::Real z_pos_offset,
                          amrex::Real const q,
                          int islice,
-                         BeamBins& bins,
+                         const BeamBins& bins,
                          int box_offset,
                          const bool do_beam_jx_jy_deposition,
                          const int which_slice,
@@ -107,13 +115,9 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, and jz must be exactly one cell thick in the z direction."
         );
 
-    BeamBins::index_type*
-        indices = nullptr;
-    BeamBins::index_type const * offsets = 0;
+    BeamBins::index_type const * const indices = bins.permutationPtr();
+    BeamBins::index_type const * const offsets = bins.offsetsPtr();
     BeamBins::index_type cell_start = 0, cell_stop = 0;
-
-    indices = bins.permutationPtr();
-    offsets = bins.offsetsPtr();
 
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]

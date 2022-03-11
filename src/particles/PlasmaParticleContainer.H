@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+ * Severin Diederichs, atmyers, Angel Ferran Pousa
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_PlasmaParticleContainer_H_
 #define HIPACE_PlasmaParticleContainer_H_
 
@@ -94,10 +102,10 @@ public:
     void UpdateDensityFunction ();
 
     /** returns u_mean of the plasma distribution */
-    amrex::RealVect GetUMean () const {return m_u_mean;};
+    amrex::RealVect GetUMean () const {return m_u_mean;}
 
     /** returns u_std of the plasma distribution */
-    amrex::RealVect GetUStd () const {return m_u_std;};
+    amrex::RealVect GetUStd () const {return m_u_std;}
 
     /** Returns charge of physical species. In case of partially-ionized ion, this should
      * return the charge of the fully-ionized atom (atomic number * elementary charge)

@@ -1,3 +1,10 @@
+# Copyright 2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
 sphinx_rtd_theme>=0.4.0
 recommonmark
 sphinx>=3.0

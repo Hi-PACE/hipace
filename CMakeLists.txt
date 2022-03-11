@@ -1,3 +1,11 @@
+# Copyright 2020-2022
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+# Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.18.0)

@@ -1,5 +1,13 @@
 #! /usr/bin/env bash
 
+# Copyright 2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation with full and coarse IO and compares them
 

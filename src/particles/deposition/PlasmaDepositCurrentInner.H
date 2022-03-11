@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2019 Axel Huebl, David Grote, Maxence Thevenet
  * Remi Lehe, Weiqun Zhang, Michael Rowan
  *
@@ -69,7 +77,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
-                         PlasmaBins& bins, int bin_size)
+                         const PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
 
@@ -119,8 +127,8 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
-    BeamBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
-    BeamBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
+    PlasmaBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
+    PlasmaBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

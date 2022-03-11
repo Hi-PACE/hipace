@@ -1,3 +1,10 @@
+/* Copyright 2020-2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2020 Axel Huebl, Maxence Thevenet
  *
  * This file is part of WarpX.

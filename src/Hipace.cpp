@@ -1,3 +1,12 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+ * Remi Lehe, Severin Diederichs, WeiqunZhang, coulibaly-mouhamed
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/SliceSort.H"
@@ -473,7 +482,7 @@ Hipace::Evolve ()
 
 void
 Hipace::SolveOneSlice (int islice_coarse, const int ibox,
-                       amrex::Vector<amrex::Vector<BeamBins>>& bins)
+                       const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
@@ -850,7 +859,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 void
 Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
-                                           amrex::Vector<BeamBins> bins, const int ibox)
+                                           const amrex::Vector<BeamBins>& bins, const int ibox)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -1062,8 +1071,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             ptile.resize(new_size);
             const auto ptd = ptile.getParticleTileData();
 
-            const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
-            const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
+            const amrex::Gpu::DeviceVector<int> comm_real(AMREX_SPACEDIM + m_multi_beam.NumRealComps(), 1);
+            const amrex::Gpu::DeviceVector<int> comm_int (AMREX_SPACEDIM + m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
 
@@ -1121,7 +1130,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
 void
 Hipace::Notify (const int step, const int it,
-                amrex::Vector<BeamBins>& bins, bool only_ghost)
+                const amrex::Vector<BeamBins>& bins, bool only_ghost)
 {
     HIPACE_PROFILE("Hipace::Notify()");
 
@@ -1197,18 +1206,15 @@ Hipace::Notify (const int step, const int it,
             auto& ptile = m_multi_beam.getBeam(ibeam);
             const auto ptd = ptile.getConstParticleTileData();
 
-            const amrex::Gpu::DeviceVector<int> comm_real(m_multi_beam.NumRealComps(), 1);
-            const amrex::Gpu::DeviceVector<int> comm_int (m_multi_beam.NumIntComps(),  1);
+            const amrex::Gpu::DeviceVector<int> comm_real(AMREX_SPACEDIM + m_multi_beam.NumRealComps(), 1);
+            const amrex::Gpu::DeviceVector<int> comm_int (AMREX_SPACEDIM + m_multi_beam.NumIntComps(),  1);
             const auto p_comm_real = comm_real.data();
             const auto p_comm_int = comm_int.data();
             const auto p_psend_buffer = psend_buffer + offset_beam*psize;
 
-            BeamBins::index_type* indices = nullptr;
-            BeamBins::index_type const * offsets = 0;
+            BeamBins::index_type const * const indices = bins[ibeam].permutationPtr();
+            BeamBins::index_type const * const offsets = bins[ibeam].offsetsPtr();
             BeamBins::index_type cell_start = 0;
-
-            indices = bins[ibeam].permutationPtr();
-            offsets = bins[ibeam].offsetsPtr();
 
             // The particles that are in the last slice (sent as ghost particles) are
             // given by the indices[cell_start:cell_stop-1]
