@@ -373,7 +373,7 @@ MultiGrid::bottomsolve ()
 #if defined(AMREX_USE_DPCPP)
     amrex::Abort("DPCPP todo");
 #else
-    amrex::launch(1, AMREX_GPU_MAX_THREADS, 0, Gpu::gpuStream(),
+    amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
     [=] AMREX_GPU_DEVICE () noexcept
     {
         Real facx = Real(1.)/(dx0*dx0);
@@ -543,7 +543,7 @@ MultiGrid::average_down_acoef ()
         Array4<Real> const* acf = m_acf_a;
         int nlevels = m_num_single_block_levels;
 
-        amrex::launch(1, AMREX_GPU_MAX_THREADS, 0, Gpu::gpuStream(),
+        amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
         [=] AMREX_GPU_DEVICE () noexcept
         {
             for (int ilev = 1; ilev < nlevels; ++ilev) {
