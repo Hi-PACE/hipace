@@ -1079,8 +1079,6 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
 
     // Receive particle counts
     {
-        amrex::AllPrint() << "receiving nparts with tag " << ncomm_z_tag+islice <<" \n";
-
         MPI_Status status;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
         MPI_Recv(m_np_rcv[islice].dataPtr(), nint,
@@ -1161,15 +1159,11 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
             } else
 #endif
             {
-                amrex::AllPrint() << " BEFORE rcv   " << ptile.size() << "\n";
-
                 for (int i = 0; i < np; ++i)
                 {
                     ptd.unpackParticleData(
                         m_precv_buffer+m_recv_buffer_offset+offset_beam*psize, i*psize, i+old_size, p_comm_real, p_comm_int); //before recv_buffer instead of m_precv_buffer+m_recv_buffer_offset
                 }
-                amrex::AllPrint() << " after rcv   " << ptile.size() << "\n";
-
             }
             offset_beam += np;
         }
@@ -1200,7 +1194,6 @@ Hipace::Notify (const int step, const int it, const int islice,
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
     // FIXME revisit this for new pipeline
-    bool truth = ((step == m_max_step) && (islice == 0) );
     if ((step == m_max_step)) return;
     //  {
     //     // for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -1291,7 +1284,6 @@ amrex::AllPrint() << "Sending nparts "<< np_snd[0]<< " with tag " << ncomm_z_tag
             // cell_start = offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
             cell_start = offsets[islice_local];
 
-// amrex::AllPrint() << " cell start " << cell_start << " ptd size  " << ptd.m_size<< "\n";
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion() && np > 0) {
                 const int np_per_block = 128;
@@ -1336,9 +1328,8 @@ amrex::AllPrint() << "Sending nparts "<< np_snd[0]<< " with tag " << ncomm_z_tag
                 }
             }
             amrex::Gpu::Device::synchronize();
-            amrex::AllPrint() << " cell_start " << cell_start << " islice_local " << islice_local << " offset_box " << offset_box << " size ptile " << ptile.size() << "\n";
             // Delete beam particles that we just sent from the particle array // here we have to add the cell_start otherwise we still delete the whole box
-            if (islice == 0) ptile.resize(offset_box + cell_start);
+            if (islice_local == 0) ptile.resize(offset_box + cell_start);
 
             offset_beam += np;
         } // here
