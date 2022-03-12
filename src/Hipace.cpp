@@ -1331,7 +1331,7 @@ amrex::AllPrint() << "Sending nparts "<< np_snd[0]<< " with tag " << ncomm_z_tag
                 {
                     // const int src_i = only_ghost ? indices[cell_start+i] : i;
 
-                    const int src_i = cell_start + i; // indices[cell_start+i];
+                    const int src_i = indices[cell_start+i]; // cell_start + i; //
                     ptd.packParticleData(p_psend_buffer, offset_box+src_i, i*psize, p_comm_real, p_comm_int);
                 }
             }
