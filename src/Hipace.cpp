@@ -452,10 +452,9 @@ Hipace::Evolve ()
         {
             //Wait(step, it);
 
-            m_box_sorters.clear();
-
-            m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
-            m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
+// move this after particles are received
+            // m_box_sorters.clear();
+            // m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
 
             // WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
 
@@ -469,8 +468,8 @@ Hipace::Evolve ()
             ResizeFDiagFAB(it);
 
             amrex::Vector<amrex::Vector<BeamBins>> bins;
-            bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx,
-                                                         geom, m_box_sorters);
+            // bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx,
+            //                                              geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
             // SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
@@ -479,6 +478,8 @@ Hipace::Evolve ()
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){ // note I removed the -1 no more ghost slice, we solve all slices
                 Wait(step, isl);
+                m_box_sorters.clear();
+                m_multi_beam.sortParticlesByBox(m_box_sorters, boxArray(lev), geom[lev]);
                 // now we need to sort by slice after each receive
                 bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx,
                                                              geom, m_box_sorters);
@@ -1100,7 +1101,7 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
 
         MPI_Status status;
         const int loc_pcomm_z_tag = pcomm_z_tag;
-        amrex::AllPrint() << "receiving particles with tag " << loc_pcomm_z_tag+ncomm_z_tag+islice <<" \n";
+        amrex::AllPrint() << "receiving nparticles " <<  np_total << "  particles with tag " << loc_pcomm_z_tag+ncomm_z_tag+islice <<" \n";
 
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
         MPI_Recv(m_precv_buffer+m_recv_buffer_offset, buffer_size,
@@ -1160,11 +1161,15 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
             } else
 #endif
             {
+                amrex::AllPrint() << " BEFORE rcv   " << ptile.size() << "\n";
+
                 for (int i = 0; i < np; ++i)
                 {
                     ptd.unpackParticleData(
                         m_precv_buffer+m_recv_buffer_offset+offset_beam*psize, i*psize, i+old_size, p_comm_real, p_comm_int); //before recv_buffer instead of m_precv_buffer+m_recv_buffer_offset
                 }
+                amrex::AllPrint() << " after rcv   " << ptile.size() << "\n";
+
             }
             offset_beam += np;
         }
@@ -1194,17 +1199,17 @@ Hipace::Notify (const int step, const int it, const int islice,
     const int nint = nbeams;
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
-    if (step == m_max_step)
-    {
-        if (!only_ghost) {
-            for (int ibeam = 0; ibeam < nbeams; ibeam++){
-                const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
-                auto& ptile = m_multi_beam.getBeam(ibeam);
-                ptile.resize(offset_box);
-            }
-        }
-        return;
-    }
+    // FIXME revisit this for new pipeline
+    bool truth = ((step == m_max_step) && (islice == 0) );
+    if ((step == m_max_step)) return;
+    //  {
+    //     // for (int ibeam = 0; ibeam < nbeams; ibeam++){
+    //     //     const int offset_box = m_box_sorters[ibeam].boxOffsetsPtr()[it];
+    //     //     auto& ptile = m_multi_beam.getBeam(ibeam);
+    //     //     ptile.resize(offset_box);
+    //     //     }
+    //     return;
+    // }
 
     // // send physical time
     // if (it == m_numprocs_z - 1 && !only_ghost){
@@ -1252,7 +1257,7 @@ Hipace::Notify (const int step, const int it, const int islice,
     MPI_Request* loc_nsend_request = &m_nsend_request;
     MPI_Isend(np_snd.dataPtr(), nint, amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
               (m_rank_z-1+m_numprocs_z)%m_numprocs_z, ncomm_z_tag+islice, m_comm_z, loc_nsend_request);
-amrex::AllPrint() << "Sending nparts with tag " << ncomm_z_tag+islice <<" \n";
+amrex::AllPrint() << "Sending nparts "<< np_snd[0]<< " with tag " << ncomm_z_tag+islice <<" \n";
     // Send beam particles. Currently only one tile.
     {
         const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.begin()+nbeams, 0);
@@ -1331,9 +1336,10 @@ amrex::AllPrint() << "Sending nparts with tag " << ncomm_z_tag+islice <<" \n";
                 }
             }
             amrex::Gpu::Device::synchronize();
-
+            amrex::AllPrint() << " cell_start " << cell_start << " islice_local " << islice_local << " offset_box " << offset_box << " size ptile " << ptile.size() << "\n";
             // Delete beam particles that we just sent from the particle array // here we have to add the cell_start otherwise we still delete the whole box
-            if (!only_ghost) ptile.resize(offset_box + cell_start);
+            if (islice == 0) ptile.resize(offset_box + cell_start);
+
             offset_beam += np;
         } // here
 
@@ -1343,8 +1349,6 @@ amrex::AllPrint() << "Sending nparts with tag " << ncomm_z_tag+islice <<" \n";
         MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_pcomm_z_tag+ncomm_z_tag+islice, m_comm_z, loc_psend_request);
                   // MPI_Request_free(loc_psend_request);
-                  amrex::AllPrint() << "Sending particles with tag " << loc_pcomm_z_tag+ncomm_z_tag+islice <<" \n";
-
     }
 #endif
 }

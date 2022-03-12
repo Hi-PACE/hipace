@@ -134,7 +134,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         }
     }
     int const num_particles = cell_stop-cell_start;
-
+if (which_slice == WhichSlice::This)  amrex::AllPrint() << " CURRENT depo wiith nparts  " << num_particles << "\n";
     int z_slice = jx_fab.box().smallEnd(2);
 
     // Loop over particles and deposit into jx_fab, jy_fab, and jz_fab
