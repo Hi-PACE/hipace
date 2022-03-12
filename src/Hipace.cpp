@@ -1125,6 +1125,9 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
 
 #ifdef AMREX_USE_GPU
             if (amrex::Gpu::inLaunchRegion() && np > 0) {
+char* recv_buffer = m_precv_buffer;
+const int recv_buffer_offset = m_recv_buffer_offset;
+
                 int const np_per_block = 128;
                 int const nblocks = (np+np_per_block-1)/np_per_block;
                 std::size_t const shared_mem_bytes = np_per_block * psize;
@@ -1144,7 +1147,7 @@ Hipace::Wait (const int step, int islice, bool only_ghost)
                         for (unsigned int index = m;
                              index < mend*psize/sizeof(double); index += blockDim.x) {
                             const double *csrc = (double *)
-                                (recv_buffer+offset_beam*psize+blockDim.x*blockIdx.x*psize);
+                                (recv_buffer+recv_buffer_offset+offset_beam*psize+blockDim.x*blockIdx.x*psize);
                             double *cdest = (double *)shared;
                             cdest[index] = csrc[index];
                         }
@@ -1302,7 +1305,7 @@ amrex::AllPrint() << "Sending nparts "<< np_snd[0]<< " with tag " << ncomm_z_tag
                         const unsigned int m = threadIdx.x;
                         const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
                         if (i < np) {
-                            const int src_i = only_ghost ? indices[cell_start+i] : i;
+                            const int src_i = indices[cell_start+i];
                             ptd.packParticleData(shared, offset_box+src_i, m*psize, p_comm_real, p_comm_int);
                         }
 
