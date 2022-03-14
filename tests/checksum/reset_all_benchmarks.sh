@@ -303,3 +303,15 @@ then
                      --file_name ${build_dir}/bin/gaussian_weight.1Rank \
                      --test-name gaussian_weight.1Rank
 fi
+
+# collisions.SI.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "collisions.SI.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R collisions.SI.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/collisions.SI.1Rank \
+                     --test-name reset_all_benchmarks.sh
+fi
