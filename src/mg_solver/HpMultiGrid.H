@@ -5,8 +5,8 @@
  * Authors: Weiqun Zhang
  * License: BSD-3-Clause-LBNL
  */
-#ifndef HP_MULTIGRID_H_
-#define HP_MULTIGRID_H_
+#ifndef HIPACE_MULTIGRID_H_
+#define HIPACE_MULTIGRID_H_
 
 #include <AMReX_FArrayBox.H>
 #include <AMReX_Geometry.H>
