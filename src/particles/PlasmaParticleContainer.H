@@ -23,7 +23,7 @@ struct PlasmaIdx
         w = 0,                               // weight
         w0,                                  // initial weight
         ux, uy,                              // momentum
-        psi,                                 // pseudo-potential at the particle position. ATTENTION what is stored is actually psi+1
+        psi,                                 // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
         x_prev, y_prev,                      // temporary position
         ux_temp, uy_temp,                    // momentum
         psi_temp,                            //
