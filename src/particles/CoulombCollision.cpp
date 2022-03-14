@@ -181,4 +181,4 @@ CoulombCollision::doCoulombCollision (
         }
         AMREX_ALWAYS_ASSERT(count == 1);
     }
-};
+}
