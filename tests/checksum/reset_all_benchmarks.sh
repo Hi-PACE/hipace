@@ -313,5 +313,5 @@ then
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
                      --file_name ${build_dir}/bin/collisions.SI.1Rank \
-                     --test-name reset_all_benchmarks.sh
+                     --test-name collisions.SI.1Rank
 fi
