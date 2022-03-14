@@ -17,11 +17,11 @@ CoulombCollision::CoulombCollision(
     std::vector<std::string> collision_species;
     amrex::ParmParse pp(collision_name);
     pp.getarr("species", collision_species);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(collision_species.size() == 2,
-    "Collision species must name exactly two species.");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        collision_species.size() == 2,
+        "Collision species must name exactly two species.");
 
-    // default Coulomb log, if < 0, will be computed automatically
-    m_CoulombLog = -1.0;
+    // default Coulomb log is -1, if < 0 (e.g. not specified), will be computed automatically
     pp.query("CoulombLog", m_CoulombLog);
 
     for (int i=0; i<(int) species_names.size(); i++)
@@ -29,8 +29,11 @@ CoulombCollision::CoulombCollision(
         if (species_names[i] == collision_species[0]) m_species1_index = i;
         if (species_names[i] == collision_species[1]) m_species2_index = i;
     }
-
     m_isSameSpecies = collision_species[0] == collision_species[1] ? true : false;
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        m_species1_index >= 0 && m_species2_index >= 0,
+        "<collision name>.species must contain exactly the name of 2 species in plasma.names"
+        );
 }
 
 void

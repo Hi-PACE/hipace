@@ -13,10 +13,10 @@
 class CoulombCollision
 {
 public:
-    int  m_species1_index;
-    int  m_species2_index;
-    bool m_isSameSpecies;
-    amrex::Real m_CoulombLog;
+    int  m_species1_index {-1};
+    int  m_species2_index {-1};
+    bool m_isSameSpecies {false};
+    amrex::Real m_CoulombLog {-1.};
 
     /** Constructor */
     CoulombCollision(
