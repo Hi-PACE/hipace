@@ -36,5 +36,5 @@ OMP_NUM_THREADS=1 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI 
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME \
-    --test-name collisions.SI.1Rank \
+    --test-name $TEST_NAME \
     --skip "{'beam': 'id'}"

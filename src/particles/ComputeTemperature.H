@@ -18,7 +18,7 @@ T_R ComputeTemperature (
     using namespace amrex::literals;
     T_R constexpr c2i = 1._rt/(PhysConstSI::c * PhysConstSI::c);
 
-    int N = Ie - Is;
+    const int N = Ie - Is;
     if ( N == 0 ) { return T_R(0.0); }
 
     T_R vx = T_R(0.0);    T_R vy = T_R(0.0);

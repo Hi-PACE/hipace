@@ -59,8 +59,8 @@ void ElasticCollisionPerez (
     using namespace amrex::literals;
 
     T_R constexpr inv_c2 = T_R(1.0)/(PhysConstSI::c*PhysConstSI::c);
-    int NI1 = I1e - I1s;
-    int NI2 = I2e - I2s;
+    const int NI1 = I1e - I1s;
+    const int NI2 = I2e - I2s;
 
     // get local T1t and T2t
     T_R T1t; T_R T2t;
