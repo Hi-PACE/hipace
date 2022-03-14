@@ -13,6 +13,7 @@ sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
+    ccache              \
     clang-7             \
     libopenmpi-dev      \
     openmpi-bin
