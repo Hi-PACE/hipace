@@ -71,7 +71,7 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
     Fuy1 = -charge_mass_ratio/phys_const.c * ( gammap * EypBxp / psip -
             phys_const.c * Bxp - ( uxp * Bzp ) / psip );
     /* Change for psi along zeta */
-    Fpsi1 = -charge_mass_ratio * phys_const.m_e / phys_const.q_e *
+    Fpsi1 = -charge_mass_ratio /phys_const.c/phys_const.c *
             (( uxp*ExmByp + uyp*EypBxp )/phys_const.c/psip - Ezp );
 }
 
