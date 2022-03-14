@@ -107,8 +107,9 @@ public:
     /** returns u_std of the plasma distribution */
     amrex::RealVect GetUStd () const {return m_u_std;}
 
-    /** Returns charge of physical species. In case of partially-ionized ion, this should
-     * return the charge of the fully-ionized atom (atomic number * elementary charge)
+    /** Returns elementary charge q_e (or -q_e for electrons).
+     * TODO: for collisions, return the charge of the fully-ionized atom
+     * (atomic number * elementary charge)
      */
     amrex::Real GetCharge () const {return m_charge;};
 
