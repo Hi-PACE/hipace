@@ -52,7 +52,7 @@ macro(find_amrex)
         set(AMReX_BUILD_TUTORIALS OFF CACHE INTERNAL "")
         set(AMReX_PARTICLES ON CACHE INTERNAL "")
         set(AMReX_TINY_PROFILE ON CACHE BOOL "")
-        set(AMReX_LINEAR_SOLVERS ON CACHE INTERNAL "")
+        set(AMReX_LINEAR_SOLVERS OFF CACHE INTERNAL "")
 
         # we don't need RDC and disabling it simplifies the build
         # complexity and potentially improves code optimization
