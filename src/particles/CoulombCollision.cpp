@@ -11,7 +11,7 @@ CoulombCollision::CoulombCollision(
     using namespace amrex::literals;
 
     // TODO: ionization level
-    // DOTO: Fix dt
+    // TODO: Fix dt
 
     // read collision species
     std::vector<std::string> collision_species;
@@ -24,7 +24,7 @@ CoulombCollision::CoulombCollision(
     m_CoulombLog = -1.0;
     pp.query("CoulombLog", m_CoulombLog);
 
-    for (int i=0; i<species_names.size(); i++)
+    for (int i=0; i<(int) species_names.size(); i++)
     {
         if (species_names[i] == collision_species[0]) m_species1_index = i;
         if (species_names[i] == collision_species[1]) m_species2_index = i;
@@ -53,8 +53,6 @@ CoulombCollision::doCoulombCollision (
         for (PlasmaParticleIterator pti(species1, lev); pti.isValid(); ++pti) {
 
             // Get particles SoA and AoS data
-            auto& aos1 = pti.GetArrayOfStructs();
-            const auto& pos1 = aos1.begin();
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy).data();
@@ -112,8 +110,6 @@ CoulombCollision::doCoulombCollision (
         for (PlasmaParticleIterator pti(species1, lev); pti.isValid(); ++pti) {
 
             // Get particles SoA and AoS data for species 1
-            auto& aos1 = pti.GetArrayOfStructs();
-            const auto& pos1 = aos1.begin();
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy).data();
@@ -124,11 +120,8 @@ CoulombCollision::doCoulombCollision (
             amrex::Real q1 = species1.GetCharge();
             amrex::Real m1 = species1.GetMass();
 
-            // Get particles SoA and AoS data for species 1
-            auto index = std::make_pair(pti.index(), pti.LocalTileIndex());
+            // Get particles SoA and AoS data for species 2
             auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
-            auto& aos2 = ptile2.GetArrayOfStructs();
-            const auto& pos2 = aos2.begin();
             auto& soa2 = ptile2.GetStructOfArrays();
             amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux).data();
             amrex::Real* const uy2 = soa2.GetRealData(PlasmaIdx::uy).data();

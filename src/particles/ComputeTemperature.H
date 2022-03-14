@@ -25,7 +25,7 @@ T_R ComputeTemperature (
     T_R vz = T_R(0.0);    T_R vs = T_R(0.0);
     T_R gm = T_R(0.0);    T_R us = T_R(0.0);
 
-    for (int i = Is; i < Ie; ++i)
+    for (int i = Is; i < (int) Ie; ++i)
     {
         // particle's normalized vector potential
         const amrex::Real psii = psi[I[i]] *
