@@ -22,16 +22,19 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+FILE_NAME=`basename "$0"`
+TEST_NAME="${FILE_NAME%.*}"
+
 # Run the simulation
 OMP_NUM_THREADS=1 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         hipace.do_tiling = 0 \
-        hipace.file_prefix=collisions_data/ \
+        hipace.file_prefix=$TEST_NAME \
         plasmas.collisions = collision1 \
         collision1.species = plasma plasma
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --file_name collisions_data/ \
+    --file_name $TEST_NAME \
     --test-name collisions.SI.1Rank \
     --skip "{'beam': 'id'}"
