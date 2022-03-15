@@ -1,0 +1,20 @@
+/* Copyright 2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: Axel Huebl
+ *
+ * License: BSD-3-Clause-LBNL
+ */
+#ifndef HIPACE_VERSION_H_
+#define HIPACE_VERSION_H_
+
+#ifndef HIPACE_VERSION
+#   define HIPACE_VERSION "@HiPACE_VERSION@"
+#endif
+
+#ifndef HIPACE_GIT_VERSION
+#   define HIPACE_GIT_VERSION "@HiPACE_GIT_VERSION@"
+#endif
+
+#endif // HIPACE_VERSION_H_
