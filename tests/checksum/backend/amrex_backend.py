@@ -1,10 +1,9 @@
-"""
-Copyright 2021
-
-This file is part of HiPACE++
-
-License: BSD-3-Clause-LBNL
-"""
+# Copyright 2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
 
 import re
 import numpy as np

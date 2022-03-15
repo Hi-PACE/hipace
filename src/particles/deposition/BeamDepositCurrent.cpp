@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Remi Lehe
+ * Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #include "BeamDepositCurrent.H"
 #include "particles/BeamParticleContainer.H"
 #include "particles/deposition/BeamDepositCurrentInner.H"
@@ -11,7 +19,7 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Vector<amrex::Geometry> const& gm, int const lev ,const int islice,
-                     int const offset, BeamBins& bins,
+                     int const offset, const BeamBins& bins,
                      const bool do_beam_jx_jy_deposition, const int which_slice, int nghost)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");

@@ -1,5 +1,13 @@
 #! /usr/bin/env bash
 
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a HiPACE++ simulation in the blowout regime and compares the result
 # with SI units.

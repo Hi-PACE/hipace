@@ -1,8 +1,14 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace
+# Copyright 2021
 #
-# It calculates the sum of jz. The beam current and the grid current should cancel each other.
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
+# This script calculates the sum of jz.
+# The beam current and the grid current should cancel each other.
 
 import argparse
 import numpy as np

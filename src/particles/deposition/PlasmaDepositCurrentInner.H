@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2019 Axel Huebl, David Grote, Maxence Thevenet
  * Remi Lehe, Weiqun Zhang, Michael Rowan
  *
@@ -69,7 +77,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
-                         PlasmaBins& bins, int bin_size)
+                         const PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
 

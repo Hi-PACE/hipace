@@ -1,7 +1,15 @@
+# Copyright 2020-2022
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+# Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.18.0)
-project(HiPACE VERSION 22.02)
+project(HiPACE VERSION 22.03)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -109,6 +117,7 @@ add_executable(HiPACE::HiPACE ALIAS HiPACE)
 # own headers
 target_include_directories(HiPACE PRIVATE
     $<BUILD_INTERFACE:${HiPACE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/src>
 )
 
 # if we include <AMReX_buildInfo.H> we will need to call:
@@ -157,8 +166,6 @@ set_hipace_binary_name()
 # Defines #####################################################################
 #
 # Let's use them as sparsely as possible to avoid MxNxOxP... binary variants.
-get_source_version(HiPACE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(HiPACE PUBLIC HIPACE_GIT_VERSION="${HiPACE_GIT_VERSION}")
 
 
 # Warnings ####################################################################
@@ -168,6 +175,13 @@ set_cxx_warnings()
 
 # Generate Configuration and .pc Files ########################################
 #
+get_source_version(HiPACE ${HiPACE_SOURCE_DIR})
+configure_file(
+    ${HiPACE_SOURCE_DIR}/src/HipaceVersion.H.in
+    ${HiPACE_BINARY_DIR}/src/HipaceVersion.H
+    @ONLY
+)
+
 # these files are used if HiPACE is installed and picked up by a downstream
 # project (not needed yet)
 

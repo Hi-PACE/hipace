@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
+
+# Copyright 2020-2021
 #
-# Copyright 2020 The HiPACE++ Community
+# This file is part of HiPACE++.
 #
+# Authors: Axel Huebl, MaxThevenet, Severin Diederichs
 # License: BSD-3-Clause-LBNL
-# Authors: Axel Huebl
 
 set -eu -o pipefail
 
+set +e
+rm -rf /usr/local/bin/2to3
 brew update
+brew install ccache
 brew install cmake
 brew install open-mpi
+set -e

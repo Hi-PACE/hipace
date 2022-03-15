@@ -1,3 +1,10 @@
+/* Copyright 2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_Parser_H_
 #define HIPACE_Parser_H_
 
@@ -22,15 +29,13 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val);
 namespace Parser
 {
     // Cache for evaluated constants
-    static std::map<std::string, double> my_constants_cache{};
+    extern std::map<std::string, double> my_constants_cache;
 
     // Physical / Numerical Constants available to parsed expressions
-    static std::map<std::string, double> hipace_constants
-        {
-            {"pi", MathConst::pi},
-            {"true", 1},
-            {"false", 0}
-        };
+    extern std::map<std::string, double> hipace_constants;
+    // {"pi", MathConst::pi},
+    // {"true", 1},
+    // {"false", 0}
 
     /** \brief add Physical constants to Parser constants
      *

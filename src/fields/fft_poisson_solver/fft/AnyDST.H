@@ -1,3 +1,10 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef ANYDST_H_
 #define ANYDST_H_
 

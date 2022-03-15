@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
+
+# Copyright 2020-2022
 #
-# Copyright 2020 The HiPACE++ Community
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Severin Diederichs
 #
 # License: BSD-3-Clause-LBNL
-# Authors: Axel Huebl
 
 set -eu -o pipefail
 
@@ -11,8 +14,9 @@ sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
-    libfftw3-dev        \
+    ccache              \
     g++                 \
+    libfftw3-dev        \
     libhdf5-dev         \
     python3             \
     python3-pip         \
