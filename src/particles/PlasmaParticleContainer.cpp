@@ -355,7 +355,7 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_temp ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_temp ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::psi_temp][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::psi_temp][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::Fx1     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::Fx2     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::Fx3     ][pidx] = 0._rt;
