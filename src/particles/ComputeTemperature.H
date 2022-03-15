@@ -27,13 +27,10 @@ T_R ComputeTemperature (
 
     for (int i = Is; i < (int) Ie; ++i)
     {
-        // particle's normalized vector potential
-        const amrex::Real psii = psi[I[i]] *
-            PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
         // particle's Lorentz factor
         gm = (1.0_rt + ux[I[i]]*ux[I[i]]*c2i + uy[I[i]]*uy[I[i]]*c2i
-              + (psii+1._rt)*(psii+1._rt)) / (2.0_rt * (psii+1._rt) );
-        const amrex::Real uz = PhysConstSI::c * (gm - psii - 1._rt);
+              + psi[I[i]]*psi[I[i]]) / (2.0_rt * psi[I[i]] );
+        const amrex::Real uz = PhysConstSI::c * (gm - psi[I[i]]);
         us = ( ux[ I[i] ] * ux[ I[i] ] +
                uy[ I[i] ] * uy[ I[i] ] +
                uz         * uz);

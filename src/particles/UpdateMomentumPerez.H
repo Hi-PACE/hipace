@@ -41,20 +41,13 @@ void UpdateMomentumPerezElastic (
 
     // Convert from pseudo-potential to momentum
 
-    constexpr amrex::Real normpsi = PhysConstSI::q_e / (PhysConstSI::m_e * PhysConstSI::c * PhysConstSI::c);
-    // particle's normalized vector potential
-    amrex::Real psi = psi1 * normpsi;
     // particle's Lorentz factor
-    const amrex::Real g1_tmp = (1.0_rt + u1x*u1x*inv_c2 + u1y*u1y*inv_c2
-                            + (psi+1._rt)*(psi+1._rt)) / (2.0_rt * (psi+1._rt) );
-    amrex::Real u1z = PhysConstSI::c * (g1_tmp - psi - 1._rt);
+    const amrex::Real g1_tmp = (1.0_rt+u1x*u1x*inv_c2+u1y*u1y*inv_c2+psi1*psi1)/(2.0_rt*psi1*psi1);
+    amrex::Real u1z = PhysConstSI::c * (g1_tmp - psi1);
 
-    // particle's normalized vector potential
-    psi = psi2 * normpsi;
     // particle's Lorentz factor
-    const amrex::Real g2_tmp = (1.0_rt + u2x*u2x*inv_c2 + u2y*u2y*inv_c2
-                            + (psi+1._rt)*(psi+1._rt)) / (2.0_rt * (psi+1._rt) );
-    amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi - 1._rt);
+    const amrex::Real g2_tmp = (1.0_rt+u2x*u2x*inv_c2+u2y*u2y*inv_c2+psi2*psi2)/(2.0_rt*psi2*psi2);
+    amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi2 - 1._rt);
 
     T_R const diffx = amrex::Math::abs(u1x-u2x);
     T_R const diffy = amrex::Math::abs(u1y-u2y);
@@ -273,7 +266,7 @@ void UpdateMomentumPerezElastic (
         u1y  = p1fy / m1;
         u1z  = p1fz / m1;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
-        psi1 = (ga - 1._rt - u1z/PhysConstSI::c)/normpsi;
+        psi1 = ga - u1z/PhysConstSI::c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
@@ -284,7 +277,7 @@ void UpdateMomentumPerezElastic (
         u2y  = p2fy / m2;
         u2z  = p2fz / m2;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
-        psi2 = (ga - 1._rt - u2z/PhysConstSI::c)/normpsi;
+        psi2 = ga - u2z/PhysConstSI::c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
