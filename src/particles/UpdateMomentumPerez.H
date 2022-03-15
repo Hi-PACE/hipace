@@ -42,11 +42,11 @@ void UpdateMomentumPerezElastic (
     // Convert from pseudo-potential to momentum
 
     // particle's Lorentz factor
-    const amrex::Real g1_tmp = (1.0_rt+u1x*u1x*inv_c2+u1y*u1y*inv_c2+psi1*psi1)/(2.0_rt*psi1*psi1);
+    const amrex::Real g1_tmp = (1.0_rt+u1x*u1x*inv_c2 + u1y*u1y*inv_c2 + psi1*psi1) / (2.0_rt*psi1);
     amrex::Real u1z = PhysConstSI::c * (g1_tmp - psi1);
 
     // particle's Lorentz factor
-    const amrex::Real g2_tmp = (1.0_rt+u2x*u2x*inv_c2+u2y*u2y*inv_c2+psi2*psi2)/(2.0_rt*psi2*psi2);
+    const amrex::Real g2_tmp = (1.0_rt+u2x*u2x*inv_c2 + u2y*u2y*inv_c2 + psi2*psi2) / (2.0_rt*psi2);
     amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi2);
 
     T_R const diffx = amrex::Math::abs(u1x-u2x);
