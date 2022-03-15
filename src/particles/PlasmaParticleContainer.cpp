@@ -243,8 +243,6 @@ IonizationModule (const int lev,
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
-        const amrex::Real * const const_of_motion = soa_ion.GetRealData(
-                                                                PlasmaIdx::const_of_motion).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -282,14 +280,12 @@ IonizationModule (const int lev,
             const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
 
             // Compute probability of ionization p
-            const amrex::Real psi_1 = ( psip[ip] *
-                phys_const.q_e / (phys_const.m_e * clightsq) ) + const_of_motion[ip];
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
                                                + uyp[ip] * uyp[ip] * clightsq
-                                               + psi_1 * psi_1 ) / ( 2.0_rt * psi_1 );
+                                               + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
-            amrex::Real w_dtau = gammap / psi_1 * adk_prefactor[ion_lev_loc] *
+            amrex::Real w_dtau = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
             amrex::Real p = 1._rt - std::exp( - w_dtau );
@@ -353,12 +349,13 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::w0      ][pidx] = arrdata_ion[PlasmaIdx::w0    ][ip];
                 arrdata_elec[PlasmaIdx::ux      ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy      ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::psi     ][pidx] = 0._rt;
+                // later we could consider adding a finite temperature to the ionized electrons
+                arrdata_elec[PlasmaIdx::psi     ][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::x_prev  ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_temp ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_temp ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::psi_temp][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::psi_temp][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::Fx1     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::Fx2     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::Fx3     ][pidx] = 0._rt;
@@ -386,8 +383,6 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::Fpsi5   ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::x0      ][pidx] = arrdata_ion[PlasmaIdx::x0    ][ip];
                 arrdata_elec[PlasmaIdx::y0      ][pidx] = arrdata_ion[PlasmaIdx::y0    ][ip];
-                // later we could consider adding a finite temperature to the ionized electrons
-                arrdata_elec[PlasmaIdx::const_of_motion][pidx] = 1._rt;
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });
