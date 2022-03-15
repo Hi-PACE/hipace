@@ -47,7 +47,7 @@ void UpdateMomentumPerezElastic (
 
     // particle's Lorentz factor
     const amrex::Real g2_tmp = (1.0_rt+u2x*u2x*inv_c2+u2y*u2y*inv_c2+psi2*psi2)/(2.0_rt*psi2*psi2);
-    amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi2 - 1._rt);
+    amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi2);
 
     T_R const diffx = amrex::Math::abs(u1x-u2x);
     T_R const diffy = amrex::Math::abs(u1y-u2y);
