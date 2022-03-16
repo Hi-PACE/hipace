@@ -273,6 +273,24 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+Binary collisions for plasma species
+------------------------------------
+
+WARNING: this module is in development. Currently only support electron-electron collisions in SI units.
+
+HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
+
+* ``plasmas.collisions`` (list of `strings`) optional
+    List of names of types binary Coulomb collisions.
+    Each will represent collisions between 2 plasma species (potentially the same).
+
+* ``<collision name>.species`` (two `strings`) optional
+    The name of the two plasma species for which collisions should be included.
+
+* ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
+    Coulomb logarithm used for this collision.
+    If not specified, the Coulomb logarithm is determined from the temperature in each cell.
+
 Beam parameters
 ---------------
 
