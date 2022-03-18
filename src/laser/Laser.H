@@ -7,13 +7,13 @@
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
-    enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, AbsSq, AbsSqDx, AbsSqDy, N };
+    enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, N };
 };
 
 class Laser
 {
 private:
-        static constexpr int m_nslices = 8;
+        static constexpr int m_nslices = 5;
 public:
     /** Constructor */
     explicit Laser ()
@@ -26,6 +26,7 @@ public:
     /** get function for the 2D slices
      * \param[in] islice slice index
      */
+    const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
     amrex::MultiFab& getSlices (int islice) {return m_slices[islice]; }
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile
@@ -41,7 +42,7 @@ public:
 private:
     std::string m_name = "laser"; /**< name of the laser */
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
-    amrex::RealVect m_W0 {0., 0., 0.}; /**< Laser waist in x and y (the third value is omitted) */
+    amrex::RealVect m_w0 {0., 0., 0.}; /**< Laser waist in x and y (the third value is omitted) */
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
     amrex::Real m_lambda0 {0.}; /**< Laser central wavelength */

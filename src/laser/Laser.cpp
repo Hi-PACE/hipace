@@ -10,11 +10,11 @@ Laser::ReadParameters ()
     m_use_laser = queryWithParser(pp, "a0", m_a0);
     if (!m_use_laser) return;
     amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "W0", tmp_vector)){
+    if (queryWithParser(pp, "w0", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == 2,
-        "The laser waist W0 must be provided in x and y, "
-        "so laser.W0 should contain 2 values");
-        for (int i=0; i<2; i++) m_W0[i] = tmp_vector[i];
+        "The laser waist w0 must be provided in x and y, "
+        "so laser.w0 should contain 2 values");
+        for (int i=0; i<2; i++) m_w0[i] = tmp_vector[i];
     }
 
     bool length_is_specified = queryWithParser(pp, "L0", m_L0);;
@@ -64,21 +64,16 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
     const amrex::GpuArray<amrex::Real, 3> pos_mean = {m_position_mean[0], m_position_mean[1],
                                                       m_position_mean[2]};
-    const amrex::GpuArray<amrex::Real, 3> pos_size = {m_W0[0], m_W0[1], m_L0};
+    const amrex::GpuArray<amrex::Real, 3> pos_size = {m_w0[0], m_w0[1], m_L0};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_size[2];
     const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
-    amrex::MultiFab& slice_this    = getSlices(WhichLaserSlice::This);
-    amrex::MultiFab& slice_AbsSq   = getSlices(WhichLaserSlice::AbsSq);
-    amrex::MultiFab& slice_AbsSqDx = getSlices(WhichLaserSlice::AbsSqDx);
-    amrex::MultiFab& slice_AbsSqDy = getSlices(WhichLaserSlice::AbsSqDy);
+    amrex::MultiFab& slice_this = getSlices(WhichLaserSlice::This);
 
     const int dcomp = 0; // NOTE, this may change when we use slices with Comps
-    const int scomp = 0; // NOTE, this may change when we use slices with Comps
-
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -86,9 +81,6 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     for ( amrex::MFIter mfi(slice_this, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & array_this = slice_this.array(mfi);
-        amrex::Array4<amrex::Real> const & array_AbsSq = slice_AbsSq.array(mfi);
-        amrex::Array4<amrex::Real> const & array_AbsSqDx = slice_AbsSqDx.array(mfi);
-        amrex::Array4<amrex::Real> const & array_AbsSqDy = slice_AbsSqDy.array(mfi);
 
         // setting this Laser slice to the initial slice (TO BE REPLACED BY COPY FROM 3D ARRAY)
         amrex::ParallelFor(
@@ -105,37 +97,6 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
                 array_this(i,j,k,dcomp) =  a0*trans_pos_factor*long_pos_factor;
 
-            }
-            );
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                array_AbsSq(i,j,k,dcomp) = std::abs( array_this(i,j,k,dcomp)
-                                                    *array_this(i,j,k,dcomp));
-            }
-            );
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                /* finite difference along x */
-                array_AbsSqDx(i,j,k,dcomp) = 1._rt / (2.0_rt*dx_arr[0]) *
-                                         (array_AbsSq(i+1, j, k, scomp)
-                                          - array_AbsSq(i-1, j, k, scomp));
-            }
-            );
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                /* finite difference along y */
-                array_AbsSqDy(i,j,k,dcomp) = 1._rt  / (2.0_rt*dx_arr[1]) *
-                                         (array_AbsSq(i, j+1, k, scomp)
-                                         - array_AbsSq(i, j-1, k, scomp));
             }
             );
     }

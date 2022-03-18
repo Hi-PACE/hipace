@@ -37,7 +37,7 @@
  * \param[in,out] jxx_fab array of current density jxx, on the box corresponding to pti
  * \param[in,out] jxy_fab array of current density jxy, on the box corresponding to pti
  * \param[in,out] jyy_fab array of current density jyy, on the box corresponding to pti
- * \param[in] a_sqrd_mf MultiFab containing |a|^2
+ * \param[in] a_mf MultiFab containing the normalized vector potential of the laser a
  * \param[in] use_laser whether a laser is used or not
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
  * \param[in] dx cell size in each dimension
@@ -64,7 +64,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          amrex::FArrayBox& jxx_fab,
                          amrex::FArrayBox& jxy_fab,
                          amrex::FArrayBox& jyy_fab,
-                         const amrex::MultiFab& a_sqrd_mf,
+                         const amrex::MultiFab& a_mf,
                          const bool use_laser,
                          amrex::Vector<amrex::FArrayBox>& tmp_densities,
                          amrex::Real const * const AMREX_RESTRICT dx,
@@ -131,7 +131,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     PlasmaBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
     // Extract laser array from MultiFab
-    amrex::Array4<const amrex::Real> const& a_sqrd_arr = use_laser ? a_sqrd_mf[pti].array()
+    amrex::Array4<const amrex::Real> const& a_arr = use_laser ? a_mf[pti].array()
                                                          : amrex::Array4<const amrex::Real>();
 
 #ifdef AMREX_USE_OMP
@@ -195,7 +195,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     const amrex::ParticleReal yp = pos_structs[ip].pos(1);
                     amrex::ParticleReal Aabssqp = 0._rt;
                     if (use_laser) {
-                        doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */, Aabssqp, a_sqrd_arr,
+                        doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */, Aabssqp, a_arr,
                                             dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
                                             depos_order_xy, 0);
                     }
