@@ -195,7 +195,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     const amrex::ParticleReal yp = pos_structs[ip].pos(1);
                     amrex::ParticleReal Aabssqp = 0._rt;
                     if (use_laser) {
-                        doLaserGatherShapeN(xp, yp, 0 /* zp not used */, Aabssqp, a_sqrd_arr,
+                        doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */, Aabssqp, a_sqrd_arr,
                                             dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
                                             depos_order_xy, 0);
                     }

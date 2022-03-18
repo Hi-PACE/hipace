@@ -18,7 +18,7 @@ void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
-                        PlasmaBins& bins, Laser& laser)
+                        PlasmaBins& bins, const Laser& laser)
 {
     std::string str = "UpdateForcePushParticles_Plasma(    )";
     if (temp_slice) str.at(32) = 't';
@@ -182,7 +182,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        depos_order_xy, 0);
 
                         if (use_laser) {
-                            doLaserGatherShapeN(xp, yp, 0 /* zp not used */,
+                            doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */,
                                                 Aabssqp, AabssqDxp, AabssqDyp,
                                                 a_sqrd_arr, a_sqrd_dx_arr, a_sqrd_dy_arr,
                                                 dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,

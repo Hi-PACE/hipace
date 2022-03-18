@@ -40,7 +40,7 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
-
+AMREX_ALWAYS_ASSERT(WhichLaserSlice::N == m_nslices);
     for (int islice=0; islice<WhichLaserSlice::N; islice++) {
         m_slices[islice].define(
             slice_ba, slice_dm, 1, m_slices_nguards, // prev Comps[islice]["N"] instead of 1
@@ -60,7 +60,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     const amrex::Real a0 = m_a0;
 
     const auto plo = geom.ProbLoArray();
-    const amrex::Real* dx = geom.CellSize();
+    amrex::Real const * const dx = geom.CellSize();
 
     const amrex::GpuArray<amrex::Real, 3> pos_mean = {m_position_mean[0], m_position_mean[1],
                                                       m_position_mean[2]};
@@ -95,8 +95,8 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                const amrex::Real x = (i+0.5)*dx_arr[0]+plo[0];
-                const amrex::Real y = (j+0.5)*dx_arr[1]+plo[1];
+                const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
+                const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
 
                 const amrex::Real delta_x = (x - pos_mean[0]) / pos_size[0];
                 const amrex::Real delta_y = (y - pos_mean[1]) / pos_size[1];

@@ -50,7 +50,6 @@ private:
     amrex::Real m_lambda0 {0.}; /**< Laser central wavelength */
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
-    int m_EB; /**< 0: use laser envelope. 1: use E and B fields */
 
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};

@@ -81,7 +81,7 @@ MultiPlasma::CheckDensity () const
 
 void
 MultiPlasma::DepositCurrent (
-    Fields & fields, Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
+    Fields & fields, const Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
     bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
     int const lev)
 {
@@ -94,7 +94,7 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::AdvanceParticles (
-    Fields & fields, Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
+    Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
     bool do_update, bool do_shift, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
@@ -114,7 +114,7 @@ MultiPlasma::ResetParticles (int lev, bool initial)
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev)
+    Fields & fields, const Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev)
 {
     for (int lev = 0; lev < nlev; ++lev) {
         for (int i=0; i<m_nplasmas; i++) {

@@ -455,14 +455,13 @@ can be specified via the pulse duration ``laser.tau``.
 If no ``laser.a0`` is provided, no laser will be initialized.
 
 * ``laser.a0`` (`float`) optional (default `0`)
-    The names of the particle beams, separated by a space.
-    To run without beams, choose the name `no_beam`.
+    Peak normalized vector potential of the laser pulse.
 
 * ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
-    The mean position of the laser in `x, y, z`, separated by a space.
+    The mean position of the laser in `x, y, z`.
 
 * ``laser.W0`` (2 `float`) optional (default `0 0`)
-    The laser waist in `x, y`, separated by a space.
+    The laser waist in `x, y`.
 
 * ``laser.L0`` (`float`) optional (default `0`)
     The laser pulse length in `z`. Use either the pulse length or the pulse duration.
