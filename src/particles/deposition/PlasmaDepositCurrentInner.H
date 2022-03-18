@@ -100,10 +100,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
     const amrex::Real * const const_of_motion = soa.GetRealData(PlasmaIdx::const_of_motion).data();
 
     // Extract box properties
-    const amrex::Real dxi = 1.0/dx[0];
-    const amrex::Real dyi = 1.0/dx[1];
-    const amrex::Real dzi = 1.0/dx[2];
-    const amrex::Real invvol = Hipace::m_normalized_units ? 1. : dxi*dyi*dzi;
+    const amrex::Real invvol = Hipace::m_normalized_units ? 1. : 1/(dx[0]*dx[1]*dx[2]);
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     // slice is only one cell thick
@@ -240,13 +237,13 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     // --- Compute shape factors
                     // x direction
                     // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-                    const amrex::Real xmid = (pos_structs[ip].pos(0) - x_pos_offset)*dxi;
+                    const amrex::Real xmid = (pos_structs[ip].pos(0) - x_pos_offset)/dx_arr[0];
                     amrex::Real sx_cell[depos_order_xy + 1];
                     const int j_cell = compute_shape_factor<depos_order_xy>(
                         sx_cell, xmid - itilex*bin_size);
 
                     // y direction
-                    const amrex::Real ymid = (pos_structs[ip].pos(1) - y_pos_offset)*dyi;
+                    const amrex::Real ymid = (pos_structs[ip].pos(1) - y_pos_offset)/dx_arr[1];
                     amrex::Real sy_cell[depos_order_xy + 1];
                     const int k_cell = compute_shape_factor<depos_order_xy>(
                         sy_cell, ymid - itiley*bin_size);
