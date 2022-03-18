@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+ * Severin Diederichs, atmyers, Angel Ferran Pousa
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_PlasmaParticleContainer_H_
 #define HIPACE_PlasmaParticleContainer_H_
 
@@ -15,7 +23,7 @@ struct PlasmaIdx
         w = 0,                               // weight
         w0,                                  // initial weight
         ux, uy,                              // momentum
-        psi,                                 //
+        psi,                                 // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
         x_prev, y_prev,                      // temporary position
         ux_temp, uy_temp,                    // momentum
         psi_temp,                            //
@@ -25,7 +33,6 @@ struct PlasmaIdx
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
         Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
         x0, y0,                              // initial positions
-        const_of_motion,                     // inital constant of motion (= 1 for a cold plasma)
         nattribs
     };
     enum {
@@ -98,6 +105,15 @@ public:
 
     /** returns u_std of the plasma distribution */
     amrex::RealVect GetUStd () const {return m_u_std;}
+
+    /** Returns elementary charge q_e (or -q_e for electrons).
+     * TODO: for collisions, return the charge of the fully-ionized atom
+     * (atomic number * elementary charge)
+     */
+    amrex::Real GetCharge () const {return m_charge;};
+
+    /** Returns mass of physical species */
+    amrex::Real GetMass () const {return m_mass;};
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */

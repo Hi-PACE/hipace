@@ -1,7 +1,13 @@
 #! /usr/bin/env bash
 
-# This file is part of the Hipace test suite.
-# It runs a Hipace simulation in the blowout regime and cand compares the result
+# Copyright 2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, MaxThevenet
+# License: BSD-3-Clause-LBNL
+
+# This file runs a Hipace simulation in the blowout regime and cand compares the result
 # of the simulation to a benchmark.
 
 # abort on first encounted error

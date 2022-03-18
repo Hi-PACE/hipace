@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse

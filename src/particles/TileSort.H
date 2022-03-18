@@ -1,7 +1,15 @@
+/* Copyright 2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_TILESORT_H_
 #define HIPACE_TILESORT_H_
 
 #include "PlasmaParticleContainer.H"
+
 #include <AMReX_MultiFab.H>
 
 using PlasmaBins = amrex::DenseBins<PlasmaParticleContainer::ParticleType>;

@@ -1,3 +1,10 @@
+/* Copyright 2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef HIPACE_DeprecatedInput_H_
 #define HIPACE_DeprecatedInput_H_
 

@@ -1,9 +1,19 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+ * Remi Lehe, Severin Diederichs, WeiqunZhang, coulibaly-mouhamed
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/SliceSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
+#include "mg_solver/HpMultiGrid.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
@@ -47,6 +57,7 @@ amrex::Real Hipace::m_external_Ez_uniform = 0.;
 amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 int Hipace::m_MG_verbose = 0;
+bool Hipace::m_use_amrex_mlmg = false;
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
 #else
@@ -133,6 +144,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
+    queryWithParser(pph, "use_amrex_mlmg", m_use_amrex_mlmg);
     queryWithParser(pph, "do_tiling", m_do_tiling);
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
@@ -593,7 +605,10 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             FillDiagnostics(lev, islice);
 
+            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
+
             m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
@@ -634,13 +649,16 @@ Hipace::ExplicitSolveBxBy (const int lev)
     amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
     const amrex::BoxArray ba = slicemf.boxArray();
     const amrex::DistributionMapping dm = slicemf.DistributionMap();
-    const amrex::IntVect ngv = slicemf.nGrowVect();
 
+    int ncomp_mult = 1;
+#ifdef AMREX_USE_LINEAR_SOLVERS
     // Later this should have only 1 component, but we have 2 for now, with always the same values.
-    amrex::MultiFab Mult(ba, dm, 2, ngv);
-    amrex::MultiFab S(ba, dm, 2, ngv);
-    Mult.setVal(0., ngv);
-    S.setVal(0., ngv);
+    if (m_use_amrex_mlmg) { ncomp_mult = 2; }
+#endif
+    amrex::MultiFab Mult(ba, dm, ncomp_mult, 0);
+    amrex::MultiFab S(ba, dm, 2, 0);
+    Mult.setVal(0.);
+    S.setVal(0.);
 
     const amrex::MultiFab Rho(slicemf, amrex::make_alias, Comps[isl]["rho"    ], 1);
     const amrex::MultiFab Jx (slicemf, amrex::make_alias, Comps[isl]["jx"     ], 1);
@@ -690,8 +708,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
-        // add enough guard cells to enable transverse derivatives
-        amrex::Box const& bx = mfi.growntilebox({1,1,0});
+        amrex::Box const& bx = mfi.tilebox();
 
         amrex::Array4<amrex::Real const> const & rho = Rho.array(mfi);
         amrex::Array4<amrex::Real const> const & jx  = Jx .array(mfi);
@@ -784,8 +801,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                         - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
-                mult(i,j,k,0) = nstar / (const_of_motion + cpsi);
-                mult(i,j,k,1) = nstar / (const_of_motion + cpsi);
+                for (int n = 0; n < ncomp_mult; ++n) {
+                    mult(i,j,k,n) = nstar / (const_of_motion + cpsi);
+                }
 
                 // sy, to compute Bx
                 s(i,j,k,0) = + cbz * cjxp / (const_of_motion+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
@@ -798,10 +816,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
             }
             );
     }
-
-#ifdef AMREX_USE_LINEAR_SOLVERS
-    // For now, we construct the solver locally. Later, we want to move it to the hipace class as
-    // a member so that we can reuse it.
 
     // construct slice geometry in normalized units
     // Set the lo and hi of domain and probdomain in the z direction
@@ -823,46 +837,56 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     slice_geom.setPeriodicity({0,0,0});
 
-    if (!m_mlalaplacian){
-        // If first call, initialize the MG solver
-        amrex::LPInfo lpinfo{};
-        lpinfo.setHiddenDirection(2).setAgglomeration(false).setConsolidation(false);
+#ifdef AMREX_USE_LINEAR_SOLVERS
+    if (m_use_amrex_mlmg) {
+        if (!m_mlalaplacian){
+            // If first call, initialize the MG solver
+            amrex::LPInfo lpinfo{};
+            lpinfo.setHiddenDirection(2).setAgglomeration(false).setConsolidation(false);
 
-        // make_unique requires explicit types
-        m_mlalaplacian = std::make_unique<amrex::MLALaplacian>(
-            amrex::Vector<amrex::Geometry>{slice_geom},
-            amrex::Vector<amrex::BoxArray>{S.boxArray()},
-            amrex::Vector<amrex::DistributionMapping>{S.DistributionMap()},
-            lpinfo,
-            amrex::Vector<amrex::FabFactory<amrex::FArrayBox> const*>{}, 2);
+            // make_unique requires explicit types
+            m_mlalaplacian = std::make_unique<amrex::MLALaplacian>(
+                amrex::Vector<amrex::Geometry>{slice_geom},
+                amrex::Vector<amrex::BoxArray>{S.boxArray()},
+                amrex::Vector<amrex::DistributionMapping>{S.DistributionMap()},
+                lpinfo,
+                amrex::Vector<amrex::FabFactory<amrex::FArrayBox> const*>{}, 2);
 
-        m_mlalaplacian->setDomainBC(
-            {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
-                          amrex::LinOpBCType::Dirichlet,
-                          amrex::LinOpBCType::Dirichlet)},
-            {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
-                          amrex::LinOpBCType::Dirichlet,
-                          amrex::LinOpBCType::Dirichlet)});
+            m_mlalaplacian->setDomainBC(
+                {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                              amrex::LinOpBCType::Dirichlet,
+                              amrex::LinOpBCType::Dirichlet)},
+                {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
+                              amrex::LinOpBCType::Dirichlet,
+                              amrex::LinOpBCType::Dirichlet)});
 
-        m_mlmg = std::make_unique<amrex::MLMG>(*m_mlalaplacian);
-        m_mlmg->setVerbose(m_MG_verbose);
-    }
+            m_mlmg = std::make_unique<amrex::MLMG>(*m_mlalaplacian);
+            m_mlmg->setVerbose(m_MG_verbose);
+        }
 
-    // BxBy is assumed to have at least one ghost cell in x and y.
-    // The ghost cells outside the domain should contain Dirichlet BC values.
-    BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
-    m_mlalaplacian->setLevelBC(0, &BxBy);
+        // BxBy is assumed to have at least one ghost cell in x and y.
+        // The ghost cells outside the domain should contain Dirichlet BC values.
+        BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
+        m_mlalaplacian->setLevelBC(0, &BxBy);
 
-    m_mlalaplacian->setACoeffs(0, Mult);
+        m_mlalaplacian->setACoeffs(0, Mult);
 
-    // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
-    // So we solve Delta BxBy - A * BxBy = S
-    m_mlalaplacian->setScalars(-1.0, -1.0);
+        // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
+        // So we solve Delta BxBy - A * BxBy = S
+        m_mlalaplacian->setScalars(-1.0, -1.0);
 
-    m_mlmg->solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
-#else
-    amrex::Abort("To use the explicit solver, compilation option AMReX_LINEAR_SOLVERS must be ON");
+        m_mlmg->solve({&BxBy}, {&S}, m_MG_tolerance_rel, m_MG_tolerance_abs);
+    } else
 #endif
+    {
+        AMREX_ALWAYS_ASSERT(ba.size() == 1);
+        if (!m_hpmg) {
+            m_hpmg = std::make_unique<hpmg::MultiGrid>(slice_geom);
+        }
+        const int max_iters = 200;
+        m_hpmg->solve(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
+                      max_iters, m_MG_verbose);
+    }
 
     // converting BxBy to SI units, if applicable
     // TODO: include ghost cells in .mult (currently not supported by amrex)
@@ -1399,16 +1423,6 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 #else
     amrex::ignore_unused(it, call_type);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
-#endif
-}
-
-std::string
-Hipace::Version ()
-{
-#ifdef HIPACE_GIT_VERSION
-    return std::string(HIPACE_GIT_VERSION);
-#else
-    return std::string("Unknown");
 #endif
 }
 

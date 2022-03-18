@@ -1,3 +1,11 @@
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: Andrew Myers, Axel Huebl, MaxThevenet, Remi Lehe
+# Severin Diederichs, atmyers
+# License: BSD-3-Clause-LBNL
+
 target_sources(HiPACE
   PRIVATE
     BeamParticleContainer.cpp
@@ -9,6 +17,7 @@ target_sources(HiPACE
     BoxSort.cpp
     MultiBeam.cpp
     MultiPlasma.cpp
+    CoulombCollision.cpp
 )
 
 add_subdirectory(deposition)

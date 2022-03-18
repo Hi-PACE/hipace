@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
+ *
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2019 Axel Huebl, David Grote, Maxence Thevenet
  * Remi Lehe, Weiqun Zhang, Michael Rowan
  *
@@ -76,7 +84,7 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
-                         PlasmaBins& bins, int bin_size)
+                         const PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
 
@@ -97,7 +105,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
         soa.GetRealData(PlasmaIdx::uy).data() : soa.GetRealData(PlasmaIdx::uy_temp).data();
     const amrex::Real * const psip = (!temp_slice) ?
         soa.GetRealData(PlasmaIdx::psi).data() : soa.GetRealData(PlasmaIdx::psi_temp).data();
-    const amrex::Real * const const_of_motion = soa.GetRealData(PlasmaIdx::const_of_motion).data();
 
     // Extract box properties
     const amrex::Real invvol = Hipace::m_normalized_units ? 1. : 1/(dx[0]*dx[1]*dx[2]);
@@ -185,9 +192,6 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                     if (pos_structs[ip].id() < 0) return;
 
-                    const amrex::Real psi = psip[ip] *
-                        phys_const.q_e / (phys_const.m_e * phys_const.c * phys_const.c);
-
                     const amrex::ParticleReal xp = pos_structs[ip].pos(0);
                     const amrex::ParticleReal yp = pos_structs[ip].pos(1);
                     amrex::ParticleReal Aabssqp = 0._rt;
@@ -198,15 +202,14 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     }
 
                     // calculate 1/gamma for plasma particles
-                    const amrex::Real gaminv = (2.0_rt * (psi+const_of_motion[ip]) )
+                    const amrex::Real gaminv = (2.0_rt * psip[ip] )
                                                 /(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq
-                                                         + (psi+const_of_motion[ip])*
-                                                           (psi+const_of_motion[ip])
+                                                         + psip[ip]*psip[ip]
                                                          + 0.5_rt*Aabssqp);
 
-                    if (( 1.0_rt/(gaminv*(psi+const_of_motion[ip])) < 0.0_rt) ||
-                        ( 1.0_rt/(gaminv*(psi+const_of_motion[ip])) > max_qsa_weighting_factor))
+                    if (( 1.0_rt/(gaminv * psip[ip]) < 0.0_rt) ||
+                        ( 1.0_rt/(gaminv * psip[ip]) > max_qsa_weighting_factor))
                     {
                         // This particle violates the QSA, discard it and do not deposit its current
                         amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
@@ -217,22 +220,19 @@ void doDepositionShapeN (const PlasmaParticleIterator& pti,
                     // calculate plasma particle velocities
                     const amrex::Real vx = uxp[ip]*gaminv;
                     const amrex::Real vy = uyp[ip]*gaminv;
-                    const amrex::Real vz = phys_const.c*(1.0_rt -(psi +const_of_motion[ip])*gaminv);
+                    const amrex::Real vz = phys_const.c*(1.0_rt -psip[ip]*gaminv);
 
                     // calculate charge of the plasma particles
                     const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
-                    const amrex::Real wq = q * wp[ip]/(gaminv * (psi + const_of_motion[ip]))*invvol;
+                    const amrex::Real wq = q * wp[ip]/(gaminv * psip[ip])*invvol;
 
                     // wqx, wqy wqz are particle current in each direction
                     const amrex::Real wqx = wq*vx;
                     const amrex::Real wqy = wq*vy;
                     const amrex::Real wqz = wq*vz;
-                    const amrex::Real wqxx = q * wp[ip] * uxp[ip] * uxp[ip] * invvol
-                        / ((psi+const_of_motion[ip])*(psi+const_of_motion[ip]));
-                    const amrex::Real wqxy = q * wp[ip] * uxp[ip] * uyp[ip] * invvol
-                        / ((psi+const_of_motion[ip])*(psi+const_of_motion[ip]));
-                    const amrex::Real wqyy = q * wp[ip] * uyp[ip] * uyp[ip] * invvol
-                        / ((psi+const_of_motion[ip])*(psi+const_of_motion[ip]));
+                    const amrex::Real wqxx = q*wp[ip]*uxp[ip]*uxp[ip]*invvol / (psip[ip]*psip[ip]);
+                    const amrex::Real wqxy = q*wp[ip]*uxp[ip]*uyp[ip]*invvol / (psip[ip]*psip[ip]);
+                    const amrex::Real wqyy = q*wp[ip]*uyp[ip]*uyp[ip]*invvol / (psip[ip]*psip[ip]);
 
                     // --- Compute shape factors
                     // x direction

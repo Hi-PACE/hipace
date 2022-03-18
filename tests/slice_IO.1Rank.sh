@@ -1,5 +1,13 @@
 #! /usr/bin/env bash
 
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
+
 # This file is part of the HiPACE++ test suite.
 # It runs a Hipace simulation with full IO and xz-slice IO, and checks that the results are equal.
 

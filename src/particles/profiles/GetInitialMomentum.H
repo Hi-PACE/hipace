@@ -1,3 +1,10 @@
+/* Copyright 2020-2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, Severin Diederichs, Weiqun Zhang
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef GETINTIALMOMENTUM_H_
 #define GETINTIALMOMENTUM_H_
 

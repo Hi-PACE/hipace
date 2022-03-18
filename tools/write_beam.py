@@ -1,3 +1,10 @@
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
 import math
 import openpmd_api as io
 import numpy as np

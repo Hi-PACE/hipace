@@ -1,3 +1,10 @@
+/* Copyright 2020-2021
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 /* Copyright 2019 David Grote, Maxence Thevenet, Remi Lehe
  * Weiqun Zhang
  *

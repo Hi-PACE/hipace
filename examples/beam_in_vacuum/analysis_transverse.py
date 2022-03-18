@@ -1,8 +1,14 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code Hipace
+# Copyright 2021
 #
-# It compares the transverse field By from a serial and a parallel simulation
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet
+# License: BSD-3-Clause-LBNL
+
+
+# This script compares the transverse field By from a serial and a parallel simulation
 # with transverse beam currents and asserts that the results are the same
 
 import matplotlib.pyplot as plt

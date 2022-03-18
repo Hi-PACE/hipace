@@ -1,8 +1,14 @@
 #! /usr/bin/env python3
 
-# This Python analysis script is part of the code HiPACE++
+# Copyright 2020-2021
 #
-# It compares the transverse field By with the theoretical value, plots both
+# This file is part of HiPACE++.
+#
+# Authors: MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
+
+# This script compares the transverse field By with the theoretical value, plots both
 # the simulation result and the theory on the same plot, and asserts that the
 # difference is small.
 #

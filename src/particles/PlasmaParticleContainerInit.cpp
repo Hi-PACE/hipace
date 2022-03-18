@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, Axel Huebl, MaxThevenet
+ * Severin Diederichs, Weiqun Zhang
+ * License: BSD-3-Clause-LBNL
+ */
 #include "PlasmaParticleContainer.H"
 #include "utils/Constants.H"
 #include "ParticleUtil.H"
@@ -154,12 +162,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::w0       ][pidx] = base_density;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
-                arrdata[PlasmaIdx::psi      ][pidx] = 0.;
+                arrdata[PlasmaIdx::psi      ][pidx] = sqrt(1.+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
                 arrdata[PlasmaIdx::x_prev   ][pidx] = 0.;
                 arrdata[PlasmaIdx::y_prev   ][pidx] = 0.;
                 arrdata[PlasmaIdx::ux_temp  ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy_temp  ][pidx] = u[1] * c_light;
-                arrdata[PlasmaIdx::psi_temp ][pidx] = 0.;
+                arrdata[PlasmaIdx::psi_temp ][pidx] = sqrt(1.+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
                 arrdata[PlasmaIdx::Fx1      ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx2      ][pidx] = 0.;
                 arrdata[PlasmaIdx::Fx3      ][pidx] = 0.;
@@ -188,8 +196,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
-                arrdata[PlasmaIdx::const_of_motion ][pidx] = sqrt(1._rt + u[0]*u[0] + u[1]*u[1]
-                                                                     + u[2]*u[2]) - u[2];
                 ++pidx;
             }
         });

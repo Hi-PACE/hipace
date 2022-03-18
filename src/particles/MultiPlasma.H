@@ -1,3 +1,10 @@
+/* Copyright 2021-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef MULTIPLASMA_H_
 #define MULTIPLASMA_H_
 
@@ -5,6 +12,7 @@
 #include "TileSort.H"
 #include "fields/Fields.H"
 #include "laser/Laser.H"
+#include "CoulombCollision.H"
 
 class MultiPlasma
 {
@@ -119,7 +127,20 @@ public:
      * to avoid machine-precision problems. */
     void CheckDensity () const;
 
+    /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
+     *
+     * The algorithm implemented is that of [Perez et al., Phys. Plasmas 19, 083104 (2012)]
+     *
+     * \param[in] lev MR level
+     * \param[in] bx box on which plasma particles are sorted per-cell and collide together
+     * \param[in] geom Corresponding gemetry
+     */
+    void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
+
+    /** Number of binary collisions */
+    int m_ncollisions = 0;
 
 private:
 
@@ -130,6 +151,11 @@ private:
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
     amrex::Real m_nominal_density; /**< Density to normalize quantities in the explicit solver */
+
+    /** User-input names of the binary collisions to be used */
+    std::vector<std::string> m_collision_names;
+    /** Vector of binary collisions */
+    amrex::Vector< CoulombCollision > m_all_collisions;
 };
 
 #endif // MULTIPLASMA_H_

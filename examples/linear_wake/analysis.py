@@ -1,5 +1,14 @@
 #! /usr/bin/env python3
 
+# Copyright 2020-2021
+#
+# This file is part of HiPACE++.
+#
+# Authors: Axel Huebl, MathisMewes, MaxThevenet, Severin Diederichs
+#
+# License: BSD-3-Clause-LBNL
+
+
 # This Python analysis script is part of the code Hipace
 #
 # It compares the transverse field By with the theoretical value, plots both
@@ -65,9 +74,9 @@ nz = len(rho_meta.z)
 nb_array = np.zeros(nz)
 beam_starting_position = 1 / kp
 distance_to_start_pos =  rho_meta.zmax - beam_starting_position
-index_beam_head = np.int(distance_to_start_pos / dzeta)
+index_beam_head = int(distance_to_start_pos / dzeta)
 beam_length = 2 / kp
-beam_length_i = np.int(beam_length / dzeta)
+beam_length_i = int(beam_length / dzeta)
 if (args.gaussian_beam):
     sigma_z = 1.41 / kp
     peak_density = 0.01*ne

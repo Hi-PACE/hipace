@@ -1,3 +1,10 @@
+# Copyright 2021-2022
+#
+# This file is part of HiPACE++.
+#
+# Authors: Axel Huebl, MaxThevenet, Severin Diederichs
+# License: BSD-3-Clause-LBNL
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -19,8 +26,8 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 project = 'HiPACE++'
 copyright = '2021, Severin Diederichs, Axel Huebl, Remi Lehe, Andrew Myers, Alexander Sinn, Maxence Thevenet, Weiqun Zhang'
 author = 'Severin Diederichs, Axel Huebl, Remi Lehe, Andrew Myers, Alexander Sinn, Maxence Thevenet, Weiqun Zhang'
-version = u'22.02'
-release = u'22.02'
+version = u'22.03'
+release = u'22.03'
 
 # -- General configuration ---------------------------------------------------
 

@@ -1,3 +1,10 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #include "AnyDST.H"
 #include "CuFFTUtils.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -65,7 +72,7 @@ namespace AnyDST
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
                 /* upper left quadrant */
-                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
+                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, k, scomp).real();
             }
             );
     };

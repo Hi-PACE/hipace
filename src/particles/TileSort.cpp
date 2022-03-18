@@ -1,3 +1,10 @@
+/* Copyright 2021-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: Axel Huebl, MaxThevenet
+ * License: BSD-3-Clause-LBNL
+ */
 #include "TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
 
@@ -31,9 +38,9 @@ findParticlesInEachTile (
 
         // Find the particles that are in each tile and return collections of indices per tile.
         bins.build(
-            amrex::BinPolicy::OpenMP, pti.numParticles(), pti.GetArrayOfStructs().begin(), cbx,
+            pti.numParticles(), pti.GetArrayOfStructs().begin(), cbx,
             // Pass lambda function that returns the tile index
-            [=] (const PlasmaParticleContainer::ParticleType& p)
+            [=] AMREX_GPU_DEVICE (const PlasmaParticleContainer::ParticleType& p)
             noexcept -> amrex::IntVect
             {
                 return amrex::IntVect(

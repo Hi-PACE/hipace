@@ -1,3 +1,11 @@
+/* Copyright 2020-2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Remi Lehe
+ * Severin Diederichs
+ * License: BSD-3-Clause-LBNL
+ */
 #include "BeamDepositCurrent.H"
 #include "particles/BeamParticleContainer.H"
 #include "particles/deposition/BeamDepositCurrentInner.H"
