@@ -449,7 +449,7 @@ Laser parameters
 ----------------
 
 Currently, only a single, static laser pulse is available. The laser profile is defined by
-:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/W0_x^2 + y^2/W0_y^2 + z^2/L0^2)]`. The laser pulse length
+:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`. The laser pulse length
 :math:`L0 = \tau / c_0`
 can be specified via the pulse duration ``laser.tau``.
 If no ``laser.a0`` is provided, no laser will be initialized.
@@ -460,7 +460,7 @@ If no ``laser.a0`` is provided, no laser will be initialized.
 * ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
     The mean position of the laser in `x, y, z`.
 
-* ``laser.W0`` (2 `float`) optional (default `0 0`)
+* ``laser.w0`` (2 `float`) optional (default `0 0`)
     The laser waist in `x, y`.
 
 * ``laser.L0`` (`float`) optional (default `0`)

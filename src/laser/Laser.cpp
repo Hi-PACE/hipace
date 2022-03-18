@@ -10,11 +10,11 @@ Laser::ReadParameters ()
     m_use_laser = queryWithParser(pp, "a0", m_a0);
     if (!m_use_laser) return;
     amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "W0", tmp_vector)){
+    if (queryWithParser(pp, "w0", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == 2,
-        "The laser waist W0 must be provided in x and y, "
-        "so laser.W0 should contain 2 values");
-        for (int i=0; i<2; i++) m_W0[i] = tmp_vector[i];
+        "The laser waist w0 must be provided in x and y, "
+        "so laser.w0 should contain 2 values");
+        for (int i=0; i<2; i++) m_w0[i] = tmp_vector[i];
     }
 
     bool length_is_specified = queryWithParser(pp, "L0", m_L0);;
@@ -64,7 +64,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
     const amrex::GpuArray<amrex::Real, 3> pos_mean = {m_position_mean[0], m_position_mean[1],
                                                       m_position_mean[2]};
-    const amrex::GpuArray<amrex::Real, 3> pos_size = {m_W0[0], m_W0[1], m_L0};
+    const amrex::GpuArray<amrex::Real, 3> pos_size = {m_w0[0], m_w0[1], m_L0};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];

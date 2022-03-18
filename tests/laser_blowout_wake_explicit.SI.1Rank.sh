@@ -30,7 +30,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         geometry.prob_hi     =  20.*kp_inv    20.*kp_inv    6.*kp_inv  \
         laser.a0 = 4.5 \
         laser.position_mean = 0. 0. 0 \
-        laser.W0 = 4.*kp_inv 4.*kp_inv \
+        laser.w0 = 4.*kp_inv 4.*kp_inv \
         laser.L0 = 2.*kp_inv \
         amr.n_cell = 128 128 100 \
 
