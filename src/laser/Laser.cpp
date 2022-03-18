@@ -71,14 +71,9 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_size[2];
     const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
-    amrex::MultiFab& slice_this    = getSlices(WhichLaserSlice::This);
-    amrex::MultiFab& slice_AbsSq   = getSlices(WhichLaserSlice::AbsSq);
-    amrex::MultiFab& slice_AbsSqDx = getSlices(WhichLaserSlice::AbsSqDx);
-    amrex::MultiFab& slice_AbsSqDy = getSlices(WhichLaserSlice::AbsSqDy);
+    amrex::MultiFab& slice_this = getSlices(WhichLaserSlice::This);
 
     const int dcomp = 0; // NOTE, this may change when we use slices with Comps
-    const int scomp = 0; // NOTE, this may change when we use slices with Comps
-
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -86,9 +81,6 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     for ( amrex::MFIter mfi(slice_this, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & array_this = slice_this.array(mfi);
-        amrex::Array4<amrex::Real> const & array_AbsSq = slice_AbsSq.array(mfi);
-        amrex::Array4<amrex::Real> const & array_AbsSqDx = slice_AbsSqDx.array(mfi);
-        amrex::Array4<amrex::Real> const & array_AbsSqDy = slice_AbsSqDy.array(mfi);
 
         // setting this Laser slice to the initial slice (TO BE REPLACED BY COPY FROM 3D ARRAY)
         amrex::ParallelFor(
@@ -105,37 +97,6 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 
                 array_this(i,j,k,dcomp) =  a0*trans_pos_factor*long_pos_factor;
 
-            }
-            );
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                array_AbsSq(i,j,k,dcomp) = std::abs( array_this(i,j,k,dcomp)
-                                                    *array_this(i,j,k,dcomp));
-            }
-            );
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                /* finite difference along x */
-                array_AbsSqDx(i,j,k,dcomp) = 1._rt / (2.0_rt*dx_arr[0]) *
-                                         (array_AbsSq(i+1, j, k, scomp)
-                                          - array_AbsSq(i-1, j, k, scomp));
-            }
-            );
-
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                /* finite difference along y */
-                array_AbsSqDy(i,j,k,dcomp) = 1._rt  / (2.0_rt*dx_arr[1]) *
-                                         (array_AbsSq(i, j+1, k, scomp)
-                                         - array_AbsSq(i, j-1, k, scomp));
             }
             );
     }

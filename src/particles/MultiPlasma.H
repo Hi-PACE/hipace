@@ -68,8 +68,8 @@ public:
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice,
-        bool do_push, bool do_update, bool do_shift, int lev);
+        Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
+        bool do_update, bool do_shift, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
      *

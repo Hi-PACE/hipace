@@ -661,10 +661,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::MultiFab next_Jyb(nslicemf, amrex::make_alias, Comps[nsl]["jy_beam"], 1);
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
 
-    // extract |a|^2 from the Laser
-    const amrex::MultiFab& A_sq_mf = m_laser.getSlices(WhichLaserSlice::AbsSq);
-    const amrex::MultiFab& A_sqdx_mf = m_laser.getSlices(WhichLaserSlice::AbsSqDx);
-    const amrex::MultiFab& A_sqdy_mf = m_laser.getSlices(WhichLaserSlice::AbsSqDy);
+    // extract a of the Laser
+    const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::This);
 
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
@@ -714,11 +712,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real const> const & prev_jyb = prev_Jyb.array(mfi);
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
-        amrex::Array4<amrex::Real const> const & a_sq = use_laser ? A_sq_mf.array(mfi)
-                                                        : amrex::Array4<const amrex::Real>();
-        amrex::Array4<amrex::Real const> const & a_sq_dx = use_laser ? A_sqdx_mf.array(mfi)
-                                                        : amrex::Array4<const amrex::Real>();
-        amrex::Array4<amrex::Real const> const & a_sq_dy = use_laser ? A_sqdy_mf.array(mfi)
+        amrex::Array4<amrex::Real const> const & a = use_laser ? A_mf.array(mfi)
                                                         : amrex::Array4<const amrex::Real>();
 
 
@@ -764,9 +758,13 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
-                const amrex::Real casq    =   use_laser ? a_sq(i,j,k) : 0._rt;
-                const amrex::Real casqdx  =   use_laser ? a_sq_dx(i,j,k)*kpinv : 0._rt;
-                const amrex::Real casqdy  =   use_laser ? a_sq_dy(i,j,k)*kpinv : 0._rt;
+                const amrex::Real casq    =   use_laser ? a(i,j,k)*a(i,j,k) : 0._rt;
+                const amrex::Real casqdx  =   use_laser ? ( a(i+1,j,k)*a(i+1,j,k)
+                                                           -a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
+                                                        : 0._rt;
+                const amrex::Real casqdy  =   use_laser ? ( a(i,j+1,k)*a(i,j+1,k)
+                                                           -a(i,j-1,k)*a(i,j-1,k) )/(2._rt*dy)
+                                                        : 0._rt;
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
