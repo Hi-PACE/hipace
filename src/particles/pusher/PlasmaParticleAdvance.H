@@ -23,7 +23,7 @@ void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
-                        PlasmaBins& bins, Laser& laser);
+                        PlasmaBins& bins, const Laser& laser);
 
 /** \brief Resets the particle position x, y, to x_prev, y_prev
  * \param[in,out] plasma plasma species to reset

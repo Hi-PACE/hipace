@@ -26,6 +26,7 @@ public:
     /** get function for the 2D slices
      * \param[in] islice slice index
      */
+   const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
     amrex::MultiFab& getSlices (int islice) {return m_slices[islice]; }
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile

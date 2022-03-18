@@ -45,7 +45,7 @@ public:
      * \param[in] lev MR level
      */
     void DepositCurrent (
-        Fields & fields, Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
+        Fields & fields, const Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
         bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
         int const lev);
 
@@ -68,8 +68,8 @@ public:
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        Fields & fields, Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
-        bool do_update, bool do_shift, int lev);
+        Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice,
+        bool do_push, bool do_update, bool do_shift, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
      *
@@ -87,7 +87,8 @@ public:
      * \param[in] nlev number of MR levels
      */
     void DepositNeutralizingBackground (
-        Fields & fields, Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev);
+        Fields & fields, const Laser & laser, int which_slice, amrex::Geometry const& gm,
+        int const nlev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *
