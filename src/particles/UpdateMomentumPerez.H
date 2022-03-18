@@ -1,3 +1,4 @@
+
 /* Copyright 2019 Yinjian Zhao
  *
  * This file is part of WarpX.
@@ -33,21 +34,22 @@ void UpdateMomentumPerezElastic (
     T_R const q1, T_R const m1, T_R const w1,
     T_R const q2, T_R const m2, T_R const w2,
     T_R const dt, T_R const L,  T_R const lmdD,
+    const PhysConst& cst,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
 
-    T_R constexpr inv_c2 = T_R(1.0) / ( PhysConstSI::c * PhysConstSI::c );
+    T_R const inv_c2 = T_R(1.0) / ( cst.c * cst.c );
 
     // Convert from pseudo-potential to momentum
 
     // particle's Lorentz factor
     const amrex::Real g1_tmp = (1.0_rt+u1x*u1x*inv_c2 + u1y*u1y*inv_c2 + psi1*psi1) / (2.0_rt*psi1);
-    amrex::Real u1z = PhysConstSI::c * (g1_tmp - psi1);
+    amrex::Real u1z = cst.c * (g1_tmp - psi1);
 
     // particle's Lorentz factor
     const amrex::Real g2_tmp = (1.0_rt+u2x*u2x*inv_c2 + u2y*u2y*inv_c2 + psi2*psi2) / (2.0_rt*psi2);
-    amrex::Real u2z = PhysConstSI::c * (g2_tmp - psi2);
+    amrex::Real u2z = cst.c * (g2_tmp - psi2);
 
     T_R const diffx = amrex::Math::abs(u1x-u2x);
     T_R const diffy = amrex::Math::abs(u1y-u2y);
@@ -114,11 +116,11 @@ void UpdateMomentumPerezElastic (
     {
         // Compute b0
         T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2 /
-               (T_R(4.0)*MathConst::pi*PhysConstSI::ep0) * gc/mass_g *
+               (T_R(4.0)*MathConst::pi*cst.ep0) * gc/mass_g *
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2) + T_R(1.0) );
 
         // Compute the minimal impact parameter
-        T_R bmin = amrex::max(PhysConstSI::hbar*MathConst::pi/p1sm,b0);
+        T_R bmin = amrex::max(cst.hbar*MathConst::pi/p1sm,b0);
 
         // Compute the Coulomb log lnLmd
         lnLmd = amrex::max( T_R(2.0),
@@ -129,7 +131,7 @@ void UpdateMomentumPerezElastic (
     const auto tts = m1*g1s*m2*g2s/(inv_c2*p1sm*p1sm) + T_R(1.0);
     const auto tts2 = tts*tts;
     T_R s = n1*n2/n12 * dt*lnLmd*q1*q1*q2*q2 /
-          ( T_R(4.0) * MathConst::pi * PhysConstSI::ep0 * PhysConstSI::ep0 *
+          ( T_R(4.0) * MathConst::pi * cst.ep0 * cst.ep0 *
             m1*g1*m2*g2/(inv_c2*inv_c2) ) * gc*p1sm/mass_g * tts2;
 
     // Compute s'
@@ -266,7 +268,7 @@ void UpdateMomentumPerezElastic (
         u1y  = p1fy / m1;
         u1z  = p1fz / m1;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
-        psi1 = ga - u1z/PhysConstSI::c;
+        psi1 = ga - u1z/cst.c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
@@ -277,7 +279,7 @@ void UpdateMomentumPerezElastic (
         u2y  = p2fy / m2;
         u2z  = p2fz / m2;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
-        psi2 = ga - u2z/PhysConstSI::c;
+        psi2 = ga - u2z/cst.c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }

@@ -43,6 +43,7 @@ struct PhysConst
     amrex::Real q_e;
     amrex::Real m_e;
     amrex::Real m_p;
+    amrex::Real hbar;
 };
 
 /** \brief SI Physical constants.
@@ -59,7 +60,8 @@ PhysConst make_constants_SI ()
         /* mu0 */ PhysConstSI::mu0,
         /* q_e */ PhysConstSI::q_e,
         /* m_e */ PhysConstSI::m_e,
-        /* m_p */ PhysConstSI::m_p
+        /* m_p */ PhysConstSI::m_p,
+        /* hbar*/ PhysConstSI::hbar
     };
     return constants;
 }
@@ -74,7 +76,8 @@ PhysConst make_constants_normalized ()
         /* mu0 */ 1.,
         /* q_e */ 1.,
         /* m_e */ 1.,
-        /* m_p */ 1836.15267343
+        /* m_p */ 1836.15267343,
+        /* hbar*/ 1.
     };
     return constants;
 }

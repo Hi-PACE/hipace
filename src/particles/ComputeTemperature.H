@@ -13,10 +13,10 @@ AMREX_GPU_HOST_DEVICE
 T_R ComputeTemperature (
     T_index const Is, T_index const Ie, T_index const * AMREX_RESTRICT I,
     T_R const * AMREX_RESTRICT ux, T_R const * AMREX_RESTRICT uy, T_R const * AMREX_RESTRICT psi,
-    T_R const m )
+    T_R const m, const PhysConst& cst )
 {
     using namespace amrex::literals;
-    T_R constexpr c2i = 1._rt/(PhysConstSI::c * PhysConstSI::c);
+    T_R const c2i = 1._rt/(cst.c * cst.c);
 
     const int N = Ie - Is;
     if ( N == 0 ) { return T_R(0.0); }

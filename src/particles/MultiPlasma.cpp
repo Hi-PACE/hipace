@@ -34,11 +34,6 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
      for (int i = 0; i < m_ncollisions; ++i) {
          m_all_collisions.emplace_back(CoulombCollision(m_names, m_collision_names[i]));
      }
-     if (m_ncollisions > 0) {
-         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-             Hipace::m_normalized_units == false,
-             "Coulomb collisions only work with normalized units for now");
-     }
 }
 
 void
