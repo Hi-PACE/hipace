@@ -38,9 +38,6 @@ public:
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
-    // Same function whether the full fields are specified or just the envelope.
-    // Just somewhere: if (m_EB) { F *= cos (k0 * z) }
-
 private:
     std::string m_name = "laser"; /**< name of the laser */
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
