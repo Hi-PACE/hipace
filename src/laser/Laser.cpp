@@ -43,7 +43,7 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
 AMREX_ALWAYS_ASSERT(WhichLaserSlice::N == m_nslices);
     for (int islice=0; islice<WhichLaserSlice::N; islice++) {
         m_slices[islice].define(
-            slice_ba, slice_dm, 1, m_slices_nguards, // prev Comps[islice]["N"] instead of 1
+            slice_ba, slice_dm, 1, m_slices_nguards, /* prev Comps[islice]["N"] instead of 1 */
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[islice].setVal(0.0);
     }
