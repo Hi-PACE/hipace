@@ -430,6 +430,34 @@ Option: ``from_file``
     without a specified ``injection_type``. Additionally the input parameters ``beams.iteration``,
     ``beams.plasma_density`` and ``beams.file_coordinates_xyz`` are passed down if applicable.
 
+Laser parameters
+----------------
+
+Currently, only a single, static laser pulse is available. The laser profile is defined by
+:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`. The laser pulse length
+:math:`L0 = \tau / c_0`
+can be specified via the pulse duration ``laser.tau``.
+If no ``laser.a0`` is provided, no laser will be initialized.
+
+* ``laser.a0`` (`float`) optional (default `0`)
+    Peak normalized vector potential of the laser pulse.
+
+* ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
+    The mean position of the laser in `x, y, z`.
+
+* ``laser.w0`` (2 `float`) optional (default `0 0`)
+    The laser waist in `x, y`.
+
+* ``laser.L0`` (`float`) optional (default `0`)
+    The laser pulse length in `z`. Use either the pulse length or the pulse duration.
+
+* ``laser.tau`` (`float`) optional (default `0`)
+    The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
+    Use either the pulse length or the pulse duration.
+
+* ``laser.lambda0`` (`float`) optional (default `0`)
+    The laser pulse wavelength. Currently not used in the code.
+
 Diagnostic parameters
 ---------------------
 

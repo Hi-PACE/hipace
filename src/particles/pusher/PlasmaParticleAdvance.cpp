@@ -25,7 +25,7 @@ void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
-                        PlasmaBins& bins)
+                        PlasmaBins& bins, const Laser& laser)
 {
     std::string str = "UpdateForcePushParticles_Plasma(    )";
     if (temp_slice) str.at(32) = 't';
@@ -69,6 +69,14 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Array4<const amrex::Real> const& bx_arr = bx_fab.array();
         amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
+
+        // extract the laser Fields
+        const bool use_laser = laser.m_use_laser;
+        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::This);
+
+        // Extract field array from MultiFab
+        amrex::Array4<const amrex::Real> const& a_arr = use_laser ?
+                                    a_mf[pti].array() : amrex::Array4<const amrex::Real>();
 
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
@@ -161,6 +169,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     // define field at particle position reals
                     amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                     amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                    amrex::ParticleReal Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
                     if (do_update)
                     {
@@ -170,11 +179,19 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                        dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
                                        depos_order_xy, 0);
+
+                        if (use_laser) {
+                            doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */,
+                                                Aabssqp, AabssqDxp, AabssqDyp, a_arr,
+                                                dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
+                                                depos_order_xy, 0);
+                        }
                         // update force terms for a single particle
                         const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
-                        UpdateForceTerms(uxp[ip], uyp[ip], psip[ip],
-                                         ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, Fx1[ip], Fy1[ip],
-                                         Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq, phys_const, q, mass);
+                        UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp, Bxp, Byp,
+                                         Bzp, Aabssqp, AabssqDxp, AabssqDyp, Fx1[ip], Fy1[ip],
+                                         Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq, phys_const, q,
+                                         mass);
                     }
 
                     if (do_push)

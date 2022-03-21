@@ -172,6 +172,32 @@ then
                      --test-name blowout_wake_explicit.2Rank
 fi
 
+#laser_blowout_wake_explicit.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "laser_blowout_wake_explicit.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R laser_blowout_wake_explicit.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/laser_blowout_wake_explicit.1Rank/ \
+                     --test-name laser_blowout_wake_explicit.1Rank \
+                     --skip-particles
+fi
+
+#laser_blowout_wake_explicit.SI.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "laser_blowout_wake_explicit.SI.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R laser_blowout_wake_explicit.SI.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/laser_blowout_wake_explicit.SI.1Rank/ \
+                     --test-name laser_blowout_wake_explicit.SI.1Rank \
+                     --skip-particles
+fi
+
 # beam_evolution.1Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "beam_evolution.1Rank" ]]
 then
