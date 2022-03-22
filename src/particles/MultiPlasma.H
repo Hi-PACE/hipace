@@ -76,8 +76,8 @@ public:
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
-        bool do_update, bool do_shift, int lev);
+        const Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice,
+        bool do_push, bool do_update, bool do_shift, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
      *
@@ -104,7 +104,7 @@ public:
      * \param[in] geom Geometry of the simulation, to get the cell size
      * \param[in] fields the general field class
      */
-    void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
+    void DoFieldIonization (const int lev, const amrex::Geometry& geom, const Fields& fields);
 
     bool IonizationOn () const;
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */

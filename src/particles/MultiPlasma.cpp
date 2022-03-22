@@ -113,8 +113,8 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::AdvanceParticles (
-    Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice, bool do_push,
-    bool do_update, bool do_shift, int lev)
+    const Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice,
+    bool do_push, bool do_update, bool do_shift, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
@@ -148,7 +148,7 @@ MultiPlasma::DepositNeutralizingBackground (
 
 void
 MultiPlasma::DoFieldIonization (
-    const int lev, const amrex::Geometry& geom, Fields& fields)
+    const int lev, const amrex::Geometry& geom, const Fields& fields)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.IonizationModule(lev, geom, fields);
