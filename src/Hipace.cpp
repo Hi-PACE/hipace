@@ -642,11 +642,11 @@ Hipace::ExplicitSolveBxBy (const int lev)
     using namespace amrex::literals;
 
     const int isl = WhichSlice::This;
-    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    const amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
     const int nsl = WhichSlice::Next;
-    amrex::MultiFab& nslicemf = m_fields.getSlices(lev, nsl);
+    const amrex::MultiFab& nslicemf = m_fields.getSlices(lev, nsl);
     const int psl = WhichSlice::Previous1;
-    amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
+    const amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
     const amrex::BoxArray ba = slicemf.boxArray();
     const amrex::DistributionMapping dm = slicemf.DistributionMap();
 

@@ -180,7 +180,7 @@ void
 PlasmaParticleContainer::
 IonizationModule (const int lev,
                   const amrex::Geometry& geom,
-                  Fields& fields)
+                  const Fields& fields)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 

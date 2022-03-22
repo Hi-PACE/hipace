@@ -27,7 +27,7 @@
  * \param[in] laser laser pulse, which affects the plasma via the ponderomotive force
  */
 void
-AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
+AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
                         PlasmaBins& bins, const Laser& laser);

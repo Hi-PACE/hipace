@@ -94,7 +94,7 @@ public:
      */
     void IonizationModule (const int lev,
                            const amrex::Geometry& geom,
-                           Fields& fields);
+                           const Fields& fields);
 
     /** Update m_density_func with m_density_table if applicable
      */
