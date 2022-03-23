@@ -455,6 +455,7 @@ MultiGrid::bottomsolve ()
         for (int ilev = 0; ilev < nlevs-1; ++ilev) {
             if (icell < ncells) {
                 cor[ilev].p[icell] = Real(0.);
+                cor[ilev].p[icell+ncells] = Real(0.);
             }
             __syncthreads();
 
@@ -517,6 +518,7 @@ MultiGrid::bottomsolve ()
             const int ilev = nlevs-1;
             if (icell < ncells) {
                 cor[ilev].p[icell] = Real(0.);
+                cor[ilev].p[icell+ncells] = Real(0.);
             }
             __syncthreads();
 
