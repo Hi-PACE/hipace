@@ -74,13 +74,15 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         getWithParser(pp, "zmin", m_zmin);
         getWithParser(pp, "zmax", m_zmax);
         getWithParser(pp, "radius", m_radius);
+        amrex::Array<amrex::Real, AMREX_SPACEDIM> position_mean{0., 0., 0.};
+        queryWithParser(pp, "position_mean", position_mean);
         queryWithParser(pp, "min_density", m_min_density);
         amrex::Vector<int> random_ppc {false, false, false};
         queryWithParser(pp, "random_ppc", random_ppc);
         const GetInitialDensity get_density(m_name);
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
-                         m_zmax, m_radius, m_min_density, random_ppc);
+                         m_zmax, m_radius, position_mean, m_min_density, random_ppc);
 
     } else if (m_injection_type == "fixed_weight") {
 
