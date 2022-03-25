@@ -113,6 +113,11 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+    /** get function for the 2D slices (const version)
+     * \param[in] lev MR level
+     * \param[in] islice slice index
+     */
+    const amrex::MultiFab& getSlices (int lev, int islice) const {return m_slices[lev][islice]; }
     /** get amrex::MultiFab of a field in a slice
      * \param[in] lev MR level
      * \param[in] islice slice index

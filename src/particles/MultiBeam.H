@@ -77,8 +77,8 @@ public:
      * \param[in] ibox index of the current box
      */
     void AdvanceBeamParticlesSlice (
-        Fields& fields, amrex::Geometry const& gm, int const lev, const int islice, const amrex::Box bx,
-        const amrex::Vector<BeamBins>& bins,
+        const Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
+        const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Loop over species and init them

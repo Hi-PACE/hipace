@@ -12,6 +12,17 @@
 #include <AMReX_GpuQualifiers.H>
 #include <cmath>
 
+namespace PhysConstSI
+{
+    static constexpr auto c   = static_cast<amrex::Real>( 299'792'458. );
+    static constexpr auto ep0 = static_cast<amrex::Real>( 8.8541878128e-12 );
+    static constexpr auto mu0 = static_cast<amrex::Real>( 1.25663706212e-06 );
+    static constexpr auto q_e = static_cast<amrex::Real>( 1.602176634e-19 );
+    static constexpr auto m_e = static_cast<amrex::Real>( 9.1093837015e-31 );
+    static constexpr auto m_p = static_cast<amrex::Real>( 1.67262192369e-27 );
+    static constexpr auto hbar  = static_cast<amrex::Real>( 1.054571817e-34 );
+}
+
 /** \brief Namespace containing math constants */
 namespace MathConst
 {
@@ -43,12 +54,12 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 PhysConst make_constants_SI ()
 {
     PhysConst const constants = {
-        /* c   */ 299'792'458.,
-        /* ep0 */ 8.8541878128e-12,
-        /* mu0 */ 1.25663706212e-06,
-        /* q_e */ 1.602176634e-19,
-        /* m_e */ 9.1093837015e-31,
-        /* m_p */ 1.67262192369e-27
+        /* c   */ PhysConstSI::c,
+        /* ep0 */ PhysConstSI::ep0,
+        /* mu0 */ PhysConstSI::mu0,
+        /* q_e */ PhysConstSI::q_e,
+        /* m_e */ PhysConstSI::m_e,
+        /* m_p */ PhysConstSI::m_p
     };
     return constants;
 }

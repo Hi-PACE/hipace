@@ -322,6 +322,7 @@ Hipace::MakeNewLevelFromScratch (
     DefineSliceGDB(lev, ba, dm);
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
+    m_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
 }
 
 void
@@ -411,7 +412,7 @@ Hipace::Evolve ()
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
-        m_multi_plasma.DepositNeutralizingBackground(m_fields, WhichSlice::RhoIons, geom[lev],
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, m_laser, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
         // Loop over longitudinal boxes on this rank, from head to tail
@@ -489,6 +490,9 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
+    // setup laser
+    m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
+
     for (int lev = 0; lev <= finestLevel(); ++lev) {
 
         if (lev == 1) { // skip all slices which are not existing on level 1
@@ -529,7 +533,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             }
 
             if (!m_explicit) {
-                m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false,
+                m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
                                                 true, false, false, lev);
             }
 
@@ -538,7 +542,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
             m_multi_plasma.DepositCurrent(
-                m_fields, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+                m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
             if (m_explicit){
                 amrex::MultiFab j_slice_next(m_fields.getSlices(lev, WhichSlice::Next),
@@ -588,7 +592,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             if (m_explicit){
                 m_fields.AddRhoIons(lev, true);
                 ExplicitSolveBxBy(lev);
-                m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, true, true, true, lev);
+                m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
+                                                true, lev);
                 m_fields.AddRhoIons(lev);
             } else {
                 PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bins[lev], ibox);
@@ -600,7 +605,10 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             FillDiagnostics(lev, islice);
 
+            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
+
             m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
@@ -634,11 +642,11 @@ Hipace::ExplicitSolveBxBy (const int lev)
     using namespace amrex::literals;
 
     const int isl = WhichSlice::This;
-    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    const amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
     const int nsl = WhichSlice::Next;
-    amrex::MultiFab& nslicemf = m_fields.getSlices(lev, nsl);
+    const amrex::MultiFab& nslicemf = m_fields.getSlices(lev, nsl);
     const int psl = WhichSlice::Previous1;
-    amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
+    const amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
     const amrex::BoxArray ba = slicemf.boxArray();
     const amrex::DistributionMapping dm = slicemf.DistributionMap();
 
@@ -671,6 +679,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::MultiFab next_Jyb(nslicemf, amrex::make_alias, Comps[nsl]["jy_beam"], 1);
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
 
+    // extract a of the Laser
+    const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::This);
+
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
     const amrex::Real n0 = m_multi_plasma.GetNominalDensity();
@@ -688,6 +699,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dx = Geom(lev).CellSize(Direction::x)/kpinv;
     const amrex::Real dy = Geom(lev).CellSize(Direction::y)/kpinv;
     const amrex::Real dz = Geom(lev).CellSize(Direction::z)/kpinv;
+
+    const bool use_laser = m_laser.m_use_laser;
 
     // transforming BxBy array to normalized units for use as initial guess
     // TODO: include ghost cells in .mult (currently not supported by amrex)
@@ -716,6 +729,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real const> const & prev_jyb = prev_Jyb.array(mfi);
         amrex::Array4<amrex::Real> const & mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const & s = S.array(mfi);
+        amrex::Array4<amrex::Real const> const & a = use_laser ? A_mf.array(mfi)
+                                                        : amrex::Array4<const amrex::Real>();
+
 
         amrex::ParallelFor(
             bx,
@@ -759,18 +775,30 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
+                const amrex::Real casq    =   use_laser ? a(i,j,k)*a(i,j,k) : 0._rt;
+                const amrex::Real casqdx  =   use_laser ? ( a(i+1,j,k)*a(i+1,j,k)
+                                                           -a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
+                                                        : 0._rt;
+                const amrex::Real casqdy  =   use_laser ? ( a(i,j+1,k)*a(i,j+1,k)
+                                                           -a(i,j-1,k)*a(i,j-1,k) )/(2._rt*dy)
+                                                        : 0._rt;
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp;
 
                 const amrex::Real nstar_gamma = 0.5_rt* (const_of_motion+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt * nstar/(const_of_motion+cpsi);
+                                                + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)
+                                                /(const_of_motion + cpsi);
 
                 const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) *
-                    (nstar_gamma*cdx_psi/(const_of_motion+cpsi) - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
+                                        ( (nstar_gamma*cdx_psi -0.25_rt*casqdx*nstar)
+                                        /(const_of_motion + cpsi)
+                                        - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
 
                 const amrex::Real nstar_ay = 1._rt/(const_of_motion + cpsi) *
-                    (nstar_gamma*cdy_psi/(const_of_motion+cpsi) - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                                        ( (nstar_gamma*cdy_psi -0.25_rt*casqdy*nstar)
+                                        /(const_of_motion+cpsi)
+                                        - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
                 for (int n = 0; n < ncomp_mult; ++n) {
@@ -925,7 +953,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
 
     /* shift force terms, update force terms using guessed Bx and By */
-    m_multi_plasma.AdvanceParticles( m_fields, geom[lev], false, false, true, true, lev);
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, false, true, true, lev);
 
     const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
 
@@ -940,12 +968,12 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_predcorr_avg_iterations += 1.0;
 
         /* Push particles to the next slice */
-        m_multi_plasma.AdvanceParticles(m_fields, geom[lev], true, true, false, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], true, true, false, false, lev);
 
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         /* deposit current to next slice */
         m_multi_plasma.DepositCurrent(
-            m_fields, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
+            m_fields, m_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
         m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
@@ -995,7 +1023,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         }
 
         /* Update force terms using the calculated Bx and By */
-        m_multi_plasma.AdvanceParticles(m_fields, geom[lev], false, false, true, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev],
+                                        false, false, true, false, lev);
 
         /* Shift relative_Bfield_error values */
         relative_Bfield_error_prev_iter = relative_Bfield_error;

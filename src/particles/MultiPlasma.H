@@ -11,6 +11,8 @@
 #include "PlasmaParticleContainer.H"
 #include "TileSort.H"
 #include "fields/Fields.H"
+#include "laser/Laser.H"
+#include "CoulombCollision.H"
 
 class MultiPlasma
 {
@@ -40,6 +42,7 @@ public:
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
      * \param[in] which_slice defines if this or the next slice is handled
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
      * \param[in] deposit_jx_jy if true, deposit to jx and jy
@@ -50,8 +53,9 @@ public:
      * \param[in] lev MR level
      */
     void DepositCurrent (
-        Fields & fields, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
-        bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm, int const lev);
+        Fields & fields, const Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
+        bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
+        int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *
@@ -63,6 +67,7 @@ public:
     /** \brief Loop over plasma species and Gather fields, update forces and push particles
      *
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
      * \param[in] do_push boolean to define if plasma particles are pushed
@@ -71,8 +76,8 @@ public:
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        Fields & fields, amrex::Geometry const& gm, bool temp_slice, bool do_push,
-        bool do_update, bool do_shift, int lev);
+        const Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice,
+        bool do_push, bool do_update, bool do_shift, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
      *
@@ -84,12 +89,14 @@ public:
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
      * \param[in] which_slice slice in which the densities are deposited
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] nlev number of MR levels
      */
     void DepositNeutralizingBackground (
-        Fields & fields, int which_slice, amrex::Geometry const& gm, int const nlev);
+        Fields & fields, const Laser & laser, int which_slice, amrex::Geometry const& gm,
+        int const nlev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *
@@ -97,7 +104,7 @@ public:
      * \param[in] geom Geometry of the simulation, to get the cell size
      * \param[in] fields the general field class
      */
-    void DoFieldIonization (const int lev, const amrex::Geometry& geom, Fields& fields);
+    void DoFieldIonization (const int lev, const amrex::Geometry& geom, const Fields& fields);
 
     bool IonizationOn () const;
     /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
@@ -120,7 +127,20 @@ public:
      * to avoid machine-precision problems. */
     void CheckDensity () const;
 
+    /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
+     *
+     * The algorithm implemented is that of [Perez et al., Phys. Plasmas 19, 083104 (2012)]
+     *
+     * \param[in] lev MR level
+     * \param[in] bx box on which plasma particles are sorted per-cell and collide together
+     * \param[in] geom Corresponding gemetry
+     */
+    void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
+
+    /** Number of binary collisions */
+    int m_ncollisions = 0;
 
 private:
 
@@ -131,6 +151,11 @@ private:
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
     amrex::Real m_nominal_density; /**< Density to normalize quantities in the explicit solver */
+
+    /** User-input names of the binary collisions to be used */
+    std::vector<std::string> m_collision_names;
+    /** Vector of binary collisions */
+    amrex::Vector< CoulombCollision > m_all_collisions;
 };
 
 #endif // MULTIPLASMA_H_

@@ -9,6 +9,7 @@
 #define HIPACE_TILESORT_H_
 
 #include "PlasmaParticleContainer.H"
+
 #include <AMReX_MultiFab.H>
 
 using PlasmaBins = amrex::DenseBins<PlasmaParticleContainer::ParticleType>;
