@@ -17,7 +17,7 @@ class Backend:
         ''' Constructor: store the dataset object
         '''
 
-        self.dataset = OpenPMDTimeSeries(filename)
+        self.dataset = OpenPMDTimeSeries(filename, backend='h5py')
 
     def fields_list(self):
         ''' Return the list of fields defined on the grid
