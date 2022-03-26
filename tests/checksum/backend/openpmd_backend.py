@@ -17,6 +17,7 @@ class Backend:
         ''' Constructor: store the dataset object
         '''
 
+        # test
         self.dataset = OpenPMDTimeSeries(filename)
 
     def fields_list(self):
