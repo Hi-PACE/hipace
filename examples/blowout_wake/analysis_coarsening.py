@@ -9,6 +9,7 @@
 
 # This script compares a field from a simulation with full IO and from a simulation with coarse IO
 
+from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib.pyplot as plt
 import scipy.constants as scc
 import matplotlib
@@ -16,7 +17,6 @@ import sys
 import numpy as np
 import math
 import argparse
-from openpmd_viewer import OpenPMDTimeSeries
 
 fields = ['Ez', 'ExmBy', 'EypBx']
 
@@ -40,4 +40,3 @@ for field in fields:
 
 del ts1
 del ts2
-

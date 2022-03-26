@@ -21,6 +21,7 @@
 # Note: the simulation may take some time, as the box size must be high to have
 # decent agreement
 
+from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib.pyplot as plt
 import scipy.constants as scc
 from scipy.stats import norm
@@ -29,7 +30,6 @@ import sys
 import numpy as np
 import math
 import argparse
-from openpmd_viewer import OpenPMDTimeSeries
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',

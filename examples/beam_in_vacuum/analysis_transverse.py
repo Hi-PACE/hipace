@@ -11,6 +11,7 @@
 # This script compares the transverse field By from a serial and a parallel simulation
 # with transverse beam currents and asserts that the results are the same
 
+from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib.pyplot as plt
 import scipy.constants as scc
 import matplotlib
@@ -18,7 +19,6 @@ import sys
 import numpy as np
 import math
 import argparse
-from openpmd_viewer import OpenPMDTimeSeries
 
 parser = argparse.ArgumentParser(
     description='Script to analyze the correctness of beam with transverse current')

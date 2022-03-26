@@ -7,12 +7,11 @@
 # Authors: MaxThevenet, Severin Diederichs
 # License: BSD-3-Clause-LBNL
 
-
+from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.constants as scc
 import argparse
-from openpmd_viewer import OpenPMDTimeSeries
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--normalized-units',

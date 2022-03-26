@@ -12,14 +12,10 @@
 # one from the write_beam script, two from hipace,
 # with each other and asserts if they are different.
 
-import matplotlib.pyplot as plt
-import scipy.constants as scc
-import matplotlib
-import sys
-import numpy as np
-import math
-import argparse
 import openpmd_api as io # to have access to Attribute Metadata
+import scipy.constants as scc
+import numpy as np
+import argparse
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of beam from_file')
 parser.add_argument('--beam-py',

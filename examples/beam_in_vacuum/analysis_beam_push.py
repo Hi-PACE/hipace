@@ -8,12 +8,11 @@
 # License: BSD-3-Clause-LBNL
 
 
+from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib.pyplot as plt
-import matplotlib
 import argparse
 import numpy as np
 import scipy.constants as scc
-from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = True
 

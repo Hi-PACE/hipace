@@ -11,6 +11,7 @@
 # This script compares a field from a simulation with
 # full IO and from a simulation with only slice IO
 
+from openpmd_viewer import OpenPMDTimeSeries
 import matplotlib.pyplot as plt
 import scipy.constants as scc
 import matplotlib
@@ -18,7 +19,6 @@ import sys
 import numpy as np
 import math
 import argparse
-from openpmd_viewer import OpenPMDTimeSeries
 
 do_plot = False
 field = 'Ez'
