@@ -1,3 +1,10 @@
+/* Copyright 2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn
+ * License: BSD-3-Clause-LBNL
+ */
 #ifndef OPEN_BOUNDARY_H_
 #define OPEN_BOUNDARY_H_
 

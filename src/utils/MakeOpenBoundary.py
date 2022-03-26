@@ -1,3 +1,12 @@
+#! /usr/bin/env python3
+
+# Copyright 2022
+#
+# This file is part of HiPACE++.
+#
+# Authors: AlexanderSinn
+# License: BSD-3-Clause-LBNL
+
 # code generator for nth order taylor expansion of the green's function used in OpenBoundary.H
 order = 18
 
