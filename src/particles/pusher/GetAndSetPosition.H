@@ -185,7 +185,9 @@ struct EnforceBC
     {
         using namespace amrex::literals;
 
-        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_periodicity);
+        // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
+        // however there is no Geometry object to get this.
+        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_phi, m_periodicity);
         const bool invalid = (shifted && !m_is_per[0]);
         if (invalid) {
             m_weights[ip] = 0.0_rt;
