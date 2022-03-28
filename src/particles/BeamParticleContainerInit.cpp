@@ -141,8 +141,9 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
                     if (z >= a_zmax || z < a_zmin ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > a_radius*a_radius)
-                        continue;
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > a_radius*a_radius) {
+                            continue;
+                        }
                 } else {
                     // If particles are randomly spaced, discard particles
                     // if the cell is outside the domain
@@ -150,8 +151,9 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                     amrex::Real yc = plo[1]+j*dx[1];
                     amrex::Real zc = plo[2]+k*dx[2];
                     if (zc >= a_zmax || zc < a_zmin ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > a_radius*a_radius)
-                        continue;
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > a_radius*a_radius) {
+                            continue;
+                        }
                 }
 
                 const amrex::Real density = get_density(x, y, z);
@@ -224,8 +226,9 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
                     if (z >= a_zmax || z < a_zmin ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > a_radius*a_radius)
-                        continue;
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > a_radius*a_radius) {
+                            continue;
+                        }
                 } else {
                     // If particles are randomly spaced, discard particles
                     // if the cell is outside the domain
@@ -233,8 +236,9 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                     amrex::Real yc = plo[1]+j*dx[1];
                     amrex::Real zc = plo[2]+k*dx[2];
                     if (zc >= a_zmax || zc < a_zmin ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > a_radius*a_radius)
-                        continue;
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > a_radius*a_radius) {
+                            continue;
+                        }
                 }
 
                 const amrex::Real density = get_density(x, y, z);
