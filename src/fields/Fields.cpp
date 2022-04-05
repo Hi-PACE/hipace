@@ -10,6 +10,7 @@
 #include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichlet.H"
 #include "Hipace.H"
+#include "OpenBoundary.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "particles/ShapeFactors.H"
@@ -24,6 +25,8 @@ Fields::Fields (Hipace const* a_hipace)
 {
     amrex::ParmParse ppf("fields");
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
+    queryWithParser(ppf, "extended_solve", m_extended_solve);
+    queryWithParser(ppf, "open_boundary", m_open_boundary);
 }
 
 void
@@ -35,11 +38,25 @@ Fields::AllocData (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice_ba.size() == 1,
         "Parallel field solvers not supported yet");
 
-    // Need 1 extra guard cell transversally for transverse derivative
-    int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-    m_slices_nguards = {nguards_xy, nguards_xy, 0};
-    // Poisson solver same size as domain, no ghost cells
-    m_poisson_nguards = {0, 0, 0};
+    if (m_extended_solve) {
+        // Need 1 extra guard cell transversally for transverse derivative
+        int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+        m_slices_nguards = {nguards_xy, nguards_xy, 0};
+        // poisson solver same size as fields
+        m_poisson_nguards = m_slices_nguards;
+        // one cell less for transverse derivative
+        m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
+        // cut off anything near edge of charge/current deposition
+        m_source_nguard = -m_slices_nguards;
+    } else {
+        // Need 1 extra guard cell transversally for transverse derivative
+        int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+        m_slices_nguards = {nguards_xy, nguards_xy, 0};
+        // Poisson solver same size as domain, no ghost cells
+        m_poisson_nguards = {0, 0, 0};
+        m_exmby_eypbx_nguard = {0, 0, 0};
+        m_source_nguard = {0, 0, 0};
+    }
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
@@ -90,19 +107,12 @@ struct derivative_inner {
     // captured variables for GPU
     amrex::Array4<amrex::Real const> array;
     amrex::Real dx_inv;
-    int box_lo;
-    int box_hi;
 
     // derivative of field in dir direction (x or y)
-    // the field is zero-extended such that this derivative can be accessed on the same box
     AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
         constexpr bool is_x_dir = dir == Direction::x;
         constexpr bool is_y_dir = dir == Direction::y;
-        const int ij_along_dir = is_x_dir * i + is_y_dir * j;
-        const bool lo_guard = ij_along_dir != box_lo;
-        const bool hi_guard = ij_along_dir != box_hi;
-        return (array(i+is_x_dir*hi_guard,j+is_y_dir*hi_guard,k)*hi_guard
-               -array(i-is_x_dir*lo_guard,j-is_y_dir*lo_guard,k)*lo_guard) * dx_inv;
+        return (array(i+is_x_dir,j+is_y_dir,k) - array(i-is_x_dir,j-is_y_dir,k)) * dx_inv;
     }
 };
 
@@ -120,8 +130,7 @@ struct derivative_inner<Direction::z> {
     }
 };
 
-/** \brief derivative in x or y direction. Field is zero-extended by one cell such that this
- * derivative can be accessed on the same box as the field */
+/** \brief derivative in x or y direction */
 template<int dir>
 struct derivative {
     // use brace initialization as constructor
@@ -130,9 +139,7 @@ struct derivative {
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
-        amrex::Box bx = f_view[mfi].box();
-        return derivative_inner<dir>{f_view.array(mfi),
-            1._rt/(2._rt*geom.CellSize(dir)), bx.smallEnd(dir), bx.bigEnd(dir)};
+        return derivative_inner<dir>{f_view.array(mfi), 1._rt/(2._rt*geom.CellSize(dir))};
     }
 };
 
@@ -286,10 +293,16 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
         const auto src_a_array = src_a.array(mfi);
         const auto src_b_array = src_b.array(mfi);
         const amrex::Box bx = mfi.growntilebox(box_grow);
-        amrex::ParallelFor(bx,
+        const int box_i_lo = bx.smallEnd(Direction::x);
+        const int box_j_lo = bx.smallEnd(Direction::y);
+        const int box_i_hi = bx.bigEnd(Direction::x);
+        const int box_j_hi = bx.bigEnd(Direction::y);
+        amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
-                dst_array(i,j,k) = factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k);
+                const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
+                dst_array(i,j,k) =
+                    inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
             });
     }
 }
@@ -501,27 +514,93 @@ void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               std::string component, const int islice)
 {
-    if (lev == 0) return; // keep lev==0 boundaries zero
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
-    constexpr int interp_order = 2;
+    if (lev == 0 && m_open_boundary) {
+        // Coarsest level: use Taylor expansion of the Green's function
+        // to get Dirichlet boundary conditions
 
-    const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
-    const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
-    const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
+        amrex::MultiFab staging_area = getStagingArea(lev);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(staging_area.size() == 1,
+            "Open Boundaries only work for lev0 with everything in one box");
+        amrex::FArrayBox& staging_area_fab = staging_area[0];
 
-    auto solution_interp = interpolated_field_xyz<interp_order>{
-        getField(lev-1, WhichSlice::This, component),
-        getField(lev-1, WhichSlice::Previous1, component),
-        rel_z, geom[lev-1]};
-    amrex::MultiFab staging_area = getStagingArea(lev);
+        const auto arr_staging_area = staging_area_fab.array();
+        const amrex::Box staging_box = staging_area_fab.box();
 
-    for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
-    {
-        const auto arr_solution_interp = solution_interp.array(mfi);
-        const auto arr_staging_area = staging_area.array(mfi);
-        const amrex::Box fine_staging_box = staging_area[mfi].box();
+        const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
+        const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
+        const amrex::Real dx = geom[lev].CellSize(0);
+        const amrex::Real dy = geom[lev].CellSize(1);
+        // scale factor cancels out for all multipole coefficients except the 0th, for wich it adds
+        // a constant term to the potential
+        const amrex::Real scale = 3._rt/std::sqrt(
+            pow<2>(geom[lev].ProbLength(0)) + pow<2>(geom[lev].ProbLength(1)));
+        const amrex::Real radius = amrex::min(
+            std::abs(geom[lev].ProbLo(0)), std::abs(geom[lev].ProbHi(0)),
+            std::abs(geom[lev].ProbLo(1)), std::abs(geom[lev].ProbHi(1)));
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(radius > 0._rt, "The x=0, y=0 coordinate must be inside"
+            "the simulation box as it is used as the point of expansion for open boundaries");
+        // ignore everything outside of 95% the min radius as the Taylor expansion only converges
+        // outside of a circular patch containing the sources, i.e. the sources can't be further
+        // from the center than the closest boundary as it would be the case in the corners
+        const amrex::Real cutoff_sq = pow<2>(0.95_rt * radius * scale);
+        const amrex::Real dxdy_div_4pi = dx*dy/(4._rt * MathConst::pi);
 
-        SetDirichletBoundaries(arr_staging_area, fine_staging_box, geom[lev], arr_solution_interp);
+        MultipoleTuple coeff_tuple =
+        amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
+                         staging_area, m_source_nguard,
+            [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
+            {
+                const amrex::Real x = (i * dx + poff_x) * scale;
+                const amrex::Real y = (j * dy + poff_y) * scale;
+                if (x*x + y*y > cutoff_sq)  {
+                    return MultipoleTuple{0._rt,
+                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
+                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
+                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
+                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt
+                    };
+                }
+                amrex::Real s_v = arr_staging_area(i, j, k);
+                return GetMultipoleCoeffs(s_v, x, y);
+            }
+        );
+
+        if (component == "Ez" || component == "Bz") {
+            // Because Ez and Bz only have transverse derivatives of currents as sources, the
+            // integral over the whole box is zero, meaning they have no physical monopole component
+            amrex::get<0>(coeff_tuple) = 0._rt;
+        }
+
+        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
+            [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
+            {
+                return dxdy_div_4pi*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
+            }
+        );
+
+    } else if (lev == 1) {
+        // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
+        constexpr int interp_order = 2;
+
+        const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
+        const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
+        const amrex::Real rel_z = islice_coarse-static_cast<int>(amrex::Math::floor(islice_coarse));
+
+        auto solution_interp = interpolated_field_xyz<interp_order>{
+            getField(lev-1, WhichSlice::This, component),
+            getField(lev-1, WhichSlice::Previous1, component),
+            rel_z, geom[lev-1]};
+        amrex::MultiFab staging_area = getStagingArea(lev);
+
+        for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
+        {
+            const auto arr_solution_interp = solution_interp.array(mfi);
+            const auto arr_staging_area = staging_area.array(mfi);
+            const amrex::Box fine_staging_box = staging_area[mfi].box();
+
+            SetDirichletBoundaries(arr_staging_area,fine_staging_box,geom[lev],arr_solution_interp);
+        }
     }
 }
 
@@ -596,17 +675,19 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
 
     SetBoundaryCondition(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
-    /* ---------- Transverse FillBoundary Psi ---------- */
-    amrex::ParallelContext::push(m_comm_xy);
-    lhs.FillBoundary(geom[lev].periodicity());
-    amrex::ParallelContext::pop();
+    if (!m_extended_solve) {
+        /* ---------- Transverse FillBoundary Psi ---------- */
+        amrex::ParallelContext::push(m_comm_xy);
+        lhs.FillBoundary(geom[lev].periodicity());
+        amrex::ParallelContext::pop();
+    }
 
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
 
@@ -623,7 +704,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
-        const amrex::Box bx = mfi.growntilebox(amrex::IntVect{0, 0, 0});
+        const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
         const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 
@@ -651,7 +732,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    1._rt/(phys_const.ep0*phys_const.c),
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
                    1._rt/(phys_const.ep0*phys_const.c),
@@ -675,7 +756,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
 
     // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
     // and store in the staging area of poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    -phys_const.mu0,
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    phys_const.mu0,
@@ -700,7 +781,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
 
     // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
     // and store in the staging area of poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    -phys_const.mu0,
@@ -727,7 +808,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
-    LinCombination(m_poisson_nguards, getStagingArea(lev),
+    LinCombination(m_source_nguard, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
                    -phys_const.mu0,
