@@ -17,6 +17,7 @@ target_sources(HiPACE
     BoxSort.cpp
     MultiBeam.cpp
     MultiPlasma.cpp
+    CoulombCollision.cpp
 )
 
 add_subdirectory(deposition)

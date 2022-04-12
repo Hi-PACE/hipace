@@ -14,6 +14,7 @@ sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
+    ccache              \
     g++                 \
     libfftw3-dev        \
     libopenmpi-dev      \

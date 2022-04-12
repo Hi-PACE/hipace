@@ -9,7 +9,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.18.0)
-project(HiPACE VERSION 22.02)
+project(HiPACE VERSION 22.04)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -117,6 +117,7 @@ add_executable(HiPACE::HiPACE ALIAS HiPACE)
 # own headers
 target_include_directories(HiPACE PRIVATE
     $<BUILD_INTERFACE:${HiPACE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${HiPACE_BINARY_DIR}/src>
 )
 
 # if we include <AMReX_buildInfo.H> we will need to call:
@@ -165,8 +166,6 @@ set_hipace_binary_name()
 # Defines #####################################################################
 #
 # Let's use them as sparsely as possible to avoid MxNxOxP... binary variants.
-get_source_version(HiPACE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(HiPACE PUBLIC HIPACE_GIT_VERSION="${HiPACE_GIT_VERSION}")
 
 
 # Warnings ####################################################################
@@ -176,6 +175,13 @@ set_cxx_warnings()
 
 # Generate Configuration and .pc Files ########################################
 #
+get_source_version(HiPACE ${HiPACE_SOURCE_DIR})
+configure_file(
+    ${HiPACE_SOURCE_DIR}/src/HipaceVersion.H.in
+    ${HiPACE_BINARY_DIR}/src/HipaceVersion.H
+    @ONLY
+)
+
 # these files are used if HiPACE is installed and picked up by a downstream
 # project (not needed yet)
 
@@ -225,6 +231,12 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME collisions.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/collisions.SI.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         #add_test(NAME hosing.2Rank
         #         COMMAND ${HiPACE_SOURCE_DIR}/tests/hosing.2Rank.sh
         #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
@@ -257,6 +269,18 @@ if(BUILD_TESTING)
 
         add_test(NAME blowout_wake_explicit.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/blowout_wake_explicit.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME laser_blowout_wake_explicit.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.1Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME laser_blowout_wake_explicit.SI.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.SI.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
@@ -347,6 +371,12 @@ if(BUILD_TESTING)
 
         add_test(NAME beam_in_vacuum.normalized.2Rank
                  COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME beam_in_vacuum_open_boundary.normalized.1Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum_open_boundary.normalized.1Rank.sh
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )

@@ -183,7 +183,7 @@ CMake Option                 Default & Values                                Des
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``  Repository URI to pull and build openPMD-api from
 ``HiPACE_openpmd_branch``    ``0.14.3``                                      Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                      Needs a pre-installed openPMD-api library if set to ``OFF``
-``AMReX_LINEAR_SOLVERS``     **ON**/OFF                                      Compile AMReX multigrid solver. Required for explicit solver
+``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                      Compile AMReX multigrid solver. Required for explicit solver
 ===========================  ==============================================  ============================================================
 
 For example, one can also build against a local AMReX copy.

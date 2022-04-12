@@ -21,12 +21,24 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
     m_nominal_density = Hipace::m_normalized_units ? 1. : 1.e23;
     queryWithParser(pp, "nominal_density", m_nominal_density);
+    queryWithParser(pp, "collisions", m_collision_names);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
         m_all_plasmas.emplace_back(PlasmaParticleContainer(amr_core, m_names[i]));
     }
+
+    /** Initialize the collision objects */
+    m_ncollisions = m_collision_names.size();
+     for (int i = 0; i < m_ncollisions; ++i) {
+         m_all_collisions.emplace_back(CoulombCollision(m_names, m_collision_names[i]));
+     }
+     if (m_ncollisions > 0) {
+         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+             Hipace::m_normalized_units == false,
+             "Coulomb collisions only work with normalized units for now");
+     }
 }
 
 void
@@ -88,11 +100,12 @@ MultiPlasma::CheckDensity () const
 
 void
 MultiPlasma::DepositCurrent (
-    Fields & fields, int which_slice, bool temp_slice, bool deposit_jx_jy, bool deposit_jz,
-    bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm, int const lev)
+    Fields & fields, const Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
+    bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
+    int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        ::DepositCurrent(m_all_plasmas[i], fields, which_slice, temp_slice,
+        ::DepositCurrent(m_all_plasmas[i], fields, laser, which_slice, temp_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
     }
@@ -100,12 +113,12 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::AdvanceParticles (
-    Fields & fields, amrex::Geometry const& gm, bool temp_slice, bool do_push,
-    bool do_update, bool do_shift, int lev)
+    const Fields & fields, const Laser & laser, amrex::Geometry const& gm, bool temp_slice,
+    bool do_push, bool do_update, bool do_shift, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
-                               do_push, do_update, do_shift, lev, m_all_bins[i]);
+                               do_push, do_update, do_shift, lev, m_all_bins[i], laser);
     }
 }
 
@@ -120,13 +133,13 @@ MultiPlasma::ResetParticles (int lev, bool initial)
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, int which_slice, amrex::Geometry const& gm, int const nlev)
+    Fields & fields, const Laser & laser, int which_slice, amrex::Geometry const& gm, int const nlev)
 {
     for (int lev = 0; lev < nlev; ++lev) {
         for (int i=0; i<m_nplasmas; i++) {
             if (m_all_plasmas[i].m_neutralize_background){
                 // current of ions is zero, so they are not deposited.
-                ::DepositCurrent(m_all_plasmas[i], fields, which_slice, false, false, false,
+                ::DepositCurrent(m_all_plasmas[i], fields, laser, which_slice, false, false, false,
                                  true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
             }
         }
@@ -135,7 +148,7 @@ MultiPlasma::DepositNeutralizingBackground (
 
 void
 MultiPlasma::DoFieldIonization (
-    const int lev, const amrex::Geometry& geom, Fields& fields)
+    const int lev, const amrex::Geometry& geom, const Fields& fields)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.IonizationModule(lev, geom, fields);
@@ -188,4 +201,22 @@ MultiPlasma::GetUStd () const
     }
 
     return u_std;
+}
+
+void
+MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
+{
+    HIPACE_PROFILE("MultiPlasma::doCoulombCollision");
+    AMREX_ALWAYS_ASSERT(lev == 0);
+    for (int i = 0; i < m_ncollisions; ++i)
+    {
+        auto& species1 = m_all_plasmas[ m_all_collisions[i].m_species1_index ];
+        auto& species2 = m_all_plasmas[ m_all_collisions[i].m_species2_index ];
+
+        // TODO: enable tiling
+
+        CoulombCollision::doCoulombCollision(
+            lev, bx, geom, species1, species2,
+            m_all_collisions[i].m_isSameSpecies, m_all_collisions[i].m_CoulombLog);
+    }
 }

@@ -15,7 +15,10 @@
 
 set -eu -o pipefail
 
+set +e
+rm -rf /usr/local/bin/2to3
 brew update
 brew install cmake
 brew install libomp
 brew install open-mpi
+set -e

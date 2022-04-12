@@ -15,9 +15,9 @@
 #include "GetDomainLev.H"
 
 void
-AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                           int const lev, const int islice_local, const amrex::Box box,
-                           const int offset, const BeamBins& bins)
+AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
+                           amrex::Geometry const& gm, int const lev, const int islice_local,
+                           const amrex::Box box, const int offset, const BeamBins& bins)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;

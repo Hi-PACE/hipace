@@ -15,13 +15,15 @@
  * \param[in] uxp momentum in x direction
  * \param[in] uyp momentum in y direction
  * \param[in] psip plasma pseudo-potential
- * \param[in] const_of_motionp constant of motion
  * \param[in] ExmByp ExmBy field at particle position
  * \param[in] EypBxp EypBx field at particle position
  * \param[in] Ezp Ez field at particle position
  * \param[in] Bxp Bx field at particle position
  * \param[in] Byp By field at particle position
  * \param[in] Bzp Bz field at particle position
+ * \param[in] Aabssqp |a|^2 field at particle position
+ * \param[in] AabssqDxp d/dx |a|^2 field at particle position
+ * \param[in] AabssqDyp d/dy |a|^2 field at particle position
  * \param[in,out] Fx1 force term acting on x position of the particle
  * \param[in,out] Fy1 force term acting on y position of the particle
  * \param[in,out] Fux1 force term acting on x momentum of the particle
@@ -36,13 +38,15 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void UpdateForceTerms(const amrex::ParticleReal& uxp,
                       const amrex::ParticleReal& uyp,
                       const amrex::ParticleReal& psip,
-                      const amrex::ParticleReal& const_of_motionp,
                       const amrex::ParticleReal& ExmByp,
                       const amrex::ParticleReal& EypBxp,
                       const amrex::ParticleReal& Ezp,
                       const amrex::ParticleReal& Bxp,
                       const amrex::ParticleReal& Byp,
                       const amrex::ParticleReal& Bzp,
+                      const amrex::ParticleReal& Aabssqp,
+                      const amrex::ParticleReal& AabssqDxp,
+                      const amrex::ParticleReal& AabssqDyp,
                       amrex::ParticleReal& Fx1,
                       amrex::ParticleReal& Fy1,
                       amrex::ParticleReal& Fux1,
@@ -58,24 +62,24 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
 
     const amrex::Real gammap = (1.0_rt + uxp*uxp*clightsq
                                        + uyp*uyp*clightsq
-                                       + (psip+const_of_motionp)*(psip+const_of_motionp))
-                                       /(2.0_rt * (psip + const_of_motionp) );
+                                       + psip*psip + 0.5_rt*Aabssqp)/(2.0_rt * psip );
 
     const amrex::Real charge_mass_ratio = charge / mass;
     /* Change for x-position along zeta */
-    Fx1 = -uxp / (psip + const_of_motionp) / phys_const.c;
+    Fx1 = -uxp / psip / phys_const.c;
     /* Change for y-position along zeta */
-    Fy1 = -uyp / (psip + const_of_motionp) / phys_const.c;
+    Fy1 = -uyp / psip / phys_const.c;
     /* Change for ux along zeta */
-    Fux1 = -charge_mass_ratio/phys_const.c * (gammap * ExmByp / (psip + const_of_motionp) +
-            phys_const.c * Byp + ( uyp * Bzp ) / (psip + const_of_motionp) );
+    Fux1 = -charge_mass_ratio/phys_const.c * (gammap * ExmByp / psip +
+            phys_const.c * Byp + ( uyp * Bzp ) / psip)
+           + 0.25_rt*AabssqDxp * phys_const.c * phys_const.m_e/mass / psip;
     /* Change for uy along zeta */
-    Fuy1 = -charge_mass_ratio/phys_const.c * ( gammap * EypBxp / (psip + const_of_motionp) -
-            phys_const.c * Bxp - ( uxp * Bzp ) / (psip + const_of_motionp) );
+    Fuy1 = -charge_mass_ratio/phys_const.c * ( gammap * EypBxp / psip -
+            phys_const.c * Bxp - ( uxp * Bzp ) / psip)
+           + 0.25_rt*AabssqDyp * phys_const.c * phys_const.m_e/mass / psip;
     /* Change for psi along zeta */
-    Fpsi1 = -charge_mass_ratio * phys_const.m_e / phys_const.q_e *
-            (1.0_rt/phys_const.c * ( uxp*ExmByp + uyp*EypBxp )/(psip + const_of_motionp) - Ezp );
-
+    Fpsi1 = -charge_mass_ratio /phys_const.c/phys_const.c *
+            (( uxp*ExmByp + uyp*EypBxp )/phys_const.c/psip - Ezp );
 }
 
 /** \brief Shifting the force term coefficients

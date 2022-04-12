@@ -115,6 +115,11 @@ public:
      * \param[in] islice slice index
      */
     amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+    /** get function for the 2D slices (const version)
+     * \param[in] lev MR level
+     * \param[in] islice slice index
+     */
+    const amrex::MultiFab& getSlices (int lev, int islice) const {return m_slices[lev][islice]; }
     /** get amrex::MultiFab of a field in a slice
      * \param[in] lev MR level
      * \param[in] islice slice index
@@ -376,6 +381,9 @@ public:
     static amrex::IntVect m_slices_nguards;
     /** Number of guard cells for poisson solver MultiFab */
     static amrex::IntVect m_poisson_nguards;
+    /** If the poisson solver should include the guard cells */
+    bool m_extended_solve = false;
+
 private:
     /** Vector over levels, array of 4 slices required to compute current slice */
     amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
@@ -385,6 +393,12 @@ private:
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
+    /** Number of guard cells where ExmBy and EypBx are calculated */
+    amrex::IntVect m_exmby_eypbx_nguard;
+    /** Number of guard cells where sources for poisson equation are included */
+    amrex::IntVect m_source_nguard;
+    /** If lev_0 should be solved with open boundary conditions */
+    bool m_open_boundary = false;
 };
 
 #endif

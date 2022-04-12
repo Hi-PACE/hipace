@@ -14,8 +14,9 @@ sudo apt-get update
 
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
-    libfftw3-dev        \
+    ccache              \
     g++                 \
+    libfftw3-dev        \
     libhdf5-dev         \
     python3             \
     python3-pip         \

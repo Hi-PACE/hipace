@@ -12,11 +12,13 @@
 #include "particles/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
+#include "laser/Laser.H"
 #include "Hipace.H"
 
 /** Depose current of particles in species plasma into the current 2D slice in fields
  * \param[in] plasma species of which the current is deposited
  * \param[in,out] fields the general field class, modified by this function
+ * \param[in] laser that affects the plasma during the deposition
  * \param[in] which_slice defines if this or the next slice is handled
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
@@ -29,7 +31,7 @@
  * \param[in] bin_size tile size (square)
  */
 void
-DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
+DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& laser,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 bool deposit_j_squared, amrex::Geometry const& gm, int const lev,

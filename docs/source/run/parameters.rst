@@ -6,9 +6,9 @@ Input parameters
 Parser
 ------
 
-In HiPACE++ all input parameters are obtained through `amrex::Parser`, making it possible to
+In HiPACE++ all input parameters are obtained through ``amrex::Parser``, making it possible to
 specify input parameters with expressions and not just numbers. User constants can be defined
-in the input script with `my_constants`.
+in the input script with ``my_constants``.
 
 .. code-block:: bash
 
@@ -68,12 +68,12 @@ General parameters
 * ``hipace.verbose`` (`int`) optional (default `0`)
     Level of verbosity.
 
-      * `verbose = 1`, prints only the time steps, which are computed.
+      * ``hipace.verbose = 1``, prints only the time steps, which are computed.
 
-      * `verbose = 2` additionally prints the number of iterations in the
+      * ``hipace.verbose = 2`` additionally prints the number of iterations in the
         predictor-corrector loop, as well as the B-Field error at each slice.
 
-      * `verbose = 3` also prints the number of particles, which violate the quasi-static
+      * ``hipace.verbose = 3`` also prints the number of particles, which violate the quasi-static
         approximation and were neglected at each slice. It prints the number of ionized particles,
         if ionization occurred. It also adds additional information if beams
         are read in from file.
@@ -85,20 +85,19 @@ General parameters
     Transverse particle shape order. Currently, only `0` is implemented.
 
 * ``hipace.output_period`` (`integer`) optional (default `-1`)
-    | Output period. No output is given for `hipace.output_period = -1`.
-    | **Warning:** `hipace.output_period = 0` will make the simulation crash.
+    Output period. No output is given for ``hipace.output_period = -1``.
+    **Warning:** ``hipace.output_period = 0`` will make the simulation crash.
 
 * ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
-    | Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
-      For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
-      exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
-      fail otherwise. As an example, a simulation with `(2048*2048*2048)` grid points
-      requires
-    | `hipace.beam_injection_cr = 8`.
+    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
+    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
+    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
+    fail otherwise. As an example, a simulation with `2048 x 2048 x 2048` grid points
+    requires ``hipace.beam_injection_cr = 8``.
 
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
-    Using the default, the beam deposits all currents `Jx`, `Jy`, `Jz`. Using
-    `hipace.do_beam_jx_jy_deposition = 0` disables the transverse current deposition of the beams.
+    Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
+    ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
 
 * ``hipace.boxes_in_z`` (`int`) optional (default `1`)
     Number of boxes along the z-axis. In serial runs, the arrays for 3D IO can easily exceed the
@@ -107,8 +106,8 @@ General parameters
     the same effect.
 
 * ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
-    OpenPMD backend. This can either be `h5, bp`, or `json`. The default is chosen by what is
-    available. If both Adios2 and HDF5 are available, `h5` is used. Note that `json` is extremely
+    OpenPMD backend. This can either be ``h5``, ``bp``, or ``json``. The default is chosen by what is
+    available. If both Adios2 and HDF5 are available, ``h5`` is used. Note that ``json`` is extremely
     slow and is not recommended for production runs.
 
 * ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
@@ -146,12 +145,22 @@ Modeling ion motion is not yet supported by the explicit solver
     The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
     The default is set accordingly.
 
+* ``fields.extended_solve`` (`bool`) optional (default `0`)
+    Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artifacts
+    originating from the boundary for long simulations.
+
+* ``fields.open_boundary`` (`bool`) optional (default `0`)
+    Uses a Taylor approximation of the Greens function to solve the Poisson equations with
+    open boundary conditions. It's recommended to use this together with
+    ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
+    Not implemented for the explicit Helmholtz solver.
+
+
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``hipace.predcorr_B_error_tolerance`` (`float`) optional (default `4e-2`)
-    The tolerance of the transverse B-field error. To enable a fixed number of iterations,
-    `predcorr_B_error_tolerance` must be negative.
+    The tolerance of the transverse B-field error. Set to a negative value to use a fixed number of iterations.
 
 * ``hipace.predcorr_max_iterations`` (`int`) optional (default `30`)
     The maximum number of iterations in the predictor-corrector loop for single slice.
@@ -165,8 +174,8 @@ Predictor-corrector loop parameters
    In general, we recommend two different settings:
 
    First, a fixed B-field error tolerance. This ensures the same level of convergence at each grid
-   point. To do so, use e.g. the default settings of `hipace.predcorr_B_error_tolerance = 4e-2`,
-   `hipace.predcorr_max_iterations = 30`, `hipace.predcorr_B_mixing_factor = 0.05`.
+   point. To do so, use e.g. the default settings of ``hipace.predcorr_B_error_tolerance = 4e-2``,
+   ``hipace.predcorr_max_iterations = 30``, ``hipace.predcorr_B_mixing_factor = 0.05``.
    This should almost always give reasonable results.
 
    Second, a fixed (low) number of iterations. This is usually much faster than the fixed B-field
@@ -175,8 +184,8 @@ Predictor-corrector loop parameters
    reproduces the same results as the fixed B-field error tolerance setting. It works very well at
    high longitudinal resolution.
    A good setting for the fixed number of iterations is usually given by
-   `hipace.predcorr_B_error_tolerance = -1.`, `hipace.predcorr_max_iterations = 1`,
-   `hipace.predcorr_B_mixing_factor = 0.15`. The B-field error tolerance must be negative.
+   ``hipace.predcorr_B_error_tolerance = -1.``, ``hipace.predcorr_max_iterations = 1``,
+   ``hipace.predcorr_B_mixing_factor = 0.15``. The B-field error tolerance must be negative.
 
 Explicit solver parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -194,11 +203,11 @@ Plasma parameters
 -----------------
 
 For the plasma parameters, first the names of the plasmas need to be specified. Afterwards, the
-plasma parameters for each plasma are specified via `<plasma name>.plasma_property = ...`
+plasma parameters for each plasma are specified via ``<plasma name>.<plasma property> = ...``.
 
 * ``plasmas.names`` (`string`)
     The names of the plasmas, separated by a space.
-    To run without plasma, choose the name `no_plasma`.
+    To run without plasma, choose the name ``no_plasma``.
 
 * ``plasmas.nominal_density`` (`string`) optional (default `1.` in normalized units, `1.e23` in SI units)
     Nominal density (in number per cubic meter) by which quantities are normalized in the explicit solver.
@@ -211,10 +220,10 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
 * ``<plasma name>.density_table_file`` (`string`) optional (default "")
-    Alternative to `<plasma name>.density(x,y,z)`. Specify the name of a text file containing
+    Alternative to ``<plasma name>.density(x,y,z)``. Specify the name of a text file containing
     multiple densities for different positions. File syntax: ``<position> <density function>`` for
     every line. If a line doesn't start with a position it is ignored (comments can be made
-    with `#`). `<density function>` is evaluated like `<plasma name>.density(x,y,z)`. The simulation
+    with `#`). `<density function>` is evaluated like ``<plasma name>.density(x,y,z)``. The simulation
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
@@ -242,32 +251,31 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     as violating the quasi-static approximation and are removed from the simulation.
 
 * ``<plasma name>.mass`` (`float`) optional (default `0.`)
-    The mass of plasma particle in SI units. Use `plasma_name.mass_Da` for Dalton.
-    Can also be set with `<plasma name>.element`. Must be `>0`.
+    The mass of plasma particle in SI units. Use ``plasma_name.mass_Da`` for Dalton.
+    Can also be set with ``<plasma name>.element``. Must be `>0`.
 
 * ``<plasma name>.mass_Da`` (`float`) optional (default `0.`)
-    The mass of plasma particle in Dalton. Use `plasma_name.mass` for SI units.
-    Can also be set with `<plasma name>.element`. Must be `>0`.
+    The mass of plasma particle in Dalton. Use ``<plasma name>.mass`` for SI units.
+    Can also be set with ``<plasma name>.element``. Must be `>0`.
 
 * ``<plasma name>.charge`` (`float`) optional (default `0.`)
-    The charge of a plasma particle. Can also be set with `<plasma name>.element`.
+    The charge of a plasma particle. Can also be set with ``<plasma name>.element``.
     The charge gets multiplied by the current ionization level.
 
 * ``<plasma name>.element`` (`string`) optional (default "")
     The Physical Element of the plasma. Sets charge, mass and, if available,
     the specific Ionization Energy of each state.
-    Options are: `electron`, `positron`, `H`, `D`, `T`, `He`, `Li`, `Be`, `B`, ….
+    Options are: ``electron``, ``positron``, ``H``, ``D``, ``T``, ``He``, ``Li``, ``Be``, ``B``, ….
 
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
-    Whether this plasma can ionize. Can also be set to 1 by specifying
-    `<plasma name>.ionization_product`.
+    Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial Ionization state of the plasma. `0` for neutral gasses.
     If set, the Plasma charge gets multiplied by this number.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
-    The `<plasma name>` of the plasma that contains the new electrons that are produced
+    Name of the plasma species that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
@@ -276,15 +284,33 @@ plasma parameters for each plasma are specified via `<plasma name>.plasma_proper
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+Binary collisions for plasma species
+------------------------------------
+
+WARNING: this module is in development. Currently only support electron-electron collisions in SI units.
+
+HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
+
+* ``plasmas.collisions`` (list of `strings`) optional
+    List of names of types binary Coulomb collisions.
+    Each will represent collisions between 2 plasma species (potentially the same).
+
+* ``<collision name>.species`` (two `strings`) optional
+    The name of the two plasma species for which collisions should be included.
+
+* ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
+    Coulomb logarithm used for this collision.
+    If not specified, the Coulomb logarithm is determined from the temperature in each cell.
+
 Beam parameters
 ---------------
 
 For the beam parameters, first the names of the beams need to be specified. Afterwards, the beam
-parameters for each beam are specified via `<beam name>.beam_property = ...`
+parameters for each beam are specified via ``<beam name>.<beam property> = ...``
 
 * ``beams.names`` (`string`)
     The names of the particle beams, separated by a space.
-    To run without beams, choose the name `no_beam`.
+    To run without beams, choose the name ``no_beam``.
 
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -294,11 +320,11 @@ which are valid only for certain beam types, are introduced further below under
 
 
 * ``<beam name>.injection_type`` (`string`)
-    The injection type for the particle beam. Currently available are `fixed_ppc`, `fixed_weight`,
-    and `from_file`. `fixed_ppc` generates a beam with a fixed number of particles per cell and
-    varying weights. It can be either a Gaussian or a flattop beam. `fixed_weight` generates a
+    The injection type for the particle beam. Currently available are ``fixed_ppc``, ``fixed_weight``,
+    and ``from_file``. ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
+    varying weights. It can be either a Gaussian or a flattop beam. ``fixed_weight`` generates a
     Gaussian beam with a fixed number of particles with a constant weight.
-    `from_file` reads a beam from openPMD files.
+    ``from_file`` reads a beam from openPMD files.
 
 * ``<beam name>.position_mean`` (3 `float`)
     The mean position of the beam in `x, y, z`, separated by a space.
@@ -309,17 +335,17 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
     the specific Ionization Energy of each state.
-    Currently available ptions are: `electron`, `positron`, and `proton`.
+    Currently available options are: ``electron``, ``positron``, and ``proton``.
 
 * ``<beam name>.mass`` (`float`) optional (default `m_e`)
-    The mass of beam particles. Can also be set with `<beam name>.element`. Must be `>0`.
+    The mass of beam particles. Can also be set with ``<beam name>.element``. Must be `>0`.
 
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
-    The charge of a beam particles. Can also be set with `<beam name>.element`.
+    The charge of a beam particles. Can also be set with ``<beam name>.element``.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
-    either `total_charge` or `density` must be specified.
+    either ``total_charge`` or ``density`` must be specified.
 
 * ``<beam name>.profile`` (`string`)
     Beam profile.
@@ -330,7 +356,7 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
-    `n_subcycles` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
+    ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
 
 * ``<beam name>.finest_level`` (`int`) optional (default `0`)
@@ -344,7 +370,7 @@ Option: ``fixed_weight``
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.total_charge`` (`float`)
-    Total charge of the beam. Note: Either `total_charge` or `density` must be specified.
+    Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
 
 * ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
     Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
@@ -364,12 +390,12 @@ Option: ``fixed_weight``
     Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
     `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
-    `beam_name.num_particles`, therefore this option requires that the beam particle number must be
+    ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
     divisible by 4.
 
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
-    Note: using `do_z_push = 0` results in unphysical behavior.
+    Note: using ``do_z_push = 0`` results in unphysical behavior.
 
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^
@@ -384,7 +410,7 @@ Option: ``fixed_ppc``
     Maximum in `z` at which particles are injected.
 
 * ``<beam name>.radius`` (`float`)
-    Maximum radius `<beam name>.radius` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
     injected.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
@@ -398,8 +424,8 @@ Option: ``from_file``
 
 * ``<beam name>.input_file`` (`string`)
     Name of the input file. **Note:** Reading in files with digits in their names (e.g.
-    `openpmd_002135.h5`) can be problematic, it is advised to read them via `openpmd_%T.h5` and then
-    specify the iteration via `beam_name.iteration = 2135`.
+    ``openpmd_002135.h5``) can be problematic, it is advised to read them via ``openpmd_%T.h5`` and then
+    specify the iteration via ``beam_name.iteration = 2135``.
 
 * ``<beam name>.iteration`` (`integer`) optional (default `0`)
     Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
@@ -412,8 +438,36 @@ Option: ``from_file``
 
 * ``beams.all_from_file`` (`string`)
     Name of the input file for all beams. This macro then passes it down to all individual beams
-    without a specified `injection_type`. Additionally the input parameters `beams.iteration`,
-    `beams.plasma_density` and `beams.file_coordinates_xyz` are passed down if applicable.
+    without a specified ``injection_type``. Additionally the input parameters ``beams.iteration``,
+    ``beams.plasma_density`` and ``beams.file_coordinates_xyz`` are passed down if applicable.
+
+Laser parameters
+----------------
+
+Currently, only a single, static laser pulse is available. The laser profile is defined by
+:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`. The laser pulse length
+:math:`L0 = \tau / c_0`
+can be specified via the pulse duration ``laser.tau``.
+If no ``laser.a0`` is provided, no laser will be initialized.
+
+* ``laser.a0`` (`float`) optional (default `0`)
+    Peak normalized vector potential of the laser pulse.
+
+* ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
+    The mean position of the laser in `x, y, z`.
+
+* ``laser.w0`` (2 `float`) optional (default `0 0`)
+    The laser waist in `x, y`.
+
+* ``laser.L0`` (`float`) optional (default `0`)
+    The laser pulse length in `z`. Use either the pulse length or the pulse duration.
+
+* ``laser.tau`` (`float`) optional (default `0`)
+    The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
+    Use either the pulse length or the pulse duration.
+
+* ``laser.lambda0`` (`float`) optional (default `0`)
+    The laser pulse wavelength. Currently not used in the code.
 
 Diagnostic parameters
 ---------------------
@@ -434,13 +488,13 @@ Diagnostic parameters
     Whether the field diagnostics should include ghost cells.
 
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
-    Names of the fields written to file, separated by a space. The field names need to be `all`,
-    `none` or a subset of `ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi`.
-    **Note:** The option `none` only suppressed the output of the field data. To suppress any
-    output, please use `hipace.output_period = -1`.
+    Names of the fields written to file, separated by a space. The field names need to be ``all``,
+    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi``.
+    **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
+    output, please use ``hipace.output_period = -1``.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
-    Names of the beams written to file, separated by a space. The beam names need to be `all`,
-    `none` or a subset of `beams.names`.
-    **Note:** The option `none` only suppressed the output of the beam data. To suppress any
-    output, please use `hipace.output_period = -1`.
+    Names of the beams written to file, separated by a space. The beam names need to be ``all``,
+    ``none`` or a subset of ``beams.names``.
+    **Note:** The option ``none`` only suppressed the output of the beam data. To suppress any
+    output, please use ``hipace.output_period = -1``.

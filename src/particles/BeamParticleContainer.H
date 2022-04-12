@@ -55,6 +55,7 @@ public:
         const amrex::Real     a_zmin,
         const amrex::Real     a_zmax,
         const amrex::Real     a_radius,
+        const amrex::Array<amrex::Real, 3> a_position_mean,
         const amrex::Real     a_min_density,
         const amrex::Vector<int>& random_ppc);
 

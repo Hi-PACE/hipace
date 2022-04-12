@@ -23,8 +23,8 @@
  * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
  */
 void
-AdvanceBeamParticlesSlice (BeamParticleContainer& beam, Fields& fields, amrex::Geometry const& gm,
-                           int const lev, const int islice_local, const amrex::Box box,
-                           const int offset, const BeamBins& bins);
+AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
+                           amrex::Geometry const& gm, int const lev, const int islice_local,
+                           const amrex::Box box, const int offset, const BeamBins& bins);
 
 #endif //  BEAMPARTICLEADVANCE_H_

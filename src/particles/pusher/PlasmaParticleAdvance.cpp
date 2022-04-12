@@ -22,10 +22,10 @@
 #include <string>
 
 void
-AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
+AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
-                        PlasmaBins& bins)
+                        PlasmaBins& bins, const Laser& laser)
 {
     std::string str = "UpdateForcePushParticles_Plasma(    )";
     if (temp_slice) str.at(32) = 't';
@@ -70,6 +70,14 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
         amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
 
+        // extract the laser Fields
+        const bool use_laser = laser.m_use_laser;
+        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::This);
+
+        // Extract field array from MultiFab
+        amrex::Array4<const amrex::Real> const& a_arr = use_laser ?
+                                    a_mf[pti].array() : amrex::Array4<const amrex::Real>();
+
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
         // Offset for converting positions to indexes
@@ -88,8 +96,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
-        const amrex::Real * const const_of_motionp = soa.GetRealData(
-                                                            PlasmaIdx::const_of_motion).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
         amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
@@ -163,6 +169,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                     // define field at particle position reals
                     amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                     amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                    amrex::ParticleReal Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
                     if (do_update)
                     {
@@ -172,12 +179,19 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, Fields & fields,
                                        exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                        dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
                                        depos_order_xy, 0);
+
+                        if (use_laser) {
+                            doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */,
+                                                Aabssqp, AabssqDxp, AabssqDyp, a_arr,
+                                                dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
+                                                depos_order_xy, 0);
+                        }
                         // update force terms for a single particle
                         const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
-                        const amrex::Real psi_factor = phys_const.q_e/(phys_const.m_e*phys_const.c*phys_const.c);
-                        UpdateForceTerms(uxp[ip], uyp[ip], psi_factor*psip[ip], const_of_motionp[ip],
-                                         ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, Fx1[ip], Fy1[ip],
-                                         Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq, phys_const, q, mass);
+                        UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp, Bxp, Byp,
+                                         Bzp, Aabssqp, AabssqDxp, AabssqDyp, Fx1[ip], Fy1[ip],
+                                         Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq, phys_const, q,
+                                         mass);
                     }
 
                     if (do_push)
@@ -224,7 +238,6 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
         amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
-        amrex::Real * const const_of_motionp = soa.GetRealData(PlasmaIdx::const_of_motion).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
         amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
@@ -281,14 +294,14 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     SetPosition(ip, x_prev[ip], y_prev[ip], zp);
                 } else {
 
-                    amrex::Real u[3] = {0.,0.,0.};
+                    amrex::Real u[3] = {0._rt,0._rt,0._rt};
                     ParticleUtil::get_gaussian_random_momentum(u, u_mean, u_std, engine);
 
                     SetPosition(ip, x0[ip], y0[ip], zp, std::abs(pid));
                     w[ip] = w0[ip] * density_func(x0[ip], y0[ip], c_t);
                     uxp[ip] = u[0]*phys_const.c;
                     uyp[ip] = u[1]*phys_const.c;
-                    psip[ip] = 0._rt;
+                    psip[ip] = sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
                     x_prev[ip] = 0._rt;
                     y_prev[ip] = 0._rt;
                     ux_temp[ip] = 0._rt;
@@ -320,7 +333,6 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     Fuy5[ip] = 0._rt;
                     Fpsi5[ip] = 0._rt;
                     ion_lev[ip] = init_ion_lev;
-                    const_of_motionp[ip]  = sqrt(1. + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
                 }
             }
             );
