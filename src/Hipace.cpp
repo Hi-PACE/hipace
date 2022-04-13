@@ -555,9 +555,6 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             m_fields.AddRhoIons(lev);
 
             // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
-            // Assert that the order of the transverse currents and charge density is correct. This
-            // order is also required in the FillBoundary call on the next slice in the
-            // predictor-corrector loop, as well as in the shift slices.
             if (!m_fields.m_extended_solve) m_fields.FillBoundary(Geom(lev).periodicity(), lev,
                 WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho");
 
@@ -664,6 +661,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::MultiFab next_Jxb(nslicemf, amrex::make_alias, Comps[nsl]["jx_beam"], 1);
     const amrex::MultiFab prev_Jyb(pslicemf, amrex::make_alias, Comps[psl]["jy_beam"], 1);
     const amrex::MultiFab next_Jyb(nslicemf, amrex::make_alias, Comps[nsl]["jy_beam"], 1);
+    AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx" ], 2);
 
     // extract a of the Laser

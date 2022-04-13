@@ -305,6 +305,13 @@ public:
                                        const int By_comp, const int Bx_iter_comp,
                                        const int By_iter_comp, const amrex::Geometry& geom);
 
+    /** \brief set all selected fields to a value
+     *
+     * \param[in] val value
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
     template<class...Args>
     void setVal (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
@@ -313,6 +320,7 @@ public:
 
         for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
             amrex::Array4<amrex::Real> array = mfab.array(mfi);
+            // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(), ncomps,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
                 {
@@ -321,6 +329,13 @@ public:
         }
     }
 
+    /** \brief multiply all selected fields with a value
+     *
+     * \param[in] val value
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
     template<class...Args>
     void mult (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
@@ -329,6 +344,7 @@ public:
 
         for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
             amrex::Array4<amrex::Real> array = mfab.array(mfi);
+            // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(), ncomps,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
                 {
@@ -337,6 +353,13 @@ public:
         }
     }
 
+    /** \brief copy all selected fields between slices
+     *
+     * \param[in] lev level of fields
+     * \param[in] islice_dst destination slice
+     * \param[in] islice_src source slice
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
     template<class...Args>
     void shift (const int lev, const int islice_dst, const int islice_src, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
@@ -348,6 +371,7 @@ public:
         for (amrex::MFIter mfi(mfab_dst); mfi.isValid(); ++mfi) {
             amrex::Array4<amrex::Real> array_src = mfab_src.array(mfi);
             amrex::Array4<amrex::Real> array_dst = mfab_dst.array(mfi);
+            // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(), ncomps,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
                 {
@@ -356,11 +380,20 @@ public:
         }
     }
 
+    /** \brief call amrex FillBoundary for multiple fields
+     *
+     * \param[in] period periodicity of the fields
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
     template<class...Args>
-    void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice, Args...comps) {
+    void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice,
+                       Args...comps) {
         std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
 
+        // optimize adjacent fields to one FillBoundary call
         std::sort(c_idx.begin(), c_idx.end());
         int scomp = 0;
         int ncomp = 0;
