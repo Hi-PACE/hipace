@@ -256,12 +256,12 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                                                                        {numParticleOnTile64});
             }
 
-            // save particle ID after converting it to a globally unique ID
+            // save particle ID
             std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                                              [](uint64_t const *p){ delete[] p; } );
 
             for (uint64_t i=0; i<numParticleOnTile; i++) {
-                ids.get()[i] = utils::localIDtoGlobal( aos[i].id(), aos[i].cpu() );
+                ids.get()[i] = pos_structs[i].id();
             }
             auto const scalar = openPMD::RecordComponent::SCALAR;
             beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});
