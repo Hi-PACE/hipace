@@ -261,7 +261,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                                              [](uint64_t const *p){ delete[] p; } );
 
             for (uint64_t i=0; i<numParticleOnTile; i++) {
-                ids.get()[i] = aos[i].id();
+                ids.get()[i] = pos_structs[i].id();
             }
             auto const scalar = openPMD::RecordComponent::SCALAR;
             beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});
