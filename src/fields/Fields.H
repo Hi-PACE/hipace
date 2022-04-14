@@ -401,7 +401,8 @@ public:
             if (ncomp==0) {
                 scomp = c_idx[i];
                 ncomp = 1;
-            } if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
+            }
+            if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
                 mfab.FillBoundary(scomp, ncomp, period);
                 ncomp = 0;
             } else if (c_idx[i+1] == scomp+ncomp) {
