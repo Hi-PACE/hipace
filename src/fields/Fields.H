@@ -16,6 +16,8 @@
 #include <AMReX_Vector.H>
 #include <AMReX_AmrCore.H>
 
+#include <algorithm>
+
 class Hipace;
 
 /** \brief describes which slice with respect to the currently calculated is used */
@@ -302,6 +304,112 @@ public:
                                        const amrex::MultiFab& By_iter, const int Bx_comp,
                                        const int By_comp, const int Bx_iter_comp,
                                        const int By_iter_comp, const amrex::Geometry& geom);
+
+    /** \brief set all selected fields to a value
+     *
+     * \param[in] val value
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
+    template<class...Args>
+    void setVal (const amrex::Real val, const int lev, const int islice, Args...comps) {
+        static constexpr int ncomps = sizeof...(comps);
+        amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
+        amrex::MultiFab& mfab = getSlices(lev, islice);
+
+        for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
+            amrex::Array4<amrex::Real> array = mfab.array(mfi);
+            // only one Kernel for all fields
+            amrex::ParallelFor(mfi.growntilebox(), ncomps,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
+                {
+                    array(i,j,k,c_idx[n]) = val;
+                });
+        }
+    }
+
+    /** \brief multiply all selected fields with a value
+     *
+     * \param[in] val value
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
+    template<class...Args>
+    void mult (const amrex::Real val, const int lev, const int islice, Args...comps) {
+        static constexpr int ncomps = sizeof...(comps);
+        amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
+        amrex::MultiFab& mfab = getSlices(lev, islice);
+
+        for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
+            amrex::Array4<amrex::Real> array = mfab.array(mfi);
+            // only one Kernel for all fields
+            amrex::ParallelFor(mfi.growntilebox(), ncomps,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
+                {
+                    array(i,j,k,c_idx[n]) *= val;
+                });
+        }
+    }
+
+    /** \brief copy all selected fields between slices
+     *
+     * \param[in] lev level of fields
+     * \param[in] islice_dst destination slice
+     * \param[in] islice_src source slice
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
+    template<class...Args>
+    void shift (const int lev, const int islice_dst, const int islice_src, Args...comps) {
+        static constexpr int ncomps = sizeof...(comps);
+        amrex::GpuArray<int, ncomps> c_idx_src = {Comps[islice_src][comps]...};
+        amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
+        amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
+        amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
+
+        for (amrex::MFIter mfi(mfab_dst); mfi.isValid(); ++mfi) {
+            amrex::Array4<amrex::Real> array_src = mfab_src.array(mfi);
+            amrex::Array4<amrex::Real> array_dst = mfab_dst.array(mfi);
+            // only one Kernel for all fields
+            amrex::ParallelFor(mfi.growntilebox(), ncomps,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
+                {
+                    array_dst(i,j,k,c_idx_dst[n]) = array_src(i,j,k,c_idx_src[n]);
+                });
+        }
+    }
+
+    /** \brief call amrex FillBoundary for multiple fields
+     *
+     * \param[in] period periodicity of the fields
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
+     */
+    template<class...Args>
+    void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice,
+                       Args...comps) {
+        std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
+        amrex::MultiFab& mfab = getSlices(lev, islice);
+
+        // optimize adjacent fields to one FillBoundary call
+        std::sort(c_idx.begin(), c_idx.end());
+        int scomp = 0;
+        int ncomp = 0;
+        for (int i=0; i < c_idx.size(); ++i) {
+            if (ncomp==0) {
+                scomp = c_idx[i];
+                ncomp = 1;
+            }
+            if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
+                mfab.FillBoundary(scomp, ncomp, period);
+                ncomp = 0;
+            } else if (c_idx[i+1] == scomp+ncomp) {
+                ++ncomp;
+            }
+        }
+    }
 
     /** Number of guard cells for slices MultiFab */
     static amrex::IntVect m_slices_nguards;
