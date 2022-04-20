@@ -276,6 +276,7 @@ struct guarded_field {
  * \param[in] src_a first source
  * \param[in] factor_b factor before src_b
  * \param[in] src_b second source
+ * \param[in] do_add whether to overwrite (=) or to add (+=) dst.
  */
 template<class FVA, class FVB>
 void
@@ -673,10 +674,11 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
     // Add beam rho-Jz/c contribution to the RHS
-    LinCombination(m_source_nguard, getStagingArea(lev),
-                   1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
-                   -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
-
+    if (m_do_beam_jz_minus_rho) {
+        LinCombination(m_source_nguard, getStagingArea(lev),
+                       1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
+                       -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
+    }
     SetBoundaryCondition(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
