@@ -60,7 +60,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     // Offset for converting positions to indexes
     amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], jxb_fab.box());
-    const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], jxb_fab.box());
+    amrex::Real const y_pos_offset = GetPosOffset(1, gm[lev], jxb_fab.box());
     amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev], jxb_fab.box());
 
     amrex::Real lev_weight_fac = 1.;
