@@ -302,12 +302,12 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
                 const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
+                const amrex::Real tmp =
+                    inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
                 if (do_add) {
-                    dst_array(i,j,k) +=
-                        inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                    dst_array(i,j,k) += tmp;
                 } else {
-                    dst_array(i,j,k) =
-                        inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                    dst_array(i,j,k) = tmp;
                 }
             });
     }
