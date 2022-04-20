@@ -267,6 +267,8 @@ public:
     static amrex::Real m_predcorr_B_mixing_factor;
     /** Whether the beams deposit Jx and Jy */
     static bool m_do_beam_jx_jy_deposition;
+    /** Whether the jz-c*rho contribution is computed and used. If not, jz-c*rho=0 is assumed */
+    static bool m_do_beam_jz_minus_rho;
     /** Whether to call amrex::Gpu::synchronize() around all profiler region */
     static int m_do_device_synchronize;
     /** Whether to use tiling for particle operations */

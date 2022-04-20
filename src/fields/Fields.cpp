@@ -281,7 +281,7 @@ template<class FVA, class FVB>
 void
 LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
-                const amrex::Real factor_b, const FVB& src_b)
+                const amrex::Real factor_b, const FVB& src_b, const bool do_add=false)
 {
     HIPACE_PROFILE("Fields::LinCombination()");
 
@@ -301,8 +301,13 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
                 const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
-                dst_array(i,j,k) =
-                    inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                if (do_add) {
+                    dst_array(i,j,k) +=
+                        inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                } else {
+                    dst_array(i,j,k) =
+                        inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                }
             });
     }
 }
@@ -650,7 +655,7 @@ void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                                    const MPI_Comm& m_comm_xy, const int lev, const int islice)
 {
-    /* Solves Laplacian(Psi) =  1/episilon0 * -(rho-Jz/c) and
+    /* Solves Laplacian(Psi) =  1/epsilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
      */
     HIPACE_PROFILE("Fields::SolveExmByAndEypBx()");
@@ -667,6 +672,10 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     LinCombination(m_source_nguard, getStagingArea(lev),
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
+    // Add beam rho-Jz/c contribution to the RHS
+    LinCombination(m_source_nguard, getStagingArea(lev),
+                   1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
+                   -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
 
     SetBoundaryCondition(geom, lev, "Psi", islice);
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);

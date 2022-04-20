@@ -40,14 +40,14 @@ MultiBeam::DepositCurrentSlice (
     Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
     const amrex::Vector<BeamBins>& bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-    const bool do_beam_jx_jy_deposition, const int which_slice)
+    const bool do_beam_jx_jy_deposition, const int which_slice, const bool do_beam_jz_minus_rho)
 
 {
     for (int i=0; i<m_nbeams; i++) {
         const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
         ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
                               a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
-                              do_beam_jx_jy_deposition, which_slice, nghost);
+                              do_beam_jx_jy_deposition, which_slice, nghost, do_beam_jz_minus_rho);
     }
 }
 
