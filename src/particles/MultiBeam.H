@@ -37,6 +37,8 @@ public:
      * \param[in] ibox index of the current box
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
      * \param[in] which_slice defines if this or the next slice is handled
+     * \param[in] do_beam_jz_minus_rho whether jz_beam-rho_beam is computed and used in the simulation.
+     *            Otherwise, it is assumed to be 0. If true, rho_beam needs to be deposited.
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
