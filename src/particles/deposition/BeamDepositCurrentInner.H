@@ -36,6 +36,7 @@
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to ptile
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to ptile
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to ptile
+ * \param[in,out] rho_fab array of charge density, on the box corresponding to ptile
  * \param[in] dx cell size in each dimension
  * \param[in] x_pos_offset offset for converting positions to indexes
  * \param[in] y_pos_offset offset for converting positions to indexes
@@ -49,6 +50,8 @@
  * \param[in] nghost number of ghost particles, all at the end of the particle array.
  *            Use for depositing transverse currents in the Next slice when processing
  *            islice = 0.
+ * \param[in] do_beam_jz_minus_rho whether jz_beam-rho_beam is computed and used in the simulation.
+ *            Otherwise, it is assumed to be 0. If true, rho_beam needs to be deposited.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
