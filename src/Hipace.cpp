@@ -49,6 +49,7 @@ amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_beam_jx_jy_deposition = true;
+bool Hipace::m_do_beam_jz_minus_rho = false;
 int Hipace::m_do_device_synchronize = 0;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
@@ -126,6 +127,7 @@ Hipace::Hipace () :
                                      "To avoid output, please use output_period = -1.");
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
+    queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
     queryWithParser(pph, "do_device_synchronize", m_do_device_synchronize);
     queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
     queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
@@ -522,11 +524,11 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 // guess.
                 m_fields.setVal(0., lev, WhichSlice::This,
                     "ExmBy", "EypBx", "Ez", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-                    "jz", "jz_beam", "rho", "Psi", "jxx", "jxy", "jyy");
+                    "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
             } else {
                 m_fields.setVal(0., lev, WhichSlice::This,
                     "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-                    "jz", "jz_beam", "rho", "Psi", "jxx", "jxy", "jyy");
+                    "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
             }
 
             if (!m_explicit) {
@@ -556,18 +558,20 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
             if (!m_fields.m_extended_solve) m_fields.FillBoundary(Geom(lev).periodicity(), lev,
-                WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho");
+                WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
+
+            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
+                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                             WhichSlice::This, m_do_beam_jz_minus_rho);
 
             m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
 
             m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
-                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                             WhichSlice::This);
+
             m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
             if (!m_fields.m_extended_solve) m_fields.FillBoundary(Geom(lev).periodicity(), lev,
-                WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho");
+                WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
 
             m_fields.SolvePoissonEz(Geom(), lev, islice);
             m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -901,7 +905,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         // exchange ExmBy EypBx Ez Bx By Bz
         m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
             "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-            "jz", "jz_beam", "rho", "Psi", "jxx", "jxy", "jyy");
+            "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
         amrex::ParallelContext::pop();
     }
 
@@ -989,7 +993,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             // exchange Bx By
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
                 "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-                "jz", "jz_beam", "rho", "Psi", "jxx", "jxy", "jyy");
+                "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
             amrex::ParallelContext::pop();
         }
 

@@ -126,6 +126,10 @@ General parameters
     :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
     factors of the slowest particles in all beams.
 
+* ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
+    Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
+    if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
+
 Field solver parameters
 -----------------------
 

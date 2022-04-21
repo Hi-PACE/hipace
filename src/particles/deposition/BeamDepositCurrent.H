@@ -27,13 +27,15 @@
  * \param[in] nghost number of ghost particles, all at the end of the particle array.
  *            Use for depositing transverse currents in the Next slice when processing
  *            islice = 0.
+ * \param[in] do_beam_jz_minus_rho whether jz_beam-rho_beam is computed and used in the simulation.
+ *            Otherwise, it is assumed to be 0. If true, rho_beam needs to be deposited.
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Vector<amrex::Geometry> const& gm, int const lev, const int islice,
                      int const offset, const BeamBins& bins,
                      const bool do_beam_jx_jy_deposition, const int which_slice,
-                     int nghost=0);
+                     int nghost=0, const bool do_beam_jz_minus_rho=false);
 
 
 #endif //  BEAMDEPOSITCURRENT_H_

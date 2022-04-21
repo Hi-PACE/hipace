@@ -36,6 +36,7 @@
  * \param[in,out] jx_fab array of current density jx, on the box corresponding to ptile
  * \param[in,out] jy_fab array of current density jy, on the box corresponding to ptile
  * \param[in,out] jz_fab array of current density jz, on the box corresponding to ptile
+ * \param[in,out] rho_fab array of charge density, on the box corresponding to ptile
  * \param[in] dx cell size in each dimension
  * \param[in] x_pos_offset offset for converting positions to indexes
  * \param[in] y_pos_offset offset for converting positions to indexes
@@ -49,12 +50,15 @@
  * \param[in] nghost number of ghost particles, all at the end of the particle array.
  *            Use for depositing transverse currents in the Next slice when processing
  *            islice = 0.
+ * \param[in] do_beam_jz_minus_rho whether jz_beam-rho_beam is computed and used in the simulation.
+ *            Otherwise, it is assumed to be 0. If true, rho_beam needs to be deposited.
  */
 template <int depos_order_xy, int depos_order_z>
 void doDepositionShapeN (const BeamParticleContainer& ptile,
                          amrex::FArrayBox& jx_fab,
                          amrex::FArrayBox& jy_fab,
                          amrex::FArrayBox& jz_fab,
+                         amrex::FArrayBox& rho_fab,
                          amrex::Real const * const AMREX_RESTRICT dx,
                          amrex::Real x_pos_offset,
                          amrex::Real y_pos_offset,
@@ -65,7 +69,8 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                          int box_offset,
                          const bool do_beam_jx_jy_deposition,
                          const int which_slice,
-                         int nghost=0)
+                         int nghost=0,
+                         const bool do_beam_jz_minus_rho=false)
 {
     using namespace amrex::literals;
 
@@ -98,14 +103,16 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
     amrex::Array4<amrex::Real> const& jx_arr = jx_fab.array();
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
+    amrex::Array4<amrex::Real> const& rho_arr = rho_fab.array();
 
     constexpr int CELL = amrex::IndexType::CELL;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         jx_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
         jy_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
-        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
-        "jx, jy, and jz must be nodal in all directions."
+        jz_fab.box().type() == amrex::IntVect(CELL, CELL, CELL) &&
+        rho_fab.box().type() == amrex::IntVect(CELL, CELL, CELL),
+        "jx, jy, jz and rho must be nodal in all directions."
         );
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -180,7 +187,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
             l_cell = 0;
             amrex::ignore_unused(l_cell);
 
-            // Deposit current into jx_arr, jy_arr, jz_arr
+            // Deposit current into jx_arr, jy_arr, jz_arr, rho_arr
             for (int iz=0; iz<=depos_order_z; iz++){
                 for (int iy=0; iy<=depos_order_xy; iy++){
                     for (int ix=0; ix<=depos_order_xy; ix++){
@@ -196,6 +203,11 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
                             amrex::Gpu::Atomic::Add(
                                 &jz_arr(j_cell+ix, k_cell+iy, z_slice),
                                 sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wqz);
+                            if (do_beam_jz_minus_rho) {
+                                amrex::Gpu::Atomic::Add(
+                                    &rho_arr(j_cell+ix, k_cell+iy, z_slice),
+                                    sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*wq);
+                            }
                         }
                     }
                 }
