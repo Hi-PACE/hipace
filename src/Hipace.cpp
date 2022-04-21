@@ -759,8 +759,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdy_jxy = - dy_jxy / n0 / pc.q_e / pc.c / pc.c;
                 const amrex::Real cdy_jz  = - dy_jz  / n0 / pc.q_e / pc.c ;
                 const amrex::Real cdy_psi =   dy_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cdz_jxb = - dz_jxb / n0 / pc.q_e / pc.c;
-                const amrex::Real cdz_jyb = - dz_jyb / n0 / pc.q_e / pc.c;
+                const amrex::Real cdz_jxb = + dz_jxb / n0 / pc.q_e / pc.c;
+                const amrex::Real cdz_jyb = + dz_jyb / n0 / pc.q_e / pc.c;
                 const amrex::Real cez     =   ez(i,j,k) / E0;
                 const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
                 const amrex::Real casq    =   use_laser ? a(i,j,k)*a(i,j,k) : 0._rt;
