@@ -48,7 +48,8 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
 
     // Extract the longitudinal beam current
     amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-    amrex::MultiFab jz(S, amrex::make_alias, Comps[WhichSlice::This]["jz_beam"], 1);
+    amrex::MultiFab jz(S, amrex::make_alias, Hipace::GetInstance().m_explicit ?
+        Comps[WhichSlice::This]["jz_beam"] : Comps[WhichSlice::This]["jz"], 1);
 
     // Extract FabArray for this box
     amrex::FArrayBox& jz_fab = jz[0];
