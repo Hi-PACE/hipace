@@ -70,7 +70,7 @@ y_domain_len = 8
 # Load HiPACE++ data for By in SI units
 Bx_sim, Bx_meta = ts.get_field(field='Bx', iteration=0, slice_across=['x','z'], slice_relative_position=[2*x_beam_mid/x_domain_len,0])
 By_sim, By_meta = ts.get_field(field='By', iteration=0, slice_across=['y','z'], slice_relative_position=[2*y_beam_mid/y_domain_len,0])
-jz_sim = ts.get_field(field='jz_beam', iteration=0, slice_across=['y','z'], slice_relative_position=[2*y_beam_mid/y_domain_len,0])[0]
+jz_sim = ts.get_field(field='jz', iteration=0, slice_across=['y','z'], slice_relative_position=[2*y_beam_mid/y_domain_len,0])[0]
 rho_sim = ts.get_field(field='rho', iteration=0, slice_across=['y','z'], slice_relative_position=[2*y_beam_mid/y_domain_len,0])[0]
 Ex_sim = ts.get_field(field='ExmBy', iteration=0, slice_across=['y','z'], slice_relative_position=[2*y_beam_mid/y_domain_len,0])[0] + c*By_sim
 Ey_sim = ts.get_field(field='EypBx', iteration=0, slice_across=['x','z'], slice_relative_position=[2*x_beam_mid/x_domain_len,0])[0] - c*Bx_sim
