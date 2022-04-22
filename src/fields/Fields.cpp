@@ -58,9 +58,70 @@ Fields::AllocData (
         m_source_nguard = {0, 0, 0};
     }
 
+    const bool explicit_solve = Hipace::GetInstance().m_explicit;
+    const bool mesh_refinement = Hipace::GetInstance().finestLevel() != 0;
+
+    int isl = WhichSlice::Next;
+    if (explicit_solve) {
+        Comps[isl].emplace("jx_beam", N_Comps[isl]++);
+        Comps[isl].emplace("jy_beam", N_Comps[isl]++);
+    } else {
+        Comps[isl].emplace("jx", N_Comps[isl]++);
+        Comps[isl].emplace("jy", N_Comps[isl]++);
+    }
+
+    isl = WhichSlice::This;
+    Comps[isl].emplace("ExmBy", N_Comps[isl]++);
+    Comps[isl].emplace("EypBx", N_Comps[isl]++);
+    Comps[isl].emplace("Ez", N_Comps[isl]++);
+    // Bx and By adjacent for explicit solver
+    Comps[isl].emplace("Bx", N_Comps[isl]++);
+    Comps[isl].emplace("By", N_Comps[isl]++);
+    Comps[isl].emplace("Bz", N_Comps[isl]++);
+    Comps[isl].emplace("Psi", N_Comps[isl]++);
+    Comps[isl].emplace("jx", N_Comps[isl]++);
+    Comps[isl].emplace("jy", N_Comps[isl]++);
+    Comps[isl].emplace("jz", N_Comps[isl]++);
+    Comps[isl].emplace("rho", N_Comps[isl]++);
+    if (explicit_solve) {
+        Comps[isl].emplace("jx_beam", N_Comps[isl]++);
+        Comps[isl].emplace("jy_beam", N_Comps[isl]++);
+        Comps[isl].emplace("jz_beam", N_Comps[isl]++);
+        Comps[isl].emplace("rho_beam", N_Comps[isl]++);
+        Comps[isl].emplace("jxx", N_Comps[isl]++);
+        Comps[isl].emplace("jxy", N_Comps[isl]++);
+        Comps[isl].emplace("jyy", N_Comps[isl]++);
+    }
+
+    isl = WhichSlice::Previous1;
+    if (mesh_refinement) {
+        Comps[isl].emplace("Ez", N_Comps[isl]++);
+        Comps[isl].emplace("Bz", N_Comps[isl]++);
+        Comps[isl].emplace("Psi", N_Comps[isl]++);
+        Comps[isl].emplace("rho", N_Comps[isl]++);
+    }
+    if (explicit_solve) {
+        Comps[isl].emplace("jx_beam", N_Comps[isl]++);
+        Comps[isl].emplace("jy_beam", N_Comps[isl]++);
+    } else {
+        Comps[isl].emplace("Bx", N_Comps[isl]++);
+        Comps[isl].emplace("By", N_Comps[isl]++);
+        Comps[isl].emplace("jx", N_Comps[isl]++);
+        Comps[isl].emplace("jy", N_Comps[isl]++);
+    }
+
+    isl = WhichSlice::Previous2;
+    if (!explicit_solve) {
+        Comps[isl].emplace("Bx", N_Comps[isl]++);
+        Comps[isl].emplace("By", N_Comps[isl]++);
+    }
+
+    isl = WhichSlice::RhoIons;
+    Comps[isl].emplace("rho", N_Comps[isl]++);
+
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
-            slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
+            slice_ba, slice_dm, N_Comps[islice], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0._rt, m_slices_nguards);
     }
@@ -411,10 +472,26 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         if (pos < patch_lo || pos > patch_hi) continue;
     }
 
-    shift(lev, WhichSlice::Previous2, WhichSlice::Previous1,
-        "Bx", "By");
-    shift(lev, WhichSlice::Previous1, WhichSlice::This,
-        "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam", "rho", "Psi");
+    const bool explicit_solve = Hipace::GetInstance().m_explicit;
+    const bool mesh_refinement = nlev != 1;
+
+    if (explicit_solve) {
+        if (mesh_refinement) {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This,
+                "Ez", "Bz", "rho", "Psi", "jx_beam", "jy_beam");
+        } else {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
+        }
+    } else {
+        shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
+        if (mesh_refinement) {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This,
+                "Ez", "Bx", "By", "Bz", "jx", "jy", "rho", "Psi");
+        } else {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This, "Bx", "By", "jx", "jy");
+        }
+    }
+
     }
 }
 
@@ -674,7 +751,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
     // Add beam rho-Jz/c contribution to the RHS
-    if (Hipace::m_do_beam_jz_minus_rho) {
+    if (Hipace::m_do_beam_jz_minus_rho && Hipace::GetInstance().m_explicit) {
         LinCombination(m_source_nguard, getStagingArea(lev),
                        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
                        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);

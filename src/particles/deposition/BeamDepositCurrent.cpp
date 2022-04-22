@@ -41,14 +41,20 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
         !(which_slice != WhichSlice::This && do_beam_jz_minus_rho),
         "depositing jz and rho beam in a slice that is not This");
 
+    const bool explicit_solve = Hipace::GetInstance().m_explicit;
+
     // Extract the fields currents
     amrex::MultiFab& S = fields.getSlices(lev, which_slice);
     // we deposit to the beam currents, because the explicit solver
     // requires sometimes just the beam currents
-    amrex::MultiFab jx_beam(S, amrex::make_alias, Comps[which_slice]["jx_beam"], 1);
-    amrex::MultiFab jy_beam(S, amrex::make_alias, Comps[which_slice]["jy_beam"], 1);
-    amrex::MultiFab jz_beam(S, amrex::make_alias, Comps[which_slice]["jz_beam"], 1);
-    amrex::MultiFab rho_beam(S, amrex::make_alias, Comps[which_slice]["rho_beam"], 1);
+    amrex::MultiFab jx_beam(S, amrex::make_alias,
+        do_beam_jx_jy_deposition ? explicit_solve ? Comps[which_slice]["jx_beam"] : Comps[which_slice]["jx"] : 0, 1);
+    amrex::MultiFab jy_beam(S, amrex::make_alias,
+        do_beam_jx_jy_deposition ? explicit_solve ? Comps[which_slice]["jy_beam"] : Comps[which_slice]["jy"] : 0, 1);
+    amrex::MultiFab jz_beam(S, amrex::make_alias,
+        which_slice == WhichSlice::This ? explicit_solve ? Comps[which_slice]["jz_beam"] : Comps[which_slice]["jz"] : 0, 1);
+    amrex::MultiFab rho_beam(S, amrex::make_alias,
+        which_slice == WhichSlice::This && do_beam_jz_minus_rho ? explicit_solve ? Comps[which_slice]["rho_beam"] : Comps[which_slice]["rho"] : 0, 1);
 
     // Extract FabArray for this box (because there is currently no transverse
     // parallelization, the index we want in the slice multifab is always 0.

@@ -25,34 +25,27 @@ struct WhichSlice {
     enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
 };
 
+struct assert_map : std::map<std::string, int> {
+    int operator[] (const std::string& str) const {
+        if (count(str)==0) {
+            amrex::ErrorStream() << "Component '"+str+"' is not allocated\nFields allocated:";
+            for (auto& [alloc_str, num] : *this) {
+                amrex::ErrorStream() << " '" << alloc_str << "' (" << num << "),";
+            }
+            amrex::ErrorStream() << "\n";
+            AMREX_ALWAYS_ASSERT(count(str)!=0);
+        }
+        return at(str);
+    }
+};
+
 /** \brief Map names and indices of each fields in each slice
  */
-static std::array<std::map<std::string, int>, 5> Comps
-{{
-        /* WhichSlice::Next */
-        {{
-                {"jx", 0}, {"jx_beam", 1}, {"jy", 2}, {"jy_beam", 3}, {"N", 4}
-            }},
-        /* WhichSlice::This */
-        {{
-                {"ExmBy", 0}, {"EypBx", 1}, {"Ez", 2}, {"Bx", 3}, {"By", 4}, {"Bz", 5}, {"jx", 6},
-                {"jx_beam", 7}, {"jy", 8}, {"jy_beam", 9}, {"jz", 10}, {"jz_beam", 11}, {"rho", 12},
-                {"rho_beam", 13}, {"Psi", 14}, {"jxx", 15}, {"jxy", 16}, {"jyy", 17}, {"N", 18}
-            }},
-        /* WhichSlice::Previous1 */
-        {{
-                {"Ez", 0}, {"Bx", 1}, {"By", 2}, {"Bz", 3}, {"jx", 4}, {"jx_beam", 5}, {"jy", 6},
-                {"jy_beam", 7}, {"rho", 8}, {"Psi", 9}, {"N", 10}
-            }},
-        /* WhichSlice::Previous2 */
-        {{
-                {"Bx", 0}, {"By", 1}, {"N", 2}
-            }},
-        /* WhichSlice::RhoIons */
-        {{
-                {"rho", 0}, {"N", 1}
-            }}
-    }};
+inline std::array<assert_map, 5> Comps{};
+
+/** \brief number of fields in each slice
+ */
+inline std::array<int, 5> N_Comps {0,0,0,0,0};
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{

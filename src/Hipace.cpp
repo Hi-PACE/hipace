@@ -325,6 +325,7 @@ Hipace::MakeNewLevelFromScratch (
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
     m_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
+    m_diags.Initialize(lev);
 }
 
 void
@@ -527,8 +528,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                     "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
             } else {
                 m_fields.setVal(0., lev, WhichSlice::This,
-                    "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-                    "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
+                    "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
             }
 
             if (!m_explicit) {
@@ -544,34 +544,53 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
             if (m_explicit){
-                m_fields.setVal(0., lev, WhichSlice::Next, "jx", "jx_beam", "jy", "jy_beam");
+                m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
                 m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                                  m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                                  WhichSlice::Next);
-                m_fields.AddBeamCurrents(lev, WhichSlice::Next);
                 // need to exchange jx jy jx_beam jy_beam
                 m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
-                    "jx", "jx_beam", "jy", "jy_beam");
+                    "jx_beam", "jy_beam");
             }
 
             m_fields.AddRhoIons(lev);
 
             // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
-            if (!m_fields.m_extended_solve) m_fields.FillBoundary(Geom(lev).periodicity(), lev,
-                WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
+            if (!m_fields.m_extended_solve) {
+                if (m_explicit) {
+                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
+                        "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
+                } else {
+                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
+                        "jx", "jy", "jz", "rho");
+                }
+            }
+
+            if (!m_do_beam_jz_minus_rho) {
+                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+            }
 
             m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                              m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                              WhichSlice::This, m_do_beam_jz_minus_rho);
 
-            m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+            if (m_do_beam_jz_minus_rho) {
+                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+            }
 
             m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
 
-            m_fields.AddBeamCurrents(lev, WhichSlice::This);
+            if (m_explicit) m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
-            if (!m_fields.m_extended_solve) m_fields.FillBoundary(Geom(lev).periodicity(), lev,
-                WhichSlice::This, "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
+            if (!m_fields.m_extended_solve) {
+                if (m_explicit) {
+                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
+                        "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
+                } else {
+                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
+                        "jx", "jy", "jz", "rho");
+                }
+            }
 
             m_fields.SolvePoissonEz(Geom(), lev, islice);
             m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -904,8 +923,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         amrex::ParallelContext::push(m_comm_xy);
         // exchange ExmBy EypBx Ez Bx By Bz
         m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-            "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-            "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
+            "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
         amrex::ParallelContext::pop();
     }
 
@@ -954,13 +972,12 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
         m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins, m_box_sorters,
                                          ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
-        m_fields.AddBeamCurrents(lev, WhichSlice::Next);
 
         if (!m_fields.m_extended_solve) {
             amrex::ParallelContext::push(m_comm_xy);
             // need to exchange jx jy jx_beam jy_beam
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
-                "jx", "jx_beam", "jy", "jy_beam");
+                "jx", "jy");
             amrex::ParallelContext::pop();
         }
 
@@ -986,14 +1003,13 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
 
         /* resetting current in the next slice to clean temporarily used current*/
-        m_fields.setVal(0., lev, WhichSlice::Next, "jx", "jx_beam", "jy", "jy_beam");
+        m_fields.setVal(0., lev, WhichSlice::Next, "jx", "jy");
 
         if (!m_fields.m_extended_solve) {
             amrex::ParallelContext::push(m_comm_xy);
             // exchange Bx By
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam",
-                "jz", "jz_beam", "rho", "rho_beam", "Psi", "jxx", "jxy", "jyy");
+                "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
             amrex::ParallelContext::pop();
         }
 
