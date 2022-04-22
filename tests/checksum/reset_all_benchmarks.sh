@@ -73,7 +73,7 @@ then
     mkdir $build_dir
     cd $build_dir
     cmake .. -DHiPACE_MPI=OFF
-    make -j 32
+    make -j 4
 fi
 
 #blowout_wake.Serial
@@ -121,7 +121,7 @@ then
     mkdir $build_dir
     cd $build_dir
     cmake .. -DHiPACE_MPI=ON
-    make -j 32
+    make -j 4
 fi
 
 #blowout_wake.2Rank
