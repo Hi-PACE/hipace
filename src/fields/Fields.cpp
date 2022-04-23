@@ -370,7 +370,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     if (diag_box.isEmpty()) return;
 
     auto& slice_mf = m_slices[lev][WhichSlice::This];
-    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{slice_mf, calc_geom};
+    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{{slice_mf}, calc_geom};
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
@@ -583,9 +583,9 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         const amrex::Real rel_z = islice_coarse-static_cast<int>(amrex::Math::floor(islice_coarse));
 
         auto solution_interp = interpolated_field_xyz<interp_order>{
-            getField(lev-1, WhichSlice::This, component),
+            {getField(lev-1, WhichSlice::This, component),
             getField(lev-1, WhichSlice::Previous1, component),
-            rel_z, geom[lev-1]};
+            rel_z}, geom[lev-1]};
         amrex::MultiFab staging_area = getStagingArea(lev);
 
         for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
@@ -615,9 +615,9 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
 
     auto field_coarse_interp = interpolated_field_xyz<interp_order>{
-        getField(lev-1, WhichSlice::This, component),
+        {getField(lev-1, WhichSlice::This, component),
         getField(lev-1, WhichSlice::Previous1, component),
-        rel_z, geom[lev-1]};
+        rel_z}, geom[lev-1]};
     amrex::MultiFab field_fine = getField(lev, WhichSlice::This, component);
 
     for (amrex::MFIter mfi( field_fine, false); mfi.isValid(); ++mfi)
