@@ -84,10 +84,10 @@ General parameters
       * ``hipace.do_device_synchronize = 0``, synchronization happens only when necessary.
 
       * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
-        via `HIPACE_PROFILE`)
+        via ``HIPACE_PROFILE``)
 
       * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
-        are profiled via `HIPACE_DETAIL_PROFILE`)
+        are profiled via ``HIPACE_DETAIL_PROFILE``)
 
 * ``hipace.depos_order_xy`` (`int`) optional (default `2`)
     Transverse particle shape order. Currently, `0,1,2,3` are implemented.
