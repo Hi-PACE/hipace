@@ -78,6 +78,17 @@ General parameters
         if ionization occurred. It also adds additional information if beams
         are read in from file.
 
+* ``hipace.do_device_synchronize`` (`int`) optional (default `0`)
+    Level of synchronization on GPU.
+
+      * ``hipace.do_device_synchronize = 0``, synchronization happens only when necessary.
+
+      * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
+        via `HIPACE_PROFILE`)
+
+      * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
+        are profiled via `HIPACE_DETAIL_PROFILE`)
+
 * ``hipace.depos_order_xy`` (`int`) optional (default `2`)
     Transverse particle shape order. Currently, `0,1,2,3` are implemented.
 
