@@ -142,9 +142,9 @@ public:
     /** Number of binary collisions */
     int m_ncollisions = 0;
 
-private:
-
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
+
+private:
     amrex::Vector<PlasmaBins> m_all_bins; /**< Logical tile bins for all plasma containers */
     amrex::Vector<std::string> m_names; /**< names of all plasma containers */
     int m_nplasmas = 0; /**< number of plasma containers */
