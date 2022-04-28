@@ -149,6 +149,8 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
     /** initial number of particles before ones are added through ionization */
     std::map<int,unsigned long> m_init_num_par;
+
+private:
     std::string m_name; /**< name of the species */
 };
 
