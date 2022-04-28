@@ -63,61 +63,37 @@ Fields::AllocData (
 
     int isl = WhichSlice::Next;
     if (explicit_solve) {
-        Comps[isl].emplace("jx_beam", N_Comps[isl]++);
-        Comps[isl].emplace("jy_beam", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
     } else {
-        Comps[isl].emplace("jx", N_Comps[isl]++);
-        Comps[isl].emplace("jy", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
     }
 
     isl = WhichSlice::This;
-    Comps[isl].emplace("ExmBy", N_Comps[isl]++);
-    Comps[isl].emplace("EypBx", N_Comps[isl]++);
-    Comps[isl].emplace("Ez", N_Comps[isl]++);
     // Bx and By adjacent for explicit solver
-    Comps[isl].emplace("Bx", N_Comps[isl]++);
-    Comps[isl].emplace("By", N_Comps[isl]++);
-    Comps[isl].emplace("Bz", N_Comps[isl]++);
-    Comps[isl].emplace("Psi", N_Comps[isl]++);
-    Comps[isl].emplace("jx", N_Comps[isl]++);
-    Comps[isl].emplace("jy", N_Comps[isl]++);
-    Comps[isl].emplace("jz", N_Comps[isl]++);
-    Comps[isl].emplace("rho", N_Comps[isl]++);
+    Comps[isl].multi_emplace(N_Comps[isl],
+        "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi", "jx", "jy", "jz", "rho");
     if (explicit_solve) {
-        Comps[isl].emplace("jx_beam", N_Comps[isl]++);
-        Comps[isl].emplace("jy_beam", N_Comps[isl]++);
-        Comps[isl].emplace("jz_beam", N_Comps[isl]++);
-        Comps[isl].emplace("rho_beam", N_Comps[isl]++);
-        Comps[isl].emplace("jxx", N_Comps[isl]++);
-        Comps[isl].emplace("jxy", N_Comps[isl]++);
-        Comps[isl].emplace("jyy", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl],
+            "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jxx", "jxy", "jyy");
     }
 
     isl = WhichSlice::Previous1;
     if (mesh_refinement) {
-        Comps[isl].emplace("Ez", N_Comps[isl]++);
-        Comps[isl].emplace("Bz", N_Comps[isl]++);
-        Comps[isl].emplace("Psi", N_Comps[isl]++);
-        Comps[isl].emplace("rho", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
     }
     if (explicit_solve) {
-        Comps[isl].emplace("jx_beam", N_Comps[isl]++);
-        Comps[isl].emplace("jy_beam", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
     } else {
-        Comps[isl].emplace("Bx", N_Comps[isl]++);
-        Comps[isl].emplace("By", N_Comps[isl]++);
-        Comps[isl].emplace("jx", N_Comps[isl]++);
-        Comps[isl].emplace("jy", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By", "jx", "jy");
     }
 
     isl = WhichSlice::Previous2;
     if (!explicit_solve) {
-        Comps[isl].emplace("Bx", N_Comps[isl]++);
-        Comps[isl].emplace("By", N_Comps[isl]++);
+        Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By");
     }
 
     isl = WhichSlice::RhoIons;
-    Comps[isl].emplace("rho", N_Comps[isl]++);
+    Comps[isl].multi_emplace(N_Comps[isl], "rho");
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(

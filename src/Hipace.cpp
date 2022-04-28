@@ -536,9 +536,6 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                                                 true, false, false, lev);
             }
 
-            amrex::MultiFab rho(m_fields.getSlices(lev, WhichSlice::This), amrex::make_alias,
-                                Comps[WhichSlice::This]["rho"], 1);
-
             if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
             m_multi_plasma.DepositCurrent(
                 m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);

@@ -37,6 +37,11 @@ struct assert_map : std::map<std::string, int> {
         }
         return at(str);
     }
+
+    template<class...Args>
+    void multi_emplace(int& n, Args...comps) {
+        (emplace(comps, n++),...);
+    }
 };
 
 /** \brief Map names and indices of each fields in each slice
