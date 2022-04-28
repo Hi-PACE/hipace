@@ -139,7 +139,9 @@ Hipace::Hipace () :
         solver == "explicit",
         "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
-
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        !(m_explicit && m_multi_plasma.m_nplasmas > 1),
+        "Ion motion with explicit solver is not implemented, need to use neutralize_background");
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
@@ -404,8 +406,6 @@ Hipace::Evolve ()
 #endif
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
-
-        if (m_explicit) m_multi_plasma.CheckDensity();
 
         ResetAllQuantities();
 
@@ -686,7 +686,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const bool use_laser = m_laser.m_use_laser;
 
     // transforming BxBy array to normalized units for use as initial guess
-    //m_fields.mult(pc.c/E0, lev, isl, "Bx", "By");
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
@@ -757,7 +756,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb =   dz_jyb;
                 const amrex::Real cez     =   ez(i,j,k);
                 const amrex::Real cbz     =   bz(i,j,k);
-                //const amrex::Real casq    =   use_laser ? a(i,j,k)*a(i,j,k) : 0._rt;
                 const amrex::Real casqdx  =   use_laser ?
                     ( a(i+1,j,k)*a(i+1,j,k) - a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
                     * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
@@ -769,12 +767,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
                 // to calculate nstar, only the plasma current density is needed
                 const amrex::Real nstar = cne - cjzp / pc.c;
-
-                /*
-                const amrex::Real nstar_gamma = 0.5_rt* (const_of_motion+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)
-                                                /(const_of_motion + cpsi);
-                */
 
                 const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) * (
                                 (-0.25_rt*casqdx*nstar)/(const_of_motion + cpsi)
@@ -887,7 +879,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
     }
 
     // converting BxBy to SI units, if applicable
-    //m_fields.mult(E0/pc.c, lev, isl, "Bx", "By");
     amrex::ParallelContext::pop();
 }
 
