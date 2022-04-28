@@ -671,9 +671,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
 
-    PlasmaParticleContainer& plasma = m_multi_plasma.m_all_plasmas[0];
-
     // getting the constant of motion for finite temperatures
+    const PlasmaParticleContainer& plasma = m_multi_plasma.m_all_plasmas[0];
     const amrex::RealVect u_std = m_multi_plasma.GetUStd();
     const amrex::Real const_of_motion = - plasma.m_mass * pc.c * pc.c / plasma.m_charge *
         sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
@@ -684,8 +683,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dz = Geom(lev).CellSize(Direction::z);
 
     const bool use_laser = m_laser.m_use_laser;
-
-    // transforming BxBy array to normalized units for use as initial guess
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
@@ -732,7 +729,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real dz_jyb = (prev_jyb(i,j,k)-next_jyb(i,j,k))/(2._rt*dz);
 
                 // Store (i,j,k) cell value in local variable.
-                // All quantities are converted to normalized units, if applicable
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and HiPACE++:
                 //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
@@ -756,6 +752,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb =   dz_jyb;
                 const amrex::Real cez     =   ez(i,j,k);
                 const amrex::Real cbz     =   bz(i,j,k);
+
+                // laser field is always in normalized units
                 const amrex::Real casqdx  =   use_laser ?
                     ( a(i+1,j,k)*a(i+1,j,k) - a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
                     * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
