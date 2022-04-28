@@ -140,9 +140,8 @@ Hipace::Hipace () :
         "hipace.bxby_solver must be predictor-corrector or explicit");
     if (solver == "explicit") m_explicit = true;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        !(m_explicit && !m_multi_plasma.AllSpeciesNeutralizeBackground()),
+        !(m_explicit && m_multi_plasma.m_nplasmas > 1),
         "Ion motion with explicit solver is not implemented, need to use neutralize_background");
-
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
@@ -408,8 +407,6 @@ Hipace::Evolve ()
 
         if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
-        if (m_explicit) m_multi_plasma.CheckDensity();
-
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
@@ -673,26 +670,19 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     // preparing conversion to normalized units, if applicable
     PhysConst pc = m_phys_const;
-    const amrex::Real n0 = m_multi_plasma.GetNominalDensity();
-    const amrex::Real omegap = std::sqrt(n0 * pc.q_e*pc.q_e/(pc.m_e*pc.ep0));
-    const amrex::Real kp = omegap/pc.c;
-    const amrex::Real kpinv = 1./kp;
-    const amrex::Real E0 = omegap * pc.m_e * pc.c / pc.q_e;
 
     // getting the constant of motion for finite temperatures
+    const PlasmaParticleContainer& plasma = m_multi_plasma.m_all_plasmas[0];
     const amrex::RealVect u_std = m_multi_plasma.GetUStd();
-    const amrex::Real const_of_motion = sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1]
-                                             + u_std[2]*u_std[2]);
+    const amrex::Real const_of_motion = - plasma.m_mass * pc.c * pc.c / plasma.m_charge *
+        sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
 
     // dx, dy, dz in normalized units
-    const amrex::Real dx = Geom(lev).CellSize(Direction::x)/kpinv;
-    const amrex::Real dy = Geom(lev).CellSize(Direction::y)/kpinv;
-    const amrex::Real dz = Geom(lev).CellSize(Direction::z)/kpinv;
+    const amrex::Real dx = Geom(lev).CellSize(Direction::x);
+    const amrex::Real dy = Geom(lev).CellSize(Direction::y);
+    const amrex::Real dz = Geom(lev).CellSize(Direction::z);
 
     const bool use_laser = m_laser.m_use_laser;
-
-    // transforming BxBy array to normalized units for use as initial guess
-    m_fields.mult(pc.c/E0, lev, isl, "Bx", "By");
 
     for ( amrex::MFIter mfi(Bz, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
@@ -739,82 +729,92 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real dz_jyb = (prev_jyb(i,j,k)-next_jyb(i,j,k))/(2._rt*dz);
 
                 // Store (i,j,k) cell value in local variable.
-                // All quantities are converted to normalized units, if applicable
                 // NOTE: a few -1 factors are added here, due to discrepancy in definitions between
                 // WAND-PIC and HiPACE++:
                 //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                const amrex::Real cne     = - rho(i,j,k) / n0 / pc.q_e ;
-                const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k)) / n0 / pc.q_e / pc.c;
-                const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k)) / n0 / pc.q_e / pc.c;
-                const amrex::Real cjyp    = - (jy(i,j,k) - jyb(i,j,k)) / n0 / pc.q_e / pc.c;
-                const amrex::Real cpsi    =   psi(i,j,k) * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cjxx    = - jxx(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cjxy    = - jxy(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cjyy    = - jyy(i,j,k) / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdx_jxx = - dx_jxx / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdx_jxy = - dx_jxy / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdx_jz  = - dx_jz  / n0 / pc.q_e / pc.c;
-                const amrex::Real cdx_psi =   dx_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cdy_jyy = - dy_jyy / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdy_jxy = - dy_jxy / n0 / pc.q_e / pc.c / pc.c;
-                const amrex::Real cdy_jz  = - dy_jz  / n0 / pc.q_e / pc.c ;
-                const amrex::Real cdy_psi =   dy_psi * pc.q_e / (pc.m_e * pc.c * pc.c);
-                const amrex::Real cdz_jxb =   dz_jxb / n0 / pc.q_e / pc.c;
-                const amrex::Real cdz_jyb =   dz_jyb / n0 / pc.q_e / pc.c;
-                const amrex::Real cez     =   ez(i,j,k) / E0;
-                const amrex::Real cbz     =   bz(i,j,k) * pc.c / E0;
-                const amrex::Real casq    =   use_laser ? a(i,j,k)*a(i,j,k) : 0._rt;
-                const amrex::Real casqdx  =   use_laser ? ( a(i+1,j,k)*a(i+1,j,k)
-                                                           -a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
-                                                        : 0._rt;
-                const amrex::Real casqdy  =   use_laser ? ( a(i,j+1,k)*a(i,j+1,k)
-                                                           -a(i,j-1,k)*a(i,j-1,k) )/(2._rt*dy)
-                                                        : 0._rt;
+                const amrex::Real cne     = - rho(i,j,k);
+                const amrex::Real cjzp    = - (jz(i,j,k) - jzb(i,j,k));
+                const amrex::Real cjxp    = - (jx(i,j,k) - jxb(i,j,k));
+                const amrex::Real cjyp    = - (jy(i,j,k) - jyb(i,j,k));
+                const amrex::Real cpsi    =   psi(i,j,k);
+                const amrex::Real cjxx    = - jxx(i,j,k);
+                const amrex::Real cjxy    = - jxy(i,j,k);
+                const amrex::Real cjyy    = - jyy(i,j,k);
+                const amrex::Real cdx_jxx = - dx_jxx;
+                const amrex::Real cdx_jxy = - dx_jxy;
+                const amrex::Real cdx_jz  = - dx_jz;
+                const amrex::Real cdx_psi =   dx_psi;
+                const amrex::Real cdy_jyy = - dy_jyy;
+                const amrex::Real cdy_jxy = - dy_jxy;
+                const amrex::Real cdy_jz  = - dy_jz;
+                const amrex::Real cdy_psi =   dy_psi;
+                const amrex::Real cdz_jxb =   dz_jxb;
+                const amrex::Real cdz_jyb =   dz_jyb;
+                const amrex::Real cez     =   ez(i,j,k);
+                const amrex::Real cbz     =   bz(i,j,k);
+
+                // laser field is always in normalized units
+                const amrex::Real casqdx  =   use_laser ?
+                    ( a(i+1,j,k)*a(i+1,j,k) - a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
+                    * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
+                    : 0._rt;
+                const amrex::Real casqdy  =   use_laser ?
+                    ( a(i,j+1,k)*a(i,j+1,k) - a(i,j-1,k)*a(i,j-1,k) )/(2._rt*dy)
+                    * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
+                    : 0._rt;
 
                 // to calculate nstar, only the plasma current density is needed
-                const amrex::Real nstar = cne - cjzp;
+                const amrex::Real nstar = cne - cjzp / pc.c;
 
-                const amrex::Real nstar_gamma = 0.5_rt* (const_of_motion+cpsi)*(cjxx + cjyy + nstar)
-                                                + 0.5_rt*nstar*(1._rt + 0.5_rt*casq)
-                                                /(const_of_motion + cpsi);
+                const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) * (
+                                (-0.25_rt*casqdx*nstar)/(const_of_motion + cpsi)
+                                + cne*cdx_psi * pc.c
+                                - cjxp*cez
+                                - cjxx*cdx_psi / pc.c
+                                - cjxy*cdy_psi / pc.c);
 
-                const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) *
-                                        ( (nstar_gamma*cdx_psi -0.25_rt*casqdx*nstar)
-                                        /(const_of_motion + cpsi)
-                                        - cjxp*cez - cjxx*cdx_psi - cjxy*cdy_psi);
-
-                const amrex::Real nstar_ay = 1._rt/(const_of_motion + cpsi) *
-                                        ( (nstar_gamma*cdy_psi -0.25_rt*casqdy*nstar)
-                                        /(const_of_motion+cpsi)
-                                        - cjyp*cez - cjxy*cdx_psi - cjyy*cdy_psi);
+                const amrex::Real nstar_ay = 1._rt/(const_of_motion + cpsi) * (
+                                (-0.25_rt*casqdy*nstar)/(const_of_motion + cpsi)
+                                + cne*cdy_psi * pc.c
+                                - cjyp*cez
+                                - cjxy*cdx_psi / pc.c
+                                - cjyy*cdy_psi / pc.c);
 
                 // Should only have 1 component, but not supported yet by the AMReX MG solver
                 for (int n = 0; n < ncomp_mult; ++n) {
-                    mult(i,j,k,n) = nstar / (const_of_motion + cpsi);
+                    mult(i,j,k,n) = nstar / (const_of_motion + cpsi) / pc.ep0;
                 }
 
                 // sy, to compute Bx
-                s(i,j,k,0) = + cbz * cjxp / (const_of_motion+cpsi) + nstar_ay - cdx_jxy - cdy_jyy + cdy_jz
-                             + cdz_jyb;
+                s(i,j,k,0) =   pc.mu0 * (
+                             + cbz * cjxp / (const_of_motion+cpsi) * pc.c
+                             + nstar_ay
+                             - cdx_jxy / pc.c
+                             - cdy_jyy / pc.c
+                             + cdy_jz
+                             + cdz_jyb);
                 // sx, to compute By
-                s(i,j,k,1) = - cbz * cjyp / (const_of_motion+cpsi) + nstar_ax - cdx_jxx - cdy_jxy + cdx_jz
-                             + cdz_jxb;
-                s(i,j,k,1) *= -1;
-
+                s(i,j,k,1) = - pc.mu0 * (
+                             - cbz * cjyp / (const_of_motion+cpsi) * pc.c
+                             + nstar_ax
+                             - cdx_jxx / pc.c
+                             - cdy_jxy / pc.c
+                             + cdx_jz
+                             + cdz_jxb);
             }
             );
     }
 
     // construct slice geometry in normalized units
     // Set the lo and hi of domain and probdomain in the z direction
-    amrex::RealBox tmp_probdom({AMREX_D_DECL(Geom(lev).ProbLo(Direction::x) / kpinv,
-                                             Geom(lev).ProbLo(Direction::y) / kpinv,
-                                             Geom(lev).ProbLo(Direction::z) / kpinv)},
-                               {AMREX_D_DECL(Geom(lev).ProbHi(Direction::x) / kpinv,
-                                             Geom(lev).ProbHi(Direction::y) / kpinv,
-                                             Geom(lev).ProbHi(Direction::z) / kpinv)});
+    amrex::RealBox tmp_probdom({AMREX_D_DECL(Geom(lev).ProbLo(Direction::x),
+                                             Geom(lev).ProbLo(Direction::y),
+                                             Geom(lev).ProbLo(Direction::z))},
+                               {AMREX_D_DECL(Geom(lev).ProbHi(Direction::x),
+                                             Geom(lev).ProbHi(Direction::y),
+                                             Geom(lev).ProbHi(Direction::z))});
     amrex::Box tmp_dom = Geom(lev).Domain();
-    const amrex::Real hi = Geom(lev).ProbHi(Direction::z) / kpinv;
+    const amrex::Real hi = Geom(lev).ProbHi(Direction::z);
     const amrex::Real lo = hi - dz;
     tmp_probdom.setLo(Direction::z, lo);
     tmp_probdom.setHi(Direction::z, hi);
@@ -877,7 +877,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
     }
 
     // converting BxBy to SI units, if applicable
-    m_fields.mult(E0/pc.c, lev, isl, "Bx", "By");
     amrex::ParallelContext::pop();
 }
 
