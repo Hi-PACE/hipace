@@ -61,6 +61,12 @@ Fields::AllocData (
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
     const bool mesh_refinement = Hipace::GetInstance().finestLevel() != 0;
 
+    // predictor-corrector:
+    // all beams and plasmas share rho jx jy jz
+    // explicit solver:
+    // beams share rho_beam jx_beam jy_beam jz_beam
+    // but all plasma species have separate rho jx jy jz jxx jxy jyy
+
     int isl = WhichSlice::Next;
     if (explicit_solve) {
         Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
@@ -79,6 +85,7 @@ Fields::AllocData (
 
     isl = WhichSlice::Previous1;
     if (mesh_refinement) {
+        // for interpolating boundary conditions to level 1
         Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
     }
     if (explicit_solve) {
@@ -451,6 +458,7 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
     const bool mesh_refinement = nlev != 1;
 
+    // only shift the slices that are allocated
     if (explicit_solve) {
         if (mesh_refinement) {
             shift(lev, WhichSlice::Previous1, WhichSlice::This,
@@ -727,6 +735,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
     // Add beam rho-Jz/c contribution to the RHS
+    // for predictor corrector the beam deposits directly to rho and jz 
     if (Hipace::m_do_beam_jz_minus_rho && Hipace::GetInstance().m_explicit) {
         LinCombination(m_source_nguard, getStagingArea(lev),
                        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),

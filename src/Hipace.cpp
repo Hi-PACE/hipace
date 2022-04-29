@@ -542,23 +542,14 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                 m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
                                                  m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
                                                  WhichSlice::Next);
-                // need to exchange jx jy jx_beam jy_beam
+                // need to exchange jx_beam jy_beam
                 m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
                     "jx_beam", "jy_beam");
             }
 
             m_fields.AddRhoIons(lev);
 
-            // need to exchange jx jy jz jx_beam jy_beam jz_beam rho
-            if (!m_fields.m_extended_solve) {
-                if (m_explicit) {
-                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                        "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
-                } else {
-                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                        "jx", "jy", "jz", "rho");
-                }
-            }
+            FillBoundaryChargeCurrents(lev);
 
             if (!m_do_beam_jz_minus_rho) {
                 m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
@@ -576,15 +567,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             if (m_explicit) m_fields.AddBeamCurrents(lev, WhichSlice::This);
 
-            if (!m_fields.m_extended_solve) {
-                if (m_explicit) {
-                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                        "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
-                } else {
-                    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                        "jx", "jy", "jz", "rho");
-                }
-            }
+            FillBoundaryChargeCurrents(lev);
 
             m_fields.SolvePoissonEz(Geom(), lev, islice);
             m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -631,6 +614,19 @@ Hipace::ResetAllQuantities ()
         m_multi_plasma.ResetParticles(lev, true);
         for (int islice=0; islice<WhichSlice::N; islice++) {
             m_fields.getSlices(lev, islice).setVal(0., m_fields.m_slices_nguards);
+        }
+    }
+}
+
+void
+Hipace::FillBoundaryChargeCurrents (int lev) {
+    if (!m_fields.m_extended_solve) {
+        if (m_explicit) {
+            m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
+                "jx", "jx_beam", "jy", "jy_beam", "jz", "jz_beam", "rho", "rho_beam");
+        } else {
+            m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
+                "jx", "jy", "jz", "rho");
         }
     }
 }

@@ -43,6 +43,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
         // Extract the fields currents
+        // Do not access the field if the kernel later does not deposit into it,
+        // the field might not be allocated. Use 0 as dummy component instead
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
         amrex::MultiFab jx(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jx"]  : 0, 1);
         amrex::MultiFab jy(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jy"]  : 0, 1);
