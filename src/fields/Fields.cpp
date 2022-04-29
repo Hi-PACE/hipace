@@ -735,7 +735,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
     // Add beam rho-Jz/c contribution to the RHS
-    // for predictor corrector the beam deposits directly to rho and jz 
+    // for predictor corrector the beam deposits directly to rho and jz
     if (Hipace::m_do_beam_jz_minus_rho && Hipace::GetInstance().m_explicit) {
         LinCombination(m_source_nguard, getStagingArea(lev),
                        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
