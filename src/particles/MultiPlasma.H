@@ -120,13 +120,6 @@ public:
     /** returns u_std of the plasma distribution */
     amrex::RealVect GetUStd () const;
 
-    /** Return the nominal density */
-    amrex::Real GetNominalDensity () const {return m_nominal_density;}
-
-    /** Check whether the on-axis density is close enough to the nominal density,
-     * to avoid machine-precision problems. */
-    void CheckDensity () const;
-
     /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
      *
      * The algorithm implemented is that of [Perez et al., Phys. Plasmas 19, 083104 (2012)]
@@ -142,15 +135,14 @@ public:
     /** Number of binary collisions */
     int m_ncollisions = 0;
 
-private:
-
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
+    int m_nplasmas = 0; /**< number of plasma containers */
+
+private:
     amrex::Vector<PlasmaBins> m_all_bins; /**< Logical tile bins for all plasma containers */
     amrex::Vector<std::string> m_names; /**< names of all plasma containers */
-    int m_nplasmas = 0; /**< number of plasma containers */
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
-    amrex::Real m_nominal_density; /**< Density to normalize quantities in the explicit solver */
 
     /** User-input names of the binary collisions to be used */
     std::vector<std::string> m_collision_names;

@@ -110,10 +110,10 @@ public:
      * TODO: for collisions, return the charge of the fully-ionized atom
      * (atomic number * elementary charge)
      */
-    amrex::Real GetCharge () const {return m_charge;};
+    amrex::Real GetCharge () const {return m_charge;}
 
     /** Returns mass of physical species */
-    amrex::Real GetMass () const {return m_mass;};
+    amrex::Real GetMass () const {return m_mass;}
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */

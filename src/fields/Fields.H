@@ -395,7 +395,7 @@ public:
         std::sort(c_idx.begin(), c_idx.end());
         int scomp = 0;
         int ncomp = 0;
-        for (int i=0; i < c_idx.size(); ++i) {
+        for (unsigned int i=0; i < c_idx.size(); ++i) {
             if (ncomp==0) {
                 scomp = c_idx[i];
                 ncomp = 1;

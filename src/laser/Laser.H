@@ -19,7 +19,7 @@ public:
     explicit Laser ()
     {
         ReadParameters();
-    };
+    }
 
     void ReadParameters ();
 
