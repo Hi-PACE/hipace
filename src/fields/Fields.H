@@ -176,13 +176,6 @@ public:
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev, bool inverse=false);
 
-    /** \brief Adds the beam currents jx_beam, jy_beam, jz_beam to the general currents jx, jy, jz
-     *
-     * \param[in] lev current level
-     * \param[in] which_slice current slice, either WhichSlice::This or WhichSlice::Next.
-     */
-    void AddBeamCurrents (const int lev, const int which_slice);
-
     /** \brief Set up boundary conditions before poisson solve
      * lev==0: leave at zero
      * lev!=0: interpolate boundaries from lev-1
@@ -423,6 +416,8 @@ private:
     bool m_do_dirichlet_poisson = true;
     /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
+    /** Postfix name of all charges and currents on This slice in the current simulation */
+    amrex::Vector<std::string> m_all_charge_currents_names;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Number of guard cells where ExmBy and EypBx are calculated */
@@ -431,6 +426,10 @@ private:
     amrex::IntVect m_source_nguard;
     /** If lev_0 should be solved with open boundary conditions */
     bool m_open_boundary = false;
+    /** If the explicit solver is being used */
+    bool m_explicit = false;
+    /** If any plasma species has a neutralizing background */
+    bool m_any_neutral_background = false;
 };
 
 #endif

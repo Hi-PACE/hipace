@@ -107,8 +107,8 @@ public:
     void DoFieldIonization (const int lev, const amrex::Geometry& geom, const Fields& fields);
 
     bool IonizationOn () const;
-    /** \brief whether all plasma species use a neutralizing background, e.g. no ion motion */
-    bool AllSpeciesNeutralizeBackground () const;
+    /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
+    bool AnySpeciesNeutralizeBackground () const;
 
     /** \brief sort particles of all containers by tile logically, and store results in m_all_bins
      *
@@ -119,6 +119,9 @@ public:
 
     /** returns u_std of the plasma distribution */
     amrex::RealVect GetUStd () const;
+
+    /** returns a Vector of names of the plasmas */
+    const amrex::Vector<std::string>& GetNames() {return m_names;}
 
     /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
      *

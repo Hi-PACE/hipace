@@ -38,6 +38,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
     const amrex::Real q = (which_slice == WhichSlice::RhoIons) ? -plasma.m_charge : plasma.m_charge;
     const bool can_ionize = plasma.m_can_ionize;
+    const bool explicit_solve = Hipace::GetInstance().m_explicit;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
@@ -46,13 +47,14 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
-        amrex::MultiFab jx(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jx"]  : 0, 1);
-        amrex::MultiFab jy(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jy"]  : 0, 1);
-        amrex::MultiFab jz(S,  amrex::make_alias, deposit_jz        ? Comps[which_slice]["jz"]  : 0, 1);
-        amrex::MultiFab rho(S, amrex::make_alias, deposit_rho       ? Comps[which_slice]["rho"] : 0, 1);
-        amrex::MultiFab jxx(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxx"] : 0, 1);
-        amrex::MultiFab jxy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxy"] : 0, 1);
-        amrex::MultiFab jyy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jyy"] : 0, 1);
+        const std::string plasma_str = explicit_solve && which_slice != WhichSlice::RhoIons ? "_" + plasma.m_name : "";
+        amrex::MultiFab jx(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jx" +plasma_str] : 0, 1);
+        amrex::MultiFab jy(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jy" +plasma_str] : 0, 1);
+        amrex::MultiFab jz(S,  amrex::make_alias, deposit_jz        ? Comps[which_slice]["jz" +plasma_str] : 0, 1);
+        amrex::MultiFab rho(S, amrex::make_alias, deposit_rho       ? Comps[which_slice]["rho"+plasma_str] : 0, 1);
+        amrex::MultiFab jxx(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxx"+plasma_str] : 0, 1);
+        amrex::MultiFab jxy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxy"+plasma_str] : 0, 1);
+        amrex::MultiFab jyy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jyy"+plasma_str] : 0, 1);
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
         // Extract FabArray for this box

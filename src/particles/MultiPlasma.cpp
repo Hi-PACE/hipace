@@ -24,6 +24,7 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");
         m_all_plasmas.emplace_back(PlasmaParticleContainer(amr_core, m_names[i]));
     }
 
@@ -146,13 +147,13 @@ MultiPlasma::IonizationOn () const
 }
 
 bool
-MultiPlasma::AllSpeciesNeutralizeBackground () const
+MultiPlasma::AnySpeciesNeutralizeBackground () const
 {
-    bool all_species_neutralize = true;
+    bool any_species_neutralize = false;
     for (auto& plasma : m_all_plasmas) {
-        if (!plasma.m_neutralize_background) all_species_neutralize = false;
+        if (plasma.m_neutralize_background) any_species_neutralize = true;
     }
-    return all_species_neutralize;
+    return any_species_neutralize;
 }
 
 void
