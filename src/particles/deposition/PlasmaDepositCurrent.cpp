@@ -43,14 +43,16 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
         // Extract the fields currents
+        // Do not access the field if the kernel later does not deposit into it,
+        // the field might not be allocated. Use 0 as dummy component instead
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
-        amrex::MultiFab jx(S, amrex::make_alias, Comps[which_slice]["jx"], 1);
-        amrex::MultiFab jy(S, amrex::make_alias, Comps[which_slice]["jy"], 1);
-        amrex::MultiFab jz(S, amrex::make_alias, Comps[which_slice]["jz"], 1);
-        amrex::MultiFab rho(S, amrex::make_alias, Comps[which_slice]["rho"], 1);
-        amrex::MultiFab jxx(S, amrex::make_alias, Comps[which_slice]["jxx"], 1);
-        amrex::MultiFab jxy(S, amrex::make_alias, Comps[which_slice]["jxy"], 1);
-        amrex::MultiFab jyy(S, amrex::make_alias, Comps[which_slice]["jyy"], 1);
+        amrex::MultiFab jx(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jx"]  : 0, 1);
+        amrex::MultiFab jy(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jy"]  : 0, 1);
+        amrex::MultiFab jz(S,  amrex::make_alias, deposit_jz        ? Comps[which_slice]["jz"]  : 0, 1);
+        amrex::MultiFab rho(S, amrex::make_alias, deposit_rho       ? Comps[which_slice]["rho"] : 0, 1);
+        amrex::MultiFab jxx(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxx"] : 0, 1);
+        amrex::MultiFab jxy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxy"] : 0, 1);
+        amrex::MultiFab jyy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jyy"] : 0, 1);
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
         // Extract FabArray for this box

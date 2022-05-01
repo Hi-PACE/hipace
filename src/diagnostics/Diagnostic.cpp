@@ -44,11 +44,19 @@ Diagnostic::Diagnostic (int nlev)
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_diag_coarsen[ilev].min() >= 1,
             "Coarsening ratio must be >= 1");
     }
+}
 
+void
+Diagnostic::Initialize (const int lev) {
+    if (lev!=0) return;
+
+    amrex::ParmParse ppd("diagnostic");
     queryWithParser(ppd, "field_data", m_comps_output);
-    const amrex::Vector<std::string> all_field_comps
-            {"ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam", "jz",
-             "jz_beam", "rho", "Psi"};
+    amrex::Vector<std::string> all_field_comps{};
+    all_field_comps.reserve(Comps[WhichSlice::This].size());
+    for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
+        all_field_comps.push_back(comp);
+    }
     if(m_comps_output.empty()) {
         m_comps_output = all_field_comps;
     }
@@ -62,10 +70,14 @@ Diagnostic::Diagnostic (int nlev)
                 m_comps_output.clear();
                 break;
             }
-            if(Comps[WhichSlice::This].count(comp_name) == 0 || comp_name == "N") {
-                amrex::Abort("Unknown field diagnostics component: " + comp_name + "\nmust be " +
-                "'all', 'none' or a subset of: ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam " +
-                "jz_beam rho Psi" );
+            if(Comps[WhichSlice::This].count(comp_name) == 0) {
+                std::stringstream error_str{};
+                error_str << "Unknown field diagnostics component: " << comp_name << "\nmust be "
+                    << "'all', 'none' or a subset of:";
+                for (auto& comp : all_field_comps) {
+                    error_str << " " << comp;
+                }
+                amrex::Abort(error_str.str());
             }
         }
     }
@@ -100,12 +112,16 @@ Diagnostic::Diagnostic (int nlev)
             }
         }
     }
+
+    m_initialized = true;
 }
 
 void
 Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
                             amrex::Geometry const& geom)
 {
+    AMREX_ALWAYS_ASSERT(m_initialized);
+
     if (m_include_ghost_cells) {
         local_box.grow(Fields::m_slices_nguards);
         domain.grow(Fields::m_slices_nguards);

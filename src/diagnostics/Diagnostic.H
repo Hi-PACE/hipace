@@ -25,6 +25,9 @@ public:
     /** \brief Constructor */
     explicit Diagnostic (int nlev);
 
+    /** \brief Determine which data to output */
+    void Initialize (const int lev);
+
     /** \brief return the main diagnostics multifab */
     amrex::Vector<amrex::FArrayBox>& getF () { return m_F; }
 
@@ -90,6 +93,7 @@ private:
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
+    bool m_initialized = false; /**< if this object is fully initialized */
     std::vector<bool> m_has_field; /**< if there is field output to write */
 };
 

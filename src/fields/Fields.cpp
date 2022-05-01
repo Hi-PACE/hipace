@@ -38,29 +38,77 @@ Fields::AllocData (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice_ba.size() == 1,
         "Parallel field solvers not supported yet");
 
-    if (m_extended_solve) {
-        // Need 1 extra guard cell transversally for transverse derivative
-        int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
-        m_slices_nguards = {nguards_xy, nguards_xy, 0};
-        // poisson solver same size as fields
-        m_poisson_nguards = m_slices_nguards;
-        // one cell less for transverse derivative
-        m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
-        // cut off anything near edge of charge/current deposition
-        m_source_nguard = -m_slices_nguards;
-    } else {
-        // Need 1 extra guard cell transversally for transverse derivative
-        int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-        m_slices_nguards = {nguards_xy, nguards_xy, 0};
-        // Poisson solver same size as domain, no ghost cells
-        m_poisson_nguards = {0, 0, 0};
-        m_exmby_eypbx_nguard = {0, 0, 0};
-        m_source_nguard = {0, 0, 0};
+    if (lev==0) {
+
+        if (m_extended_solve) {
+            // Need 1 extra guard cell transversally for transverse derivative
+            int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+            m_slices_nguards = {nguards_xy, nguards_xy, 0};
+            // poisson solver same size as fields
+            m_poisson_nguards = m_slices_nguards;
+            // one cell less for transverse derivative
+            m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
+            // cut off anything near edge of charge/current deposition
+            m_source_nguard = -m_slices_nguards;
+        } else {
+            // Need 1 extra guard cell transversally for transverse derivative
+            int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+            m_slices_nguards = {nguards_xy, nguards_xy, 0};
+            // Poisson solver same size as domain, no ghost cells
+            m_poisson_nguards = {0, 0, 0};
+            m_exmby_eypbx_nguard = {0, 0, 0};
+            m_source_nguard = {0, 0, 0};
+        }
+
+        const bool explicit_solve = Hipace::GetInstance().m_explicit;
+        const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
+
+        // predictor-corrector:
+        // all beams and plasmas share rho jx jy jz
+        // explicit solver:
+        // beams share rho_beam jx_beam jy_beam jz_beam
+        // but all plasma species have separate rho jx jy jz jxx jxy jyy
+
+        int isl = WhichSlice::Next;
+        if (explicit_solve) {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+        } else {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
+        }
+
+        isl = WhichSlice::This;
+        // Bx and By adjacent for explicit solver
+        Comps[isl].multi_emplace(N_Comps[isl],
+            "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi", "jx", "jy", "jz", "rho");
+        if (explicit_solve) {
+            Comps[isl].multi_emplace(N_Comps[isl],
+                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jxx", "jxy", "jyy");
+        }
+
+        isl = WhichSlice::Previous1;
+        if (mesh_refinement) {
+            // for interpolating boundary conditions to level 1
+            Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
+        }
+        if (explicit_solve) {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+        } else {
+            Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By", "jx", "jy");
+        }
+
+        isl = WhichSlice::Previous2;
+        if (!explicit_solve) {
+            Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By");
+        }
+
+        isl = WhichSlice::RhoIons;
+        Comps[isl].multi_emplace(N_Comps[isl], "rho");
+
     }
 
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
-            slice_ba, slice_dm, Comps[islice]["N"], m_slices_nguards,
+            slice_ba, slice_dm, N_Comps[islice], m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[lev][islice].setVal(0._rt, m_slices_nguards);
     }
@@ -411,10 +459,27 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         if (pos < patch_lo || pos > patch_hi) continue;
     }
 
-    shift(lev, WhichSlice::Previous2, WhichSlice::Previous1,
-        "Bx", "By");
-    shift(lev, WhichSlice::Previous1, WhichSlice::This,
-        "Ez", "Bx", "By", "Bz", "jx", "jx_beam", "jy", "jy_beam", "rho", "Psi");
+    const bool explicit_solve = Hipace::GetInstance().m_explicit;
+    const bool mesh_refinement = nlev != 1;
+
+    // only shift the slices that are allocated
+    if (explicit_solve) {
+        if (mesh_refinement) {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This,
+                "Ez", "Bz", "rho", "Psi", "jx_beam", "jy_beam");
+        } else {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
+        }
+    } else {
+        shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
+        if (mesh_refinement) {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This,
+                "Ez", "Bx", "By", "Bz", "jx", "jy", "rho", "Psi");
+        } else {
+            shift(lev, WhichSlice::Previous1, WhichSlice::This, "Bx", "By", "jx", "jy");
+        }
+    }
+
     }
 }
 
@@ -674,7 +739,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
                    1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
                    -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"));
     // Add beam rho-Jz/c contribution to the RHS
-    if (Hipace::m_do_beam_jz_minus_rho) {
+    // for predictor corrector the beam deposits directly to rho and jz
+    if (Hipace::m_do_beam_jz_minus_rho && Hipace::GetInstance().m_explicit) {
         LinCombination(m_source_nguard, getStagingArea(lev),
                        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
                        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
