@@ -38,76 +38,79 @@ Fields::AllocData (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice_ba.size() == 1,
         "Parallel field solvers not supported yet");
 
-    if (m_extended_solve) {
-        // Need 1 extra guard cell transversally for transverse derivative
-        int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
-        m_slices_nguards = {nguards_xy, nguards_xy, 0};
-        // poisson solver same size as fields
-        m_poisson_nguards = m_slices_nguards;
-        // one cell less for transverse derivative
-        m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
-        // cut off anything near edge of charge/current deposition
-        m_source_nguard = -m_slices_nguards;
-    } else {
-        // Need 1 extra guard cell transversally for transverse derivative
-        int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-        m_slices_nguards = {nguards_xy, nguards_xy, 0};
-        // Poisson solver same size as domain, no ghost cells
-        m_poisson_nguards = {0, 0, 0};
-        m_exmby_eypbx_nguard = {0, 0, 0};
-        m_source_nguard = {0, 0, 0};
-    }
+    if (lev==0) {
 
-    m_explicit = Hipace::GetInstance().m_explicit;
-    m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
-    const bool mesh_refinement = Hipace::GetInstance().finestLevel() != 0;
-
-    // predictor-corrector:
-    // all beams and plasmas share rho jx jy jz
-    // explicit solver:
-    // beams share rho_beam jx_beam jy_beam jz_beam
-    // but all plasma species have separate rho jx jy jz jxx jxy jyy
-
-    int isl = WhichSlice::Next;
-    if (m_explicit) {
-        Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
-    } else {
-        Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
-    }
-
-    isl = WhichSlice::This;
-    // Bx and By adjacent for explicit solver
-    Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi");
-    if (m_explicit) {
-        Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam", "jz_beam", "rho_beam");
-        for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-            Comps[isl].multi_emplace(N_Comps[isl],
-                "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-                "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
+        if (m_extended_solve) {
+            // Need 1 extra guard cell transversally for transverse derivative
+            int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+            m_slices_nguards = {nguards_xy, nguards_xy, 0};
+            // poisson solver same size as fields
+            m_poisson_nguards = m_slices_nguards;
+            // one cell less for transverse derivative
+            m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
+            // cut off anything near edge of charge/current deposition
+            m_source_nguard = -m_slices_nguards;
+        } else {
+            // Need 1 extra guard cell transversally for transverse derivative
+            int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+            m_slices_nguards = {nguards_xy, nguards_xy, 0};
+            // Poisson solver same size as domain, no ghost cells
+            m_poisson_nguards = {0, 0, 0};
+            m_exmby_eypbx_nguard = {0, 0, 0};
+            m_source_nguard = {0, 0, 0};
         }
-    } else {
-        Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy", "jz", "rho");
-    }
 
-    isl = WhichSlice::Previous1;
-    if (mesh_refinement) {
-        // for interpolating boundary conditions to level 1
-        Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
-    }
-    if (m_explicit) {
-        Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
-    } else {
-        Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By", "jx", "jy");
-    }
+        m_explicit = Hipace::GetInstance().m_explicit;
+        m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
+        const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
 
-    isl = WhichSlice::Previous2;
-    if (!m_explicit) {
-        Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By");
-    }
+        // predictor-corrector:
+        // all beams and plasmas share rho jx jy jz
+        // explicit solver:
+        // beams share rho_beam jx_beam jy_beam jz_beam
+        // but all plasma species have separate rho jx jy jz jxx jxy jyy
 
-    isl = WhichSlice::RhoIons;
-    if (m_any_neutral_background) {
-        Comps[isl].multi_emplace(N_Comps[isl], "rho");
+        int isl = WhichSlice::Next;
+        if (m_explicit) {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+        } else {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
+        }
+
+        isl = WhichSlice::This;
+        // Bx and By adjacent for explicit solver
+        Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi");
+        if (m_explicit) {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+            for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+                Comps[isl].multi_emplace(N_Comps[isl],
+                    "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
+                    "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
+            }
+        } else {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy", "jz", "rho");
+        }
+
+        isl = WhichSlice::Previous1;
+        if (mesh_refinement) {
+            // for interpolating boundary conditions to level 1
+            Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
+        }
+        if (m_explicit) {
+            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+        } else {
+            Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By", "jx", "jy");
+        }
+
+        isl = WhichSlice::Previous2;
+        if (!m_explicit) {
+            Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By");
+        }
+
+        isl = WhichSlice::RhoIons;
+        if (m_any_neutral_background) {
+            Comps[isl].multi_emplace(N_Comps[isl], "rho");
+        }
     }
 
     // set up m_all_charge_currents_names

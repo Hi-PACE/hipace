@@ -188,9 +188,9 @@ void
 MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
 {
     HIPACE_PROFILE("MultiPlasma::doCoulombCollision");
-    AMREX_ALWAYS_ASSERT(lev == 0);
     for (int i = 0; i < m_ncollisions; ++i)
     {
+        AMREX_ALWAYS_ASSERT(lev == 0);
         auto& species1 = m_all_plasmas[ m_all_collisions[i].m_species1_index ];
         auto& species2 = m_all_plasmas[ m_all_collisions[i].m_species2_index ];
 
