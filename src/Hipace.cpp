@@ -40,6 +40,7 @@ Hipace* Hipace::m_instance = nullptr;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
+amrex::Real Hipace::m_max_time = std::numeric_limits<amrex::Real>::infinity();
 amrex::Real Hipace::m_physical_time = 0.0;
 amrex::Real Hipace::m_initial_time = 0.0;
 int Hipace::m_verbose = 0;
@@ -105,6 +106,7 @@ Hipace::Hipace () :
     std::string str_dt {""};
     queryWithParser(pph, "dt", str_dt);
     if (str_dt != "adaptive") queryWithParser(pph, "dt", m_dt);
+    queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     queryWithParser(pph, "numprocs_x", m_numprocs_x);
     queryWithParser(pph, "numprocs_y", m_numprocs_y);
@@ -175,8 +177,12 @@ Hipace::Hipace () :
 Hipace::~Hipace ()
 {
 #ifdef AMREX_USE_MPI
-    NotifyFinish();
-    NotifyFinish(0, true);
+    if (m_physical_time < m_max_time) {
+        NotifyFinish();
+        NotifyFinish(0, true);
+    } else {
+        NotifyFinish(0, false, true); // finish only time sends
+    }
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
@@ -278,7 +284,8 @@ Hipace::InitData ()
     constexpr int lev = 0;
     m_initial_time = m_multi_beam.InitData(geom[lev]);
     m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
-    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
+    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
+                                   m_max_time, m_physical_time);
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
     m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
@@ -403,10 +410,12 @@ Hipace::Evolve ()
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
+        if (m_physical_time <= m_max_time) {
+            m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
+        }
 #endif
 
-        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
+        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" at time = "<<m_physical_time<< " with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities();
 
@@ -420,6 +429,12 @@ Hipace::Evolve ()
         for (int it = n_boxes-1; it >= 0; --it)
         {
             Wait(step, it);
+            if (m_physical_time >= m_max_time) {
+                Notify(step, it);
+                if (m_physical_time > m_max_time) break;
+            }
+            // adjust time step to reach max_time
+            m_dt = std::min(m_dt, m_max_time - m_physical_time);
 
             m_box_sorters.clear();
 
@@ -457,8 +472,13 @@ Hipace::Evolve ()
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
 
-            m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
-                                           it, m_box_sorters, false);
+            if (m_physical_time < m_max_time) {
+                m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
+                                               m_max_time, m_physical_time, it, m_box_sorters, false);
+            } else {
+                m_dt = 2.*m_max_time;
+            }
+
 
             // averaging predictor corrector loop diagnostics
             m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
@@ -1052,6 +1072,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
                  (m_rank_z+1)%m_numprocs_z, tcomm_z_tag, m_comm_z, &status);
     }
 
+    if (m_physical_time > m_max_time) return;
+
     const int nbeams = m_multi_beam.get_nbeams();
     // 1 element per beam species, and 1 for
     // the index of leftmost box with beam particles.
@@ -1165,8 +1187,8 @@ Hipace::Notify (const int step, const int it,
 #ifdef AMREX_USE_MPI
     constexpr int lev = 0;
 
-    NotifyFinish(it, only_ghost); // finish the previous send
-
+    const bool only_time = m_physical_time >= m_max_time;
+    NotifyFinish(it, only_ghost, only_time); // finish the previous send
     const int nbeams = m_multi_beam.get_nbeams();
     const int nint = nbeams + 1;
 
@@ -1189,6 +1211,8 @@ Hipace::Notify (const int step, const int it,
         MPI_Isend(&m_tsend_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, tcomm_z_tag, m_comm_z, &m_tsend_request);
     }
+
+    if (only_time) return;
 
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
     if (it < m_leftmost_box_snd && it < m_numprocs_z - 1 && m_skip_empty_comms){
@@ -1306,7 +1330,7 @@ Hipace::Notify (const int step, const int it,
 }
 
 void
-Hipace::NotifyFinish (const int it, bool only_ghost)
+Hipace::NotifyFinish (const int it, bool only_ghost, bool only_time)
 {
 #ifdef AMREX_USE_MPI
     if (only_ghost) {
@@ -1329,6 +1353,7 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
                 MPI_Wait(&m_tsend_request, &status);
                 m_tsend_buffer = m_initial_time - 1.;
             }
+            if (only_time) return;
         }
 
         if (m_np_snd.size() > 0) {
