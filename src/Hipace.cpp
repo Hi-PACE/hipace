@@ -284,8 +284,7 @@ Hipace::InitData ()
     constexpr int lev = 0;
     m_initial_time = m_multi_beam.InitData(geom[lev]);
     m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
-    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
-                                   m_max_time, m_physical_time);
+    m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity());
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
     m_adaptive_time_step.NotifyTimeStep(m_dt, m_comm_z);
@@ -415,8 +414,6 @@ Hipace::Evolve ()
         }
 #endif
 
-        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" at time = "<<m_physical_time<< " with dt = "<<m_dt<<'\n';
-
         ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
@@ -430,11 +427,14 @@ Hipace::Evolve ()
         {
             Wait(step, it);
             if (m_physical_time >= m_max_time) {
-                Notify(step, it);
+                Notify(step, it); // just send signal to finish simulation
                 if (m_physical_time > m_max_time) break;
             }
             // adjust time step to reach max_time
             m_dt = std::min(m_dt, m_max_time - m_physical_time);
+
+            if (m_verbose>=1 && it == n_boxes-1 ) std::cout<<"Rank "<<rank<<" started  step "<<step<<" at time = "
+                                       <<m_physical_time<< " with dt = "<<m_dt<<'\n';
 
             m_box_sorters.clear();
 
@@ -474,7 +474,7 @@ Hipace::Evolve ()
 
             if (m_physical_time < m_max_time) {
                 m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
-                                               m_max_time, m_physical_time, it, m_box_sorters, false);
+                                               it, m_box_sorters, false);
             } else {
                 m_dt = 2.*m_max_time;
             }

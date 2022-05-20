@@ -47,15 +47,12 @@ public:
      * \param[in,out] dt the time step
      * \param[in] beams multibeam containing all beams
      * \param[in] plasma_density maximum plasma density
-     * \param[in] max_time maximum time of the simulation
-     * \param[in] phys_time physical time at the current time step
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] initial whether to calculate the initial dt
      */
     void
-    Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density, amrex::Real max_time,
-               amrex::Real phys_time, const int it=0,
+    Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density, const int it=0,
                const amrex::Vector<BoxSorter>& a_box_sorter_vec={}, const bool initial=true);
 
 };

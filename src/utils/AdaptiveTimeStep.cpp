@@ -63,7 +63,6 @@ AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
 
 void
 AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density,
-                             amrex::Real max_time, amrex::Real phys_time,
                              const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                              const bool initial)
 {
@@ -169,9 +168,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         }
 
         /* set the new time step */
-        dt = std::min(new_dt, max_time - phys_time);
-        if (std::abs(dt) < std::numeric_limits<amrex::Real>::epsilon()) {
-            dt = 2.*max_time;
-        }
+        dt = new_dt;
+
     }
 }
