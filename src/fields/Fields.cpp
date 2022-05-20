@@ -123,6 +123,12 @@ Fields::AllocData (
         }
     }
 
+    // warning because the field output for rho might be confusing
+    if (m_explicit && m_any_neutral_background && Hipace::GetInstance().m_multi_plasma.m_nplasmas > 1) {
+        amrex::Print() << "WARNING: The neutralizing background of all plasma species combined will"
+            << " be added to rho_" << Hipace::GetInstance().m_multi_plasma.GetNames()[0] << "\n";
+    }
+
     // allocate memory for fields
     for (int islice=0; islice<WhichSlice::N; islice++) {
         m_slices[lev][islice].define(
