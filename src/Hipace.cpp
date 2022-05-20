@@ -433,8 +433,14 @@ Hipace::Evolve ()
             // adjust time step to reach max_time
             m_dt = std::min(m_dt, m_max_time - m_physical_time);
 
-            if (m_verbose>=1 && it == n_boxes-1 ) std::cout<<"Rank "<<rank<<" started  step "<<step<<" at time = "
-                                       <<m_physical_time<< " with dt = "<<m_dt<<'\n';
+#ifdef HIPACE_USE_OPENPMD
+            if (m_physical_time == m_max_time && it == n_boxes-1) { // init diagnostic if max_time
+                m_openpmd_writer.InitDiagnostics(step, m_output_period, step, finestLevel()+1);
+            }
+#endif
+
+            if (m_verbose>=1 && it==n_boxes-1) std::cout<<"Rank "<<rank<<" started  step "<<step
+                                    <<" at time = "<<m_physical_time<< " with dt = "<<m_dt<<'\n';
 
             m_box_sorters.clear();
 
@@ -1425,7 +1431,8 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 
     // Dump every m_output_period steps and after last step
     if (m_output_period < 0 ||
-        (!(output_step == m_max_step) && output_step % m_output_period != 0) ) return;
+        (!(m_physical_time == m_max_time) && !(output_step == m_max_step)
+         && output_step % m_output_period != 0 ) ) return;
 
     // assumption: same order as in struct enum Field Comps
     const amrex::Vector< std::string > varnames = getDiagComps();
