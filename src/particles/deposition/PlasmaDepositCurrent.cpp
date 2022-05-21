@@ -47,7 +47,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
         amrex::MultiFab& S = fields.getSlices(lev, which_slice);
-        const std::string plasma_str = explicit_solve && which_slice != WhichSlice::RhoIons ? "_" + plasma.m_name : "";
+        const std::string plasma_str = explicit_solve && which_slice != WhichSlice::RhoIons ? "_" + plasma.GetName() : "";
         amrex::MultiFab jx(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jx" +plasma_str] : 0, 1);
         amrex::MultiFab jy(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jy" +plasma_str] : 0, 1);
         amrex::MultiFab jz(S,  amrex::make_alias, deposit_jz        ? Comps[which_slice]["jz" +plasma_str] : 0, 1);

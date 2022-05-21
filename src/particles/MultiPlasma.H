@@ -121,7 +121,7 @@ public:
     amrex::RealVect GetUStd () const;
 
     /** returns a Vector of names of the plasmas */
-    const amrex::Vector<std::string>& GetNames() {return m_names;}
+    const amrex::Vector<std::string>& GetNames() const {return m_names;}
 
     /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
      *

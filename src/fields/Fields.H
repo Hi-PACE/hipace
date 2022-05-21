@@ -416,7 +416,7 @@ private:
     bool m_do_dirichlet_poisson = true;
     /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
-    /** Postfix name of all charges and currents on This slice in the current simulation */
+    /** Postfix name of all charges and currents from beam + plasmas on this slice */
     amrex::Vector<std::string> m_all_charge_currents_names;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;

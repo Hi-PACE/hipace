@@ -680,7 +680,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
         amrex::Array4<amrex::Real> const mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const s = S.array(mfi);
 
-        // calculate contribution to Sx and Sy by all beams (same as with PC solver)
+        // FIRST: calculate contribution to Sx and Sy by all beams (same as with PC solver)
         const auto next_jxb = nslicemf.array(mfi, Comps[nsl]["jx_beam"]);
         const auto next_jyb = nslicemf.array(mfi, Comps[nsl]["jy_beam"]);
         const auto jzb = slicemf.array(mfi, Comps[isl]["jz_beam"]);
@@ -716,7 +716,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
         const auto ez  = slicemf.array(mfi, Comps[isl]["Ez"]);
         const auto a = use_laser ? A_mf.array(mfi) : amrex::Array4<const amrex::Real>();
 
-        // calculate contribution to Mult, Sx and Sy for each plasma separately
+        // SECOND: calculate contribution to Mult, Sx and Sy for each plasma separately
         for (const PlasmaParticleContainer& plasma : m_multi_plasma.m_all_plasmas) {
 
             // getting the constant of motion for finite temperatures
@@ -724,7 +724,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
             const amrex::Real const_of_motion = - plasma.m_mass * pc.c * pc.c / plasma.m_charge *
                 sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
 
-            const std::string plasma_str = "_" + plasma.m_name;
+            const std::string plasma_str = "_" + plasma.GetName();
             const auto rho = slicemf.array(mfi, Comps[isl]["rho"+plasma_str]);
             const auto jx  = slicemf.array(mfi, Comps[isl]["jx" +plasma_str]);
             const auto jy  = slicemf.array(mfi, Comps[isl]["jy" +plasma_str]);

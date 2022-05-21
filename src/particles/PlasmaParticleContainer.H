@@ -115,6 +115,9 @@ public:
     /** Returns mass of physical species */
     amrex::Real GetMass () const {return m_mass;}
 
+    /** Returns name of the plasma */
+    const std::string& GetName () const {return m_name;}
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     bool m_use_density_table; /**< if a density value table was specified */
@@ -149,6 +152,8 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
     /** initial number of particles before ones are added through ionization */
     std::map<int,unsigned long> m_init_num_par;
+
+private:
     std::string m_name; /**< name of the species */
 };
 
