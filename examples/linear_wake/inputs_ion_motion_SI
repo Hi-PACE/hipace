@@ -1,0 +1,61 @@
+amr.n_cell = 64 64 200
+
+my_constants.kp_inv = 10.e-6
+my_constants.kp = 1. / kp_inv
+my_constants.wp = clight * kp
+my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
+
+random_seed = 1
+
+hipace.bxby_solver = explicit
+hipace.normalized_units = 0
+hipace.predcorr_B_mixing_factor = 0.0635
+hipace.predcorr_max_iterations = 7
+hipace.predcorr_B_error_tolerance = 0.0001
+
+amr.blocking_factor = 2
+amr.max_level = 0
+
+max_step = 0
+hipace.output_period = 1
+
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
+hipace.depos_order_xy = 2
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = true  true  false  # Is periodic?
+geometry.prob_lo     = -8*kp_inv   -8*kp_inv   -6*kp_inv
+geometry.prob_hi     =  8*kp_inv    8*kp_inv    6*kp_inv
+
+beams.names = beam
+beam.injection_type = fixed_weight
+beam.do_symmetrize = 0
+beam.num_particles = 1000000
+beam.density = ne
+beam.mass = m_e
+beam.charge = -q_e
+beam.u_mean = 10 20 100
+beam.u_std = 0 0 0
+beam.profile = gaussian
+beam.position_mean = 0.25*kp_inv 0 2*kp_inv
+beam.position_std = 0.4*kp_inv 0.4*kp_inv 1.41*kp_inv
+beam.dy_per_dzeta = 0.2
+
+plasmas.sort_bin_size = 8
+plasmas.names = elec ions
+
+elec.mass = m_e
+elec.charge = -q_e
+elec.neutralize_background = false
+"elec.density(x,y,z)" = ne
+elec.ppc = 1 1
+
+ions.mass = 5*m_e    # for testing
+ions.charge = q_e
+ions.neutralize_background = false
+"ions.density(x,y,z)" = ne
+ions.ppc = 1 1
+
+diagnostic.diag_type = xyz
