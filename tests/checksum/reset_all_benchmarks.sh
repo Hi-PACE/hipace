@@ -148,6 +148,19 @@ fi
 #                     --test-name hosing.2Rank
 #fi
 
+
+#ion_motion.SI.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "ion_motion.SI.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R ion_motion.SI.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/ion_motion.SI.1Rank/e \
+                     --test-name ion_motion.SI.1Rank
+fi
+
 #ionization.2Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "ionization.2Rank" ]]
 then
