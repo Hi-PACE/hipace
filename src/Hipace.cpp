@@ -430,6 +430,7 @@ Hipace::Evolve ()
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
+            // TODO WriteDiagnostics(step, it, OpenPMDWriterCallType::laser);
 
             m_multi_beam.StoreNRealParticles();
             // Copy particles in box it-1 in the ghost buffer.
@@ -491,7 +492,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    // setup laser
+    // Get this laser slice from the 3D array
     m_laser.Copy(islice_coarse, false);
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
@@ -599,6 +600,10 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
+
+        // TODO Push laser envelope
+        m_laser.AdvanceSlice(m_fields);
+        m_laser.Copy(islice_coarse, true);
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();

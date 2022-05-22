@@ -1,19 +1,21 @@
 #ifndef LASER_H_
 #define LASER_H_
 
+#include "fields/Fields.H"
+
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
 #include <AMReX_AmrCore.H>
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
-    enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, N };
+    enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, NextTime, N };
 };
 
 class Laser
 {
 private:
-        static constexpr int m_nslices = 5;
+        static constexpr int m_nslices = 6;
 public:
     /** Constructor */
     explicit Laser ()
@@ -49,7 +51,9 @@ public:
      * \param[in] isl slice index, referring to the 3D slice
      * \param[in] to3d if true, copy from 2D slice to 3D array. Otherwise, the other way.
      */
-    void Copy (int isl, bool to3d=true);
+    void Copy (int isl, bool to3d);
+
+    void AdvanceSlice (const Fields& fields);
 
     void PrepareLaserSlice (const amrex::Geometry& geom, const int islice);
 
