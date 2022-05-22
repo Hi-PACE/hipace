@@ -162,6 +162,24 @@ public:
     void SolveOneSlice (int islice_coarse, const int ibox,
                         const amrex::Vector<amrex::Vector<BeamBins>>& bins);
 
+    /** \brief Full evolve on 1 slice with explicit solver
+     *
+     * \param[in] islice_coarse slice number
+     * \param[in] ibox index of the current box to be calculated
+     * \param[in] bins an amrex::DenseBins object that orders particles by slice
+     */
+    void ExplicitSolveOneSlice (int islice_coarse, const int ibox,
+                                const amrex::Vector<amrex::Vector<BeamBins>>& bins);
+
+    /** \brief Full evolve on 1 slice with predictor-corrector solver
+     *
+     * \param[in] islice_coarse slice number
+     * \param[in] ibox index of the current box to be calculated
+     * \param[in] bins an amrex::DenseBins object that orders particles by slice
+     */
+    void PredictorCorrectorSolveOneSlice (int islice_coarse, const int ibox,
+                                          const amrex::Vector<amrex::Vector<BeamBins>>& bins);
+
     /** \brief Reset plasma and field slice quantities to initial value.
      *
      * Typically done at the beginning of each iteration.
