@@ -224,7 +224,10 @@ public:
     MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
     /** status of the physical time send request */
     MPI_Request m_tsend_request = MPI_REQUEST_NULL;
-
+    // Laser buffer
+    amrex::Real* m_lsend_buffer = nullptr;
+    // status of laser send
+    MPI_Request m_lsend_request = MPI_REQUEST_NULL;
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
     /** Whether to use normalized units */

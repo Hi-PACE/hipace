@@ -32,6 +32,7 @@ namespace {
     constexpr int ncomm_z_tag_ghost = 1003;
     constexpr int pcomm_z_tag_ghost = 1004;
     constexpr int tcomm_z_tag = 1005;
+    constexpr int lcomm_z_tag = 1006;
 }
 #endif
 
@@ -449,6 +450,7 @@ Hipace::Evolve ()
             if (it<m_numprocs_z-1) Notify(step, it, bins[lev], true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
+                amrex::AllPrint()<<"isl "<<isl<<'\n';
                 SolveOneSlice(isl, it, bins);
             };
             // Receive ghost slice
@@ -1070,7 +1072,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     const int nbeams = m_multi_beam.get_nbeams();
     // 1 element per beam species, and 1 for
     // the index of leftmost box with beam particles.
-    const int nint = nbeams + 1;
+    const int nint = nbeams + 2;
     amrex::Vector<int> np_rcv(nint, 0);
     if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
         if (m_verbose >= 2){
@@ -1088,12 +1090,13 @@ Hipace::Wait (const int step, int it, bool only_ghost)
                  amrex::ParallelDescriptor::Mpi_typemap<int>::type(),
                  (m_rank_z+1)%m_numprocs_z, loc_ncomm_z_tag, m_comm_z, &status);
     }
+    const int nz_laser = np_rcv[nbeams+1];
     if (!only_ghost) m_leftmost_box_rcv = std::min(np_rcv[nbeams], m_leftmost_box_rcv);
 
     // Receive beam particles.
     {
         const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.begin()+nbeams, 0);
-        if (np_total == 0) return;
+        if (np_total == 0 && !m_laser.m_use_laser) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
@@ -1168,6 +1171,32 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
+    // Receive laser
+    {
+        if (!m_laser.m_use_laser) return;
+        AMREX_ALWAYS_ASSERT(nz_laser > 0);
+        amrex::FArrayBox& laser_fab = m_laser.getFAB();
+        amrex::Array4<amrex::Real> laser_arr = laser_fab.array();
+        const amrex::Box& bx = laser_fab.box(); // does not include ghost cells
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( bx.bigEnd(2)-bx.smallEnd(2)+1 == nz_laser,
+                                          "Laser requires all sub-domains to be the same size, i.e., nz%nrank=0");
+        const std::size_t nreals = bx.numPts()*laser_fab.nComp();
+        auto lrecv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            (sizeof(amrex::Real)*nreals);
+        auto const buf = amrex::makeArray4(lrecv_buffer, bx, laser_fab.nComp());
+        MPI_Status lstatus;
+        MPI_Recv(lrecv_buffer, nreals,
+                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                 (m_rank_z+1)%m_numprocs_z, lcomm_z_tag, m_comm_z, &lstatus);
+        amrex::AllPrint()<<"rank "<<m_rank_z<<": recv\n";
+        amrex::ParallelFor
+            (bx, laser_fab.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                laser_arr(i,j,k,n) = buf(i,j,k,n);
+            });
+        amrex::The_Pinned_Arena()->free(lrecv_buffer);
+        amrex::AllPrint()<<"rank "<<m_rank_z<<": recv, "<<laser_fab.max()<<' '<<laser_fab.min()<<'\n';
+    }
 #endif
 }
 
@@ -1182,8 +1211,13 @@ Hipace::Notify (const int step, const int it,
 
     NotifyFinish(it, only_ghost); // finish the previous send
 
+    int nz_laser = 0;
+    if (m_laser.m_use_laser){
+        const amrex::Box& laser_bx = m_laser.getFAB().box();
+        nz_laser = laser_bx.bigEnd(2) - laser_bx.smallEnd(2) + 1;
+    }
     const int nbeams = m_multi_beam.get_nbeams();
-    const int nint = nbeams + 1;
+    const int nint = nbeams + 2;
 
     // last step does not need to send anything, but needs to resize to remove slipped particles
     if (step == m_max_step)
@@ -1225,6 +1259,7 @@ Hipace::Notify (const int step, const int it,
             : m_box_sorters[ibeam].boxCountsPtr()[it];
     }
     np_snd[nbeams] = m_leftmost_box_snd;
+    np_snd[nbeams+1] = nz_laser;
 
     // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
     const int loc_ncomm_z_tag = only_ghost ? ncomm_z_tag_ghost : ncomm_z_tag;
@@ -1235,7 +1270,7 @@ Hipace::Notify (const int step, const int it,
     // Send beam particles. Currently only one tile.
     {
         const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.begin()+nbeams, 0);
-        if (np_total == 0) return;
+        if (np_total == 0 && !m_laser.m_use_laser) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
@@ -1317,6 +1352,29 @@ Hipace::Notify (const int step, const int it,
         MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, loc_psend_request);
     }
+
+    // Send laser data
+    {
+        if (!m_laser.m_use_laser) return;
+        const amrex::FArrayBox& laser_fab = m_laser.getFAB();
+        // Note that there is only one local Box in slice multifab's boxarray.
+        // const int box_index = laser_fab.IndexArray();
+        amrex::Array4<amrex::Real const> const& laser_arr = laser_fab.array();
+        const amrex::Box& lbx = laser_fab.box(); // does not include ghost cells
+        const std::size_t nreals = lbx.numPts()*laser_fab.nComp();
+        m_lsend_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            (sizeof(amrex::Real)*nreals);
+        auto const buf = amrex::makeArray4(m_lsend_buffer, lbx, laser_fab.nComp());
+        amrex::ParallelFor
+            (lbx, laser_fab.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                buf(i,j,k,n) = laser_arr(i,j,k,n);
+            });
+        MPI_Isend(m_lsend_buffer, nreals,
+                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                  (m_rank_z-1+m_numprocs_z)%m_numprocs_z, lcomm_z_tag, m_comm_z, &m_lsend_request);
+        amrex::AllPrint()<<"rank "<<m_rank_z<<": send, "<<laser_fab.max()<<' '<<laser_fab.min()<<'\n';
+    }
 #endif
 }
 
@@ -1345,7 +1403,6 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
                 m_tsend_buffer = m_initial_time - 1.;
             }
         }
-
         if (m_np_snd.size() > 0) {
             MPI_Status status;
             MPI_Wait(&m_nsend_request, &status);
@@ -1356,6 +1413,12 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
             MPI_Wait(&m_psend_request, &status);
             amrex::The_Pinned_Arena()->free(m_psend_buffer);
             m_psend_buffer = nullptr;
+        }
+        if (m_lsend_buffer) {
+            MPI_Status status;
+            MPI_Wait(&m_lsend_request, &status);
+            amrex::The_Pinned_Arena()->free(m_lsend_buffer);
+            m_lsend_buffer = nullptr;
         }
     }
 #endif

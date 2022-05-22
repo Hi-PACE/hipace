@@ -31,6 +31,8 @@ public:
     /** get function for the 2D slices (const version)
      * \param[in] islice slice index */
     const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
+    const amrex::FArrayBox& getFAB () const {return m_F;};
+    amrex::FArrayBox& getFAB () {return m_F;};
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile
      * \return physical time at which the simulation will start

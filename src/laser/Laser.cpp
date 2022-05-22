@@ -52,11 +52,13 @@ void
 Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 {
     if (!m_use_laser) return;
-    if (step > 0) return;
-    HIPACE_PROFILE("Laser::PrepareLaserSlice()");
+    HIPACE_PROFILE("Laser::Init3DEnvelope()");
     bx.grow(m_slices_nguards);
     // Allocate the 3D field on this box
     m_F.resize(bx, m_nfields_3d, amrex::The_Pinned_Arena());
+    amrex::AllPrint()<<"rank "<<amrex::ParallelDescriptor::MyProc()<<" "<<bx<<'\n';
+
+    if (step > 0) return;
 
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
@@ -65,6 +67,7 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
         // Copy (device) slice to (host) 3D array
         Copy(isl, true);
     }
+    amrex::AllPrint()<<"rank "<<amrex::ParallelDescriptor::MyProc()<<": init, "<<m_F.max()<<' '<<m_F.min()<<'\n';
 }
 
 void
@@ -75,7 +78,8 @@ Laser::Copy (int isl, bool to3d)
     amrex::MultiFab& oldt_slice = m_slices[WhichLaserSlice::PrevTime1];
     amrex::MultiFab& zeta_slice = m_slices[WhichLaserSlice::PrevZeta1];
 
-    for ( amrex::MFIter mfi(this_slice, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    // for ( amrex::MFIter mfi(this_slice, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(this_slice, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> this_arr = this_slice.array(mfi);
         amrex::Array4<amrex::Real> newt_arr = newt_slice.array(mfi);
@@ -89,15 +93,15 @@ Laser::Copy (int isl, bool to3d)
             // n should always be 0 here
             if (to3d){
                 // next time slice into new host
-                host_arr(i,j,k+isl,n) = newt_arr(i,j,k,n);
+                host_arr(i,j,isl,n) = newt_arr(i,j,k,n);
                 // this slice into old host
-                host_arr(i,j,k+isl,n+2) = this_arr(i,j,k,n);
+                host_arr(i,j,isl,n+2) = this_arr(i,j,k,n);
                 // this slice into previous zeta slice
                 zeta_arr(i,j,k,n) = this_arr(i,j,k,n);
             } else {
                 // Get current slice from 3D host array, both current and previous time step
-                this_arr(i,j,k,n) = host_arr(i,j,k+isl,n);
-                oldt_arr(i,j,k,n) = host_arr(i,j,k+isl,n+2);
+                this_arr(i,j,k,n) = host_arr(i,j,isl,n);
+                oldt_arr(i,j,k,n) = host_arr(i,j,isl,n+2);
             }
         });
     }
@@ -145,6 +149,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
+    amrex::AllPrint()<<"rank "<<amrex::ParallelDescriptor::MyProc()<<" plo "<<plo[2]<<" z "<<z<<'\n';
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_size[2];
     const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
@@ -155,8 +160,10 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(slice_this, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    // for ( amrex::MFIter mfi(slice_this, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(slice_this, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
+        amrex::AllPrint()<<"here bx "<<bx<<'\n';
         amrex::Array4<amrex::Real> const & array_this = slice_this.array(mfi);
 
         // setting this Laser slice to the initial slice (TO BE REPLACED BY COPY FROM 3D ARRAY)
