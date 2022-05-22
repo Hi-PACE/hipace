@@ -26,7 +26,6 @@ Laser::ReadParameters ()
     amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
     queryWithParser(pp, "position_mean", loc_array);
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
-
 }
 
 
@@ -49,6 +48,46 @@ AMREX_ALWAYS_ASSERT(WhichLaserSlice::N == m_nslices);
     }
 }
 
+void
+Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
+{
+    if (!m_use_laser) return;
+    if (step > 0) return;
+    HIPACE_PROFILE("Laser::PrepareLaserSlice()");
+    bx.grow(m_slices_nguards);
+    // Allocate the 3D field on this box
+    m_F.resize(bx, m_nfields_3d, amrex::The_Pinned_Arena());
+
+    // Loop over slices
+    for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
+        // Compute initial field on the current (device) slice
+        PrepareLaserSlice(gm, isl);
+        // Copy (device) slice to (host) 3D array
+        Copy(isl);
+    }
+}
+
+void
+Laser::Copy (int isl, bool to3d)
+{
+    amrex::MultiFab& src_slice = m_slices[WhichLaserSlice::This];
+
+    for ( amrex::MFIter mfi(src_slice, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+        const amrex::Box& bx = mfi.tilebox();
+        amrex::Array4<amrex::Real> src_arr = src_slice.array(mfi);
+        amrex::Array4<amrex::Real> dst_arr = m_F.array();
+        amrex::ParallelFor(
+        bx, 1,
+        [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+        {
+            if (to3d){
+                dst_arr(i,j,k+isl,n) = src_arr(i,j,k,n);
+            } else {
+                src_arr(i,j,k,n) = dst_arr(i,j,k+isl,n);
+            }
+        });
+    }
+}
 
 void
 Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)

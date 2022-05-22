@@ -320,6 +320,7 @@ Hipace::MakeNewLevelFromScratch (
     DefineSliceGDB(lev, ba, dm);
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
+    // maxence
     m_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
     m_diags.Initialize(lev);
 }
@@ -416,6 +417,11 @@ Hipace::Evolve ()
         const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
         for (int it = n_boxes-1; it >= 0; --it)
         {
+            const amrex::Box& bx = boxArray(lev)[it];
+
+            // Before that, the 3D fields of the envelope are not initialized (not even allocated).
+            m_laser.Init3DEnvelope(step, bx, Geom(0));
+
             Wait(step, it);
 
             m_box_sorters.clear();
@@ -429,8 +435,6 @@ Hipace::Evolve ()
             // Copy particles in box it-1 in the ghost buffer.
             // This handles both beam initialization and particle slippage.
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
-
-            const amrex::Box& bx = boxArray(lev)[it];
 
             ResizeFDiagFAB(it);
 
@@ -488,7 +492,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
     // setup laser
-    m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
+    m_laser.Copy(islice_coarse, false);
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
 

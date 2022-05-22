@@ -36,6 +36,21 @@ public:
     void InitData (const amrex::BoxArray& slice_ba,
                    const amrex::DistributionMapping& slice_dm);
 
+    /** \brief Initialize 3D laser field on current box.
+     *
+     * \param[in] step time step of the simulation
+     * \param[in] bx Box on which the laser field is initialized
+     * \param[in] gm Geometry of the problem
+     */
+    void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
+
+    /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
+     *
+     * \param[in] isl slice index, referring to the 3D slice
+     * \param[in] to3d if true, copy from 2D slice to 3D array. Otherwise, the other way.
+     */
+    void Copy (int isl, bool to3d=true);
+
     void PrepareLaserSlice (const amrex::Geometry& geom, const int islice);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
@@ -53,9 +68,11 @@ private:
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
 
-    /** Vector over levels, all fields */
-    amrex::Vector<std::array<amrex::FArrayBox, 3>> m_3D_F;
-    /** Vector over levels, array of 4 slices required to compute current slice */
+    /** Nb fields in 3D array: A_new_real, A_new_imag, A_old_real, A_old_imag */
+    int m_nfields_3d {4};
+    /** 3D laser data. Could be a vector over levels if MR needed for laser */
+    amrex::FArrayBox m_F;
+    /** Array of 4 slices required to compute current slice */
     std::array<amrex::MultiFab, m_nslices> m_slices;
 };
 
