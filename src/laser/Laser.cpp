@@ -79,8 +79,7 @@ Laser::Copy (int isl, bool to3d)
     amrex::MultiFab& oldt_slice = m_slices[WhichLaserSlice::PrevTime1];
     amrex::MultiFab& zeta_slice = m_slices[WhichLaserSlice::PrevZeta1];
 
-    // for ( amrex::MFIter mfi(this_slice, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-    for ( amrex::MFIter mfi(this_slice, false); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(this_slice, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> this_arr = this_slice.array(mfi);
         amrex::Array4<amrex::Real> newt_arr = newt_slice.array(mfi);
