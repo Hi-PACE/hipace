@@ -445,6 +445,7 @@ Hipace::Evolve ()
                                                          geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
+            amrex::AllPrint()<<"isl "<<bx.bigEnd(Direction::z)<<'\n';
             SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
             // Notify ghost slice
             if (it<m_numprocs_z-1) Notify(step, it, bins[lev], true);
@@ -457,6 +458,7 @@ Hipace::Evolve ()
             if (it>0) Wait(step, it, true);
             CheckGhostSlice(it);
             // Solve tail slice. Consume ghost particles.
+            amrex::AllPrint()<<"isl "<<bx.smallEnd(Direction::z)<<'\n';
             SolveOneSlice(bx.smallEnd(Direction::z), it, bins);
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
@@ -1173,13 +1175,15 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
     // Receive laser
     {
+        if (only_ghost) return;
         if (!m_laser.m_use_laser) return;
         AMREX_ALWAYS_ASSERT(nz_laser > 0);
         amrex::FArrayBox& laser_fab = m_laser.getFAB();
         amrex::Array4<amrex::Real> laser_arr = laser_fab.array();
         const amrex::Box& bx = laser_fab.box(); // does not include ghost cells
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( bx.bigEnd(2)-bx.smallEnd(2)+1 == nz_laser,
-                                          "Laser requires all sub-domains to be the same size, i.e., nz%nrank=0");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            bx.bigEnd(2)-bx.smallEnd(2)+1 == nz_laser,
+            "Laser requires all sub-domains to be the same size, i.e., nz%nrank=0");
         const std::size_t nreals = bx.numPts()*laser_fab.nComp();
         auto lrecv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*nreals);
@@ -1355,6 +1359,7 @@ Hipace::Notify (const int step, const int it,
 
     // Send laser data
     {
+        if (only_ghost) return;
         if (!m_laser.m_use_laser) return;
         const amrex::FArrayBox& laser_fab = m_laser.getFAB();
         // Note that there is only one local Box in slice multifab's boxarray.

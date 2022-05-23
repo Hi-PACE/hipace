@@ -53,15 +53,16 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 {
     if (!m_use_laser) return;
     HIPACE_PROFILE("Laser::Init3DEnvelope()");
-    bx.grow(m_slices_nguards);
+    // bx.grow(m_slices_nguards);
     // Allocate the 3D field on this box
+    // m_F.resize(bx, m_nfields_3d, amrex::The_Pinned_Arena(), m_slices_nguards);
     m_F.resize(bx, m_nfields_3d, amrex::The_Pinned_Arena());
     amrex::AllPrint()<<"rank "<<amrex::ParallelDescriptor::MyProc()<<" "<<bx<<'\n';
 
     if (step > 0) return;
 
     // Loop over slices
-    for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
+    for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
         // Compute initial field on the current (device) slice
         PrepareLaserSlice(gm, isl);
         // Copy (device) slice to (host) 3D array
@@ -126,7 +127,7 @@ Laser::AdvanceSlice(const Fields& fields)
         bx, 1,
         [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
         {
-            newt_arr(i,j,k,n) = 2._rt * this_arr(i,j,k,n);
+            newt_arr(i,j,k,n) = .9_rt * this_arr(i,j,k,n);
         });
     }
 }
@@ -149,7 +150,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
-    amrex::AllPrint()<<"rank "<<amrex::ParallelDescriptor::MyProc()<<" plo "<<plo[2]<<" z "<<z<<'\n';
+    // amrex::AllPrint()<<"rank "<<amrex::ParallelDescriptor::MyProc()<<" plo "<<plo[2]<<" z "<<z<<'\n';
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_size[2];
     const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
@@ -163,7 +164,7 @@ Laser::PrepareLaserSlice (const amrex::Geometry& geom, const int islice)
     // for ( amrex::MFIter mfi(slice_this, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
     for ( amrex::MFIter mfi(slice_this, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::AllPrint()<<"here bx "<<bx<<'\n';
+        // amrex::AllPrint()<<"here bx "<<bx<<'\n';
         amrex::Array4<amrex::Real> const & array_this = slice_this.array(mfi);
 
         // setting this Laser slice to the initial slice (TO BE REPLACED BY COPY FROM 3D ARRAY)
