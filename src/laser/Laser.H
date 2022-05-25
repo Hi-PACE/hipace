@@ -12,10 +12,12 @@ struct WhichLaserSlice {
     enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, NextTime, N };
 };
 
+class Fields;
+
 class Laser
 {
 private:
-        static constexpr int m_nslices = 6;
+    static constexpr int m_nslices = WhichLaserSlice::N;
 public:
     /** Constructor */
     explicit Laser ()
@@ -78,7 +80,7 @@ private:
     int m_nfields_3d {4};
     /** 3D laser data. Could be a vector over levels if MR needed for laser */
     amrex::FArrayBox m_F;
-    /** Array of 4 slices required to compute current slice */
+    /** Array of N slices required to compute current slice */
     std::array<amrex::MultiFab, m_nslices> m_slices;
 };
 

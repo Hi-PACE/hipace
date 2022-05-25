@@ -47,7 +47,7 @@ Diagnostic::Diagnostic (int nlev)
 }
 
 void
-Diagnostic::Initialize (const int lev) {
+Diagnostic::Initialize (const int lev, bool do_laser) {
     if (lev!=0) return;
 
     amrex::ParmParse ppd("diagnostic");
@@ -146,7 +146,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int l
     m_has_field[lev] = local_box.ok();
 
     if(m_has_field[lev]) {
-        m_F[lev].resize(local_box, m_nfields, amrex::The_Pinned_Arena());
+        m_F[lev].resize(local_box, getTotalNFields(), amrex::The_Pinned_Arena());
         m_F[lev].setVal<amrex::RunOn::Host>(0);
     }
 }
