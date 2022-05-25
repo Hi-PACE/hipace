@@ -58,6 +58,9 @@ public:
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;}
 
+    /** Whether to output laser */
+    bool doLaser () const {return m_do_laser;}
+
     /**< return if there is field output to write */
     std::vector<bool>& hasField () {return m_has_field;}
 

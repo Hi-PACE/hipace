@@ -50,6 +50,7 @@ void
 Diagnostic::Initialize (const int lev, bool do_laser) {
     if (lev!=0) return;
 
+    m_do_laser = do_laser;
     amrex::ParmParse ppd("diagnostic");
     queryWithParser(ppd, "field_data", m_comps_output);
     amrex::Vector<std::string> all_field_comps{};
