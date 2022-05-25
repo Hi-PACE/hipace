@@ -431,7 +431,6 @@ Hipace::Evolve ()
             m_leftmost_box_snd = std::min(leftmostBoxWithParticles(), m_leftmost_box_snd);
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::beams);
-            // TODO WriteDiagnostics(step, it, OpenPMDWriterCallType::laser);
 
             m_multi_beam.StoreNRealParticles();
             // Copy particles in box it-1 in the ghost buffer.
@@ -445,20 +444,17 @@ Hipace::Evolve ()
                                                          geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
-            amrex::AllPrint()<<"isl "<<bx.bigEnd(Direction::z)<<'\n';
             SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
             // Notify ghost slice
             if (it<m_numprocs_z-1) Notify(step, it, bins[lev], true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
-                amrex::AllPrint()<<"isl "<<isl<<'\n';
                 SolveOneSlice(isl, it, bins);
             };
             // Receive ghost slice
             if (it>0) Wait(step, it, true);
             CheckGhostSlice(it);
             // Solve tail slice. Consume ghost particles.
-            amrex::AllPrint()<<"isl "<<bx.smallEnd(Direction::z)<<'\n';
             SolveOneSlice(bx.smallEnd(Direction::z), it, bins);
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
@@ -1078,7 +1074,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     amrex::Vector<int> np_rcv(nint, 0);
     if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
         if (m_verbose >= 2){
-            amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
         }
         return;
     }
@@ -1192,7 +1187,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         MPI_Recv(lrecv_buffer, nreals,
                  amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                  (m_rank_z+1)%m_numprocs_z, lcomm_z_tag, m_comm_z, &lstatus);
-        amrex::AllPrint()<<"rank "<<m_rank_z<<": recv\n";
         amrex::ParallelFor
             (bx, laser_fab.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {
@@ -1200,7 +1194,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             });
         amrex::Gpu::Device::synchronize();
         amrex::The_Pinned_Arena()->free(lrecv_buffer);
-        amrex::AllPrint()<<"rank "<<m_rank_z<<": recv, "<<laser_fab.max()<<' '<<laser_fab.min()<<'\n';
     }
 #endif
 }
@@ -1380,7 +1373,6 @@ Hipace::Notify (const int step, const int it,
         MPI_Isend(m_lsend_buffer, nreals,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, lcomm_z_tag, m_comm_z, &m_lsend_request);
-        amrex::AllPrint()<<"rank "<<m_rank_z<<": send, "<<laser_fab.max()<<' '<<laser_fab.min()<<'\n';
     }
 #endif
 }

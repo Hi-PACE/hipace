@@ -59,7 +59,7 @@ public:
 
     void AdvanceSlice (const Fields& fields);
 
-    void PrepareLaserSlice (const amrex::Geometry& geom, const int islice);
+    void InitLaserSlice (const amrex::Geometry& geom, const int islice);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
