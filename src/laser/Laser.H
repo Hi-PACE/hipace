@@ -72,7 +72,7 @@ private:
     amrex::Real m_lambda0 {0.}; /**< Laser central wavelength */
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
-
+    int m_3d_on_host {0};/** Whether the 3D laser envelope is stored in host or device memory */
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
 

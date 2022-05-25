@@ -25,6 +25,7 @@ Laser::ReadParameters ()
     queryWithParser(pp, "lambda0", m_lambda0);
     amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
     queryWithParser(pp, "position_mean", loc_array);
+    queryWithParser(pp, "3d_on_host", m_3d_on_host);
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
 }
 
@@ -53,10 +54,8 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 {
     if (!m_use_laser) return;
     HIPACE_PROFILE("Laser::Init3DEnvelope()");
-    // bx.grow(m_slices_nguards);
     // Allocate the 3D field on this box
-    // m_F.resize(bx, m_nfields_3d, amrex::The_Pinned_Arena(), m_slices_nguards);
-    m_F.resize(bx, m_nfields_3d, amrex::The_Pinned_Arena());
+    m_F.resize(bx, m_nfields_3d, m_3d_on_host ? amrex::The_Pinned_Arena() : amrex::The_Arena());
 
     if (step > 0) return;
 
