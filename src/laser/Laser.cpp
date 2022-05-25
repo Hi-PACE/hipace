@@ -126,7 +126,7 @@ Laser::AdvanceSlice(const Fields& fields)
         bx, 1,
         [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
         {
-            newt_arr(i,j,k,n) = .9_rt * this_arr(i,j,k,n);
+            newt_arr(i,j,k,n) = 2._rt * this_arr(i,j,k,n);
         });
     }
 }

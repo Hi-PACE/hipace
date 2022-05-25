@@ -26,7 +26,7 @@ public:
     explicit Diagnostic (int nlev);
 
     /** \brief Determine which data to output */
-    void Initialize (const int lev);
+    void Initialize (const int lev, bool do_laser);
 
     /** \brief return the main diagnostics multifab */
     amrex::Vector<amrex::FArrayBox>& getF () { return m_F; }
@@ -46,6 +46,9 @@ public:
     /** \brief return the number of Field components to output */
     int getNFields() { return m_nfields; }
 
+    /** \brief return the number of Field components to output */
+    int getTotalNFields() { return m_nfields + m_do_laser; }
+
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
 
@@ -54,6 +57,9 @@ public:
 
     /** return slice direction of the diagnostics */
     int sliceDir () {return m_slice_dir;}
+
+    /** Whether to output laser */
+    bool doLaser () const {return m_do_laser;}
 
     /**< return if there is field output to write */
     std::vector<bool>& hasField () {return m_has_field;}
@@ -91,6 +97,7 @@ private:
     amrex::Gpu::DeviceVector<int> m_comps_output_idx;
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
     int m_nfields; /**< Number of physical fields to write */
+    bool m_do_laser {false}; /**< Whether to output the laser */
     amrex::Vector<amrex::Geometry> m_geom_io; /**< Diagnostics geometry */
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
     bool m_initialized = false; /**< if this object is fully initialized */
