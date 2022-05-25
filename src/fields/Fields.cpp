@@ -473,7 +473,6 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
             {
                 const amrex::Real x = i * dx + poff_diag_x;
                 const amrex::Real y = j * dy + poff_diag_y;
-                // const int m = n[diag_comps];
                 diag_array(i,j,k,ncomp) += rel_z_data[k-k_min] * laser_array(x,y,lo2_laser);
             });
     }
