@@ -467,6 +467,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 const int m = n[diag_comps];
                 diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,lo2,m);
             });
+        amrex::Gpu::Device::synchronize();
         if (!laser.m_use_laser) return;
         amrex::ParallelFor(diag_box,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
@@ -475,6 +476,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 const amrex::Real y = j * dy + poff_diag_y;
                 diag_array(i,j,k,ncomp) += rel_z_data[k-k_min] * laser_array(x,y,lo2_laser);
             });
+        amrex::Gpu::Device::synchronize();
     }
 }
 

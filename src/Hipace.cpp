@@ -1198,6 +1198,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             {
                 laser_arr(i,j,k,n) = buf(i,j,k,n);
             });
+        amrex::Gpu::Device::synchronize();
         amrex::The_Pinned_Arena()->free(lrecv_buffer);
         amrex::AllPrint()<<"rank "<<m_rank_z<<": recv, "<<laser_fab.max()<<' '<<laser_fab.min()<<'\n';
     }
@@ -1375,6 +1376,7 @@ Hipace::Notify (const int step, const int it,
             {
                 buf(i,j,k,n) = laser_arr(i,j,k,n);
             });
+        amrex::Gpu::Device::synchronize();
         MPI_Isend(m_lsend_buffer, nreals,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, lcomm_z_tag, m_comm_z, &m_lsend_request);
