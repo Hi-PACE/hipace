@@ -1068,8 +1068,9 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     }
 
     const int nbeams = m_multi_beam.get_nbeams();
-    // 1 element per beam species, and 1 for
-    // the index of leftmost box with beam particles.
+    // 1 element per beam species,
+    // 1 for the index of leftmost box with beam particles,
+    // 1 for number of z points for laser data.
     const int nint = nbeams + 2;
     amrex::Vector<int> np_rcv(nint, 0);
     if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
