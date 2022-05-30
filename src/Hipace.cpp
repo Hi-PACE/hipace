@@ -486,208 +486,165 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
                        const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
-    if (m_explicit) {
-        ExplicitSolveOneSlice (islice_coarse, ibox, bins);
-    } else {
-        PredictorCorrectorSolveOneSlice (islice_coarse, ibox, bins);
+
+    // setup laser
+    m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
+
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+
+        if (lev == 1) { // skip all slices which are not existing on level 1
+            // use geometry of coarse grid to determine whether slice is to be solved
+            const amrex::Real* problo = Geom(0).ProbLo();
+            const amrex::Real* dx = Geom(0).CellSize();
+            amrex::Real pos = (islice_coarse+0.5)*dx[2]+problo[2];
+            if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
+        }
+
+        // Between this push and the corresponding pop at the end of this
+        // for loop, the parallelcontext is the transverse communicator
+        amrex::ParallelContext::push(m_comm_xy);
+
+        const amrex::Box& bx = boxArray(lev)[ibox];
+
+        const int nsubslice = GetRefRatio(lev)[Direction::z];
+
+        for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
+
+            // calculate correct slice for refined level
+            const int islice = nsubslice*islice_coarse + isubslice;
+            const int islice_local = islice - bx.smallEnd(Direction::z);
+
+            if (m_explicit) {
+                ExplicitSolveOneSubSlice (lev, ibox, bx, islice, islice_local, bins[lev]);
+            } else {
+                PredictorCorrectorSolveOneSubSlice (lev, ibox, bx, islice, islice_local, bins[lev]);
+            }
+
+            FillDiagnostics(lev, islice);
+
+            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
+
+            m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+
+            if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+
+        } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
+
+        // After this, the parallel context is the full 3D communicator again
+        amrex::ParallelContext::pop();
+    } // end for (int lev = 0; lev <= finestLevel(); ++lev)
+
+     // shift slices of all levels
+     m_fields.ShiftSlices(finestLevel()+1, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+}
+
+
+void
+Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
+                                  const int islice, const int islice_local,
+                                  const amrex::Vector<BeamBins>& beam_bin)
+{
+    // Set all quantities to 0 except Bx and By: the previous slice serves as initial
+    // guess.
+    m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
+        "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+    for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
+        m_fields.setVal(0., lev, WhichSlice::This,
+            "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
+            "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
     }
-}
 
+    if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+    m_multi_plasma.DepositCurrent(
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
-void
-Hipace::ExplicitSolveOneSlice (int islice_coarse, const int ibox,
-                               const amrex::Vector<amrex::Vector<BeamBins>>& bins)
-{
-    // setup laser
-    m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
+    m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::Next);
+    // need to exchange jx_beam jy_beam
+    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
+        "jx_beam", "jy_beam");
 
-    for (int lev = 0; lev <= finestLevel(); ++lev) {
+    m_fields.AddRhoIons(lev);
 
-        if (lev == 1) { // skip all slices which are not existing on level 1
-            // use geometry of coarse grid to determine whether slice is to be solved
-            const amrex::Real* problo = Geom(0).ProbLo();
-            const amrex::Real* dx = Geom(0).CellSize();
-            amrex::Real pos = (islice_coarse+0.5)*dx[2]+problo[2];
-            if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
-        }
+    FillBoundaryChargeCurrents(lev);
 
-        // Between this push and the corresponding pop at the end of this
-        // for loop, the parallelcontext is the transverse communicator
-        amrex::ParallelContext::push(m_comm_xy);
+    if (!m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
 
-        const amrex::Box& bx = boxArray(lev)[ibox];
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::This, m_do_beam_jz_minus_rho);
 
-        const int nsubslice = GetRefRatio(lev)[Direction::z];
+    if (m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
 
-        for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
 
-            // calculate correct slice for refined level
-            const int islice = nsubslice*islice_coarse + isubslice;
-            const int islice_local = islice - boxArray(lev)[ibox].smallEnd(Direction::z);
+    FillBoundaryChargeCurrents(lev);
 
-            // Set all quantities to 0 except Bx and By: the previous slice serves as initial
-            // guess.
-            m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
-                "jx_beam", "jy_beam", "jz_beam", "rho_beam");
-            for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
-                m_fields.setVal(0., lev, WhichSlice::This,
-                    "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-                    "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
-            }
+    m_fields.SolvePoissonEz(Geom(), lev, islice);
+    m_fields.SolvePoissonBz(Geom(), lev, islice);
 
-            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
-            m_multi_plasma.DepositCurrent(
-                m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    m_fields.AddRhoIons(lev, true);
+    ExplicitSolveBxBy(lev);
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
+                                    true, lev);
+    m_fields.AddRhoIons(lev);
 
-            m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
-                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                             WhichSlice::Next);
-            // need to exchange jx_beam jy_beam
-            m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
-                "jx_beam", "jy_beam");
-
-            m_fields.AddRhoIons(lev);
-
-            FillBoundaryChargeCurrents(lev);
-
-            if (!m_do_beam_jz_minus_rho) {
-                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-            }
-
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
-                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                             WhichSlice::This, m_do_beam_jz_minus_rho);
-
-            if (m_do_beam_jz_minus_rho) {
-                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-            }
-
-            m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-
-            FillBoundaryChargeCurrents(lev);
-
-            m_fields.SolvePoissonEz(Geom(), lev, islice);
-            m_fields.SolvePoissonBz(Geom(), lev, islice);
-
-            // Modifies Bx and By in the current slice and the force terms of the plasma particles
-            m_fields.AddRhoIons(lev, true);
-            ExplicitSolveBxBy(lev);
-            m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
-                                            true, lev);
-            m_fields.AddRhoIons(lev);
-
-            // Push beam particles
-            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                                   bins[lev], m_box_sorters, ibox);
-
-            FillDiagnostics(lev, islice);
-
-            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
-
-            m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
-
-            if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
-
-        } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
-
-        // After this, the parallel context is the full 3D communicator again
-        amrex::ParallelContext::pop();
-    } // end for (int lev = 0; lev <= finestLevel(); ++lev)
-
-     // shift slices of all levels
-     m_fields.ShiftSlices(finestLevel()+1, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+    // Push beam particles
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                           beam_bin, m_box_sorters, ibox);
 }
 
 void
-Hipace::PredictorCorrectorSolveOneSlice (int islice_coarse, const int ibox,
-                                         const amrex::Vector<amrex::Vector<BeamBins>>& bins)
+Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
+                                            const int islice, const int islice_local,
+                                            const amrex::Vector<BeamBins>& beam_bin)
 {
-    HIPACE_PROFILE("Hipace::SolveOneSlice()");
+    m_fields.setVal(0., lev, WhichSlice::This,
+        "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
 
-    // setup laser
-    m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
+                                    true, false, false, lev);
 
-    for (int lev = 0; lev <= finestLevel(); ++lev) {
+    if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+    m_multi_plasma.DepositCurrent(
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
 
-        if (lev == 1) { // skip all slices which are not existing on level 1
-            // use geometry of coarse grid to determine whether slice is to be solved
-            const amrex::Real* problo = Geom(0).ProbLo();
-            const amrex::Real* dx = Geom(0).CellSize();
-            amrex::Real pos = (islice_coarse+0.5)*dx[2]+problo[2];
-            if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
-        }
+    m_fields.AddRhoIons(lev);
 
-        // Between this push and the corresponding pop at the end of this
-        // for loop, the parallelcontext is the transverse communicator
-        amrex::ParallelContext::push(m_comm_xy);
+    FillBoundaryChargeCurrents(lev);
 
-        const amrex::Box& bx = boxArray(lev)[ibox];
+    if (!m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
 
-        const int nsubslice = GetRefRatio(lev)[Direction::z];
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::This, m_do_beam_jz_minus_rho);
 
-        for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
+    if (m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
 
-            // calculate correct slice for refined level
-            const int islice = nsubslice*islice_coarse + isubslice;
-            const int islice_local = islice - boxArray(lev)[ibox].smallEnd(Direction::z);
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
 
-            m_fields.setVal(0., lev, WhichSlice::This,
-                "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+    FillBoundaryChargeCurrents(lev);
 
-            m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
-                                            true, false, false, lev);
+    m_fields.SolvePoissonEz(Geom(), lev, islice);
+    m_fields.SolvePoissonBz(Geom(), lev, islice);
 
-            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
-            m_multi_plasma.DepositCurrent(
-                m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    PredictorCorrectorLoopToSolveBxBy(islice_local, lev, beam_bin, ibox);
 
-            m_fields.AddRhoIons(lev);
-
-            FillBoundaryChargeCurrents(lev);
-
-            if (!m_do_beam_jz_minus_rho) {
-                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-            }
-
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
-                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                             WhichSlice::This, m_do_beam_jz_minus_rho);
-
-            if (m_do_beam_jz_minus_rho) {
-                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-            }
-
-            m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-
-            FillBoundaryChargeCurrents(lev);
-
-            m_fields.SolvePoissonEz(Geom(), lev, islice);
-            m_fields.SolvePoissonBz(Geom(), lev, islice);
-
-            // Modifies Bx and By in the current slice and the force terms of the plasma particles
-            PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bins[lev], ibox);
-
-            // Push beam particles
-            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                                   bins[lev], m_box_sorters, ibox);
-
-            FillDiagnostics(lev, islice);
-
-            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
-
-            m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
-
-            if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
-
-        } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
-
-        // After this, the parallel context is the full 3D communicator again
-        amrex::ParallelContext::pop();
-    } // end for (int lev = 0; lev <= finestLevel(); ++lev)
-
-     // shift slices of all levels
-     m_fields.ShiftSlices(finestLevel()+1, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+    // Push beam particles
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                           beam_bin, m_box_sorters, ibox);
 }
 
 void

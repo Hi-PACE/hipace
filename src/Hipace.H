@@ -162,23 +162,31 @@ public:
     void SolveOneSlice (int islice_coarse, const int ibox,
                         const amrex::Vector<amrex::Vector<BeamBins>>& bins);
 
-    /** \brief Full evolve on 1 slice with explicit solver
+    /** \brief Full evolve on 1 subslice with explicit solver
      *
-     * \param[in] islice_coarse slice number
+     * \param[in] lev MR level
      * \param[in] ibox index of the current box to be calculated
-     * \param[in] bins an amrex::DenseBins object that orders particles by slice
+     * \param[in] bx current transverse box
+     * \param[in] islice longitudinal slice
+     * \param[in] islice_local local index of the slice
+     * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void ExplicitSolveOneSlice (int islice_coarse, const int ibox,
-                                const amrex::Vector<amrex::Vector<BeamBins>>& bins);
+    void ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
+                                   const int islice, const int islice_local,
+                                   const amrex::Vector<BeamBins>& beam_bin);
 
-    /** \brief Full evolve on 1 slice with predictor-corrector solver
+    /** \brief Full evolve on 1 subslice with predictor-corrector solver
      *
-     * \param[in] islice_coarse slice number
+     * \param[in] lev MR level
      * \param[in] ibox index of the current box to be calculated
-     * \param[in] bins an amrex::DenseBins object that orders particles by slice
+     * \param[in] bx current transverse box
+     * \param[in] islice longitudinal slice
+     * \param[in] islice_local local index of the slice
+     * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void PredictorCorrectorSolveOneSlice (int islice_coarse, const int ibox,
-                                          const amrex::Vector<amrex::Vector<BeamBins>>& bins);
+    void PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
+                                             const int islice, const int islice_local,
+                                             const amrex::Vector<BeamBins>& beam_bin);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
