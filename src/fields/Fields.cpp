@@ -64,62 +64,73 @@ Fields::AllocData (
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
         const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
 
-        // predictor-corrector:
-        // all beams and plasmas share rho jx jy jz
-        // explicit solver:
-        // beams share rho_beam jx_beam jy_beam jz_beam
-        // but all plasma species have separate rho jx jy jz jxx jxy jyy
-
-        int isl = WhichSlice::Next;
         if (m_explicit) {
+            // explicit solver:
+            // beams share rho_beam jx_beam jy_beam jz_beam
+            // but all plasma species have separate rho jx jy jz jxx jxy jyy
+
+            int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
-        } else {
-            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
-        }
 
-        isl = WhichSlice::This;
-        // Bx and By adjacent for explicit solver
-        Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi");
-        if (m_explicit) {
-            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+            isl = WhichSlice::This;
+            // Bx and By adjacent for explicit solver
+            Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
+                                                   "jx_beam", "jy_beam", "jz_beam", "rho_beam");
             for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                 Comps[isl].multi_emplace(N_Comps[isl],
                     "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
                     "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
             }
-        } else {
-            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy", "jz", "rho");
-        }
 
-        isl = WhichSlice::Previous1;
-        if (mesh_refinement) {
-            // for interpolating boundary conditions to level 1
-            Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
-        }
-        if (m_explicit) {
+            isl = WhichSlice::Previous1;
+            if (mesh_refinement) {
+                // for interpolating boundary conditions to level 1
+                Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
+            }
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+
+            isl = WhichSlice::Previous2;
+            // empty
+
+            isl = WhichSlice::RhoIons;
+            if (m_any_neutral_background) {
+                Comps[isl].multi_emplace(N_Comps[isl], "rho");
+            }
+
+            // set up m_all_charge_currents_names
+            m_all_charge_currents_names.push_back("_beam");
+            for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+                m_all_charge_currents_names.push_back("_"+plasma_name);
+            }
         } else {
+            // predictor-corrector:
+            // all beams and plasmas share rho jx jy jz
+
+            int isl = WhichSlice::Next;
+            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
+
+            isl = WhichSlice::This;
+            // Bx and By adjacent for explicit solver
+            Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
+                                                   "jx", "jy", "jz", "rho");
+
+            isl = WhichSlice::Previous1;
+            if (mesh_refinement) {
+                // for interpolating boundary conditions to level 1
+                Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
+            }
             Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By", "jx", "jy");
-        }
 
-        isl = WhichSlice::Previous2;
-        if (!m_explicit) {
+            isl = WhichSlice::Previous2;
             Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By");
-        }
 
-        isl = WhichSlice::RhoIons;
-        if (m_any_neutral_background) {
-            Comps[isl].multi_emplace(N_Comps[isl], "rho");
-        }
-    }
+            isl = WhichSlice::RhoIons;
+            if (m_any_neutral_background) {
+                Comps[isl].multi_emplace(N_Comps[isl], "rho");
+            }
 
-    // set up m_all_charge_currents_names
-    if (!m_explicit) {
-        m_all_charge_currents_names.push_back("");
-    } else {
-        m_all_charge_currents_names.push_back("_beam");
-        for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-            m_all_charge_currents_names.push_back("_"+plasma_name);
+            // set up m_all_charge_currents_names
+            m_all_charge_currents_names.push_back("");
         }
     }
 
