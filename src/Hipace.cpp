@@ -27,7 +27,7 @@
 
 #ifdef AMREX_USE_MPI
 namespace {
-    constexpr int ncomm_z_tag = 1001;
+    constexpr int ncomm_z_tag =  1001;
     constexpr int pcomm_z_tag = 1002;
     constexpr int ncomm_z_tag_ghost = 1003;
     constexpr int pcomm_z_tag_ghost = 1004;
