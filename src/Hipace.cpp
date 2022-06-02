@@ -671,7 +671,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     S.setVal(0.);
 
     // extract a of the Laser
-    const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::This);
+    const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::n00j00);
 
     PhysConst pc = m_phys_const;
 

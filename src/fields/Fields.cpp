@@ -443,7 +443,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     if (diag_box.isEmpty()) return;
     auto& slice_mf = m_slices[lev][WhichSlice::This];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{{slice_mf}, calc_geom};
-    auto& laser_mf = laser.getSlices(WhichLaserSlice::This);
+    auto& laser_mf = laser.getSlices(WhichLaserSlice::n00j00);
     auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field>{{laser_mf}, calc_geom};
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields

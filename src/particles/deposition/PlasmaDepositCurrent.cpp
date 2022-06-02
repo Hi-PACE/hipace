@@ -68,7 +68,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
 
         // extract the laser Fields
         const bool use_laser = laser.m_use_laser;
-        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::This);
+        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::n00j00);
 
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, jx_fab.box());

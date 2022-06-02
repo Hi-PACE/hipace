@@ -9,7 +9,8 @@
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
-    enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, NextTime, N };
+    enum slice { nm1jm1, nm1j00, nm1jp1, n00j00, n00jp1, np1j00, np1jp1, np1jp2, N };
+    // enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, NextTime, N };
 };
 
 class Fields;
@@ -55,7 +56,7 @@ public:
      * \param[in] isl slice index, referring to the 3D slice
      * \param[in] to3d if true, copy from 2D slice to 3D array. Otherwise, the other way.
      */
-    void Copy (int isl, bool to3d);
+    void Copy (int isl, bool to3d, bool init=false);
 
     void AdvanceSlice (const Fields& fields);
 
@@ -76,7 +77,7 @@ private:
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
 
-    /** Nb fields in 3D array: A_new_real, A_new_imag, A_old_real, A_old_imag */
+    /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};
     /** 3D laser data. Could be a vector over levels if MR needed for laser */
     amrex::FArrayBox m_F;

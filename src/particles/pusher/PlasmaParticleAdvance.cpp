@@ -72,7 +72,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         // extract the laser Fields
         const bool use_laser = laser.m_use_laser;
-        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::This);
+        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::n00j00);
 
         // Extract field array from MultiFab
         amrex::Array4<const amrex::Real> const& a_arr = use_laser ?
