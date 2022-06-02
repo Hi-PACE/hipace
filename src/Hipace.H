@@ -127,14 +127,16 @@ public:
      * \param[in] bins slice indexing
      * \param[in] only_ghost whether to send only ghost particles
      */
-    void Notify (const int step, const int it, const amrex::Vector<BeamBins>& bins, bool only_ghost=false);
+    void Notify (const int step, const int it, const amrex::Vector<BeamBins>& bins={},
+                 bool only_ghost=false);
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
      * \param[in] it current box number
      * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)
+     * \param[in] only_time whether only the time is send (and no beam particles)
      */
-    void NotifyFinish (const int it=0, bool only_ghost=false);
+    void NotifyFinish (const int it=0, bool only_ghost=false, bool only_time=false);
 
     /** \brief return whether rank is in the same transverse communicator w/ me
      *
@@ -265,6 +267,8 @@ public:
     Laser m_laser;
     /** Number of time iterations */
     static int m_max_step;
+    /** Maximum simulation time */
+    static amrex::Real m_max_time;
     /** Time step for the beam evolution */
     static amrex::Real m_dt;
     /** Number of iterations between consecutive output dumps.
