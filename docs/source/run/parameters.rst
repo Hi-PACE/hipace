@@ -60,9 +60,7 @@ General parameters
     fields of the initial beams.
 
 * ``hipace.max_time`` (`float`) optional (default `infinity`)
-    Maximum physical time of the simulation. If ``t + dt > hipace.max_time``, the time step ``dt``
-    will be reduced so that ``t + dt = max_time``, both for the adaptive and a
-    fixed time step.
+    Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
 
 * ``hipace.dt`` (`float` or `string`) optional (default `0.`)
     Time step to advance the particle beam. For adaptive time step, use ``"adaptive"``.
