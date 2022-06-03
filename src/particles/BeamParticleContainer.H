@@ -25,6 +25,8 @@ struct BeamIdx
     };
 };
 
+using BeamBins = amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>;
+
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
     : public amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>
@@ -97,6 +99,8 @@ public:
                                   const bool species_specified);
 #endif
 
+    void InSituComputeDiags (int islice, const BeamBins& bins);
+    void InSituWriteToFile (int step);
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
@@ -139,6 +143,20 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name ; /**< the name of the particle species in the beam file */
+    int m_insitu_freq {-1};
+    /** Number of integer beam properties for in-situ reduced diagnostics.
+     * 0: number of particles in this slice */
+    int m_insitu_inp {1};
+    /** Number of real beam properties for in-situ reduced diagnostics.
+     * 0: Average energy
+     * 1: Average position */
+    int m_insitu_rnp {2};
+    /** Per-slice real beam properties */
+    std::vector<amrex::Real> m_insitu_rdata;
+    /** Per-slice integer beam properties */
+    std::vector<int> m_insitu_idata;
+    /** Separator when writing to file */
+    std::string m_insitu_sep = " ";
 };
 
 #endif

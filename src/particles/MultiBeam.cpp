@@ -228,3 +228,19 @@ MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
         }
     }
 }
+
+void
+MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins)
+{
+    for (int i = 0; i < m_nbeams; ++i) {
+        m_all_beams[i].InSituComputeDiags(islice, bins[i]);
+    }
+}
+
+void
+MultiBeam::InSituWriteToFile (int step)
+{
+    for (auto& beam : m_all_beams) {
+        beam.InSituWriteToFile(step);
+    }
+}

@@ -488,7 +488,7 @@ Hipace::Evolve ()
             m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
-
+            m_multi_beam.InSituWriteToFile(step);
             Notify(step, it, bins[lev]);
         }
 
@@ -513,6 +513,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
+    m_multi_beam.InSituComputeDiags(islice_coarse, bins[0]);
     // setup laser
     m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
 
