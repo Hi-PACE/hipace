@@ -83,7 +83,7 @@ public:
         const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
-    void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins);
+    void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0);
     void InSituWriteToFile (int step);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
@@ -163,6 +163,8 @@ public:
      * \param[in] beam_names names of all beams.
      */
     void MultiFromFileMacro (const amrex::Vector<std::string> beam_names);
+    bool doInSitu (int step);
+    int m_insitu_freq {-1};
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

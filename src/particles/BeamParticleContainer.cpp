@@ -53,7 +53,7 @@ BeamParticleContainer::ReadParameters ()
     queryWithParser(pp, "dy_per_dzeta", m_dy_per_dzeta);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParser(pp, "do_z_push", m_do_z_push);
-    queryWithParser(pp, "insitu_freq", m_insitu_freq);
+    queryWithParser(pp, "insitu_sep", m_insitu_sep);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     queryWithParser(pp, "finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
@@ -204,13 +204,15 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
 }
 
 void
-BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins)
+BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0)
 {
+    amrex::Print()<<"InSituComputeDiags\n";
     using namespace amrex::literals;
+    amrex::AllPrint()<<"islice "<<islice<<'\n';
     BeamBins::index_type const * const indices = bins.permutationPtr();
     BeamBins::index_type const * const offsets = bins.offsetsPtr();
-    BeamBins::index_type const cell_start = offsets[islice];
-    BeamBins::index_type const cell_stop = offsets[islice+1];
+    BeamBins::index_type const cell_start = offsets[islice-islice0];
+    BeamBins::index_type const cell_stop = offsets[islice-islice0+1];
     int const num_particles = cell_stop-cell_start;
     amrex::Gpu::DeviceVector<amrex::Real> device_rdata;
     amrex::Gpu::DeviceVector<int> device_idata;
@@ -229,15 +231,20 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins)
             amrex::Gpu::Atomic::Add(&p_idata[0], 1);
         });
     for (int i=0; i<m_insitu_rnp; i++) m_insitu_rdata[m_insitu_rnp*islice+i] = p_rdata[i];
-    for (int i=0; i<m_insitu_inp; i++) m_insitu_idata[m_insitu_inp*islice+i] = p_idata[i];
+    for (int i=0; i<m_insitu_inp; i++) {
+        m_insitu_idata[m_insitu_inp*islice+i] = p_idata[i];
+        amrex::AllPrint()<<m_insitu_inp*islice+i<<" is "<<m_insitu_idata[m_insitu_inp*islice+i]<<'\n';
+    }
 }
 
 void
 BeamParticleContainer::InSituWriteToFile (int step)
 {
+    amrex::Print()<<"InSituWriteToFile\n";
+    using namespace amrex::literals;
     // open file
 
-    std::ofstream ofs{"reduced_" + m_name + ".txt",
+    std::ofstream ofs{"reduced_" + m_name + "." + std::to_string(step) + ".txt",
         std::ofstream::out | std::ofstream::app};
 
     // write step
@@ -262,4 +269,7 @@ BeamParticleContainer::InSituWriteToFile (int step)
 
     // close file
     ofs.close();
+
+    for (int i=0; i<m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
+    for (int i=0; i<m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
 }

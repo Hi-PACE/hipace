@@ -99,7 +99,7 @@ public:
                                   const bool species_specified);
 #endif
 
-    void InSituComputeDiags (int islice, const BeamBins& bins);
+    void InSituComputeDiags (int islice, const BeamBins& bins, int islice0);
     void InSituWriteToFile (int step);
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
@@ -143,7 +143,6 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name ; /**< the name of the particle species in the beam file */
-    int m_insitu_freq {-1};
     /** Number of integer beam properties for in-situ reduced diagnostics.
      * 0: number of particles in this slice */
     int m_insitu_inp {1};

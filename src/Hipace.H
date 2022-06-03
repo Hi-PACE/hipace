@@ -161,7 +161,7 @@ public:
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice_coarse, const int ibox,
+    void SolveOneSlice (int islice_coarse, const int ibox, int step,
                         const amrex::Vector<amrex::Vector<BeamBins>>& bins);
 
     /** \brief Full evolve on 1 subslice with explicit solver

@@ -460,18 +460,18 @@ Hipace::Evolve ()
                                                          geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
-            SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
+            SolveOneSlice(bx.bigEnd(Direction::z), it, step, bins);
             // Notify ghost slice
             if (it<m_numprocs_z-1) Notify(step, it, bins[lev], true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, it, bins);
+                SolveOneSlice(isl, it, step, bins);
             };
             // Receive ghost slice
             if (it>0) Wait(step, it, true);
             CheckGhostSlice(it);
             // Solve tail slice. Consume ghost particles.
-            SolveOneSlice(bx.smallEnd(Direction::z), it, bins);
+            SolveOneSlice(bx.smallEnd(Direction::z), it, step, bins);
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
 
@@ -488,9 +488,10 @@ Hipace::Evolve ()
             m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
-            m_multi_beam.InSituWriteToFile(step);
             Notify(step, it, bins[lev]);
         }
+
+        if ( m_multi_beam.doInSitu(step) ) m_multi_beam.InSituWriteToFile(step);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
@@ -508,12 +509,15 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice_coarse, const int ibox,
+Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
                        const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    m_multi_beam.InSituComputeDiags(islice_coarse, bins[0]);
+    if ( m_multi_beam.doInSitu(step) ) {
+        m_multi_beam.InSituComputeDiags(islice_coarse, bins[0],
+                                        boxArray(0)[ibox].smallEnd(Direction::z));
+    }
     // setup laser
     m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
 
