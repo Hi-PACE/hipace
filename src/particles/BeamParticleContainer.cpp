@@ -168,8 +168,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         int nslices = geom.Domain().length(2);
         m_insitu_rdata.resize(nslices*m_insitu_rnp, 0.);
         m_insitu_idata.resize(nslices*m_insitu_inp, 0.);
-        m_insitu_device_rdata.resize(m_insitu_rnp, 0._rt);
-        m_insitu_device_idata.resize(m_insitu_inp, 0._rt);
     }
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
@@ -210,33 +208,31 @@ void
 BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags");
+
     using namespace amrex::literals;
+
     BeamBins::index_type const * const indices = bins.permutationPtr();
     BeamBins::index_type const * const offsets = bins.offsetsPtr();
     BeamBins::index_type const cell_start = offsets[islice-islice0];
     BeamBins::index_type const cell_stop = offsets[islice-islice0+1];
     int const num_particles = cell_stop-cell_start;
 
-    amrex::Gpu::DeviceVector<amrex::Real> device_rdata;
-    amrex::Gpu::DeviceVector<int> device_idata;
-    device_rdata.resize(m_insitu_rnp);
-    device_idata.resize(m_insitu_inp);
-    for (int i=0; i<m_insitu_rnp; i++) device_rdata[i] = 0._rt;
-    for (int i=0; i<m_insitu_inp; i++) device_idata[i] = 0._rt;
+    amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+    amrex::ReduceData<amrex::Real, amrex::Real> reduce_data(reduce_op);
+    using ReduceTuple = typename decltype(reduce_data)::Type;
 
-    amrex::Real* AMREX_RESTRICT p_rdata = device_rdata.data();
-    int* AMREX_RESTRICT p_idata = device_idata.data();
-    amrex::ParallelFor(
-        num_particles,
-        [=] AMREX_GPU_DEVICE (long idx) {
-            const int ip = indices[cell_start+idx];
-            amrex::Gpu::Atomic::Add(&p_rdata[0], 1.);
-            amrex::Gpu::Atomic::Add(&p_rdata[1], 2.);
-            amrex::Gpu::Atomic::Add(&p_idata[0], 1);
+    reduce_op.eval(
+        num_particles, reduce_data,
+        [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
+        {
+            return {1._rt,2._rt};
         });
-    amrex::Gpu::Device::synchronize();
-    for (int i=0; i<m_insitu_rnp; i++) m_insitu_rdata[m_insitu_rnp*islice+i] = p_rdata[i];
-    for (int i=0; i<m_insitu_inp; i++) m_insitu_idata[m_insitu_inp*islice+i] = p_idata[i];
+    // amrex::Gpu::Device::synchronize();
+    ReduceTuple a = reduce_data.value();
+    m_insitu_idata[m_insitu_inp*islice  ] = num_particles;
+    m_insitu_rdata[m_insitu_rnp*islice  ] = amrex::get<0>(a);
+    m_insitu_rdata[m_insitu_rnp*islice+1] = amrex::get<1>(a);
+
 }
 
 void
@@ -274,6 +270,4 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
 
     for (int i=0; i<m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
     for (int i=0; i<m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
-    m_insitu_device_rdata.resize(m_insitu_rnp, 0._rt);
-    m_insitu_device_idata.resize(m_insitu_inp, 0._rt);
 }
