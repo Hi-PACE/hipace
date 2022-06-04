@@ -217,22 +217,20 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     BeamBins::index_type const cell_stop = offsets[islice-islice0+1];
     int const num_particles = cell_stop-cell_start;
 
-    amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-    amrex::ReduceData<amrex::Real, amrex::Real> reduce_data(reduce_op);
+    amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+    amrex::ReduceData<int, amrex::Real, amrex::Real> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
     reduce_op.eval(
         num_particles, reduce_data,
         [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
         {
-            return {1._rt,2._rt};
+            return {1,1._rt,2._rt};
         });
-    // amrex::Gpu::Device::synchronize();
     ReduceTuple a = reduce_data.value();
-    m_insitu_idata[m_insitu_inp*islice  ] = num_particles;
-    m_insitu_rdata[m_insitu_rnp*islice  ] = amrex::get<0>(a);
-    m_insitu_rdata[m_insitu_rnp*islice+1] = amrex::get<1>(a);
-
+    m_insitu_idata[m_insitu_inp*islice  ] = amrex::get<0>(a);
+    m_insitu_rdata[m_insitu_rnp*islice  ] = amrex::get<1>(a);
+    m_insitu_rdata[m_insitu_rnp*islice+1] = amrex::get<2>(a);
 }
 
 void
