@@ -99,7 +99,7 @@ public:
                                   const bool species_specified);
 #endif
 
-    void InSituComputeDiags (int islice, const BeamBins& bins, int islice0);
+    void InSituComputeDiags (int islice, const BeamBins& bins, int islice0, const int box_offset);
     void InSituWriteToFile (int step, amrex::Real time);
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
@@ -148,8 +148,12 @@ private:
     int m_insitu_inp {1};
     /** Number of real beam properties for in-situ reduced diagnostics.
      * 0: Average energy
-     * 1: Average position */
-    int m_insitu_rnp {2};
+     * 1: Average position in x *
+     * 2: Average position in y *
+     * 3: Emittance in x *
+     * 4: Emittance in y *
+     * 5: rms energy spread */
+    int m_insitu_rnp {6};
     /** Per-slice real beam properties */
     std::vector<amrex::Real> m_insitu_rdata;
     /** Per-slice integer beam properties */

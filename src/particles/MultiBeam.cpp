@@ -231,10 +231,12 @@ MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
 }
 
 void
-MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0)
+MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
+                               const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
 {
     for (int i = 0; i < m_nbeams; ++i) {
-        m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0);
+        m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
+                                          a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
     }
 }
 

@@ -83,7 +83,15 @@ public:
         const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
-    void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0);
+    /** FIXME
+     * \param[in] islice
+     * \param[in] bins Vector (over species) of particles sorted by slices
+     * \param[in] islice0
+     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
+     * \param[in] ibox index of the current box
+     */
+    void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
+                             const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
     void InSituWriteToFile (int step, amrex::Real time);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
