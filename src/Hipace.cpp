@@ -516,7 +516,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
     if ( m_multi_beam.doInSitu(step) ) {
         m_multi_beam.InSituComputeDiags(islice_coarse, bins[0],
-                                        boxArray(0)[ibox].smallEnd(Direction::z));
+                                        boxArray(0)[ibox].smallEnd(Direction::z),
+                                        m_box_sorters, ibox);
     }
     // setup laser
     m_laser.PrepareLaserSlice(Geom(0), islice_coarse);

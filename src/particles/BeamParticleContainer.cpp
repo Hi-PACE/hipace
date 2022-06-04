@@ -207,10 +207,25 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
 }
 
 void
-BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0)
+BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0,
+                                           const int box_offset)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags");
     using namespace amrex::literals;
+    PhysConst const phys_const = get_phys_const();
+    const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
+
+    auto const& ptaos = this->GetArrayOfStructs();
+    const auto& pos_structs = ptaos.begin() + box_offset;
+
+    // ParticleType const* aos = ptaos().data();
+    auto const& soa = this->GetStructOfArrays();
+    const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+    const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
+    const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
+    const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
+
+
     BeamBins::index_type const * const indices = bins.permutationPtr();
     BeamBins::index_type const * const offsets = bins.offsetsPtr();
     BeamBins::index_type const cell_start = offsets[islice-islice0];
@@ -219,10 +234,11 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
 
     amrex::Gpu::DeviceVector<amrex::Real> device_rdata;
     amrex::Gpu::DeviceVector<int> device_idata;
-    device_rdata.resize(m_insitu_rnp);
-    device_idata.resize(m_insitu_inp);
-    for (int i=0; i<m_insitu_rnp; i++) device_rdata[i] = 0._rt;
-    for (int i=0; i<m_insitu_inp; i++) device_idata[i] = 0._rt;
+    device_rdata.resize(m_insitu_rnp+8); // additionally averages of (x-xm)**2, (y-ym)**2,
+                                         // uxm, uym, (ux-uxm)**2, (uy-uym)**2,
+    device_idata.resize(m_insitu_inp+8); //  (x - xm)*(ux - uxm), (y - y)*(uy - uym)
+    for (int i=0; i<m_insitu_rnp+8; i++) device_rdata[i] = 0._rt;
+    for (int i=0; i<m_insitu_inp+8; i++) device_idata[i] = 0._rt;
 
     amrex::Real* AMREX_RESTRICT p_rdata = device_rdata.data();
     int* AMREX_RESTRICT p_idata = device_idata.data();
@@ -230,13 +246,67 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx) {
             const int ip = indices[cell_start+idx];
-            amrex::Gpu::Atomic::Add(&p_rdata[0], 1.);
-            amrex::Gpu::Atomic::Add(&p_rdata[1], 2.);
-            amrex::Gpu::Atomic::Add(&p_idata[0], 1);
+
+            // Skip invalid particles
+            if (pos_structs[ip].id() < 0) return;
+
+            const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
+                                                       + uyp[ip]*uyp[ip]*clightsq
+                                                       + uzp[ip]*uzp[ip]*clightsq);
+
+            amrex::Gpu::Atomic::Add(&p_rdata[0], gamma); // sum of gamma
+            amrex::Gpu::Atomic::Add(&p_rdata[1], pos_structs[ip].pos(0)); // sum of x
+            amrex::Gpu::Atomic::Add(&p_rdata[2], pos_structs[ip].pos(1)); //sum of y
+            amrex::Gpu::Atomic::Add(&p_rdata[6], uxp[ip]); // sum of ux
+            amrex::Gpu::Atomic::Add(&p_rdata[7], uyp[ip]); // sum of uy
+            amrex::Gpu::Atomic::Add(&p_idata[0], 1); // sum of weights
         });
     amrex::Gpu::Device::synchronize();
+
+    if (p_idata[0] < std::numeric_limits<amrex::Real>::epsilon()) return; // return if no valid particles
+    // sums to averages
+    for (int i=0; i<m_insitu_rnp+8; i++) p_rdata[i] = p_rdata[i] / p_idata[0];
+
+    amrex::ParallelFor(
+        num_particles,
+        [=] AMREX_GPU_DEVICE (long idx) {
+            const int ip = indices[cell_start+idx];
+
+            // Skip invalid particles
+            if (pos_structs[ip].id() < 0) return;
+
+            const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
+                                                       + uyp[ip]*uyp[ip]*clightsq
+                                                       + uzp[ip]*uzp[ip]*clightsq);
+
+            amrex::Gpu::Atomic::Add(&p_rdata[5], (gamma - p_rdata[0])*(gamma - p_rdata[0]) ); // sum of (gamma-gammam)^2
+            amrex::Gpu::Atomic::Add(&p_rdata[8], (pos_structs[ip].pos(0) - p_rdata[1] )*
+                                                 (pos_structs[ip].pos(0) - p_rdata[1] )); // sum of (x-xm)^2
+            amrex::Gpu::Atomic::Add(&p_rdata[9], (pos_structs[ip].pos(1) - p_rdata[2] )*
+                                                 (pos_structs[ip].pos(1) - p_rdata[2] )); // sum of (y-ym)^2
+            amrex::Gpu::Atomic::Add(&p_rdata[10], (uxp[ip] - p_rdata[6] )* (uxp[ip] - p_rdata[6] )); // sum of (ux-uxm)^2
+            amrex::Gpu::Atomic::Add(&p_rdata[11], (uyp[ip] - p_rdata[7] )* (uyp[ip] - p_rdata[7] )); // sum of (uy-uym)^2
+            // cross terms for emittance
+            amrex::Gpu::Atomic::Add(&p_rdata[12], (pos_structs[ip].pos(0) - p_rdata[1] )* (uxp[ip] - p_rdata[6] )); // sum of (x-xm)*(ux-uxm)
+            amrex::Gpu::Atomic::Add(&p_rdata[13], (pos_structs[ip].pos(1) - p_rdata[2] )* (uyp[ip] - p_rdata[7] )); // sum of (y-ym)*(uy-uym)
+        });
+    amrex::Gpu::Device::synchronize();
+    p_rdata[5] = std::sqrt(p_rdata[5] / p_idata[0]); // rms energy spread
+    p_rdata[8] = p_rdata[8] / p_idata[0]; // variance in x
+    p_rdata[9] = p_rdata[9] / p_idata[0]; // variance in y
+    p_rdata[10] = p_rdata[10] / p_idata[0]; // variance in ux
+    p_rdata[11] = p_rdata[11] / p_idata[0]; // variance in uy
+    p_rdata[12] = p_rdata[10] / p_idata[0]; // <x-ux>
+    p_rdata[13] = p_rdata[11] / p_idata[0]; // <y-uy>
+
     for (int i=0; i<m_insitu_rnp; i++) m_insitu_rdata[m_insitu_rnp*islice+i] = p_rdata[i];
     for (int i=0; i<m_insitu_inp; i++) m_insitu_idata[m_insitu_inp*islice+i] = p_idata[i];
+
+    // calculating the emittance = sqrt( <x><ux> - <x-ux>^2 )
+    m_insitu_rdata[m_insitu_rnp*islice+3] = std::sqrt( std::abs( (p_rdata[8] * p_rdata[10]
+                                                                 - p_rdata[12]*p_rdata[12] ) ) ); // in x
+    m_insitu_rdata[m_insitu_rnp*islice+4] = std::sqrt( std::abs( (p_rdata[9] * p_rdata[11]
+                                                              - p_rdata[13]*p_rdata[13] ) ) ); // in y
 }
 
 void
