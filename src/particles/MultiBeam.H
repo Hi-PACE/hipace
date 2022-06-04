@@ -84,7 +84,7 @@ public:
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0);
-    void InSituWriteToFile (int step);
+    void InSituWriteToFile (int step, amrex::Real time);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      * \return physical time at which the simulation will start

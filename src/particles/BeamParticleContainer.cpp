@@ -67,6 +67,7 @@ BeamParticleContainer::ReadParameters ()
 amrex::Real
 BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
+    using namespace amrex::literals;
     PhysConst phys_const = get_phys_const();
     amrex::Real ptime {0.};
     if (m_injection_type == "fixed_ppc") {
@@ -167,6 +168,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         int nslices = geom.Domain().length(2);
         m_insitu_rdata.resize(nslices*m_insitu_rnp, 0.);
         m_insitu_idata.resize(nslices*m_insitu_inp, 0.);
+        m_insitu_device_rdata.resize(m_insitu_rnp, 0._rt);
+        m_insitu_device_idata.resize(m_insitu_inp, 0._rt);
     }
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
@@ -206,20 +209,21 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
 void
 BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0)
 {
-    amrex::Print()<<"InSituComputeDiags\n";
+    HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags");
     using namespace amrex::literals;
-    amrex::AllPrint()<<"islice "<<islice<<'\n';
     BeamBins::index_type const * const indices = bins.permutationPtr();
     BeamBins::index_type const * const offsets = bins.offsetsPtr();
     BeamBins::index_type const cell_start = offsets[islice-islice0];
     BeamBins::index_type const cell_stop = offsets[islice-islice0+1];
     int const num_particles = cell_stop-cell_start;
+
     amrex::Gpu::DeviceVector<amrex::Real> device_rdata;
     amrex::Gpu::DeviceVector<int> device_idata;
     device_rdata.resize(m_insitu_rnp);
     device_idata.resize(m_insitu_inp);
     for (int i=0; i<m_insitu_rnp; i++) device_rdata[i] = 0._rt;
     for (int i=0; i<m_insitu_inp; i++) device_idata[i] = 0._rt;
+
     amrex::Real* AMREX_RESTRICT p_rdata = device_rdata.data();
     int* AMREX_RESTRICT p_idata = device_idata.data();
     amrex::ParallelFor(
@@ -230,17 +234,15 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
             amrex::Gpu::Atomic::Add(&p_rdata[1], 2.);
             amrex::Gpu::Atomic::Add(&p_idata[0], 1);
         });
+    amrex::Gpu::Device::synchronize();
     for (int i=0; i<m_insitu_rnp; i++) m_insitu_rdata[m_insitu_rnp*islice+i] = p_rdata[i];
-    for (int i=0; i<m_insitu_inp; i++) {
-        m_insitu_idata[m_insitu_inp*islice+i] = p_idata[i];
-        amrex::AllPrint()<<m_insitu_inp*islice+i<<" is "<<m_insitu_idata[m_insitu_inp*islice+i]<<'\n';
-    }
+    for (int i=0; i<m_insitu_inp; i++) m_insitu_idata[m_insitu_inp*islice+i] = p_idata[i];
 }
 
 void
-BeamParticleContainer::InSituWriteToFile (int step)
+BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
 {
-    amrex::Print()<<"InSituWriteToFile\n";
+    HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile");
     using namespace amrex::literals;
     // open file
 
@@ -256,7 +258,7 @@ BeamParticleContainer::InSituWriteToFile (int step)
     ofs << std::fixed << std::setprecision(14) << std::scientific;
 
     // write time
-    // ofs << WarpX::GetInstance().gett_new(0);
+    ofs << time;
 
     // loop over data size and write
     for (const auto& item : m_insitu_idata) ofs << m_insitu_sep << item;
@@ -272,4 +274,6 @@ BeamParticleContainer::InSituWriteToFile (int step)
 
     for (int i=0; i<m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
     for (int i=0; i<m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
+    m_insitu_device_rdata.resize(m_insitu_rnp, 0._rt);
+    m_insitu_device_idata.resize(m_insitu_inp, 0._rt);
 }

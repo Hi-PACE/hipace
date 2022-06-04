@@ -239,10 +239,10 @@ MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, 
 }
 
 void
-MultiBeam::InSituWriteToFile (int step)
+MultiBeam::InSituWriteToFile (int step, amrex::Real time)
 {
     for (auto& beam : m_all_beams) {
-        beam.InSituWriteToFile(step);
+        beam.InSituWriteToFile(step, time);
     }
 }
 

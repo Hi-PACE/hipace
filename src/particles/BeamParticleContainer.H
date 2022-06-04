@@ -100,7 +100,7 @@ public:
 #endif
 
     void InSituComputeDiags (int islice, const BeamBins& bins, int islice0);
-    void InSituWriteToFile (int step);
+    void InSituWriteToFile (int step, amrex::Real time);
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
@@ -154,6 +154,8 @@ private:
     std::vector<amrex::Real> m_insitu_rdata;
     /** Per-slice integer beam properties */
     std::vector<int> m_insitu_idata;
+    amrex::Gpu::DeviceVector<amrex::Real> m_insitu_device_rdata;
+    amrex::Gpu::DeviceVector<int> m_insitu_device_idata;
     /** Separator when writing to file */
     std::string m_insitu_sep = " ";
 };

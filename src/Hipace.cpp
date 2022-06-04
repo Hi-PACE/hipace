@@ -491,7 +491,7 @@ Hipace::Evolve ()
             Notify(step, it, bins[lev]);
         }
 
-        if ( m_multi_beam.doInSitu(step) ) m_multi_beam.InSituWriteToFile(step);
+        if ( m_multi_beam.doInSitu(step) ) m_multi_beam.InSituWriteToFile(step, m_physical_time);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
