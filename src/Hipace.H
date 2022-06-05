@@ -159,6 +159,7 @@ public:
      *
      * \param[in] islice_coarse slice number
      * \param[in] ibox index of the current box to be calculated
+     * \param[in] step current time step
      * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
     void SolveOneSlice (int islice_coarse, const int ibox, int step,
