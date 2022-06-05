@@ -680,8 +680,10 @@ Hipace::ResetAllQuantities ()
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);
-        for (int islice=0; islice<WhichSlice::N; islice++) {
-            m_fields.getSlices(lev, islice).setVal(0., m_fields.m_slices_nguards);
+        for (amrex::MultiFab& slice : m_fields.getSlices(lev)) {
+            if (slice.nComp() != 0) {
+                slice.setVal(0., m_fields.m_slices_nguards);
+            }
         }
     }
 }
