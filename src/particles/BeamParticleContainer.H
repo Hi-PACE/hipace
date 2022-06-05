@@ -143,17 +143,19 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name ; /**< the name of the particle species in the beam file */
+    /** Number of real beam properties for in-situ reduced diagnostics.
+     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
+     * sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>
+     * Per-slice emittance: sqrt( (<x^2>-<x>^2) * (<ux^2>-<uxm>^2) - (<x*ux>-<x><ux>)^2 ).
+     * Projected emittance: Same as above AFTER averaging all these quantities over slices.
+     * Energy spread: sqrt(<ga^2>-<ga>^2), and same as above.
+     * sum(w) should never be 0. When it is, it is replaced by 1 to avoid nans and these
+     * diags are incorrect.
+     */
+    int m_insitu_rnp {13};
     /** Number of integer beam properties for in-situ reduced diagnostics.
      * 0: number of particles in this slice */
     int m_insitu_inp {1};
-    /** Number of real beam properties for in-situ reduced diagnostics.
-     * 0: Average energy
-     * 1: Average position in x *
-     * 2: Average position in y *
-     * 3: Emittance in x *
-     * 4: Emittance in y *
-     * 5: rms energy spread */
-    int m_insitu_rnp {6};
     /** Per-slice real beam properties */
     std::vector<amrex::Real> m_insitu_rdata;
     /** Per-slice integer beam properties */

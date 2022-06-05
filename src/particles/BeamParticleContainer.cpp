@@ -229,29 +229,17 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     int const num_particles = cell_stop-cell_start;
 
     // Tuple contains:
-    // 0: np
-    // 1: sum(weights)
-    // 2: <x>
-    // 3: <x**2>
-    // 4: <y>
-    // 5: <y**2>
-    // 6: <ux>
-    // 7: <ux**2>
-    // 8: <uy>
-    // 9: <uy**2>
-    //10: <x*ux>
-    //11: <y*uy>
-    //12: <ga>
-    //13: <ga**2>
+    //      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12, 13
+    // sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
     amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-    amrex::ReduceData<int, amrex::Real, amrex::Real, amrex::Real,
+    amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real,
                       amrex::Real, amrex::Real, amrex::Real, amrex::Real,
                       amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real> reduce_data(reduce_op);
+                      amrex::Real, int> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
     reduce_op.eval(
         num_particles, reduce_data,
@@ -262,8 +250,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
             const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                        + uyp[ip]*uyp[ip]*clightsq
                                                        + uzp[ip]*uzp[ip]*clightsq);
-            return {1,
-                    wp[ip],
+            return {wp[ip],
                     wp[ip]*pos_structs[ip].pos(0),
                     wp[ip]*pos_structs[ip].pos(0)*pos_structs[ip].pos(0),
                     wp[ip]*pos_structs[ip].pos(1),
@@ -276,35 +263,31 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
                     wp[ip]*pos_structs[ip].pos(1)*uyp[ip],
                     wp[ip]*gamma,
                     wp[ip]*gamma*gamma,
-            };
+                    1};
         });
+
     ReduceTuple a = reduce_data.value();
-    const int np            = amrex::get< 0>(a);
-    const amrex::Real sum_w0= amrex::get< 1>(a);
-    const amrex::Real sum_w = sum_w0 < std::numeric_limits<amrex::Real>::epsilon() ? 1._rt : sum_w0;
-    const amrex::Real xm    = amrex::get< 2>(a)/sum_w;
-    const amrex::Real x2m   = amrex::get< 3>(a)/sum_w;
-    const amrex::Real ym    = amrex::get< 4>(a)/sum_w;
-    const amrex::Real y2m   = amrex::get< 5>(a)/sum_w;
-    const amrex::Real uxm   = amrex::get< 6>(a)/sum_w;
-    const amrex::Real ux2m  = amrex::get< 7>(a)/sum_w;
-    const amrex::Real uym   = amrex::get< 8>(a)/sum_w;
-    const amrex::Real uy2m  = amrex::get< 9>(a)/sum_w;
-    const amrex::Real xuxm  = amrex::get<10>(a)/sum_w;
-    const amrex::Real yuym  = amrex::get<11>(a)/sum_w;
-    const amrex::Real gam   = amrex::get<12>(a)/sum_w;
-    const amrex::Real ga2m  = amrex::get<13>(a)/sum_w;
+    const int np             = amrex::get<13>(a);
+    const amrex::Real sum_w0 = amrex::get< 0>(a);
+    const amrex::Real sum_w  = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 1._rt : sum_w0;
 
-    m_insitu_idata[m_insitu_inp*islice  ] = np;
-
-    m_insitu_rdata[m_insitu_rnp*islice  ] = gam;
-    m_insitu_rdata[m_insitu_rnp*islice+1] = xm;
-    m_insitu_rdata[m_insitu_rnp*islice+2] = ym;
-    m_insitu_rdata[m_insitu_rnp*islice+3] =
-        std::sqrt( std::abs( (x2m-xm*xm) * (ux2m-uxm*uxm) - (xuxm-xm*uxm) * (xuxm-xm*uxm) ) );
-    m_insitu_rdata[m_insitu_rnp*islice+4] =
-        std::sqrt( std::abs( (y2m-ym*ym) * (uy2m-uym*uym) - (yuym-ym*uym) * (yuym-ym*uym) ) );
-    m_insitu_rdata[m_insitu_rnp*islice+5] = std::sqrt( std::abs( ga2m - gam*gam ) );
+    m_insitu_idata[m_insitu_inp*islice   ] = np;
+    m_insitu_rdata[m_insitu_rnp*islice   ] = sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 1] = amrex::get< 1>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 2] = amrex::get< 2>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 3] = amrex::get< 3>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 4] = amrex::get< 4>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 5] = amrex::get< 5>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 6] = amrex::get< 6>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 7] = amrex::get< 7>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 8] = amrex::get< 8>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+ 9] = amrex::get< 9>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+10] = amrex::get<10>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+11] = amrex::get<11>(a)/sum_w;
+    m_insitu_rdata[m_insitu_rnp*islice+12] = amrex::get<12>(a)/sum_w;
+    if (np>0 && sum_w0==0) {
+        amrex::Print()<<"WARNING: Beam slice with 0 total weight: In-Situ diags are INCORRECT\n";
+    }
 }
 
 void
