@@ -246,7 +246,10 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
         [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
         {
             const int ip = indices[cell_start+i];
-            if (pos_structs[ip].id() < 0) return;
+            if (pos_structs[ip].id() < 0) {
+                return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
+                    0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
+            }
             const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                        + uyp[ip]*uyp[ip]*clightsq
                                                        + uzp[ip]*uzp[ip]*clightsq);
@@ -323,6 +326,6 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
     // close file
     ofs.close();
 
-    for (int i=0; i<m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
-    for (int i=0; i<m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
+    for (int i=0; i<(int) m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
+    for (int i=0; i<(int) m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
 }
