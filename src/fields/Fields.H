@@ -138,7 +138,8 @@ public:
     void checkInit() {
         for (auto& slices_lev : m_slices) {
             for (auto& slice : slices_lev) {
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice.nGrowVect() == m_slices_nguards,
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    slice.nComp() == 0 || slice.nGrowVect() == m_slices_nguards,
                     "m_slices[lev][islice].nGrowVect() must be equal to m_slices_nguards");
             }
         }
