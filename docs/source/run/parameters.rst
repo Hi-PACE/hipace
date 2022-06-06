@@ -507,7 +507,13 @@ Diagnostic parameters
 
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be ``all``,
-    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi``.
+    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
+    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
+    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
+    for each plasma are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
+    ``jx_<plasma name> jy_<plasma name> jz_<plasma name>`` ``jxx_<plasma name> jxy_<plasma name>
+    jyy_<plasma name> rho_<plasma name>`` are available. Note, that the neutralizing background will
+    always be added to the first plasma species in case multiple plasma species are available.
     **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
     output, please use ``hipace.output_period = -1``.
 
