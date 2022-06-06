@@ -142,10 +142,12 @@ Fields::AllocData (
 
     // allocate memory for fields
     for (int islice=0; islice<WhichSlice::N; islice++) {
-        m_slices[lev][islice].define(
-            slice_ba, slice_dm, N_Comps[islice], m_slices_nguards,
-            amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[lev][islice].setVal(0._rt, m_slices_nguards);
+        if (N_Comps[islice] != 0) {
+            m_slices[lev][islice].define(
+                slice_ba, slice_dm, N_Comps[islice], m_slices_nguards,
+                amrex::MFInfo().SetArena(amrex::The_Arena()));
+            m_slices[lev][islice].setVal(0._rt, m_slices_nguards);
+        }
     }
 
     // The Poisson solver operates on transverse slices only.
