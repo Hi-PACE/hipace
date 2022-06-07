@@ -330,6 +330,16 @@ parameters for each beam are specified via ``<beam name>.<beam property> = ...``
     The names of the particle beams, separated by a space.
     To run without beams, choose the name ``no_beam``.
 
+* ``beams.insitu_freq`` (`int`) optional (default ``-1``)
+    Frequency of in-situ diagnostics, computing the main per-slice beam quantities for the main beam parameters (width, energy spread, emittance, etc.).
+    The data is written to a text file:
+      * 1 file per time step.
+      * 1 line per file.
+      * [time step], [physical time], [all quantities for slice 0], [all quantities for slice 1], ..., [all quantities for slice nz-1]
+      * all quantities are: [number of macro-particles], sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
+        where "<>" stands for averaging over all particles in the current slice, "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+    When <0, the in-situ diagnostics are not activated.
+
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
 The general beam parameters are applicable to all particle beam types. More specialized beam parameters,
@@ -380,6 +390,9 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.finest_level`` (`int`) optional (default `0`)
     Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
     up to its finest level. The beam will be pushed by the fields of the finest level.
+
+* ``<beam name>.insitu_sep`` (`string`) optional (default ``" "``)
+    Separator used in the text file of in-situ diagnostics.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^

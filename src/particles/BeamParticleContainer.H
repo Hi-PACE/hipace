@@ -25,6 +25,8 @@ struct BeamIdx
     };
 };
 
+using BeamBins = amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>;
+
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
     : public amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>
@@ -42,9 +44,11 @@ public:
     void ReadParameters ();
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile
+     * \param[in] geom Geometry object for the whole domain
+     * \param[in] do_insitu Whether in-situ diagnostics are activated for this species
      * \return physical time at which the simulation will start
      */
-    amrex::Real InitData (const amrex::Geometry& geom);
+    amrex::Real InitData (const amrex::Geometry& geom, bool do_insitu);
 
     /** Initialize a beam with a fix number of particles per cell */
     void InitBeamFixedPPC (
@@ -97,6 +101,18 @@ public:
                                   const bool species_specified);
 #endif
 
+    /** Compute reduced beam diagnostics of current slice, store in member variable
+     * \param[in] islice current slice, on which diags are computed.
+     * \param[in] bins Binning object to get particles on current slice
+     * \param[in] islice0 index of the leftmost slice of this box, to select the correct bin
+     * \param[in] box_offset Index of first particle of the current box.
+     */
+    void InSituComputeDiags (int islice, const BeamBins& bins, int islice0, const int box_offset);
+    /** Dump in-situ reduced diagnostics to file.
+     * \param[in] step current time step
+     * \param[in] time physical time
+     */
+    void InSituWriteToFile (int step, amrex::Real time);
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
@@ -138,7 +154,27 @@ private:
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
-    std::string m_species_name ; /**< the name of the particle species in the beam file */
+    std::string m_species_name; /**< the name of the particle species in the beam file */
+    /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
+    int m_insitu_rnp {13};
+    /** Number of integer beam properties for in-situ reduced diagnostics. */
+    int m_insitu_inp {1};
+    /** Per-slice real beam properties:
+     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
+     * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
+     * where [] means average over all particles within slice.
+     * Per-slice emittance: sqrt( ([x^2]-[x]^2) * ([ux^2]-[uxm]^2) - ([x*ux]-[x][ux])^2 ).
+     * Projected emittance: Same as above AFTER averaging all these quantities over slices.
+     * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
+     * sum(w) should never be 0. When it is, it is replaced by 1 to avoid nans and these
+     * diags are incorrect.
+     */
+    std::vector<amrex::Real> m_insitu_rdata;
+    /** Per-slice integer beam properties:
+     * 0: number of particles in this slice */
+    std::vector<int> m_insitu_idata;
+    /** Separator when writing to file */
+    std::string m_insitu_sep = " ";
 };
 
 #endif

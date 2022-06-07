@@ -17,6 +17,7 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     amrex::ParmParse pp("beams");
     getWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
+    queryWithParser(pp, "insitu_freq", m_insitu_freq);
     m_nbeams = m_names.size();
     MultiFromFileMacro(m_names);
     for (int i = 0; i < m_nbeams; ++i) {
@@ -30,7 +31,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 {
     amrex::Real ptime {0.};
     for (auto& beam : m_all_beams) {
-        ptime = beam.InitData(geom);
+        ptime = beam.InitData(geom, m_insitu_freq>0);
     }
     return ptime;
 }
@@ -228,4 +229,29 @@ MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
             }
         }
     }
+}
+
+void
+MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
+                               const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
+{
+    for (int i = 0; i < m_nbeams; ++i) {
+        m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
+                                          a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
+    }
+}
+
+void
+MultiBeam::InSituWriteToFile (int step, amrex::Real time)
+{
+    for (auto& beam : m_all_beams) {
+        beam.InSituWriteToFile(step, time);
+    }
+}
+
+bool
+MultiBeam::doInSitu (int step)
+{
+    if (m_insitu_freq < 0) return false;
+    return step % m_insitu_freq == 0;
 }
