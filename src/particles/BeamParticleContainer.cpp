@@ -65,7 +65,7 @@ BeamParticleContainer::ReadParameters ()
 }
 
 amrex::Real
-BeamParticleContainer::InitData (const amrex::Geometry& geom)
+BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
 {
     using namespace amrex::literals;
     PhysConst phys_const = get_phys_const();
@@ -163,7 +163,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     }
 
-    {
+    if (do_insitu) {
         // Allocate memory for in-situ diagnostics
         int nslices = geom.Domain().length(2);
         m_insitu_rdata.resize(nslices*m_insitu_rnp, 0.);
@@ -211,6 +211,9 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags");
 
     using namespace amrex::literals;
+
+    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0);
+
     PhysConst const phys_const = get_phys_const();
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
 

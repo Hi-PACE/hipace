@@ -31,7 +31,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 {
     amrex::Real ptime {0.};
     for (auto& beam : m_all_beams) {
-        ptime = beam.InitData(geom);
+        ptime = beam.InitData(geom, m_insitu_freq>0);
     }
     return ptime;
 }

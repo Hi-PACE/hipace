@@ -44,9 +44,11 @@ public:
     void ReadParameters ();
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile
+     * \param[in] geom Geometry object for the whole domain
+     * \param[in] do_insitu Whether in-situ diagnostics are activated for this species
      * \return physical time at which the simulation will start
      */
-    amrex::Real InitData (const amrex::Geometry& geom);
+    amrex::Real InitData (const amrex::Geometry& geom, bool do_insitu);
 
     /** Initialize a beam with a fix number of particles per cell */
     void InitBeamFixedPPC (
