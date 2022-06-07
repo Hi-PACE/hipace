@@ -83,13 +83,6 @@ public:
         const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
-    /** FIXME
-     * \param[in] islice
-     * \param[in] bins Vector (over species) of particles sorted by slices
-     * \param[in] islice0
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
-     * \param[in] ibox index of the current box
-     */
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] bins Binning object to get particles on current slice.
