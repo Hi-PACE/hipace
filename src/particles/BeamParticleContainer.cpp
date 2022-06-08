@@ -275,25 +275,22 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     ReduceTuple a = reduce_data.value();
     const int np             = amrex::get<13>(a);
     const amrex::Real sum_w0 = amrex::get< 0>(a);
-    const amrex::Real sum_w  = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 1._rt : sum_w0;
+    const amrex::Real sum_w_inv = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 0._rt : 1._rt/sum_w0;
 
     m_insitu_idata[m_insitu_inp*islice   ] = np;
-    m_insitu_rdata[m_insitu_rnp*islice   ] = sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 1] = amrex::get< 1>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 2] = amrex::get< 2>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 3] = amrex::get< 3>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 4] = amrex::get< 4>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 5] = amrex::get< 5>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 6] = amrex::get< 6>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 7] = amrex::get< 7>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 8] = amrex::get< 8>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+ 9] = amrex::get< 9>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+10] = amrex::get<10>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+11] = amrex::get<11>(a)/sum_w;
-    m_insitu_rdata[m_insitu_rnp*islice+12] = amrex::get<12>(a)/sum_w;
-    if (np>0 && sum_w0==0) {
-        amrex::Print()<<"WARNING: Beam slice with 0 total weight: In-Situ diags are INCORRECT\n";
-    }
+    m_insitu_rdata[m_insitu_rnp*islice   ] = sum_w0;
+    m_insitu_rdata[m_insitu_rnp*islice+ 1] = amrex::get< 1>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 2] = amrex::get< 2>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 3] = amrex::get< 3>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 4] = amrex::get< 4>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 5] = amrex::get< 5>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 6] = amrex::get< 6>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 7] = amrex::get< 7>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 8] = amrex::get< 8>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+ 9] = amrex::get< 9>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+10] = amrex::get<10>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+11] = amrex::get<11>(a)*sum_w_inv;
+    m_insitu_rdata[m_insitu_rnp*islice+12] = amrex::get<12>(a)*sum_w_inv;
 }
 
 void
