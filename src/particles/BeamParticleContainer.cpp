@@ -79,6 +79,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
         amrex::Array<amrex::Real, AMREX_SPACEDIM> position_mean{0., 0., 0.};
         queryWithParser(pp, "position_mean", position_mean);
         queryWithParser(pp, "min_density", m_min_density);
+        m_min_density = std::abs(m_min_density);
         amrex::Vector<int> random_ppc {false, false, false};
         queryWithParser(pp, "random_ppc", random_ppc);
         const GetInitialDensity get_density(m_name);

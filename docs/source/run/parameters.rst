@@ -369,11 +369,12 @@ which are valid only for certain beam types, are introduced further below under
     The mass of beam particles. Can also be set with ``<beam name>.element``. Must be `>0`.
 
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
-    The charge of a beam particles. Can also be set with ``<beam name>.element``.
+    The charge of a beam particle. Can also be set with ``<beam name>.element``.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
     either ``total_charge`` or ``density`` must be specified.
+    The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.profile`` (`string`)
     Beam profile.
@@ -402,6 +403,7 @@ Option: ``fixed_weight``
 
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
+    The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
     Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
@@ -446,6 +448,7 @@ Option: ``fixed_ppc``
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
+    The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
     Whether the position in `(x y z)` of the particles is randomized within the cell.

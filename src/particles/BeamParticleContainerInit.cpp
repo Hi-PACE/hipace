@@ -59,7 +59,7 @@ namespace
         arrdata[BeamIdx::ux  ][ip] = ux * speed_of_light;
         arrdata[BeamIdx::uy  ][ip] = uy * speed_of_light;
         arrdata[BeamIdx::uz  ][ip] = uz * speed_of_light;
-        arrdata[BeamIdx::w][ip] = weight;
+        arrdata[BeamIdx::w][ip] = std::abs(weight);
     }
 }
 
