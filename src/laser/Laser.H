@@ -30,9 +30,7 @@ public:
      * \param[in] islice slice index */
     const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
 
-    /** \brief Allocate beam particle data and initialize particles with requested beam profile
-     * \return physical time at which the simulation will start
-     */
+    /** \brief Allocate laser multifab */
     void InitData (const amrex::BoxArray& slice_ba,
                    const amrex::DistributionMapping& slice_dm);
 
