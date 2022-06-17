@@ -27,9 +27,8 @@ beam.num_particles = 10000
 beam.density = 200.
 beam.u_mean = 20. 10. 20
 beam.u_std = 100. 100. 15.
-beam.position_mean = 0. 0. 0
+beam.position_mean = "z*0.2" "0." "0"
 beam.position_std = 0.1 0.1 1.41
-beam.dx_per_dzeta = 0.2
 
 beam2.injection_type = fixed_weight
 beam2.num_particles = 3000

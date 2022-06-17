@@ -11,6 +11,7 @@
 
 #include "profiles/GetInitialDensity.H"
 #include "profiles/GetInitialMomentum.H"
+#include "utils/Parser.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
@@ -66,12 +67,12 @@ public:
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
                               const GetInitialMomentum& get_momentum,
-                              const amrex::RealVect pos_mean,
+                              const amrex::ParserExecutor<1>& pos_mean_x,
+                              const amrex::ParserExecutor<1>& pos_mean_y,
+                              const amrex::Real pos_mean_z,
                               const amrex::RealVect pos_std,
                               const amrex::Real total_charge,
                               const bool do_symmetrize,
-                              const amrex::Real dx_per_dzeta,
-                              const amrex::Real dy_per_dzeta,
                               const bool can, const amrex::Real zmin, const amrex::Real zmax);
 
 #ifdef HIPACE_USE_OPENPMD
@@ -134,12 +135,12 @@ private:
     amrex::Real m_zmax; /**< Max longitudinal position of the can beam */
     amrex::Real m_radius; /**< Radius of the can beam */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
-    /** Average position of the Gaussian beam. Only used for a fixed-weight beam */
-    amrex::RealVect m_position_mean {0., 0., 0.};
+    /** Average x position of the fixed-weight beam depending on z */
+    amrex::Parser m_pos_mean_x_parser;
+    /** Average y position of the fixed-weight beam depending on z */
+    amrex::Parser m_pos_mean_y_parser;
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
-    amrex::Real m_dx_per_dzeta {0.}; /**< tilt in x direction */
-    amrex::Real m_dy_per_dzeta {0.}; /**< tilt in y direction */
     amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;

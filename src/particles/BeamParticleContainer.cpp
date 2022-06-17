@@ -8,6 +8,7 @@
  */
 #include "BeamParticleContainer.H"
 #include "utils/Constants.H"
+#include "utils/DeprecatedInput.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
@@ -49,8 +50,10 @@ BeamParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
         for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
     }
-    queryWithParser(pp, "dx_per_dzeta", m_dx_per_dzeta);
-    queryWithParser(pp, "dy_per_dzeta", m_dy_per_dzeta);
+    DeprecatedInput(m_name, "dx_per_dzeta", "position_mean = \"x_center+(z-z_center)"
+        "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
+    DeprecatedInput(m_name, "dy_per_dzeta", "position_mean = \"x_center+(z-z_center)"
+        "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParser(pp, "do_z_push", m_do_z_push);
     queryWithParser(pp, "insitu_sep", m_insitu_sep);
@@ -58,8 +61,7 @@ BeamParticleContainer::ReadParameters ()
     queryWithParser(pp, "finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (m_dx_per_dzeta == 0.) && (m_dy_per_dzeta == 0.)
-                                           && (m_duz_per_uz0_dzeta == 0.),
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
 }
@@ -103,8 +105,14 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
         } else {
             amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
         }
-        getWithParser(pp, "position_mean", loc_array);
-        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
+
+        std::array<std::string, 3> pos_mean_arr{"","",""};
+        getWithParser(pp, "position_mean", pos_mean_arr);
+        auto pos_mean_x = makeFunctionWithParser<1>(pos_mean_arr[0], m_pos_mean_x_parser, {"z"});
+        auto pos_mean_y = makeFunctionWithParser<1>(pos_mean_arr[1], m_pos_mean_y_parser, {"z"});
+        amrex::Real pos_mean_z = 0;
+        Parser::fillWithParser(pos_mean_arr[2], pos_mean_z);
+
         getWithParser(pp, "position_std", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
         getWithParser(pp, "num_particles", m_num_particles);
@@ -131,9 +139,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
         }
 
         const GetInitialMomentum get_momentum(m_name);
-        InitBeamFixedWeight(m_num_particles, get_momentum, m_position_mean,
-                            m_position_std, m_total_charge, m_do_symmetrize, m_dx_per_dzeta,
-                            m_dy_per_dzeta, can, zmin, zmax);
+        InitBeamFixedWeight(m_num_particles, get_momentum, pos_mean_x, pos_mean_y, pos_mean_z,
+                            m_position_std, m_total_charge, m_do_symmetrize, can, zmin, zmax);
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD

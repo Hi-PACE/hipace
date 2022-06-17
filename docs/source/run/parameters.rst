@@ -355,7 +355,9 @@ which are valid only for certain beam types, are introduced further below under
     ``from_file`` reads a beam from openPMD files.
 
 * ``<beam name>.position_mean`` (3 `float`)
-    The mean position of the beam in `x, y, z`, separated by a space.
+    The mean position of the beam in ``x, y, z``, separated by a space. For fixed_weight beams the
+    x and y directions can be functions of ``z``. To generate a tilted beam use
+    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta" "z_center"``.
 
 * ``<beam name>.position_std`` (3 `float`)
     The rms size of the of the beam in `x, y, z`, separated by a space.
@@ -404,14 +406,6 @@ Option: ``fixed_weight``
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
-
-* ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
-    Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
-    beam.
-
-* ``<beam name>.dy_per_dzeta`` (`float`)  optional (default `0.`)
-    Tilt of the beam in the y direction. The tilt is introduced with respect to the center of the
-    beam.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
