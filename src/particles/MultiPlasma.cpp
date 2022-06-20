@@ -167,23 +167,6 @@ MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
     }
 }
 
-amrex::RealVect
-MultiPlasma::GetUStd () const
-{
-    amrex::RealVect u_std = {0.,0.,0.};
-
-    for (auto& plasma : m_all_plasmas) {
-        u_std = plasma.GetUStd();
-        if (m_nplasmas > 1) {
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( (std::abs(u_std[0]) + std::abs(u_std[1])
-                                               + std::abs(u_std[2])) < 1e-7,
-                "Cannot use explicit solver + multiple plasma species + non-zero temperature");
-        }
-    }
-
-    return u_std;
-}
-
 void
 MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
 {
