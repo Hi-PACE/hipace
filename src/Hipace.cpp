@@ -797,7 +797,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
         for (const PlasmaParticleContainer& plasma : m_multi_plasma.m_all_plasmas) {
 
             // getting the constant of motion for finite temperatures
-            const amrex::RealVect u_std = m_multi_plasma.GetUStd();
+            const amrex::RealVect u_std = plasma.GetUStd();
             const amrex::Real const_of_motion = - plasma.m_mass * pc.c * pc.c / plasma.m_charge *
                 sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
 

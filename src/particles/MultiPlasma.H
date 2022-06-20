@@ -117,9 +117,6 @@ public:
      */
     void TileSort (amrex::Box bx, amrex::Geometry geom);
 
-    /** returns u_std of the plasma distribution */
-    amrex::RealVect GetUStd () const;
-
     /** returns a Vector of names of the plasmas */
     const amrex::Vector<std::string>& GetNames() const {return m_names;}
 
