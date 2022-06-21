@@ -1176,6 +1176,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         MPI_Datatype one_particle_size{};
         MPI_Type_contiguous(psize, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                             &one_particle_size);
+        MPI_Type_commit(&one_particle_size);
 
         MPI_Recv(recv_buffer, np_total, one_particle_size,
                  (m_rank_z+1)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, &status);
@@ -1396,6 +1397,7 @@ Hipace::Notify (const int step, const int it,
         MPI_Datatype one_particle_size{};
         MPI_Type_contiguous(psize, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
                             &one_particle_size);
+        MPI_Type_commit(&one_particle_size);
 
         MPI_Isend(psend_buffer, np_total, one_particle_size,
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, loc_psend_request);
