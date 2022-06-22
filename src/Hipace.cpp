@@ -1171,8 +1171,14 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         MPI_Status status;
         const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        MPI_Recv(recv_buffer, buffer_size,
-                 amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+
+        // Make datatype the same size as one particle, so MAX_INT particles can be sent
+        MPI_Datatype one_particle_size{};
+        MPI_Type_contiguous(psize, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                            &one_particle_size);
+        MPI_Type_commit(&one_particle_size);
+
+        MPI_Recv(recv_buffer, np_total, one_particle_size,
                  (m_rank_z+1)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, &status);
 
         int offset_beam = 0;
@@ -1386,7 +1392,14 @@ Hipace::Notify (const int step, const int it,
         const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
         MPI_Request* loc_psend_request = only_ghost ? &m_psend_request_ghost : &m_psend_request;
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-        MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+
+        // Make datatype the same size as one particle, so MAX_INT particles can be sent
+        MPI_Datatype one_particle_size{};
+        MPI_Type_contiguous(psize, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                            &one_particle_size);
+        MPI_Type_commit(&one_particle_size);
+
+        MPI_Isend(psend_buffer, np_total, one_particle_size,
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, loc_psend_request);
     }
 #endif
