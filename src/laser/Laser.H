@@ -37,9 +37,7 @@ public:
     const amrex::FArrayBox& getFAB () const {return m_F;};
     amrex::FArrayBox& getFAB () {return m_F;};
 
-    /** \brief Allocate beam particle data and initialize particles with requested beam profile
-     * \return physical time at which the simulation will start
-     */
+    /** \brief Allocate laser multifab */
     void InitData (const amrex::BoxArray& slice_ba,
                    const amrex::DistributionMapping& slice_dm);
 

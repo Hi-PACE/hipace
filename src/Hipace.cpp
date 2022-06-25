@@ -41,6 +41,7 @@ Hipace* Hipace::m_instance = nullptr;
 bool Hipace::m_normalized_units = false;
 int Hipace::m_max_step = 0;
 amrex::Real Hipace::m_dt = 0.0;
+amrex::Real Hipace::m_max_time = std::numeric_limits<amrex::Real>::infinity();
 amrex::Real Hipace::m_physical_time = 0.0;
 amrex::Real Hipace::m_initial_time = 0.0;
 int Hipace::m_verbose = 0;
@@ -106,6 +107,7 @@ Hipace::Hipace () :
     std::string str_dt {""};
     queryWithParser(pph, "dt", str_dt);
     if (str_dt != "adaptive") queryWithParser(pph, "dt", m_dt);
+    queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     queryWithParser(pph, "numprocs_x", m_numprocs_x);
     queryWithParser(pph, "numprocs_y", m_numprocs_y);
@@ -173,8 +175,12 @@ Hipace::Hipace () :
 Hipace::~Hipace ()
 {
 #ifdef AMREX_USE_MPI
-    NotifyFinish();
-    NotifyFinish(0, true);
+    if (m_physical_time < m_max_time) {
+        NotifyFinish();
+        NotifyFinish(0, true);
+    } else {
+        NotifyFinish(0, false, true); // finish only time sends
+    }
     MPI_Comm_free(&m_comm_xy);
     MPI_Comm_free(&m_comm_z);
 #endif
@@ -402,10 +408,10 @@ Hipace::Evolve ()
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
+        if (m_physical_time <= m_max_time) {
+            m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
+        }
 #endif
-
-        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step<<" with dt = "<<m_dt<<'\n';
 
         ResetAllQuantities();
 
@@ -424,6 +430,21 @@ Hipace::Evolve ()
             m_laser.Init3DEnvelope(step, bx, Geom(0));
 
             Wait(step, it);
+            if (m_physical_time >= m_max_time) {
+                Notify(step, it); // just send signal to finish simulation
+                if (m_physical_time > m_max_time) break;
+            }
+            // adjust time step to reach max_time
+            m_dt = std::min(m_dt, m_max_time - m_physical_time);
+
+#ifdef HIPACE_USE_OPENPMD
+            if (m_physical_time == m_max_time && it == n_boxes-1) { // init diagnostic if max_time
+                m_openpmd_writer.InitDiagnostics(step, m_output_period, step, finestLevel()+1);
+            }
+#endif
+
+            if (m_verbose>=1 && it==n_boxes-1) std::cout<<"Rank "<<rank<<" started  step "<<step
+                                    <<" at time = "<<m_physical_time<< " with dt = "<<m_dt<<'\n';
 
             m_box_sorters.clear();
 
@@ -444,32 +465,38 @@ Hipace::Evolve ()
                                                          geom, m_box_sorters);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
-            SolveOneSlice(bx.bigEnd(Direction::z), it, bins);
+            SolveOneSlice(bx.bigEnd(Direction::z), it, step, bins);
             // Notify ghost slice
             if (it<m_numprocs_z-1) Notify(step, it, bins[lev], true);
             // Solve central slices
             for (int isl = bx.bigEnd(Direction::z)-1; isl > bx.smallEnd(Direction::z); --isl){
-                SolveOneSlice(isl, it, bins);
+                SolveOneSlice(isl, it, step, bins);
             };
             // Receive ghost slice
             if (it>0) Wait(step, it, true);
             CheckGhostSlice(it);
             // Solve tail slice. Consume ghost particles.
-            SolveOneSlice(bx.smallEnd(Direction::z), it, bins);
+            SolveOneSlice(bx.smallEnd(Direction::z), it, step, bins);
             // Delete ghost particles
             m_multi_beam.RemoveGhosts();
 
-            m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
-                                           it, m_box_sorters, false);
+            if (m_physical_time < m_max_time) {
+                m_adaptive_time_step.Calculate(m_dt, m_multi_beam, m_multi_plasma.maxDensity(),
+                                               it, m_box_sorters, false);
+            } else {
+                m_dt = 2.*m_max_time;
+            }
+
 
             // averaging predictor corrector loop diagnostics
             m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
             m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
 
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
-
             Notify(step, it, bins[lev]);
         }
+
+        if ( m_multi_beam.doInSitu(step) ) m_multi_beam.InSituWriteToFile(step, m_physical_time);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
@@ -487,11 +514,16 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice_coarse, const int ibox,
+Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
                        const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
+    if ( m_multi_beam.doInSitu(step) ) {
+        m_multi_beam.InSituComputeDiags(islice_coarse, bins[0],
+                                        boxArray(0)[ibox].smallEnd(Direction::z),
+                                        m_box_sorters, ibox);
+    }
     // Get this laser slice from the 3D array
     m_laser.Copy(islice_coarse, false);
 
@@ -517,79 +549,13 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
 
             // calculate correct slice for refined level
             const int islice = nsubslice*islice_coarse + isubslice;
-            const int islice_local = islice - boxArray(lev)[ibox].smallEnd(Direction::z);
+            const int islice_local = islice - bx.smallEnd(Direction::z);
 
             if (m_explicit) {
-                // Set all quantities to 0 except Bx and By: the previous slice serves as initial
-                // guess.
-                m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
-                    "jx_beam", "jy_beam", "jz_beam", "rho_beam");
-                for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
-                    m_fields.setVal(0., lev, WhichSlice::This,
-                        "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-                        "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
-                }
+                ExplicitSolveOneSubSlice (lev, ibox, bx, islice, islice_local, bins[lev]);
             } else {
-                m_fields.setVal(0., lev, WhichSlice::This,
-                    "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+                PredictorCorrectorSolveOneSubSlice (lev, ibox, bx, islice, islice_local, bins[lev]);
             }
-
-            if (!m_explicit) {
-                m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
-                                                true, false, false, lev);
-            }
-
-            if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
-            m_multi_plasma.DepositCurrent(
-                m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
-
-            if (m_explicit){
-                m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
-                m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
-                                                 m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                                 WhichSlice::Next);
-                // need to exchange jx_beam jy_beam
-                m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
-                    "jx_beam", "jy_beam");
-            }
-
-            m_fields.AddRhoIons(lev);
-
-            FillBoundaryChargeCurrents(lev);
-
-            if (!m_do_beam_jz_minus_rho) {
-                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-            }
-
-            m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins[lev],
-                                             m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                             WhichSlice::This, m_do_beam_jz_minus_rho);
-
-            if (m_do_beam_jz_minus_rho) {
-                m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-            }
-
-            m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-
-            FillBoundaryChargeCurrents(lev);
-
-            m_fields.SolvePoissonEz(Geom(), lev, islice);
-            m_fields.SolvePoissonBz(Geom(), lev, islice);
-
-            // Modifies Bx and By in the current slice and the force terms of the plasma particles
-            if (m_explicit){
-                m_fields.AddRhoIons(lev, true);
-                ExplicitSolveBxBy(lev);
-                m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
-                                                true, lev);
-                m_fields.AddRhoIons(lev);
-            } else {
-                PredictorCorrectorLoopToSolveBxBy(islice_local, lev, bins[lev], ibox);
-            }
-
-            // Push beam particles
-            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                                   bins[lev], m_box_sorters, ibox);
 
             FillDiagnostics(lev, islice);
 
@@ -613,6 +579,115 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox,
      m_fields.ShiftSlices(finestLevel()+1, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
 }
 
+
+void
+Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
+                                  const int islice, const int islice_local,
+                                  const amrex::Vector<BeamBins>& beam_bin)
+{
+    // Set all quantities to 0 except Bx and By: the previous slice serves as initial
+    // guess.
+    m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
+        "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+    for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
+        m_fields.setVal(0., lev, WhichSlice::This,
+            "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
+            "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
+    }
+
+    if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+    m_multi_plasma.DepositCurrent(
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+
+    m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::Next);
+    // need to exchange jx_beam jy_beam
+    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
+        "jx_beam", "jy_beam");
+
+    m_fields.AddRhoIons(lev);
+
+    FillBoundaryChargeCurrents(lev);
+
+    if (!m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
+
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::This, m_do_beam_jz_minus_rho);
+
+    if (m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
+
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
+
+    FillBoundaryChargeCurrents(lev);
+
+    m_fields.SolvePoissonEz(Geom(), lev, islice);
+    m_fields.SolvePoissonBz(Geom(), lev, islice);
+
+    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    m_fields.AddRhoIons(lev, true);
+    ExplicitSolveBxBy(lev);
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
+                                    true, lev);
+    m_fields.AddRhoIons(lev);
+
+    // Push beam particles
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                           beam_bin, m_box_sorters, ibox);
+}
+
+void
+Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
+                                            const int islice, const int islice_local,
+                                            const amrex::Vector<BeamBins>& beam_bin)
+{
+    m_fields.setVal(0., lev, WhichSlice::This,
+        "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
+                                    true, false, false, lev);
+
+    if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+    m_multi_plasma.DepositCurrent(
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+
+    m_fields.AddRhoIons(lev);
+
+    FillBoundaryChargeCurrents(lev);
+
+    if (!m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
+
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::This, m_do_beam_jz_minus_rho);
+
+    if (m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    }
+
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
+
+    FillBoundaryChargeCurrents(lev);
+
+    m_fields.SolvePoissonEz(Geom(), lev, islice);
+    m_fields.SolvePoissonBz(Geom(), lev, islice);
+
+    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    PredictorCorrectorLoopToSolveBxBy(islice_local, lev, beam_bin, ibox);
+
+    // Push beam particles
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                           beam_bin, m_box_sorters, ibox);
+}
+
 void
 Hipace::ResetAllQuantities ()
 {
@@ -620,8 +695,10 @@ Hipace::ResetAllQuantities ()
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);
-        for (int islice=0; islice<WhichSlice::N; islice++) {
-            m_fields.getSlices(lev, islice).setVal(0., m_fields.m_slices_nguards);
+        for (amrex::MultiFab& slice : m_fields.getSlices(lev)) {
+            if (slice.nComp() != 0) {
+                slice.setVal(0., m_fields.m_slices_nguards);
+            }
         }
     }
 }
@@ -729,7 +806,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
         for (const PlasmaParticleContainer& plasma : m_multi_plasma.m_all_plasmas) {
 
             // getting the constant of motion for finite temperatures
-            const amrex::RealVect u_std = m_multi_plasma.GetUStd();
+            const amrex::RealVect u_std = plasma.GetUStd();
             const amrex::Real const_of_motion = - plasma.m_mass * pc.c * pc.c / plasma.m_charge *
                 sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
 
@@ -1067,6 +1144,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
                  (m_rank_z+1)%m_numprocs_z, tcomm_z_tag, m_comm_z, &status);
     }
 
+    if (m_physical_time > m_max_time) return;
+
     const int nbeams = m_multi_beam.get_nbeams();
     // 1 element per beam species,
     // 1 for the index of leftmost box with beam particles,
@@ -1102,8 +1181,14 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         MPI_Status status;
         const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
         // Each rank receives data from upstream, except rank m_numprocs_z-1 who receives from 0
-        MPI_Recv(recv_buffer, buffer_size,
-                 amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+
+        // Make datatype the same size as one particle, so MAX_INT particles can be sent
+        MPI_Datatype one_particle_size{};
+        MPI_Type_contiguous(psize, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                            &one_particle_size);
+        MPI_Type_commit(&one_particle_size);
+
+        MPI_Recv(recv_buffer, np_total, one_particle_size,
                  (m_rank_z+1)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, &status);
 
         int offset_beam = 0;
@@ -1208,8 +1293,8 @@ Hipace::Notify (const int step, const int it,
 #ifdef AMREX_USE_MPI
     constexpr int lev = 0;
 
-    NotifyFinish(it, only_ghost); // finish the previous send
-
+    const bool only_time = m_physical_time >= m_max_time;
+    NotifyFinish(it, only_ghost, only_time); // finish the previous send
     int nz_laser = 0;
     if (m_laser.m_use_laser){
         const amrex::Box& laser_bx = m_laser.getFAB().box();
@@ -1237,6 +1322,8 @@ Hipace::Notify (const int step, const int it,
         MPI_Isend(&m_tsend_buffer, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, tcomm_z_tag, m_comm_z, &m_tsend_request);
     }
+
+    if (only_time) return;
 
     m_leftmost_box_snd = std::min(m_leftmost_box_snd, m_leftmost_box_rcv);
     if (it < m_leftmost_box_snd && it < m_numprocs_z - 1 && m_skip_empty_comms){
@@ -1348,7 +1435,14 @@ Hipace::Notify (const int step, const int it,
         const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
         MPI_Request* loc_psend_request = only_ghost ? &m_psend_request_ghost : &m_psend_request;
         // Each rank sends data downstream, except rank 0 who sends data to m_numprocs_z-1
-        MPI_Isend(psend_buffer, buffer_size, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+
+        // Make datatype the same size as one particle, so MAX_INT particles can be sent
+        MPI_Datatype one_particle_size{};
+        MPI_Type_contiguous(psize, amrex::ParallelDescriptor::Mpi_typemap<char>::type(),
+                            &one_particle_size);
+        MPI_Type_commit(&one_particle_size);
+
+        MPI_Isend(psend_buffer, np_total, one_particle_size,
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, loc_pcomm_z_tag, m_comm_z, loc_psend_request);
     }
 
@@ -1379,7 +1473,7 @@ Hipace::Notify (const int step, const int it,
 }
 
 void
-Hipace::NotifyFinish (const int it, bool only_ghost)
+Hipace::NotifyFinish (const int it, bool only_ghost, bool only_time)
 {
 #ifdef AMREX_USE_MPI
     if (only_ghost) {
@@ -1402,6 +1496,7 @@ Hipace::NotifyFinish (const int it, bool only_ghost)
                 MPI_Wait(&m_tsend_request, &status);
                 m_tsend_buffer = m_initial_time - 1.;
             }
+            if (only_time) return;
         }
         if (m_np_snd.size() > 0) {
             MPI_Status status;
@@ -1478,7 +1573,8 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 
     // Dump every m_output_period steps and after last step
     if (m_output_period < 0 ||
-        (!(output_step == m_max_step) && output_step % m_output_period != 0) ) return;
+        (!(m_physical_time == m_max_time) && !(output_step == m_max_step)
+         && output_step % m_output_period != 0 ) ) return;
 
     // assumption: same order as in struct enum Field Comps
     amrex::Vector< std::string > varnames = getDiagComps();

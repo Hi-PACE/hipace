@@ -39,9 +39,8 @@ beam.charge = -q_e
 beam.u_mean = 10 20 100
 beam.u_std = 0 0 0
 beam.profile = gaussian
-beam.position_mean = 0.25*kp_inv 0 2*kp_inv
+beam.position_mean = "0.25*kp_inv" "(z-2*kp_inv)*0.2" "2*kp_inv"
 beam.position_std = 0.4*kp_inv 0.4*kp_inv 1.41*kp_inv
-beam.dy_per_dzeta = 0.2
 
 plasmas.sort_bin_size = 8
 plasmas.names = elec ions

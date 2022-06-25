@@ -59,8 +59,19 @@ General parameters
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
 
+* ``hipace.max_time`` (`float`) optional (default `infinity`)
+    Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
+
 * ``hipace.dt`` (`float` or `string`) optional (default `0.`)
     Time step to advance the particle beam. For adaptive time step, use ``"adaptive"``.
+
+* ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    Number of time steps per betatron period (of the full blowout regime).
+    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N`
+    (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with
+    :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
+    factors of the slowest particles in all beams.
 
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.
@@ -128,14 +139,6 @@ General parameters
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.
-
-* ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
-    Only used when using adaptive time step (see ``hipace.dt`` above).
-    Number of time steps per betatron period (of the full blowout regime).
-    The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N`
-    (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with
-    :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
-    factors of the slowest particles in all beams.
 
 * ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
@@ -327,6 +330,16 @@ parameters for each beam are specified via ``<beam name>.<beam property> = ...``
     The names of the particle beams, separated by a space.
     To run without beams, choose the name ``no_beam``.
 
+* ``beams.insitu_freq`` (`int`) optional (default ``-1``)
+    Frequency of in-situ diagnostics, computing the main per-slice beam quantities for the main beam parameters (width, energy spread, emittance, etc.).
+    The data is written to a text file:
+      * 1 file per time step.
+      * 1 line per file.
+      * [time step], [physical time], [all quantities for slice 0], [all quantities for slice 1], ..., [all quantities for slice nz-1]
+      * all quantities are: [number of macro-particles], sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
+        where "<>" stands for averaging over all particles in the current slice, "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+    When <0, the in-situ diagnostics are not activated.
+
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
 The general beam parameters are applicable to all particle beam types. More specialized beam parameters,
@@ -342,7 +355,9 @@ which are valid only for certain beam types, are introduced further below under
     ``from_file`` reads a beam from openPMD files.
 
 * ``<beam name>.position_mean`` (3 `float`)
-    The mean position of the beam in `x, y, z`, separated by a space.
+    The mean position of the beam in ``x, y, z``, separated by a space. For fixed_weight beams the
+    x and y directions can be functions of ``z``. To generate a tilted beam use
+    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta" "z_center"``.
 
 * ``<beam name>.position_std`` (3 `float`)
     The rms size of the of the beam in `x, y, z`, separated by a space.
@@ -356,11 +371,12 @@ which are valid only for certain beam types, are introduced further below under
     The mass of beam particles. Can also be set with ``<beam name>.element``. Must be `>0`.
 
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
-    The charge of a beam particles. Can also be set with ``<beam name>.element``.
+    The charge of a beam particle. Can also be set with ``<beam name>.element``.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
     either ``total_charge`` or ``density`` must be specified.
+    The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.profile`` (`string`)
     Beam profile.
@@ -378,6 +394,9 @@ which are valid only for certain beam types, are introduced further below under
     Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
     up to its finest level. The beam will be pushed by the fields of the finest level.
 
+* ``<beam name>.insitu_sep`` (`string`) optional (default ``" "``)
+    Separator used in the text file of in-situ diagnostics.
+
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -386,14 +405,7 @@ Option: ``fixed_weight``
 
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
-
-* ``<beam name>.dx_per_dzeta`` (`float`)  optional (default `0.`)
-    Tilt of the beam in the x direction. The tilt is introduced with respect to the center of the
-    beam.
-
-* ``<beam name>.dy_per_dzeta`` (`float`)  optional (default `0.`)
-    Tilt of the beam in the y direction. The tilt is introduced with respect to the center of the
-    beam.
+    The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
@@ -430,6 +442,7 @@ Option: ``fixed_ppc``
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
+    The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
     Whether the position in `(x y z)` of the particles is randomized within the cell.
@@ -504,7 +517,13 @@ Diagnostic parameters
 
 * ``diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be ``all``,
-    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz jx jy jz jx_beam jy_beam jz_beam rho Psi``.
+    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
+    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
+    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
+    for each plasma are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
+    ``jx_<plasma name> jy_<plasma name> jz_<plasma name>`` ``jxx_<plasma name> jxy_<plasma name>
+    jyy_<plasma name> rho_<plasma name>`` are available. Note, that the neutralizing background will
+    always be added to the first plasma species in case multiple plasma species are available.
     **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
     output, please use ``hipace.output_period = -1``.
 

@@ -83,6 +83,17 @@ public:
         const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
+    /** Compute reduced beam diagnostics of current slice, store in member variable.
+     * \param[in] islice current slice, on which diags are computed.
+     * \param[in] bins Binning object to get particles on current slice.
+     * \param[in] islice0 index of the leftmost slice of this box, to select the correct bin.
+     * \param[in] a_box_sorter_vec Vector (over beams and boxes) of BoxSorter objects, with info on
+     *            particle indices in current box.
+     * \param[in] ibox index of box currently being computed.
+     */
+    void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
+                             const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
+    void InSituWriteToFile (int step, amrex::Real time);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      * \return physical time at which the simulation will start
@@ -161,6 +172,8 @@ public:
      * \param[in] beam_names names of all beams.
      */
     void MultiFromFileMacro (const amrex::Vector<std::string> beam_names);
+    bool doInSitu (int step);
+    int m_insitu_freq {-1};
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
