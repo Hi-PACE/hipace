@@ -81,12 +81,10 @@ PlasmaParticleContainer::ReadParameters ()
                     "The same functionality can be obtained with the parser using "
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
-
     bool density_func_specified = queryWithParser(pp, "density(x,y,z)", density_func_str);
     m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
 
     queryWithParser(pp, "min_density", m_min_density);
-
 
     std::string density_table_file_name{};
     m_use_density_table = queryWithParser(pp, "density_table_file", density_table_file_name);
