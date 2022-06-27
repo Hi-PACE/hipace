@@ -238,7 +238,7 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
 * ``<plasma name>.min_density`` (`float`) optional (default `0`)
-    Minimal density at which particles are still injected.
+    Minimal density below which particles are not injected.
     Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
 
 * ``<plasma name>.density_table_file`` (`string`) optional (default "")
