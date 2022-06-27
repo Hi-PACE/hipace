@@ -237,6 +237,10 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     of every timestep. If specified as a command line parameter, quotation marks must be added:
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
+* ``<plasma name>.min_density`` (`float`) optional (default `0`)
+    Minimal density at which particles are still injected.
+    Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
+
 * ``<plasma name>.density_table_file`` (`string`) optional (default "")
     Alternative to ``<plasma name>.density(x,y,z)``. Specify the name of a text file containing
     multiple densities for different positions. File syntax: ``<position> <density function>`` for
@@ -259,10 +263,6 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.hollow_core_radius`` (`float`) optional (default `0.`)
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
-
-* ``<plasma name>.parabolic_curvature`` (`float`) optional (default `0.`)
-    Curvature of a parabolic plasma profile. The plasma density is set to
-    :math:`\mathrm{plasma.density(x,y,z)} * (1 + \mathrm{plasma.parabolic\_curvature}*r^2)`.
 
 * ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered

@@ -120,6 +120,7 @@ public:
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
+    amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density funciton string */
     std::map<amrex::Real, std::string> m_density_table;
@@ -129,8 +130,6 @@ public:
     amrex::Real m_max_qsa_weighting_factor {35.};
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
-    /** defines the curvature of a parabolic plasma profile */
-    amrex::Real m_parabolic_curvature {0.};
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
