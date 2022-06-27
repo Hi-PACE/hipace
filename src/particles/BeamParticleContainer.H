@@ -131,8 +131,8 @@ public:
 
 private:
     std::string m_name; /**< name of the species */
-    amrex::Real m_zmin; /**< Min longitudinal position of the can beam */
-    amrex::Real m_zmax; /**< Max longitudinal position of the can beam */
+    amrex::Real m_zmin; /**< Min longitudinal particle position of the beam */
+    amrex::Real m_zmax; /**< Max longitudinal particle position of the beam */
     amrex::Real m_radius; /**< Radius of the can beam */
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
     /** Average x position of the fixed-weight beam depending on z */
