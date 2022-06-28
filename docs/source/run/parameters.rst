@@ -362,6 +362,12 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.position_std`` (3 `float`)
     The rms size of the of the beam in `x, y, z`, separated by a space.
 
+* ``<beam name>.zmin`` (`float`) (default `-infinity`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`) (default `infinity`)
+    Maximum in `z` at which particles are injected.
+
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
     the specific Ionization Energy of each state.
@@ -406,6 +412,7 @@ Option: ``fixed_weight``
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
+    Note that ``<beam name>.zmin`` and ``<beam name>.zmax`` can reduce the total charge.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
@@ -429,12 +436,6 @@ Option: ``fixed_ppc``
 
 * ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
-
-* ``<beam name>.zmin`` (`float`)
-    Minimum in `z` at which particles are injected.
-
-* ``<beam name>.zmax`` (`float`)
-    Maximum in `z` at which particles are injected.
 
 * ``<beam name>.radius`` (`float`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are

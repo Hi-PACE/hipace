@@ -94,7 +94,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
         amrex::ParmParse pp(m_name);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         bool can = false;
-        amrex::Real zmin = 0, zmax = 0;
+        amrex::Real zmin = -std::numeric_limits<amrex::Real>::infinity();
+        amrex::Real zmax = std::numeric_limits<amrex::Real>::infinity();
         std::string profile = "gaussian";
         queryWithParser(pp, "profile", profile);
         if (profile == "can") {
@@ -102,6 +103,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
             getWithParser(pp, "zmin", zmin);
             getWithParser(pp, "zmax", zmax);
         } else if (profile == "gaussian") {
+            queryWithParser(pp, "zmin", zmin);
+            queryWithParser(pp, "zmax", zmax);
         } else {
             amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
         }
