@@ -145,8 +145,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
                     density_func(x, y, c_t) < min_density) continue;
 
-                const amrex::Real rp = std::sqrt(x*x + y*y);
-
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
