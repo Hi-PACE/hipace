@@ -752,7 +752,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     for ( amrex::MFIter mfi(slicemf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
-        amrex::Box const& bx = mfi.tilebox();
+        amrex::Box const& bx = mfi.growntilebox(m_fields.m_source_nguard);
 
         amrex::Array4<amrex::Real> const mult = Mult.array(mfi);
         amrex::Array4<amrex::Real> const s = S.array(mfi);

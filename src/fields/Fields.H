@@ -408,6 +408,8 @@ public:
     static amrex::IntVect m_slices_nguards;
     /** Number of guard cells for poisson solver MultiFab */
     static amrex::IntVect m_poisson_nguards;
+    /** Number of guard cells where sources for poisson equation are included */
+    amrex::IntVect m_source_nguard;
     /** If the poisson solver should include the guard cells */
     bool m_extended_solve = false;
 
@@ -424,8 +426,8 @@ private:
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Number of guard cells where ExmBy and EypBx are calculated */
     amrex::IntVect m_exmby_eypbx_nguard;
-    /** Number of guard cells where sources for poisson equation are included */
-    amrex::IntVect m_source_nguard;
+    /** Number of extra cells where sources for poisson equation are not included */
+    int m_source_cutoff = 0;
     /** If lev_0 should be solved with open boundary conditions */
     bool m_open_boundary = false;
     /** If the explicit solver is being used */

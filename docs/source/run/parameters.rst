@@ -167,6 +167,11 @@ Modeling ion motion is not yet supported by the explicit solver
     Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artifacts
     originating from the boundary for long simulations.
 
+* ``fields.source_cutoff`` (`int`) optional (default `0`)
+    Parameter for ``extended_solve``. Cutoff additional cells near the domain boundary from
+    the source terms of the solvers. Can help to further reduce noise for very long boxes.
+    Note: for the explicit solver this cutoff region is like vacuum and not unperturbed plasma.
+
 * ``fields.open_boundary`` (`bool`) optional (default `0`)
     Uses a Taylor approximation of the Greens function to solve the Poisson equations with
     open boundary conditions. It's recommended to use this together with

@@ -26,6 +26,9 @@ Fields::Fields (Hipace const* a_hipace)
     amrex::ParmParse ppf("fields");
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
     queryWithParser(ppf, "extended_solve", m_extended_solve);
+    if (m_extended_solve) {
+        queryWithParser(ppf, "source_cutoff", m_source_cutoff);
+    }
     queryWithParser(ppf, "open_boundary", m_open_boundary);
 }
 
@@ -49,7 +52,7 @@ Fields::AllocData (
             // one cell less for transverse derivative
             m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
             // cut off anything near edge of charge/current deposition
-            m_source_nguard = -m_slices_nguards;
+            m_source_nguard = -m_slices_nguards-amrex::IntVect{m_source_cutoff, m_source_cutoff, 0};
         } else {
             // Need 1 extra guard cell transversally for transverse derivative
             int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
