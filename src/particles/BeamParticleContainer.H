@@ -46,10 +46,9 @@ public:
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile
      * \param[in] geom Geometry object for the whole domain
-     * \param[in] do_insitu Whether in-situ diagnostics are activated for this species
      * \return physical time at which the simulation will start
      */
-    amrex::Real InitData (const amrex::Geometry& geom, bool do_insitu);
+    amrex::Real InitData (const amrex::Geometry& geom);
 
     /** Initialize a beam with a fix number of particles per cell */
     void InitBeamFixedPPC (
@@ -129,6 +128,8 @@ public:
 
     amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
 
+    bool doInSitu (int step);
+
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal particle position of the beam */
@@ -150,7 +151,7 @@ private:
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Density of plasma to convert from_file beam to normalized units */
-    amrex::Real m_plasma_density;
+    amrex::Real m_plasma_density = 0;
     std::string m_input_file; /**< Path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
@@ -164,7 +165,7 @@ private:
      *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
      * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
      * where [] means average over all particles within slice.
-     * Per-slice emittance: sqrt( ([x^2]-[x]^2) * ([ux^2]-[uxm]^2) - ([x*ux]-[x][ux])^2 ).
+     * Per-slice emittance: sqrt( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ).
      * Projected emittance: Same as above AFTER averaging all these quantities over slices.
      * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
      * sum(w) should never be 0. When it is, it is replaced by 1 to avoid nans and these
@@ -176,6 +177,10 @@ private:
     std::vector<int> m_insitu_idata;
     /** Separator when writing to file */
     std::string m_insitu_sep = " ";
+    /** Prefix/path for the output files */
+    std::string m_insitu_file_prefix = "diags/insitu";
+    /** How often the insitu beam diagnostics should be computed and written */
+    int m_insitu_period {-1};
 };
 
 #endif

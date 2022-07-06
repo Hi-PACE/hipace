@@ -9,6 +9,7 @@
 #include "deposition/BeamDepositCurrent.H"
 #include "particles/SliceSort.H"
 #include "pusher/BeamParticleAdvance.H"
+#include "utils/DeprecatedInput.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
@@ -17,7 +18,7 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     amrex::ParmParse pp("beams");
     getWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
-    queryWithParser(pp, "insitu_freq", m_insitu_freq);
+    DeprecatedInput("beams", "insitu_freq", "insitu_period");
     m_nbeams = m_names.size();
     MultiFromFileMacro(m_names);
     for (int i = 0; i < m_nbeams; ++i) {
@@ -31,7 +32,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 {
     amrex::Real ptime {0.};
     for (auto& beam : m_all_beams) {
-        ptime = beam.InitData(geom, m_insitu_freq>0);
+        ptime = beam.InitData(geom);
     }
     return ptime;
 }
@@ -201,43 +202,26 @@ MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
         return;
     }
 
-    int iteration = 0;
-    const bool multi_iteration = queryWithParser(pp, "iteration", iteration);
-    amrex::Real plasma_density = 0;
-    const bool multi_plasma_density = queryWithParser(pp, "plasma_density", plasma_density);
-    std::vector<std::string> file_coordinates_xyz;
-    const bool multi_file_coordinates_xyz = queryWithParser(pp, "file_coordinates_xyz",
-                                                            file_coordinates_xyz);
-
     for( std::string name : beam_names ) {
         amrex::ParmParse pp_beam(name);
         if(!pp_beam.contains("injection_type")) {
             std::string str_from_file = "from_file";
             pp_beam.add("injection_type", str_from_file);
             pp_beam.add("input_file", all_input_file);
-
-            if(!pp_beam.contains("iteration") && multi_iteration) {
-                pp_beam.add("iteration", iteration);
-            }
-
-            if(!pp_beam.contains("plasma_density") && multi_plasma_density) {
-                pp_beam.add("plasma_density", plasma_density);
-            }
-
-            if(!pp_beam.contains("file_coordinates_xyz") && multi_file_coordinates_xyz) {
-                pp_beam.addarr("file_coordinates_xyz", file_coordinates_xyz);
-            }
         }
     }
 }
 
 void
-MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
-                               const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
+MultiBeam::InSituComputeDiags (int step, int islice, const amrex::Vector<BeamBins>& bins,
+                               int islice0, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                               const int ibox)
 {
     for (int i = 0; i < m_nbeams; ++i) {
-        m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
-                                          a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
+        if (m_all_beams[i].doInSitu(step)) {
+            m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
+                                              a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
+        }
     }
 }
 
@@ -245,13 +229,8 @@ void
 MultiBeam::InSituWriteToFile (int step, amrex::Real time)
 {
     for (auto& beam : m_all_beams) {
-        beam.InSituWriteToFile(step, time);
+        if (beam.doInSitu(step)) {
+            beam.InSituWriteToFile(step, time);
+        }
     }
-}
-
-bool
-MultiBeam::doInSitu (int step)
-{
-    if (m_insitu_freq < 0) return false;
-    return step % m_insitu_freq == 0;
 }

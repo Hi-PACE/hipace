@@ -491,7 +491,7 @@ Hipace::Evolve ()
             Notify(step, it, bins[lev]);
         }
 
-        if ( m_multi_beam.doInSitu(step) ) m_multi_beam.InSituWriteToFile(step, m_physical_time);
+        m_multi_beam.InSituWriteToFile(step, m_physical_time);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
@@ -514,11 +514,9 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    if ( m_multi_beam.doInSitu(step) ) {
-        m_multi_beam.InSituComputeDiags(islice_coarse, bins[0],
-                                        boxArray(0)[ibox].smallEnd(Direction::z),
-                                        m_box_sorters, ibox);
-    }
+    m_multi_beam.InSituComputeDiags(step, islice_coarse, bins[0],
+                                    boxArray(0)[ibox].smallEnd(Direction::z),
+                                    m_box_sorters, ibox);
     // setup laser
     m_laser.PrepareLaserSlice(Geom(0), islice_coarse);
 

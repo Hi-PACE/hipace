@@ -11,6 +11,7 @@
 #include "utils/DeprecatedInput.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include <filesystem>
 
 namespace
 {
@@ -38,25 +39,24 @@ void
 BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_alt("beams");
     QueryElementSetChargeMass(pp, m_charge, m_mass);
     // Overwrite element's charge and mass if user specifies them explicitly
     queryWithParser(pp, "charge", m_charge);
     queryWithParser(pp, "mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The beam particle mass must not be 0");
 
-    getWithParser(pp, "injection_type", m_injection_type);
-    amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "ppc", tmp_vector)){
-        AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
-        for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
-    }
     DeprecatedInput(m_name, "dx_per_dzeta", "position_mean = \"x_center+(z-z_center)"
         "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
     DeprecatedInput(m_name, "dy_per_dzeta", "position_mean = \"x_center+(z-z_center)"
         "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
+
+    getWithParser(pp, "injection_type", m_injection_type);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParser(pp, "do_z_push", m_do_z_push);
-    queryWithParser(pp, "insitu_sep", m_insitu_sep);
+    queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
+    queryWithParserAlt(pp, "insitu_sep", m_insitu_sep, pp_alt);
+    queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     queryWithParser(pp, "finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
@@ -67,7 +67,7 @@ BeamParticleContainer::ReadParameters ()
 }
 
 amrex::Real
-BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
+BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     using namespace amrex::literals;
     PhysConst phys_const = get_phys_const();
@@ -75,6 +75,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
     if (m_injection_type == "fixed_ppc") {
 
         amrex::ParmParse pp(m_name);
+        amrex::Vector<amrex::Real> tmp_vector;
+        if (queryWithParser(pp, "ppc", tmp_vector)){
+            AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
+            for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
+        }
         getWithParser(pp, "zmin", m_zmin);
         getWithParser(pp, "zmax", m_zmax);
         getWithParser(pp, "radius", m_radius);
@@ -148,17 +153,15 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
         amrex::ParmParse pp(m_name);
+        amrex::ParmParse pp_alt("beams");
         getWithParser(pp, "input_file", m_input_file);
-        bool coordinates_specified = queryWithParser(pp, "file_coordinates_xyz", m_file_coordinates_xyz);
-        bool n_0_specified = queryWithParser(pp, "plasma_density", m_plasma_density);
-        queryWithParser(pp, "iteration", m_num_iteration);
+        bool coordinates_specified = queryWithParserAlt(pp, "file_coordinates_xyz",
+                                                        m_file_coordinates_xyz, pp_alt);
+        queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);
+        queryWithParserAlt(pp, "iteration", m_num_iteration, pp_alt);
         bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;
-        }
-
-        if(!n_0_specified) {
-            m_plasma_density = 0;
         }
 
         ptime = InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz,
@@ -174,7 +177,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
 
     }
 
-    if (do_insitu) {
+    if (m_insitu_period > 0) {
         // Allocate memory for in-situ diagnostics
         int nslices = geom.Domain().length(2);
         m_insitu_rdata.resize(nslices*m_insitu_rnp, 0.);
@@ -213,6 +216,13 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
     }
 
     return nparticles;
+}
+
+bool
+BeamParticleContainer::doInSitu (int step)
+{
+    if (m_insitu_period <= 0) return false;
+    return step % m_insitu_period == 0;
 }
 
 void
@@ -310,9 +320,9 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
     HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile");
     using namespace amrex::literals;
     // open file
-
-    std::ofstream ofs{"reduced_" + m_name + "." + std::to_string(step) + ".txt",
-        std::ofstream::out | std::ofstream::app};
+    std::filesystem::create_directories(m_insitu_file_prefix);
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + std::to_string(step)
+        + ".txt", std::ofstream::out | std::ofstream::trunc};
 
     // write step
     ofs << step;
@@ -336,6 +346,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
 
     // close file
     ofs.close();
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
 
     for (int i=0; i<(int) m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
     for (int i=0; i<(int) m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
