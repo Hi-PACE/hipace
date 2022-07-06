@@ -320,7 +320,7 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
  * \param[in] pp ParmParse that is first searched for the expression
  * \param[in] str name of expression
  * \param[out] val value to be filled, see fillWithParserArr and fillWithParser for supported types
- * \param[in] pp Alternative ParmParse that is searched for the expression with lower priority
+ * \param[in] pp_alt Alternative ParmParse that is searched for the expression with lower priority
  */
 template<class T>
 inline bool
