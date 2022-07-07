@@ -18,6 +18,7 @@ set -eu -o pipefail
 sudo apt-get -qqq update
 sudo apt-get install -y \
     build-essential     \
+    g++                 \
     ca-certificates     \
     cmake               \
     gnupg               \
