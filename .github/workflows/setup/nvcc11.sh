@@ -20,6 +20,7 @@ sudo apt-get install -y \
     build-essential     \
     ca-certificates     \
     cmake               \
+    g++                 \
     gnupg               \
     libhiredis-dev      \
     libopenmpi-dev      \
