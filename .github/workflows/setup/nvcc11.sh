@@ -30,10 +30,6 @@ sudo apt-get install -y \
     pkg-config          \
     wget
 
-export CC=gcc-9
-export CXX=g++-9
-export CUDAHOSTCXX=$CXX
-
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
 echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" \
     | sudo tee /etc/apt/sources.list.d/cuda.list

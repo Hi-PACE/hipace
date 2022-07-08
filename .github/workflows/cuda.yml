@@ -50,10 +50,6 @@ jobs:
         export LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
         which nvcc || echo "nvcc not in PATH!"
 
-        export CC=gcc-9
-        export CXX=g++-9
-        export CUDAHOSTCXX=$CXX
-
         cmake -S . -B build            \
           -DCMAKE_VERBOSE_MAKEFILE=ON  \
           -DAMReX_CUDA_ARCH=6.0        \
