@@ -48,8 +48,6 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
         m_timestep_data.emplace_back(ts_data);
     }
 
-
-
 }
 
 #ifdef AMREX_USE_MPI
@@ -171,11 +169,13 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
             const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
                                            /m_timestep_data[ibeam][WhichDouble::SumWeights];
             const amrex::Real sigma_uz = sqrt(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
-                                              /m_timestep_data[ibeam][WhichDouble::SumWeights] - mean_uz*mean_uz);
+                                              /m_timestep_data[ibeam][WhichDouble::SumWeights]
+                                              - mean_uz*mean_uz);
             const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
             const amrex::Real max_supported_uz = 1e30;
-            const amrex::Real chosen_min_uz = std::min( std::max(sigma_uz_dev,
-                                              m_timestep_data[ibeam][WhichDouble::MinUz]), max_supported_uz);
+            const amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
+                                                       m_timestep_data[ibeam][WhichDouble::MinUz]),
+                                                       max_supported_uz);
 
             if (Hipace::m_verbose >=2 ){
                 amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
