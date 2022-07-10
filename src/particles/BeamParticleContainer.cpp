@@ -11,7 +11,9 @@
 #include "utils/DeprecatedInput.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include <filesystem>
+#ifdef HIPACE_USE_OPENPMD
+#   include <openPMD/auxiliary/Filesystem.hpp>
+#endif
 
 namespace
 {
@@ -179,9 +181,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     if (m_insitu_period > 0) {
         // Allocate memory for in-situ diagnostics
-        int nslices = geom.Domain().length(2);
-        m_insitu_rdata.resize(nslices*m_insitu_rnp, 0.);
-        m_insitu_idata.resize(nslices*m_insitu_inp, 0.);
+        m_nslices = geom.Domain().length(2);
+        m_insitu_data.resize(m_nslices*m_insitu_np, 0.);
     }
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
@@ -233,7 +234,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
 
     using namespace amrex::literals;
 
-    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0);
+    AMREX_ALWAYS_ASSERT(m_insitu_data.size()>0);
 
     PhysConst const phys_const = get_phys_const();
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
@@ -294,60 +295,57 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
         });
 
     ReduceTuple a = reduce_data.value();
-    const int np             = amrex::get<13>(a);
     const amrex::Real sum_w0 = amrex::get< 0>(a);
     const amrex::Real sum_w_inv = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 0._rt : 1._rt/sum_w0;
 
-    m_insitu_idata[m_insitu_inp*islice   ] = np;
-    m_insitu_rdata[m_insitu_rnp*islice   ] = sum_w0;
-    m_insitu_rdata[m_insitu_rnp*islice+ 1] = amrex::get< 1>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 2] = amrex::get< 2>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 3] = amrex::get< 3>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 4] = amrex::get< 4>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 5] = amrex::get< 5>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 6] = amrex::get< 6>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 7] = amrex::get< 7>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 8] = amrex::get< 8>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 9] = amrex::get< 9>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+10] = amrex::get<10>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+11] = amrex::get<11>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+12] = amrex::get<12>(a)*sum_w_inv;
+    m_insitu_data[islice             ] = static_cast<double>(sum_w0);
+    m_insitu_data[islice+ 1*m_nslices] = static_cast<double>(amrex::get< 1>(a)*sum_w_inv);
+    m_insitu_data[islice+ 2*m_nslices] = static_cast<double>(amrex::get< 2>(a)*sum_w_inv);
+    m_insitu_data[islice+ 3*m_nslices] = static_cast<double>(amrex::get< 3>(a)*sum_w_inv);
+    m_insitu_data[islice+ 4*m_nslices] = static_cast<double>(amrex::get< 4>(a)*sum_w_inv);
+    m_insitu_data[islice+ 5*m_nslices] = static_cast<double>(amrex::get< 5>(a)*sum_w_inv);
+    m_insitu_data[islice+ 6*m_nslices] = static_cast<double>(amrex::get< 6>(a)*sum_w_inv);
+    m_insitu_data[islice+ 7*m_nslices] = static_cast<double>(amrex::get< 7>(a)*sum_w_inv);
+    m_insitu_data[islice+ 8*m_nslices] = static_cast<double>(amrex::get< 8>(a)*sum_w_inv);
+    m_insitu_data[islice+ 9*m_nslices] = static_cast<double>(amrex::get< 9>(a)*sum_w_inv);
+    m_insitu_data[islice+10*m_nslices] = static_cast<double>(amrex::get<10>(a)*sum_w_inv);
+    m_insitu_data[islice+11*m_nslices] = static_cast<double>(amrex::get<11>(a)*sum_w_inv);
+    m_insitu_data[islice+12*m_nslices] = static_cast<double>(amrex::get<12>(a)*sum_w_inv);
+    m_insitu_data[islice+13*m_nslices] = static_cast<double>(amrex::get<13>(a));
 }
 
 void
-BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
+BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile");
-    using namespace amrex::literals;
     // open file
-    std::filesystem::create_directories(m_insitu_file_prefix);
+#ifdef HIPACE_USE_OPENPMD
+    openPMD::auxiliary::create_directories(m_insitu_file_prefix);
+#endif
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + std::to_string(step)
-        + ".txt", std::ofstream::out | std::ofstream::trunc};
+        + ".txt", std::ofstream::out | std::ofstream::trunc | std::ofstream::binary};
 
-    // write step
-    ofs << step;
+    amrex::Vector<double> header{
+        8., // header size
+        static_cast<double>(m_nslices),
+        static_cast<double>(time),
+        static_cast<double>(step),
+        static_cast<double>(m_charge),
+        static_cast<double>(m_mass),
+        static_cast<double>(geom.ProbLo(2)),
+        static_cast<double>(geom.ProbHi(2))
+    };
 
-    ofs << m_insitu_sep;
-
-    // set precision
-    ofs << std::fixed << std::setprecision(14) << std::scientific;
-
-    // write time
-    ofs << time;
-
-    // loop over data size and write
-    for (const auto& item : m_insitu_idata) ofs << m_insitu_sep << item;
-    for (const auto& item : m_insitu_rdata) ofs << m_insitu_sep << item;
-
-    // end loop over data size
-
-    // end line
-    ofs << std::endl;
+    ofs.write(reinterpret_cast<const char*>(header.dataPtr()), header.size()*sizeof(double));
+    ofs.write(reinterpret_cast<const char*>(m_insitu_data.dataPtr()), m_insitu_data.size()*sizeof(double));
 
     // close file
     ofs.close();
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics"
+#ifndef HIPACE_USE_OPENPMD
+    ". Maybe the specified subdirectory does not exist"
+#endif
+    );
 
-    for (int i=0; i<(int) m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
-    for (int i=0; i<(int) m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
+    for (double& x : m_insitu_data) x = 0.;
 }
