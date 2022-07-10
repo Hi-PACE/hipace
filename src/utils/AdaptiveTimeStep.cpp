@@ -33,16 +33,18 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
     }
     DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
 
+    // get number of beams
     amrex::Vector<std::string> beam_names;
     amrex::ParmParse ppb("beams");
     getWithParser(ppb, "names", beam_names);
     if (beam_names[0] == "no_beam") return;
     const int nbeams = beam_names.size();
 
+    // create time step data container per beam
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         amrex::Vector<amrex::Real> ts_data;
         ts_data.resize(5, 0.);
-        ts_data[1] = 1e30; // {0., 1e30, 0., 0., 0.};
+        ts_data[1] = 1e30; // max possible uz be taken into account
         m_timestep_data.emplace_back(ts_data);
     }
 
@@ -161,12 +163,15 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
     if (it == 0 || initial)
     {
         for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+
+            const auto& beam = beams.getBeam(ibeam);
+
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
                 "The sum of all weights is 0! Probably no beam particles are initialized");
             const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
                                            /m_timestep_data[ibeam][WhichDouble::SumWeights];
             const amrex::Real sigma_uz = sqrt(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
-                                              /m_timestep_data[ibeam][WhichDouble::SumWeights] - mean_uz);
+                                              /m_timestep_data[ibeam][WhichDouble::SumWeights] - mean_uz*mean_uz);
             const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
             const amrex::Real max_supported_uz = 1e30;
             const amrex::Real chosen_min_uz = std::min( std::max(sigma_uz_dev,
@@ -187,7 +192,8 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
             {
                 const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
                                               / ( phys_const.ep0*phys_const.m_e ));
-                amrex::Real omega_betatron = omega_p / std::sqrt(2.*chosen_min_uz);
+                amrex::Real omega_betatron = omega_p / std::sqrt(2.*chosen_min_uz)
+                                            * phys_const.m_e/beam.m_mass;
                 new_dts[ibeam] = 2.*MathConst::pi/omega_betatron / m_nt_per_betatron;
             }
         }
