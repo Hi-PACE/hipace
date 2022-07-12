@@ -171,8 +171,6 @@ private:
      * Np: number of particles in this slice
      */
     amrex::Vector<double> m_insitu_data;
-    /** Separator when writing to file */
-    std::string m_insitu_sep = " ";
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
     /** How often the insitu beam diagnostics should be computed and written */

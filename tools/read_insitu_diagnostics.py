@@ -43,16 +43,16 @@ def read_file(pathname):
     # 6: z_lo
     # 7: z_hi
 
-    header_size = all_file_data[0][0]
-    n_slices = all_file_data[0][1]
+    header_size = int(all_file_data[0][0])
+    n_slices = int(all_file_data[0][1])
     charge = all_file_data[0][4]
     mass = all_file_data[0][5]
     z_lo = all_file_data[0][6]
     z_hi = all_file_data[0][7]
 
     for data in all_file_data:
-        assert(data[0] == header_size, "inconsistent format")
-        assert(data[1] == n_slices, "inconsistent number of slices")
+        assert(int(data[0]) == header_size, "inconsistent format")
+        assert(int(data[1]) == n_slices, "inconsistent number of slices")
         assert(data[4] == charge, "inconsistent charge")
         assert(data[5] == mass, "inconsistent mass")
         assert(data[6] == z_lo, "inconsistent z_lo")
@@ -87,7 +87,7 @@ def read_file(pathname):
         else:
             all_data["average"][key] = np.average(all_data[key], axis=1, weights=all_data["sum(w)"])
 
-    return return_dict
+    return all_data
 
 def z_axis(all_data):
     return 0.5*(np.linspace(all_data["z_lo"], all_data["z_hi"], all_data["n_slices"]+1)[1:] \
