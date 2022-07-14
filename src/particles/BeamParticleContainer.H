@@ -160,17 +160,29 @@ private:
     std::string m_species_name; /**< the name of the particle species in the beam file */
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_np {14};
+    int m_insitu_nrp {13};
+    /** Number of int beam properties for in-situ per-slice reduced diagnostics. */
+    int m_insitu_nip {1};
     /** Per-slice real beam properties:
-     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12, 13
-     * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2], Np
+     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
+     * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
      * where [] means average over all particles within slice.
      * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
      * Projected emittance: Same as above AFTER averaging all these quantities over slices.
      * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
      * Np: number of particles in this slice
      */
-    amrex::Vector<double> m_insitu_data;
+    amrex::Vector<amrex::Real> m_insitu_rdata;
+    /** Per-slice int beam properties:
+     *  0
+     * Np
+     * Np: number of particles in this slice
+     */
+    amrex::Vector<int> m_insitu_idata;
+    /** Sum of all per-slice real beam properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_rdata;
+    /** Sum of all per-slice int beam properties */
+    amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
     /** How often the insitu beam diagnostics should be computed and written */
