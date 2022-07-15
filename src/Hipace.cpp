@@ -969,8 +969,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
             m_hpmg = std::make_unique<hpmg::MultiGrid>(slice_geom);
         }
         const int max_iters = 200;
-        m_hpmg->solve(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
-                      max_iters, m_MG_verbose);
+        m_hpmg->solve1(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
+                       max_iters, m_MG_verbose);
     }
     amrex::ParallelContext::pop();
 }
