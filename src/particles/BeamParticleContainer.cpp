@@ -345,28 +345,8 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         + std::to_string(amrex::ParallelDescriptor::MyProc()) + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
-    amrex::Real sum_w0 = m_insitu_sum_rdata[0];
-    std::size_t nslices = static_cast<std::size_t>(m_nslices);
-
-    amrex::Vector<insitu_utils::DataNode> average_data{
-        {"[x]"   , &(m_insitu_sum_rdata[ 1] /= sum_w0)},
-        {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
-        {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
-        {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
-        {"[ux]"  , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
-        {"[ux^2]", &(m_insitu_sum_rdata[ 6] /= sum_w0)},
-        {"[uy]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
-        {"[uy^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
-        {"[x*ux]", &(m_insitu_sum_rdata[ 9] /= sum_w0)},
-        {"[y*uy]", &(m_insitu_sum_rdata[10] /= sum_w0)},
-        {"[ga]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
-        {"[ga^2]", &(m_insitu_sum_rdata[12] /= sum_w0)}
-    };
-
-    amrex::Vector<insitu_utils::DataNode> total_data{
-        {"sum(w)", &m_insitu_sum_rdata[0]},
-        {"Np"    , &m_insitu_sum_idata[0]}
-    };
+    const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
+    const std::size_t nslices = static_cast<std::size_t>(m_nslices);
 
     amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"    , &time},
@@ -376,41 +356,56 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         {"mass"    , &m_mass},
         {"z_lo"    , &geom.ProbLo()[2]},
         {"z_hi"    , &geom.ProbHi()[2]},
-        {"[x]"     , m_insitu_rdata.dataPtr() +  1*nslices, nslices},
-        {"[x^2]"   , m_insitu_rdata.dataPtr() +  2*nslices, nslices},
-        {"[y]"     , m_insitu_rdata.dataPtr() +  3*nslices, nslices},
-        {"[y^2]"   , m_insitu_rdata.dataPtr() +  4*nslices, nslices},
-        {"[ux]"    , m_insitu_rdata.dataPtr() +  5*nslices, nslices},
-        {"[ux^2]"  , m_insitu_rdata.dataPtr() +  6*nslices, nslices},
-        {"[uy]"    , m_insitu_rdata.dataPtr() +  7*nslices, nslices},
-        {"[uy^2]"  , m_insitu_rdata.dataPtr() +  8*nslices, nslices},
-        {"[x*ux]"  , m_insitu_rdata.dataPtr() +  9*nslices, nslices},
-        {"[y*uy]"  , m_insitu_rdata.dataPtr() + 10*nslices, nslices},
-        {"[ga]"    , m_insitu_rdata.dataPtr() + 11*nslices, nslices},
-        {"[ga^2]"  , m_insitu_rdata.dataPtr() + 12*nslices, nslices},
-        {"sum(w)"  , m_insitu_rdata.dataPtr()             , nslices},
-        {"Np"      , m_insitu_idata.dataPtr()             , nslices},
-        {"average" , insitu_utils::get_header(average_data, "    ")},
-        {"total"   , insitu_utils::get_header(total_data, "    ")}
+        {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
+        {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
+        {"[y]"     , &m_insitu_rdata[3*nslices], nslices},
+        {"[y^2]"   , &m_insitu_rdata[4*nslices], nslices},
+        {"[ux]"    , &m_insitu_rdata[5*nslices], nslices},
+        {"[ux^2]"  , &m_insitu_rdata[6*nslices], nslices},
+        {"[uy]"    , &m_insitu_rdata[7*nslices], nslices},
+        {"[uy^2]"  , &m_insitu_rdata[8*nslices], nslices},
+        {"[x*ux]"  , &m_insitu_rdata[9*nslices], nslices},
+        {"[y*uy]"  , &m_insitu_rdata[10*nslices], nslices},
+        {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
+        {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
+        {"sum(w)"  , &m_insitu_rdata[0], nslices},
+        {"Np"      , &m_insitu_idata[0], nslices},
+        {"average" , {
+            {"[x]"   , &(m_insitu_sum_rdata[ 1] /= sum_w0)},
+            {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
+            {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
+            {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
+            {"[ux]"  , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
+            {"[ux^2]", &(m_insitu_sum_rdata[ 6] /= sum_w0)},
+            {"[uy]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
+            {"[uy^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
+            {"[x*ux]", &(m_insitu_sum_rdata[ 9] /= sum_w0)},
+            {"[y*uy]", &(m_insitu_sum_rdata[10] /= sum_w0)},
+            {"[ga]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
+            {"[ga^2]", &(m_insitu_sum_rdata[12] /= sum_w0)}
+        }},
+        {"total"   , {
+            {"sum(w)", &m_insitu_sum_rdata[0]},
+            {"Np"    , &m_insitu_sum_idata[0]}
+        }}
     };
 
     if (ofs.tellp() == 0) {
-        std::string str = insitu_utils::get_header(all_data);
+        const std::string str = insitu_utils::get_header(all_data);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(str.size()<4000, "Insitu format is too large");
         ofs << str << std::string(4000-str.size(), ' ');
     }
 
     insitu_utils::write_data(all_data, ofs);
-    insitu_utils::write_data(average_data, ofs);
-    insitu_utils::write_data(total_data, ofs);
 
     // close file
     ofs.close();
+#ifdef HIPACE_USE_OPENPMD
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
+#else
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics"
-#ifndef HIPACE_USE_OPENPMD
-    ". Maybe the specified subdirectory does not exist"
+        ". Maybe the specified subdirectory does not exist");
 #endif
-    );
 
     for (auto& x : m_insitu_rdata) x = 0.;
     for (auto& x : m_insitu_idata) x = 0;

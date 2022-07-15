@@ -5,8 +5,8 @@
  * Authors: AlexanderSinn
  * License: BSD-3-Clause-LBNL
  */
-#ifndef HIPACE_IOUTIL_H_
-#define HIPACE_IOUTIL_H_
+#ifndef HIPACE_INSITUUTIL_H_
+#define HIPACE_INSITUUTIL_H_
 
 #include <AMReX_AmrCore.H>
 #include <fstream>
@@ -22,8 +22,9 @@ namespace insitu_utils
 struct DataNode {
     std::string m_name;
     std::string m_format;
-    const char * m_data_loacation;
+    const char * m_data_location;
     std::size_t m_data_size;
+    amrex::Vector<DataNode> m_structured_format;
 
     template<class T>
     DataNode (const std::string& name, const T* data, std::size_t size = 1) : m_name{name} {
@@ -35,15 +36,15 @@ struct DataNode {
 
         m_format = "\"" + (size > 1 ? "(" + std::to_string(size) + ",)" : std::string(""))
                  + "<" + type_letter + std::to_string(sizeof(T)) + "\"";
-        m_data_loacation = reinterpret_cast<const char *>(data);
+        m_data_location = reinterpret_cast<const char *>(data);
         m_data_size = sizeof(T) * size;
     }
 
-    DataNode (const std::string& name, const std::string& format)
-        : m_name{name}, m_format{format}, m_data_loacation{nullptr}, m_data_size{0} {}
+    DataNode (const std::string& name, const amrex::Vector<DataNode>& structured_format)
+        : m_name{name}, m_data_location{nullptr}, m_structured_format{structured_format} {}
 };
 
-std::string get_header (const amrex::Vector<DataNode>& nodes, const std::string& indent = "") {
+inline std::string get_header (const amrex::Vector<DataNode>& nodes, const std::string& indent="") {
     std::stringstream ss;
     ss << "{\n" << indent << "  \"names\":[\n";
     for (unsigned int i=0; i<nodes.size(); ++i) {
@@ -51,16 +52,19 @@ std::string get_header (const amrex::Vector<DataNode>& nodes, const std::string&
     }
     ss << indent << "  ],\n" << indent << "  \"formats\":[\n";
     for (unsigned int i=0; i<nodes.size(); ++i) {
-        ss << indent << "    " << nodes[i].m_format << (i+1==nodes.size() ? "\n" : ",\n");
+        ss << indent << "    " << (nodes[i].m_data_location ? nodes[i].m_format : get_header(
+            nodes[i].m_structured_format, indent + "    ")) << (i+1==nodes.size() ? "\n" : ",\n");
     }
     ss << indent << "  ]\n" << indent << "}";
     return ss.str();
 }
 
-void write_data (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs) {
-    for (auto dn : nodes) {
-        if (dn.m_data_loacation != nullptr) {
-            ofs.write(dn.m_data_loacation, dn.m_data_size);
+inline void write_data (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs) {
+    for (auto& dn : nodes) {
+        if (dn.m_data_location) {
+            ofs.write(dn.m_data_location, dn.m_data_size);
+        } else {
+            write_data(dn.m_structured_format, ofs);
         }
     }
 }
