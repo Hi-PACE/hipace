@@ -391,9 +391,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     };
 
     if (ofs.tellp() == 0) {
-        const std::string str = insitu_utils::get_header(all_data);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(str.size()<4000, "Insitu format is too large");
-        ofs << str << std::string(4000-str.size(), ' ');
+        insitu_utils::write_header(all_data, ofs);
     }
 
     insitu_utils::write_data(all_data, ofs);

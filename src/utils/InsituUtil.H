@@ -32,10 +32,10 @@ struct DataNode {
         if (std::is_integral_v<T> && std::is_signed_v<T>) type_letter = "i";
         else if (std::is_integral_v<T> && std::is_unsigned_v<T>) type_letter = "u";
         else if (std::is_floating_point_v<T>) type_letter = "f";
-        else amrex::Abort("unknown type");
+        else amrex::Abort("DataNode (): unknown type T");
 
-        m_format = "\"" + (size > 1 ? "(" + std::to_string(size) + ",)" : std::string(""))
-                 + "<" + type_letter + std::to_string(sizeof(T)) + "\"";
+        m_format = (size > 1 ? "(" + std::to_string(size) + ",)" : "")
+                   + "<" + type_letter + std::to_string(sizeof(T));
         m_data_location = reinterpret_cast<const char *>(data);
         m_data_size = sizeof(T) * size;
     }
@@ -44,19 +44,22 @@ struct DataNode {
         : m_name{name}, m_data_location{nullptr}, m_structured_format{structured_format} {}
 };
 
-inline std::string get_header (const amrex::Vector<DataNode>& nodes, const std::string& indent="") {
-    std::stringstream ss;
-    ss << "{\n" << indent << "  \"names\":[\n";
-    for (unsigned int i=0; i<nodes.size(); ++i) {
-        ss << indent << "    \"" << nodes[i].m_name << "\"" << (i+1==nodes.size() ? "\n" : ",\n");
+inline void write_header (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs,
+                          const std::string& indent = "") {
+    ofs << indent << "{\n" << indent << "    \"names\": [\n";
+    for (int i=0; i<nodes.size(); ++i) {
+        ofs << indent << "        \"" << nodes[i].m_name << "\"" << (i+1==nodes.size()?"\n":",\n");
     }
-    ss << indent << "  ],\n" << indent << "  \"formats\":[\n";
-    for (unsigned int i=0; i<nodes.size(); ++i) {
-        ss << indent << "    " << (nodes[i].m_data_location ? nodes[i].m_format : get_header(
-            nodes[i].m_structured_format, indent + "    ")) << (i+1==nodes.size() ? "\n" : ",\n");
+    ofs << indent << "    ],\n" << indent << "    \"formats\": [\n";
+    for (int i=0; i<nodes.size(); ++i) {
+        if (nodes[i].m_data_location) {
+            ofs << indent << "        \"" << nodes[i].m_format << "\"";
+        } else {
+            write_header(nodes[i].m_structured_format, ofs, "        ");
+        }
+        ofs << (i+1==nodes.size()?"\n":",\n");
     }
-    ss << indent << "  ]\n" << indent << "}";
-    return ss.str();
+    ofs << indent << "    ]\n" << indent << "}";
 }
 
 inline void write_data (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs) {

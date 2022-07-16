@@ -10,21 +10,16 @@ from numpy.lib import recfunctions as rfn
 import glob
 import json
 
-def get_datatype(file):
-    with open(file, "r", errors="replace") as f:
-        datatype_str = json.loads(f.read(4000))
-    return np.dtype(datatype_str)
+def get_buffer(file):
+    with open(file, "rb") as f:
+        bytes = f.read()
+        datatype_obj = json.JSONDecoder().raw_decode(bytes.decode(errors="replace"))
+    return {"buffer" : bytes, "dtype" : np.dtype(datatype_obj[0]), "offset" : datatype_obj[1]}
 
 def read_file(pathname):
-    filenames = glob.iglob(pathname)
-
-    all_data = rfn.stack_arrays([
-        np.fromfile(file, dtype=get_datatype(file), offset=4000) for file in filenames
-    ], usemask=False, asrecarray=False, autoconvert=True)
-
-    all_data.sort(order="time")
-
-    return all_data
+    return np.sort(rfn.stack_arrays([
+        np.frombuffer(**get_buffer(file)) for file in glob.iglob(pathname)
+    ], usemask=False, asrecarray=False, autoconvert=True), order="time")
 
 def z_axis(all_data):
     return (np.linspace(all_data["z_lo"][0], all_data["z_hi"][0], all_data["n_slices"][0]+1)[1:] \
