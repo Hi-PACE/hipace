@@ -330,16 +330,6 @@ parameters for each beam are specified via ``<beam name>.<beam property> = ...``
     The names of the particle beams, separated by a space.
     To run without beams, choose the name ``no_beam``.
 
-* ``beams.insitu_freq`` (`int`) optional (default ``-1``)
-    Frequency of in-situ diagnostics, computing the main per-slice beam quantities for the main beam parameters (width, energy spread, emittance, etc.).
-    The data is written to a text file:
-      * 1 file per time step.
-      * 1 line per file.
-      * [time step], [physical time], [all quantities for slice 0], [all quantities for slice 1], ..., [all quantities for slice nz-1]
-      * all quantities are: [number of macro-particles], sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
-        where "<>" stands for averaging over all particles in the current slice, "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
-    When <0, the in-situ diagnostics are not activated.
-
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
 The general beam parameters are applicable to all particle beam types. More specialized beam parameters,
@@ -400,8 +390,24 @@ which are valid only for certain beam types, are introduced further below under
     Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
     up to its finest level. The beam will be pushed by the fields of the finest level.
 
-* ``<beam name>.insitu_sep`` (`string`) optional (default ``" "``)
-    Separator used in the text file of in-situ diagnostics.
+* ``<beam name> or beams.insitu_period`` (`int`) optional (default ``-1``)
+    Period of in-situ diagnostics, for computing the main per-slice beam quantities for the main
+    beam parameters (width, energy spread, emittance, etc.).
+    For this the following quantities are calculated per slice and stored:
+    ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2], np``
+    where "[]" stands for averaging over all particles in the current slice,
+    "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+
+    The data is written to a file at ``<insitu_file_prefix>/reduced_<beam name>.<MPI rank number>.txt``.
+    The in-situ diagnostics file format consists of a header part in ASCII containing a JSON object.
+    When this is parsed into Python it can be converted to a NumPy structured datatype.
+    The rest of the file, following immediately after the closing }, is in binary format and
+    contains all of the in-situ diagnostic along with some meta data. This part can be read using the
+    structured datatype of the first section.
+    Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+
+* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"diags/insitu"``)
+    Path of the in-situ output.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^

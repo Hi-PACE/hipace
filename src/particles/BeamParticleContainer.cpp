@@ -337,10 +337,12 @@ void
 BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile");
-    // open file
+
 #ifdef HIPACE_USE_OPENPMD
+    // create subdirectory
     openPMD::auxiliary::create_directories(m_insitu_file_prefix);
 #endif
+    // open file
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "."
         + std::to_string(amrex::ParallelDescriptor::MyProc()) + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
@@ -348,7 +350,9 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
     const std::size_t nslices = static_cast<std::size_t>(m_nslices);
 
-    amrex::Vector<insitu_utils::DataNode> all_data{
+    // specify the structure of the data later available in python
+    // avoid pointers to temporary objects as second argument, stack variables are ok
+    const amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"    , &time},
         {"step"    , &step},
         {"n_slices", &m_nslices},
@@ -391,20 +395,24 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     };
 
     if (ofs.tellp() == 0) {
+        // write JSON header containing a NumPy structured datatype
         insitu_utils::write_header(all_data, ofs);
     }
 
+    // write binary data according to datatype in header
     insitu_utils::write_data(all_data, ofs);
 
     // close file
     ofs.close();
+    // assert no file errors
 #ifdef HIPACE_USE_OPENPMD
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
 #else
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics"
-        ". Maybe the specified subdirectory does not exist");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics. "
+        "Maybe the specified subdirectory does not exist");
 #endif
 
+    // reset arrays for insitu data
     for (auto& x : m_insitu_rdata) x = 0.;
     for (auto& x : m_insitu_idata) x = 0;
     for (auto& x : m_insitu_sum_rdata) x = 0.;
