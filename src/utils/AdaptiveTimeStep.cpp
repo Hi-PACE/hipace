@@ -22,7 +22,7 @@ struct WhichDouble {
     enum Comp { Dt=0, MinUz, SumWeights, SumWeightsTimesUz, SumWeightsTimesUzSquared, N };
 };
 
-AdaptiveTimeStep::AdaptiveTimeStep ()
+AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
 {
     amrex::ParmParse ppa("hipace");
     std::string str_dt = "";
@@ -32,13 +32,6 @@ AdaptiveTimeStep::AdaptiveTimeStep ()
         queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
     }
     DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
-
-    // get number of beams
-    amrex::Vector<std::string> beam_names;
-    amrex::ParmParse ppb("beams");
-    getWithParser(ppb, "names", beam_names);
-    if (beam_names[0] == "no_beam") return;
-    const int nbeams = beam_names.size();
 
     // create time step data container per beam
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {

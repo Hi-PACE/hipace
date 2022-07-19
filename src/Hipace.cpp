@@ -93,7 +93,8 @@ Hipace::Hipace () :
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
-    m_diags(this->maxLevel()+1)
+    m_diags(this->maxLevel()+1),
+    m_adaptive_time_step(m_multi_beam.get_nbeams())
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);

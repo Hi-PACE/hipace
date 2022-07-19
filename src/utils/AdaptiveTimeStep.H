@@ -27,7 +27,7 @@ private:
 
 public:
     /** Constructor */
-    explicit AdaptiveTimeStep ();
+    explicit AdaptiveTimeStep (const int nbeams);
 
 #ifdef AMREX_USE_MPI
     /** sends the calculated initial time step to the rank downstream
