@@ -342,9 +342,14 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     // create subdirectory
     openPMD::auxiliary::create_directories(m_insitu_file_prefix);
 #endif
+
+    // zero pad the rank number;
+    std::string::size_type n_zeros = 4;
+    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+
     // open file
-    std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "."
-        + std::to_string(amrex::ParallelDescriptor::MyProc()) + ".txt",
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
     const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
