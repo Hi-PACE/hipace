@@ -161,9 +161,9 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
                 "The sum of all weights is 0! Probably no beam particles are initialized");
             const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
                                            /m_timestep_data[ibeam][WhichDouble::SumWeights];
-            const amrex::Real sigma_uz = sqrt(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
+            const amrex::Real sigma_uz = std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
                                               /m_timestep_data[ibeam][WhichDouble::SumWeights]
-                                              - mean_uz*mean_uz);
+                                              - mean_uz*mean_uz));
             const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
             const amrex::Real max_supported_uz = 1e30;
             const amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
