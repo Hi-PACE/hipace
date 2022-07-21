@@ -84,7 +84,7 @@ public:
      * is not supposed to be a public function.  It's made public due to a
      * CUDA limitation. */
     void bottomsolve ();
-    /** brief Private funciton used by solve1 and solve2.  It's made public
+    /** \brief Private function used by solve1 and solve2.  It's made public
      * due to a CUDA limitation. */
     void solve_doit (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
                      amrex::FArrayBox const& acoef,
