@@ -74,8 +74,8 @@ Fields::AllocData (
 
             isl = WhichSlice::This;
             // (Bx, By), (Sy, Sx) and (Mult, Mult2) adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
-                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "Sy", "Sx", "Mult");
+            Comps[isl].multi_emplace(N_Comps[isl], "Mult", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
+                "Bx", "By", "Bz", "Psi", "jx_beam", "jy_beam", "jz_beam", "rho_beam");
             if (Hipace::m_use_amrex_mlmg) {
                 Comps[isl].multi_emplace(N_Comps[isl], "Mult2");
             }
