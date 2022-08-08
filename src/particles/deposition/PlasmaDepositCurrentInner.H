@@ -45,13 +45,13 @@
  * \param[in] can_ionize whether charge needs to be multiplied by ion_lev
  * \param[in] pti particle iterator, contains data of all particles in a box
  * \param[in,out] isl_fab array of current slice, on the box corresponding to pti
- * \param[in] jx_fab array component of current density jx
- * \param[in] jy_fab array component of current density jy
- * \param[in] jz_fab array component of current density jz
- * \param[in] rho_fab array component of charge density rho
- * \param[in] jxx_fab array component of current density jxx
- * \param[in] jxy_fab array component of current density jxy
- * \param[in] jyy_fab array component of current density jyy
+ * \param[in] jx_cmp array component of current density jx
+ * \param[in] jy_cmp array component of current density jy
+ * \param[in] jz_cmp array component of current density jz
+ * \param[in] rho_cmp array component of charge density rho
+ * \param[in] jxx_cmp array component of current density jxx
+ * \param[in] jxy_cmp array component of current density jxy
+ * \param[in] jyy_cmp array component of current density jyy
  * \param[in] a_mf MultiFab containing the normalized vector potential of the laser a
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
  * \param[in] dx cell size in each dimension
