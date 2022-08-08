@@ -93,8 +93,8 @@ Hipace::Hipace () :
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
-    m_diags(this->maxLevel()+1),
-    m_adaptive_time_step(m_multi_beam.get_nbeams())
+    m_adaptive_time_step(m_multi_beam.get_nbeams()),
+    m_diags(this->maxLevel()+1)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
@@ -587,7 +587,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
@@ -645,7 +645,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, false, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 

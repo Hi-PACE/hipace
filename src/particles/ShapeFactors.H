@@ -107,83 +107,52 @@ int compute_shape_factor <3> (amrex::Real* const sx, amrex::Real xmid){
     return j-1;
 }
 
-/**
- *  Compute shifted shape factor and return index of leftmost cell where
- *  particle writes, for Esirkepov algorithm.
- *  Specialized templates are defined below for orders 1, 2 and 3.
- */
-template <int depos_order>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-int compute_shifted_shape_factor (amrex::Real* const sx,
-                                  const amrex::Real x_old,
-                                  const int i_new);
+struct shape_factor_result {
+    amrex::Real factor;
+    int cell;
+};
 
-/**
- *  Compute shifted shape factor and return index of leftmost cell where
- *  particle writes, for Esirkepov algorithm.
- *  Specialization for order 1
+/** \brief Compute a single shape factor and return the index of the cell where the particle writes.
+ *
+ * \tparam depos_order Order of the shape factor
+ * \param[in] xmid exact position of the particle in index space
+ * \param[in] ix index of the shape factor, must be 0 <= ix <= depos_order
  */
-template <>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-int compute_shifted_shape_factor <1> (amrex::Real* const sx,
-                                      const amrex::Real x_old,
-                                      const int i_new){
+template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+shape_factor_result compute_shape_factor_branchless (amrex::Real xmid, int ix) noexcept {
 
     using namespace amrex::literals;
 
-    const auto i = static_cast<int>(amrex::Math::floor(x_old));
-    const int i_shift = i - i_new;
-    const amrex::Real xint = x_old - i;
-    sx[1+i_shift] = 1.0_rt - xint;
-    sx[2+i_shift] = xint;
-    return i;
-}
-
-/**
- *  Compute shifted shape factor and return index of leftmost cell where
- *  particle writes, for Esirkepov algorithm.
- *  Specialization for order 2
- */
-template <>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-int compute_shifted_shape_factor <2> (amrex::Real* const sx,
-                                      const amrex::Real x_old,
-                                      const int i_new){
-
-    using namespace amrex::literals;
-
-    const auto i = static_cast<int>(amrex::Math::floor(x_old+0.5_rt));
-    const int i_shift = i - (i_new + 1);
-    const amrex::Real xint = x_old - i;
-    sx[1+i_shift] = 0.5_rt*(0.5_rt-xint)*(0.5_rt-xint);
-    sx[2+i_shift] = 0.75_rt-xint*xint;
-    sx[3+i_shift] = 0.5_rt*(0.5_rt+xint)*(0.5_rt+xint);
-    // index of the leftmost cell where particle deposits
-    return i-1;
-}
-
-/**
- *  Compute shifted shape factor and return index of leftmost cell where
- *  particle writes, for Esirkepov algorithm.
- *  Specialization for order 3
- */
-template <>
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-int compute_shifted_shape_factor <3> (amrex::Real* const sx,
-                                      const amrex::Real x_old,
-                                      const int i_new){
-
-    using namespace amrex::literals;
-
-    const auto i = static_cast<int>(amrex::Math::floor(x_old));
-    const int i_shift = i - (i_new + 1);
-    const amrex::Real xint = x_old - static_cast<amrex::Real>(i);
-    sx[1+i_shift] = 1.0_rt/6.0_rt*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);
-    sx[2+i_shift] = 2.0_rt/3.0_rt-xint*xint*(1.0_rt-xint/2.0_rt);
-    sx[3+i_shift] = 2.0_rt/3.0_rt-(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-0.5_rt*(1.0_rt-xint));
-    sx[4+i_shift] = 1.0_rt/6.0_rt*xint*xint*xint;
-    // index of the leftmost cell where particle deposits
-    return i-1;
+    if constexpr (depos_order==0) {
+        const int i = static_cast<int>(std::floor(xmid+0.5));
+        return {1, i+ix};
+    } else if constexpr (depos_order==1) {
+        const int i = static_cast<int>(std::floor(xmid));
+        const amrex::Real xint = xmid-i;
+        const amrex::Real ic = static_cast<amrex::Real>(ix);
+        const amrex::Real shape = (1._rt-ic) + (2._rt*ic-1._rt) * xint;
+        return {shape, i+ix};
+    } else if constexpr (depos_order==2) {
+        const int i = static_cast<int>(std::floor(xmid+0.5));
+        const amrex::Real xint = xmid-i;
+        const int ic = ix - 1;
+        const amrex::Real icr = static_cast<amrex::Real>(ic);
+        const amrex::Real shape = (-0.625_rt*icr*icr + 0.75_rt)
+                                + (0.5_rt*icr + 1.5_rt*icr*icr*xint - xint) * xint;
+        return {shape, i+ic};
+    } else if constexpr (depos_order==3) {
+        const int i = static_cast<int>(std::floor(xmid));
+        const amrex::Real xint = xmid-i;
+        const int ic = ix + 1;
+        const amrex::Real icr = static_cast<amrex::Real>(ic&1);
+        const amrex::Real xint_s = icr + (1._rt - 2._rt*icr) * xint;
+        const amrex::Real cond = static_cast<amrex::Real>(ic&2);
+        const amrex::Real shape = (1.0_rt/6.0_rt)*(cond*2._rt
+                                + xint_s*xint_s*(cond*(xint_s-3._rt) + xint_s));
+        return {shape, i+ix-1};
+    }
+    static_assert(0 <= depos_order && depos_order <= 3);
+    return {};
 }
 
 #endif // SHAPEFACTORS_H_
