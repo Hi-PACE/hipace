@@ -124,32 +124,32 @@ shape_factor_result compute_shape_factor_branchless (amrex::Real xmid, int ix) n
     using namespace amrex::literals;
 
     if constexpr (depos_order==0) {
-        const int i = static_cast<int>(std::floor(xmid+0.5));
-        return {1, i+ix};
+        const int i = static_cast<int>(amrex::Math::floor(xmid+0.5_rt));
+        return {1._rt, i+ix};
     } else if constexpr (depos_order==1) {
-        const int i = static_cast<int>(std::floor(xmid));
-        const amrex::Real xint = xmid-i;
+        const amrex::Real xfloor = amrex::Math::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
         const amrex::Real ic = static_cast<amrex::Real>(ix);
         const amrex::Real shape = (1._rt-ic) + (2._rt*ic-1._rt) * xint;
-        return {shape, i+ix};
+        return {shape, static_cast<int>(xfloor)+ix};
     } else if constexpr (depos_order==2) {
-        const int i = static_cast<int>(std::floor(xmid+0.5));
-        const amrex::Real xint = xmid-i;
+        const amrex::Real xfloor = amrex::Math::floor(xmid+0.5_rt);
+        const amrex::Real xint = xmid-xfloor;
         const int ic = ix - 1;
         const amrex::Real icr = static_cast<amrex::Real>(ic);
         const amrex::Real shape = (-0.625_rt*icr*icr + 0.75_rt)
                                 + (0.5_rt*icr + 1.5_rt*icr*icr*xint - xint) * xint;
-        return {shape, i+ic};
+        return {shape, static_cast<int>(xfloor)+ic};
     } else if constexpr (depos_order==3) {
-        const int i = static_cast<int>(std::floor(xmid));
-        const amrex::Real xint = xmid-i;
+        const amrex::Real xfloor = amrex::Math::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
         const int ic = ix + 1;
         const amrex::Real icr = static_cast<amrex::Real>(ic&1);
         const amrex::Real xint_s = icr + (1._rt - 2._rt*icr) * xint;
         const amrex::Real cond = static_cast<amrex::Real>(ic&2);
         const amrex::Real shape = (1.0_rt/6.0_rt)*(cond*2._rt
                                 + xint_s*xint_s*(cond*(xint_s-3._rt) + xint_s));
-        return {shape, i+ix-1};
+        return {shape, static_cast<int>(xfloor)+ix-1};
     }
     static_assert(0 <= depos_order && depos_order <= 3);
     return {};

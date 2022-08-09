@@ -239,7 +239,7 @@ void doDepositionShapeN (const bool use_laser,
                                                           + 0.5_rt*Aabssqp)
                                                           / (2.0_rt * psip[ip]*psip[ip]);
 
-                    if (gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor)
+                    if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && inxy == 0)
                     {
                         // This particle violates the QSA, discard it and do not deposit its current
                         amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
