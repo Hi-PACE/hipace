@@ -60,10 +60,13 @@ amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 int Hipace::m_MG_verbose = 0;
 bool Hipace::m_use_amrex_mlmg = false;
+
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
+bool Hipace::m_outer_depos_loop = true;
 #else
 bool Hipace::m_do_tiling = true;
+bool Hipace::m_outer_depos_loop = false;
 #endif
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
@@ -122,6 +125,7 @@ Hipace::Hipace () :
                             "Multiple boxes per rank only implemented for one rank.");
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
     queryWithParser(pph, "depos_order_z", m_depos_order_z);
+    queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);

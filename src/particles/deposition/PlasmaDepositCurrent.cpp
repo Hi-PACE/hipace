@@ -15,21 +15,36 @@
 #include "utils/HipaceProfilerWrapper.H"
 
 template<class...Args>
-void DepositCurrent_middle (int depos_order_xy, bool use_laser, bool do_tiling, bool can_ionize, Args&&...args)
+void DepositCurrent_middle (bool outer_depos_loop, int depos_order_xy, bool use_laser,
+                            bool do_tiling, bool can_ionize, Args&&...args)
 {
-    if (!use_laser && !do_tiling && !can_ionize) {
+    if (outer_depos_loop && !use_laser && !do_tiling && !can_ionize) {
         switch (depos_order_xy) {
-            case 0: return doDepositionShapeN<0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
-            case 1: return doDepositionShapeN<1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
-            case 2: return doDepositionShapeN<2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
-            case 3: return doDepositionShapeN<3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 0: return doDepositionShapeN<true, 0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<true, 1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<true, 2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<true, 3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+        }
+    } else if (!outer_depos_loop && !use_laser && !do_tiling && !can_ionize) {
+        switch (depos_order_xy) {
+            case 0: return doDepositionShapeN<false, 0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<false, 1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<false, 2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<false, 3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+        }
+    } else if (outer_depos_loop) {
+        switch (depos_order_xy) {
+            case 0: return doDepositionShapeN<true, 0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<true, 1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<true, 2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<true, 3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
         }
     } else {
         switch (depos_order_xy) {
-            case 0: return doDepositionShapeN<0, true, true, true>(use_laser, do_tiling, can_ionize, args...);
-            case 1: return doDepositionShapeN<1, true, true, true>(use_laser, do_tiling, can_ionize, args...);
-            case 2: return doDepositionShapeN<2, true, true, true>(use_laser, do_tiling, can_ionize, args...);
-            case 3: return doDepositionShapeN<3, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 0: return doDepositionShapeN<false, 0, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<false, 1, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<false, 2, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<false, 3, true, true, true>(use_laser, do_tiling, can_ionize, args...);
         }
     }
     amrex::Abort("unknow depos_order_xy: " + std::to_string(depos_order_xy));
@@ -90,7 +105,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
         const amrex::Real z_pos_offset = GetPosOffset(2, gm, isl_fab.box());
 
-        DepositCurrent_middle(Hipace::m_depos_order_xy, use_laser, Hipace::m_do_tiling, can_ionize,
+        DepositCurrent_middle(Hipace::m_outer_depos_loop, Hipace::m_depos_order_xy,
+                              use_laser, Hipace::m_do_tiling, can_ionize,
                               pti, isl_fab, jx_cmp, jy_cmp, jz_cmp, rho_cmp, jxx_cmp, jxy_cmp,
                               jyy_cmp, a_mf, tmp_dens, dx, x_pos_offset,
                               y_pos_offset, z_pos_offset, q, temp_slice,

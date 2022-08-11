@@ -36,6 +36,7 @@
  *   with projected values of transverse position, wp, uxp, uyp and psip stored in temp arrays.
  *
  *
+ * \tparam outer_depos_loop if the loop over depos_order is included in the loop over particles
  * \tparam depos_order_xy Order of the transverse shape factor for the deposition
  * \tparam t_use_laser whether a laser can be used
  * \tparam t_do_tiling whether tiling can be used
@@ -68,7 +69,7 @@
  * \param[in] bins objects containing indices of plasma particles in each tile
  * \param[in] bin_size tile size (square)
  */
-template <int depos_order_xy, bool t_use_laser, bool t_do_tiling, bool t_can_ionize>
+template <bool outer_depos_loop, int depos_order_xy, bool t_use_laser, bool t_do_tiling, bool t_can_ionize>
 void doDepositionShapeN (const bool use_laser,
                          const bool do_tiling,
                          const bool can_ionize,
@@ -95,8 +96,9 @@ void doDepositionShapeN (const bool use_laser,
 {
     using namespace amrex::literals;
 
-    static constexpr int depos_order_1 = depos_order_xy + 1;
-    static constexpr int depos_order_1_sq = depos_order_1 * depos_order_1;
+    static constexpr int outer_depos_order_1 = outer_depos_loop ? (depos_order_xy + 1) : 1;
+    static constexpr int outer_depos_order_1_sq = outer_depos_order_1 * outer_depos_order_1;
+    static constexpr int inner_depos_order = outer_depos_loop ? 0 : depos_order_xy;
 
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -188,8 +190,7 @@ void doDepositionShapeN (const bool use_laser,
             const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
 
             // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
-            amrex::ParallelFor(
-                depos_order_1_sq * num_particles,
+            amrex::ParallelFor(outer_depos_order_1_sq * num_particles,
                 [   // explicit lambda capture is required here
                     pos_structs,
                     wp, uxp, uyp, psip,
@@ -203,107 +204,120 @@ void doDepositionShapeN (const bool use_laser,
                     a_arr, dx_arr, c_z_pos_offset,
                     // ionization
                     ion_lev
-                ]
-                AMREX_GPU_DEVICE (int idx) noexcept {
-                    int ip = idx / depos_order_1_sq;
+                ] AMREX_GPU_DEVICE (int idx) noexcept {
+                int ip = idx / outer_depos_order_1_sq;
 
-                    if constexpr (t_do_tiling) {
-                        if (c_indices()) { // do_tiling
-                            ip = c_indices()[c_offsets()[c_itile()]+ip];
-                        }
+                if constexpr (t_do_tiling) {
+                    if (c_indices()) { // do_tiling
+                        ip = c_indices()[c_offsets()[c_itile()]+ip];
                     }
+                }
 
-                    const int inxy = idx % depos_order_1_sq;
-                    const int iy = inxy / depos_order_1;
-                    const int ix = inxy % depos_order_1;
+                const int onxy = idx % outer_depos_order_1_sq;
+                [[maybe_unused]] const int oy = onxy / outer_depos_order_1;
+                [[maybe_unused]] const int ox = onxy % outer_depos_order_1;
 
-                    const auto positions = pos_structs[ip];
-                    if (positions.id() < 0) return;
+                const auto positions = pos_structs[ip];
+                if (positions.id() < 0) return;
 
-                    const amrex::ParticleReal xp = positions.pos(0);
-                    const amrex::ParticleReal yp = positions.pos(1);
+                const amrex::ParticleReal xp = positions.pos(0);
+                const amrex::ParticleReal yp = positions.pos(1);
 
-                    amrex::ParticleReal Aabssqp = 0._rt;
-                    if constexpr (t_use_laser) {
-                        if (a_arr()) { // use_laser
-                            doLaserGatherShapeN<depos_order_xy,0> (xp, yp, 0._rt, // zp not used
-                                                Aabssqp, a_arr(), dx_arr(),
-                                                x_pos_offset, y_pos_offset, c_z_pos_offset());
-                        }
+                amrex::ParticleReal Aabssqp = 0._rt;
+                if constexpr (t_use_laser) {
+                    if (a_arr()) { // use_laser
+                        doLaserGatherShapeN<depos_order_xy,0> (xp, yp, 0._rt, // zp not used
+                                            Aabssqp, a_arr(), dx_arr(),
+                                            x_pos_offset, y_pos_offset, c_z_pos_offset());
                     }
+                }
 
-                    // calculate gamma/psip for plasma particles
-                    const amrex::Real gamma_psi = (1.0_rt + uxp[ip]*uxp[ip]*clightinv*clightinv
-                                                          + uyp[ip]*uyp[ip]*clightinv*clightinv
-                                                          + psip[ip]*psip[ip]
-                                                          + 0.5_rt*Aabssqp)
-                                                          / (2.0_rt * psip[ip]*psip[ip]);
+                // calculate gamma/psip for plasma particles
+                const amrex::Real gamma_psi = (1.0_rt + uxp[ip]*uxp[ip]*clightinv*clightinv
+                                                      + uyp[ip]*uyp[ip]*clightinv*clightinv
+                                                      + psip[ip]*psip[ip]
+                                                      + 0.5_rt*Aabssqp)
+                                                      / (2.0_rt * psip[ip]*psip[ip]);
 
-                    if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && inxy == 0)
-                    {
-                        // This particle violates the QSA, discard it and do not deposit its current
-                        amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
-                        wp[ip] = 0.0_rt;
-                        pos_structs[ip].id() = -std::abs(positions.id());
-                        return;
-                    }
-
-                    // --- Compute shape factors
-                    // x direction
-                    const amrex::Real xmid = (xp - x_pos_offset)*dx_inv;
-                    auto [shape_x, cell_x] = compute_shape_factor_branchless<depos_order_xy>(xmid, ix);
-
-                    // y direction
-                    const amrex::Real ymid = (yp - y_pos_offset)*dy_inv;
-                    auto [shape_y, cell_y] = compute_shape_factor_branchless<depos_order_xy>(ymid, iy);
-
-                    if constexpr (t_do_tiling) {
-                        if (c_indices()) { // do_tiling
-                            cell_x -= c_itilex_bs();
-                            cell_y -= c_itiley_bs();
-                        }
-                    }
-
-                    // calculate charge of the plasma particles
-                    amrex::Real q = charge;
-                    if constexpr (t_can_ionize) {
-                        if (ion_lev()) { // can_ionize
-                            q *= ion_lev()[ip];
-                        }
-                    }
-
-                    const amrex::Real charge_density = q * wp[ip] * invvol * shape_x * shape_y;
-
-                    const amrex::Real ux_fact = uxp[ip] / psip[ip];
-                    const amrex::Real uy_fact = uyp[ip] / psip[ip];
-
-                    // wqx, wqy wqz are particle current in each direction
-                    const amrex::Real wqx = charge_density * ux_fact;
-                    const amrex::Real wqy = charge_density * uy_fact;
-                    const amrex::Real wqz = charge_density * (gamma_psi-1._rt) / clightinv;
-                    const amrex::Real wq  = charge_density * gamma_psi;
-                    const amrex::Real wqxx = wqx * ux_fact;
-                    const amrex::Real wqxy = wqx * uy_fact;
-                    const amrex::Real wqyy = wqy * uy_fact;
-
-                    // Deposit current into isl_arr
-                    if (jx != -1) { // deposit_jx_jy
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jx), wqx);
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jy), wqy);
-                    }
-                    if (jz != -1) { // deposit_jz
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jz), wqz);
-                    }
-                    if (rho != -1) { // deposit_rho
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
-                    }
-                    if (jxx != -1) { // deposit_j_squared
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxx), wqxx);
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxy), wqxy);
-                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
-                    }
+                if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && onxy == 0)
+                {
+                    // This particle violates the QSA, discard it and do not deposit its current
+                    amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                    wp[ip] = 0.0_rt;
+                    pos_structs[ip].id() = -std::abs(positions.id());
                     return;
-                });
+                }
+
+                const amrex::Real ux_fact = uxp[ip] / psip[ip];
+                const amrex::Real uy_fact = uyp[ip] / psip[ip];
+
+                // calculate charge of the plasma particles
+                amrex::Real q = charge;
+                if constexpr (t_can_ionize) {
+                    if (ion_lev()) { // can_ionize
+                        q *= ion_lev()[ip];
+                    }
+                }
+
+                for (int iy=0; iy <= inner_depos_order; ++iy) {
+                    for (int ix=0; ix <= inner_depos_order; ++ix) {
+                        int tx = 0;
+                        int ty = 0;
+                        if constexpr (outer_depos_loop) {
+                            tx = ox;
+                            ty = oy;
+                        } else {
+                            tx = ix;
+                            ty = iy;
+                        }
+                        // --- Compute shape factors
+                        // x direction
+                        const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
+                        auto [shape_x, cell_x] =
+                            compute_single_shape_factor<outer_depos_loop, depos_order_xy>(xmid, tx);
+
+                        // y direction
+                        const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
+                        auto [shape_y, cell_y] =
+                            compute_single_shape_factor<outer_depos_loop, depos_order_xy>(ymid, ty);
+
+                        if constexpr (t_do_tiling) {
+                            if (c_indices()) { // do_tiling
+                                cell_x -= c_itilex_bs();
+                                cell_y -= c_itiley_bs();
+                            }
+                        }
+
+                        const amrex::Real charge_density = q * wp[ip] * invvol * shape_x * shape_y;
+
+                        // wqx, wqy wqz are particle current in each direction
+                        const amrex::Real wqx = charge_density * ux_fact;
+                        const amrex::Real wqy = charge_density * uy_fact;
+                        const amrex::Real wqz = charge_density * (gamma_psi-1._rt) / clightinv;
+                        const amrex::Real wq  = charge_density * gamma_psi;
+                        const amrex::Real wqxx = wqx * ux_fact;
+                        const amrex::Real wqxy = wqx * uy_fact;
+                        const amrex::Real wqyy = wqy * uy_fact;
+
+                        // Deposit current into isl_arr
+                        if (jx != -1) { // deposit_jx_jy
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jx), wqx);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jy), wqy);
+                        }
+                        if (jz != -1) { // deposit_jz
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jz), wqz);
+                        }
+                        if (rho != -1) { // deposit_rho
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
+                        }
+                        if (jxx != -1) { // deposit_j_squared
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxx), wqxx);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxy), wqxy);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
+                        }
+                    }
+                }
+            });
 #ifndef AMREX_USE_GPU
             if (do_tiling) {
                 // If tiling is on, the current was deposited (see above) in temporary tile arrays.
