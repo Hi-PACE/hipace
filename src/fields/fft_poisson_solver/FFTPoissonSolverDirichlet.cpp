@@ -9,6 +9,7 @@
 #include "FFTPoissonSolverDirichlet.H"
 #include "fft/AnyDST.H"
 #include "utils/Constants.H"
+#include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 FFTPoissonSolverDirichlet::FFTPoissonSolverDirichlet (
@@ -62,7 +63,7 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix); mfi.isValid(); ++mfi ){
-        amrex::Array4<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
         amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
             fft_box, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
@@ -73,10 +74,10 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
                     amrex::Real siney_sq = sin(( j - lo[1] + 1 ) * sine_y_factor) * sin(( j - lo[1] + 1 ) * sine_y_factor);
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
-                        eigenvalue_matrix(i,j,lo[2]) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                        eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
                     } else {
                         // Avoid division by 0
-                        eigenvalue_matrix(i,j,lo[2]) = 0._rt;
+                        eigenvalue_matrix(i,j) = 0._rt;
                     }
                 });
     }
@@ -109,26 +110,26 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by eigenvalue_matrix
-        amrex::Array4<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        amrex::Array4<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
+        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
 
         amrex::ParallelFor( m_tmpSpectralField[mfi].box(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                tmp_cmplx_arr(i,j,k) *= eigenvalue_matrix(i,j,k);
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+                tmp_cmplx_arr(i,j) *= eigenvalue_matrix(i,j);
             });
 
         // Perform Fourier transform from `tmpSpectralField` to the staging area
         AnyDST::Execute<AnyDST::direction::backward>(m_plan[mfi]);
 
         // Copy from the staging area to output array (and normalize)
-        amrex::Array4<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
-        amrex::Array4<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
+        Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
         amrex::ParallelFor( lhs_mf[mfi].box() & m_stagingArea[mfi].box(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 // Copy field
-                lhs_arr(i,j,k) = tmp_real_arr(i,j,k);
+                lhs_arr(i,j) = tmp_real_arr(i,j);
             });
     }
 }
