@@ -51,6 +51,7 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_beam_jx_jy_deposition = true;
 bool Hipace::m_do_beam_jz_minus_rho = false;
+int Hipace::m_do_device_synchronize = 0;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
