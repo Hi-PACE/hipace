@@ -61,9 +61,11 @@ elif args.beam_py == '' and args.beam_out1 != '' and args.beam_out2 != '':
 else:
     raise AssertionError("Invalid input")
 
+SCALAR = io.Mesh_Record_Component.SCALAR
+
 all_comps = [["position", "position", [["x", "x"], ["y", "y"], ["z", "z"]]], \
              ["momentum", "momentum", [["x", "x"], ["y", "y"], ["z", "z"]]], \
-             ["charge", "weighting", [["charge", io.Mesh_Record_Component.SCALAR]]]]
+             ["charge", "weighting", [[SCALAR, SCALAR]]]]
 
 units_py = {"position" : 1. , "momentum": scc.c * scc.m_e, "charge": 1./scc.e}
 
