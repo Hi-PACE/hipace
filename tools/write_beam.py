@@ -24,13 +24,12 @@ kp_inv = constants.c / constants.e * math.sqrt(constants.epsilon_0 * constants.m
 single_weight = (beam_density * beam_position_std[0] * beam_position_std[1] *
                  beam_position_std[2] * np.sqrt(2. * math.pi)**3 / n)
 
-rng = random.default_rng(seed=0)
+np.random.seed(0)
+data = np.zeros([6,n],dtype=np.float64)
 
-data = np.zeros([6, n], dtype=np.float64)
-
-for i in [0, 1, 2]:
-    data[i] = rng.normal(beam_position_mean[i], beam_position_std[i], n)
-    data[i+3] = rng.normal(beam_u_mean[i], beam_u_std[i], n)
+for i in [0,1,2]:
+    data[i]=random.normal(beam_position_mean[i],beam_position_std[i],n)
+    data[i+3]=random.normal(beam_u_mean[i],beam_u_std[i],n)
 
 series = io.Series("beam_%05T.h5", io.Access.create)
 
@@ -40,7 +39,7 @@ particle = i.particles["Electrons"]
 
 particle.set_attribute("HiPACE++_Plasma_Density", plasma_density)
 
-dataset = io.Dataset(data[0].dtype, data[0].shape)
+dataset = io.Dataset(data[0].dtype,data[0].shape)
 
 particle["position"].unit_dimension = {
     io.Unit_Dimension.L:  1,
