@@ -70,13 +70,15 @@ for k,m in [["x",3],["y",4],["z",5]]:
     particle["momentum"][k].store_chunk(data[m])
     particle["momentum"][k].unit_SI = constants.m_e * constants.c
 
-particle["charge"]["charge"].reset_dataset(dataset)
-particle["charge"]["charge"].make_constant(single_weight)
-particle["charge"]["charge"].unit_SI = constants.e * plasma_density * kp_inv**3
+SCALAR = io.Mesh_Record_Component.SCALAR
 
-particle["mass"]["mass"].reset_dataset(dataset)
-particle["mass"]["mass"].make_constant(single_weight)
-particle["mass"]["mass"].unit_SI = constants.m_e * plasma_density * kp_inv**3
+particle["charge"][SCALAR].reset_dataset(dataset)
+particle["charge"][SCALAR].make_constant(single_weight)
+particle["charge"][SCALAR].unit_SI = constants.e * plasma_density * kp_inv**3
+
+particle["mass"][SCALAR].reset_dataset(dataset)
+particle["mass"][SCALAR].make_constant(single_weight)
+particle["mass"][SCALAR].unit_SI = constants.m_e * plasma_density * kp_inv**3
 
 series.flush()
 
