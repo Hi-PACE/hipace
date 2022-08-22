@@ -883,7 +883,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                     - cjyy*cdy_psi / pc.c);
 
                     // Should only have 1 component, but not supported yet by the AMReX MG solver
-                    isl_arr(i,j,k,mult) += nstar / (const_of_motion + cpsi) / pc.ep0;
+                    isl_arr(i,j,mult) += nstar / (const_of_motion + cpsi) / pc.ep0;
                     if (ncomp_mult==2) {
                         isl_arr(i,j,mult+1) += nstar / (const_of_motion + cpsi) / pc.ep0;
                     }
