@@ -34,10 +34,10 @@ void DepositCurrent_middle (bool outer_depos_loop, int depos_order_xy, bool use_
         }
     } else if (outer_depos_loop) {
         switch (depos_order_xy) {
-            case 0: return doDepositionShapeN<true, 0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
-            case 1: return doDepositionShapeN<true, 1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
-            case 2: return doDepositionShapeN<true, 2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
-            case 3: return doDepositionShapeN<true, 3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 0: return doDepositionShapeN<true, 0, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<true, 1, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<true, 2, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<true, 3, true, true, true>(use_laser, do_tiling, can_ionize, args...);
         }
     } else {
         switch (depos_order_xy) {
