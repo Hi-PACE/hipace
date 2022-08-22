@@ -112,7 +112,6 @@ void doDepositionShapeN (const bool use_laser,
     const amrex::Real * const AMREX_RESTRICT psip =
         soa.GetRealData(temp_slice ? PlasmaIdx::psi_temp : PlasmaIdx::psi).data();
 
-    // optional lambda capture for ionization
     int const * const AMREX_RESTRICT ion_lev =
         can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
