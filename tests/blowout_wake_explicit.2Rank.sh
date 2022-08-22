@@ -31,6 +31,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=$TEST_NAME \
         hipace.bxby_solver=explicit \
+        hipace.outer_depos_loop = true \
         max_step=1
 
 # Compare the results with checksum benchmark

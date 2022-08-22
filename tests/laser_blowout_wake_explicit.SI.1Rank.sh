@@ -33,6 +33,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         laser.w0 = 4.*kp_inv 4.*kp_inv \
         laser.L0 = 2.*kp_inv \
         amr.n_cell = 128 128 100 \
+        hipace.outer_depos_loop = true \
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
