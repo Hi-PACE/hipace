@@ -60,10 +60,13 @@ amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 int Hipace::m_MG_verbose = 0;
 bool Hipace::m_use_amrex_mlmg = false;
+
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
+bool Hipace::m_outer_depos_loop = true;
 #else
 bool Hipace::m_do_tiling = true;
+bool Hipace::m_outer_depos_loop = false;
 #endif
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
@@ -93,8 +96,8 @@ Hipace::Hipace () :
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
-    m_diags(this->maxLevel()+1),
-    m_adaptive_time_step(m_multi_beam.get_nbeams())
+    m_adaptive_time_step(m_multi_beam.get_nbeams()),
+    m_diags(this->maxLevel()+1)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
@@ -122,6 +125,7 @@ Hipace::Hipace () :
                             "Multiple boxes per rank only implemented for one rank.");
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
     queryWithParser(pph, "depos_order_z", m_depos_order_z);
+    queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
@@ -587,7 +591,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
@@ -645,7 +649,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, false, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 
