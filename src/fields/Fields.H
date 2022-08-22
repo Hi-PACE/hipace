@@ -367,8 +367,8 @@ public:
         amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
 
         for (amrex::MFIter mfi(mfab_dst); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real const> array_src = mfab_src.array(mfi);
-            const Array3<amrex::Real> array_dst = mfab_dst.const_array(mfi);
+            const Array3<amrex::Real const> array_src = mfab_src.const_array(mfi);
+            const Array3<amrex::Real> array_dst = mfab_dst.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
                 [=] AMREX_GPU_DEVICE(int i, int j, int)
