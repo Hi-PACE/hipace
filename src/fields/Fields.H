@@ -11,6 +11,7 @@
 
 #include "fft_poisson_solver/FFTPoissonSolver.H"
 #include "diagnostics/Diagnostic.H"
+#include "utils/GPUUtil.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -308,17 +309,17 @@ public:
     template<class...Args>
     void setVal (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
-        amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
+        const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
 
         for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
-            amrex::Array4<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                [=] AMREX_GPU_DEVICE(int i, int j, int)
                 {
                     for (int n=0; n<ncomps; ++n) {
-                        array(i,j,k,c_idx[n]) = val;
+                        array(i,j,c_idx[n]) = val;
                     }
                 });
         }
@@ -334,17 +335,17 @@ public:
     template<class...Args>
     void mult (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
-        amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
+        const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
 
         for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
-            amrex::Array4<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                [=] AMREX_GPU_DEVICE(int i, int j, int)
                 {
                     for (int n=0; n<ncomps; ++n) {
-                        array(i,j,k,c_idx[n]) *= val;
+                        array(i,j,c_idx[n]) *= val;
                     }
                 });
         }
@@ -360,20 +361,20 @@ public:
     template<class...Args>
     void shift (const int lev, const int islice_dst, const int islice_src, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
-        amrex::GpuArray<int, ncomps> c_idx_src = {Comps[islice_src][comps]...};
-        amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
-        amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
+        const amrex::GpuArray<int, ncomps> c_idx_src = {Comps[islice_src][comps]...};
+        const amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
+        const amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
         amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
 
         for (amrex::MFIter mfi(mfab_dst); mfi.isValid(); ++mfi) {
-            amrex::Array4<amrex::Real> array_src = mfab_src.array(mfi);
-            amrex::Array4<amrex::Real> array_dst = mfab_dst.array(mfi);
+            const Array3<amrex::Real const> array_src = mfab_src.array(mfi);
+            const Array3<amrex::Real> array_dst = mfab_dst.const_array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                [=] AMREX_GPU_DEVICE(int i, int j, int)
                 {
                     for (int n=0; n<ncomps; ++n) {
-                        array_dst(i,j,k,c_idx_dst[n]) = array_src(i,j,k,c_idx_src[n]);
+                        array_dst(i,j,c_idx_dst[n]) = array_src(i,j,c_idx_src[n]);
                     }
                 });
         }
