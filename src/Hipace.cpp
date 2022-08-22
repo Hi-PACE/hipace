@@ -51,7 +51,6 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_beam_jx_jy_deposition = true;
 bool Hipace::m_do_beam_jz_minus_rho = false;
-int Hipace::m_do_device_synchronize = 0;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
@@ -131,7 +130,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
-    queryWithParser(pph, "do_device_synchronize", m_do_device_synchronize);
+    queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
     queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
     queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);

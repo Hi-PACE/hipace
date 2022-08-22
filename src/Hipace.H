@@ -307,8 +307,6 @@ public:
     static bool m_do_beam_jx_jy_deposition;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
     static bool m_do_beam_jz_minus_rho;
-    /** Whether to call amrex::Gpu::synchronize() around all profiler region */
-    static int m_do_device_synchronize;
     /** Whether to use tiling for particle operations */
     static bool m_do_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.

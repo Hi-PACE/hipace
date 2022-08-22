@@ -21,13 +21,13 @@
 #include <AMReX_GpuDevice.H>
 
 /** Whether to call amrex::Gpu::synchronize() around all profiler region */
-inline int m_do_device_synchronize = 0;
+inline int DO_DEVICE_SYNCHRONIZE = 0;
 
 template<int detail_level>
 AMREX_FORCE_INLINE
 void doDeviceSynchronize ()
 {
-    if ( m_do_device_synchronize >= detail_level )
+    if ( DO_DEVICE_SYNCHRONIZE >= detail_level )
         amrex::Gpu::synchronize();
 }
 
