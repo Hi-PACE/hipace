@@ -20,7 +20,6 @@
 #include "particles/TileSort.H"
 #include "particles/pusher/FieldGather.H"
 #include "utils/Constants.H"
-#include "utils/GPUUtil.H"
 #include "Hipace.H"
 
 #include <AMReX_Array4.H>
