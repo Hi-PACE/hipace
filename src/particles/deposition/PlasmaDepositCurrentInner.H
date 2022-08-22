@@ -20,6 +20,7 @@
 #include "particles/TileSort.H"
 #include "particles/pusher/FieldGather.H"
 #include "utils/Constants.H"
+#include "utils/GPUUtil.H"
 #include "Hipace.H"
 
 #include <AMReX_Array4.H>
@@ -142,7 +143,7 @@ void doDepositionShapeN (const bool use_laser,
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
             "jx, jy, jz, and rho must be nodal in all directions.");
 
-        amrex::Array4<amrex::Real> const isl_arr =
+        Array3<amrex::Real> const isl_arr =
             do_tiling ? tmp_densities[ithread].array() : isl_fab.array();
         const int jx  = do_tiling ? 0 : jx_cmp;
         const int jy  = do_tiling ? 1 : jy_cmp;
