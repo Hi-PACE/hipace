@@ -62,9 +62,9 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     const int rhob_cmp = do_beam_rho_deposition   ? Comps[which_slice]["rho"+beam_str] : -1;
 
     // Offset for converting positions to indexes
-    amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], jxb_fab.box());
-    amrex::Real const y_pos_offset = GetPosOffset(1, gm[lev], jxb_fab.box());
-    amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev], jxb_fab.box());
+    amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
+    amrex::Real const y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
+    amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev], isl_fab.box());
 
     amrex::Real lev_weight_fac = 1.;
     if (lev == 1 && Hipace::m_normalized_units) {
