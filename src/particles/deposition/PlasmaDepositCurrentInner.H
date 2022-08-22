@@ -145,7 +145,7 @@ void doDepositionShapeN (const bool use_laser,
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
             "jx, jy, jz, and rho must be nodal in all directions.");
 
-        Array3<amrex::Real> const isl_arr =
+        amrex::Array4<amrex::Real> const isl_arr =
             do_tiling ? tmp_densities[ithread].array() : isl_fab.array();
         const int jx  = do_tiling ? 0 : jx_cmp;
         const int jy  = do_tiling ? 1 : jy_cmp;
@@ -300,20 +300,21 @@ void doDepositionShapeN (const bool use_laser,
                         const amrex::Real wqyy = wqy * uy_fact;
 
                         // Deposit current into isl_arr
+                        const int lo2 = amrex::lbound(isl_arr).z;
                         if (jx != -1) { // deposit_jx_jy
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jx), wqx);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jy), wqy);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, jx), wqx);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, jy), wqy);
                         }
                         if (jz != -1) { // deposit_jz
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jz), wqz);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, jz), wqz);
                         }
                         if (rho != -1) { // deposit_rho
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, rho), wq);
                         }
                         if (jxx != -1) { // deposit_j_squared
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxx), wqxx);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxy), wqxy);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, jxx), wqxx);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, jxy), wqxy);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, lo2, jyy), wqyy);
                         }
                     }
                 }
