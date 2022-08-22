@@ -14,11 +14,48 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 
+template<class...Args>
+void DepositCurrent_middle (bool outer_depos_loop, int depos_order_xy, bool use_laser,
+                            bool do_tiling, bool can_ionize, Args&&...args)
+{
+    if (outer_depos_loop && !use_laser && !do_tiling && !can_ionize) {
+        switch (depos_order_xy) {
+            case 0: return doDepositionShapeN<true, 0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<true, 1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<true, 2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<true, 3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+        }
+    } else if (!outer_depos_loop && !use_laser && !do_tiling && !can_ionize) {
+        switch (depos_order_xy) {
+            case 0: return doDepositionShapeN<false, 0, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<false, 1, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<false, 2, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<false, 3, false, false, false>(use_laser, do_tiling, can_ionize, args...);
+        }
+    } else if (outer_depos_loop) {
+        switch (depos_order_xy) {
+            case 0: return doDepositionShapeN<true, 0, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<true, 1, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<true, 2, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<true, 3, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+        }
+    } else {
+        switch (depos_order_xy) {
+            case 0: return doDepositionShapeN<false, 0, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 1: return doDepositionShapeN<false, 1, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 2: return doDepositionShapeN<false, 2, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+            case 3: return doDepositionShapeN<false, 3, true, true, true>(use_laser, do_tiling, can_ionize, args...);
+        }
+    }
+    amrex::Abort("unknow depos_order_xy: " + std::to_string(depos_order_xy));
+}
+
+
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& laser,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
+                const bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
@@ -46,62 +83,34 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         // Extract the fields currents
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
-        amrex::MultiFab& S = fields.getSlices(lev, which_slice);
-        const std::string plasma_str = explicit_solve && which_slice != WhichSlice::RhoIons ? "_" + plasma.GetName() : "";
-        amrex::MultiFab jx(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jx" +plasma_str] : 0, 1);
-        amrex::MultiFab jy(S,  amrex::make_alias, deposit_jx_jy     ? Comps[which_slice]["jy" +plasma_str] : 0, 1);
-        amrex::MultiFab jz(S,  amrex::make_alias, deposit_jz        ? Comps[which_slice]["jz" +plasma_str] : 0, 1);
-        amrex::MultiFab rho(S, amrex::make_alias, deposit_rho       ? Comps[which_slice]["rho"+plasma_str] : 0, 1);
-        amrex::MultiFab jxx(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxx"+plasma_str] : 0, 1);
-        amrex::MultiFab jxy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jxy"+plasma_str] : 0, 1);
-        amrex::MultiFab jyy(S, amrex::make_alias, deposit_j_squared ? Comps[which_slice]["jyy"+plasma_str] : 0, 1);
-        amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
+        amrex::FArrayBox& isl_fab = fields.getSlices(lev, which_slice)[pti];
+        const std::string plasma_str = explicit_solve && which_slice != WhichSlice::RhoIons ?
+                                       "_" + plasma.GetName() : "";
+        const int  jx_cmp = deposit_jx_jy     ? Comps[which_slice]["jx" +plasma_str] : -1;
+        const int  jy_cmp = deposit_jx_jy     ? Comps[which_slice]["jy" +plasma_str] : -1;
+        const int  jz_cmp = deposit_jz        ? Comps[which_slice]["jz" +plasma_str] : -1;
+        const int rho_cmp = deposit_rho       ? Comps[which_slice]["rho"+plasma_str] : -1;
+        const int jxx_cmp = deposit_j_squared ? Comps[which_slice]["jxx"+plasma_str] : -1;
+        const int jxy_cmp = deposit_j_squared ? Comps[which_slice]["jxy"+plasma_str] : -1;
+        const int jyy_cmp = deposit_j_squared ? Comps[which_slice]["jyy"+plasma_str] : -1;
 
-        // Extract FabArray for this box
-        amrex::FArrayBox& jx_fab = jx[pti];
-        amrex::FArrayBox& jy_fab = jy[pti];
-        amrex::FArrayBox& jz_fab = jz[pti];
-        amrex::FArrayBox& rho_fab = rho[pti];
-        amrex::FArrayBox& jxx_fab = jxx[pti];
-        amrex::FArrayBox& jxy_fab = jxy[pti];
-        amrex::FArrayBox& jyy_fab = jyy[pti];
+        amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
         // extract the laser Fields
         const bool use_laser = laser.m_use_laser;
         const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::This);
 
         // Offset for converting positions to indexes
-        const amrex::Real x_pos_offset = GetPosOffset(0, gm, jx_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, jx_fab.box());
-        const amrex::Real z_pos_offset = GetPosOffset(2, gm, jx_fab.box());
+        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
+        const amrex::Real z_pos_offset = GetPosOffset(2, gm, isl_fab.box());
 
-
-        if        (Hipace::m_depos_order_xy == 0){
-                doDepositionShapeN<0, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
-                                          jyy_fab, a_mf, use_laser, tmp_dens, dx, x_pos_offset,
-                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
-                                          max_qsa_weighting_factor, bins, bin_size);
-        } else if (Hipace::m_depos_order_xy == 1){
-                doDepositionShapeN<1, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
-                                          jyy_fab, a_mf, use_laser, tmp_dens, dx, x_pos_offset,
-                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
-                                          max_qsa_weighting_factor, bins, bin_size);
-        } else if (Hipace::m_depos_order_xy == 2){
-                doDepositionShapeN<2, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
-                                          jyy_fab, a_mf, use_laser, tmp_dens, dx, x_pos_offset,
-                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
-                                          max_qsa_weighting_factor, bins, bin_size);
-        } else if (Hipace::m_depos_order_xy == 3){
-                doDepositionShapeN<3, 0>( pti, jx_fab, jy_fab, jz_fab, rho_fab, jxx_fab, jxy_fab,
-                                          jyy_fab, a_mf, use_laser, tmp_dens, dx, x_pos_offset,
-                                          y_pos_offset, z_pos_offset, q, can_ionize, temp_slice,
-                                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
-                                          max_qsa_weighting_factor, bins, bin_size);
-        } else {
-            amrex::Abort("unknow deposition order");
-        }
+        DepositCurrent_middle(Hipace::m_outer_depos_loop, Hipace::m_depos_order_xy,
+                              use_laser, Hipace::m_do_tiling, can_ionize,
+                              pti, isl_fab, jx_cmp, jy_cmp, jz_cmp, rho_cmp, jxx_cmp, jxy_cmp,
+                              jyy_cmp, a_mf, tmp_dens, dx, x_pos_offset,
+                              y_pos_offset, z_pos_offset, q, temp_slice,
+                              deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
+                              max_qsa_weighting_factor, bins, bin_size);
     }
 }

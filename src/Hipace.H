@@ -285,9 +285,12 @@ public:
     /** Order of the field gather and current deposition shape factor in the transverse directions
      */
     static int m_depos_order_xy;
-    /** Order of the field gather and current deposition shape factorin the longitudinal direction
+    /** Order of the field gather and current deposition shape factor in the longitudinal direction
      */
     static int m_depos_order_z;
+    /* if the loop over depos_order is included in the loop over particles
+     */
+    static bool m_outer_depos_loop;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_error_tolerance;

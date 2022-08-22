@@ -106,6 +106,9 @@ General parameters
 * ``hipace.depos_order_z`` (`int`) optional (default `0`)
     Transverse particle shape order. Currently, only `0` is implemented.
 
+* ``hipace.outer_depos_loop`` (`bool`) optional (default GPU: `1` CPU: `0`)
+    If the loop over depos_order is included in the loop over particles.
+
 * ``hipace.output_period`` (`integer`) optional (default `-1`)
     Output period. No output is given for ``hipace.output_period = -1``.
     **Warning:** ``hipace.output_period = 0`` will make the simulation crash.
