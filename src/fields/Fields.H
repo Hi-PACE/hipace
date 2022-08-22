@@ -314,10 +314,12 @@ public:
         for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
             amrex::Array4<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(), ncomps,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
+            amrex::ParallelFor(mfi.growntilebox(),
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    array(i,j,k,c_idx[n]) = val;
+                    for (int n=0; n<ncomps; ++n) {
+                        array(i,j,k,c_idx[n]) = val;
+                    }
                 });
         }
     }
@@ -338,10 +340,12 @@ public:
         for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
             amrex::Array4<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(), ncomps,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
+            amrex::ParallelFor(mfi.growntilebox(),
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    array(i,j,k,c_idx[n]) *= val;
+                    for (int n=0; n<ncomps; ++n) {
+                        array(i,j,k,c_idx[n]) *= val;
+                    }
                 });
         }
     }
@@ -365,10 +369,12 @@ public:
             amrex::Array4<amrex::Real> array_src = mfab_src.array(mfi);
             amrex::Array4<amrex::Real> array_dst = mfab_dst.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(), ncomps,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n)
+            amrex::ParallelFor(mfi.growntilebox(),
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    array_dst(i,j,k,c_idx_dst[n]) = array_src(i,j,k,c_idx_src[n]);
+                    for (int n=0; n<ncomps; ++n) {
+                        array_dst(i,j,k,c_idx_dst[n]) = array_src(i,j,k,c_idx_src[n]);
+                    }
                 });
         }
     }

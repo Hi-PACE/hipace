@@ -35,6 +35,15 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.bxby_solver=explicit \
         max_step=1
 
+# Compare the results with checksum benchmark
+$HIPACE_TEST_DIR/checksum/checksumAPI.py \
+    --evaluate \
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"
+
+echo "Start testing new current deposition"
+
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=${TEST_NAME}_cd2 \
@@ -42,13 +51,8 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.outer_depos_loop=true \
         max_step=1
 
-# Compare the results with checksum benchmark
-$HIPACE_TEST_DIR/checksum/checksumAPI.py \
-    --evaluate \
-    --file_name $TEST_NAME \
-    --test-name $TEST_NAME
-
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name ${TEST_NAME}_cd2 \
-    --test-name $TEST_NAME
+    --test-name $TEST_NAME \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"

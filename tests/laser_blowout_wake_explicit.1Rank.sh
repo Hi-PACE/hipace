@@ -40,4 +40,5 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME \
-    --skip-particles
+    --skip-particles \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"
