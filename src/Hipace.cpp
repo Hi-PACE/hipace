@@ -818,7 +818,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
             const int jyy = Comps[isl]["jyy"+plasma_str];
 
             amrex::ParallelFor(bx,
-                [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                 {
                     const amrex::Real dx_jxy = (isl_arr(i+1,j,jxy)-isl_arr(i-1,j,jxy))/(2._rt*dx);
                     const amrex::Real dx_jxx = (isl_arr(i+1,j,jxx)-isl_arr(i-1,j,jxx))/(2._rt*dx);
