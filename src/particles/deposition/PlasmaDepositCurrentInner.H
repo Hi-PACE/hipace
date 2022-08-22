@@ -114,7 +114,7 @@ void doDepositionShapeN (const bool use_laser,
         soa.GetRealData(temp_slice ? PlasmaIdx::psi_temp : PlasmaIdx::psi).data();
 
     // optional lambda capture for ionization
-    LambdaOptional<t_can_ionize, int const * AMREX_RESTRICT> ion_lev =
+    int const * const AMREX_RESTRICT ion_lev =
         can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
     // Extract box properties
@@ -130,10 +130,9 @@ void doDepositionShapeN (const bool use_laser,
 
     // optional lambda capture for laser
     // Extract laser array from MultiFab
-    LambdaOptional<t_use_laser, amrex::Array4<const amrex::Real>> a_arr =
+    const amrex::Array4<const amrex::Real> a_arr =
         use_laser ? a_mf[pti].array() : amrex::Array4<const amrex::Real>();
-    LambdaOptional<t_use_laser, amrex::GpuArray<amrex::Real, 3>> dx_arr = amrex::GpuArray<amrex::Real, 3>{dx[0], dx[1], dx[2]};
-    LambdaOptional<t_use_laser, amrex::Real> c_z_pos_offset = z_pos_offset;
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -179,13 +178,8 @@ void doDepositionShapeN (const bool use_laser,
             const int itiley = do_tiling ? itile % ntiley : 0;
             PlasmaBins::index_type const * const indices = do_tiling ? bins.permutationPtr() : nullptr;
             PlasmaBins::index_type const * const offsets = do_tiling ? bins.offsetsPtr() : nullptr;
-
-            // optional lambda capture for tiling
-            LambdaOptional<t_do_tiling, PlasmaBins::index_type const *> c_indices = indices;
-            LambdaOptional<t_do_tiling, PlasmaBins::index_type const *> c_offsets = offsets;
-            LambdaOptional<t_do_tiling, int> c_itile = itile;
-            LambdaOptional<t_do_tiling, int> c_itilex_bs = do_tiling ? itilex * bin_size : 0;
-            LambdaOptional<t_do_tiling, int> c_itiley_bs = do_tiling ? itiley * bin_size : 0;
+            const int itilex_bs = do_tiling ? itilex * bin_size : 0;
+            const int itiley_bs = do_tiling ? itiley * bin_size : 0;
 
             const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
 
@@ -199,17 +193,17 @@ void doDepositionShapeN (const bool use_laser,
                     isl_arr,
                     jx, jy, jz, rho, jxx, jxy, jyy,
                     // tiling
-                    c_indices, c_offsets, c_itile, c_itilex_bs, c_itiley_bs,
+                    indices, offsets, itile, itilex_bs, itiley_bs,
                     // laser
-                    a_arr, dx_arr, c_z_pos_offset,
+                    a_arr, dx_arr, z_pos_offset,
                     // ionization
                     ion_lev
                 ] AMREX_GPU_DEVICE (int idx) noexcept {
                 int ip = idx / outer_depos_order_1_sq;
 
                 if constexpr (t_do_tiling) {
-                    if (c_indices()) { // do_tiling
-                        ip = c_indices()[c_offsets()[c_itile()]+ip];
+                    if (indices) { // do_tiling
+                        ip = indices[offsets[itile]+ip];
                     }
                 }
 
@@ -225,10 +219,10 @@ void doDepositionShapeN (const bool use_laser,
 
                 amrex::ParticleReal Aabssqp = 0._rt;
                 if constexpr (t_use_laser) {
-                    if (a_arr()) { // use_laser
+                    if (a_arr) { // use_laser
                         doLaserGatherShapeN<depos_order_xy,0> (xp, yp, 0._rt, // zp not used
-                                            Aabssqp, a_arr(), dx_arr(),
-                                            x_pos_offset, y_pos_offset, c_z_pos_offset());
+                                            Aabssqp, a_arr, dx_arr,
+                                            x_pos_offset, y_pos_offset, z_pos_offset);
                     }
                 }
 
@@ -254,8 +248,8 @@ void doDepositionShapeN (const bool use_laser,
                 // calculate charge of the plasma particles
                 amrex::Real q = charge;
                 if constexpr (t_can_ionize) {
-                    if (ion_lev()) { // can_ionize
-                        q *= ion_lev()[ip];
+                    if (ion_lev) { // can_ionize
+                        q *= ion_lev[ip];
                     }
                 }
 
@@ -282,9 +276,9 @@ void doDepositionShapeN (const bool use_laser,
                             compute_single_shape_factor<outer_depos_loop, depos_order_xy>(ymid, ty);
 
                         if constexpr (t_do_tiling) {
-                            if (c_indices()) { // do_tiling
-                                cell_x -= c_itilex_bs();
-                                cell_y -= c_itiley_bs();
+                            if (indices) { // do_tiling
+                                cell_x -= itilex_bs;
+                                cell_y -= itiley_bs;
                             }
                         }
 
