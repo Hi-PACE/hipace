@@ -74,9 +74,12 @@ Fields::AllocData (
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
 
             isl = WhichSlice::This;
-            // Bx and By adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
-                                                   "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+            // (Bx, By), (Sy, Sx) and (Mult, Mult2) adjacent for explicit solver
+            Comps[isl].multi_emplace(N_Comps[isl], "Mult", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
+                "Bx", "By", "Bz", "Psi", "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+            if (Hipace::m_use_amrex_mlmg) {
+                Comps[isl].multi_emplace(N_Comps[isl], "Mult2");
+            }
             for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                 Comps[isl].multi_emplace(N_Comps[isl],
                     "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,

@@ -502,8 +502,8 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const
                        Real const tol_rel, Real const tol_abs, int const nummaxiter,
                        int const verbose)
 {
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_rhs.box(),2,0) == m_domain.front() &&
-                        amrex::makeSlab(a_acf.box(),2,0) == m_domain.front() &&
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_rhs.box(),2,0).contains(m_domain.front()) &&
+                        amrex::makeSlab(a_acf.box(),2,0).contains(m_domain.front()) &&
                         a_sol.nComp() >= 2 && a_rhs.nComp() >= 2);
 
     m_sol = FArrayBox(amrex::makeSlab(a_sol.box(), 2, 0), 2, a_sol.dataPtr());
@@ -520,13 +520,14 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const
         ReduceOps<ReduceOpMax,ReduceOpMax> reduce_op;
         ReduceData<Real,Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
-        Long const N = m_domain[0].numPts() * 2; // 2 components
-        Real const* p_res = m_res[0].dataPtr();
-        Real const* p_rhs = m_rhs.dataPtr();
-        reduce_op.eval(N, reduce_data, [=] AMREX_GPU_DEVICE (Long i) -> ReduceTuple
-        {
-            return {std::abs(p_res[i]), std::abs(p_rhs[i])};
-        });
+        const auto& array_res = m_res[0].const_array();
+        const auto& array_rhs = m_rhs.const_array();
+        reduce_op.eval(m_domain[0], 2, reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept -> ReduceTuple
+            {
+                return {std::abs(array_res(i,j,0,n)), std::abs(array_rhs(i,j,0,n))};
+            });
+
         auto hv = reduce_data.value(reduce_op);
         resnorm0 = amrex::get<0>(hv);
         rhsnorm0 = amrex::get<1>(hv);
@@ -737,13 +738,12 @@ MultiGrid::bottomsolve ()
 void
 MultiGrid::average_down_acoef (FArrayBox const& a_acf)
 {
-#if defined(AMREX_USE_GPU)
-    Gpu::dtod_memcpy_async(m_acf[0].dataPtr(), a_acf.dataPtr(), m_acf[0].nBytes());
-#else
-    Real const* psrc = a_acf.dataPtr();
-    Real * pdst = m_acf[0].dataPtr();
-    hpmg::ParallelFor(m_acf[0].size(), [=] (Long i) noexcept { pdst[i] = psrc[i]; });
-#endif
+    auto const& array_m_acf = m_acf[0].array();
+    auto const& array_a_acf = a_acf.const_array();
+    hpmg::ParallelFor(m_acf[0].box(), [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0) = array_a_acf(i,j,0);
+        });
 
 #if defined(AMREX_USE_CUDA)
     if (!m_cuda_graph_acf_created) {
