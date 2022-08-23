@@ -95,9 +95,16 @@ void doDepositionShapeN (const bool use_laser,
 {
     using namespace amrex::literals;
 
-    static constexpr int outer_depos_order_1 = outer_depos_loop ? (depos_order_xy + 1) : 1;
-    static constexpr int outer_depos_order_1_sq = outer_depos_order_1 * outer_depos_order_1;
-    static constexpr int inner_depos_order = outer_depos_loop ? 0 : depos_order_xy;
+    static constexpr bool outer_depos_loop_x = outer_depos_loop;
+    static constexpr bool outer_depos_loop_y = false;
+
+    static constexpr int outer_depos_order_x_1 = outer_depos_loop_x ? (depos_order_xy + 1) : 1;
+    static constexpr int outer_depos_order_y_1 = outer_depos_loop_y ? (depos_order_xy + 1) : 1;
+
+    static constexpr int outer_depos_order_xy_1_sq = outer_depos_order_x_1 * outer_depos_order_y_1;
+
+    static constexpr int inner_depos_order_x = outer_depos_loop_x ? 0 : depos_order_xy;
+    static constexpr int inner_depos_order_y = outer_depos_loop_y ? 0 : depos_order_xy;
 
     // Extract particle properties
     auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -182,7 +189,7 @@ void doDepositionShapeN (const bool use_laser,
             const int num_particles = do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
 
             // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
-            amrex::ParallelFor(outer_depos_order_1_sq * num_particles,
+            amrex::ParallelFor(outer_depos_order_xy_1_sq * num_particles,
                 [   // explicit lambda capture is required here
                     pos_structs,
                     wp, uxp, uyp, psip,
@@ -197,7 +204,7 @@ void doDepositionShapeN (const bool use_laser,
                     // ionization
                     ion_lev
                 ] AMREX_GPU_DEVICE (int idx) noexcept {
-                int ip = idx / outer_depos_order_1_sq;
+                int ip = idx / outer_depos_order_xy_1_sq;
 
                 if constexpr (t_do_tiling) {
                     if (indices) { // do_tiling
@@ -205,9 +212,9 @@ void doDepositionShapeN (const bool use_laser,
                     }
                 }
 
-                const int onxy = idx % outer_depos_order_1_sq;
-                [[maybe_unused]] const int oy = onxy / outer_depos_order_1;
-                [[maybe_unused]] const int ox = onxy % outer_depos_order_1;
+                const int onxy = idx % outer_depos_order_xy_1_sq;
+                [[maybe_unused]] const int oy = onxy / outer_depos_order_x_1;
+                [[maybe_unused]] const int ox = onxy % outer_depos_order_x_1;
 
                 const auto positions = pos_structs[ip];
                 if (positions.id() < 0) return;
@@ -251,27 +258,30 @@ void doDepositionShapeN (const bool use_laser,
                     }
                 }
 
-                for (int iy=0; iy <= inner_depos_order; ++iy) {
-                    for (int ix=0; ix <= inner_depos_order; ++ix) {
+                for (int iy=0; iy <= inner_depos_order_y; ++iy) {
+                    for (int ix=0; ix <= inner_depos_order_x; ++ix) {
                         int tx = 0;
                         int ty = 0;
-                        if constexpr (outer_depos_loop) {
+                        if constexpr (outer_depos_loop_x) {
                             tx = ox;
-                            ty = oy;
                         } else {
                             tx = ix;
+                        }
+                        if constexpr (outer_depos_loop_y) {
+                            ty = oy;
+                        } else {
                             ty = iy;
                         }
                         // --- Compute shape factors
                         // x direction
                         const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                         auto [shape_x, cell_x] =
-                            compute_single_shape_factor<outer_depos_loop, depos_order_xy>(xmid, tx);
+                            compute_single_shape_factor<outer_depos_loop_x, depos_order_xy>(xmid, tx);
 
                         // y direction
                         const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
                         auto [shape_y, cell_y] =
-                            compute_single_shape_factor<outer_depos_loop, depos_order_xy>(ymid, ty);
+                            compute_single_shape_factor<outer_depos_loop_y, depos_order_xy>(ymid, ty);
 
                         if constexpr (t_do_tiling) {
                             if (indices) { // do_tiling

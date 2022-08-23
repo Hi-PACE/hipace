@@ -29,6 +29,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const auto plo = ParticleGeom(lev).ProbLoArray();
     const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
 
+    const int depos_order_1 = Hipace::m_depos_order_xy + 1;
+    const bool outer_depos_loop = Hipace::m_outer_depos_loop;
+
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
@@ -43,10 +46,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
-        amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
+        amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts()*num_ppc, 0);
         unsigned int* pcount = counts.dataPtr();
 
-        amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
+        amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts()*num_ppc);
         unsigned int* poffset = offsets.dataPtr();
 
         UpdateDensityFunction();
@@ -83,8 +86,27 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
                 unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
                 unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
-                unsigned int cellid = (uix * ny + uiy) * nz + uiz;
-                pcount[cellid] += 1;
+
+                unsigned int cellid = 0;
+                if (outer_depos_loop) {
+                    // ordering if axes form fastest to slowest:
+                    // x/depos_order_1 to match deposition
+                    // x%depos_order_1
+                    // y
+                    // z (not used)
+                    // ppc
+                    cellid = ((i_part * nz + uiz) * ny + uiy) * nx +
+                    uix/depos_order_1 + ((uix%depos_order_1)*nx+depos_order_1-1)/depos_order_1;
+                } else {
+                    // ordering if axes form fastest to slowest:
+                    // x
+                    // y
+                    // z (not used)
+                    // ppc
+                    cellid = ((i_part * nz + uiz) * ny + uiy) * nx + uix;
+                }
+
+                pcount[cellid] = 1;
             }
         });
 
@@ -124,12 +146,19 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
             unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
             unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
-            unsigned int cellid = (uix * ny + uiy) * nz + uiz;
-
-            int pidx = int(poffset[cellid] - poffset[0]);
 
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
+                unsigned int cellid = 0;
+                if (outer_depos_loop) {
+                    cellid = ((i_part * nz + uiz) * ny + uiy) * nx +
+                    uix/depos_order_1 + ((uix%depos_order_1)*nx+depos_order_1-1)/depos_order_1;
+                } else {
+                    cellid = ((i_part * nz + uiz) * ny + uiy) * nx + uix;
+                }
+
+                const int pidx = int(poffset[cellid] - poffset[0]);
+
                 amrex::Real r[3] = {0.,0.,0.};
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
@@ -193,7 +222,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
-                ++pidx;
             }
         });
     }

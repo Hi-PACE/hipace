@@ -62,7 +62,7 @@ bool Hipace::m_use_amrex_mlmg = false;
 
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
-bool Hipace::m_outer_depos_loop = true;
+bool Hipace::m_outer_depos_loop = false;
 #else
 bool Hipace::m_do_tiling = true;
 bool Hipace::m_outer_depos_loop = false;
