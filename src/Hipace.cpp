@@ -52,7 +52,6 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_beam_jx_jy_deposition = true;
 bool Hipace::m_do_beam_jz_minus_rho = false;
-int Hipace::m_do_device_synchronize = 0;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
@@ -61,10 +60,13 @@ amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 int Hipace::m_MG_verbose = 0;
 bool Hipace::m_use_amrex_mlmg = false;
+
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
+bool Hipace::m_outer_depos_loop = true;
 #else
 bool Hipace::m_do_tiling = true;
+bool Hipace::m_outer_depos_loop = false;
 #endif
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
@@ -94,6 +96,7 @@ Hipace::Hipace () :
     m_fields(this),
     m_multi_beam(this),
     m_multi_plasma(this),
+    m_adaptive_time_step(m_multi_beam.get_nbeams()),
     m_diags(this->maxLevel()+1)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
@@ -122,6 +125,7 @@ Hipace::Hipace () :
                             "Multiple boxes per rank only implemented for one rank.");
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
     queryWithParser(pph, "depos_order_z", m_depos_order_z);
+    queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
@@ -131,7 +135,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
-    queryWithParser(pph, "do_device_synchronize", m_do_device_synchronize);
+    queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
     queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
     queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
@@ -496,7 +500,7 @@ Hipace::Evolve ()
             Notify(step, it, bins[lev]);
         }
 
-        if ( m_multi_beam.doInSitu(step) ) m_multi_beam.InSituWriteToFile(step, m_physical_time);
+        m_multi_beam.InSituWriteToFile(step, m_physical_time, geom[lev]);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
@@ -519,11 +523,9 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    if ( m_multi_beam.doInSitu(step) ) {
-        m_multi_beam.InSituComputeDiags(islice_coarse, bins[0],
-                                        boxArray(0)[ibox].smallEnd(Direction::z),
-                                        m_box_sorters, ibox);
-    }
+    m_multi_beam.InSituComputeDiags(step, islice_coarse, bins[0],
+                                    boxArray(0)[ibox].smallEnd(Direction::z),
+                                    m_box_sorters, ibox);
     // Get this laser slice from the 3D array
     m_laser.Copy(islice_coarse, false);
 
@@ -597,7 +599,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
@@ -655,7 +657,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_explicit, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, false, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 
@@ -729,7 +731,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     using namespace amrex::literals;
 
     const int isl = WhichSlice::This;
-    const amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev, isl);
     const int nsl = WhichSlice::Next;
     const amrex::MultiFab& nslicemf = m_fields.getSlices(lev, nsl);
     const int psl = WhichSlice::Previous1;
@@ -740,12 +742,15 @@ Hipace::ExplicitSolveBxBy (const int lev)
     int ncomp_mult = 1;
 #ifdef AMREX_USE_LINEAR_SOLVERS
     // Later this should have only 1 component, but we have 2 for now, with always the same values.
-    if (m_use_amrex_mlmg) { ncomp_mult = 2; }
+    if (m_use_amrex_mlmg) {
+        ncomp_mult = 2;
+        AMREX_ALWAYS_ASSERT(Comps[isl]["Mult"] + 1 == Comps[isl]["Mult2"]);
+        m_fields.setVal(0., lev, isl, "Mult2");
+    }
 #endif
-    amrex::MultiFab Mult(ba, dm, ncomp_mult, 0);
-    amrex::MultiFab S(ba, dm, 2, 0);
-    Mult.setVal(0.);
-    S.setVal(0.);
+    AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
+    AMREX_ALWAYS_ASSERT(Comps[isl]["Sy"] + 1 == Comps[isl]["Sx"]);
+    m_fields.setVal(0., lev, isl, "Sy", "Sx", "Mult");
 
     // extract a of the Laser
     const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::n00j00);
@@ -758,28 +763,32 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dz = Geom(lev).CellSize(Direction::z);
 
     const bool use_laser = m_laser.m_use_laser;
-
     for ( amrex::MFIter mfi(slicemf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
         amrex::Box const& bx = mfi.tilebox();
 
-        amrex::Array4<amrex::Real> const mult = Mult.array(mfi);
-        amrex::Array4<amrex::Real> const s = S.array(mfi);
+        amrex::Array4<amrex::Real> const isl_arr = slicemf.array(mfi);
+        amrex::Array4<const amrex::Real> const nsl_arr = nslicemf.const_array(mfi);
+        amrex::Array4<const amrex::Real> const psl_arr = pslicemf.const_array(mfi);
+
+        const int mult = Comps[isl]["Mult"];
+        const int Sx = Comps[isl]["Sx"];
+        const int Sy = Comps[isl]["Sy"];
 
         // FIRST: calculate contribution to Sx and Sy by all beams (same as with PC solver)
-        const auto next_jxb = nslicemf.array(mfi, Comps[nsl]["jx_beam"]);
-        const auto next_jyb = nslicemf.array(mfi, Comps[nsl]["jy_beam"]);
-        const auto jzb = slicemf.array(mfi, Comps[isl]["jz_beam"]);
-        const auto prev_jxb = pslicemf.array(mfi, Comps[psl]["jx_beam"]);
-        const auto prev_jyb = pslicemf.array(mfi, Comps[psl]["jy_beam"]);
+        const int next_jxb = Comps[nsl]["jx_beam"];
+        const int next_jyb = Comps[nsl]["jy_beam"];
+        const int      jzb = Comps[isl]["jz_beam"];
+        const int prev_jxb = Comps[psl]["jx_beam"];
+        const int prev_jyb = Comps[psl]["jy_beam"];
 
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
             {
-                const amrex::Real dx_jzb = (jzb(i+1,j,k)-jzb(i-1,j,k))/(2._rt*dx);
-                const amrex::Real dy_jzb = (jzb(i,j+1,k)-jzb(i,j-1,k))/(2._rt*dy);
-                const amrex::Real dz_jxb = (prev_jxb(i,j,k)-next_jxb(i,j,k))/(2._rt*dz);
-                const amrex::Real dz_jyb = (prev_jyb(i,j,k)-next_jyb(i,j,k))/(2._rt*dz);
+                const amrex::Real dx_jzb = (isl_arr(i+1,j,k,jzb)-isl_arr(i-1,j,k,jzb))/(2._rt*dx);
+                const amrex::Real dy_jzb = (isl_arr(i,j+1,k,jzb)-isl_arr(i,j-1,k,jzb))/(2._rt*dy);
+                const amrex::Real dz_jxb = (psl_arr(i,j,k,prev_jxb)-nsl_arr(i,j,k,next_jxb))/(2._rt*dz);
+                const amrex::Real dz_jyb = (psl_arr(i,j,k,prev_jyb)-nsl_arr(i,j,k,next_jyb))/(2._rt*dz);
 
                 const amrex::Real cdx_jzb = - dx_jzb;
                 const amrex::Real cdy_jzb = - dy_jzb;
@@ -787,20 +796,20 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb =   dz_jyb;
 
                 // sy, to compute Bx
-                s(i,j,k,0) =   pc.mu0 * (
-                             + cdy_jzb
-                             + cdz_jyb);
+                isl_arr(i,j,k,Sy) =   pc.mu0 * (
+                                    + cdy_jzb
+                                    + cdz_jyb);
 
                 // sx, to compute By
-                s(i,j,k,1) = - pc.mu0 * (
-                             + cdx_jzb
-                             + cdz_jxb);
+                isl_arr(i,j,k,Sx) = - pc.mu0 * (
+                                    + cdx_jzb
+                                    + cdz_jxb);
             });
 
-        const auto psi = slicemf.array(mfi, Comps[isl]["Psi"]);
-        const auto bz  = slicemf.array(mfi, Comps[isl]["Bz"]);
-        const auto ez  = slicemf.array(mfi, Comps[isl]["Ez"]);
-        const auto a = use_laser ? A_mf.array(mfi) : amrex::Array4<const amrex::Real>();
+        const int psi = Comps[isl]["Psi"];
+        const int bz = Comps[isl]["Bz"];
+        const int ez = Comps[isl]["Ez"];
+        const auto a = use_laser ? A_mf.const_array(mfi) : amrex::Array4<const amrex::Real>();
 
         // SECOND: calculate contribution to Mult, Sx and Sy for each plasma separately
         for (const PlasmaParticleContainer& plasma : m_multi_plasma.m_all_plasmas) {
@@ -811,42 +820,42 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
 
             const std::string plasma_str = "_" + plasma.GetName();
-            const auto rho = slicemf.array(mfi, Comps[isl]["rho"+plasma_str]);
-            const auto jx  = slicemf.array(mfi, Comps[isl]["jx" +plasma_str]);
-            const auto jy  = slicemf.array(mfi, Comps[isl]["jy" +plasma_str]);
-            const auto jz  = slicemf.array(mfi, Comps[isl]["jz" +plasma_str]);
-            const auto jxx = slicemf.array(mfi, Comps[isl]["jxx"+plasma_str]);
-            const auto jxy = slicemf.array(mfi, Comps[isl]["jxy"+plasma_str]);
-            const auto jyy = slicemf.array(mfi, Comps[isl]["jyy"+plasma_str]);
+            const int rho = Comps[isl]["rho"+plasma_str];
+            const int jx  = Comps[isl]["jx" +plasma_str];
+            const int jy  = Comps[isl]["jy" +plasma_str];
+            const int jz  = Comps[isl]["jz" +plasma_str];
+            const int jxx = Comps[isl]["jxx"+plasma_str];
+            const int jxy = Comps[isl]["jxy"+plasma_str];
+            const int jyy = Comps[isl]["jyy"+plasma_str];
 
             amrex::ParallelFor(bx,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                 {
-                    const amrex::Real dx_jxy = (jxy(i+1,j,k)-jxy(i-1,j,k))/(2._rt*dx);
-                    const amrex::Real dx_jxx = (jxx(i+1,j,k)-jxx(i-1,j,k))/(2._rt*dx);
-                    const amrex::Real dx_jz  = (jz (i+1,j,k)-jz (i-1,j,k))/(2._rt*dx);
-                    const amrex::Real dx_psi = (psi(i+1,j,k)-psi(i-1,j,k))/(2._rt*dx);
+                    const amrex::Real dx_jxy = (isl_arr(i+1,j,k,jxy)-isl_arr(i-1,j,k,jxy))/(2._rt*dx);
+                    const amrex::Real dx_jxx = (isl_arr(i+1,j,k,jxx)-isl_arr(i-1,j,k,jxx))/(2._rt*dx);
+                    const amrex::Real dx_jz  = (isl_arr (i+1,j,k,jz)-isl_arr (i-1,j,k,jz))/(2._rt*dx);
+                    const amrex::Real dx_psi = (isl_arr(i+1,j,k,psi)-isl_arr(i-1,j,k,psi))/(2._rt*dx);
 
-                    const amrex::Real dy_jyy = (jyy(i,j+1,k)-jyy(i,j-1,k))/(2._rt*dy);
-                    const amrex::Real dy_jxy = (jxy(i,j+1,k)-jxy(i,j-1,k))/(2._rt*dy);
-                    const amrex::Real dy_jz  = (jz (i,j+1,k)-jz (i,j-1,k))/(2._rt*dy);
-                    const amrex::Real dy_psi = (psi(i,j+1,k)-psi(i,j-1,k))/(2._rt*dy);
+                    const amrex::Real dy_jyy = (isl_arr(i,j+1,k,jyy)-isl_arr(i,j-1,k,jyy))/(2._rt*dy);
+                    const amrex::Real dy_jxy = (isl_arr(i,j+1,k,jxy)-isl_arr(i,j-1,k,jxy))/(2._rt*dy);
+                    const amrex::Real dy_jz  = (isl_arr (i,j+1,k,jz)-isl_arr (i,j-1,k,jz))/(2._rt*dy);
+                    const amrex::Real dy_psi = (isl_arr(i,j+1,k,psi)-isl_arr(i,j-1,k,psi))/(2._rt*dy);
 
                     // Store (i,j,k) cell value in local variable.
                     // NOTE: a few -1 factors are added here, due to discrepancy in definitions
                     // between WAND-PIC and HiPACE++:
                     //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                    const amrex::Real cez     =   ez(i,j,k);
-                    const amrex::Real cbz     =   bz(i,j,k);
-                    const amrex::Real cpsi    =   psi(i,j,k);
+                    const amrex::Real cez     =   isl_arr(i,j,k,ez);
+                    const amrex::Real cbz     =   isl_arr(i,j,k,bz);
+                    const amrex::Real cpsi    =   isl_arr(i,j,k,psi);
 
-                    const amrex::Real cne     = - rho(i,j,k);
-                    const amrex::Real cjx     = - jx(i,j,k);
-                    const amrex::Real cjy     = - jy(i,j,k);
-                    const amrex::Real cjz     = - jz(i,j,k);
-                    const amrex::Real cjxx    = - jxx(i,j,k);
-                    const amrex::Real cjxy    = - jxy(i,j,k);
-                    const amrex::Real cjyy    = - jyy(i,j,k);
+                    const amrex::Real cne     = - isl_arr(i,j,k,rho);
+                    const amrex::Real cjx     = - isl_arr(i,j,k,jx);
+                    const amrex::Real cjy     = - isl_arr(i,j,k,jy);
+                    const amrex::Real cjz     = - isl_arr(i,j,k,jz);
+                    const amrex::Real cjxx    = - isl_arr(i,j,k,jxx);
+                    const amrex::Real cjxy    = - isl_arr(i,j,k,jxy);
+                    const amrex::Real cjyy    = - isl_arr(i,j,k,jyy);
 
                     const amrex::Real cdx_jxx = - dx_jxx;
                     const amrex::Real cdx_jxy = - dx_jxy;
@@ -856,7 +865,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
                     const amrex::Real cdy_jxy = - dy_jxy;
                     const amrex::Real cdy_jz  = - dy_jz;
                     const amrex::Real cdy_psi =   dy_psi;
-
 
                     // laser field is always in normalized units
                     const amrex::Real casqdx = use_laser ?
@@ -886,24 +894,25 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                     - cjyy*cdy_psi / pc.c);
 
                     // Should only have 1 component, but not supported yet by the AMReX MG solver
-                    for (int n = 0; n < ncomp_mult; ++n) {
-                        mult(i,j,k,n) += nstar / (const_of_motion + cpsi) / pc.ep0;
+                    isl_arr(i,j,k,mult) += nstar / (const_of_motion + cpsi) / pc.ep0;
+                    if (ncomp_mult==2) {
+                        isl_arr(i,j,k,mult+1) += nstar / (const_of_motion + cpsi) / pc.ep0;
                     }
 
                     // sy, to compute Bx
-                    s(i,j,k,0) += pc.mu0 * (
-                                + cbz * cjx / (const_of_motion+cpsi) * pc.c
-                                + nstar_ay
-                                - cdx_jxy / pc.c
-                                - cdy_jyy / pc.c
-                                + cdy_jz);
+                    isl_arr(i,j,k,Sy) += pc.mu0 * (
+                                       + cbz * cjx / (const_of_motion+cpsi) * pc.c
+                                       + nstar_ay
+                                       - cdx_jxy / pc.c
+                                       - cdy_jyy / pc.c
+                                       + cdy_jz);
                     // sx, to compute By
-                    s(i,j,k,1) -= pc.mu0 * (
-                                - cbz * cjy / (const_of_motion+cpsi) * pc.c
-                                + nstar_ax
-                                - cdx_jxx / pc.c
-                                - cdy_jxy / pc.c
-                                + cdx_jz);
+                    isl_arr(i,j,k,Sx) -= pc.mu0 * (
+                                       - cbz * cjy / (const_of_motion+cpsi) * pc.c
+                                       + nstar_ax
+                                       - cdx_jxx / pc.c
+                                       - cdy_jxy / pc.c
+                                       + cdx_jz);
                 });
             }
     }
@@ -928,8 +937,10 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
     slice_geom.setPeriodicity({0,0,0});
 
-    AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
+
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx"], 2);
+    amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[isl]["Mult"], ncomp_mult);
+    amrex::MultiFab S (slicemf, amrex::make_alias, Comps[isl]["Sy"], 2);
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
@@ -978,8 +989,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
             m_hpmg = std::make_unique<hpmg::MultiGrid>(slice_geom);
         }
         const int max_iters = 200;
-        m_hpmg->solve(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
-                      max_iters, m_MG_verbose);
+        m_hpmg->solve1(BxBy[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
+                       max_iters, m_MG_verbose);
     }
     amrex::ParallelContext::pop();
 }

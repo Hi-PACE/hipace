@@ -106,6 +106,9 @@ General parameters
 * ``hipace.depos_order_z`` (`int`) optional (default `0`)
     Transverse particle shape order. Currently, only `0` is implemented.
 
+* ``hipace.outer_depos_loop`` (`bool`) optional (default GPU: `1` CPU: `0`)
+    If the loop over depos_order is included in the loop over particles.
+
 * ``hipace.output_period`` (`integer`) optional (default `-1`)
     Output period. No output is given for ``hipace.output_period = -1``.
     **Warning:** ``hipace.output_period = 0`` will make the simulation crash.
@@ -237,6 +240,10 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     of every timestep. If specified as a command line parameter, quotation marks must be added:
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
+* ``<plasma name>.min_density`` (`float`) optional (default `0`)
+    Minimal density below which particles are not injected.
+    Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
+
 * ``<plasma name>.density_table_file`` (`string`) optional (default "")
     Alternative to ``<plasma name>.density(x,y,z)``. Specify the name of a text file containing
     multiple densities for different positions. File syntax: ``<position> <density function>`` for
@@ -259,10 +266,6 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.hollow_core_radius`` (`float`) optional (default `0.`)
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
-
-* ``<plasma name>.parabolic_curvature`` (`float`) optional (default `0.`)
-    Curvature of a parabolic plasma profile. The plasma density is set to
-    :math:`\mathrm{plasma.density(x,y,z)} * (1 + \mathrm{plasma.parabolic\_curvature}*r^2)`.
 
 * ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
@@ -330,16 +333,6 @@ parameters for each beam are specified via ``<beam name>.<beam property> = ...``
     The names of the particle beams, separated by a space.
     To run without beams, choose the name ``no_beam``.
 
-* ``beams.insitu_freq`` (`int`) optional (default ``-1``)
-    Frequency of in-situ diagnostics, computing the main per-slice beam quantities for the main beam parameters (width, energy spread, emittance, etc.).
-    The data is written to a text file:
-      * 1 file per time step.
-      * 1 line per file.
-      * [time step], [physical time], [all quantities for slice 0], [all quantities for slice 1], ..., [all quantities for slice nz-1]
-      * all quantities are: [number of macro-particles], sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
-        where "<>" stands for averaging over all particles in the current slice, "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
-    When <0, the in-situ diagnostics are not activated.
-
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
 The general beam parameters are applicable to all particle beam types. More specialized beam parameters,
@@ -361,6 +354,12 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name>.position_std`` (3 `float`)
     The rms size of the of the beam in `x, y, z`, separated by a space.
+
+* ``<beam name>.zmin`` (`float`) (default `-infinity`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`) (default `infinity`)
+    Maximum in `z` at which particles are injected.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -394,8 +393,24 @@ which are valid only for certain beam types, are introduced further below under
     Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
     up to its finest level. The beam will be pushed by the fields of the finest level.
 
-* ``<beam name>.insitu_sep`` (`string`) optional (default ``" "``)
-    Separator used in the text file of in-situ diagnostics.
+* ``<beam name> or beams.insitu_period`` (`int`) optional (default ``-1``)
+    Period of in-situ diagnostics, for computing the main per-slice beam quantities for the main
+    beam parameters (width, energy spread, emittance, etc.).
+    For this the following quantities are calculated per slice and stored:
+    ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2], np``
+    where "[]" stands for averaging over all particles in the current slice,
+    "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+
+    The data is written to a file at ``<insitu_file_prefix>/reduced_<beam name>.<MPI rank number>.txt``.
+    The in-situ diagnostics file format consists of a header part in ASCII containing a JSON object.
+    When this is parsed into Python it can be converted to a NumPy structured datatype.
+    The rest of the file, following immediately after the closing }, is in binary format and
+    contains all of the in-situ diagnostic along with some meta data. This part can be read using the
+    structured datatype of the first section.
+    Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+
+* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"diags/insitu"``)
+    Path of the in-situ output.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -406,6 +421,7 @@ Option: ``fixed_weight``
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
+    Note that ``<beam name>.zmin`` and ``<beam name>.zmax`` can reduce the total charge.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
@@ -429,12 +445,6 @@ Option: ``fixed_ppc``
 
 * ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
-
-* ``<beam name>.zmin`` (`float`)
-    Minimum in `z` at which particles are injected.
-
-* ``<beam name>.zmax`` (`float`)
-    Maximum in `z` at which particles are injected.
 
 * ``<beam name>.radius`` (`float`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are

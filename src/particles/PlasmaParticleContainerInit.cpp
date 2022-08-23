@@ -49,6 +49,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
         unsigned int* poffset = offsets.dataPtr();
 
+        UpdateDensityFunction();
+        auto density_func = m_density_func;
+        const amrex::Real c_light = get_phys_const().c;
+        const amrex::Real c_t = c_light * Hipace::m_physical_time;
+        const amrex::Real min_density = m_min_density;
+
         amrex::ParallelFor(tile_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -65,7 +71,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > a_radius*a_radius ||
-                    rsq < a_hollow_core_radius*a_hollow_core_radius) continue;
+                    rsq < a_hollow_core_radius*a_hollow_core_radius ||
+                    density_func(x, y, c_t) < min_density) continue;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -103,13 +110,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
-        UpdateDensityFunction();
-        auto density_func = m_density_func;
-        amrex::Real c_light = get_phys_const().c;
-        amrex::Real c_t = c_light * Hipace::m_physical_time;
-
-        const amrex::Real parabolic_curvature = m_parabolic_curvature;
-
         const int init_ion_lev = m_init_ion_lev;
 
         amrex::ParallelForRNG(tile_box,
@@ -142,9 +142,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > a_radius*a_radius ||
-                    rsq < a_hollow_core_radius*a_hollow_core_radius) continue;
-
-                const amrex::Real rp = std::sqrt(x*x + y*y);
+                    rsq < a_hollow_core_radius*a_hollow_core_radius ||
+                    density_func(x, y, c_t) < min_density) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
@@ -156,10 +155,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(1) = y;
                 p.pos(2) = z;
 
-                amrex::Real base_density = (1. + parabolic_curvature*rp*rp) * scale_fac;
-
-                arrdata[PlasmaIdx::w        ][pidx] = base_density * density_func(x, y, c_t);
-                arrdata[PlasmaIdx::w0       ][pidx] = base_density;
+                arrdata[PlasmaIdx::w        ][pidx] = scale_fac * density_func(x, y, c_t);
+                arrdata[PlasmaIdx::w0       ][pidx] = scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi      ][pidx] = sqrt(1.+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];

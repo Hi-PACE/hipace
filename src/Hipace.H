@@ -288,9 +288,12 @@ public:
     /** Order of the field gather and current deposition shape factor in the transverse directions
      */
     static int m_depos_order_xy;
-    /** Order of the field gather and current deposition shape factorin the longitudinal direction
+    /** Order of the field gather and current deposition shape factor in the longitudinal direction
      */
     static int m_depos_order_z;
+    /* if the loop over depos_order is included in the loop over particles
+     */
+    static bool m_outer_depos_loop;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_error_tolerance;
@@ -310,8 +313,6 @@ public:
     static bool m_do_beam_jx_jy_deposition;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
     static bool m_do_beam_jz_minus_rho;
-    /** Whether to call amrex::Gpu::synchronize() around all profiler region */
-    static int m_do_device_synchronize;
     /** Whether to use tiling for particle operations */
     static bool m_do_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.

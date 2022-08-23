@@ -33,6 +33,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     AMREX_FOR_1D ( np, i,
     {
         int dst_box = assign_grid(particle_ptr[i]);
+        if (particle_ptr[i].id() < 0) dst_box = num_boxes; // if pid is invalid, remove particle
         if (dst_box < 0) {
             // particle has left domain transversely, stick it at the end and invalidate
             dst_box = num_boxes;
@@ -52,6 +53,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     AMREX_FOR_1D ( np, i,
     {
         int dst_box = assign_grid(particle_ptr[i]);
+        if (particle_ptr[i].id() < 0) dst_box = num_boxes; // if pid is invalid, remove particle
         if (dst_box < 0) dst_box = num_boxes;
         p_dst_indices[i] += p_box_offsets[dst_box];
     });

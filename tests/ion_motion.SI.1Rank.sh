@@ -41,4 +41,5 @@ $HIPACE_EXAMPLE_DIR/analysis_equal.py --first=$TEST_NAME/pc  --second=$TEST_NAME
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME/e \
-    --test-name $TEST_NAME
+    --test-name $TEST_NAME \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"

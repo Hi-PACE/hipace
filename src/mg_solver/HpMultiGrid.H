@@ -17,8 +17,17 @@ namespace hpmg {
 /** \brief Multigrid solver
  *
  * This solves `-acoef * sol + Lap(sol) = rhs` with homogeneous Dirichlet BC
- * on a 2D slice.  sol and rhs have two components, whereas acoef has only
- * one component. */
+ * on a 2D slice.  It can solve two types of linear systems.
+ *
+ * (1) sol and rhs have two components, whereas acoef has only one
+ *     component.  For Type I, call solve1(...).
+ *
+ * (2) acoef, sol, rhs are complex numbers, and the real part of acoef is a
+ *     scalar constant.  The system is equivalent to
+ *       -acoef_real * sol_real + acoef_imag * sol_imag + Lap(sol_real) = rhs_real
+ *       -acoef_imag * sol_real - acoef_real * sol_imag + Lap(sol_imag) = rhs_imag
+ *     For Type II, call solve2(...).
+ */
 class MultiGrid
 {
 public:
@@ -32,7 +41,7 @@ public:
     /** \brief Dtor */
     ~MultiGrid ();
 
-    /** \brief Solve the equation given the initial guess, right hand side,
+    /** \brief Solve the Type I equation given the initial guess, right hand side,
      * and the coefficient.
      *
      * \param[in,out] sol the initial guess and final solution
@@ -43,9 +52,26 @@ public:
      * \param[in] nummaxiter maximum number of iterations
      * \param[in] verbose verbosity level
      */
-    void solve (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs, amrex::FArrayBox const& acoef,
-                amrex::Real const tol_rel, amrex::Real const tol_abs, int const nummaxiter,
-                int const verbose);
+    void solve1 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs, amrex::FArrayBox const& acoef,
+                 amrex::Real const tol_rel, amrex::Real const tol_abs, int const nummaxiter,
+                 int const verbose);
+
+    /** \brief Solve the Type II equation given the initial guess, right hand side,
+     * and the coefficient.
+     *
+     * \param[in,out] sol the initial guess and final solution
+     * \param[in] rhs right hand side
+     * \param[in] acoef_real the real part of the coefficient
+     * \param[in] acoef_imag the imaginary part of the coefficient
+     * \param[in] tol_rel relative tolerance
+     * \param[in] tol_abs absolute tolerance
+     * \param[in] nummaxiter maximum number of iterations
+     * \param[in] verbose verbosity level
+     */
+    void solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                 amrex::Real const acoef_real, amrex::FArrayBox const& acoef_imag,
+                 amrex::Real const tol_rel, amrex::Real const tol_abs,
+                 int const nummaxiter, int const verbose);
 
     /** \brief Average down the coefficient.  Ideally, this function is not
      * supposed to be a public function.  It's made public due to a CUDA
@@ -58,8 +84,19 @@ public:
      * is not supposed to be a public function.  It's made public due to a
      * CUDA limitation. */
     void bottomsolve ();
+    /** \brief Private function used by solve1 and solve2.  It's made public
+     * due to a CUDA limitation. */
+    void solve_doit (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                     amrex::FArrayBox const& acoef,
+                     amrex::Real const tol_rel, amrex::Real const tol_abs,
+                     int const nummaxiter, int const verbose);
 
 private:
+
+    static constexpr int m_num_system_types = 2;
+    int m_system_type = 0;
+
+    amrex::Real m_acf_real = amrex::Real(0.); // Only used by Type II.
 
     /** 2D slice domain */
     amrex::Vector<amrex::Box> m_domain;
@@ -108,10 +145,10 @@ private:
     cudaGraph_t m_cuda_graph_acf = NULL;
     cudaGraphExec_t m_cuda_graph_exe_acf = NULL;
 
-    /** CUDA graphs for the V-cycle */
-    bool m_cuda_graph_vcycle_created = false;
-    cudaGraph_t m_cuda_graph_vcycle = NULL;
-    cudaGraphExec_t m_cuda_graph_exe_vcycle = NULL;
+    /** CUDA graphs for the V-cycle*/
+    bool m_cuda_graph_vcycle_created[m_num_system_types] = {false,false};
+    cudaGraph_t m_cuda_graph_vcycle[m_num_system_types] = {NULL,NULL};
+    cudaGraphExec_t m_cuda_graph_exe_vcycle[m_num_system_types] = {NULL,NULL};
 #endif
 };
 

@@ -13,7 +13,7 @@
 #include <AMReX_Parser.H>
 
 inline void
-DeprecatedInput(std::string const& pp_name, char const * const str,
+DeprecatedInput (std::string const& pp_name, char const * const str,
                 std::string const& replacement, std::string const& msg="")
 {
     amrex::ParmParse pp(pp_name);

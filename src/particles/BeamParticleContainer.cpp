@@ -11,6 +11,10 @@
 #include "utils/DeprecatedInput.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/InsituUtil.H"
+#ifdef HIPACE_USE_OPENPMD
+#   include <openPMD/auxiliary/Filesystem.hpp>
+#endif
 
 namespace
 {
@@ -38,25 +42,23 @@ void
 BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_alt("beams");
     QueryElementSetChargeMass(pp, m_charge, m_mass);
     // Overwrite element's charge and mass if user specifies them explicitly
     queryWithParser(pp, "charge", m_charge);
     queryWithParser(pp, "mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The beam particle mass must not be 0");
 
-    getWithParser(pp, "injection_type", m_injection_type);
-    amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "ppc", tmp_vector)){
-        AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
-        for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
-    }
     DeprecatedInput(m_name, "dx_per_dzeta", "position_mean = \"x_center+(z-z_center)"
         "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
     DeprecatedInput(m_name, "dy_per_dzeta", "position_mean = \"x_center+(z-z_center)"
         "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
+
+    getWithParser(pp, "injection_type", m_injection_type);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParser(pp, "do_z_push", m_do_z_push);
-    queryWithParser(pp, "insitu_sep", m_insitu_sep);
+    queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
+    queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     queryWithParser(pp, "finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
@@ -67,7 +69,7 @@ BeamParticleContainer::ReadParameters ()
 }
 
 amrex::Real
-BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
+BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     using namespace amrex::literals;
     PhysConst phys_const = get_phys_const();
@@ -75,6 +77,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
     if (m_injection_type == "fixed_ppc") {
 
         amrex::ParmParse pp(m_name);
+        amrex::Vector<amrex::Real> tmp_vector;
+        if (queryWithParser(pp, "ppc", tmp_vector)){
+            AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
+            for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
+        }
         getWithParser(pp, "zmin", m_zmin);
         getWithParser(pp, "zmax", m_zmax);
         getWithParser(pp, "radius", m_radius);
@@ -94,7 +101,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
         amrex::ParmParse pp(m_name);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         bool can = false;
-        amrex::Real zmin = 0, zmax = 0;
+        amrex::Real zmin = -std::numeric_limits<amrex::Real>::infinity();
+        amrex::Real zmax = std::numeric_limits<amrex::Real>::infinity();
         std::string profile = "gaussian";
         queryWithParser(pp, "profile", profile);
         if (profile == "can") {
@@ -102,6 +110,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
             getWithParser(pp, "zmin", zmin);
             getWithParser(pp, "zmax", zmax);
         } else if (profile == "gaussian") {
+            queryWithParser(pp, "zmin", zmin);
+            queryWithParser(pp, "zmax", zmax);
         } else {
             amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
         }
@@ -145,17 +155,15 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
         amrex::ParmParse pp(m_name);
+        amrex::ParmParse pp_alt("beams");
         getWithParser(pp, "input_file", m_input_file);
-        bool coordinates_specified = queryWithParser(pp, "file_coordinates_xyz", m_file_coordinates_xyz);
-        bool n_0_specified = queryWithParser(pp, "plasma_density", m_plasma_density);
-        queryWithParser(pp, "iteration", m_num_iteration);
+        bool coordinates_specified = queryWithParserAlt(pp, "file_coordinates_xyz",
+                                                        m_file_coordinates_xyz, pp_alt);
+        queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);
+        queryWithParserAlt(pp, "iteration", m_num_iteration, pp_alt);
         bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;
-        }
-
-        if(!n_0_specified) {
-            m_plasma_density = 0;
         }
 
         ptime = InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz,
@@ -171,11 +179,13 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom, bool do_insitu)
 
     }
 
-    if (do_insitu) {
+    if (m_insitu_period > 0) {
         // Allocate memory for in-situ diagnostics
-        int nslices = geom.Domain().length(2);
-        m_insitu_rdata.resize(nslices*m_insitu_rnp, 0.);
-        m_insitu_idata.resize(nslices*m_insitu_inp, 0.);
+        m_nslices = geom.Domain().length(2);
+        m_insitu_rdata.resize(m_nslices*m_insitu_nrp, 0.);
+        m_insitu_idata.resize(m_nslices*m_insitu_nip, 0);
+        m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
+        m_insitu_sum_idata.resize(m_insitu_nip, 0);
     }
     /* setting total number of particles, which is required for openPMD I/O */
     m_total_num_particles = TotalNumberOfParticles();
@@ -212,6 +222,13 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
     return nparticles;
 }
 
+bool
+BeamParticleContainer::doInSitu (int step)
+{
+    if (m_insitu_period <= 0) return false;
+    return step % m_insitu_period == 0;
+}
+
 void
 BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0,
                                            const int box_offset)
@@ -220,7 +237,8 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
 
     using namespace amrex::literals;
 
-    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0);
+    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
+                        m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
     PhysConst const phys_const = get_phys_const();
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
@@ -281,59 +299,127 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
         });
 
     ReduceTuple a = reduce_data.value();
-    const int np             = amrex::get<13>(a);
     const amrex::Real sum_w0 = amrex::get< 0>(a);
     const amrex::Real sum_w_inv = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 0._rt : 1._rt/sum_w0;
 
-    m_insitu_idata[m_insitu_inp*islice   ] = np;
-    m_insitu_rdata[m_insitu_rnp*islice   ] = sum_w0;
-    m_insitu_rdata[m_insitu_rnp*islice+ 1] = amrex::get< 1>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 2] = amrex::get< 2>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 3] = amrex::get< 3>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 4] = amrex::get< 4>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 5] = amrex::get< 5>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 6] = amrex::get< 6>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 7] = amrex::get< 7>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 8] = amrex::get< 8>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+ 9] = amrex::get< 9>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+10] = amrex::get<10>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+11] = amrex::get<11>(a)*sum_w_inv;
-    m_insitu_rdata[m_insitu_rnp*islice+12] = amrex::get<12>(a)*sum_w_inv;
+    m_insitu_rdata[islice             ] = sum_w0;
+    m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
+    m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
+    m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
+    m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
+    m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
+    m_insitu_idata[islice             ] = amrex::get<13>(a);
+
+    m_insitu_sum_rdata[ 0] += sum_w0;
+    m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
+    m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
+    m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
+    m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
+    m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
+    m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
+    m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
+    m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
+    m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
+    m_insitu_sum_rdata[10] += amrex::get<10>(a);
+    m_insitu_sum_rdata[11] += amrex::get<11>(a);
+    m_insitu_sum_rdata[12] += amrex::get<12>(a);
+    m_insitu_sum_idata[ 0] += amrex::get<13>(a);
 }
 
 void
-BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time)
+BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile");
-    using namespace amrex::literals;
+
+#ifdef HIPACE_USE_OPENPMD
+    // create subdirectory
+    openPMD::auxiliary::create_directories(m_insitu_file_prefix);
+#endif
+
+    // zero pad the rank number;
+    std::string::size_type n_zeros = 4;
+    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+
     // open file
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",
+        std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
-    std::ofstream ofs{"reduced_" + m_name + "." + std::to_string(step) + ".txt",
-        std::ofstream::out | std::ofstream::app};
+    const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
+    const std::size_t nslices = static_cast<std::size_t>(m_nslices);
 
-    // write step
-    ofs << step;
+    // specify the structure of the data later available in python
+    // avoid pointers to temporary objects as second argument, stack variables are ok
+    const amrex::Vector<insitu_utils::DataNode> all_data{
+        {"time"    , &time},
+        {"step"    , &step},
+        {"n_slices", &m_nslices},
+        {"charge"  , &m_charge},
+        {"mass"    , &m_mass},
+        {"z_lo"    , &geom.ProbLo()[2]},
+        {"z_hi"    , &geom.ProbHi()[2]},
+        {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
+        {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
+        {"[y]"     , &m_insitu_rdata[3*nslices], nslices},
+        {"[y^2]"   , &m_insitu_rdata[4*nslices], nslices},
+        {"[ux]"    , &m_insitu_rdata[5*nslices], nslices},
+        {"[ux^2]"  , &m_insitu_rdata[6*nslices], nslices},
+        {"[uy]"    , &m_insitu_rdata[7*nslices], nslices},
+        {"[uy^2]"  , &m_insitu_rdata[8*nslices], nslices},
+        {"[x*ux]"  , &m_insitu_rdata[9*nslices], nslices},
+        {"[y*uy]"  , &m_insitu_rdata[10*nslices], nslices},
+        {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
+        {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
+        {"sum(w)"  , &m_insitu_rdata[0], nslices},
+        {"Np"      , &m_insitu_idata[0], nslices},
+        {"average" , {
+            {"[x]"   , &(m_insitu_sum_rdata[ 1] /= sum_w0)},
+            {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
+            {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
+            {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
+            {"[ux]"  , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
+            {"[ux^2]", &(m_insitu_sum_rdata[ 6] /= sum_w0)},
+            {"[uy]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
+            {"[uy^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
+            {"[x*ux]", &(m_insitu_sum_rdata[ 9] /= sum_w0)},
+            {"[y*uy]", &(m_insitu_sum_rdata[10] /= sum_w0)},
+            {"[ga]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
+            {"[ga^2]", &(m_insitu_sum_rdata[12] /= sum_w0)}
+        }},
+        {"total"   , {
+            {"sum(w)", &m_insitu_sum_rdata[0]},
+            {"Np"    , &m_insitu_sum_idata[0]}
+        }}
+    };
 
-    ofs << m_insitu_sep;
+    if (ofs.tellp() == 0) {
+        // write JSON header containing a NumPy structured datatype
+        insitu_utils::write_header(all_data, ofs);
+    }
 
-    // set precision
-    ofs << std::fixed << std::setprecision(14) << std::scientific;
-
-    // write time
-    ofs << time;
-
-    // loop over data size and write
-    for (const auto& item : m_insitu_idata) ofs << m_insitu_sep << item;
-    for (const auto& item : m_insitu_rdata) ofs << m_insitu_sep << item;
-
-    // end loop over data size
-
-    // end line
-    ofs << std::endl;
+    // write binary data according to datatype in header
+    insitu_utils::write_data(all_data, ofs);
 
     // close file
     ofs.close();
+    // assert no file errors
+#ifdef HIPACE_USE_OPENPMD
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
+#else
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics. "
+        "Maybe the specified subdirectory does not exist");
+#endif
 
-    for (int i=0; i<(int) m_insitu_rdata.size(); i++) m_insitu_rdata[i] = 0._rt;
-    for (int i=0; i<(int) m_insitu_idata.size(); i++) m_insitu_idata[i] = 0._rt;
+    // reset arrays for insitu data
+    for (auto& x : m_insitu_rdata) x = 0.;
+    for (auto& x : m_insitu_idata) x = 0;
+    for (auto& x : m_insitu_sum_rdata) x = 0.;
+    for (auto& x : m_insitu_sum_idata) x = 0;
 }

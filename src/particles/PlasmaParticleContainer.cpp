@@ -77,9 +77,14 @@ PlasmaParticleContainer::ReadParameters ()
 
     std::string density_func_str = "0.";
     DeprecatedInput(m_name, "density", "density(x,y,z)");
+    DeprecatedInput(m_name, "parabolic_curvature", "density(x,y,z)",
+                    "The same functionality can be obtained with the parser using "
+                    "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
     bool density_func_specified = queryWithParser(pp, "density(x,y,z)", density_func_str);
     m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
+
+    queryWithParser(pp, "min_density", m_min_density);
 
     std::string density_table_file_name{};
     m_use_density_table = queryWithParser(pp, "density_table_file", density_table_file_name);
@@ -108,7 +113,6 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
-    queryWithParser(pp, "parabolic_curvature", m_parabolic_curvature);
     queryWithParser(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor);
     amrex::Vector<amrex::Real> tmp_vector;
     if (queryWithParser(pp, "ppc", tmp_vector)){
