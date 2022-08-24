@@ -95,6 +95,8 @@ void doDepositionShapeN (const bool use_laser,
 {
     using namespace amrex::literals;
 
+    // Using 1 thread per particle and per deposited cell is only done in the fast (x) direction.
+    // This can also be applied in the y direction, but so far does not show significant gain.
     static constexpr bool outer_depos_loop_x = outer_depos_loop;
     static constexpr int outer_depos_order_x_1 = outer_depos_loop_x ? (depos_order_xy + 1) : 1;
     static constexpr int inner_depos_order_x = outer_depos_loop_x ? 0 : depos_order_xy;
