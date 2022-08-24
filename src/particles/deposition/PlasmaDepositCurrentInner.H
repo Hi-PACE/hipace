@@ -249,7 +249,7 @@ void doDepositionShapeN (const bool use_laser,
                     }
                 }
 
-                for (int iy=0; iy <= inner_depos_order_y; ++iy) {
+                for (int iy=0; iy <= depos_order_xy; ++iy) {
                     for (int ix=0; ix <= inner_depos_order_x; ++ix) {
                         int tx = 0;
                         if constexpr (outer_depos_loop_x) {
