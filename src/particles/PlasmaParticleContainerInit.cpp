@@ -89,7 +89,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 unsigned int cellid = 0;
                 if (outer_depos_loop) {
-                    // ordering if axes form fastest to slowest:
+                    // ordering of axes form fastest to slowest:
                     // x/depos_order_1 to match deposition
                     // x%depos_order_1
                     // y
@@ -98,7 +98,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     cellid = ((i_part * nz + uiz) * ny + uiy) * nx +
                     uix/depos_order_1 + ((uix%depos_order_1)*nx+depos_order_1-1)/depos_order_1;
                 } else {
-                    // ordering if axes form fastest to slowest:
+                    // ordering of axes form fastest to slowest:
                     // x
                     // y
                     // z (not used)
