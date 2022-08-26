@@ -130,12 +130,12 @@ Laser::Copy (int isl, bool to3d, bool init)
 }
 
 void
-Laser::AdvanceSlice(const Fields& fields, const amrex::Real* cellsize, const amrex::Real dt)
+Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
     using namespace amrex::literals;
-    const amrex::Real dx = cellsize[0];
-    const amrex::Real dy = cellsize[1];
-    const amrex::Real dz = cellsize[2];
+    const amrex::Real dx = geom.CellSize(0);
+    const amrex::Real dy = geom.CellSize(1);
+    const amrex::Real dz = geom.CellSize(2);
     constexpr amrex::Real pi = MathConst::pi;
 
     const amrex::Real c = get_phys_const().c;
@@ -156,7 +156,7 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Real* cellsize, const amr
     amrex::FArrayBox acoeff_imag;
     amrex::Real acoeff_real = -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
 
-    for ( amrex::MFIter mfi(n00j00, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         acoeff_imag.resize(bx, 1, amrex::The_Arena());
         rhs.resize(bx, 2, amrex::The_Arena());
@@ -231,36 +231,31 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Real* cellsize, const amr
                 + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,1);
         });
     }
-/*
     // construct slice geometry
     // Set the lo and hi of domain and probdomain in the z direction
-    amrex::RealBox tmp_probdom({AMREX_D_DECL(Geom(lev).ProbLo(Direction::x),
-                                             Geom(lev).ProbLo(Direction::y),
-                                             Geom(lev).ProbLo(Direction::z))},
-                               {AMREX_D_DECL(Geom(lev).ProbHi(Direction::x),
-                                             Geom(lev).ProbHi(Direction::y),
-                                             Geom(lev).ProbHi(Direction::z))});
-    amrex::Box tmp_dom = Geom(lev).Domain();
-    const amrex::Real hi = Geom(lev).ProbHi(Direction::z);
+    amrex::RealBox tmp_probdom({AMREX_D_DECL(geom.ProbLo(Direction::x),
+                                             geom.ProbLo(Direction::y),
+                                             geom.ProbLo(Direction::z))},
+                               {AMREX_D_DECL(geom.ProbHi(Direction::x),
+                                             geom.ProbHi(Direction::y),
+                                             geom.ProbHi(Direction::z))});
+    amrex::Box tmp_dom = geom.Domain();
+    const amrex::Real hi = geom.ProbHi(Direction::z);
     const amrex::Real lo = hi - dz;
     tmp_probdom.setLo(Direction::z, lo);
     tmp_probdom.setHi(Direction::z, hi);
     tmp_dom.setSmall(Direction::z, 0);
     tmp_dom.setBig(Direction::z, 0);
     amrex::Geometry slice_geom = amrex::Geometry(
-        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
+        tmp_dom, tmp_probdom, geom.Coord(), geom.isPeriodic());
 
     slice_geom.setPeriodicity({0,0,0});
     if (!m_mg) {
         m_mg = std::make_unique<hpmg::MultiGrid>(slice_geom);
     }
     const int max_iters = 200;
-    // [0] means we're taking the first (and only) box in these MF
-    // Mult == acoeff
-    // S == rhs
-    m_hpmg->solve2(np1j00[0], S[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
+    m_mg->solve2(np1j00[0], rhs, acoeff_real, acoeff_imag, m_MG_tolerance_rel, m_MG_tolerance_abs,
     max_iters, m_MG_verbose);
-*/
 }
 
 void

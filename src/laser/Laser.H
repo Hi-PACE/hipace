@@ -2,6 +2,7 @@
 #define LASER_H_
 
 #include "fields/Fields.H"
+#include "mg_solver/HpMultiGrid.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -10,7 +11,6 @@
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
     enum slice { nm1jm1, nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
-    // enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, NextTime, N };
 };
 
 class Fields;
@@ -56,7 +56,7 @@ public:
      */
     void Copy (int isl, bool to3d, bool init=false);
 
-    void AdvanceSlice (const Fields& fields, const amrex::Real* cellsize, const amrex::Real dt);
+    void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
 
     void InitLaserSlice (const amrex::Geometry& geom, const int islice);
 
@@ -81,6 +81,11 @@ private:
     amrex::FArrayBox m_F;
     /** Array of N slices required to compute current slice */
     std::array<amrex::MultiFab, m_nslices> m_slices;
+    amrex::Real m_MG_tolerance_rel = 1.e-4;
+    amrex::Real m_MG_tolerance_abs = 0.;
+    int m_MG_verbose = 0;
+    /** hpmg solver for the envelope solver */
+    std::unique_ptr<hpmg::MultiGrid> m_mg;
 };
 
 #endif // LASER_H_
