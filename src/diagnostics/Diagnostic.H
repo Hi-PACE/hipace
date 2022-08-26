@@ -47,7 +47,7 @@ public:
     int getNFields() { return m_nfields; }
 
     /** \brief return the number of Field components to output */
-    int getTotalNFields() { return m_nfields + m_do_laser; }
+    int getTotalNFields() { return m_nfields + 2*m_do_laser; }
 
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }

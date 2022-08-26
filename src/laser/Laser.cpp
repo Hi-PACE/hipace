@@ -96,7 +96,7 @@ Laser::Copy (int isl, bool to3d, bool init)
         amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         amrex::Array4<amrex::Real> host_arr = m_F.array();
         amrex::ParallelFor(
-        bx, 1,
+        bx, 2,
         [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
         {
             // n should always be 0 here
@@ -110,9 +110,9 @@ Laser::Copy (int isl, bool to3d, bool init)
                 // previous value when computing the next slice.
                 if (isl+1 <= izmax) host_arr(i,j,isl+1,n+2) = n00jp1_arr(i,j,k,n);
             } else {
-                nm1jm1_arr(i,j,k,n) = host_arr(i,j,isl-1,n+2);
+                if (isl-1 >= izmin) nm1jm1_arr(i,j,k,n) = host_arr(i,j,isl-1,n+2);
                 nm1j00_arr(i,j,k,n) = host_arr(i,j,isl,n+2);
-                nm1jp1_arr(i,j,k,n) = host_arr(i,j,isl+1,n+2);
+                if (isl+1 <= izmax) nm1jp1_arr(i,j,k,n) = host_arr(i,j,isl+1,n+2);
                 n00jp1_arr(i,j,k,n) = n00j00_arr(i,j,k,n);
                 n00j00_arr(i,j,k,n) = host_arr(i,j,isl,n);
                 np1jp2_arr(i,j,k,n) = np1jp1_arr(i,j,k,n);
@@ -149,7 +149,10 @@ Laser::AdvanceSlice(const Fields& fields)
         bx, 1,
         [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
         {
-            np1j00_arr(i,j,k,n) = .9_rt * n00j00_arr(i,j,k,n);
+            // Real part
+            np1j00_arr(i,j,k,0) = .9_rt * n00j00_arr(i,j,k,0);
+            // Imaginary part
+            np1j00_arr(i,j,k,1) = .9_rt * n00j00_arr(i,j,k,1);
         });
     }
 }
@@ -198,9 +201,10 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
                 const amrex::Real delta_y = (y - pos_mean[1]) / pos_size[1];
                 const amrex::Real trans_pos_factor =  std::exp( -(delta_x*delta_x
                                                                         + delta_y*delta_y) );
-
-                array_this(i,j,k,dcomp) =  a0*trans_pos_factor*long_pos_factor;
-
+                // Real part
+                array_this(i,j,k,dcomp  ) =  a0*trans_pos_factor*long_pos_factor;
+                // Imaginary part
+                array_this(i,j,k,dcomp+1) =  2._rt*a0*trans_pos_factor*long_pos_factor;
             }
             );
     }

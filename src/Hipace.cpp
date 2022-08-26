@@ -1589,7 +1589,8 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 
     // assumption: same order as in struct enum Field Comps
     amrex::Vector< std::string > varnames = getDiagComps();
-    if (m_diags.doLaser()) varnames.push_back("laser");
+    if (m_diags.doLaser()) varnames.push_back("laser_real");
+    if (m_diags.doLaser()) varnames.push_back("laser_imag");
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
