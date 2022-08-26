@@ -570,7 +570,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
         // TODO Push laser envelope
-        m_laser.AdvanceSlice(m_fields);
+        m_laser.AdvanceSlice(m_fields, Geom(0).CellSize(), m_dt);
         m_laser.Copy(islice_coarse, true);
 
         // After this, the parallel context is the full 3D communicator again

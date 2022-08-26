@@ -9,7 +9,7 @@
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
-    enum slice { nm1jm1, nm1j00, nm1jp1, n00j00, n00jp1, np1j00, np1jp1, np1jp2, N };
+    enum slice { nm1jm1, nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
     // enum slice { This=0, PrevZeta1, PrevZeta2, PrevTime1, PrevTime2, NextTime, N };
 };
 
@@ -56,7 +56,7 @@ public:
      */
     void Copy (int isl, bool to3d, bool init=false);
 
-    void AdvanceSlice (const Fields& fields);
+    void AdvanceSlice (const Fields& fields, const amrex::Real* cellsize, const amrex::Real dt);
 
     void InitLaserSlice (const amrex::Geometry& geom, const int islice);
 
