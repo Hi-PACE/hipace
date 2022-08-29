@@ -83,7 +83,7 @@ private:
     std::array<amrex::MultiFab, m_nslices> m_slices;
     amrex::Real m_MG_tolerance_rel = 1.e-4;
     amrex::Real m_MG_tolerance_abs = 0.;
-    int m_MG_verbose = 0;
+    int m_MG_verbose = 100;
     /** hpmg solver for the envelope solver */
     std::unique_ptr<hpmg::MultiGrid> m_mg;
 };
