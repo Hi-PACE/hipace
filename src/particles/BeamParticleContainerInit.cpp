@@ -530,6 +530,7 @@ InitBeamFromFile (const std::string input_file,
     // Determine whether to use momentum or normalized momentum as well as weight, charge or mass
     // set conversion factor appropriately
     const PhysConst phys_const_SI = make_constants_SI();
+    const PhysConst phys_const = get_phys_const();
 
     std::string name_w = "", name_ww = "";
     std::string weighting_type = "";
@@ -540,7 +541,7 @@ InitBeamFromFile (const std::string input_file,
     input_type si_to_norm_weight = 1.;
 
     if(u_is_momentum) {
-        si_to_norm_momentum = m_mass * phys_const_SI.c;
+        si_to_norm_momentum = m_mass * (phys_const_SI.m_e / phys_const.m_e) * phys_const_SI.c;
         momentum_type = "Momentum";
     }
 
@@ -552,13 +553,13 @@ InitBeamFromFile (const std::string input_file,
     else if(name_qq != "") {
         name_w = name_q;
         name_ww = name_qq;
-        si_to_norm_weight = m_charge;
+        si_to_norm_weight = m_charge * (phys_const_SI.q_e / phys_const.q_e);
         weighting_type = "Charge";
     }
     else if(name_mm != "") {
         name_w = name_m;
         name_ww = name_mm;
-        si_to_norm_weight = m_mass;
+        si_to_norm_weight = m_mass * (phys_const_SI.m_e / phys_const.m_e);
         weighting_type = "Mass";
     }
     else {
@@ -674,7 +675,6 @@ InitBeamFromFile (const std::string input_file,
 
     // input data using AddOneBeamParticle function, make necessary variables and arrays
     const int num_to_add = electrons[name_r][name_rx].getExtent()[0];
-    const PhysConst phys_const = get_phys_const();
 
     if (Hipace::HeadRank()) {
 
