@@ -305,8 +305,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     // calculate the multiplier to convert from Hipace to SI units
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
-    double hipace_to_SI_momentum = phys_const_SI.m_e;
-    double hipace_to_unitSI_momentum = phys_const_SI.m_e;
+    double hipace_to_SI_momentum = beam.m_mass;
+    double hipace_to_unitSI_momentum = beam.m_mass;
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 
@@ -319,16 +319,15 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
         const double kp_inv = (double)phys_const_SI.c / omega_p;
         hipace_to_SI_pos = kp_inv;
         hipace_to_SI_weight = n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
-        hipace_to_SI_momentum = phys_const_SI.m_e * phys_const_SI.c;
-        hipace_to_unitSI_momentum = 1.;
+        hipace_to_SI_momentum = beam.m_mass * phys_const_SI.m_e * phys_const_SI.c;
         hipace_to_SI_charge = phys_const_SI.q_e;
         hipace_to_SI_mass = phys_const_SI.m_e;
     }
 
     // temporary workaround until openPMD-viewer does not autonormalize momentum
     if(m_openpmd_viewer_workaround) {
-        if(Hipace::m_normalized_units){
-            hipace_to_unitSI_momentum = phys_const_SI.c;
+        if(Hipace::m_normalized_units) {
+            hipace_to_unitSI_momentum = beam.m_mass * phys_const_SI.c;
         }
     }
 
