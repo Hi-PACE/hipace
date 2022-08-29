@@ -73,10 +73,10 @@ def position_std_y(all_data):
     return np.sqrt(np.maximum(all_data["[y^2]"] - all_data["[y]"]**2,0))
 
 def per_slice_charge(all_data):
-    return all_data["charge"] * all_data["sum(w)"]
+    return all_data["charge"] * all_data["sum(w)"] * all_data["normalized_density_factor"]
 
 def total_charge(all_data):
-    return all_data["charge"] * all_data["total"]["sum(w)"]
+    return all_data["charge"] * all_data["total"]["sum(w)"] * all_data["normalized_density_factor"]
 
 def z_axis(all_data):
     return (np.linspace(all_data["z_lo"][0], all_data["z_hi"][0], all_data["n_slices"][0]+1)[1:] \
