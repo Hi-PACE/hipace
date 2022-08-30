@@ -30,14 +30,14 @@ namespace
      * \param[in] x position in x
      * \param[in] y position in y
      * \param[in] z position in z
-     * \param[in] ux momentum in x
-     * \param[in] uy momentum in y
-     * \param[in] uz momentum in z
+     * \param[in] ux gamma * beta_x
+     * \param[in] uy gamma * beta_y
+     * \param[in] uz gamma * beta_z
      * \param[in] weight weight of the single particle
      * \param[in] pid particle ID to be assigned to the particle
      * \param[in] procID processor ID to be assigned to the particle
      * \param[in] ip index of the particle
-     * \param[in] speed_of_light speed of light in SI units
+     * \param[in] speed_of_light speed of light in the current units
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
@@ -292,6 +292,7 @@ InitBeamFixedWeight (int num_to_add,
         ParticleType::NextID(pid + num_to_add);
 
         const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
+        const amrex::Real single_charge = m_charge;
         amrex::ParallelForRNG(
             num_to_add,
             [=] AMREX_GPU_DEVICE (int i, const amrex::RandomEngine& engine) noexcept
@@ -311,7 +312,7 @@ InitBeamFixedWeight (int num_to_add,
                 const amrex::Real cental_x_pos = pos_mean_x(z_central);
                 const amrex::Real cental_y_pos = pos_mean_y(z_central);
 
-                amrex::Real weight = total_charge / num_to_add / phys_const.q_e;
+                amrex::Real weight = total_charge / (num_to_add * single_charge);
                 if (!do_symmetrize)
                 {
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
@@ -464,6 +465,7 @@ InitBeamFromFile (const std::string input_file,
                     }
                 }
                 else if(units == std::array<double,7> {1., 0., -1., 0., 0., 0., 0.}) {
+                    // proper velocity = gamma * v
                     name_u = physical_quantity.first;
                     u_is_momentum = false;
                     for( auto const& axes_direction : physical_quantity.second ) {
@@ -479,6 +481,7 @@ InitBeamFromFile (const std::string input_file,
                     }
                 }
                 else if(units == std::array<double,7> {1., 1., -1., 0., 0., 0., 0.}) {
+                    // momentum = gamma * m * v
                     name_u = physical_quantity.first;
                     u_is_momentum = true;
                     for( auto const& axes_direction : physical_quantity.second ) {
@@ -527,17 +530,18 @@ InitBeamFromFile (const std::string input_file,
     // Determine whether to use momentum or normalized momentum as well as weight, charge or mass
     // set conversion factor appropriately
     const PhysConst phys_const_SI = make_constants_SI();
+    const PhysConst phys_const = get_phys_const();
 
     std::string name_w = "", name_ww = "";
     std::string weighting_type = "";
-    std::string momentum_type = "Normalized momentum";
+    std::string momentum_type = "Proper velocity";
 
     input_type si_to_norm_pos = 1.;
-    input_type si_to_norm_momentum = 1.;
+    input_type si_to_norm_momentum = phys_const_SI.c;
     input_type si_to_norm_weight = 1.;
 
     if(u_is_momentum) {
-        si_to_norm_momentum = phys_const_SI.m_e * phys_const_SI.c;
+        si_to_norm_momentum = m_mass * (phys_const_SI.m_e / phys_const.m_e) * phys_const_SI.c;
         momentum_type = "Momentum";
     }
 
@@ -549,13 +553,13 @@ InitBeamFromFile (const std::string input_file,
     else if(name_qq != "") {
         name_w = name_q;
         name_ww = name_qq;
-        si_to_norm_weight = phys_const_SI.q_e;
+        si_to_norm_weight = m_charge * (phys_const_SI.q_e / phys_const.q_e);
         weighting_type = "Charge";
     }
     else if(name_mm != "") {
         name_w = name_m;
         name_ww = name_mm;
-        si_to_norm_weight = phys_const_SI.m_e;
+        si_to_norm_weight = m_mass * (phys_const_SI.m_e / phys_const.m_e);
         weighting_type = "Mass";
     }
     else {
@@ -671,7 +675,6 @@ InitBeamFromFile (const std::string input_file,
 
     // input data using AddOneBeamParticle function, make necessary variables and arrays
     const int num_to_add = electrons[name_r][name_rx].getExtent()[0];
-    const PhysConst phys_const = get_phys_const();
 
     if (Hipace::HeadRank()) {
 
@@ -692,7 +695,7 @@ InitBeamFromFile (const std::string input_file,
                                (amrex::Real)(r_x_data.get()[i] * unit_rx),
                                (amrex::Real)(r_y_data.get()[i] * unit_ry),
                                (amrex::Real)(r_z_data.get()[i] * unit_rz),
-                               (amrex::Real)(u_x_data.get()[i] * unit_ux),
+                               (amrex::Real)(u_x_data.get()[i] * unit_ux), // = gamma * beta
                                (amrex::Real)(u_y_data.get()[i] * unit_uy),
                                (amrex::Real)(u_z_data.get()[i] * unit_uz),
                                (amrex::Real)(w_w_data.get()[i] * unit_ww),

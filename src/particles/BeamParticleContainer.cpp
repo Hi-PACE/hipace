@@ -72,7 +72,6 @@ amrex::Real
 BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     using namespace amrex::literals;
-    PhysConst phys_const = get_phys_const();
     amrex::Real ptime {0.};
     if (m_injection_type == "fixed_ppc") {
 
@@ -136,7 +135,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         if (peak_density_is_specified)
         {
-            m_total_charge = m_density*phys_const.q_e;
+            m_total_charge = m_density*m_charge;
             for (int idim=0; idim<AMREX_SPACEDIM; ++idim)
             {
                 m_total_charge *= m_position_std[idim] * sqrt(2. * MathConst::pi);
