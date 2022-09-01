@@ -47,7 +47,7 @@ public:
      * \param[in] bx Box on which the laser field is initialized
      * \param[in] gm Geometry of the problem
      */
-    void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
+    void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm, const amrex::Real dt);
 
     /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
      *
@@ -57,8 +57,10 @@ public:
     void Copy (int isl, bool to3d, bool init=false);
 
     void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSlice2 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
 
-    void InitLaserSlice (const amrex::Geometry& geom, const int islice);
+    void InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Real dt);
+    void InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Real dt);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
