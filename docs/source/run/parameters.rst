@@ -400,6 +400,21 @@ which are valid only for certain beam types, are introduced further below under
     ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2], np``
     where "[]" stands for averaging over all particles in the current slice,
     "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+    Averages and totals over all slices are also provided for convenience under the
+    respective ``average`` and ``total`` subcategories.
+
+    Additionally, some metadata is also available:
+    ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
+    ``time`` and ``step`` refers to the physical time of the simulation and step number of the
+    current timestep.
+    ``n_slices`` equal to the number of slices in the zeta direction.
+    ``charge`` and ``mass`` relate to a single beam particle and are for example equal to the
+    electron charge and mass.
+    ``z_lo`` and ``z_hi`` are the lower and upper bounds of the z-axis of the simulation domain
+    specified in the input file and can be used to generate a z/zeta-axis for plotting.
+    ``normalized_density_factor`` is equal to ``dx * dy * dz`` in normalized units and 1 in
+    SI units. It can be used to convert ``sum(w)``, which specifies the beam density in normalized
+    units and beam weight an SI units, to the beam weight in both unit systems.
 
     The data is written to a file at ``<insitu_file_prefix>/reduced_<beam name>.<MPI rank number>.txt``.
     The in-situ diagnostics file format consists of a header part in ASCII containing a JSON object.
