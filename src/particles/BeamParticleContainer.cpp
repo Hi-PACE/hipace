@@ -353,6 +353,8 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
 
     const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
     const std::size_t nslices = static_cast<std::size_t>(m_nslices);
+    const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
+        geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
 
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
@@ -364,6 +366,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         {"mass"    , &m_mass},
         {"z_lo"    , &geom.ProbLo()[2]},
         {"z_hi"    , &geom.ProbHi()[2]},
+        {"normalized_density_factor", &normalized_density_factor},
         {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
         {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
         {"[y]"     , &m_insitu_rdata[3*nslices], nslices},
