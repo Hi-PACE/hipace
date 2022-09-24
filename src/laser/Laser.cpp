@@ -298,7 +298,7 @@ Laser::AdvanceSlice2 (const Fields& fields, const amrex::Geometry& geom, const a
 
     amrex::FArrayBox rhs;
     amrex::FArrayBox acoeff_imag;
-    amrex::Real acoeff_real = -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
+    amrex::Real acoeff_real = -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) * 0.;
 
     for ( amrex::MFIter mfi(nm1j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -328,20 +328,20 @@ Laser::AdvanceSlice2 (const Fields& fields, const amrex::Geometry& geom, const a
 
             // Imag acoeff term (the Real part is just a scalar defined above)
             // With 0 it runs, real part of the laser is hardly changed, imag becomes quite negative.
-            const amrex::Real ai = -2._rt*k0 / (c*dt);
-            acoeff_imag_arr(i,j,k,0) = ai             *0.;
+            const amrex::Real ai = 1./dx/dy; // -2._rt*k0 / (c*dt);
+            acoeff_imag_arr(i,j,k,0) = ai             *1.;
             // Real RHS term
             rhs_arr(i,j,k,0) =
-                + lapR                                           
-                - acoeff_real*nm1j00_arr(i,j,k,0)     *1.
-                + ai * nm1j00_arr(i,j,k,1)            *0.
+                + lapR
+                - acoeff_real*nm1j00_arr(i,j,k,0)     *0.
+                + ai * nm1j00_arr(i,j,k,1)            *1.
                 - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,1) *0.;
 
             // Imag RHS term
             rhs_arr(i,j,k,1) =
                 + lapI
-                - acoeff_real*nm1j00_arr(i,j,k,1)     *1.
-                - ai * nm1j00_arr(i,j,k,0)            *0.
+                - acoeff_real*nm1j00_arr(i,j,k,1)     *0.
+                - ai * nm1j00_arr(i,j,k,0)            *1.
                 + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0) *0.;
         });
     }
