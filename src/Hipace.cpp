@@ -47,6 +47,7 @@ amrex::Real Hipace::m_initial_time = 0.0;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
+bool Hipace::m_outer_depos_loop = false;
 amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
@@ -63,10 +64,8 @@ bool Hipace::m_use_amrex_mlmg = false;
 
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
-bool Hipace::m_outer_depos_loop = true;
 #else
 bool Hipace::m_do_tiling = true;
-bool Hipace::m_outer_depos_loop = false;
 #endif
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
