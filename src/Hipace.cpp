@@ -572,8 +572,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
         // TODO Push laser envelope
-        m_laser.InitLaserSlice2(Geom(0), islice_coarse, m_dt);
-        m_laser.AdvanceSlice2(m_fields, Geom(0), m_dt);
+        // m_laser.InitLaserSlice2(Geom(0), islice_coarse, m_dt);
+        m_laser.AdvanceSlice(m_fields, Geom(0), m_dt);
         // m_laser.AdvanceSlice(m_fields, Geom(0), m_dt);
         m_laser.Copy(islice_coarse, true);
 
