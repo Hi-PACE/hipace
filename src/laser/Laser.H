@@ -54,13 +54,14 @@ public:
      * \param[in] isl slice index, referring to the 3D slice
      * \param[in] to3d if true, copy from 2D slice to 3D array. Otherwise, the other way.
      */
-    void Copy (int isl, bool to3d, bool init=false);
+    void Copy (int isl, bool to3d, bool init);
 
     void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
-    void AdvanceSlice2 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
 
     void InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Real dt);
     void InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Real dt);
+    void SolvePoissonLocal(const amrex::Box& bx);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 

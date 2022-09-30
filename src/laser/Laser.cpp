@@ -5,6 +5,8 @@
 
 #include <AMReX_GpuComplex.H>
 
+#include <fftw3.h>
+
 void
 Laser::ReadParameters ()
 {
@@ -94,7 +96,7 @@ Laser::Copy (int isl, bool to3d, bool init)
 
     for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Print()<<"copy bx "<<bx<<'\n';
+        // amrex::Print()<<"copy bx "<<bx<<'\n';
         amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         amrex::Array4<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
@@ -126,6 +128,7 @@ Laser::Copy (int isl, bool to3d, bool init)
                     }
                 }
             } else {
+                // +2 means old
                 nm1jm1_arr(i,j,k,n) = isl-1 >= izmin ? host_arr(i,j,isl-1,n+2) : 0._rt;
                 nm1j00_arr(i,j,k,n) = host_arr(i,j,isl,n+2);
                 nm1jp1_arr(i,j,k,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
@@ -141,7 +144,7 @@ Laser::Copy (int isl, bool to3d, bool init)
 }
 
 void
-Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
+Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
     using namespace amrex::literals;
     const amrex::Real dx = geom.CellSize(0);
@@ -188,14 +191,27 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amr
         amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         amrex::Array4<amrex::Real> rhs_arr    = rhs.array();
         amrex::Array4<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
+        const int ic = (bx.smallEnd(0)+bx.bigEnd(0))/2;
+        const int jc = (bx.smallEnd(1)+bx.bigEnd(1))/2;
+
         amrex::ParallelFor(
             bx, 1,
             [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
             {
                 // Calculate complex arguments (theta) needed
-                const amrex::Real tj00 = std::atan2(n00j00_arr(i,j,k,1), n00j00_arr(i,j,k,0));
-                const amrex::Real tjp1 = std::atan2(n00jp1_arr(i,j,k,1), n00jp1_arr(i,j,k,0));
-                const amrex::Real tjp2 = std::atan2(n00jp2_arr(i,j,k,1), n00jp2_arr(i,j,k,0));
+                const amrex::Real tj00 = std::atan2(
+                    0.25*(n00j00_arr(i-1,j-1,0,1) + n00j00_arr(i-1,j,0,1) + n00j00_arr(i,j-1,0,1) + n00j00_arr(i,j,0,1)),
+                    0.25*(n00j00_arr(i-1,j-1,0,0) + n00j00_arr(i-1,j,0,0) + n00j00_arr(i,j-1,0,0) + n00j00_arr(i,j,0,0)));
+                const amrex::Real tjp1 = std::atan2(
+                    0.25*(n00jp1_arr(i-1,j-1,0,1) + n00jp1_arr(i-1,j,0,1) + n00jp1_arr(i,j-1,0,1) + n00jp1_arr(i,j,0,1)),
+                    0.25*(n00jp1_arr(i-1,j-1,0,0) + n00jp1_arr(i-1,j,0,0) + n00jp1_arr(i,j-1,0,0) + n00jp1_arr(i,j,0,0)));
+                const amrex::Real tjp2 = std::atan2(
+                    0.25*(n00jp2_arr(i-1,j-1,0,1) + n00jp2_arr(i-1,j,0,1) + n00jp2_arr(i,j-1,0,1) + n00jp2_arr(i,j,0,1)),
+                    0.25*(n00jp2_arr(i-1,j-1,0,0) + n00jp2_arr(i-1,j,0,0) + n00jp2_arr(i,j-1,0,0) + n00jp2_arr(i,j,0,0)));
+
+                //const amrex::Real tj00 = std::atan2(n00j00_arr(ic,jc,k,1), n00j00_arr(ic,jc,k,0));
+                //const amrex::Real tjp1 = std::atan2(n00jp1_arr(ic,jc,k,1), n00jp1_arr(ic,jc,k,0));
+                //const amrex::Real tjp2 = std::atan2(n00jp2_arr(ic,jc,k,1), n00jp2_arr(ic,jc,k,0));
                 amrex::Real dt1 = tj00 - tjp1;
                 amrex::Real dt2 = tj00 - tjp2;
                 if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
@@ -214,7 +230,7 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amr
                     (nm1j00_arr(i+1,j,k,1)+nm1j00_arr(i-1,j,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dx*dx) +
                     (nm1j00_arr(i,j+1,k,1)+nm1j00_arr(i,j-1,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dy*dy) : 0._rt;
                 // D_j^n as defined in Benedetti's 2017 paper
-                amrex::Real djn = ( 3._rt*tj00 - 4._rt*tjp1 + tjp2 ) / (2._rt*dz);
+                amrex::Real djn = -( 3._rt*tj00 - 4._rt*tjp1 + tjp2 ) / (2._rt*dz);
 
                 // Imag acoeff term (the Real part is just a scalar defined above)
                 acoeff_imag_arr(i,j,k,0) = -2._rt*( k0 + djn ) / (c*dt);
@@ -247,6 +263,7 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amr
                     + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0);
             });
     }
+
     // construct slice geometry
     // Set the lo and hi of domain and probdomain in the z direction
     amrex::RealBox tmp_probdom({AMREX_D_DECL(geom.ProbLo(Direction::x),
@@ -269,12 +286,6 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amr
     if (!m_mg) {
         m_mg = std::make_unique<hpmg::MultiGrid>(slice_geom);
     }
-
-    // amrex::Print()<<"rhs         "<<rhs.max() << ' '<<rhs.min()<<'\n';
-    // amrex::Print()<<"np1j00[0]   "<<np1j00[0].max() << ' '<<np1j00[0].min()<<'\n';
-    // amrex::Print()<<"acoeff_real "<<acoeff_real << ' ' <<'\n';
-    // amrex::Print()<<"acoeff_imag "<<acoeff_imag.max() << ' '<<acoeff_imag.min()<<'\n';
-
 
     const int max_iters = 200;
     m_mg->solve2(np1j00[0], rhs, acoeff_real, acoeff_imag, m_MG_tolerance_rel, m_MG_tolerance_abs,
@@ -282,101 +293,185 @@ Laser::AdvanceSlice(const Fields& fields, const amrex::Geometry& geom, const amr
 }
 
 void
-Laser::AdvanceSlice2 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
+Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
     using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
+    using SpectralFieldLoc = amrex::BaseFab <Complex>;
+    constexpr amrex::Real pi = MathConst::pi;
+    constexpr const Complex I(0.,1.);
+
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
-    const amrex::Real dz = std::numeric_limits<amrex::Real>::infinity(); // geom.CellSize(2);
-    constexpr amrex::Real pi = MathConst::pi;
+    const amrex::Real dz = geom.CellSize(2);
 
     const amrex::Real c = get_phys_const().c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
 
+    amrex::MultiFab& nm1jm1 = m_slices[WhichLaserSlice::nm1jm1];
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
+    amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
+    amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
+    amrex::MultiFab& n00j00 = m_slices[WhichLaserSlice::n00j00];
+    amrex::MultiFab& n00jp1 = m_slices[WhichLaserSlice::n00jp1];
+    amrex::MultiFab& n00jp2 = m_slices[WhichLaserSlice::n00jp2];
     amrex::MultiFab& np1j00 = m_slices[WhichLaserSlice::np1j00];
+    amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
+    amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
 
-    amrex::FArrayBox rhs;
-    amrex::FArrayBox acoeff_imag;
-    amrex::Real acoeff_real = -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
-
-    for ( amrex::MFIter mfi(nm1j00, false); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Print()<<"bx "<<bx<<'\n';
         const int imin = bx.smallEnd(0);
         const int imax = bx.bigEnd  (0);
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        acoeff_imag.resize(bx, 1, amrex::The_Arena());
-        rhs.resize(bx, 2, amrex::The_Arena());
+        // solution: cmplex array
+        SpectralFieldLoc sol;
+        SpectralFieldLoc rhs;
+        SpectralFieldLoc rhs_fourier;
+        sol.resize(bx, 1, amrex::The_Arena());
+        rhs.resize(bx, 1, amrex::The_Arena());
+        rhs_fourier.resize(bx, 1, amrex::The_Arena());
+        sol.setVal(0.);
+        rhs.setVal(0.);
+        rhs_fourier.setVal(0.);
+        amrex::Array4<Complex> sol_arr = sol.array();
+        amrex::Array4<Complex> rhs_arr = rhs.array();
+        amrex::Array4<Complex> rhs_fourier_arr = rhs_fourier.array();
+
+        amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
+        amrex::Array4<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
+        amrex::Array4<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
+        amrex::Array4<amrex::Real> n00j00_arr = n00j00.array(mfi);
+        amrex::Array4<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
+        amrex::Array4<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
         amrex::Array4<amrex::Real> np1j00_arr = np1j00.array(mfi);
-        amrex::Array4<amrex::Real> rhs_arr    = rhs.array();
-        amrex::Array4<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
+        amrex::Array4<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
+        amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        int const Nx = bx.length(0);
+        int const Ny = bx.length(1);
+        int const imid = (Nx+1)/2;
+        int const jmid = (Ny+1)/2;
+        const auto plo = geom.ProbLoArray();
+        // Calculate complex arguments (theta) needed
+        // Just once, on axis, as done in Wake-T
+        const amrex::Real tj00 = std::atan2(
+            0.25*(n00j00_arr(imid-1,jmid-1,0,1) + n00j00_arr(imid-1,jmid,0,1) + n00j00_arr(imid,jmid-1,0,1) + n00j00_arr(imid,jmid,0,1)),
+            0.25*(n00j00_arr(imid-1,jmid-1,0,0) + n00j00_arr(imid-1,jmid,0,0) + n00j00_arr(imid,jmid-1,0,0) + n00j00_arr(imid,jmid,0,0)));
+        const amrex::Real tjp1 = std::atan2(
+            0.25*(n00jp1_arr(imid-1,jmid-1,0,1) + n00jp1_arr(imid-1,jmid,0,1) + n00jp1_arr(imid,jmid-1,0,1) + n00jp1_arr(imid,jmid,0,1)),
+            0.25*(n00jp1_arr(imid-1,jmid-1,0,0) + n00jp1_arr(imid-1,jmid,0,0) + n00jp1_arr(imid,jmid-1,0,0) + n00jp1_arr(imid,jmid,0,0)));
+        const amrex::Real tjp2 = std::atan2(
+            0.25*(n00jp2_arr(imid-1,jmid-1,0,1) + n00jp2_arr(imid-1,jmid,0,1) + n00jp2_arr(imid,jmid-1,0,1) + n00jp2_arr(imid,jmid,0,1)),
+            0.25*(n00jp2_arr(imid-1,jmid-1,0,0) + n00jp2_arr(imid-1,jmid,0,0) + n00jp2_arr(imid,jmid-1,0,0) + n00jp2_arr(imid,jmid,0,0)));
+        amrex::Real dt1 = tj00 - tjp1;
+        amrex::Real dt2 = tj00 - tjp2;
+        if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
+        if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
+        if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
+        if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
+        amrex::Real cdt1 = std::cos(dt1);
+        amrex::Real cdt2 = std::cos(dt2);
+        amrex::Real sdt1 = std::sin(dt1);
+        amrex::Real sdt2 = std::sin(dt2);
+        // D_j^n as defined in Benedetti's 2017 paper
+        amrex::Real djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
         amrex::ParallelFor(
-        bx, 1,
-        [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
-        {
-            // Transverse Laplacian of real and imaginary parts of A_j^n-1
-            amrex::Real lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                (nm1j00_arr(i+1,j,k,0)+nm1j00_arr(i-1,j,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dx*dx) +
-                (nm1j00_arr(i,j+1,k,0)+nm1j00_arr(i,j-1,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dy*dy) : 0._rt;
-            amrex::Real lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                (nm1j00_arr(i+1,j,k,1)+nm1j00_arr(i-1,j,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dx*dx) +
-                (nm1j00_arr(i,j+1,k,1)+nm1j00_arr(i,j-1,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dy*dy) : 0._rt;
+            bx, 1,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+            {
+                // Transverse Laplacian of real and imaginary parts of A_j^n-1
+                amrex::Real lapR = i>imin && i<imax && j>jmin && j<jmax ?
+                    (nm1j00_arr(i+1,j,k,0)+nm1j00_arr(i-1,j,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dx*dx) +
+                    (nm1j00_arr(i,j+1,k,0)+nm1j00_arr(i,j-1,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dy*dy) : 0._rt;
+                amrex::Real lapI = i>imin && i<imax && j>jmin && j<jmax ?
+                    (nm1j00_arr(i+1,j,k,1)+nm1j00_arr(i-1,j,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dx*dx) +
+                    (nm1j00_arr(i,j+1,k,1)+nm1j00_arr(i,j-1,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dy*dy) : 0._rt;
+                // Real RHS term
+                const amrex::Real rhs_real =
+                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,k,0)-nm1jp1_arr(i,j,k,0))*cdt1 -
+                                       (np1jp1_arr(i,j,k,1)-nm1jp1_arr(i,j,k,1))*sdt1)
+                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,k,0)-nm1jp2_arr(i,j,k,0))*cdt2 -
+                                       (np1jp2_arr(i,j,k,1)-nm1jp2_arr(i,j,k,1))*sdt2)
+                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,k,0)
+                    - lapR
+                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,k,0)
+                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,1)
+                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,0)
+                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,1);
+                const amrex::Real rhs_imag =
+                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,k,1)-nm1jp1_arr(i,j,k,1))*cdt1 +
+                                       (np1jp1_arr(i,j,k,0)-nm1jp1_arr(i,j,k,0))*sdt1)
+                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,k,1)-nm1jp2_arr(i,j,k,1))*cdt2 +
+                                       (np1jp2_arr(i,j,k,0)-nm1jp2_arr(i,j,k,0))*sdt2)
+                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,k,1)
+                    - lapI
+                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,k,1)
+                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,0)
+                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,1)
+                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0);
 
-            // Imag acoeff term (the Real part is just a scalar defined above)
-            // With 0 it runs, real part of the laser is hardly changed, imag becomes quite negative.
-            const amrex::Real ai = -2._rt*k0 / (c*dt);
-            acoeff_imag_arr(i,j,k,0) = ai             *1.;
-            // Real RHS term
-            rhs_arr(i,j,k,0) =
-                + lapR
-                - acoeff_real*nm1j00_arr(i,j,k,0)     *1.
-                + ai * nm1j00_arr(i,j,k,1)            *1.
-                - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,1) *1.;
+                // Simplified solution
+//                const amrex::Real x = (i+0.5_rt)*dx+plo[0];
+//                const amrex::Real y = (j+0.5_rt)*dy+plo[1];
+//                const amrex::Real w0 = 20.e-6;
+//                const amrex::Real rhs_number = exp( - ( x*x ) / ( w0 * w0 ) );
+                rhs_arr(i,j,k) = rhs_real+I*rhs_imag;
+            });
+        amrex::IntVect fft_size = bx.length();
+        // amrex::Print()<<"bx "<<bx<<'\n';
+        fftw_plan plan = fftw_plan_dft_2d(
+            fft_size[1], fft_size[0],
+            reinterpret_cast<fftw_complex*>(rhs.dataPtr()),
+            reinterpret_cast<fftw_complex*>(rhs_fourier.dataPtr()),
+            FFTW_FORWARD, FFTW_ESTIMATE);
 
-            // Imag RHS term
-            rhs_arr(i,j,k,1) =
-                + lapI
-                - acoeff_real*nm1j00_arr(i,j,k,1)     *1.
-                - ai * nm1j00_arr(i,j,k,0)            *1.
-                + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0) *1.;
-        });
+        // Transform rhs to Fourier space
+        fftw_execute( plan );
+        fftw_destroy_plan( plan );
+
+        // Multiply by appropriate factors in Fourier space
+        amrex::Real dkx = 2.*MathConst::pi/geom.ProbLength(0);
+        amrex::Real dky = 2.*MathConst::pi/geom.ProbLength(1);
+        // acoeff_imag is supposed to be a nx*ny array.
+        // For the sake of simplicity, we evaluate it on-axis only.
+        const Complex acoeff =
+            ( -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) )
+            - I * 2._rt * ( k0 + djn ) / (c*dt);
+
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                // divide rhs_fourier by -(k^2+a)
+                amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
+                amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
+                const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
+                    1._rt/(kx*kx + ky*ky + acoeff) : 0.;
+                rhs_fourier_arr(i,j,k) *= -inv_k2a;
+            });
+
+        // Backward fft
+        fftw_plan plan_bkw = fftw_plan_dft_2d(
+            fft_size[1], fft_size[0],
+            reinterpret_cast<fftw_complex*>(rhs_fourier.dataPtr()),
+            reinterpret_cast<fftw_complex*>(sol.dataPtr()),
+            FFTW_BACKWARD, FFTW_ESTIMATE);
+
+        // Transform rhs to Fourier space to get solution in sol
+        fftw_execute( plan_bkw );
+        fftw_destroy_plan( plan_bkw );
+
+        // Normalize and store solution in np1j00[0]
+        const amrex::Real inv_numPts = 1./bx.numPts();
+        amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+                np1j00_arr(i,j,k,0) = sol_arr(i,j,k).real() * inv_numPts;
+                np1j00_arr(i,j,k,1) = sol_arr(i,j,k).imag() * inv_numPts;
+            });
     }
-    // construct slice geometry
-    // Set the lo and hi of domain and probdomain in the z direction
-    amrex::RealBox tmp_probdom({AMREX_D_DECL(geom.ProbLo(Direction::x),
-                                             geom.ProbLo(Direction::y),
-                                             geom.ProbLo(Direction::z))},
-                               {AMREX_D_DECL(geom.ProbHi(Direction::x),
-                                             geom.ProbHi(Direction::y),
-                                             geom.ProbHi(Direction::z))});
-    amrex::Box tmp_dom = geom.Domain();
-    const amrex::Real hi = geom.ProbHi(Direction::z);
-    const amrex::Real lo = hi - geom.CellSize(2);
-    tmp_probdom.setLo(Direction::z, lo);
-    tmp_probdom.setHi(Direction::z, hi);
-    tmp_dom.setSmall(Direction::z, 0);
-    tmp_dom.setBig(Direction::z, 0);
-    amrex::Geometry slice_geom = amrex::Geometry(
-        tmp_dom, tmp_probdom, geom.Coord(), geom.isPeriodic());
-
-    slice_geom.setPeriodicity({0,0,0});
-    if (!m_mg) {
-        m_mg = std::make_unique<hpmg::MultiGrid>(slice_geom);
-    }
-
-    amrex::Print()<<"rhs         "<<rhs.max() << ' '<<rhs.min()<<'\n';
-    amrex::Print()<<"np1j00[0]   "<<np1j00[0].max() << ' '<<np1j00[0].min()<<'\n';
-    amrex::Print()<<"acoeff_real "<<acoeff_real << ' ' <<'\n';
-    amrex::Print()<<"acoeff_imag "<<acoeff_imag.max() << ' '<<acoeff_imag.min()<<'\n';
-
-
-    const int max_iters = 200;
-    m_mg->solve2(np1j00[0], rhs, acoeff_real, acoeff_imag, m_MG_tolerance_rel, m_MG_tolerance_abs,
-    max_iters, m_MG_verbose);
 }
 
 void
@@ -467,6 +562,8 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
 void
 Laser::InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Real dt)
 {
+    AMREX_ALWAYS_ASSERT(false);
+/*
     if (!m_use_laser) return;
 
     HIPACE_PROFILE("Laser::InitLaserSlice()");
@@ -528,10 +625,10 @@ Laser::InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Re
                 Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                 Complex envelope = stcfactor * amrex::exp( exp_argument );
                 n00j00_arr(i,j,k,dcomp  ) = envelope.real();
-                n00j00_arr(i,j,k,dcomp+1) = envelope.imag();
+                n00j00_arr(i,j,k,dcomp+1) = 0.;//envelope.imag();
 
                 // Same thing for time step -1
-                z -= c * dt * 0.;
+                z -= c * dt;
                 diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
                 inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                 prefactor = a0/diffract_factor;
@@ -540,8 +637,9 @@ Laser::InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Re
                 exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                 envelope = stcfactor * amrex::exp( exp_argument );
                 nm1j00_arr(i,j,k,dcomp  ) = envelope.real();
-                nm1j00_arr(i,j,k,dcomp+1) = envelope.imag();
+                nm1j00_arr(i,j,k,dcomp+1) = 0.;//envelope.imag();
             }
             );
     }
+*/
 }
