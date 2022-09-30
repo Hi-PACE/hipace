@@ -70,8 +70,10 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm, const
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
         // Compute initial field on the current (device) slice
+        // n00j00 for current, nm1j00 for old
         InitLaserSlice(gm, isl, dt);
         // Copy: (device) slice to (host) 3D array
+        // A = np1j00, Aold = n00j00
         Copy(isl, true, true);
     }
 }
@@ -496,8 +498,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
     const amrex::Real y0 = m_position_mean[1];
     const amrex::Real z0 = m_position_mean[2];
     const amrex::Real L0 = m_L0;
-    // const amrex::GpuArray<amrex::Real, 3> pos_mean = {
-    //     m_position_mean[0], m_position_mean[1], m_position_mean[2]};
+
     AMREX_ALWAYS_ASSERT(m_w0[0] == m_w0[1]);
     AMREX_ALWAYS_ASSERT(x0 == 0._rt);
     AMREX_ALWAYS_ASSERT(y0 == 0._rt);
@@ -505,13 +506,9 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
     // Get grid properties
     const auto plo = geom.ProbLoArray();
     amrex::Real const * const dx = geom.CellSize();
-    // const amrex::GpuArray<amrex::Real, 3> pos_size = {m_w0[0], m_w0[1], m_L0};
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-    // const amrex::Real delta_z = (z - pos_mean[2]) / pos_size[2];
-    // const amrex::Real long_pos_factor =  std::exp( -(delta_z*delta_z) );
 
     // Envelope quantities common for all this slice
-
     amrex::MultiFab& np1j00 = getSlices(WhichLaserSlice::np1j00);
     amrex::MultiFab& n00j00 = getSlices(WhichLaserSlice::n00j00);
 
@@ -548,7 +545,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
                 diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
                 inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                 prefactor = a0/diffract_factor;
-                time_exponent = (z-z0)*(z-z0)/(L0*L0);
+                time_exponent = (z-z0+c*dt)*(z-z0+c*dt)/(L0*L0);
                 stcfactor = prefactor * amrex::exp( - time_exponent );
                 exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                 envelope = stcfactor * amrex::exp( exp_argument );
@@ -557,89 +554,4 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
             }
             );
     }
-}
-
-void
-Laser::InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Real dt)
-{
-    AMREX_ALWAYS_ASSERT(false);
-/*
-    if (!m_use_laser) return;
-
-    HIPACE_PROFILE("Laser::InitLaserSlice()");
-
-    using namespace amrex::literals;
-    using Complex = amrex::GpuComplex<amrex::Real>;
-
-    // Basic laser parameters and constants
-    Complex I(0,1);
-    const amrex::Real c = get_phys_const().c;
-    const int dcomp = 0; // NOTE, this may change when we use slices with Comps
-    const amrex::Real a0 = m_a0;
-    const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
-    const amrex::Real w0 = m_w0[0];
-    const amrex::Real tau = m_tau;
-    const amrex::Real x0 = m_position_mean[0];
-    const amrex::Real y0 = m_position_mean[1];
-    const amrex::Real z0 = m_position_mean[2];
-    const amrex::Real L0 = m_L0;
-
-    AMREX_ALWAYS_ASSERT(m_w0[0] == m_w0[1]);
-    AMREX_ALWAYS_ASSERT(x0 == 0._rt);
-    AMREX_ALWAYS_ASSERT(y0 == 0._rt);
-
-    // Get grid properties
-    const auto plo = geom.ProbLoArray();
-    amrex::Real const * const dx = geom.CellSize();
-    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-
-    // Envelope quantities common for all this slice
-    amrex::MultiFab& np1j00 = getSlices(WhichLaserSlice::np1j00);
-    amrex::MultiFab& n00j00 = getSlices(WhichLaserSlice::n00j00);
-    amrex::MultiFab& nm1j00 = getSlices(WhichLaserSlice::nm1j00);
-
-#ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
-#endif
-    for ( amrex::MFIter mfi(np1j00, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-        const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real> const & np1j00_arr = np1j00.array(mfi);
-        amrex::Array4<amrex::Real> const & n00j00_arr = n00j00.array(mfi);
-        amrex::Array4<amrex::Real> const & nm1j00_arr = nm1j00.array(mfi);
-
-        // Initialize a Gaussian laser envelope on slice islice
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
-                const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
-                const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
-
-                // Compute envelope for time step 0
-                Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
-                Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
-                Complex prefactor = a0/diffract_factor;
-                Complex time_exponent = (z-z0)*(z-z0)/(L0*L0);
-                Complex stcfactor = prefactor * amrex::exp( - time_exponent );
-                Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
-                Complex envelope = stcfactor * amrex::exp( exp_argument );
-                n00j00_arr(i,j,k,dcomp  ) = envelope.real();
-                n00j00_arr(i,j,k,dcomp+1) = 0.;//envelope.imag();
-
-                // Same thing for time step -1
-                z -= c * dt;
-                diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
-                inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
-                prefactor = a0/diffract_factor;
-                time_exponent = (z-z0)*(z-z0)/(L0*L0);
-                stcfactor = prefactor * amrex::exp( - time_exponent );
-                exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
-                envelope = stcfactor * amrex::exp( exp_argument );
-                nm1j00_arr(i,j,k,dcomp  ) = envelope.real();
-                nm1j00_arr(i,j,k,dcomp+1) = 0.;//envelope.imag();
-            }
-            );
-    }
-*/
 }

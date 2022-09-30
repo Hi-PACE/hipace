@@ -60,7 +60,6 @@ public:
     void AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
 
     void InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Real dt);
-    void InitLaserSlice2 (const amrex::Geometry& geom, const int islice, amrex::Real dt);
     void SolvePoissonLocal(const amrex::Box& bx);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
