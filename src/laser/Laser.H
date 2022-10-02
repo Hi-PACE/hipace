@@ -21,22 +21,27 @@
 namespace LaserFFT {
 #ifdef AMREX_USE_CUDA
     using VendorFFT = cufftHandle;
+    const auto VendorCreate = cufftPlan2d;
     const auto VendorDestroy = cufftDestroy;
 #  ifdef AMREX_USE_FLOAT
-    using VendorExecute = cufftExecC2C;
+    const auto VendorExecute = cufftExecC2C;
+    using cufftComplex = cuComplex;
 #  else
-    using VendorExecute = cufftExecZ2Z;
+    const auto VendorExecute = cufftExecZ2Z;
+    using cufftComplex = cuDoubleComplex;
 #  endif
 #elif defined(AMREX_USE_HIP)
     // TODO
 #else
 #  ifdef AMREX_USE_FLOAT
     using VendorFFT = fftwf_plan;
-    const auto VendorExecute = fftwf_plan_dft_2d;
+    const auto VendorCreate = fftwf_plan_dft_2d;
+    const auto VendorExecute = fftwf_execute;
     const auto VendorDestroy = fftwf_destroy_plan;
 #  else
     using VendorFFT = fftw_plan;
-    const auto VendorExecute = fftw_plan_dft_2d;
+    const auto VendorCreate = fftw_plan_dft_2d;
+    const auto VendorExecute = fftw_execute;
     const auto VendorDestroy = fftw_destroy_plan;
 #  endif
 #endif

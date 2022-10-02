@@ -2,6 +2,7 @@
 #include "utils/Constants.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
 
 #include <AMReX_GpuComplex.H>
 
@@ -65,25 +66,22 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
     }
 
     const amrex::Box& bx = slice_ba[0];
-    m_F.setVal(0.);
     m_sol.resize(bx, 1, amrex::The_Arena());
     m_rhs.resize(bx, 1, amrex::The_Arena());
     m_rhs_fourier.resize(bx, 1, amrex::The_Arena());
-    m_sol.setVal(0.);
-    m_rhs.setVal(0.);
-    m_rhs_fourier.setVal(0.);
 
+    // Create FFT plans
     amrex::IntVect fft_size = bx.length();
 #ifdef AMREX_USE_CUDA
     cufftResult result;
-    result = cufftPlan2d(
-        &(m_plan_fwd), fft_size[1], fft_size[0], CUFFT_FORWARD);
+    result = LaserFFT::VendorCreate(
+        &(m_plan_fwd), fft_size[1], fft_size[0], CUFFT_Z2Z);
     if ( result != CUFFT_SUCCESS ) {
         amrex::Print() << " cufftplan failed! Error: " <<
             CuFFTUtils::cufftErrorToString(result) << "\n";
     }
-    result = cufftPlan2d(
-        &(m_plan_bkw), fft_size[1], fft_size[0], CUFFT_BACKWARD);
+    result = LaserFFT::VendorCreate(
+        &(m_plan_bkw), fft_size[1], fft_size[0], CUFFT_Z2Z);
     if ( result != CUFFT_SUCCESS ) {
         amrex::Print() << " cufftplan failed! Error: " <<
             CuFFTUtils::cufftErrorToString(result) << "\n";
@@ -91,13 +89,13 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
 #elif defined(AMREX_USE_HIP)
 #else
     // Forward FFT plan
-    m_plan_fwd = LaserFFT::VendorExecute(
+    m_plan_fwd = LaserFFT::VendorCreate(
         fft_size[1], fft_size[0],
         reinterpret_cast<fftw_complex*>(m_rhs.dataPtr()),
         reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
         FFTW_FORWARD, FFTW_ESTIMATE);
     // Backward FFT plan
-    m_plan_bkw = LaserFFT::VendorExecute(
+    m_plan_bkw = LaserFFT::VendorCreate(
         fft_size[1], fft_size[0],
         reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
         reinterpret_cast<fftw_complex*>(m_sol.dataPtr()),
@@ -349,7 +347,6 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
     using SpectralFieldLoc = amrex::BaseFab <Complex>;
-    constexpr amrex::Real pi = MathConst::pi;
     constexpr const Complex I(0.,1.);
 
     const amrex::Real dx = geom.CellSize(0);
@@ -402,7 +399,8 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const auto plo = geom.ProbLoArray();
         // Calculate complex arguments (theta) needed
         // Just once, on axis, as done in Wake-T
-        const amrex::Real tj00 = std::atan2(
+/*
+  const amrex::Real tj00 = std::atan2(
             0.25*(n00j00_arr(imid-1,jmid-1,0,1) + n00j00_arr(imid-1,jmid,0,1) + n00j00_arr(imid,jmid-1,0,1) + n00j00_arr(imid,jmid,0,1)),
             0.25*(n00j00_arr(imid-1,jmid-1,0,0) + n00j00_arr(imid-1,jmid,0,0) + n00j00_arr(imid,jmid-1,0,0) + n00j00_arr(imid,jmid,0,0)));
         const amrex::Real tjp1 = std::atan2(
@@ -411,6 +409,10 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const amrex::Real tjp2 = std::atan2(
             0.25*(n00jp2_arr(imid-1,jmid-1,0,1) + n00jp2_arr(imid-1,jmid,0,1) + n00jp2_arr(imid,jmid-1,0,1) + n00jp2_arr(imid,jmid,0,1)),
             0.25*(n00jp2_arr(imid-1,jmid-1,0,0) + n00jp2_arr(imid-1,jmid,0,0) + n00jp2_arr(imid,jmid-1,0,0) + n00jp2_arr(imid,jmid,0,0)));
+*/
+        const amrex::Real tj00 = 0.;
+        const amrex::Real tjp1 = 0.;
+        const amrex::Real tjp2 = 0.;
         amrex::Real dt1 = tj00 - tjp1;
         amrex::Real dt2 = tj00 - tjp2;
         if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
@@ -457,27 +459,27 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
                     + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,0)
                     + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,1)
                     + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0);
-
-                // Simplified solution
-//                const amrex::Real x = (i+0.5_rt)*dx+plo[0];
-//                const amrex::Real y = (j+0.5_rt)*dy+plo[1];
-//                const amrex::Real w0 = 20.e-6;
-//                const amrex::Real rhs_number = exp( - ( x*x ) / ( w0 * w0 ) );
                 rhs_arr(i,j,k) = rhs_real+I*rhs_imag;
             });
 
         // Transform rhs to Fourier space
 #ifdef AMREX_USE_CUDA
+        cudaStream_t stream = amrex::Gpu::Device::cudaStream();
+        cufftSetStream ( m_plan_fwd, stream);
         cufftResult result;
         result = LaserFFT::VendorExecute(
             m_plan_fwd,
-            reinterpret_cast<cuComplex*>( m_rhs.dataPtr() ),
-            reinterpret_cast<cuComplex*>( m_rhs_fourier.dataPtr() )
-            );
+            reinterpret_cast<LaserFFT::cufftComplex*>( m_rhs.dataPtr() ),
+            reinterpret_cast<LaserFFT::cufftComplex*>( m_rhs_fourier.dataPtr() ),
+            CUFFT_FORWARD);
+        if ( result != CUFFT_SUCCESS ) {
+            amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
+		CuFFTUtils::cufftErrorToString(result) << "\n";
+	}
 #elif defined(AMREX_USE_HIP)
         amrex::Abort("Not implemented");
 #else
-        fftw_execute( m_plan_fwd );
+        LaserFFT::VendorExecute( m_plan_fwd );
 #endif
 
         // Multiply by appropriate factors in Fourier space
@@ -501,15 +503,21 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
 
         // Transform rhs to Fourier space to get solution in sol
 #ifdef AMREX_USE_CUDA
+        cudaStream_t stream_bkw = amrex::Gpu::Device::cudaStream();
+        cufftSetStream ( m_plan_bkw, stream_bkw);
         result = LaserFFT::VendorExecute(
             m_plan_bkw,
-            reinterpret_cast<cuComplex*>( m_rhs_fourier.dataPtr() ),
-            reinterpret_cast<cuComplex*>( m_sol.dataPtr() )
-            );
+            reinterpret_cast<LaserFFT::cufftComplex*>( m_rhs_fourier.dataPtr() ),
+            reinterpret_cast<LaserFFT::cufftComplex*>( m_sol.dataPtr() ),
+            CUFFT_INVERSE);
+        if ( result != CUFFT_SUCCESS ) {
+            amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
+		CuFFTUtils::cufftErrorToString(result) << "\n";
+	}
 #elif defined(AMREX_USE_HIP)
         amrex::Abort("Not implemented");
 #else
-        fftw_execute( m_plan_bkw );
+        LaserFFT::VendorExecute( m_plan_bkw );
 #endif
 
         // Normalize and store solution in np1j00[0]
