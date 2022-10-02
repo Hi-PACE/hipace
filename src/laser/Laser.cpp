@@ -2,8 +2,9 @@
 #include "utils/Constants.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
-
+#ifdef AMREX_USE_CUDA
+#  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
+#endif
 #include <AMReX_GpuComplex.H>
 
 #ifdef AMREX_USE_CUDA
