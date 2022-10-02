@@ -5,7 +5,14 @@
 
 #include <AMReX_GpuComplex.H>
 
-#include <fftw3.h>
+#ifdef AMREX_USE_CUDA
+#  include <cufft.h>
+#elif defined(AMREX_USE_HIP)
+#  include <cstddef>
+#  include <rocfft.h>
+#else
+#  include <fftw3.h>
+#endif
 
 void
 Laser::ReadParameters ()
@@ -13,6 +20,9 @@ Laser::ReadParameters ()
     amrex::ParmParse pp(m_name);
     m_use_laser = queryWithParser(pp, "a0", m_a0);
     if (!m_use_laser) return;
+#if defined(AMREX_USE_HIP)
+    amrex::Abort("Laser solver not implemented with HIP");
+#endif
     amrex::Vector<amrex::Real> tmp_vector;
     if (queryWithParser(pp, "w0", tmp_vector)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == 2,
@@ -53,7 +63,46 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
         m_slices[islice].setVal(0.0);
     }
+
+    const amrex::Box& bx = slice_ba[0];
     m_F.setVal(0.);
+    m_sol.resize(bx, 1, amrex::The_Arena());
+    m_rhs.resize(bx, 1, amrex::The_Arena());
+    m_rhs_fourier.resize(bx, 1, amrex::The_Arena());
+    m_sol.setVal(0.);
+    m_rhs.setVal(0.);
+    m_rhs_fourier.setVal(0.);
+
+    amrex::IntVect fft_size = bx.length();
+#ifdef AMREX_USE_CUDA
+    cufftResult result;
+    result = cufftPlan2d(
+        &(m_plan_fwd), fft_size[1], fft_size[0], CUFFT_FORWARD);
+    if ( result != CUFFT_SUCCESS ) {
+        amrex::Print() << " cufftplan failed! Error: " <<
+            CuFFTUtils::cufftErrorToString(result) << "\n";
+    }
+    result = cufftPlan2d(
+        &(m_plan_bkw), fft_size[1], fft_size[0], CUFFT_BACKWARD);
+    if ( result != CUFFT_SUCCESS ) {
+        amrex::Print() << " cufftplan failed! Error: " <<
+            CuFFTUtils::cufftErrorToString(result) << "\n";
+    }
+#elif defined(AMREX_USE_HIP)
+#else
+    // Forward FFT plan
+    m_plan_fwd = LaserFFT::VendorExecute(
+        fft_size[1], fft_size[0],
+        reinterpret_cast<fftw_complex*>(m_rhs.dataPtr()),
+        reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
+        FFTW_FORWARD, FFTW_ESTIMATE);
+    // Backward FFT plan
+    m_plan_bkw = LaserFFT::VendorExecute(
+        fft_size[1], fft_size[0],
+        reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
+        reinterpret_cast<fftw_complex*>(m_sol.dataPtr()),
+        FFTW_BACKWARD, FFTW_ESTIMATE);
+#endif
 }
 
 void
@@ -329,18 +378,12 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const int jmax = bx.bigEnd  (1);
 
         // solution: cmplex array
-        SpectralFieldLoc sol;
-        SpectralFieldLoc rhs;
-        SpectralFieldLoc rhs_fourier;
-        sol.resize(bx, 1, amrex::The_Arena());
-        rhs.resize(bx, 1, amrex::The_Arena());
-        rhs_fourier.resize(bx, 1, amrex::The_Arena());
-        sol.setVal(0.);
-        rhs.setVal(0.);
-        rhs_fourier.setVal(0.);
-        amrex::Array4<Complex> sol_arr = sol.array();
-        amrex::Array4<Complex> rhs_arr = rhs.array();
-        amrex::Array4<Complex> rhs_fourier_arr = rhs_fourier.array();
+        //SpectralFieldLoc sol;
+        //SpectralFieldLoc rhs;
+        //SpectralFieldLoc rhs_fourier;
+        amrex::Array4<Complex> sol_arr = m_sol.array();
+        amrex::Array4<Complex> rhs_arr = m_rhs.array();
+        amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
         amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
@@ -422,17 +465,20 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
 //                const amrex::Real rhs_number = exp( - ( x*x ) / ( w0 * w0 ) );
                 rhs_arr(i,j,k) = rhs_real+I*rhs_imag;
             });
-        amrex::IntVect fft_size = bx.length();
-        // amrex::Print()<<"bx "<<bx<<'\n';
-        fftw_plan plan = fftw_plan_dft_2d(
-            fft_size[1], fft_size[0],
-            reinterpret_cast<fftw_complex*>(rhs.dataPtr()),
-            reinterpret_cast<fftw_complex*>(rhs_fourier.dataPtr()),
-            FFTW_FORWARD, FFTW_ESTIMATE);
 
         // Transform rhs to Fourier space
-        fftw_execute( plan );
-        fftw_destroy_plan( plan );
+#ifdef AMREX_USE_CUDA
+        cufftResult result;
+        result = LaserFFT::VendorExecute(
+            m_plan_fwd,
+            reinterpret_cast<cuComplex*>( m_rhs.dataPtr() ),
+            reinterpret_cast<cuComplex*>( m_rhs_fourier.dataPtr() )
+            );
+#elif defined(AMREX_USE_HIP)
+        amrex::Abort("Not implemented");
+#else
+        fftw_execute( m_plan_fwd );
+#endif
 
         // Multiply by appropriate factors in Fourier space
         amrex::Real dkx = 2.*MathConst::pi/geom.ProbLength(0);
@@ -442,7 +488,6 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const Complex acoeff =
             ( -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) )
             - I * 2._rt * ( k0 + djn ) / (c*dt);
-
         amrex::ParallelFor(
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
@@ -454,16 +499,18 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
                 rhs_fourier_arr(i,j,k) *= -inv_k2a;
             });
 
-        // Backward fft
-        fftw_plan plan_bkw = fftw_plan_dft_2d(
-            fft_size[1], fft_size[0],
-            reinterpret_cast<fftw_complex*>(rhs_fourier.dataPtr()),
-            reinterpret_cast<fftw_complex*>(sol.dataPtr()),
-            FFTW_BACKWARD, FFTW_ESTIMATE);
-
         // Transform rhs to Fourier space to get solution in sol
-        fftw_execute( plan_bkw );
-        fftw_destroy_plan( plan_bkw );
+#ifdef AMREX_USE_CUDA
+        result = LaserFFT::VendorExecute(
+            m_plan_bkw,
+            reinterpret_cast<cuComplex*>( m_rhs_fourier.dataPtr() ),
+            reinterpret_cast<cuComplex*>( m_sol.dataPtr() )
+            );
+#elif defined(AMREX_USE_HIP)
+        amrex::Abort("Not implemented");
+#else
+        fftw_execute( m_plan_bkw );
+#endif
 
         // Normalize and store solution in np1j00[0]
         const amrex::Real inv_numPts = 1./bx.numPts();

@@ -7,6 +7,40 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
 #include <AMReX_AmrCore.H>
+#include <AMReX_GpuComplex.H>
+
+#ifdef AMREX_USE_CUDA
+#  include <cufft.h>
+#elif defined(AMREX_USE_HIP)
+#  include <cstddef>
+#  include <rocfft.h>
+#else
+#  include <fftw3.h>
+#endif
+
+namespace LaserFFT {
+#ifdef AMREX_USE_CUDA
+    using VendorFFT = cufftHandle;
+    const auto VendorDestroy = cufftDestroy;
+#  ifdef AMREX_USE_FLOAT
+    using VendorExecute = cufftExecC2C;
+#  else
+    using VendorExecute = cufftExecZ2Z;
+#  endif
+#elif defined(AMREX_USE_HIP)
+    // TODO
+#else
+#  ifdef AMREX_USE_FLOAT
+    using VendorFFT = fftwf_plan;
+    const auto VendorExecute = fftwf_plan_dft_2d;
+    const auto VendorDestroy = fftwf_destroy_plan;
+#  else
+    using VendorFFT = fftw_plan;
+    const auto VendorExecute = fftw_plan_dft_2d;
+    const auto VendorDestroy = fftw_destroy_plan;
+#  endif
+#endif
+}
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
@@ -17,13 +51,25 @@ class Fields;
 
 class Laser
 {
+
+    using SpectralFieldLoc = amrex::BaseFab <amrex::GpuComplex<amrex::Real>>;
+
 private:
+
     static constexpr int m_nslices = WhichLaserSlice::N;
+
 public:
+
     /** Constructor */
     explicit Laser ()
     {
         ReadParameters();
+    }
+
+    ~Laser ()
+    {
+        LaserFFT::VendorDestroy( m_plan_fwd );
+        LaserFFT::VendorDestroy( m_plan_bkw );
     }
 
     void ReadParameters ();
@@ -88,6 +134,22 @@ private:
     int m_MG_verbose = 100;
     /** hpmg solver for the envelope solver */
     std::unique_ptr<hpmg::MultiGrid> m_mg;
+
+    // Elements for the FFT-based laser envelope solver
+    // This could belong to AnyFFT etc., with 2 caveats:
+    // - This solver operates on a FArrayBox instead of a MultiFab, which is more adequate
+    // - The array in position space must be Complex rather than real, which takes up quite some
+    //   rewriting, see https://github.com/MaxThevenet/hipace/tree/laser_solve,
+    // not sure what the best way to proceed is.
+    LaserFFT::VendorFFT m_plan_fwd;
+    LaserFFT::VendorFFT m_plan_bkw;
+    SpectralFieldLoc m_sol;
+    SpectralFieldLoc m_rhs;
+    SpectralFieldLoc m_rhs_fourier;
+#ifdef AMREX_USE_CUDA
+    cufftResult m_result_fwd;
+    cufftResult m_result_bkw;
+#endif
 };
 
 #endif // LASER_H_
