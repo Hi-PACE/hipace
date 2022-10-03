@@ -343,6 +343,7 @@ void
 Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
     if (!m_use_laser) return;
+    using namespace amrex;
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
     using SpectralFieldLoc = amrex::BaseFab <Complex>;
@@ -393,30 +394,33 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         int const imid = (Nx+1)/2;
         int const jmid = (Ny+1)/2;
         const auto plo = geom.ProbLoArray();
+
         // Calculate complex arguments (theta) needed
         // Just once, on axis, as done in Wake-T
-        amrex::Real[2] im1jm1;
-        n00j00.getVal(im1jm1, amrex::IntVect({imid-1,jmid-1,0}));
-        amrex::Real[2] im1j00;
-        n00j00.getVal(im1j00, amrex::IntVect({imid-1,jmid-1,0}));
-        amrex::Real[2] i00jm1;
-        n00j00.getVal(i00jm1, amrex::IntVect({imid-1,jmid-1,0}));
-        amrex::Real[2] i00j00;
-        n00j00.getVal(i00j00, amrex::IntVect({imid-1,jmid-1,0}));
-/*
-  const amrex::Real tj00 = std::atan2(
-            0.25*(n00j00_arr(imid-1,jmid-1,0,1) + n00j00_arr(imid-1,jmid,0,1) + n00j00_arr(imid,jmid-1,0,1) + n00j00_arr(imid,jmid,0,1)),
-            0.25*(n00j00_arr(imid-1,jmid-1,0,0) + n00j00_arr(imid-1,jmid,0,0) + n00j00_arr(imid,jmid-1,0,0) + n00j00_arr(imid,jmid,0,0)));
-        const amrex::Real tjp1 = std::atan2(
-            0.25*(n00jp1_arr(imid-1,jmid-1,0,1) + n00jp1_arr(imid-1,jmid,0,1) + n00jp1_arr(imid,jmid-1,0,1) + n00jp1_arr(imid,jmid,0,1)),
-            0.25*(n00jp1_arr(imid-1,jmid-1,0,0) + n00jp1_arr(imid-1,jmid,0,0) + n00jp1_arr(imid,jmid-1,0,0) + n00jp1_arr(imid,jmid,0,0)));
-        const amrex::Real tjp2 = std::atan2(
-            0.25*(n00jp2_arr(imid-1,jmid-1,0,1) + n00jp2_arr(imid-1,jmid,0,1) + n00jp2_arr(imid,jmid-1,0,1) + n00jp2_arr(imid,jmid,0,1)),
-            0.25*(n00jp2_arr(imid-1,jmid-1,0,0) + n00jp2_arr(imid-1,jmid,0,0) + n00jp2_arr(imid,jmid-1,0,0) + n00jp2_arr(imid,jmid,0,0)));
-*/
-        const amrex::Real tj00 = 0.;
-        const amrex::Real tjp1 = 0.;
-        const amrex::Real tjp2 = 0.;
+        // This is done with a reduce operation, returning the sum of the four elements nearest
+        // the axis (both real and imag parts, and for the 3 arrays relevant) ...
+        ReduceOps<ReduceOpSum, ReduceOpSum> reduce_op;
+	ReduceData<Real, Real, Real, Real, Real, Real> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+        reduce_op.eval(bx, reduce_data,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
+        {
+            if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
+                return {
+                    n00j00_arr(i,j,0,0), n00j00_arr(i,j,0,1),
+                    n00jp1_arr(i,j,0,0), n00jp1_arr(i,j,0,1),
+                    n00jp2_arr(i,j,0,0), n00jp2_arr(i,j,0,1)
+                };
+            } else {
+                return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
+            }
+        });
+        // ... and taking the argument of the resulting complex number.
+        ReduceTuple hv = reduce_data.value(reduce_op);
+        const amrex::Real tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
+        const amrex::Real tjp1 = std::atan2(amrex::get<3>(hv), amrex::get<2>(hv));
+        const amrex::Real tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
+
         amrex::Real dt1 = tj00 - tjp1;
         amrex::Real dt2 = tj00 - tjp2;
         if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
@@ -427,6 +431,7 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         amrex::Real cdt2 = std::cos(dt2);
         amrex::Real sdt1 = std::sin(dt1);
         amrex::Real sdt2 = std::sin(dt2);
+
         // D_j^n as defined in Benedetti's 2017 paper
         amrex::Real djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
         amrex::ParallelFor(
