@@ -55,8 +55,7 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
-    // m_slices_nguards = {nguards_xy, nguards_xy, 0};
-    m_slices_nguards = {0,0,0};
+    m_slices_nguards = {nguards_xy, nguards_xy, 0};
     AMREX_ALWAYS_ASSERT(WhichLaserSlice::N == m_nslices);
     for (int islice=0; islice<WhichLaserSlice::N; islice++) {
         // 2 components for complex numbers.
@@ -131,6 +130,7 @@ Laser::Copy (int isl, bool to3d, bool init)
 {
     using namespace amrex::literals;
     HIPACE_PROFILE("Laser::Copy()");
+    if (!m_use_laser) return;
     amrex::MultiFab& nm1jm1 = m_slices[WhichLaserSlice::nm1jm1];
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
@@ -196,6 +196,7 @@ Laser::Copy (int isl, bool to3d, bool init)
 void
 Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
+    if (!m_use_laser) return;
     using namespace amrex::literals;
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
@@ -258,10 +259,6 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
                 const amrex::Real tjp2 = std::atan2(
                     0.25*(n00jp2_arr(i-1,j-1,0,1) + n00jp2_arr(i-1,j,0,1) + n00jp2_arr(i,j-1,0,1) + n00jp2_arr(i,j,0,1)),
                     0.25*(n00jp2_arr(i-1,j-1,0,0) + n00jp2_arr(i-1,j,0,0) + n00jp2_arr(i,j-1,0,0) + n00jp2_arr(i,j,0,0)));
-
-                //const amrex::Real tj00 = std::atan2(n00j00_arr(ic,jc,k,1), n00j00_arr(ic,jc,k,0));
-                //const amrex::Real tjp1 = std::atan2(n00jp1_arr(ic,jc,k,1), n00jp1_arr(ic,jc,k,0));
-                //const amrex::Real tjp2 = std::atan2(n00jp2_arr(ic,jc,k,1), n00jp2_arr(ic,jc,k,0));
                 amrex::Real dt1 = tj00 - tjp1;
                 amrex::Real dt2 = tj00 - tjp2;
                 if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
@@ -345,6 +342,7 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
 void
 Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
+    if (!m_use_laser) return;
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
     using SpectralFieldLoc = amrex::BaseFab <Complex>;
@@ -376,9 +374,6 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const int jmax = bx.bigEnd  (1);
 
         // solution: cmplex array
-        //SpectralFieldLoc sol;
-        //SpectralFieldLoc rhs;
-        //SpectralFieldLoc rhs_fourier;
         amrex::Array4<Complex> sol_arr = m_sol.array();
         amrex::Array4<Complex> rhs_arr = m_rhs.array();
         amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
@@ -400,6 +395,14 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const auto plo = geom.ProbLoArray();
         // Calculate complex arguments (theta) needed
         // Just once, on axis, as done in Wake-T
+        amrex::Real[2] im1jm1;
+        n00j00.getVal(im1jm1, amrex::IntVect({imid-1,jmid-1,0}));
+        amrex::Real[2] im1j00;
+        n00j00.getVal(im1j00, amrex::IntVect({imid-1,jmid-1,0}));
+        amrex::Real[2] i00jm1;
+        n00j00.getVal(i00jm1, amrex::IntVect({imid-1,jmid-1,0}));
+        amrex::Real[2] i00j00;
+        n00j00.getVal(i00j00, amrex::IntVect({imid-1,jmid-1,0}));
 /*
   const amrex::Real tj00 = std::atan2(
             0.25*(n00j00_arr(imid-1,jmid-1,0,1) + n00j00_arr(imid-1,jmid,0,1) + n00j00_arr(imid,jmid-1,0,1) + n00j00_arr(imid,jmid,0,1)),
@@ -521,13 +524,21 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         LaserFFT::VendorExecute( m_plan_bkw );
 #endif
 
+        amrex::Box grown_bx = bx;
+        grown_bx.grow(m_slices_nguards);
         // Normalize and store solution in np1j00[0]
+
         const amrex::Real inv_numPts = 1./bx.numPts();
         amrex::ParallelFor(
-            bx,
+            grown_bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
-                np1j00_arr(i,j,k,0) = sol_arr(i,j,k).real() * inv_numPts;
-                np1j00_arr(i,j,k,1) = sol_arr(i,j,k).imag() * inv_numPts;
+                if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
+                    np1j00_arr(i,j,k,0) = sol_arr(i,j,k).real() * inv_numPts;
+                    np1j00_arr(i,j,k,1) = sol_arr(i,j,k).imag() * inv_numPts;
+                } else {
+                    np1j00_arr(i,j,k,0) = 0._rt;
+                    np1j00_arr(i,j,k,1) = 0._rt;
+                }
             });
     }
 }

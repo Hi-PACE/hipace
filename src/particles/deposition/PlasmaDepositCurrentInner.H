@@ -216,6 +216,7 @@ void doDepositionShapeN (const bool use_laser,
                 const amrex::ParticleReal yp = positions.pos(1);
 
                 amrex::ParticleReal Aabssqp = 0._rt;
+
                 if constexpr (t_use_laser) {
                     if (a_arr) { // use_laser
                         doLaserGatherShapeN<depos_order_xy,0> (xp, yp, 0._rt, // zp not used

@@ -73,6 +73,7 @@ public:
 
     ~Laser ()
     {
+        if (!m_use_laser) return;
         LaserFFT::VendorDestroy( m_plan_fwd );
         LaserFFT::VendorDestroy( m_plan_bkw );
     }

@@ -707,6 +707,10 @@ Hipace::ResetAllQuantities ()
             }
         }
     }
+
+    if (m_laser.m_use_laser){
+        m_laser.getSlices(WhichLaserSlice::n00j00).setVal(0.);
+    }
 }
 
 void
@@ -870,13 +874,17 @@ Hipace::ExplicitSolveBxBy (const int lev)
                     const amrex::Real cdy_jz  = - dy_jz;
                     const amrex::Real cdy_psi =   dy_psi;
 
+                    const amrex::Real a2ip1j00 = a(i+1,j,k,0)*a(i+1,j,k,0) + a(i+1,j,k,1)*a(i+1,j,k,1);
+                    const amrex::Real a2im1j00 = a(i-1,j,k,0)*a(i-1,j,k,0) + a(i-1,j,k,1)*a(i-1,j,k,1);
+                    const amrex::Real a2i00jp1 = a(i,j+1,k,0)*a(i,j+1,k,0) + a(i,j+1,k,1)*a(i,j+1,k,1);
+                    const amrex::Real a2i00jm1 = a(i,j-1,k,0)*a(i,j-1,k,0) + a(i,j-1,k,1)*a(i,j-1,k,1);
                     // laser field is always in normalized units
                     const amrex::Real casqdx = use_laser ?
-                        ( a(i+1,j,k)*a(i+1,j,k) - a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
+                        ( a2ip1j00 - a2im1j00 )/(2._rt*dx)
                         * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
                         : 0._rt;
                     const amrex::Real casqdy = use_laser ?
-                        ( a(i,j+1,k)*a(i,j+1,k) - a(i,j-1,k)*a(i,j-1,k) )/(2._rt*dy)
+                        ( a2i00jp1 - a2i00jm1 )/(2._rt*dy)
                         * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
                         : 0._rt;
 
