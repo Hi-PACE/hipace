@@ -109,7 +109,8 @@ public:
     void Copy (int isl, bool to3d, bool init);
 
     void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
-    void AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSliceExplicit (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
 
     void InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Real dt);
     void SolvePoissonLocal(const amrex::Box& bx);
@@ -128,6 +129,7 @@ private:
     int m_3d_on_host {0};/** Whether the 3D laser envelope is stored in host or device memory */
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
+    std::string m_solver_type = "fft";
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};

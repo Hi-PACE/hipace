@@ -96,6 +96,7 @@ Hipace::Hipace () :
     m_multi_beam(this),
     m_multi_plasma(this),
     m_adaptive_time_step(m_multi_beam.get_nbeams()),
+    m_laser(),
     m_diags(this->maxLevel()+1)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
@@ -173,6 +174,8 @@ Hipace::Hipace () :
     MPI_Comm_rank(m_comm_xy, &m_rank_xy);
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
 #endif
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !( (m_numprocs_z > 1) && m_laser.m_use_laser ),
+        "The laser solver currently works for serial runs only");
 }
 
 Hipace::~Hipace ()
@@ -571,10 +574,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
-        // TODO Push laser envelope
-        // m_laser.InitLaserSlice2(Geom(0), islice_coarse, m_dt);
-        // m_laser.AdvanceSlice(m_fields, Geom(0), m_dt);
-        m_laser.AdvanceSlice3(m_fields, Geom(0), m_dt);
+        // Advance laser slice by 1 step and store result to 3D array
+        m_laser.AdvanceSlice(m_fields, Geom(0), m_dt);
         m_laser.Copy(islice_coarse, true, false);
 
         // After this, the parallel context is the full 3D communicator again

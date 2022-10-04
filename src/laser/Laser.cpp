@@ -42,6 +42,8 @@ Laser::ReadParameters ()
     amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
     queryWithParser(pp, "position_mean", loc_array);
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
+    queryWithParser(pp, "solver_type", m_solver_type);
+    AMREX_ALWAYS_ASSERT(m_solver_type == "explicit" || m_solver_type == "fft");
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
 }
 
@@ -52,6 +54,7 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
 {
     if (!m_use_laser) return;
     HIPACE_PROFILE("Laser::InitData()");
+
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
@@ -70,37 +73,43 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
     m_rhs.resize(bx, 1, amrex::The_Arena());
     m_rhs_fourier.resize(bx, 1, amrex::The_Arena());
 
-    // Create FFT plans
-    amrex::IntVect fft_size = bx.length();
+    if (m_solver_type == "fft") {
+
+        // Create FFT plans
+        amrex::IntVect fft_size = bx.length();
+
 #ifdef AMREX_USE_CUDA
-    cufftResult result;
-    result = LaserFFT::VendorCreate(
-        &(m_plan_fwd), fft_size[1], fft_size[0], CUFFT_Z2Z);
-    if ( result != CUFFT_SUCCESS ) {
-        amrex::Print() << " cufftplan failed! Error: " <<
-            CuFFTUtils::cufftErrorToString(result) << "\n";
-    }
-    result = LaserFFT::VendorCreate(
-        &(m_plan_bkw), fft_size[1], fft_size[0], CUFFT_Z2Z);
-    if ( result != CUFFT_SUCCESS ) {
-        amrex::Print() << " cufftplan failed! Error: " <<
-            CuFFTUtils::cufftErrorToString(result) << "\n";
-    }
+        cufftResult result;
+        // Forward FFT plan
+        result = LaserFFT::VendorCreate(
+            &(m_plan_fwd), fft_size[1], fft_size[0], CUFFT_Z2Z);
+        if ( result != CUFFT_SUCCESS ) {
+            amrex::Print() << " cufftplan failed! Error: " <<
+                CuFFTUtils::cufftErrorToString(result) << "\n";
+        }
+        // Backward FFT plan
+        result = LaserFFT::VendorCreate(
+            &(m_plan_bkw), fft_size[1], fft_size[0], CUFFT_Z2Z);
+        if ( result != CUFFT_SUCCESS ) {
+            amrex::Print() << " cufftplan failed! Error: " <<
+                CuFFTUtils::cufftErrorToString(result) << "\n";
+        }
 #elif defined(AMREX_USE_HIP)
 #else
-    // Forward FFT plan
-    m_plan_fwd = LaserFFT::VendorCreate(
-        fft_size[1], fft_size[0],
-        reinterpret_cast<fftw_complex*>(m_rhs.dataPtr()),
-        reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
-        FFTW_FORWARD, FFTW_ESTIMATE);
-    // Backward FFT plan
-    m_plan_bkw = LaserFFT::VendorCreate(
-        fft_size[1], fft_size[0],
-        reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
-        reinterpret_cast<fftw_complex*>(m_sol.dataPtr()),
-        FFTW_BACKWARD, FFTW_ESTIMATE);
+        // Forward FFT plan
+        m_plan_fwd = LaserFFT::VendorCreate(
+            fft_size[1], fft_size[0],
+            reinterpret_cast<fftw_complex*>(m_rhs.dataPtr()),
+            reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
+            FFTW_FORWARD, FFTW_ESTIMATE);
+        // Backward FFT plan
+        m_plan_bkw = LaserFFT::VendorCreate(
+            fft_size[1], fft_size[0],
+            reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
+            reinterpret_cast<fftw_complex*>(m_sol.dataPtr()),
+            FFTW_BACKWARD, FFTW_ESTIMATE);
 #endif
+    }
 }
 
 void
@@ -146,7 +155,6 @@ Laser::Copy (int isl, bool to3d, bool init)
 
     for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        // amrex::Print()<<"copy bx "<<bx<<'\n';
         amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         amrex::Array4<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
@@ -162,7 +170,8 @@ Laser::Copy (int isl, bool to3d, bool init)
         bx, 2,
         [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
         {
-            // n should always be 0 here
+            // +2 in 3D array means old.
+            // 2 components for complex numbers.
             if (to3d){
                 // next time slice into new host
                 host_arr(i,j,isl,n) = np1j00_arr(i,j,k,n);
@@ -178,7 +187,6 @@ Laser::Copy (int isl, bool to3d, bool init)
                     }
                 }
             } else {
-                // +2 means old
                 nm1jm1_arr(i,j,k,n) = isl-1 >= izmin ? host_arr(i,j,isl-1,n+2) : 0._rt;
                 nm1j00_arr(i,j,k,n) = host_arr(i,j,isl,n+2);
                 nm1jp1_arr(i,j,k,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
@@ -196,12 +204,28 @@ Laser::Copy (int isl, bool to3d, bool init)
 void
 Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
+    if (m_solver_type == "explicit") {
+        AdvanceSliceExplicit(fields, geom, dt);
+    } else if (m_solver_type == "fft") {
+        AdvanceSliceFFT(fields, geom, dt);
+    } else {
+        amrex::Abort("<laser name>.solver_type must be fft or explicit");
+    }
+}
+
+void
+Laser::AdvanceSliceExplicit (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
+{
+
     if (!m_use_laser) return;
+
+    HIPACE_PROFILE("Laser::AdvanceSliceExplicit()");
+
     using namespace amrex::literals;
+
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
     const amrex::Real dz = geom.CellSize(2);
-    constexpr amrex::Real pi = MathConst::pi;
 
     const amrex::Real c = get_phys_const().c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
@@ -340,9 +364,13 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
 }
 
 void
-Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
+Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
+
     if (!m_use_laser) return;
+
+    HIPACE_PROFILE("Laser::AdvanceSliceExplicit()");
+
     using namespace amrex;
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
@@ -374,7 +402,10 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        // solution: cmplex array
+        // solution: complex array
+        // The right-hand side is computed and stored in rhs
+        // Then rhs is Fourier-transformed into rhs_fourier, then multiplied by -1/(k**2+a)
+        // rhs_fourier is FFT-back-transformed to sol, and sol is normalized and copied into np1j00.
         amrex::Array4<Complex> sol_arr = m_sol.array();
         amrex::Array4<Complex> rhs_arr = m_rhs.array();
         amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
@@ -391,6 +422,8 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         int const Nx = bx.length(0);
         int const Ny = bx.length(1);
+
+        // Get the central point. Useful to get the on-axis phase and calculate kx and ky
         int const imid = (Nx+1)/2;
         int const jmid = (Ny+1)/2;
         const auto plo = geom.ProbLoArray();
@@ -399,7 +432,8 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         // Just once, on axis, as done in Wake-T
         // This is done with a reduce operation, returning the sum of the four elements nearest
         // the axis (both real and imag parts, and for the 3 arrays relevant) ...
-        ReduceOps<ReduceOpSum, ReduceOpSum> reduce_op;
+        ReduceOps<ReduceOpSum, ReduceOpSum, ReduceOpSum,
+                  ReduceOpSum, ReduceOpSum, ReduceOpSum> reduce_op;
 	ReduceData<Real, Real, Real, Real, Real, Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(bx, reduce_data,
@@ -529,10 +563,9 @@ Laser::AdvanceSlice3 (const Fields& fields, const amrex::Geometry& geom, const a
         LaserFFT::VendorExecute( m_plan_bkw );
 #endif
 
+        // Normalize and store solution in np1j00[0]. Guard cells are filled with 0s.
         amrex::Box grown_bx = bx;
         grown_bx.grow(m_slices_nguards);
-        // Normalize and store solution in np1j00[0]
-
         const amrex::Real inv_numPts = 1./bx.numPts();
         amrex::ParallelFor(
             grown_bx,
@@ -565,7 +598,6 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
     const amrex::Real a0 = m_a0;
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
     const amrex::Real w0 = m_w0[0];
-    const amrex::Real tau = m_tau;
     const amrex::Real x0 = m_position_mean[0];
     const amrex::Real y0 = m_position_mean[1];
     const amrex::Real z0 = m_position_mean[2];
