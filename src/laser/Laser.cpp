@@ -40,6 +40,7 @@ Laser::ReadParameters ()
     if (duration_is_specified) m_L0 = m_tau/get_phys_const().c;
     getWithParser(pp, "lambda0", m_lambda0);
     amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+    queryWithParser(pp, "focal_distance", m_focal_distance);
     queryWithParser(pp, "position_mean", loc_array);
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
     queryWithParser(pp, "solver_type", m_solver_type);
@@ -602,6 +603,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
     const amrex::Real y0 = m_position_mean[1];
     const amrex::Real z0 = m_position_mean[2];
     const amrex::Real L0 = m_L0;
+    const amrex::Real zfoc = m_focal_distance;
 
     AMREX_ALWAYS_ASSERT(m_w0[0] == m_w0[1]);
     AMREX_ALWAYS_ASSERT(x0 == 0._rt);
@@ -629,7 +631,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
+                amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
                 const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
                 const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
 
@@ -637,7 +639,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
                 Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
                 Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                 Complex prefactor = a0/diffract_factor;
-                Complex time_exponent = (z-z0)*(z-z0)/(L0*L0);
+                Complex time_exponent = (z-z0+zfoc)*(z-z0+zfoc)/(L0*L0);
                 Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                 Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                 Complex envelope = stcfactor * amrex::exp( exp_argument );
@@ -649,7 +651,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Rea
                 diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
                 inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                 prefactor = a0/diffract_factor;
-                time_exponent = (z-z0+c*dt)*(z-z0+c*dt)/(L0*L0);
+                time_exponent = (z-z0+c*dt+zfoc)*(z-z0+c*dt+zfoc)/(L0*L0);
                 stcfactor = prefactor * amrex::exp( - time_exponent );
                 exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                 envelope = stcfactor * amrex::exp( exp_argument );

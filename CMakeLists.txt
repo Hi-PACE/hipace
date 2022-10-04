@@ -387,6 +387,11 @@ if(BUILD_TESTING)
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        #add_test(NAME laser.SI.1Rank
+        #         COMMAND ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum_open_boundary.normalized.1Rank.sh
+        #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+        #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        #)
     endif()
 endif()
 

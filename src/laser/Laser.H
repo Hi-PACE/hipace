@@ -127,6 +127,7 @@ private:
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
     int m_3d_on_host {0};/** Whether the 3D laser envelope is stored in host or device memory */
+    amrex::Real m_focal_distance {0.};
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
     std::string m_solver_type = "fft";
