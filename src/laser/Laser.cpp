@@ -440,7 +440,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // the axis (both real and imag parts, and for the 3 arrays relevant) ...
         ReduceOps<ReduceOpSum, ReduceOpSum, ReduceOpSum,
                   ReduceOpSum, ReduceOpSum, ReduceOpSum> reduce_op;
-	ReduceData<Real, Real, Real, Real, Real, Real> reduce_data(reduce_op);
+        ReduceData<Real, Real, Real, Real, Real, Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(bx, reduce_data,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
@@ -523,8 +523,8 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
             CUFFT_FORWARD);
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-		CuFFTUtils::cufftErrorToString(result) << "\n";
-	}
+                CuFFTUtils::cufftErrorToString(result) << "\n";
+        }
 #elif defined(AMREX_USE_HIP)
         amrex::Abort("Not implemented");
 #else
@@ -561,8 +561,8 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
             CUFFT_INVERSE);
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-		CuFFTUtils::cufftErrorToString(result) << "\n";
-	}
+                CuFFTUtils::cufftErrorToString(result) << "\n";
+        }
 #elif defined(AMREX_USE_HIP)
         amrex::Abort("Not implemented");
 #else
