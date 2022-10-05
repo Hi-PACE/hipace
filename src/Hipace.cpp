@@ -12,6 +12,7 @@
 #include "particles/SliceSort.H"
 #include "particles/BoxSort.H"
 #include "utils/IOUtil.H"
+#include "utils/GPUUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
 #include "mg_solver/HpMultiGrid.H"
 
@@ -757,9 +758,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
         amrex::Box const& bx = mfi.tilebox();
 
-        amrex::Array4<amrex::Real> const isl_arr = slicemf.array(mfi);
-        amrex::Array4<const amrex::Real> const nsl_arr = nslicemf.const_array(mfi);
-        amrex::Array4<const amrex::Real> const psl_arr = pslicemf.const_array(mfi);
+        Array3<amrex::Real> const isl_arr = slicemf.array(mfi);
+        Array3<const amrex::Real> const nsl_arr = nslicemf.const_array(mfi);
+        Array3<const amrex::Real> const psl_arr = pslicemf.const_array(mfi);
 
         const int mult = Comps[isl]["Mult"];
         const int Sx = Comps[isl]["Sx"];
@@ -773,12 +774,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
         const int prev_jyb = Comps[psl]["jy_beam"];
 
         amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                const amrex::Real dx_jzb = (isl_arr(i+1,j,k,jzb)-isl_arr(i-1,j,k,jzb))/(2._rt*dx);
-                const amrex::Real dy_jzb = (isl_arr(i,j+1,k,jzb)-isl_arr(i,j-1,k,jzb))/(2._rt*dy);
-                const amrex::Real dz_jxb = (psl_arr(i,j,k,prev_jxb)-nsl_arr(i,j,k,next_jxb))/(2._rt*dz);
-                const amrex::Real dz_jyb = (psl_arr(i,j,k,prev_jyb)-nsl_arr(i,j,k,next_jyb))/(2._rt*dz);
+                const amrex::Real dx_jzb = (isl_arr(i+1,j,jzb)-isl_arr(i-1,j,jzb))/(2._rt*dx);
+                const amrex::Real dy_jzb = (isl_arr(i,j+1,jzb)-isl_arr(i,j-1,jzb))/(2._rt*dy);
+                const amrex::Real dz_jxb = (psl_arr(i,j,prev_jxb)-nsl_arr(i,j,next_jxb))/(2._rt*dz);
+                const amrex::Real dz_jyb = (psl_arr(i,j,prev_jyb)-nsl_arr(i,j,next_jyb))/(2._rt*dz);
 
                 const amrex::Real cdx_jzb = - dx_jzb;
                 const amrex::Real cdy_jzb = - dy_jzb;
@@ -786,12 +787,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb =   dz_jyb;
 
                 // sy, to compute Bx
-                isl_arr(i,j,k,Sy) =   pc.mu0 * (
+                isl_arr(i,j,Sy) =   pc.mu0 * (
                                     + cdy_jzb
                                     + cdz_jyb);
 
                 // sx, to compute By
-                isl_arr(i,j,k,Sx) = - pc.mu0 * (
+                isl_arr(i,j,Sx) = - pc.mu0 * (
                                     + cdx_jzb
                                     + cdz_jxb);
             });
@@ -821,31 +822,31 @@ Hipace::ExplicitSolveBxBy (const int lev)
             amrex::ParallelFor(bx,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                 {
-                    const amrex::Real dx_jxy = (isl_arr(i+1,j,k,jxy)-isl_arr(i-1,j,k,jxy))/(2._rt*dx);
-                    const amrex::Real dx_jxx = (isl_arr(i+1,j,k,jxx)-isl_arr(i-1,j,k,jxx))/(2._rt*dx);
-                    const amrex::Real dx_jz  = (isl_arr (i+1,j,k,jz)-isl_arr (i-1,j,k,jz))/(2._rt*dx);
-                    const amrex::Real dx_psi = (isl_arr(i+1,j,k,psi)-isl_arr(i-1,j,k,psi))/(2._rt*dx);
+                    const amrex::Real dx_jxy = (isl_arr(i+1,j,jxy)-isl_arr(i-1,j,jxy))/(2._rt*dx);
+                    const amrex::Real dx_jxx = (isl_arr(i+1,j,jxx)-isl_arr(i-1,j,jxx))/(2._rt*dx);
+                    const amrex::Real dx_jz  = (isl_arr (i+1,j,jz)-isl_arr (i-1,j,jz))/(2._rt*dx);
+                    const amrex::Real dx_psi = (isl_arr(i+1,j,psi)-isl_arr(i-1,j,psi))/(2._rt*dx);
 
-                    const amrex::Real dy_jyy = (isl_arr(i,j+1,k,jyy)-isl_arr(i,j-1,k,jyy))/(2._rt*dy);
-                    const amrex::Real dy_jxy = (isl_arr(i,j+1,k,jxy)-isl_arr(i,j-1,k,jxy))/(2._rt*dy);
-                    const amrex::Real dy_jz  = (isl_arr (i,j+1,k,jz)-isl_arr (i,j-1,k,jz))/(2._rt*dy);
-                    const amrex::Real dy_psi = (isl_arr(i,j+1,k,psi)-isl_arr(i,j-1,k,psi))/(2._rt*dy);
+                    const amrex::Real dy_jyy = (isl_arr(i,j+1,jyy)-isl_arr(i,j-1,jyy))/(2._rt*dy);
+                    const amrex::Real dy_jxy = (isl_arr(i,j+1,jxy)-isl_arr(i,j-1,jxy))/(2._rt*dy);
+                    const amrex::Real dy_jz  = (isl_arr (i,j+1,jz)-isl_arr (i,j-1,jz))/(2._rt*dy);
+                    const amrex::Real dy_psi = (isl_arr(i,j+1,psi)-isl_arr(i,j-1,psi))/(2._rt*dy);
 
                     // Store (i,j,k) cell value in local variable.
                     // NOTE: a few -1 factors are added here, due to discrepancy in definitions
                     // between WAND-PIC and HiPACE++:
                     //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                    const amrex::Real cez     =   isl_arr(i,j,k,ez);
-                    const amrex::Real cbz     =   isl_arr(i,j,k,bz);
-                    const amrex::Real cpsi    =   isl_arr(i,j,k,psi);
+                    const amrex::Real cez     =   isl_arr(i,j,ez);
+                    const amrex::Real cbz     =   isl_arr(i,j,bz);
+                    const amrex::Real cpsi    =   isl_arr(i,j,psi);
 
-                    const amrex::Real cne     = - isl_arr(i,j,k,rho);
-                    const amrex::Real cjx     = - isl_arr(i,j,k,jx);
-                    const amrex::Real cjy     = - isl_arr(i,j,k,jy);
-                    const amrex::Real cjz     = - isl_arr(i,j,k,jz);
-                    const amrex::Real cjxx    = - isl_arr(i,j,k,jxx);
-                    const amrex::Real cjxy    = - isl_arr(i,j,k,jxy);
-                    const amrex::Real cjyy    = - isl_arr(i,j,k,jyy);
+                    const amrex::Real cne     = - isl_arr(i,j,rho);
+                    const amrex::Real cjx     = - isl_arr(i,j,jx);
+                    const amrex::Real cjy     = - isl_arr(i,j,jy);
+                    const amrex::Real cjz     = - isl_arr(i,j,jz);
+                    const amrex::Real cjxx    = - isl_arr(i,j,jxx);
+                    const amrex::Real cjxy    = - isl_arr(i,j,jxy);
+                    const amrex::Real cjyy    = - isl_arr(i,j,jyy);
 
                     const amrex::Real cdx_jxx = - dx_jxx;
                     const amrex::Real cdx_jxy = - dx_jxy;
@@ -884,25 +885,25 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                     - cjyy*cdy_psi / pc.c);
 
                     // Should only have 1 component, but not supported yet by the AMReX MG solver
-                    isl_arr(i,j,k,mult) += nstar / (const_of_motion + cpsi) / pc.ep0;
+                    isl_arr(i,j,mult) += nstar / (const_of_motion + cpsi) / pc.ep0;
                     if (ncomp_mult==2) {
-                        isl_arr(i,j,k,mult+1) += nstar / (const_of_motion + cpsi) / pc.ep0;
+                        isl_arr(i,j,mult+1) += nstar / (const_of_motion + cpsi) / pc.ep0;
                     }
 
                     // sy, to compute Bx
-                    isl_arr(i,j,k,Sy) += pc.mu0 * (
-                                       + cbz * cjx / (const_of_motion+cpsi) * pc.c
-                                       + nstar_ay
-                                       - cdx_jxy / pc.c
-                                       - cdy_jyy / pc.c
-                                       + cdy_jz);
+                    isl_arr(i,j,Sy) += pc.mu0 * (
+                                     + cbz * cjx / (const_of_motion+cpsi) * pc.c
+                                     + nstar_ay
+                                     - cdx_jxy / pc.c
+                                     - cdy_jyy / pc.c
+                                     + cdy_jz);
                     // sx, to compute By
-                    isl_arr(i,j,k,Sx) -= pc.mu0 * (
-                                       - cbz * cjy / (const_of_motion+cpsi) * pc.c
-                                       + nstar_ax
-                                       - cdx_jxx / pc.c
-                                       - cdy_jxy / pc.c
-                                       + cdx_jz);
+                    isl_arr(i,j,Sx) -= pc.mu0 * (
+                                     - cbz * cjy / (const_of_motion+cpsi) * pc.c
+                                     + nstar_ax
+                                     - cdx_jxx / pc.c
+                                     - cdy_jxy / pc.c
+                                     + cdx_jz);
                 });
             }
     }

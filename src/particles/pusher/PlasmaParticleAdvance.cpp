@@ -17,6 +17,7 @@
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/GPUUtil.H"
 #include "particles/ParticleUtil.H"
 
 #include <string>
@@ -47,28 +48,15 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
-        // Extract the fields
-        const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-        const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
-        const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
-        const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
-        const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
-        const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
-        const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
-        // Extract FabArray for this box
-        const amrex::FArrayBox& exmby_fab = exmby[pti];
-        const amrex::FArrayBox& eypbx_fab = eypbx[pti];
-        const amrex::FArrayBox& ez_fab = ez[pti];
-        const amrex::FArrayBox& bx_fab = bx[pti];
-        const amrex::FArrayBox& by_fab = by[pti];
-        const amrex::FArrayBox& bz_fab = bz[pti];
         // Extract field array from FabArray
-        amrex::Array4<const amrex::Real> const& exmby_arr = exmby_fab.array();
-        amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx_fab.array();
-        amrex::Array4<const amrex::Real> const& ez_arr = ez_fab.array();
-        amrex::Array4<const amrex::Real> const& bx_arr = bx_fab.array();
-        amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
-        amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[pti];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int exmby_comp = Comps[WhichSlice::This]["ExmBy"];
+        const int eypbx_comp = Comps[WhichSlice::This]["EypBx"];
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+        const int bx_comp = Comps[WhichSlice::This]["Bx"];
+        const int by_comp = Comps[WhichSlice::This]["By"];
+        const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
         // extract the laser Fields
         const bool use_laser = laser.m_use_laser;
@@ -81,9 +69,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
         // Offset for converting positions to indexes
-        amrex::Real const x_pos_offset = GetPosOffset(0, gm, ez_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, ez_fab.box());
-        amrex::Real const z_pos_offset = GetPosOffset(2, gm, ez_fab.box());
+        amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
+        amrex::Real const z_pos_offset = GetPosOffset(2, gm, slice_fab.box());
 
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
@@ -174,11 +162,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     if (do_update)
                     {
                         // field gather for a single particle
-                        doGatherShapeN(xp, yp, 0 /* zp not used */,
-                                       ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                                       exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                                       dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
-                                       depos_order_xy, 0);
+                        doGatherShapeN(xp, yp,
+                                       ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
+                                       exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                                       dx_arr, x_pos_offset, y_pos_offset, depos_order_xy);
 
                         if (use_laser) {
                             doLaserGatherShapeN(xp, yp, 0._rt /* zp not used */,

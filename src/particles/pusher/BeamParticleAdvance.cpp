@@ -12,6 +12,7 @@
 #include "utils/Constants.H"
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/GPUUtil.H"
 #include "GetDomainLev.H"
 
 void
@@ -34,31 +35,23 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const amrex::Real dt = Hipace::m_dt / n_subcycles;
     const int depos_order_xy = Hipace::m_depos_order_xy;
 
-    // Extract the fields
-    const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-    const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
-    const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
-    const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
-    const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
-    const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
-    const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
-
     // Extract field array from FabArrays in MultiFabs.
     // (because there is currently no transverse parallelization, the index
     // we want in the slice multifab is always 0. Fix later.
-    amrex::Array4<const amrex::Real> const& exmby_arr = exmby[0].array();
-    amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx[0].array();
-    amrex::Array4<const amrex::Real> const& ez_arr = ez[0].array();
-    amrex::Array4<const amrex::Real> const& bx_arr = bx[0].array();
-    amrex::Array4<const amrex::Real> const& by_arr = by[0].array();
-    amrex::Array4<const amrex::Real> const& bz_arr = bz[0].array();
+    const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[0];
+    Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+    const int exmby_comp = Comps[WhichSlice::This]["ExmBy"];
+    const int eypbx_comp = Comps[WhichSlice::This]["EypBx"];
+    const int ez_comp = Comps[WhichSlice::This]["Ez"];
+    const int bx_comp = Comps[WhichSlice::This]["Bx"];
+    const int by_comp = Comps[WhichSlice::This]["By"];
+    const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     // Offset for converting positions to indexes
-    amrex::Real const x_pos_offset = GetPosOffset(0, gm, ez[0].box());
-    const amrex::Real y_pos_offset = GetPosOffset(1, gm, ez[0].box());
-    amrex::Real const z_pos_offset = GetPosOffset(2, gm, ez[0].box());
+    amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
+    const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
 
     // Extract particle properties
     auto& soa = beam.GetStructOfArrays(); // For momenta and weights
@@ -118,11 +111,10 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                doGatherShapeN(xp, yp, 0 /* zp not used */,
-                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                               exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                               dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
-                               depos_order_xy, 0);
+                doGatherShapeN(xp, yp,
+                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
+                               exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                               dx_arr, x_pos_offset, y_pos_offset, depos_order_xy);
 
                 ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
                                    external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);

@@ -8,6 +8,7 @@
  */
 #include "AnyDST.H"
 #include "RocFFTUtils.H"
+#include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_Config.H>
@@ -26,21 +27,21 @@ namespace AnyDST
         const int nx = bx.length(0);
         const int ny = bx.length(1);
         const amrex::IntVect lo = bx.smallEnd();
-        amrex::Array4<amrex::Real const> const & src_array = src.array();
-        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+        Array2<amrex::Real const> const src_array = src.const_array(scomp);
+        Array2<amrex::Real> const dst_array = dst.array(dcomp);
 
         amrex::ParallelFor(
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int)
             {
                 /* upper left quadrant */
-                dst_array(i+1,j+1,lo[2],dcomp) = src_array(i, j, lo[2], scomp);
+                dst_array(i+1,j+1) = src_array(i, j);
                 /* lower left quadrant */
-                dst_array(i+1,j+ny+2,lo[2],dcomp) = -src_array(i, ny-1-j+2*lo[1], lo[2], scomp);
+                dst_array(i+1,j+ny+2) = -src_array(i, ny-1-j+2*lo[1]);
                 /* upper right quadrant */
-                dst_array(i+nx+2,j+1,lo[2],dcomp) = -src_array(nx-1-i+2*lo[0], j, lo[2], scomp);
+                dst_array(i+nx+2,j+1) = -src_array(nx-1-i+2*lo[0], j);
                 /* lower right quadrant */
-                dst_array(i+nx+2,j+ny+2,lo[2],dcomp) = src_array(nx-1-i+2*lo[0], ny-1-j+2*lo[1], lo[2], scomp);
+                dst_array(i+nx+2,j+ny+2) = src_array(nx-1-i+2*lo[0], ny-1-j+2*lo[1]);
             }
             );
     }
@@ -53,14 +54,14 @@ namespace AnyDST
         constexpr int dcomp = 0;
 
         const amrex::Box bx = dst.box();
-        amrex::Array4<amrex::GpuComplex<amrex::Real> const> const & src_array = src.array();
-        amrex::Array4<amrex::Real> const & dst_array = dst.array();
+        Array2<amrex::GpuComplex<amrex::Real> const> const src_array = src.const_array(scomp);
+        Array2<amrex::Real> const dst_array = dst.array(dcomp);
         amrex::ParallelFor(
             bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            [=] AMREX_GPU_DEVICE(int i, int j, int)
             {
                 /* upper left quadrant */
-                dst_array(i,j,k,dcomp) = -src_array(i+1, j+1, 0, scomp).real();
+                dst_array(i,j) = -src_array(i+1, j+1).real();
             }
             );
     }

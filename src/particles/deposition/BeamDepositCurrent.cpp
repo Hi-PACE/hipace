@@ -43,34 +43,28 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
 
+    const bool do_beam_jz_deposition = which_slice == WhichSlice::This;
+    const bool do_beam_rho_deposition = which_slice == WhichSlice::This && do_beam_jz_minus_rho;
+
     // Extract the fields currents
-    amrex::MultiFab& S = fields.getSlices(lev, which_slice);
+    // Extract FabArray for this box (because there is currently no transverse
+    // parallelization, the index we want in the slice multifab is always 0.
+    // Fix later.
+    amrex::FArrayBox& isl_fab = fields.getSlices(lev, which_slice)[0];
     // we deposit to the beam currents, because the explicit solver
     // requires sometimes just the beam currents
     // Do not access the field if the kernel later does not deposit into it,
     // the field might not be allocated. Use 0 as dummy component instead
     const std::string beam_str = explicit_solve ? "_beam" : "";
-    amrex::MultiFab jx_beam(S, amrex::make_alias,
-        do_beam_jx_jy_deposition ? Comps[which_slice]["jx"+beam_str] : 0, 1);
-    amrex::MultiFab jy_beam(S, amrex::make_alias,
-        do_beam_jx_jy_deposition ? Comps[which_slice]["jy"+beam_str] : 0, 1);
-    amrex::MultiFab jz_beam(S, amrex::make_alias,
-        which_slice == WhichSlice::This ? Comps[which_slice]["jz"+beam_str] : 0, 1);
-    amrex::MultiFab rho_beam(S, amrex::make_alias,
-        which_slice == WhichSlice::This && do_beam_jz_minus_rho ? Comps[which_slice]["rho"+beam_str] : 0, 1);
-
-    // Extract FabArray for this box (because there is currently no transverse
-    // parallelization, the index we want in the slice multifab is always 0.
-    // Fix later.
-    amrex::FArrayBox& jxb_fab = jx_beam[0];
-    amrex::FArrayBox& jyb_fab = jy_beam[0];
-    amrex::FArrayBox& jzb_fab = jz_beam[0];
-    amrex::FArrayBox& rhob_fab = rho_beam[0];
+    const int  jxb_cmp = do_beam_jx_jy_deposition ? Comps[which_slice]["jx" +beam_str] : -1;
+    const int  jyb_cmp = do_beam_jx_jy_deposition ? Comps[which_slice]["jy" +beam_str] : -1;
+    const int  jzb_cmp = do_beam_jz_deposition    ? Comps[which_slice]["jz" +beam_str] : -1;
+    const int rhob_cmp = do_beam_rho_deposition   ? Comps[which_slice]["rho"+beam_str] : -1;
 
     // Offset for converting positions to indexes
-    amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], jxb_fab.box());
-    amrex::Real const y_pos_offset = GetPosOffset(1, gm[lev], jxb_fab.box());
-    amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev], jxb_fab.box());
+    amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
+    amrex::Real const y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
+    amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev], isl_fab.box());
 
     amrex::Real lev_weight_fac = 1.;
     if (lev == 1 && Hipace::m_normalized_units) {
@@ -85,21 +79,21 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     // Call deposition function in each box
     if        (Hipace::m_depos_order_xy == 0){
-        doDepositionShapeN<0, 0>( beam, jxb_fab, jyb_fab, jzb_fab, rhob_fab, dx, x_pos_offset, y_pos_offset,
-                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
-                                  which_slice, nghost, do_beam_jz_minus_rho);
+        doDepositionShapeN<0, 0>( beam, isl_fab, jxb_cmp, jyb_cmp, jzb_cmp, rhob_cmp, dx,
+                                  x_pos_offset, y_pos_offset, z_pos_offset, q, islice, bins, offset,
+                                  do_beam_jx_jy_deposition, which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 1){
-        doDepositionShapeN<1, 0>( beam, jxb_fab, jyb_fab, jzb_fab, rhob_fab, dx, x_pos_offset, y_pos_offset,
-                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
-                                  which_slice, nghost, do_beam_jz_minus_rho);
+        doDepositionShapeN<1, 0>( beam, isl_fab, jxb_cmp, jyb_cmp, jzb_cmp, rhob_cmp, dx,
+                                  x_pos_offset, y_pos_offset, z_pos_offset, q, islice, bins, offset,
+                                  do_beam_jx_jy_deposition, which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 2){
-        doDepositionShapeN<2, 0>( beam, jxb_fab, jyb_fab, jzb_fab, rhob_fab, dx, x_pos_offset, y_pos_offset,
-                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
-                                  which_slice, nghost, do_beam_jz_minus_rho);
+        doDepositionShapeN<2, 0>( beam, isl_fab, jxb_cmp, jyb_cmp, jzb_cmp, rhob_cmp, dx,
+                                  x_pos_offset, y_pos_offset, z_pos_offset, q, islice, bins, offset,
+                                  do_beam_jx_jy_deposition, which_slice, nghost);
     } else if (Hipace::m_depos_order_xy == 3){
-        doDepositionShapeN<3, 0>( beam, jxb_fab, jyb_fab, jzb_fab, rhob_fab, dx, x_pos_offset, y_pos_offset,
-                                  z_pos_offset, q, islice, bins, offset, do_beam_jx_jy_deposition,
-                                  which_slice, nghost, do_beam_jz_minus_rho);
+        doDepositionShapeN<3, 0>( beam, isl_fab, jxb_cmp, jyb_cmp, jzb_cmp, rhob_cmp, dx,
+                                  x_pos_offset, y_pos_offset, z_pos_offset, q, islice, bins, offset,
+                                  do_beam_jx_jy_deposition, which_slice, nghost);
     } else {
         amrex::Abort("unknown deposition order");
     }
