@@ -81,15 +81,25 @@ public:
     void ReadParameters ();
 
     /** get function for the 2D slices
-     * \param[in] islice slice index */
+     * \param[in] islice slice index
+     */
     amrex::MultiFab& getSlices (int islice) {return m_slices[islice]; }
+
     /** get function for the 2D slices (const version)
-     * \param[in] islice slice index */
+     * \param[in] islice slice index
+     */
     const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
+
+    /** Retun the 3D FArrayBox containing the laser envelope, const version */
     const amrex::FArrayBox& getFAB () const {return m_F;};
+
+    /** Retun the 3D FArrayBox containing the laser envelope, non-const version */
     amrex::FArrayBox& getFAB () {return m_F;};
 
-    /** \brief Allocate laser multifab */
+    /** \brief Allocate laser multifab
+     * \param[in] slice_ba box array of the slice
+     * \param[in] slice_dm corresponding distribution mapping
+     */
     void InitData (const amrex::BoxArray& slice_ba,
                    const amrex::DistributionMapping& slice_dm);
 
@@ -108,16 +118,44 @@ public:
      */
     void Copy (int isl, bool to3d, bool init);
 
+    /** Wrapper function to advance a laser slice by 1 time step.
+     * \param[in] fields Field object
+     * \param[in] geom Geometry object
+     * \param[in] dt time step of the simulation
+     */
     void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
-    void AdvanceSliceExplicit (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+
+    /** Advance a laser slice by 1 time step using a multigrid solver.
+     * The complex phase of the envelope is evaluated everywhere.
+     *
+     * \param[in] fields Field object
+     * \param[in] geom Geometry object
+     * \param[in] dt time step of the simulation
+     */
+    void AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+
+    /** Advance a laser slice by 1 time step using a FFT solver.
+     * The complex phase of the envelope is evaluated on-axis only.
+     *
+     * \param[in] fields Field object
+     * \param[in] geom Geometry object
+     * \param[in] dt time step of the simulation
+     */
     void AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
 
+    /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
+     * and nm1j00 (previous time step).
+     *
+     * \param[in] geom Geometry object for the slice
+     * \param[in] islice slice index
+     * \param[in] dt time step
+     */
     void InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Real dt);
-    void SolvePoissonLocal(const amrex::Box& bx);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
 private:
+
     std::string m_name = "laser"; /**< name of the laser */
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::RealVect m_w0 {0., 0., 0.}; /**< Laser waist in x and y (the third value is omitted) */
@@ -150,10 +188,15 @@ private:
     // - The array in position space must be Complex rather than real, which takes up quite some
     //   rewriting, see https://github.com/MaxThevenet/hipace/tree/laser_solve,
     // not sure what the best way to proceed is.
+    /** FFTW plan for forward C2C transform to solve Complex Poisson equation */
     LaserFFT::VendorFFT m_plan_fwd;
+    /** FFTW plan for backward C2C transform to solve Complex Poisson equation */
     LaserFFT::VendorFFT m_plan_bkw;
+    /** Complex FAB to store the solution (e.g. laser envelope on current slice) */
     SpectralFieldLoc m_sol;
+    /** Complex FAB to store the RHS in position space */
     SpectralFieldLoc m_rhs;
+    /** Complex FAB to store the RHS in Fourier space */
     SpectralFieldLoc m_rhs_fourier;
 #ifdef AMREX_USE_CUDA
     cufftResult m_result_fwd;

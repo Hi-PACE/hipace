@@ -157,6 +157,7 @@ public:
      * \param[in] calc_geom main geometry
      * \param[in] diag_comps_vect the field components to copy
      * \param[in] ncomp number of components to copy
+     * \param[in] laser Laser object
      */
      void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
                 amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,

@@ -215,7 +215,7 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
     if (!m_use_laser) return;
 
     if (m_solver_type == "explicit") {
-        AdvanceSliceExplicit(fields, geom, dt);
+        AdvanceSliceMG(fields, geom, dt);
     } else if (m_solver_type == "fft") {
         AdvanceSliceFFT(fields, geom, dt);
     } else {
@@ -224,10 +224,10 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
 }
 
 void
-Laser::AdvanceSliceExplicit (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
+Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
 
-    HIPACE_PROFILE("Laser::AdvanceSliceExplicit()");
+    HIPACE_PROFILE("Laser::AdvanceSliceMG()");
 
     using namespace amrex::literals;
 
