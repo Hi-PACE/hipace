@@ -54,6 +54,7 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
                  const amrex::DistributionMapping& slice_dm)
 {
     if (!m_use_laser) return;
+
     HIPACE_PROFILE("Laser::InitData()");
 
     // Alloc 2D slices
@@ -116,7 +117,9 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
 void
 Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm, const amrex::Real dt)
 {
+
     if (!m_use_laser) return;
+
     HIPACE_PROFILE("Laser::Init3DEnvelope()");
     // Allocate the 3D field on this box
     // Note: box has no guard cells
@@ -138,9 +141,12 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm, const
 void
 Laser::Copy (int isl, bool to3d, bool init)
 {
-    using namespace amrex::literals;
-    HIPACE_PROFILE("Laser::Copy()");
     if (!m_use_laser) return;
+
+    using namespace amrex::literals;
+
+    HIPACE_PROFILE("Laser::Copy()");
+
     amrex::MultiFab& nm1jm1 = m_slices[WhichLaserSlice::nm1jm1];
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
@@ -205,6 +211,9 @@ Laser::Copy (int isl, bool to3d, bool init)
 void
 Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
+
+    if (!m_use_laser) return;
+
     if (m_solver_type == "explicit") {
         AdvanceSliceExplicit(fields, geom, dt);
     } else if (m_solver_type == "fft") {
@@ -217,8 +226,6 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
 void
 Laser::AdvanceSliceExplicit (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
-
-    if (!m_use_laser) return;
 
     HIPACE_PROFILE("Laser::AdvanceSliceExplicit()");
 
@@ -367,8 +374,6 @@ Laser::AdvanceSliceExplicit (const Fields& fields, const amrex::Geometry& geom, 
 void
 Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
-
-    if (!m_use_laser) return;
 
     HIPACE_PROFILE("Laser::AdvanceSliceExplicit()");
 
