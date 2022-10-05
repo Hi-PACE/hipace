@@ -13,6 +13,7 @@
 #include "OpenBoundary.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
+#include "utils/GPUUtil.H"
 #include "particles/ShapeFactors.H"
 
 using namespace amrex::literals;
@@ -193,14 +194,14 @@ Fields::AllocData (
 template<int dir>
 struct derivative_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> array;
+    Array2<amrex::Real const> array;
     amrex::Real dx_inv;
 
     // derivative of field in dir direction (x or y)
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
         constexpr bool is_x_dir = dir == Direction::x;
         constexpr bool is_y_dir = dir == Direction::y;
-        return (array(i+is_x_dir,j+is_y_dir,k) - array(i-is_x_dir,j-is_y_dir,k)) * dx_inv;
+        return (array(i+is_x_dir,j+is_y_dir) - array(i-is_x_dir,j-is_y_dir)) * dx_inv;
     }
 };
 
@@ -208,13 +209,13 @@ struct derivative_inner {
 template<>
 struct derivative_inner<Direction::z> {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> array1;
-    amrex::Array4<amrex::Real const> array2;
+    Array2<amrex::Real const> array1;
+    Array2<amrex::Real const> array2;
     amrex::Real dz_inv;
 
     // derivative of field in z direction
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
-        return (array1(i,j,k) - array2(i,j,k)) * dz_inv;
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
+        return (array1(i,j) - array2(i,j)) * dz_inv;
     }
 };
 
@@ -301,14 +302,13 @@ struct interpolated_field_xy {
 /** \brief inner version of interpolated_field_z */
 struct interpolated_field_z_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> arr_this;
-    amrex::Array4<amrex::Real const> arr_prev;
+    Array2<amrex::Real const> arr_this;
+    Array2<amrex::Real const> arr_prev;
     amrex::Real rel_z;
-    int lo2;
 
     // linear longitudinal field interpolation
     AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
-        return (1._rt-rel_z)*arr_this(i, j, lo2) + rel_z*arr_prev(i, j, lo2);
+        return (1._rt-rel_z)*arr_this(i, j) + rel_z*arr_prev(i, j);
     }
 };
 
@@ -322,7 +322,7 @@ struct interpolated_field_z {
     // use .array(mfi) like with amrex::MultiFab
     interpolated_field_z_inner array (amrex::MFIter& mfi) const {
         return interpolated_field_z_inner{
-            mfab_this.array(mfi), mfab_prev.array(mfi), rel_z, mfab_this[mfi].box().smallEnd(2)};
+            mfab_this.array(mfi), mfab_prev.array(mfi), rel_z};
     }
 };
 
@@ -331,28 +331,32 @@ struct interpolated_field_z {
 template<int interp_order_xy>
 using interpolated_field_xyz = interpolated_field_xy<interp_order_xy, interpolated_field_z>;
 
-/** \brief inner version of guarded_field */
-struct guarded_field_inner {
+/** \brief inner version of guarded_field_xy */
+struct guarded_field_xy_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> array;
-    amrex::Box bx;
+    Array3<amrex::Real const> array;
+    int lox;
+    int hix;
+    int loy;
+    int hiy;
 
-    template<class...Args>
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k, Args...args) const noexcept {
-        if (bx.contains(i,j,k)) {
-            return array(i,j,k,args...);
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int n) const noexcept {
+        if (lox <= i && i <= hix && loy <= j && j <= hiy) {
+            return array(i,j,n);
         } else return 0._rt;
     }
 };
 
 /** \brief if indices are outside of the fields box zero is returned */
-struct guarded_field {
+struct guarded_field_xy {
     // use brace initialization as constructor
     amrex::MultiFab& mfab; // field to be guarded (zero extended)
 
     // use .array(mfi) like with amrex::MultiFab
-    guarded_field_inner array (amrex::MFIter& mfi) const {
-        return guarded_field_inner{mfab.array(mfi), mfab[mfi].box()};
+    guarded_field_xy_inner array (amrex::MFIter& mfi) const {
+        const amrex::Box bx = mfab[mfi].box();
+        return guarded_field_xy_inner{mfab.const_array(mfi), bx.smallEnd(Direction::x),
+            bx.bigEnd(Direction::x), bx.smallEnd(Direction::y), bx.bigEnd(Direction::y)};
     }
 };
 
@@ -378,24 +382,24 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
     for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-        const auto dst_array = dst.array(mfi);
-        const auto src_a_array = src_a.array(mfi);
-        const auto src_b_array = src_b.array(mfi);
+        const Array2<amrex::Real> dst_array = dst.array(mfi);
+        const auto src_a_array = to_array2(src_a.array(mfi));
+        const auto src_b_array = to_array2(src_b.array(mfi));
         const amrex::Box bx = mfi.growntilebox(box_grow);
         const int box_i_lo = bx.smallEnd(Direction::x);
         const int box_j_lo = bx.smallEnd(Direction::y);
         const int box_i_hi = bx.bigEnd(Direction::x);
         const int box_j_hi = bx.bigEnd(Direction::y);
         amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
             {
                 const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
                 const amrex::Real tmp =
-                    inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                    inside ? factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j) : 0._rt;
                 if (do_add) {
-                    dst_array(i,j,k) += tmp;
+                    dst_array(i,j) += tmp;
                 } else {
-                    dst_array(i,j,k) = tmp;
+                    dst_array(i,j) = tmp;
                 }
             });
     }
@@ -458,9 +462,9 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     if (diag_box.isEmpty()) return;
     auto& slice_mf = m_slices[lev][WhichSlice::This];
-    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{{slice_mf}, calc_geom};
+    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
     auto& laser_mf = laser.getSlices(WhichLaserSlice::n00j00);
-    auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field>{{laser_mf}, calc_geom};
+    auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
     for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
@@ -469,7 +473,6 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
 
         const int *diag_comps = diag_comps_vect.data();
         const amrex::Real *rel_z_data = m_rel_z_vec.data();
-        const int lo2 = slice_mf[mfi].box().smallEnd(2);
         const amrex::Real dx = diag_geom.CellSize(0);
         const amrex::Real dy = diag_geom.CellSize(1);
 
@@ -479,7 +482,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 const amrex::Real x = i * dx + poff_diag_x;
                 const amrex::Real y = j * dy + poff_diag_y;
                 const int m = n[diag_comps];
-                diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,lo2,m);
+                diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
             });
         amrex::Gpu::Device::synchronize();
         if (!laser.m_use_laser) return;
@@ -566,7 +569,7 @@ Fields::AddRhoIons (const int lev, bool inverse)
  */
 template<class Functional>
 void
-SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver_size,
+SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
                         const amrex::Geometry& geom, const Functional& boundary_value)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
@@ -579,7 +582,6 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver
     const int box_len1 = solver_size.length(1);
     const int box_lo0 = solver_size.smallEnd(0);
     const int box_lo1 = solver_size.smallEnd(1);
-    const int box_lo2 = solver_size.smallEnd(2);
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
     const amrex::Real offset0 = GetPosOffset(0, geom, solver_size);
@@ -609,8 +611,7 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver
             const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
 
             // atomic add because the corners of RHS get two values
-            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx, box_lo2)),
-                                         - boundary_value(x, y) / dxdx);
+            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx)), - boundary_value(x, y) / dxdx);
         });
 }
 
@@ -628,7 +629,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             "Open Boundaries only work for lev0 with everything in one box");
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
-        const auto arr_staging_area = staging_area_fab.array();
+        const Array2<amrex::Real> arr_staging_area = staging_area_fab.array();
         const amrex::Box staging_box = staging_area_fab.box();
 
         const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
@@ -653,7 +654,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         MultipoleTuple coeff_tuple =
         amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
                          staging_area, m_source_nguard,
-            [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
+            [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int) noexcept
             {
                 const amrex::Real x = (i * dx + poff_x) * scale;
                 const amrex::Real y = (j * dy + poff_y) * scale;
@@ -665,7 +666,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                         0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt
                     };
                 }
-                amrex::Real s_v = arr_staging_area(i, j, k);
+                amrex::Real s_v = arr_staging_area(i, j);
                 return GetMultipoleCoeffs(s_v, x, y);
             }
         );
@@ -700,7 +701,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
-            const auto arr_staging_area = staging_area.array(mfi);
+            const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
             const amrex::Box fine_staging_box = staging_area[mfi].box();
 
             SetDirichletBoundaries(arr_staging_area,fine_staging_box,geom[lev],arr_solution_interp);
@@ -732,7 +733,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     for (amrex::MFIter mfi( field_fine, false); mfi.isValid(); ++mfi)
     {
         auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
-        auto arr_field_fine = field_fine.array(mfi);
+        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
         const amrex::Box fine_box_extended = mfi.growntilebox(outer_edge);
         const amrex::Box fine_box_narrow = mfi.growntilebox(inner_edge);
 
@@ -747,14 +748,14 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         const amrex::Real offset1 = GetPosOffset(1, geom[lev], fine_box_extended);
 
         amrex::ParallelFor(fine_box_extended,
-            [=] AMREX_GPU_DEVICE (int i, int j , int k) noexcept
+            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
             {
                 // set interpolated values near edge of fine field between outer_edge and inner_edge
                 // to compensate for incomplete charge/current deposition in those cells
                 if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
                     amrex::Real x = i * dx + offset0;
                     amrex::Real y = j * dy + offset1;
-                    arr_field_fine(i,j,k) = arr_field_coarse_interp(x,y);
+                    arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
                 }
             });
     }
@@ -811,20 +812,20 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
     for ( amrex::MFIter mfi(f_ExmBy, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-        const amrex::Array4<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
-        const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
-        const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
+        const Array2<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
+        const Array2<amrex::Real> array_EypBx = f_EypBx.array(mfi);
+        const Array2<amrex::Real const> array_Psi = f_Psi.const_array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
         const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
         const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 
         amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            [=] AMREX_GPU_DEVICE(int i, int j, int)
             {
                 // derivatives in x and y direction, no guards needed
-                array_ExmBy(i,j,k) = - (array_Psi(i+1,j,k) - array_Psi(i-1,j,k))*dx_inv;
-                array_EypBx(i,j,k) = - (array_Psi(i,j+1,k) - array_Psi(i,j-1,k))*dy_inv;
+                array_ExmBy(i,j) = - (array_Psi(i+1,j) - array_Psi(i-1,j))*dx_inv;
+                array_EypBx(i,j) = - (array_Psi(i,j+1) - array_Psi(i,j-1))*dy_inv;
             });
     }
 }
@@ -1038,23 +1039,23 @@ Fields::ComputeRelBFieldError (
 
     for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real const> const & Bx_array = Bx.array(mfi);
-        amrex::Array4<amrex::Real const> const & Bx_iter_array = Bx_iter.array(mfi);
-        amrex::Array4<amrex::Real const> const & By_array = By.array(mfi);
-        amrex::Array4<amrex::Real const> const & By_iter_array = By_iter.array(mfi);
+        Array2<amrex::Real const> const Bx_array = Bx.array(mfi, Bx_comp);
+        Array2<amrex::Real const> const Bx_iter_array = Bx_iter.array(mfi, Bx_iter_comp);
+        Array2<amrex::Real const> const By_array = By.array(mfi, By_comp);
+        Array2<amrex::Real const> const By_iter_array = By_iter.array(mfi, By_iter_comp);
 
         amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
+        [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
         {
             amrex::Gpu::deviceReduceSum(p_norm_B, std::sqrt(
-                                        Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
-                                        By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp)),
+                                        Bx_array(i, j) * Bx_array(i, j) +
+                                        By_array(i, j) * By_array(i, j)),
                                         handler);
             amrex::Gpu::deviceReduceSum(p_norm_Bdiff, std::sqrt(
-                            ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
-                            ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
-                            ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
-                            ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) )),
+                            ( Bx_array(i, j) - Bx_iter_array(i, j) ) *
+                            ( Bx_array(i, j) - Bx_iter_array(i, j) ) +
+                            ( By_array(i, j) - By_iter_array(i, j) ) *
+                            ( By_array(i, j) - By_iter_array(i, j) )),
                             handler);
         }
         );
