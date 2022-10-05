@@ -1,7 +1,7 @@
 Get started
 ===========
 
-A full HiPACE++ input file can be found below, with a detailed description of the main parameters.
+useless change. A full HiPACE++ input file can be found below, with a detailed description of the main parameters.
 All the input parameters available in the simulation are available in the :doc:`parameters` section.
 
 .. literalinclude:: ../../../examples/get_started/inputs_normalized
