@@ -874,19 +874,19 @@ Hipace::ExplicitSolveBxBy (const int lev)
                     const amrex::Real cdy_jz  = - dy_jz;
                     const amrex::Real cdy_psi =   dy_psi;
 
-                    const amrex::Real a2ip1j00 = a(i+1,j,k,0)*a(i+1,j,k,0) + a(i+1,j,k,1)*a(i+1,j,k,1);
-                    const amrex::Real a2im1j00 = a(i-1,j,k,0)*a(i-1,j,k,0) + a(i-1,j,k,1)*a(i-1,j,k,1);
-                    const amrex::Real a2i00jp1 = a(i,j+1,k,0)*a(i,j+1,k,0) + a(i,j+1,k,1)*a(i,j+1,k,1);
-                    const amrex::Real a2i00jm1 = a(i,j-1,k,0)*a(i,j-1,k,0) + a(i,j-1,k,1)*a(i,j-1,k,1);
+                    const amrex::Real a2ip1j00 = use_laser ?
+                        a(i+1,j,k,0)*a(i+1,j,k,0) + a(i+1,j,k,1)*a(i+1,j,k,1) : 0._rt;
+                    const amrex::Real a2im1j00 = use_laser ?
+                        a(i-1,j,k,0)*a(i-1,j,k,0) + a(i-1,j,k,1)*a(i-1,j,k,1) : 0._rt;
+                    const amrex::Real a2i00jp1 = use_laser ?
+                        a(i,j+1,k,0)*a(i,j+1,k,0) + a(i,j+1,k,1)*a(i,j+1,k,1) : 0._rt;
+                    const amrex::Real a2i00jm1 = use_laser ?
+                        a(i,j-1,k,0)*a(i,j-1,k,0) + a(i,j-1,k,1)*a(i,j-1,k,1) : 0._rt;
                     // laser field is always in normalized units
-                    const amrex::Real casqdx = use_laser ?
-                        ( a2ip1j00 - a2im1j00 )/(2._rt*dx)
-                        * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
-                        : 0._rt;
-                    const amrex::Real casqdy = use_laser ?
-                        ( a2i00jp1 - a2i00jm1 )/(2._rt*dy)
-                        * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
-                        : 0._rt;
+                    const amrex::Real casqdx = ( a2ip1j00 - a2im1j00 )/(2._rt*dx)
+                        * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c;
+                    const amrex::Real casqdy = ( a2i00jp1 - a2i00jm1 )/(2._rt*dy)
+                        * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c;
 
                     // to calculate nstar, only the plasma current density is needed
                     const amrex::Real nstar = cne - cjz / pc.c;
