@@ -108,6 +108,7 @@ public:
      * \param[in] step time step of the simulation
      * \param[in] bx Box on which the laser field is initialized
      * \param[in] gm Geometry of the problem
+     * \param[in] dt time step
      */
     void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm, const amrex::Real dt);
 
