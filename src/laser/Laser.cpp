@@ -162,16 +162,16 @@ Laser::Copy (int isl, bool to3d, bool init)
 
     for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
-        amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
-        amrex::Array4<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
-        amrex::Array4<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
-        amrex::Array4<amrex::Real> n00j00_arr = n00j00.array(mfi);
-        amrex::Array4<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
-        amrex::Array4<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        amrex::Array4<amrex::Real> np1j00_arr = np1j00.array(mfi);
-        amrex::Array4<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
-        amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        Array3<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
+        Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
+        Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
+        Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
+        Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
+        Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
+        Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
+        Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
+        Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
+        Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         amrex::Array4<amrex::Real> host_arr = m_F.array();
         amrex::ParallelFor(
         bx, 2,
@@ -181,28 +181,28 @@ Laser::Copy (int isl, bool to3d, bool init)
             // 2 components for complex numbers.
             if (to3d){
                 // next time slice into new host
-                host_arr(i,j,isl,n) = np1j00_arr(i,j,k,n);
+                host_arr(i,j,isl,n) = np1j00_arr(i,j,n);
                 if (init) {
-                    host_arr(i,j,isl,n+2) = n00j00_arr(i,j,k,n);
+                    host_arr(i,j,isl,n+2) = n00j00_arr(i,j,n);
                 }
                 // this slice into old host
                 // Cannot update slice isl or isl+1 of old array because we'll need the
                 // previous value when computing the next slice.
                 if (!init) {
                     if (isl+2 <= izmax){
-                        host_arr(i,j,isl+2,n+2) = n00jp2_arr(i,j,k,n);
+                        host_arr(i,j,isl+2,n+2) = n00jp2_arr(i,j,n);
                     }
                 }
             } else {
-                nm1jm1_arr(i,j,k,n) = isl-1 >= izmin ? host_arr(i,j,isl-1,n+2) : 0._rt;
-                nm1j00_arr(i,j,k,n) = host_arr(i,j,isl,n+2);
-                nm1jp1_arr(i,j,k,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
-                nm1jp2_arr(i,j,k,n) = isl+2 <= izmax ? host_arr(i,j,isl+2,n+2) : 0._rt;
-                n00jp2_arr(i,j,k,n) = n00jp1_arr(i,j,k,n);
-                n00jp1_arr(i,j,k,n) = n00j00_arr(i,j,k,n);
-                n00j00_arr(i,j,k,n) = host_arr(i,j,isl,n);
-                np1jp2_arr(i,j,k,n) = np1jp1_arr(i,j,k,n);
-                np1jp1_arr(i,j,k,n) = np1j00_arr(i,j,k,n);
+                nm1jm1_arr(i,j,n) = isl-1 >= izmin ? host_arr(i,j,isl-1,n+2) : 0._rt;
+                nm1j00_arr(i,j,n) = host_arr(i,j,isl,n+2);
+                nm1jp1_arr(i,j,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
+                nm1jp2_arr(i,j,n) = isl+2 <= izmax ? host_arr(i,j,isl+2,n+2) : 0._rt;
+                n00jp2_arr(i,j,n) = n00jp1_arr(i,j,n);
+                n00jp1_arr(i,j,n) = n00j00_arr(i,j,n);
+                n00j00_arr(i,j,n) = host_arr(i,j,isl,n);
+                np1jp2_arr(i,j,n) = np1jp1_arr(i,j,n);
+                np1jp1_arr(i,j,n) = np1j00_arr(i,j,n);
             }
         });
     }
@@ -262,35 +262,35 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
 
         acoeff_imag.resize(bx, 1, amrex::The_Arena());
         rhs.resize(bx, 2, amrex::The_Arena());
-        amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
-        amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
-        amrex::Array4<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
-        amrex::Array4<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
-        amrex::Array4<amrex::Real> n00j00_arr = n00j00.array(mfi);
-        amrex::Array4<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
-        amrex::Array4<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        amrex::Array4<amrex::Real> np1j00_arr = np1j00.array(mfi);
-        amrex::Array4<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
-        amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
-        amrex::Array4<amrex::Real> rhs_arr    = rhs.array();
-        amrex::Array4<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
+        Array3<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
+        Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
+        Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
+        Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
+        Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
+        Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
+        Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
+        Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
+        Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
+        Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        Array3<amrex::Real> rhs_arr    = rhs.array();
+        Array3<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
         const int ic = (bx.smallEnd(0)+bx.bigEnd(0))/2;
         const int jc = (bx.smallEnd(1)+bx.bigEnd(1))/2;
 
         amrex::ParallelFor(
             bx, 1,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+            [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
             {
                 // Calculate complex arguments (theta) needed
                 const amrex::Real tj00 = std::atan2(
-                    0.25*(n00j00_arr(i-1,j-1,0,1) + n00j00_arr(i-1,j,0,1) + n00j00_arr(i,j-1,0,1) + n00j00_arr(i,j,0,1)),
-                    0.25*(n00j00_arr(i-1,j-1,0,0) + n00j00_arr(i-1,j,0,0) + n00j00_arr(i,j-1,0,0) + n00j00_arr(i,j,0,0)));
+                    0.25*(n00j00_arr(i-1,j-1,1) + n00j00_arr(i-1,j,1) + n00j00_arr(i,j-1,1) + n00j00_arr(i,j,1)),
+                    0.25*(n00j00_arr(i-1,j-1,0) + n00j00_arr(i-1,j,0) + n00j00_arr(i,j-1,0) + n00j00_arr(i,j,0)));
                 const amrex::Real tjp1 = std::atan2(
-                    0.25*(n00jp1_arr(i-1,j-1,0,1) + n00jp1_arr(i-1,j,0,1) + n00jp1_arr(i,j-1,0,1) + n00jp1_arr(i,j,0,1)),
-                    0.25*(n00jp1_arr(i-1,j-1,0,0) + n00jp1_arr(i-1,j,0,0) + n00jp1_arr(i,j-1,0,0) + n00jp1_arr(i,j,0,0)));
+                    0.25*(n00jp1_arr(i-1,j-1,1) + n00jp1_arr(i-1,j,1) + n00jp1_arr(i,j-1,1) + n00jp1_arr(i,j,1)),
+                    0.25*(n00jp1_arr(i-1,j-1,0) + n00jp1_arr(i-1,j,0) + n00jp1_arr(i,j-1,0) + n00jp1_arr(i,j,0)));
                 const amrex::Real tjp2 = std::atan2(
-                    0.25*(n00jp2_arr(i-1,j-1,0,1) + n00jp2_arr(i-1,j,0,1) + n00jp2_arr(i,j-1,0,1) + n00jp2_arr(i,j,0,1)),
-                    0.25*(n00jp2_arr(i-1,j-1,0,0) + n00jp2_arr(i-1,j,0,0) + n00jp2_arr(i,j-1,0,0) + n00jp2_arr(i,j,0,0)));
+                    0.25*(n00jp2_arr(i-1,j-1,1) + n00jp2_arr(i-1,j,1) + n00jp2_arr(i,j-1,1) + n00jp2_arr(i,j,1)),
+                    0.25*(n00jp2_arr(i-1,j-1,0) + n00jp2_arr(i-1,j,0) + n00jp2_arr(i,j-1,0) + n00jp2_arr(i,j,0)));
                 amrex::Real dt1 = tj00 - tjp1;
                 amrex::Real dt2 = tj00 - tjp2;
                 if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
@@ -303,43 +303,43 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
                 amrex::Real sdt2 = std::sin(dt2);
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                    (nm1j00_arr(i+1,j,k,0)+nm1j00_arr(i-1,j,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dx*dx) +
-                    (nm1j00_arr(i,j+1,k,0)+nm1j00_arr(i,j-1,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dy*dy) : 0._rt;
+                    (nm1j00_arr(i+1,j,0)+nm1j00_arr(i-1,j,0)-2._rt*nm1j00_arr(i,j,0))/(dx*dx) +
+                    (nm1j00_arr(i,j+1,0)+nm1j00_arr(i,j-1,0)-2._rt*nm1j00_arr(i,j,0))/(dy*dy) : 0._rt;
                 amrex::Real lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                    (nm1j00_arr(i+1,j,k,1)+nm1j00_arr(i-1,j,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dx*dx) +
-                    (nm1j00_arr(i,j+1,k,1)+nm1j00_arr(i,j-1,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dy*dy) : 0._rt;
+                    (nm1j00_arr(i+1,j,1)+nm1j00_arr(i-1,j,1)-2._rt*nm1j00_arr(i,j,1))/(dx*dx) +
+                    (nm1j00_arr(i,j+1,1)+nm1j00_arr(i,j-1,1)-2._rt*nm1j00_arr(i,j,1))/(dy*dy) : 0._rt;
                 // D_j^n as defined in Benedetti's 2017 paper
                 amrex::Real djn = -( 3._rt*tj00 - 4._rt*tjp1 + tjp2 ) / (2._rt*dz);
 
                 // Imag acoeff term (the Real part is just a scalar defined above)
-                acoeff_imag_arr(i,j,k,0) = -2._rt*( k0 + djn ) / (c*dt);
+                acoeff_imag_arr(i,j,0) = -2._rt*( k0 + djn ) / (c*dt);
                 // Real RHS term
-                rhs_arr(i,j,k,0) =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,k,0)-nm1jp1_arr(i,j,k,0))*cdt1 -
-                                       (np1jp1_arr(i,j,k,1)-nm1jp1_arr(i,j,k,1))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,k,0)-nm1jp2_arr(i,j,k,0))*cdt2 -
-                                       (np1jp2_arr(i,j,k,1)-nm1jp2_arr(i,j,k,1))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,k,0)
+                rhs_arr(i,j,0) =
+                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*cdt1 -
+                                       (np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*sdt1)
+                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*cdt2 -
+                                       (np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*sdt2)
+                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,0)
                     + 0.0000000
                     - lapR
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,k,0)
-                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,1)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,0)
-                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,1);
+                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,0)
+                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,1)
+                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,0)
+                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,1);
 
                 // Imag RHS term
-                rhs_arr(i,j,k,1) =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,k,1)-nm1jp1_arr(i,j,k,1))*cdt1 +
-                                       (np1jp1_arr(i,j,k,0)-nm1jp1_arr(i,j,k,0))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,k,1)-nm1jp2_arr(i,j,k,1))*cdt2 +
-                                       (np1jp2_arr(i,j,k,0)-nm1jp2_arr(i,j,k,0))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,k,1)
+                rhs_arr(i,j,1) =
+                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*cdt1 +
+                                       (np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*sdt1)
+                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*cdt2 +
+                                       (np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*sdt2)
+                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,1)
                     - 0.0000000
                     - lapI
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,k,1)
-                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,0)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,1)
-                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0);
+                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,1)
+                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,0)
+                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,1)
+                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,0);
             });
     }
 
@@ -412,20 +412,20 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // The right-hand side is computed and stored in rhs
         // Then rhs is Fourier-transformed into rhs_fourier, then multiplied by -1/(k**2+a)
         // rhs_fourier is FFT-back-transformed to sol, and sol is normalized and copied into np1j00.
-        amrex::Array4<Complex> sol_arr = m_sol.array();
-        amrex::Array4<Complex> rhs_arr = m_rhs.array();
-        amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
+        Array3<Complex> sol_arr = m_sol.array();
+        Array3<Complex> rhs_arr = m_rhs.array();
+        Array3<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
-        amrex::Array4<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
-        amrex::Array4<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
-        amrex::Array4<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
-        amrex::Array4<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
-        amrex::Array4<amrex::Real> n00j00_arr = n00j00.array(mfi);
-        amrex::Array4<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
-        amrex::Array4<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        amrex::Array4<amrex::Real> np1j00_arr = np1j00.array(mfi);
-        amrex::Array4<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
-        amrex::Array4<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        Array3<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
+        Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
+        Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
+        Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
+        Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
+        Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
+        Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
+        Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
+        Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
+        Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         int const Nx = bx.length(0);
         int const Ny = bx.length(1);
 
@@ -443,13 +443,13 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         ReduceData<Real, Real, Real, Real, Real, Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(bx, reduce_data,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
+        [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
         {
             if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
                 return {
-                    n00j00_arr(i,j,0,0), n00j00_arr(i,j,0,1),
-                    n00jp1_arr(i,j,0,0), n00jp1_arr(i,j,0,1),
-                    n00jp2_arr(i,j,0,0), n00jp2_arr(i,j,0,1)
+                    n00j00_arr(i,j,0), n00j00_arr(i,j,1),
+                    n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
+                    n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
                 };
             } else {
                 return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
@@ -476,39 +476,39 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         amrex::Real djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
         amrex::ParallelFor(
             bx, 1,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+            [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
             {
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                    (nm1j00_arr(i+1,j,k,0)+nm1j00_arr(i-1,j,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dx*dx) +
-                    (nm1j00_arr(i,j+1,k,0)+nm1j00_arr(i,j-1,k,0)-2._rt*nm1j00_arr(i,j,k,0))/(dy*dy) : 0._rt;
+                    (nm1j00_arr(i+1,j,0)+nm1j00_arr(i-1,j,0)-2._rt*nm1j00_arr(i,j,0))/(dx*dx) +
+                    (nm1j00_arr(i,j+1,0)+nm1j00_arr(i,j-1,0)-2._rt*nm1j00_arr(i,j,0))/(dy*dy) : 0._rt;
                 amrex::Real lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                    (nm1j00_arr(i+1,j,k,1)+nm1j00_arr(i-1,j,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dx*dx) +
-                    (nm1j00_arr(i,j+1,k,1)+nm1j00_arr(i,j-1,k,1)-2._rt*nm1j00_arr(i,j,k,1))/(dy*dy) : 0._rt;
+                    (nm1j00_arr(i+1,j,1)+nm1j00_arr(i-1,j,1)-2._rt*nm1j00_arr(i,j,1))/(dx*dx) +
+                    (nm1j00_arr(i,j+1,1)+nm1j00_arr(i,j-1,1)-2._rt*nm1j00_arr(i,j,1))/(dy*dy) : 0._rt;
                 // Real RHS term
                 const amrex::Real rhs_real =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,k,0)-nm1jp1_arr(i,j,k,0))*cdt1 -
-                                       (np1jp1_arr(i,j,k,1)-nm1jp1_arr(i,j,k,1))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,k,0)-nm1jp2_arr(i,j,k,0))*cdt2 -
-                                       (np1jp2_arr(i,j,k,1)-nm1jp2_arr(i,j,k,1))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,k,0)
+                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*cdt1 -
+                                       (np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*sdt1)
+                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*cdt2 -
+                                       (np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*sdt2)
+                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,0)
                     - lapR
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,k,0)
-                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,1)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,0)
-                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,1);
+                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,0)
+                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,1)
+                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,0)
+                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,1);
                 const amrex::Real rhs_imag =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,k,1)-nm1jp1_arr(i,j,k,1))*cdt1 +
-                                       (np1jp1_arr(i,j,k,0)-nm1jp1_arr(i,j,k,0))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,k,1)-nm1jp2_arr(i,j,k,1))*cdt2 +
-                                       (np1jp2_arr(i,j,k,0)-nm1jp2_arr(i,j,k,0))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,k,1)
+                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*cdt1 +
+                                       (np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*sdt1)
+                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*cdt2 +
+                                       (np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*sdt2)
+                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,1)
                     - lapI
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,k,1)
-                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,k,0)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,k,1)
-                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,k,0);
-                rhs_arr(i,j,k) = rhs_real+I*rhs_imag;
+                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,1)
+                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,0)
+                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,1)
+                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,0);
+                rhs_arr(i,j,0) = rhs_real+I*rhs_imag;
             });
 
         // Transform rhs to Fourier space
@@ -575,13 +575,13 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         const amrex::Real inv_numPts = 1./bx.numPts();
         amrex::ParallelFor(
             grown_bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
-                    np1j00_arr(i,j,k,0) = sol_arr(i,j,k).real() * inv_numPts;
-                    np1j00_arr(i,j,k,1) = sol_arr(i,j,k).imag() * inv_numPts;
+                    np1j00_arr(i,j,0) = sol_arr(i,j,0).real() * inv_numPts;
+                    np1j00_arr(i,j,1) = sol_arr(i,j,0).imag() * inv_numPts;
                 } else {
-                    np1j00_arr(i,j,k,0) = 0._rt;
-                    np1j00_arr(i,j,k,1) = 0._rt;
+                    np1j00_arr(i,j,0) = 0._rt;
+                    np1j00_arr(i,j,1) = 0._rt;
                 }
             });
     }
