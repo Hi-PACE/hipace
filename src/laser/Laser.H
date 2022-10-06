@@ -31,7 +31,9 @@ namespace LaserFFT {
     using cufftComplex = cuDoubleComplex;
 #  endif
 #elif defined(AMREX_USE_HIP)
-    // TODO
+    using VendorFFT = rocfft_plan;
+    const auto VendorDestroy = rocfft_plan_destroy;
+// TODO
 #else
 #  ifdef AMREX_USE_FLOAT
     using VendorFFT = fftwf_plan;
@@ -49,7 +51,7 @@ namespace LaserFFT {
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
-    enum slice { nm1jm1, nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
+    enum slice { nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
 };
 
 class Fields;
@@ -91,10 +93,10 @@ public:
     const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
 
     /** Retun the 3D FArrayBox containing the laser envelope, const version */
-    const amrex::FArrayBox& getFAB () const {return m_F;};
+    const amrex::FArrayBox& getFAB () const {return m_F;}
 
     /** Retun the 3D FArrayBox containing the laser envelope, non-const version */
-    amrex::FArrayBox& getFAB () {return m_F;};
+    amrex::FArrayBox& getFAB () {return m_F;}
 
     /** \brief Allocate laser multifab
      * \param[in] slice_ba box array of the slice

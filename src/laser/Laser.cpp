@@ -147,7 +147,6 @@ Laser::Copy (int isl, bool to3d, bool init)
 
     HIPACE_PROFILE("Laser::Copy()");
 
-    amrex::MultiFab& nm1jm1 = m_slices[WhichLaserSlice::nm1jm1];
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
     amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
@@ -162,7 +161,6 @@ Laser::Copy (int isl, bool to3d, bool init)
 
     for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        Array3<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
         Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
@@ -194,7 +192,6 @@ Laser::Copy (int isl, bool to3d, bool init)
                     }
                 }
             } else {
-                nm1jm1_arr(i,j,n) = isl-1 >= izmin ? host_arr(i,j,isl-1,n+2) : 0._rt;
                 nm1j00_arr(i,j,n) = host_arr(i,j,isl,n+2);
                 nm1jp1_arr(i,j,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
                 nm1jp2_arr(i,j,n) = isl+2 <= izmax ? host_arr(i,j,isl+2,n+2) : 0._rt;
@@ -238,7 +235,6 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
     const amrex::Real c = get_phys_const().c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
 
-    amrex::MultiFab& nm1jm1 = m_slices[WhichLaserSlice::nm1jm1];
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
     amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
@@ -262,24 +258,20 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
 
         acoeff_imag.resize(bx, 1, amrex::The_Arena());
         rhs.resize(bx, 2, amrex::The_Arena());
-        Array3<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
         Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
         Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
         Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
         Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
         Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
         Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         Array3<amrex::Real> rhs_arr    = rhs.array();
         Array3<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
-        const int ic = (bx.smallEnd(0)+bx.bigEnd(0))/2;
-        const int jc = (bx.smallEnd(1)+bx.bigEnd(1))/2;
 
         amrex::ParallelFor(
             bx, 1,
-            [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
+            [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
             {
                 // Calculate complex arguments (theta) needed
                 const amrex::Real tj00 = std::atan2(
@@ -380,7 +372,6 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
     using namespace amrex;
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
-    using SpectralFieldLoc = amrex::BaseFab <Complex>;
     constexpr const Complex I(0.,1.);
 
     const amrex::Real dx = geom.CellSize(0);
@@ -390,7 +381,6 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
     const amrex::Real c = get_phys_const().c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
 
-    amrex::MultiFab& nm1jm1 = m_slices[WhichLaserSlice::nm1jm1];
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
     amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
@@ -416,7 +406,6 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         Array3<Complex> rhs_arr = m_rhs.array();
         Array3<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
-        Array3<amrex::Real> nm1jm1_arr = nm1jm1.array(mfi);
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
         Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
@@ -432,7 +421,6 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // Get the central point. Useful to get the on-axis phase and calculate kx and ky
         int const imid = (Nx+1)/2;
         int const jmid = (Ny+1)/2;
-        const auto plo = geom.ProbLoArray();
 
         // Calculate complex arguments (theta) needed
         // Just once, on axis, as done in Wake-T
