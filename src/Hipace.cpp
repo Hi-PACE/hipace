@@ -595,7 +595,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
     // Set all quantities to 0 except Bx and By: the previous slice serves as initial
     // guess.
     m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
-        "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+                    "jx_beam", "jy_beam", "jz_beam", "rho_beam", "chi");
     for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
         m_fields.setVal(0., lev, WhichSlice::This,
             "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,

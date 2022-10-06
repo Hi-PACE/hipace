@@ -86,6 +86,8 @@ Fields::AllocData (
                     "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
             }
 
+            Comps[isl].multi_emplace(N_Comps[isl], "chi");
+
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
                 // for interpolating boundary conditions to level 1
@@ -117,6 +119,8 @@ Fields::AllocData (
             // Bx and By adjacent for explicit solver
             Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
                                                    "jx", "jy", "jz", "rho");
+
+            Comps[isl].multi_emplace(N_Comps[isl], "chi");
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -184,8 +188,8 @@ Fields::AllocData (
         for (int i=0; i<num_threads; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
-            // jx jy jz rho jxx jxy jyy
-            m_tmp_densities[i].resize(bx, 7);
+            // jx jy jz rho jxx jxy jyy chi
+            m_tmp_densities[i].resize(bx, 8);
         }
     }
 }

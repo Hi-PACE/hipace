@@ -415,6 +415,12 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
         Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
         Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+
+        constexpr int lev = 0;
+        const amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[mfi];
+        Array3<amrex::Real const> const isl_arr = isl_fab.array();
+        const int chi = Comps[WhichSlice::This]["chi"];
+
         int const Nx = bx.length(0);
         int const Ny = bx.length(1);
 
@@ -480,6 +486,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                     - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*cdt2 -
                                        (np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*sdt2)
                     - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,0)
+                    + 2._rt*isl_arr(i,j,chi)*isl_arr(i,j,chi)*n00j00_arr(i,j,0)
                     - lapR
                     + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,0)
                     - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,1)
@@ -491,6 +498,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                     - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*cdt2 +
                                        (np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*sdt2)
                     - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,1)
+                    - 2._rt*isl_arr(i,j,chi)*isl_arr(i,j,chi)*n00j00_arr(i,j,1)
                     - lapI
                     + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,1)
                     + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,0)
