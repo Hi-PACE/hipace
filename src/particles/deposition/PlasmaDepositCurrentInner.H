@@ -126,7 +126,6 @@ void doDepositionShapeN (const bool use_laser,
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clightinv = 1.0_rt/phys_const.c;
-    const amrex::Real chi_fac = phys_const.q_e*phys_const.q_e/(phys_const.c*phys_const.c*phys_const.m_e*phys_const.ep0);
 
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
@@ -197,7 +196,6 @@ void doDepositionShapeN (const bool use_laser,
                     charge, clightinv, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
                     isl_arr,
                     jx, jy, jz, rho, jxx, jxy, jyy, chi,
-                    chi_fac,
                     // tiling
                     indices, offsets, itile, itilex_bs, itiley_bs,
                     // laser
@@ -312,7 +310,7 @@ void doDepositionShapeN (const bool use_laser,
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
                         }
                         if (chi != -1) {
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wq*chi_fac/gamma);
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wq/gamma);
                         }
                     }
                 }

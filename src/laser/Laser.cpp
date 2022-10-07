@@ -378,8 +378,10 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
     const amrex::Real dy = geom.CellSize(1);
     const amrex::Real dz = geom.CellSize(2);
 
-    const amrex::Real c = get_phys_const().c;
+    const PhysConst phc = get_phys_const();
+    const amrex::Real c = phc.c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
+    const amrex::Real chi_fac = phc.q_e/(c*c*phc.m_e*phc.ep0);
 
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
@@ -486,7 +488,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                     - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*cdt2 -
                                        (np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*sdt2)
                     - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,0)
-                    + 2._rt*isl_arr(i,j,chi)*isl_arr(i,j,chi)*n00j00_arr(i,j,0)
+                    + 2._rt*isl_arr(i,j,chi)*n00j00_arr(i,j,0) * chi_fac
                     - lapR
                     + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,0)
                     - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,1)
@@ -498,7 +500,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                     - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*cdt2 +
                                        (np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*sdt2)
                     - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,1)
-                    - 2._rt*isl_arr(i,j,chi)*isl_arr(i,j,chi)*n00j00_arr(i,j,1)
+                    - 2._rt*isl_arr(i,j,chi)*n00j00_arr(i,j,1) * chi_fac
                     - lapI
                     + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,1)
                     + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,0)
