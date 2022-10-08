@@ -710,7 +710,10 @@ Hipace::ResetAllQuantities ()
     }
 
     if (m_laser.m_use_laser){
-        m_laser.getSlices(WhichLaserSlice::n00j00).setVal(0.);
+        // m_laser.getSlices(WhichLaserSlice::n00j00).setVal(0.);
+        for (int sl=WhichLaserSlice::nm1j00; sl!=WhichLaserSlice::N; sl++) {
+            m_laser.getSlices(sl).setVal(0.);
+        }
     }
 }
 
