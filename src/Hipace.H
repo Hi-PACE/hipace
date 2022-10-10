@@ -197,6 +197,9 @@ public:
      */
     void ResetAllQuantities ();
 
+    /** \brief reset all laser slices to 0 */
+    void ResetLaser ();
+
     /**
        \brief Calls FillBoundary on charges and currents on WhichSlice::This
      *

@@ -434,9 +434,10 @@ Hipace::Evolve ()
 
             if (m_laser.m_use_laser) {
                 AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
+                // Before that, the 3D fields of the envelope are not initialized (not even allocated).
+                m_laser.Init3DEnvelope(step, bx, Geom(0), m_dt);
+                ResetLaser();
             }
-            // Before that, the 3D fields of the envelope are not initialized (not even allocated).
-            m_laser.Init3DEnvelope(step, bx, Geom(0), m_dt);
 
             Wait(step, it);
             if (m_physical_time >= m_max_time) {
@@ -708,12 +709,15 @@ Hipace::ResetAllQuantities ()
             }
         }
     }
+}
 
-    if (m_laser.m_use_laser){
-        // m_laser.getSlices(WhichLaserSlice::n00j00).setVal(0.);
-        for (int sl=WhichLaserSlice::nm1j00; sl!=WhichLaserSlice::N; sl++) {
-            m_laser.getSlices(sl).setVal(0.);
-        }
+void
+Hipace::ResetLaser ()
+{
+    HIPACE_PROFILE("Hipace::ResetLaser()");
+
+    for (int sl=WhichLaserSlice::nm1j00; sl<WhichLaserSlice::N; sl++) {
+        m_laser.getSlices(sl).setVal(0.);
     }
 }
 
