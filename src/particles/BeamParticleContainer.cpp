@@ -54,9 +54,7 @@ BeamParticleContainer::ReadParameters ()
     DeprecatedInput(m_name, "dy_per_dzeta", "position_mean = \"x_center+(z-z_center)"
         "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
 
-    bool got_injection_type = queryWithParserAlt(pp, "injection_type", m_injection_type, pp_alt);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(got_injection_type,
-        "<beam name>.injection_type must be specified");
+    getWithParserAlt(pp, "injection_type", m_injection_type, pp_alt);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParserAlt(pp, "do_z_push", m_do_z_push, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
@@ -155,9 +153,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
-        bool got_input_file = queryWithParserAlt(pp, "input_file", m_input_file, pp_alt);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(got_input_file,
-            "<beam name>.input_file must be specified");
+        getWithParserAlt(pp, "input_file", m_input_file, pp_alt);
         bool coordinates_specified = queryWithParserAlt(pp, "file_coordinates_xyz",
                                                         m_file_coordinates_xyz, pp_alt);
         queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);

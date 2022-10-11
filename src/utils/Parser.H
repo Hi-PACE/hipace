@@ -330,6 +330,24 @@ queryWithParserAlt (const amrex::ParmParse& pp, char const * const str, T& val,
     return queryWithParser(pp, str, val) || queryWithParser(pp_alt, str, val);
 }
 
+/** \brief fill val with the evaluated expression from the input file
+ * The input is searched in pp first, if it is not found pp_alt is searched
+ *
+ * \param[in] pp ParmParse that is first searched for the expression
+ * \param[in] str name of expression
+ * \param[out] val value to be filled, see fillWithParserArr and fillWithParser for supported types
+ * \param[in] pp_alt Alternative ParmParse that is searched for the expression with lower priority
+ */
+template<class T>
+inline void
+getWithParserAlt (const amrex::ParmParse& pp, char const * const str, T& val,
+                  const amrex::ParmParse& pp_alt) {
+    if (!queryWithParserAlt(pp, str, val, pp_alt)) {
+        // Use error massage of the get function with the original pp
+        getWithParser(pp, str, val);
+    }
+}
+
 /** \brief return function object for Host and Device from the input file
  *
  * \param[in] func_str string that gets Parsed to a function
