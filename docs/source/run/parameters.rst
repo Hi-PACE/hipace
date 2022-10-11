@@ -230,17 +230,13 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     The names of the plasmas, separated by a space.
     To run without plasma, choose the name ``no_plasma``.
 
-* ``plasmas.nominal_density`` (`string`) optional (default `1.` in normalized units, `1.e23` in SI units)
-    Nominal density (in number per cubic meter) by which quantities are normalized in the explicit solver.
-    This should be roughly the peak density of the unperturbed plasma.
-
-* ``<plasma name>.density(x,y,z)`` (`float`) optional (default `0.`)
+* ``<plasma name> or plasmas.density(x,y,z)`` (`float`) optional (default `0.`)
     The plasma density as function of `x`, `y` and `z`. `x` and `y` coordinates are taken from
     the simulation box and :math:`z = time \cdot c`. The density gets recalculated at the beginning
     of every timestep. If specified as a command line parameter, quotation marks must be added:
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
-* ``<plasma name>.min_density`` (`float`) optional (default `0`)
+* ``<plasma name> or plasmas.min_density`` (`float`) optional (default `0`)
     Minimal density below which particles are not injected.
     Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
 
@@ -252,7 +248,7 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
-* ``<plasma name>.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name> or plasmas.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
@@ -260,14 +256,14 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.level`` (`integer`) optional (default `0`)
     Level of mesh refinement to which the plasma is assigned.
 
-* ``<plasma name>.radius`` (`float`) optional (default `infinity`)
+* ``<plasma name> or plasmas.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
-* ``<plasma name>.hollow_core_radius`` (`float`) optional (default `0.`)
+* ``<plasma name> or plasmas.hollow_core_radius`` (`float`) optional (default `0.`)
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
 
-* ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
+* ``<plasma name> or plasmas.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
     as violating the quasi-static approximation and are removed from the simulation.
 
@@ -298,6 +294,9 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
+
+* ``<plasma name> or plasmas.neutralize_background`` (`bool`) optional (default `1`)
+    Whether to add a neutralizing background of immobile particles of opposite charge.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
     Tile size for plasma current deposition, when running on CPU.
@@ -340,7 +339,7 @@ which are valid only for certain beam types, are introduced further below under
 "Option: ``<injection_type>``".
 
 
-* ``<beam name>.injection_type`` (`string`)
+* ``<beam name> or beams.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are ``fixed_ppc``, ``fixed_weight``,
     and ``from_file``. ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
     varying weights. It can be either a Gaussian or a flattop beam. ``fixed_weight`` generates a
@@ -377,14 +376,14 @@ which are valid only for certain beam types, are introduced further below under
     either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
 
-* ``<beam name>.profile`` (`string`)
+* ``<beam name> or beams.profile`` (`string`)
     Beam profile.
     When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
     (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
-* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
+* ``<beam name> or beams.n_subcycles`` (`int`) optional (default `1`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
@@ -430,7 +429,7 @@ which are valid only for certain beam types, are introduced further below under
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name>.num_particles`` (`int`)
+* ``<beam name> or beams.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.total_charge`` (`float`)
@@ -444,43 +443,43 @@ Option: ``fixed_weight``
     :math:`\zeta` is hereby the particle position relative to the mean
     longitudinal position of the beam.
 
-* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
+* ``<beam name> or beams.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
     `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
     divisible by 4.
 
-* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
+* ``<beam name> or beams.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
+* ``<beam name> or beams.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
 
 * ``<beam name>.radius`` (`float`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
     injected.
 
-* ``<beam name>.min_density`` (`float`) optional (default `0`)
+* ``<beam name> or beams.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
     The absolute value of this parameter is used when initializing the beam.
 
-* ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
+* ``<beam name> or beams.random_ppc`` (3 `bool`) optional (default `0 0 0`)
     Whether the position in `(x y z)` of the particles is randomized within the cell.
 
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name>.input_file`` (`string`)
+* ``<beam name> or beams.input_file`` (`string`)
     Name of the input file. **Note:** Reading in files with digits in their names (e.g.
     ``openpmd_002135.h5``) can be problematic, it is advised to read them via ``openpmd_%T.h5`` and then
     specify the iteration via ``beam_name.iteration = 2135``.
 
-* ``<beam name>.iteration`` (`integer`) optional (default `0`)
+* ``<beam name> or beams.iteration`` (`integer`) optional (default `0`)
     Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
     or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
     time of the simulation is set to the time of the given iteration (if available).
@@ -488,11 +487,6 @@ Option: ``from_file``
 * ``<beam name>.openPMD_species_name`` (`string`) optional (default `<beam name>`)
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
-
-* ``beams.all_from_file`` (`string`)
-    Name of the input file for all beams. This macro then passes it down to all individual beams
-    without a specified ``injection_type``. Additionally the input parameters ``beams.iteration``,
-    ``beams.plasma_density`` and ``beams.file_coordinates_xyz`` are passed down if applicable.
 
 Laser parameters
 ----------------

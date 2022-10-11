@@ -11,6 +11,7 @@
 GetInitialMomentum::GetInitialMomentum (const std::string& name)
 {
     amrex::ParmParse pp(name);
+    amrex::ParmParse pp_alt("beams")
 
     /* currently only Gaussian beam momentum profile implemented */
     if (m_momentum_profile == BeamMomentumType::Gaussian) {
@@ -27,7 +28,7 @@ GetInitialMomentum::GetInitialMomentum (const std::string& name)
             }
         }
         bool do_symmetrize = false;
-        queryWithParser(pp, "do_symmetrize", do_symmetrize);
+        queryWithParserAlt(pp, "do_symmetrize", do_symmetrize, pp_alt);
         if (do_symmetrize) {
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( std::fabs(m_u_mean[0]) +std::fabs(m_u_mean[1])
                                                < std::numeric_limits<amrex::Real>::epsilon(),
