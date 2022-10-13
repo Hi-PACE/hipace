@@ -129,6 +129,7 @@ public:
      * \param[in] fields Field object
      * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
+     * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
     void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
 
