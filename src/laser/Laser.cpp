@@ -44,7 +44,7 @@ Laser::ReadParameters ()
     queryWithParser(pp, "position_mean", loc_array);
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
     queryWithParser(pp, "solver_type", m_solver_type);
-    AMREX_ALWAYS_ASSERT(m_solver_type == "explicit" || m_solver_type == "fft");
+    AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
 }
 
@@ -211,12 +211,12 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const am
 
     if (!m_use_laser) return;
 
-    if (m_solver_type == "explicit") {
+    if (m_solver_type == "multigrid") {
         AdvanceSliceMG(fields, geom, dt);
     } else if (m_solver_type == "fft") {
         AdvanceSliceFFT(fields, geom, dt);
     } else {
-        amrex::Abort("<laser name>.solver_type must be fft or explicit");
+        amrex::Abort("<laser name>.solver_type must be fft or multigrid");
     }
 }
 
@@ -227,13 +227,17 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
     HIPACE_PROFILE("Laser::AdvanceSliceMG()");
 
     using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
+    constexpr Complex I(0.,1.);
 
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
     const amrex::Real dz = geom.CellSize(2);
 
-    const amrex::Real c = get_phys_const().c;
+    const PhysConst phc = get_phys_const();
+    const amrex::Real c = phc.c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
+    const amrex::Real chi_fac = phc.q_e/(c*c*phc.m_e*phc.ep0);
 
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
@@ -245,9 +249,10 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
     amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
     amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
 
-    amrex::FArrayBox rhs;
+    amrex::FArrayBox rhs_mg;
     amrex::FArrayBox acoeff_imag;
-    amrex::Real acoeff_real = -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
+
+    amrex::Real djn {0.};
 
     for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -257,7 +262,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
         const int jmax = bx.bigEnd  (1);
 
         acoeff_imag.resize(bx, 1, amrex::The_Arena());
-        rhs.resize(bx, 2, amrex::The_Arena());
+        rhs_mg.resize(bx, 2, amrex::The_Arena());
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
         Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
@@ -266,33 +271,68 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
         Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
         Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
         Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
-        Array3<amrex::Real> rhs_arr    = rhs.array();
+        Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
+        Array3<Complex> rhs_arr = m_rhs.array();
         Array3<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
+
+        constexpr int lev = 0;
+        const amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[mfi];
+        Array3<amrex::Real const> const isl_arr = isl_fab.array();
+        const int chi = Comps[WhichSlice::This]["chi"];
+
+        int const Nx = bx.length(0);
+        int const Ny = bx.length(1);
+
+        // Get the central point. Useful to get the on-axis phase and calculate kx and ky
+        int const imid = (Nx+1)/2;
+        int const jmid = (Ny+1)/2;
+
+        // Calculate complex arguments (theta) needed
+        // Just once, on axis, as done in Wake-T
+        // This is done with a reduce operation, returning the sum of the four elements nearest
+        // the axis (both real and imag parts, and for the 3 arrays relevant) ...
+        amrex::ReduceOps<
+            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<
+            amrex::Real, amrex::Real, amrex::Real,
+            amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+        reduce_op.eval(bx, reduce_data,
+        [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+        {
+            if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
+                return {
+                    n00j00_arr(i,j,0), n00j00_arr(i,j,1),
+                    n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
+                    n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
+                };
+            } else {
+                return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
+            }
+        });
+        // ... and taking the argument of the resulting complex number.
+        ReduceTuple hv = reduce_data.value(reduce_op);
+        const amrex::Real tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
+        const amrex::Real tjp1 = std::atan2(amrex::get<3>(hv), amrex::get<2>(hv));
+        const amrex::Real tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
+
+        amrex::Real dt1 = tj00 - tjp1;
+        amrex::Real dt2 = tj00 - tjp2;
+        if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
+        if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
+        if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
+        if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
+        Complex edt1 = amrex::exp(I*dt1);
+        Complex edt2 = amrex::exp(I*dt2);
+
+        // D_j^n as defined in Benedetti's 2017 paper
+        djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
 
         amrex::ParallelFor(
             bx, 1,
             [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
             {
-                // Calculate complex arguments (theta) needed
-                const amrex::Real tj00 = std::atan2(
-                    0.25*(n00j00_arr(i-1,j-1,1) + n00j00_arr(i-1,j,1) + n00j00_arr(i,j-1,1) + n00j00_arr(i,j,1)),
-                    0.25*(n00j00_arr(i-1,j-1,0) + n00j00_arr(i-1,j,0) + n00j00_arr(i,j-1,0) + n00j00_arr(i,j,0)));
-                const amrex::Real tjp1 = std::atan2(
-                    0.25*(n00jp1_arr(i-1,j-1,1) + n00jp1_arr(i-1,j,1) + n00jp1_arr(i,j-1,1) + n00jp1_arr(i,j,1)),
-                    0.25*(n00jp1_arr(i-1,j-1,0) + n00jp1_arr(i-1,j,0) + n00jp1_arr(i,j-1,0) + n00jp1_arr(i,j,0)));
-                const amrex::Real tjp2 = std::atan2(
-                    0.25*(n00jp2_arr(i-1,j-1,1) + n00jp2_arr(i-1,j,1) + n00jp2_arr(i,j-1,1) + n00jp2_arr(i,j,1)),
-                    0.25*(n00jp2_arr(i-1,j-1,0) + n00jp2_arr(i-1,j,0) + n00jp2_arr(i,j-1,0) + n00jp2_arr(i,j,0)));
-                amrex::Real dt1 = tj00 - tjp1;
-                amrex::Real dt2 = tj00 - tjp2;
-                if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
-                if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
-                if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
-                if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
-                amrex::Real cdt1 = std::cos(dt1);
-                amrex::Real cdt2 = std::cos(dt2);
-                amrex::Real sdt1 = std::sin(dt1);
-                amrex::Real sdt2 = std::sin(dt2);
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR = i>imin && i<imax && j>jmin && j<jmax ?
                     (nm1j00_arr(i+1,j,0)+nm1j00_arr(i-1,j,0)-2._rt*nm1j00_arr(i,j,0))/(dx*dx) +
@@ -300,38 +340,23 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
                 amrex::Real lapI = i>imin && i<imax && j>jmin && j<jmax ?
                     (nm1j00_arr(i+1,j,1)+nm1j00_arr(i-1,j,1)-2._rt*nm1j00_arr(i,j,1))/(dx*dx) +
                     (nm1j00_arr(i,j+1,1)+nm1j00_arr(i,j-1,1)-2._rt*nm1j00_arr(i,j,1))/(dy*dy) : 0._rt;
-                // D_j^n as defined in Benedetti's 2017 paper
-                amrex::Real djn = -( 3._rt*tj00 - 4._rt*tjp1 + tjp2 ) / (2._rt*dz);
-
-                // Imag acoeff term (the Real part is just a scalar defined above)
-                acoeff_imag_arr(i,j,0) = -2._rt*( k0 + djn ) / (c*dt);
-                // Real RHS term
-                rhs_arr(i,j,0) =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*cdt1 -
-                                       (np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*cdt2 -
-                                       (np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,0)
-                    + 0.0000000
-                    - lapR
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,0)
-                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,1)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,0)
-                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,1);
-
-                // Imag RHS term
-                rhs_arr(i,j,1) =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*cdt1 +
-                                       (np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*cdt2 +
-                                       (np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,1)
-                    - 0.0000000
-                    - lapI
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,1)
-                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,0)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,1)
-                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,0);
+                const Complex anp1jp1 = np1jp1_arr(i,j,0) + I * np1jp1_arr(i,j,1);
+                const Complex anm1jp1 = nm1jp1_arr(i,j,0) + I * nm1jp1_arr(i,j,1);
+                const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
+                const Complex anm1jp2 = nm1jp2_arr(i,j,0) + I * nm1jp2_arr(i,j,1);
+                const Complex an00j00 = n00j00_arr(i,j,0) + I * n00j00_arr(i,j,1);
+                const Complex anm1j00 = nm1j00_arr(i,j,0) + I * nm1j00_arr(i,j,1);
+                const Complex lapA = lapR + I*lapI;
+                const Complex rhs =
+                    + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*edt1
+                    + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*edt2
+                    - 4._rt/(c*c*dt*dt)*an00j00
+                    - 2._rt * chi_fac * isl_arr(i,j,chi) * an00j00
+                    - lapA
+                    + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
+                rhs_arr(i,j,0) = rhs;
+                rhs_mg_arr(i,j,0) = rhs.real();
+                rhs_mg_arr(i,j,1) = rhs.imag();
             });
     }
 
@@ -359,7 +384,10 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
     }
 
     const int max_iters = 200;
-    m_mg->solve2(np1j00[0], rhs, acoeff_real, acoeff_imag, m_MG_tolerance_rel, m_MG_tolerance_abs,
+    amrex::Real acoeff_real = 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
+    acoeff_imag.setVal( -2._rt * ( k0 + djn ) / (c*dt) );
+
+    m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag, m_MG_tolerance_rel, m_MG_tolerance_abs,
     max_iters, m_MG_verbose);
 }
 
@@ -367,9 +395,8 @@ void
 Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt)
 {
 
-    HIPACE_PROFILE("Laser::AdvanceSliceExplicit()");
+    HIPACE_PROFILE("Laser::AdvanceSliceFFT()");
 
-    using namespace amrex;
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
     constexpr Complex I(0.,1.);
@@ -434,9 +461,12 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // Just once, on axis, as done in Wake-T
         // This is done with a reduce operation, returning the sum of the four elements nearest
         // the axis (both real and imag parts, and for the 3 arrays relevant) ...
-        ReduceOps<ReduceOpSum, ReduceOpSum, ReduceOpSum,
-                  ReduceOpSum, ReduceOpSum, ReduceOpSum> reduce_op;
-        ReduceData<Real, Real, Real, Real, Real, Real> reduce_data(reduce_op);
+        amrex::ReduceOps<
+            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<
+            amrex::Real, amrex::Real, amrex::Real,
+            amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(bx, reduce_data,
         [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
@@ -490,9 +520,6 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                     + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*edt1
                     + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*edt2
                     - 4._rt/(c*c*dt*dt)*an00j00
-// Not sure whether this is + or -, I believe - and this is consistent with
-// the physical effect of plasma on a laser, but double checking would be good.
-//                    + 2._rt * chi_fac * isl_arr(i,j,chi) * an00j00
                     - 2._rt * chi_fac * isl_arr(i,j,chi) * an00j00
                     - lapA
                     + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
@@ -525,7 +552,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-            ( 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) )
+            3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt)
             - I * 2._rt * ( k0 + djn ) / (c*dt);
         amrex::ParallelFor(
             bx,
