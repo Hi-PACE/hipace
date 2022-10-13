@@ -53,6 +53,7 @@
  * \param[in] jxx_cmp array component of current density jxx
  * \param[in] jxy_cmp array component of current density jxy
  * \param[in] jyy_cmp array component of current density jyy
+ * \param[in] chi_cmp array component of current density chi
  * \param[in] a_mf MultiFab containing the normalized vector potential of the laser a
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
  * \param[in] dx cell size in each dimension
