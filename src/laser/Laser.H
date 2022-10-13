@@ -112,9 +112,8 @@ public:
      * \param[in] step time step of the simulation
      * \param[in] bx Box on which the laser field is initialized
      * \param[in] gm Geometry of the problem
-     * \param[in] dt time step
      */
-    void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm, const amrex::Real dt);
+    void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
 
     /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
      *
@@ -131,7 +130,7 @@ public:
      * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
      */
-    void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated everywhere.
@@ -140,7 +139,7 @@ public:
      * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
      */
-    void AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
@@ -149,16 +148,15 @@ public:
      * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
      */
-    void AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt);
+    void AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
      *
      * \param[in] geom Geometry object for the slice
      * \param[in] islice slice index
-     * \param[in] dt time step
      */
-    void InitLaserSlice (const amrex::Geometry& geom, const int islice, amrex::Real dt);
+    void InitLaserSlice (const amrex::Geometry& geom, const int islice);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 

@@ -439,7 +439,7 @@ Hipace::Evolve ()
             if (m_laser.m_use_laser) {
                 AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
                 // Before that, the 3D fields of the envelope are not initialized (not even allocated).
-                m_laser.Init3DEnvelope(step, bx, Geom(0), m_dt);
+                m_laser.Init3DEnvelope(step, bx, Geom(0));
                 ResetLaser();
             }
 
@@ -580,7 +580,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
         // Advance laser slice by 1 step and store result to 3D array
-        m_laser.AdvanceSlice(m_fields, Geom(0), m_dt);
+        m_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
         m_laser.Copy(islice_coarse, true, false);
 
         // After this, the parallel context is the full 3D communicator again
