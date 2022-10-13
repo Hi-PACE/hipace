@@ -385,7 +385,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, const 
 
     const int max_iters = 200;
     amrex::Real acoeff_real = 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
-    acoeff_imag.setVal( -2._rt * ( k0 + djn ) / (c*dt) );
+    acoeff_imag.setVal<amrex::RunOn::Device>( -2._rt * ( k0 + djn ) / (c*dt) );
 
     m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag, m_MG_tolerance_rel, m_MG_tolerance_abs,
     max_iters, m_MG_verbose);
