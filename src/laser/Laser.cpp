@@ -372,7 +372,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
     using namespace amrex;
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
-    constexpr const Complex I(0.,1.);
+    constexpr Complex I(0.,1.);
 
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
@@ -463,10 +463,8 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
         if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
         if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
-        amrex::Real cdt1 = std::cos(dt1);
-        amrex::Real cdt2 = std::cos(dt2);
-        amrex::Real sdt1 = std::sin(dt1);
-        amrex::Real sdt2 = std::sin(dt2);
+        Complex edt1 = amrex::exp(I*dt1);
+        Complex edt2 = amrex::exp(I*dt2);
 
         // D_j^n as defined in Benedetti's 2017 paper
         amrex::Real djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
@@ -481,32 +479,24 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                 amrex::Real lapI = i>imin && i<imax && j>jmin && j<jmax ?
                     (nm1j00_arr(i+1,j,1)+nm1j00_arr(i-1,j,1)-2._rt*nm1j00_arr(i,j,1))/(dx*dx) +
                     (nm1j00_arr(i,j+1,1)+nm1j00_arr(i,j-1,1)-2._rt*nm1j00_arr(i,j,1))/(dy*dy) : 0._rt;
-                // Real RHS term
-                const amrex::Real rhs_real =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*cdt1 -
-                                       (np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*cdt2 -
-                                       (np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,0)
-                    + 2._rt*isl_arr(i,j,chi)*n00j00_arr(i,j,0) * chi_fac
-                    - lapR
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,0)
-                    - 2._rt/(c*dt)*djn * nm1j00_arr(i,j,1)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,0)
-                    - 2._rt*k0/(c*dt)*nm1j00_arr(i,j,1);
-                const amrex::Real rhs_imag =
-                    + 4._rt/(c*dt*dz)*((np1jp1_arr(i,j,1)-nm1jp1_arr(i,j,1))*cdt1 +
-                                       (np1jp1_arr(i,j,0)-nm1jp1_arr(i,j,0))*sdt1)
-                    - 1._rt/(c*dt*dz)*((np1jp2_arr(i,j,1)-nm1jp2_arr(i,j,1))*cdt2 +
-                                       (np1jp2_arr(i,j,0)-nm1jp2_arr(i,j,0))*sdt2)
-                    - 4._rt/(c*c*dt*dt)*n00j00_arr(i,j,1)
-                    - 2._rt*isl_arr(i,j,chi)*n00j00_arr(i,j,1) * chi_fac
-                    - lapI
-                    + 3._rt/(c*dt*dz)  * nm1j00_arr(i,j,1)
-                    + 2._rt/(c*dt)*djn * nm1j00_arr(i,j,0)
-                    + 2._rt/(c*c*dt*dt) * nm1j00_arr(i,j,1)
-                    + 2._rt*k0/(c*dt)*nm1j00_arr(i,j,0);
-                rhs_arr(i,j,0) = rhs_real+I*rhs_imag;
+                const Complex anp1jp1 = np1jp1_arr(i,j,0) + I * np1jp1_arr(i,j,1);
+                const Complex anm1jp1 = nm1jp1_arr(i,j,0) + I * nm1jp1_arr(i,j,1);
+                const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
+                const Complex anm1jp2 = nm1jp2_arr(i,j,0) + I * nm1jp2_arr(i,j,1);
+                const Complex an00j00 = n00j00_arr(i,j,0) + I * n00j00_arr(i,j,1);
+                const Complex anm1j00 = nm1j00_arr(i,j,0) + I * nm1j00_arr(i,j,1);
+                const Complex lapA = lapR + I*lapI;
+                const Complex rhs =
+                    + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*edt1
+                    + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*edt2
+                    - 4._rt/(c*c*dt*dt)*an00j00
+// Not sure whether this is + or -, I believe - and this is consistent with
+// the physical effect of plasma on a laser, but double checking would be good.
+//                    + 2._rt * chi_fac * isl_arr(i,j,chi) * an00j00
+                    - 2._rt * chi_fac * isl_arr(i,j,chi) * an00j00
+                    - lapA
+                    + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
+                rhs_arr(i,j,0) = rhs;
             });
 
         // Transform rhs to Fourier space
@@ -535,7 +525,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-            ( -3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) )
+            ( 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) )
             - I * 2._rt * ( k0 + djn ) / (c*dt);
         amrex::ParallelFor(
             bx,
