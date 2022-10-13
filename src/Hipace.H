@@ -337,6 +337,8 @@ public:
     static int m_MG_verbose;
     /** Whether to use amrex MLMG solver */
     static bool m_use_amrex_mlmg;
+    /** Whether the simulation uses a laser pulse */
+    static bool m_use_laser;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** GridCurrent instance */

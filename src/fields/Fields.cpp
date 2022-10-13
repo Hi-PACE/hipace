@@ -86,7 +86,9 @@ Fields::AllocData (
                     "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
             }
 
-            Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            }
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -120,7 +122,9 @@ Fields::AllocData (
             Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
                                                    "jx", "jy", "jz", "rho");
 
-            Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            }
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -185,11 +189,13 @@ Fields::AllocData (
         AMREX_ALWAYS_ASSERT(ncell[0] % bin_size == 0 && ncell[1] % bin_size == 0);
 
         m_tmp_densities.resize(num_threads);
+        // jx jy jz rho jxx jxy jyy chi
+        int num_comps = 7;
+        if (Hipace::m_use_laser) num_comps += 1;
         for (int i=0; i<num_threads; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
-            // jx jy jz rho jxx jxy jyy chi
-            m_tmp_densities[i].resize(bx, 8);
+            m_tmp_densities[i].resize(bx, num_comps);
         }
     }
 }

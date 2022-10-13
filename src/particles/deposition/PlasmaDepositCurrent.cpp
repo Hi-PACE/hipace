@@ -93,7 +93,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         const int jxx_cmp = deposit_j_squared ? Comps[which_slice]["jxx"+plasma_str] : -1;
         const int jxy_cmp = deposit_j_squared ? Comps[which_slice]["jxy"+plasma_str] : -1;
         const int jyy_cmp = deposit_j_squared ? Comps[which_slice]["jyy"+plasma_str] : -1;
-        const int chi_cmp = which_slice == WhichSlice::This ? Comps[WhichSlice::This]["chi"] : -1;
+        const int chi_cmp = which_slice == WhichSlice::This && Hipace::m_use_laser ?
+            Comps[WhichSlice::This]["chi"] : -1;
 
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 

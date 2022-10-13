@@ -157,7 +157,7 @@ void doDepositionShapeN (const bool use_laser,
         const int jxx = do_tiling ? 4 : jxx_cmp;
         const int jxy = do_tiling ? 5 : jxy_cmp;
         const int jyy = do_tiling ? 6 : jyy_cmp;
-        const int chi = do_tiling ? 7 : chi_cmp;
+        const int chi = do_tiling && chi_cmp > 0 ? 7 : chi_cmp;
 
         int ntiley = 0;
         if (do_tiling) {

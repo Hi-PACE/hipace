@@ -62,6 +62,7 @@ amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
 amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 int Hipace::m_MG_verbose = 0;
 bool Hipace::m_use_amrex_mlmg = false;
+bool Hipace::m_use_laser = false;
 
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
@@ -177,6 +178,9 @@ Hipace::Hipace () :
 #endif
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !( (m_numprocs_z > 1) && m_laser.m_use_laser ),
         "The laser solver currently works for serial runs only");
+
+    m_use_laser = m_laser.m_use_laser;
+    amrex::Print()<<"use laser "<<m_use_laser<<'\n';;
 }
 
 Hipace::~Hipace ()
@@ -596,7 +600,10 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
     // Set all quantities to 0 except Bx and By: the previous slice serves as initial
     // guess.
     m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
-                    "jx_beam", "jy_beam", "jz_beam", "rho_beam", "chi");
+                    "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+    if (m_use_laser) {
+        m_fields.setVal(0., lev, WhichSlice::This, "chi");
+    }
     for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
         m_fields.setVal(0., lev, WhichSlice::This,
             "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
