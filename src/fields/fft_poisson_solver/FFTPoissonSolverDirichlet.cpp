@@ -62,7 +62,7 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
                                              *( fft_box.length(1) + 1 )));
 
     // Calculate the array of m_eigenvalue_matrix
-    for (amrex::MFIter mfi(m_eigenvalue_matrix); mfi.isValid(); ++mfi ){
+    for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
         Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
         amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
@@ -86,7 +86,7 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     m_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
     // Loop over boxes and allocate the corresponding plan
     // for each box owned by the local MPI proc
-    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
         // Note: the size of the real-space box and spectral-space box
         // differ when using real-to-complex FFT. When initializing
         // the FFT plan, the valid dimensions are those of the real-space box.
@@ -103,7 +103,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     HIPACE_PROFILE("FFTPoissonSolverDirichlet::SolvePoissonEquation()");
 
     // Loop over boxes
-    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
 
         // Perform Fourier transform from the staging area to `tmpSpectralField`
         AnyDST::Execute<AnyDST::direction::forward>(m_plan[mfi]);

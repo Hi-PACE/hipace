@@ -312,7 +312,7 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
 
-        for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
+        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -338,7 +338,7 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev, islice);
 
-        for (amrex::MFIter mfi(mfab); mfi.isValid(); ++mfi) {
+        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -366,7 +366,7 @@ public:
         const amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
         amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
 
-        for (amrex::MFIter mfi(mfab_dst); mfi.isValid(); ++mfi) {
+        for (amrex::MFIter mfi(mfab_dst, DfltMfi); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real const> array_src = mfab_src.const_array(mfi);
             const Array3<amrex::Real> array_dst = mfab_dst.array(mfi);
             // only one Kernel for all fields

@@ -38,7 +38,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const amrex::Real scale_fac = Hipace::m_normalized_units?
                                   1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
-    for(amrex::MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi)
+    for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
     {
 
         const amrex::Box& tile_box  = mfi.tilebox();

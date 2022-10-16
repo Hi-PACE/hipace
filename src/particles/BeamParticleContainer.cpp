@@ -251,7 +251,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
 
     BeamBins::index_type const * const indices = bins.permutationPtr();
-    BeamBins::index_type const * const offsets = bins.offsetsPtr();
+    BeamBins::index_type const * const offsets = bins.offsetsPtrCpu();
     BeamBins::index_type const cell_start = offsets[islice-islice0];
     BeamBins::index_type const cell_stop = offsets[islice-islice0+1];
     int const num_particles = cell_stop-cell_start;

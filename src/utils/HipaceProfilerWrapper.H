@@ -28,7 +28,7 @@ AMREX_FORCE_INLINE
 void doDeviceSynchronize ()
 {
     if ( DO_DEVICE_SYNCHRONIZE >= detail_level )
-        amrex::Gpu::synchronize();
+        amrex::Gpu::streamSynchronize();
 }
 
 // Note that objects are destructed in the reverse order of declaration
