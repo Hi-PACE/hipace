@@ -176,8 +176,8 @@ Hipace::Hipace () :
     MPI_Comm_rank(m_comm_xy, &m_rank_xy);
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
 #endif
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !( (m_numprocs_z > 1) && m_laser.m_use_laser ),
-        "The laser solver currently works for serial runs only");
+    // AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !( (m_numprocs_z > 1) && m_laser.m_use_laser ),
+    //     "The laser solver currently works for serial runs only");
 
     m_use_laser = m_laser.m_use_laser;
     amrex::Print()<<"use laser "<<m_use_laser<<'\n';;
@@ -440,7 +440,7 @@ Hipace::Evolve ()
                 AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
                 // Before that, the 3D fields of the envelope are not initialized (not even allocated).
                 m_laser.Init3DEnvelope(step, bx, Geom(0));
-                ResetLaser();
+                if (it == n_boxes-1) ResetLaser();
             }
 
             Wait(step, it);
@@ -1294,12 +1294,14 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
     // Receive laser
     {
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" nz_laser "<<nz_laser<<'\n';
         if (only_ghost) return;
         if (!m_laser.m_use_laser) return;
         AMREX_ALWAYS_ASSERT(nz_laser > 0);
         amrex::FArrayBox& laser_fab = m_laser.getFAB();
         amrex::Array4<amrex::Real> laser_arr = laser_fab.array();
         const amrex::Box& bx = laser_fab.box(); // does not include ghost cells
+        amrex::AllPrint()<<"rank "<<m_rank_z<<" bx "<<bx<<'\n';
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             bx.bigEnd(2)-bx.smallEnd(2)+1 == nz_laser,
             "Laser requires all sub-domains to be the same size, i.e., nz%nrank=0");

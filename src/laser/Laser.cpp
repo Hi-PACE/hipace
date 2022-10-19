@@ -183,13 +183,16 @@ Laser::Copy (int isl, bool to3d, bool init)
                 // this slice into old host
                 // Cannot update slice isl or isl+1 of old array because we'll need the
                 // previous value when computing the next slice.
-                if (isl+2 <= izmax){
-                    host_arr(i,j,isl+2,n+2) = n00jp2_arr(i,j,n);
-                }
+                host_arr(i,j,isl,n+2) = n00j00_arr(i,j,n);
+                // if (isl+2 <= izmax){
+                //     host_arr(i,j,isl+2,n+2) = n00jp2_arr(i,j,n);
+                // }
             } else {
+                nm1jp2_arr(i,j,n) = nm1jp1_arr(i,j,n);
+                nm1jp1_arr(i,j,n) = nm1j00_arr(i,j,n);
                 nm1j00_arr(i,j,n) = host_arr(i,j,isl,n+2);
-                nm1jp1_arr(i,j,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
-                nm1jp2_arr(i,j,n) = isl+2 <= izmax ? host_arr(i,j,isl+2,n+2) : 0._rt;
+                // nm1jp1_arr(i,j,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
+                // nm1jp2_arr(i,j,n) = isl+2 <= izmax ? host_arr(i,j,isl+2,n+2) : 0._rt;
                 n00jp2_arr(i,j,n) = n00jp1_arr(i,j,n);
                 n00jp1_arr(i,j,n) = n00j00_arr(i,j,n);
                 n00j00_arr(i,j,n) = host_arr(i,j,isl,n);
@@ -453,7 +456,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // rhs_fourier is FFT-back-transformed to sol, and sol is normalized and copied into np1j00.
         Array3<Complex> sol_arr = m_sol.array();
         Array3<Complex> rhs_arr = m_rhs.array();
-        Array3<Complex> rhs_fourier_arr = m_rhs_fourier.array();
+        amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
@@ -604,7 +607,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                 amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
                 const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
                     1._rt/(kx*kx + ky*ky + acoeff) : 0.;
-                rhs_fourier_arr(i,j,k) *= -inv_k2a;
+                rhs_fourier_arr(i,j,k,0) *= -inv_k2a;
             });
 
         // Transform rhs to Fourier space to get solution in sol
