@@ -62,7 +62,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
                                                                              dst_indices.dataPtr());
 
     a_beam.swap(tmp);
-
+#ifdef AMREX_USE_GPU
     amrex::Gpu::dtoh_memcpy_async(m_box_counts_cpu.dataPtr(), m_box_counts.dataPtr(),
                                   m_box_counts.size() * sizeof(index_type));
 
@@ -70,6 +70,13 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
                                   m_box_offsets.size() * sizeof(index_type));
 
     amrex::Gpu::streamSynchronize();
+#else
+    std::memcpy(m_box_counts_cpu.dataPtr(), m_box_counts.dataPtr(),
+                m_box_counts.size() * sizeof(index_type));
+
+    std::memcpy(m_box_offsets_cpu.dataPtr(), m_box_offsets.dataPtr(),
+                m_box_offsets.size() * sizeof(index_type));
+#endif
 }
 
 int
