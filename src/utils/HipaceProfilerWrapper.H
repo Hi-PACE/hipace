@@ -20,12 +20,12 @@
 #include <AMReX_BLProfiler.H>
 #include <AMReX_GpuDevice.H>
 
-/** Whether to call amrex::Gpu::synchronize() around all profiler region */
+/** Whether to call amrex::Gpu::streamSynchronize() around all profiler region */
 inline int DO_DEVICE_SYNCHRONIZE = 0;
 
 template<int detail_level>
 AMREX_FORCE_INLINE
-void doDeviceSynchronize ()
+void doStreamSynchronize ()
 {
     if ( DO_DEVICE_SYNCHRONIZE >= detail_level )
         amrex::Gpu::streamSynchronize();
@@ -36,22 +36,22 @@ template<int detail_level>
 struct synchronizeOnDestruct {
     AMREX_FORCE_INLINE
     ~synchronizeOnDestruct () {
-        doDeviceSynchronize<detail_level>();
+        doStreamSynchronize<detail_level>();
     }
 };
 
-#define HIPACE_PROFILE(fname) doDeviceSynchronize<1>(); BL_PROFILE(fname); synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__){}
-#define HIPACE_PROFILE_VAR(fname, vname) doDeviceSynchronize<1>(); BL_PROFILE_VAR(fname, vname); synchronizeOnDestruct<1> SYNC_V_##vname{}
+#define HIPACE_PROFILE(fname) doStreamSynchronize<1>(); BL_PROFILE(fname); synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__){}
+#define HIPACE_PROFILE_VAR(fname, vname) doStreamSynchronize<1>(); BL_PROFILE_VAR(fname, vname); synchronizeOnDestruct<1> SYNC_V_##vname{}
 #define HIPACE_PROFILE_VAR_NS(fname, vname) BL_PROFILE_VAR_NS(fname, vname); synchronizeOnDestruct<1> SYNC_V_##vname{}
-#define HIPACE_PROFILE_VAR_START(vname) doDeviceSynchronize<1>(); BL_PROFILE_VAR_START(vname)
-#define HIPACE_PROFILE_VAR_STOP(vname) doDeviceSynchronize<1>(); BL_PROFILE_VAR_STOP(vname)
-#define HIPACE_PROFILE_REGION(rname) doDeviceSynchronize<1>(); BL_PROFILE_REGION(rname); synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_R_, __COUNTER__){}
+#define HIPACE_PROFILE_VAR_START(vname) doStreamSynchronize<1>(); BL_PROFILE_VAR_START(vname)
+#define HIPACE_PROFILE_VAR_STOP(vname) doStreamSynchronize<1>(); BL_PROFILE_VAR_STOP(vname)
+#define HIPACE_PROFILE_REGION(rname) doStreamSynchronize<1>(); BL_PROFILE_REGION(rname); synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_R_, __COUNTER__){}
 
-#define HIPACE_DETAIL_PROFILE(fname) doDeviceSynchronize<2>(); BL_PROFILE(fname); synchronizeOnDestruct<2> BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__){}
-#define HIPACE_DETAIL_PROFILE_VAR(fname, vname) doDeviceSynchronize<2>(); BL_PROFILE_VAR(fname, vname); synchronizeOnDestruct<2> SYNC_V_##vname{}
+#define HIPACE_DETAIL_PROFILE(fname) doStreamSynchronize<2>(); BL_PROFILE(fname); synchronizeOnDestruct<2> BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__){}
+#define HIPACE_DETAIL_PROFILE_VAR(fname, vname) doStreamSynchronize<2>(); BL_PROFILE_VAR(fname, vname); synchronizeOnDestruct<2> SYNC_V_##vname{}
 #define HIPACE_DETAIL_PROFILE_VAR_NS(fname, vname) BL_PROFILE_VAR_NS(fname, vname); synchronizeOnDestruct<2> SYNC_V_##vname{}
-#define HIPACE_DETAIL_PROFILE_VAR_START(vname) doDeviceSynchronize<2>(); BL_PROFILE_VAR_START(vname)
-#define HIPACE_DETAIL_PROFILE_VAR_STOP(vname) doDeviceSynchronize<2>(); BL_PROFILE_VAR_STOP(vname)
-#define HIPACE_DETAIL_PROFILE_REGION(rname) doDeviceSynchronize<2>(); BL_PROFILE_REGION(rname); synchronizeOnDestruct<2> BL_PROFILE_PASTE(SYNC_R_, __COUNTER__){}
+#define HIPACE_DETAIL_PROFILE_VAR_START(vname) doStreamSynchronize<2>(); BL_PROFILE_VAR_START(vname)
+#define HIPACE_DETAIL_PROFILE_VAR_STOP(vname) doStreamSynchronize<2>(); BL_PROFILE_VAR_STOP(vname)
+#define HIPACE_DETAIL_PROFILE_REGION(rname) doStreamSynchronize<2>(); BL_PROFILE_REGION(rname); synchronizeOnDestruct<2> BL_PROFILE_PASTE(SYNC_R_, __COUNTER__){}
 
 #endif // HIPACE_PROFILERWRAPPER_H_
