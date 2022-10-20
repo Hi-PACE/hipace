@@ -26,23 +26,7 @@ struct BeamIdx
     };
 };
 
-struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType> {
-
-    template<class...Args>
-    void build (Args&&...args) {
-        amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
-
-        auto offset_size = numBins() + 1;
-        auto offsets_gpu = offsetsPtr();
-        m_offsets_cpu.resize(offset_size);
-        amrex::Gpu::dtoh_memcpy(m_offsets_cpu.dataPtr(), offsets_gpu,
-                                offset_size * sizeof(index_type));
-    }
-
-    const index_type* offsetsPtrCpu () const noexcept { return m_offsets_cpu.dataPtr(); }
-
-    amrex::Vector<index_type> m_offsets_cpu;
-};
+using BeamBins = amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>;
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer

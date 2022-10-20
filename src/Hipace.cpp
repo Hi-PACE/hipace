@@ -615,20 +615,17 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
     }
 
-    {
-        HIPACE_PROFILE("Hipace::TestProfile()");
-        m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
-                                         m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                         WhichSlice::This, m_do_beam_jz_minus_rho);
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
+                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
+                                     WhichSlice::This, m_do_beam_jz_minus_rho);
 
-        if (m_do_beam_jz_minus_rho) {
-            m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-        }
-
-        m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
-
-        FillBoundaryChargeCurrents(lev);
+    if (m_do_beam_jz_minus_rho) {
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
     }
+
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
+
+    FillBoundaryChargeCurrents(lev);
 
     m_fields.SolvePoissonEz(Geom(), lev, islice);
     m_fields.SolvePoissonBz(Geom(), lev, islice);
@@ -709,7 +706,6 @@ Hipace::ResetAllQuantities ()
 void
 Hipace::FillBoundaryChargeCurrents (int lev) {
     if (!m_fields.m_extended_solve) {
-        HIPACE_PROFILE("Hipace::FillBoundaryChargeCurrents()");
         if (m_explicit) {
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
                 "jx_beam", "jy_beam", "jz_beam", "rho_beam");
@@ -1250,36 +1246,6 @@ Hipace::Wait (const int step, int it, bool only_ghost)
                                 shared, m*psize, i+old_size, p_comm_real, p_comm_int);
                         }
                     });
-
-
-                    amrex::launch(
-                        nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-                        [=] AMREX_GPU_DEVICE () noexcept
-                        {
-                            amrex::Gpu::SharedMemory<char> gsm;
-                            char* const shared = gsm.dataPtr();
-
-                            // Copy packed data from recv_buffer (in pinned memory) to shared memory
-                            const int i = blockDim.x*blockIdx.x+threadIdx.x;
-                            const unsigned int m = threadIdx.x;
-                            const unsigned int mend = amrex::min<unsigned int>
-                                (blockDim.x, np-blockDim.x*blockIdx.x);
-                            for (unsigned int index = m;
-                                 index < mend*psize/sizeof(double); index += blockDim.x) {
-                                double *csrc = (double *)
-                                    (recv_buffer+offset_beam*psize+blockDim.x*blockIdx.x*psize);
-                                double *cdest = (double *)shared;
-                                cdest[index] = csrc[index];
-                                csrc[index] = 0;
-                            }
-
-                            __syncthreads();
-                            // Unpack in shared memory, and move to device memory
-                            if (i < np) {
-                                ptd.unpackParticleData(
-                                    shared, m*psize, i+old_size, p_comm_real, p_comm_int);
-                            }
-                        });
             } else
 #endif
             {
@@ -1370,7 +1336,6 @@ Hipace::Notify (const int step, const int it,
         const amrex::Long buffer_size = psize*np_total;
         char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
         psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
-        char* psend_buffer_d = (char*)amrex::The_Device_Arena()->alloc(buffer_size);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -1431,33 +1396,6 @@ Hipace::Notify (const int step, const int it,
                             cdest[index] = csrc[index];
                         }
                     });
-
-                            amrex::launch(
-                                nblocks, np_per_block, shared_mem_bytes, amrex::Gpu::gpuStream(),
-                                [=] AMREX_GPU_DEVICE () noexcept
-                                {
-                                    amrex::Gpu::SharedMemory<char> gsm;
-                                    char* const shared = gsm.dataPtr();
-
-                                    // Pack particles from device memory to shared memory
-                                    const int i = blockDim.x*blockIdx.x+threadIdx.x;
-                                    const unsigned int m = threadIdx.x;
-                                    const unsigned int mend = amrex::min<unsigned int>(blockDim.x, np-blockDim.x*blockIdx.x);
-                                    if (i < np) {
-                                        const int src_i = only_ghost ? indices[cell_start+i] : i;
-                                        ptd.packParticleData(shared, offset_box+src_i, m*psize, p_comm_real, p_comm_int);
-                                    }
-
-                                    __syncthreads();
-
-                                    // Copy packed particles from shared memory to psend_buffer in pinned memory
-                                    for (unsigned int index = m;
-                                         index < mend*psize/sizeof(double); index += blockDim.x) {
-                                        const double *csrc = (double *)shared;
-                                        double *cdest = (double *)(p_psend_buffer_d+blockDim.x*blockIdx.x*psize);
-                                        cdest[index] = csrc[index];
-                                    }
-                                });
             } else
 #endif
             {
