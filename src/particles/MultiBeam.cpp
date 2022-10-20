@@ -132,7 +132,7 @@ int
 MultiBeam::NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx)
 {
     BeamBins::index_type const * offsets = 0;
-    offsets = bins[ibeam].offsetsPtr();
+    offsets = bins[ibeam].offsetsPtrCpu();
     return offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)]
         - offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
 }

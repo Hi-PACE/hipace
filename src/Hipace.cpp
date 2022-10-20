@@ -1345,7 +1345,7 @@ Hipace::Notify (const int step, const int it,
             const auto p_psend_buffer = psend_buffer + offset_beam*psize;
 
             BeamBins::index_type const * const indices = bins[ibeam].permutationPtr();
-            BeamBins::index_type const * const offsets = bins[ibeam].offsetsPtr();
+            BeamBins::index_type const * const offsets = bins[ibeam].offsetsPtrCpu();
             BeamBins::index_type cell_start = 0;
 
             // The particles that are in the last slice (sent as ghost particles) are
