@@ -430,7 +430,7 @@ private:
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
-    amrex::Vector<amrex::Real> m_rel_z_vec_cpu;
+    amrex::Gpu::PinnedVector<amrex::Real> m_rel_z_vec_cpu;
     /** Number of guard cells where ExmBy and EypBx are calculated */
     amrex::IntVect m_exmby_eypbx_nguard;
     /** Number of guard cells where sources for poisson equation are included */
