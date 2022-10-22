@@ -942,6 +942,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
+        amrex::Gpu::streamSynchronize();
         if (!m_mlalaplacian){
             // If first call, initialize the MG solver
             amrex::LPInfo lpinfo{};
@@ -1258,7 +1259,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             offset_beam += np;
         }
 
-        amrex::Gpu::Device::synchronize();
+        amrex::Gpu::streamSynchronize();
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
@@ -1400,7 +1401,7 @@ Hipace::Notify (const int step, const int it,
                     ptd.packParticleData(p_psend_buffer, offset_box+src_i, i*psize, p_comm_real, p_comm_int);
                 }
             }
-            amrex::Gpu::Device::synchronize();
+            amrex::Gpu::streamSynchronize();
 
             // Delete beam particles that we just sent from the particle array
             if (!only_ghost) ptile.resize(offset_box);
@@ -1527,6 +1528,7 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
+    amrex::Gpu::streamSynchronize();
     m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.hasField(),
                         m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames,
                         beamnames, it, m_box_sorters, geom, call_type);

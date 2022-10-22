@@ -67,7 +67,7 @@ MultiBeam::findParticlesInEachSlice (int nlev, int ibox, amrex::Box bx,
         }
         bins.emplace_back(bins_per_level);
     }
-    amrex::Gpu::Device::synchronize();
+    amrex::Gpu::streamSynchronize();
     return bins;
 }
 
