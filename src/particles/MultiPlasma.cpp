@@ -7,6 +7,7 @@
  */
 #include "MultiPlasma.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
+#include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -89,6 +90,14 @@ MultiPlasma::DepositCurrent (
         ::DepositCurrent(m_all_plasmas[i], fields, laser, which_slice, temp_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
+    }
+}
+
+void
+MultiPlasma::ExplicitDeposition (Fields& fields, amrex::Geometry const& gm, int const lev)
+{
+    for (int i=0; i<m_nplasmas; i++) {
+        ::ExplicitDeposition(m_all_plasmas[i], fields, gm, lev);
     }
 }
 

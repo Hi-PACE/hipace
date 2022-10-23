@@ -57,6 +57,8 @@ public:
         bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
         int const lev);
 
+    void ExplicitDeposition (Fields& fields, amrex::Geometry const& gm, int const lev);
+
     /** \brief Return max density, to compute the adaptive time step.
      *
      * the max is taken across species AND include m_adaptive_density, giving a way to

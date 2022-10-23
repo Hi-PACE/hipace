@@ -15,5 +15,4 @@ void
 ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     amrex::Geometry const& gm, const int lev);
 
-
 #endif //  EXPLICITDEPOSITION_H_

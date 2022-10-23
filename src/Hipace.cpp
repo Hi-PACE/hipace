@@ -741,7 +741,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 #endif
     AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[isl]["Sy"] + 1 == Comps[isl]["Sx"]);
-    m_fields.setVal(0., lev, isl, "Sy", "Sx", "Mult");
+    m_fields.setVal(0., lev, isl, "Sy", "Sx", "Sy_depos", "Sx_depos", "Mult");
 
     // extract a of the Laser
     const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::This);
@@ -765,6 +765,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
         const int mult = Comps[isl]["Mult"];
         const int Sx = Comps[isl]["Sx"];
         const int Sy = Comps[isl]["Sy"];
+
+        const int Sx_depos = Comps[isl]["Sx_depos"];
+        const int Sy_depos = Comps[isl]["Sy_depos"];
 
         // FIRST: calculate contribution to Sx and Sy by all beams (same as with PC solver)
         const int next_jxb = Comps[nsl]["jx_beam"];
@@ -793,6 +796,30 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
                 // sx, to compute By
                 isl_arr(i,j,Sx) = - pc.mu0 * (
+                                    + cdx_jzb
+                                    + cdz_jxb);
+            });
+
+        amrex::ParallelFor(bx,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+            {
+                const amrex::Real dx_jzb = (isl_arr(i+1,j,jzb)-isl_arr(i-1,j,jzb))/(2._rt*dx);
+                const amrex::Real dy_jzb = (isl_arr(i,j+1,jzb)-isl_arr(i,j-1,jzb))/(2._rt*dy);
+                const amrex::Real dz_jxb = (psl_arr(i,j,prev_jxb)-nsl_arr(i,j,next_jxb))/(2._rt*dz);
+                const amrex::Real dz_jyb = (psl_arr(i,j,prev_jyb)-nsl_arr(i,j,next_jyb))/(2._rt*dz);
+
+                const amrex::Real cdx_jzb = - dx_jzb;
+                const amrex::Real cdy_jzb = - dy_jzb;
+                const amrex::Real cdz_jxb =   dz_jxb;
+                const amrex::Real cdz_jyb =   dz_jyb;
+
+                // sy, to compute Bx
+                isl_arr(i,j,Sy_depos) =   pc.mu0 * (
+                                    + cdy_jzb
+                                    + cdz_jyb);
+
+                // sx, to compute By
+                isl_arr(i,j,Sx_depos) = - pc.mu0 * (
                                     + cdx_jzb
                                     + cdz_jxb);
             });
@@ -907,6 +934,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 });
             }
     }
+
+    m_multi_plasma.ExplicitDeposition(m_fields, geom[lev], lev);
 
     // construct slice geometry
     // Set the lo and hi of domain and probdomain in the z direction
