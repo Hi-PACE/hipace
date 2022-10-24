@@ -435,7 +435,7 @@ Hipace::Evolve ()
 
             if (m_laser.m_use_laser) {
                 AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
-                AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() == 1);
+                AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
                 // Before that, the 3D fields of the envelope are not initialized (not even allocated).
                 m_laser.Init3DEnvelope(step, bx, Geom(0));
                 if (it == n_boxes-1) ResetLaser();
