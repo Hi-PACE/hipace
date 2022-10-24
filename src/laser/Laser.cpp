@@ -20,7 +20,8 @@ void
 Laser::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
-    m_use_laser = queryWithParser(pp, "a0", m_a0);
+    queryWithParser(pp, "use_laser", m_use_laser);
+    queryWithParser(pp, "a0", m_a0);
     if (!m_use_laser) return;
 #if defined(AMREX_USE_HIP)
     amrex::Abort("Laser solver not implemented with HIP");

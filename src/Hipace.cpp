@@ -176,11 +176,8 @@ Hipace::Hipace () :
     MPI_Comm_rank(m_comm_xy, &m_rank_xy);
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
 #endif
-    // AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !( (m_numprocs_z > 1) && m_laser.m_use_laser ),
-    //     "The laser solver currently works for serial runs only");
 
     m_use_laser = m_laser.m_use_laser;
-    amrex::Print()<<"use laser "<<m_use_laser<<'\n';;
 }
 
 Hipace::~Hipace ()
