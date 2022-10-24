@@ -53,6 +53,7 @@
  * \param[in] jxx_cmp array component of current density jxx
  * \param[in] jxy_cmp array component of current density jxy
  * \param[in] jyy_cmp array component of current density jyy
+ * \param[in] mult_cmp array component of current density mult
  * \param[in] a_mf MultiFab containing the normalized vector potential of the laser a
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
  * \param[in] dx cell size in each dimension
@@ -60,6 +61,7 @@
  * \param[in] y_pos_offset offset for converting positions to indexes
  * \param[in] z_pos_offset offset for converting positions to indexes
  * \param[in] charge of a particle
+ * \param[in] mass of a particle
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
  * \param[in] deposit_jx_jy if true, deposit to jx and jy
  * \param[in] deposit_jz if true, deposit to jz
@@ -82,6 +84,7 @@ void doDepositionShapeN (const bool use_laser,
                          const int jxx_cmp,
                          const int jxy_cmp,
                          const int jyy_cmp,
+                         const int mult_cmp,
                          const amrex::MultiFab& a_mf,
                          amrex::Vector<amrex::FArrayBox>& tmp_densities,
                          amrex::Real const * const AMREX_RESTRICT dx,
@@ -89,6 +92,7 @@ void doDepositionShapeN (const bool use_laser,
                          amrex::Real const y_pos_offset,
                          amrex::Real const z_pos_offset,
                          amrex::Real const charge,
+                         amrex::Real const mass,
                          const bool temp_slice,
                          const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                          const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
@@ -124,6 +128,7 @@ void doDepositionShapeN (const bool use_laser,
     const amrex::Real dy_inv = 1._rt/dx[1];
 
     const amrex::Real clightinv = 1.0_rt/get_phys_const().c;
+    const amrex::Real mu0 = get_phys_const().mu0;
 
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
@@ -154,6 +159,7 @@ void doDepositionShapeN (const bool use_laser,
         const int jxx = do_tiling ? 4 : jxx_cmp;
         const int jxy = do_tiling ? 5 : jxy_cmp;
         const int jyy = do_tiling ? 6 : jyy_cmp;
+        const int mult = do_tiling ? 7 : mult_cmp;
 
         int ntiley = 0;
         if (do_tiling) {
@@ -190,9 +196,9 @@ void doDepositionShapeN (const bool use_laser,
                     pos_structs,
                     wp, uxp, uyp, psip,
                     max_qsa_weighting_factor, p_n_qsa_violation,
-                    charge, clightinv, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
+                    charge, mass, clightinv, mu0, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
                     isl_arr,
-                    jx, jy, jz, rho, jxx, jxy, jyy,
+                    jx, jy, jz, rho, jxx, jxy, jyy, mult,
                     // tiling
                     indices, offsets, itile, itilex_bs, itiley_bs,
                     // laser
@@ -288,6 +294,7 @@ void doDepositionShapeN (const bool use_laser,
                         const amrex::Real wqxx = wqx * ux_fact;
                         const amrex::Real wqxy = wqx * uy_fact;
                         const amrex::Real wqyy = wqy * uy_fact;
+                        const amrex::Real wmult = charge_density * q * mu0 / (psip[ip] * mass);
 
                         // Deposit current into isl_arr
                         if (jx != -1) { // deposit_jx_jy
@@ -304,6 +311,9 @@ void doDepositionShapeN (const bool use_laser,
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxx), wqxx);
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxy), wqxy);
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
+                        }
+                        if (mult != -1) { // deposit_mult
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, mult), wmult);
                         }
                     }
                 }

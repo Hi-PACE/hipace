@@ -26,14 +26,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[pti];
         const Array3<amrex::Real> arr = isl_fab.array();
 
-        const int Sx = Comps[WhichSlice::This]["Sx_depos"];
-        const int Sy = Comps[WhichSlice::This]["Sy_depos"];
+        const int Sx = Comps[WhichSlice::This]["Sx"];
+        const int Sy = Comps[WhichSlice::This]["Sy"];
 
         const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
         const int EypBx = Comps[WhichSlice::This]["EypBx"];
         const int Ez = Comps[WhichSlice::This]["Ez"];
         const int Bz = Comps[WhichSlice::This]["Bz"];
-        const int Psi_bad = Comps[WhichSlice::This]["Psi"];
 
         const PhysConst pc = get_phys_const();
         const amrex::Real clight = pc.c;
@@ -131,7 +130,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                         const amrex::Real Ez_v = arr(i,j,Ez);
                         const amrex::Real ExmBy_v = arr(i,j,ExmBy);
                         const amrex::Real EypBx_v = arr(i,j,EypBx);
-                        const amrex::Real Psi_bad_v = arr(i,j,Psi_bad);
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sy),
                             - shape_x * shape_y * (
@@ -139,7 +137,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                                 + ( Ez_v * vy
                                 + ExmBy_v * (          - vx * vy)
                                 + EypBx_v * (gamma_psi - vy * vy) ) / clight
-                            ) / (mass / charge - Psi_bad_v / clight / clight ) //* charge / (psi * mass)
+                            ) * charge / (psi * mass)
                             - shape_dx * shape_y * (
                                 - vx * vy
                             )
@@ -154,7 +152,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                                 + ( Ez_v * vx
                                 + ExmBy_v * (gamma_psi - vx * vx)
                                 + EypBx_v * (          - vx * vy) ) / clight
-                            ) / (mass / charge - Psi_bad_v / clight / clight ) //* charge / (psi * mass)
+                            ) * charge / (psi * mass)
                             + shape_dx * shape_y * (
                                 gamma_psi - vx * vx - 1._rt
                             )

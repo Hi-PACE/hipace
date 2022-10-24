@@ -581,7 +581,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
     // Set all quantities to 0 except Bx and By: the previous slice serves as initial
     // guess.
     m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
-        "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+        "jx_beam", "jy_beam", "jz_beam", "rho_beam", "Mult");
     for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
         m_fields.setVal(0., lev, WhichSlice::This,
             "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
@@ -741,7 +741,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 #endif
     AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[isl]["Sy"] + 1 == Comps[isl]["Sx"]);
-    m_fields.setVal(0., lev, isl, "Sy", "Sx", "Sy_depos", "Sx_depos", "Mult");
+    m_fields.setVal(0., lev, isl, "Sy", "Sx");
 
     // extract a of the Laser
     const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::This);
@@ -753,7 +753,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dy = Geom(lev).CellSize(Direction::y);
     const amrex::Real dz = Geom(lev).CellSize(Direction::z);
 
-    const bool use_laser = m_laser.m_use_laser;
     for ( amrex::MFIter mfi(slicemf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
 
         amrex::Box const& bx = mfi.tilebox();
@@ -762,12 +761,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
         Array3<const amrex::Real> const nsl_arr = nslicemf.const_array(mfi);
         Array3<const amrex::Real> const psl_arr = pslicemf.const_array(mfi);
 
-        const int mult = Comps[isl]["Mult"];
         const int Sx = Comps[isl]["Sx"];
         const int Sy = Comps[isl]["Sy"];
-
-        const int Sx_depos = Comps[isl]["Sx_depos"];
-        const int Sy_depos = Comps[isl]["Sy_depos"];
 
         // FIRST: calculate contribution to Sx and Sy by all beams (same as with PC solver)
         const int next_jxb = Comps[nsl]["jx_beam"];
@@ -799,140 +794,6 @@ Hipace::ExplicitSolveBxBy (const int lev)
                                     + cdx_jzb
                                     + cdz_jxb);
             });
-
-        amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
-            {
-                const amrex::Real dx_jzb = (isl_arr(i+1,j,jzb)-isl_arr(i-1,j,jzb))/(2._rt*dx);
-                const amrex::Real dy_jzb = (isl_arr(i,j+1,jzb)-isl_arr(i,j-1,jzb))/(2._rt*dy);
-                const amrex::Real dz_jxb = (psl_arr(i,j,prev_jxb)-nsl_arr(i,j,next_jxb))/(2._rt*dz);
-                const amrex::Real dz_jyb = (psl_arr(i,j,prev_jyb)-nsl_arr(i,j,next_jyb))/(2._rt*dz);
-
-                const amrex::Real cdx_jzb = - dx_jzb;
-                const amrex::Real cdy_jzb = - dy_jzb;
-                const amrex::Real cdz_jxb =   dz_jxb;
-                const amrex::Real cdz_jyb =   dz_jyb;
-
-                // sy, to compute Bx
-                isl_arr(i,j,Sy_depos) =   pc.mu0 * (
-                                    + cdy_jzb
-                                    + cdz_jyb);
-
-                // sx, to compute By
-                isl_arr(i,j,Sx_depos) = - pc.mu0 * (
-                                    + cdx_jzb
-                                    + cdz_jxb);
-            });
-
-        const int psi = Comps[isl]["Psi"];
-        const int bz = Comps[isl]["Bz"];
-        const int ez = Comps[isl]["Ez"];
-        const auto a = use_laser ? A_mf.const_array(mfi) : amrex::Array4<const amrex::Real>();
-
-        // SECOND: calculate contribution to Mult, Sx and Sy for each plasma separately
-        for (const PlasmaParticleContainer& plasma : m_multi_plasma.m_all_plasmas) {
-
-            // getting the constant of motion for finite temperatures
-            const amrex::RealVect u_std = plasma.GetUStd();
-            const amrex::Real const_of_motion = - plasma.m_mass * pc.c * pc.c / plasma.m_charge *
-                sqrt(1. + u_std[0]*u_std[0] + u_std[1]*u_std[1] + u_std[2]*u_std[2]);
-
-            const std::string plasma_str = "_" + plasma.GetName();
-            const int rho = Comps[isl]["rho"+plasma_str];
-            const int jx  = Comps[isl]["jx" +plasma_str];
-            const int jy  = Comps[isl]["jy" +plasma_str];
-            const int jz  = Comps[isl]["jz" +plasma_str];
-            const int jxx = Comps[isl]["jxx"+plasma_str];
-            const int jxy = Comps[isl]["jxy"+plasma_str];
-            const int jyy = Comps[isl]["jyy"+plasma_str];
-
-            amrex::ParallelFor(bx,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                {
-                    const amrex::Real dx_jxy = (isl_arr(i+1,j,jxy)-isl_arr(i-1,j,jxy))/(2._rt*dx);
-                    const amrex::Real dx_jxx = (isl_arr(i+1,j,jxx)-isl_arr(i-1,j,jxx))/(2._rt*dx);
-                    const amrex::Real dx_jz  = (isl_arr (i+1,j,jz)-isl_arr (i-1,j,jz))/(2._rt*dx);
-                    const amrex::Real dx_psi = (isl_arr(i+1,j,psi)-isl_arr(i-1,j,psi))/(2._rt*dx);
-
-                    const amrex::Real dy_jyy = (isl_arr(i,j+1,jyy)-isl_arr(i,j-1,jyy))/(2._rt*dy);
-                    const amrex::Real dy_jxy = (isl_arr(i,j+1,jxy)-isl_arr(i,j-1,jxy))/(2._rt*dy);
-                    const amrex::Real dy_jz  = (isl_arr (i,j+1,jz)-isl_arr (i,j-1,jz))/(2._rt*dy);
-                    const amrex::Real dy_psi = (isl_arr(i,j+1,psi)-isl_arr(i,j-1,psi))/(2._rt*dy);
-
-                    // Store (i,j,k) cell value in local variable.
-                    // NOTE: a few -1 factors are added here, due to discrepancy in definitions
-                    // between WAND-PIC and HiPACE++:
-                    //   n* and j are defined from ne in WAND-PIC and from rho in hipace++.
-                    const amrex::Real cez     =   isl_arr(i,j,ez);
-                    const amrex::Real cbz     =   isl_arr(i,j,bz);
-                    const amrex::Real cpsi    =   isl_arr(i,j,psi);
-
-                    const amrex::Real cne     = - isl_arr(i,j,rho);
-                    const amrex::Real cjx     = - isl_arr(i,j,jx);
-                    const amrex::Real cjy     = - isl_arr(i,j,jy);
-                    const amrex::Real cjz     = - isl_arr(i,j,jz);
-                    const amrex::Real cjxx    = - isl_arr(i,j,jxx);
-                    const amrex::Real cjxy    = - isl_arr(i,j,jxy);
-                    const amrex::Real cjyy    = - isl_arr(i,j,jyy);
-
-                    const amrex::Real cdx_jxx = - dx_jxx;
-                    const amrex::Real cdx_jxy = - dx_jxy;
-                    const amrex::Real cdx_jz  = - dx_jz;
-                    const amrex::Real cdx_psi =   dx_psi;
-                    const amrex::Real cdy_jyy = - dy_jyy;
-                    const amrex::Real cdy_jxy = - dy_jxy;
-                    const amrex::Real cdy_jz  = - dy_jz;
-                    const amrex::Real cdy_psi =   dy_psi;
-
-                    // laser field is always in normalized units
-                    const amrex::Real casqdx = use_laser ?
-                        ( a(i+1,j,k)*a(i+1,j,k) - a(i-1,j,k)*a(i-1,j,k) )/(2._rt*dx)
-                        * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
-                        : 0._rt;
-                    const amrex::Real casqdy = use_laser ?
-                        ( a(i,j+1,k)*a(i,j+1,k) - a(i,j-1,k)*a(i,j-1,k) )/(2._rt*dy)
-                        * (pc.c * pc.m_e / pc.q_e) * (pc.c * pc.m_e / pc.q_e) * pc.c * pc.c * pc.c
-                        : 0._rt;
-
-                    // to calculate nstar, only the plasma current density is needed
-                    const amrex::Real nstar = cne - cjz / pc.c;
-
-                    const amrex::Real nstar_ax = 1._rt/(const_of_motion + cpsi) * (
-                                    (-0.25_rt*casqdx*nstar)/(const_of_motion + cpsi)
-                                    + cne*cdx_psi * pc.c
-                                    - cjx*cez
-                                    - cjxx*cdx_psi / pc.c
-                                    - cjxy*cdy_psi / pc.c);
-
-                    const amrex::Real nstar_ay = 1._rt/(const_of_motion + cpsi) * (
-                                    (-0.25_rt*casqdy*nstar)/(const_of_motion + cpsi)
-                                    + cne*cdy_psi * pc.c
-                                    - cjy*cez
-                                    - cjxy*cdx_psi / pc.c
-                                    - cjyy*cdy_psi / pc.c);
-
-                    // Should only have 1 component, but not supported yet by the AMReX MG solver
-                    isl_arr(i,j,mult) += nstar / (const_of_motion + cpsi) / pc.ep0;
-                    if (ncomp_mult==2) {
-                        isl_arr(i,j,mult+1) += nstar / (const_of_motion + cpsi) / pc.ep0;
-                    }
-
-                    // sy, to compute Bx
-                    isl_arr(i,j,Sy) += pc.mu0 * (
-                                     + cbz * cjx / (const_of_motion+cpsi) * pc.c
-                                     + nstar_ay
-                                     - cdx_jxy / pc.c
-                                     - cdy_jyy / pc.c
-                                     + cdy_jz);
-                    // sx, to compute By
-                    isl_arr(i,j,Sx) -= pc.mu0 * (
-                                     - cbz * cjy / (const_of_motion+cpsi) * pc.c
-                                     + nstar_ax
-                                     - cdx_jxx / pc.c
-                                     - cdy_jxy / pc.c
-                                     + cdx_jz);
-                });
-            }
     }
 
     m_multi_plasma.ExplicitDeposition(m_fields, geom[lev], lev);
@@ -964,6 +825,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
+        AMREX_ALWAYS_ASSERT(m_use_amrex_mlmg!=m_use_amrex_mlmg); // not supported
         if (!m_mlalaplacian){
             // If first call, initialize the MG solver
             amrex::LPInfo lpinfo{};
