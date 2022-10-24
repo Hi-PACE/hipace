@@ -376,5 +376,6 @@ then
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
                      --file_name ${build_dir}/bin/laser_evolution.SI.2Rank \
-                     --test-name laser_evolution.SI.2Rank
+                     --test-name laser_evolution.SI.2Rank \
+                     --skip-particles
 fi

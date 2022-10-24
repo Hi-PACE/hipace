@@ -1189,6 +1189,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     amrex::Vector<int> np_rcv(nint, 0);
     if (it < m_leftmost_box_rcv && it < m_numprocs_z - 1 && m_skip_empty_comms){
         if (m_verbose >= 2){
+            amrex::AllPrint()<<"rank "<<m_rank_z<<" step "<<step<<" box "<<it<<": SKIP RECV!\n";
         }
         return;
     }

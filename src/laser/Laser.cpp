@@ -361,6 +361,8 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
                 const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
                 Complex rhs;
                 if (step == 0) {
+                    // First time step: non-centered push to go
+                    // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = n00jp1_arr(i,j,0) + I * n00jp1_arr(i,j,1);
                     const Complex an00jp2 = n00jp2_arr(i,j,0) + I * n00jp2_arr(i,j,1);
                     rhs =
@@ -555,6 +557,8 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
                 const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
                 Complex rhs;
                 if (step == 0) {
+                    // First time step: non-centered push to go
+                    // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = n00jp1_arr(i,j,0) + I * n00jp1_arr(i,j,1);
                     const Complex an00jp2 = n00jp2_arr(i,j,0) + I * n00jp2_arr(i,j,1);
                     rhs =
@@ -643,12 +647,6 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         amrex::ParallelFor(
             grown_bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
-                // OK: n00j**
-                // OK: nm1j**_arr(i,j,0)*(step>0)
-                // Problems: np1jp1, np1jp2.
-                // np1j00_arr(i,j,0) = .9*n00j00_arr(i,j,0)+.1*np1jp1_arr(i,j,0)*(step>=0);
-                // np1j00_arr(i,j,1) = .9*n00j00_arr(i,j,1)+.1*np1jp1_arr(i,j,1)*(step>=0);
-                // return;
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
                     np1j00_arr(i,j,0) = sol_arr(i,j,0).real() * inv_numPts;
                     np1j00_arr(i,j,1) = sol_arr(i,j,0).imag() * inv_numPts;

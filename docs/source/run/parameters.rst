@@ -497,11 +497,11 @@ Option: ``from_file``
 Laser parameters
 ----------------
 
-Currently, only a single, static laser pulse is available. The laser profile is defined by
-:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`. The laser pulse length
-:math:`L0 = \tau / c_0`
-can be specified via the pulse duration ``laser.tau``.
-If no ``laser.a0`` is provided, no laser will be initialized.
+The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
+The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse duration ``laser.tau``.
+
+* ``laser.use_laser`` (`0` or `1`) optional (default `0`)
+    Weather to activate the laser envelope solver.
 
 * ``laser.a0`` (`float`) optional (default `0`)
     Peak normalized vector potential of the laser pulse.
@@ -519,8 +519,11 @@ If no ``laser.a0`` is provided, no laser will be initialized.
     The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
     Use either the pulse length or the pulse duration.
 
-* ``laser.lambda0`` (`float`) optional (default `0`)
-    The laser pulse wavelength. Currently not used in the code.
+* ``laser.lambda0`` (`float`)
+    The laser pulse wavelength.
+
+* ``laser.focal_distance`` (`float`)
+    Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
 Diagnostic parameters
 ---------------------
@@ -551,6 +554,8 @@ Diagnostic parameters
     always be added to the first plasma species in case multiple plasma species are available.
     **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
     output, please use ``hipace.output_period = -1``.
+    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,
