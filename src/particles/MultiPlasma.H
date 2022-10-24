@@ -120,6 +120,9 @@ public:
     /** returns a Vector of names of the plasmas */
     const amrex::Vector<std::string>& GetNames() const {return m_names;}
 
+    /** returns number of plasma species */
+    int GetNPlasmas() const {return m_nplasmas;}
+
     /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
      *
      * The algorithm implemented is that of [Perez et al., Phys. Plasmas 19, 083104 (2012)]
