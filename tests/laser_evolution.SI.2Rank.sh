@@ -34,6 +34,7 @@ $HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
+    --skip-particles \
     --evaluate \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME
