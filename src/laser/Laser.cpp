@@ -134,7 +134,7 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     // (except for the head box).
     amrex::FArrayBox store_np1j00;
     store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
-    store_np1j00.copy(m_slices[WhichLaserSlice::np1j00][0]);
+    store_np1j00.copy<amrex::RunOn::Device>(m_slices[WhichLaserSlice::np1j00][0]);
 
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -145,7 +145,7 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     }
 
     // Reset np1j00 to its original value.
-    m_slices[WhichLaserSlice::np1j00][0].copy(store_np1j00);
+    m_slices[WhichLaserSlice::np1j00][0].copy<amrex::RunOn::Device>(store_np1j00);
 }
 
 void
