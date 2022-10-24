@@ -366,3 +366,15 @@ then
                      --file_name ${build_dir}/bin/beam_in_vacuum_open_boundary.normalized.1Rank \
                      --test-name beam_in_vacuum_open_boundary.normalized.1Rank
 fi
+
+# laser_evolution.SI.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "laser_evolution.SI.2Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R laser_evolution.SI.2Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/laser_evolution.SI.2Rank \
+                     --test-name laser_evolution.SI.2Rank
+fi

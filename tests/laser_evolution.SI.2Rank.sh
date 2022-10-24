@@ -26,14 +26,14 @@ FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
-mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         hipace.file_prefix = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
-# $HIPACE_TEST_DIR/checksum/checksumAPI.py \
-#     --evaluate \
-#     --file_name $TEST_NAME \
-#     --test-name $TEST_NAME
+$HIPACE_TEST_DIR/checksum/checksumAPI.py \
+    --evaluate \
+    --file_name $TEST_NAME \
+    --test-name $TEST_NAME
