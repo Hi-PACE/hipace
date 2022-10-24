@@ -51,6 +51,8 @@ namespace LaserFFT {
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichLaserSlice {
+    // n stands for the time step, j for the longitudinal slice.
+    // n00 is time step n, nm1 is n-1 and np1 is n+1. Similar notation for slice j.
     enum slice { nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
 };
 
