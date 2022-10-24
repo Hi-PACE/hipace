@@ -178,6 +178,7 @@ private:
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
     std::string m_solver_type = "fft";
+    amrex::Box m_slice_box;
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};

@@ -70,15 +70,15 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
         m_slices[islice].setVal(0.0);
     }
 
-    const amrex::Box& bx = slice_ba[0];
-    m_sol.resize(bx, 1, amrex::The_Arena());
-    m_rhs.resize(bx, 1, amrex::The_Arena());
-    m_rhs_fourier.resize(bx, 1, amrex::The_Arena());
+    m_slice_box = slice_ba[0];
+    m_sol.resize(m_slice_box, 1, amrex::The_Arena());
+    m_rhs.resize(m_slice_box, 1, amrex::The_Arena());
+    m_rhs_fourier.resize(m_slice_box, 1, amrex::The_Arena());
 
     if (m_solver_type == "fft") {
 
         // Create FFT plans
-        amrex::IntVect fft_size = bx.length();
+        amrex::IntVect fft_size = m_slice_box.length();
 
 #ifdef AMREX_USE_CUDA
         cufftResult result;
@@ -127,15 +127,25 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
     if (step > 0) return;
 
+    // In order to use the normal Copy function, we use slice np1j00 as a tmp array
+    // to initialize the laser in the loop over slices below.
+    // We need to keep the value in np1j00, as it is shifted to np1jp1 and used to compute
+    // the following slices. This is relevant for the first slices at step 0 of every box
+    // (except for the head box).
+    amrex::FArrayBox store_np1j00;
+    store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
+    store_np1j00.copy(m_slices[WhichLaserSlice::np1j00][0]);
+
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-        // Compute initial field on the current (device) slice
-        // n00j00 for current, nm1j00 for old
+        // Compute initial field on the current (device) slice n00j00 for current
         InitLaserSlice(gm, isl);
-        // Copy: (device) slice to (host) 3D array
-        // A = np1j00, Aold = n00j00
+        // Copy: (device) slice to (host) 3D array. A = np1j00
         Copy(isl, true, true);
     }
+
+    // Reset np1j00 to its original value.
+    m_slices[WhichLaserSlice::np1j00][0].copy(store_np1j00);
 }
 
 void
@@ -178,24 +188,20 @@ Laser::Copy (int isl, bool to3d, bool init)
             // +2 in 3D array means old.
             // 2 components for complex numbers.
             if (to3d){
-                // next time slice into new host
-                host_arr(i,j,isl,n) = np1j00_arr(i,j,n);
                 // this slice into old host
-                // Cannot update slice isl or isl+1 of old array because we'll need the
-                // previous value when computing the next slice.
                 host_arr(i,j,isl,n+2) = n00j00_arr(i,j,n);
-                // if (isl+2 <= izmax){
-                //     host_arr(i,j,isl+2,n+2) = n00jp2_arr(i,j,n);
-                // }
+                // next time slice into new host
+                host_arr(i,j,isl,n  ) = np1j00_arr(i,j,n);
             } else {
+                // Shift slices of step n-1, and get current slice from 3D array
                 nm1jp2_arr(i,j,n) = nm1jp1_arr(i,j,n);
                 nm1jp1_arr(i,j,n) = nm1j00_arr(i,j,n);
                 nm1j00_arr(i,j,n) = host_arr(i,j,isl,n+2);
-                // nm1jp1_arr(i,j,n) = isl+1 <= izmax ? host_arr(i,j,isl+1,n+2) : 0._rt;
-                // nm1jp2_arr(i,j,n) = isl+2 <= izmax ? host_arr(i,j,isl+2,n+2) : 0._rt;
+                // Shift slices of step n, and get current slice from 3D array
                 n00jp2_arr(i,j,n) = n00jp1_arr(i,j,n);
                 n00jp1_arr(i,j,n) = n00j00_arr(i,j,n);
                 n00j00_arr(i,j,n) = host_arr(i,j,isl,n);
+                // Shift slices of step n+1. Current slice will be computed
                 np1jp2_arr(i,j,n) = np1jp1_arr(i,j,n);
                 np1jp1_arr(i,j,n) = np1j00_arr(i,j,n);
             }
@@ -636,6 +642,12 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         amrex::ParallelFor(
             grown_bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+                // OK: n00j**
+                // OK: nm1j**_arr(i,j,0)*(step>0)
+                // Problems: np1jp1, np1jp2.
+                // np1j00_arr(i,j,0) = .9*n00j00_arr(i,j,0)+.1*np1jp1_arr(i,j,0)*(step>=0);
+                // np1j00_arr(i,j,1) = .9*n00j00_arr(i,j,1)+.1*np1jp1_arr(i,j,1)*(step>=0);
+                // return;
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
                     np1j00_arr(i,j,0) = sol_arr(i,j,0).real() * inv_numPts;
                     np1j00_arr(i,j,1) = sol_arr(i,j,0).imag() * inv_numPts;
@@ -681,7 +693,6 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
 
     // Envelope quantities common for all this slice
     amrex::MultiFab& np1j00 = getSlices(WhichLaserSlice::np1j00);
-    amrex::MultiFab& n00j00 = getSlices(WhichLaserSlice::n00j00);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -689,7 +700,6 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
     for ( amrex::MFIter mfi(np1j00, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & np1j00_arr = np1j00.array(mfi);
-        amrex::Array4<amrex::Real> const & n00j00_arr = n00j00.array(mfi);
 
         // Initialize a Gaussian laser envelope on slice islice
         amrex::ParallelFor(

@@ -1294,14 +1294,12 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
     // Receive laser
     {
-        amrex::AllPrint()<<"rank "<<m_rank_z<<" nz_laser "<<nz_laser<<'\n';
         if (only_ghost) return;
         if (!m_laser.m_use_laser) return;
         AMREX_ALWAYS_ASSERT(nz_laser > 0);
         amrex::FArrayBox& laser_fab = m_laser.getFAB();
         amrex::Array4<amrex::Real> laser_arr = laser_fab.array();
         const amrex::Box& bx = laser_fab.box(); // does not include ghost cells
-        amrex::AllPrint()<<"rank "<<m_rank_z<<" bx "<<bx<<'\n';
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             bx.bigEnd(2)-bx.smallEnd(2)+1 == nz_laser,
             "Laser requires all sub-domains to be the same size, i.e., nz%nrank=0");
