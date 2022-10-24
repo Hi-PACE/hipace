@@ -121,11 +121,8 @@ public:
      *
      * \param[in] isl slice index, referring to the 3D slice
      * \param[in] to3d if true, copy from 2D slice to 3D array. Otherwise, the other way.
-     * \param[in] init whether this is for initialization. If yes, also store the previous time
-     *            step in old 3D array. If not, same thing, but on a different slice index to
-     *            avoid conflict.
      */
-    void Copy (int isl, bool to3d, bool init);
+    void Copy (int isl, bool to3d);
 
     /** Wrapper function to advance a laser slice by 1 time step.
      * \param[in] fields Field object

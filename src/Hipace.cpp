@@ -535,7 +535,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
                                     boxArray(0)[ibox].smallEnd(Direction::z),
                                     m_box_sorters, ibox);
     // Get this laser slice from the 3D array
-    m_laser.Copy(islice_coarse, false, false);
+    m_laser.Copy(islice_coarse, false);
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
 
@@ -579,7 +579,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
         // Advance laser slice by 1 step and store result to 3D array
         m_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
-        m_laser.Copy(islice_coarse, true, false);
+        m_laser.Copy(islice_coarse, true);
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();

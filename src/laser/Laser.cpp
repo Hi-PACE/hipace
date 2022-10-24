@@ -142,7 +142,7 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
         // Compute initial field on the current (device) slice n00j00 for current
         InitLaserSlice(gm, isl);
         // Copy: (device) slice to (host) 3D array. A = np1j00
-        Copy(isl, true, true);
+        Copy(isl, true);
     }
 
     // Reset np1j00 to its original value.
@@ -150,7 +150,7 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 }
 
 void
-Laser::Copy (int isl, bool to3d, bool init)
+Laser::Copy (int isl, bool to3d)
 {
     if (!m_use_laser) return;
 
