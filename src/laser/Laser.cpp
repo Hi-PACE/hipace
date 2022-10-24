@@ -221,7 +221,7 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::R
     } else if (m_solver_type == "fft") {
         AdvanceSliceFFT(fields, geom, dt, step);
     } else {
-        amrex::Abort("<laser name>.solver_type must be fft or multigrid");
+        amrex::Abort("laser.solver_type must be fft or multigrid");
     }
 }
 

@@ -525,6 +525,11 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
 * ``laser.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
+* ``laser.solver_type`` (`string`) optional (default `fft`)
+    Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
+    Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
+    With the multigrid solver, we could drop this assumption.
+
 Diagnostic parameters
 ---------------------
 
