@@ -21,16 +21,16 @@ public:
                              const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
 
     //! \brief returns the pointer to the permutation array
-    index_type* boxCountsPtr () noexcept { return m_box_counts.dataPtr(); }
+    index_type* boxCountsPtr () noexcept { return m_box_counts_cpu.dataPtr(); }
 
     //! \brief returns the pointer to the offsets array
-    index_type* boxOffsetsPtr () noexcept { return m_box_offsets.dataPtr(); }
+    index_type* boxOffsetsPtr () noexcept { return m_box_offsets_cpu.dataPtr(); }
 
     //! \brief returns the pointer to the permutation array
-    const index_type* boxCountsPtr () const noexcept { return m_box_counts.dataPtr(); }
+    const index_type* boxCountsPtr () const noexcept { return m_box_counts_cpu.dataPtr(); }
 
     //! \brief returns the pointer to the offsets array
-    const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets.dataPtr(); }
+    const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets_cpu.dataPtr(); }
 
     /** Get the index of the most downstream box that has beam particles */
     int leftmostBoxWithParticles () const;
@@ -40,8 +40,12 @@ private:
     amrex::ParticleLocator<amrex::DenseBins<amrex::Box> > m_particle_locator;
     /** Number of particles in each box */
     amrex::Gpu::DeviceVector<index_type> m_box_counts;
+    /** Number of particles in each box, stored on the cpu */
+    amrex::Vector<index_type> m_box_counts_cpu;
     /** Index of the first particle in each box */
     amrex::Gpu::DeviceVector<index_type> m_box_offsets;
+    /** Index of the first particle in each box, stored on the cpu*/
+    amrex::Vector<index_type> m_box_offsets_cpu;
 };
 
 #endif // HIPACE_BoxSort_H_
