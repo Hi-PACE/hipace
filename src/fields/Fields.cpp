@@ -497,7 +497,6 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
         amrex::Gpu::Device::synchronize();
         if (!laser.m_use_laser) return;
         auto laser_array = laser_func.array(mfi);
-        const int lo2_laser = laser_mf[mfi].box().smallEnd(2);
         amrex::ParallelFor(diag_box,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
