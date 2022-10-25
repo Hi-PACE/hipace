@@ -55,7 +55,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     const amrex::Real long_pos_factor =  std::exp( -0.5_rt*(delta_z*delta_z) );
     const amrex::Real loc_peak_current_density = m_peak_current_density;
 
-    for ( amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(S, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         Array2<amrex::Real> const jz_arr = S.array(mfi, Hipace::GetInstance().m_explicit ?
             Comps[WhichSlice::This]["jz_beam"] : Comps[WhichSlice::This]["jz"]);

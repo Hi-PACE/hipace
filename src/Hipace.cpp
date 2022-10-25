@@ -135,6 +135,13 @@ Hipace::Hipace () :
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
+    bool do_mfi_sync = false;
+    queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
+    DfltMfi.SetDeviceSync(do_mfi_sync).UseDefaultStream();
+    DfltMfiTlng.SetDeviceSync(do_mfi_sync).UseDefaultStream();
+    if (amrex::TilingIfNotGPU()) {
+        DfltMfiTlng.EnableTiling();
+    }
     queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
     queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
     queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
@@ -341,7 +348,7 @@ Hipace::ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real /*time*/, int /
     const amrex::Real* problo = Geom(lev).ProbLo();
     const amrex::Real* dx = Geom(lev).CellSize();
 
-    for (amrex::MFIter mfi(tags); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(tags, DfltMfi); mfi.isValid(); ++mfi)
     {
         auto& fab = tags[mfi];
         const amrex::Box& bx = fab.box();
@@ -754,7 +761,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::Real dz = Geom(lev).CellSize(Direction::z);
 
     const bool use_laser = m_laser.m_use_laser;
-    for ( amrex::MFIter mfi(slicemf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
         amrex::Box const& bx = mfi.tilebox();
 
@@ -935,6 +942,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
+        amrex::Gpu::streamSynchronize();
         if (!m_mlalaplacian){
             // If first call, initialize the MG solver
             amrex::LPInfo lpinfo{};
@@ -1251,7 +1259,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             offset_beam += np;
         }
 
-        amrex::Gpu::Device::synchronize();
+        amrex::Gpu::streamSynchronize();
         amrex::The_Pinned_Arena()->free(recv_buffer);
     }
 
@@ -1393,7 +1401,7 @@ Hipace::Notify (const int step, const int it,
                     ptd.packParticleData(p_psend_buffer, offset_box+src_i, i*psize, p_comm_real, p_comm_int);
                 }
             }
-            amrex::Gpu::Device::synchronize();
+            amrex::Gpu::streamSynchronize();
 
             // Delete beam particles that we just sent from the particle array
             if (!only_ghost) ptile.resize(offset_box);
@@ -1520,6 +1528,7 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
     const amrex::Vector< std::string > beamnames = getDiagBeamNames();
 
 #ifdef HIPACE_USE_OPENPMD
+    amrex::Gpu::streamSynchronize();
     m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.hasField(),
                         m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames,
                         beamnames, it, m_box_sorters, geom, call_type);
