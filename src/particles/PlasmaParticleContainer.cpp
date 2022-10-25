@@ -198,7 +198,7 @@ IonizationModule (const int lev,
     const PhysConst phys_const = make_constants_SI();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
-    for (amrex::MFIter mfi_ion = MakeMFIter(lev); mfi_ion.isValid(); ++mfi_ion)
+    for (amrex::MFIter mfi_ion = MakeMFIter(lev, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[mfi_ion];
@@ -289,7 +289,7 @@ IonizationModule (const int lev,
                 amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
             }
         });
-        amrex::Gpu::synchronize();
+        amrex::Gpu::streamSynchronize();
 
         if (num_new_electrons.dataValue() == 0) continue;
 
@@ -377,6 +377,5 @@ IonizationModule (const int lev,
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });
-        amrex::Gpu::synchronize();
     }
 }

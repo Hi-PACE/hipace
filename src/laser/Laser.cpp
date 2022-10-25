@@ -170,7 +170,7 @@ Laser::Copy (int isl, bool to3d)
     const int izmax = m_F.box().bigEnd(2);
     const int izmin = m_F.box().smallEnd(2);
 
-    for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
@@ -259,7 +259,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
 
     amrex::Real djn {0.};
 
-    for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         const int imin = bx.smallEnd(0);
         const int imax = bx.bigEnd  (0);
@@ -452,7 +452,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
     amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
     amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
 
-    for ( amrex::MFIter mfi(n00j00, false); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         const int imin = bx.smallEnd(0);
         const int imax = bx.bigEnd  (0);
@@ -696,7 +696,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(np1j00, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(np1j00, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & np1j00_arr = np1j00.array(mfi);
 

@@ -9,6 +9,7 @@
 #define HIPACE_GPUUTIL_H_
 
 #include <AMReX_Array4.H>
+#include <AMReX_MFIter.H>
 
 template<class T>
 struct Array2 {
@@ -178,5 +179,8 @@ template<class T> inline
 T to_array3 (T&& in) {
     return in;
 }
+
+inline amrex::MFItInfo DfltMfi; // Default MFIter
+inline amrex::MFItInfo DfltMfiTlng; // Default MFIter with Tiling
 
 #endif

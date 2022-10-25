@@ -71,7 +71,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     amrex::Real dky = 2*MathConst::pi/gm.ProbLength(1);
     m_inv_k2 = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
     // Loop over boxes and calculate inv_k2 in each box
-    for (amrex::MFIter mfi(m_inv_k2); mfi.isValid(); ++mfi ){
+    for (amrex::MFIter mfi(m_inv_k2, DfltMfi); mfi.isValid(); ++mfi ){
         Array2<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
         amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
         int const Ny = bx.length(1);
@@ -96,7 +96,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     m_backward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
     // Loop over boxes and allocate the corresponding plan
     // for each box owned by the local MPI proc
-    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
         // Note: the size of the real-space box and spectral-space box
         // differ when using real-to-complex FFT. When initializing
         // the FFT plan, the valid dimensions are those of the real-space box.
@@ -120,7 +120,7 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     HIPACE_PROFILE("FFTPoissonSolverPeriodic::SolvePoissonEquation()");
 
     // Loop over boxes
-    for ( amrex::MFIter mfi(m_stagingArea); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
 
         // Perform Fourier transform from the staging area to `tmpSpectralField`
         AnyFFT::Execute(m_forward_plan[mfi]);
