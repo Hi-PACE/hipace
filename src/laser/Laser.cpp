@@ -85,14 +85,14 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
         cufftResult result;
         // Forward FFT plan
         result = LaserFFT::VendorCreate(
-            &(m_plan_fwd), fft_size[1], fft_size[0], CUFFT_Z2Z);
+            &(m_plan_fwd), fft_size[1], fft_size[0], LaserFFT::cufft_type);
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " cufftplan failed! Error: " <<
                 CuFFTUtils::cufftErrorToString(result) << "\n";
         }
         // Backward FFT plan
         result = LaserFFT::VendorCreate(
-            &(m_plan_bkw), fft_size[1], fft_size[0], CUFFT_Z2Z);
+            &(m_plan_bkw), fft_size[1], fft_size[0], LaserFFT::cufft_type);
         if ( result != CUFFT_SUCCESS ) {
             amrex::Print() << " cufftplan failed! Error: " <<
                 CuFFTUtils::cufftErrorToString(result) << "\n";
