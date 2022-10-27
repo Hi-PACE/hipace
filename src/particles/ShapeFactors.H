@@ -194,4 +194,112 @@ shape_factor_result compute_single_shape_factor (amrex::Real xmid, int ix) noexc
     return {};
 }
 
+
+struct shape_factor_result_derivative {
+    amrex::Real factor;
+    amrex::Real derivative_factor;
+    int cell;
+};
+
+template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+shape_factor_result_derivative single_shape_factor_derivative (amrex::Real xmid, int ix) noexcept {
+
+    using namespace amrex::literals;
+    if constexpr (depos_order==0) {
+        const amrex::Real xfloor = amrex::Math::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
+        if (ix==0) {
+            const amrex::Real fac = (xint < 0.5_rt) ? 1._rt : 0._rt;
+            const amrex::Real dfac = 1._rt;
+            return {fac, dfac, static_cast<int>(xfloor)};
+        } else {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0._rt : 1._rt;
+            const amrex::Real dfac = -1._rt;
+            return {fac, dfac, static_cast<int>(xfloor)+1};
+        }
+    } else if constexpr (depos_order==1) {
+        const amrex::Real xfloor = amrex::Math::floor(xmid+0.5_rt);
+        const amrex::Real xint = xmid-xfloor;
+        if (ix==0) {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0.5_rt - xint : 0._rt;
+            const amrex::Real dfac = 1._rt - xint;
+            return {fac, dfac, static_cast<int>(xfloor)-1};
+        } else if (ix==1) {
+            const amrex::Real fac = (xint < 0.5_rt) ? xint + 0.5_rt : 1.5_rt - xint;
+            const amrex::Real dfac = 2 * xint - 1._rt;
+            return {fac, dfac, static_cast<int>(xfloor)};
+        } else {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0._rt : xint - 0.5_rt;
+            const amrex::Real dfac = - xint;
+            return {fac, dfac, static_cast<int>(xfloor)+1};
+        }
+    } else if constexpr (false) {
+        const amrex::Real xfloor = amrex::Math::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
+        if (ix==0) {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0.5_rt*xint*xint : 0._rt;
+            const amrex::Real dfac = 0.5_rt*(0.5_rt-xint)*(0.5_rt-xint);
+            return {fac, dfac, static_cast<int>(xfloor)-1};
+        } else if (ix==1) {
+            const amrex::Real fac = (xint < 0.5_rt) ? -xint*xint-xint+0.5_rt : 0.5_rt*(1._rt-xint)*(1._rt-xint);
+            const amrex::Real dfac = - 1.5_rt*xint*xint + 0.5_rt*xint + 0.625_rt;
+            return {fac, dfac, static_cast<int>(xfloor)};
+        } else if (ix==2) {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0.5_rt*(1._rt+xint)*(1._rt+xint) : -xint*xint+xint+0.5_rt;
+            const amrex::Real dfac = 1.5_rt*xint*xint + 0.5_rt*xint - 0.625_rt;
+            return {fac, dfac, static_cast<int>(xfloor)+1};
+        } else {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0._rt : 0.5_rt*xint*xint;
+            const amrex::Real dfac = - 0.5_rt*(0.5_rt+xint)*(0.5_rt+xint);
+            return {fac, dfac, static_cast<int>(xfloor)+2};
+        }
+    } else if constexpr (depos_order==2) {
+        const amrex::Real xfloor = amrex::Math::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
+        if (ix==0) {
+            const amrex::Real fac = 1.0_rt/6.0_rt*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);
+            const amrex::Real dfac = 0.5_rt*(0.5_rt-xint)*(0.5_rt-xint);
+            return {fac, dfac, static_cast<int>(xfloor)-1};
+        } else if (ix==1) {
+            const amrex::Real fac = 2.0_rt/3.0_rt-xint*xint*(1.0_rt-xint/2.0_rt);
+            const amrex::Real dfac = - 1.5_rt*xint*xint + 0.5_rt*xint + 0.625_rt;
+            return {fac, dfac, static_cast<int>(xfloor)};
+        } else if (ix==2) {
+            const amrex::Real fac = 2.0_rt/3.0_rt-(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-0.5_rt*(1.0_rt-xint));
+            const amrex::Real dfac = 1.5_rt*xint*xint + 0.5_rt*xint - 0.625_rt;
+            return {fac, dfac, static_cast<int>(xfloor)+1};
+        } else {
+            const amrex::Real fac = 1.0_rt/6.0_rt*xint*xint*xint;
+            const amrex::Real dfac = - 0.5_rt*(0.5_rt+xint)*(0.5_rt+xint);
+            return {fac, dfac, static_cast<int>(xfloor)+2};
+        }
+    } else if constexpr (depos_order==3) {
+        const amrex::Real xfloor = amrex::Math::floor(xmid+0.5_rt);
+        const amrex::Real xint = xmid-xfloor;
+        if (ix==0) {
+            const amrex::Real fac = (xint < 0.5_rt) ? (1._rt/6._rt)*(0.5_rt-xint)*(0.5_rt-xint)*(0.5_rt-xint) : 0._rt;
+            const amrex::Real dfac = (1._rt/6._rt)*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);
+            return {fac, dfac, static_cast<int>(xfloor)-2};
+        } else if (ix==1) {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0.5_rt*xint*xint*xint - 0.25_rt*xint*xint - 0.625_rt*xint + (23._rt/48._rt) : 1.0_rt/6.0_rt*(1.5_rt-xint)*(1.5_rt-xint)*(1.5_rt-xint);
+            const amrex::Real dfac = (2._rt/3._rt)*xint*xint*xint - 1.5_rt*xint*xint + 0.5_rt*xint + 0.5_rt;
+            return {fac, dfac, static_cast<int>(xfloor)-1};
+        } else if (ix==2) {
+            const amrex::Real fac = (xint < 0.5_rt) ? - 0.5_rt*xint*xint*xint - 0.25_rt*xint*xint + 0.625_rt*xint + (23._rt/48._rt) : 0.5_rt*xint*xint*xint - 1.75_rt*xint*xint + 1.375_rt*xint + (17._rt/48._rt);
+            const amrex::Real dfac = -xint*xint*xint + 1.5_rt*xint*xint + 0.5_rt*xint - 0.5_rt;
+            return {fac, dfac, static_cast<int>(xfloor)};
+        } else if (ix==3) {
+            const amrex::Real fac = (xint < 0.5_rt) ? (1._rt/6._rt)*(0.5_rt+xint)*(0.5_rt+xint)*(0.5_rt+xint) : - 0.5_rt*xint*xint*xint + 1.25_rt*xint*xint - 0.375*xint + (5._rt/48._rt);
+            const amrex::Real dfac = (2._rt/3._rt)*xint*xint*xint - 0.5_rt*xint*xint - 0.5_rt*xint - (1._rt/6._rt);
+            return {fac, dfac, static_cast<int>(xfloor)+1};
+        } else {
+            const amrex::Real fac = (xint < 0.5_rt) ? 0._rt : (1._rt/6._rt)*(xint-0.5_rt)*(xint-0.5_rt)*(xint-0.5_rt);
+            const amrex::Real dfac = - (1._rt/6._rt)*xint*xint*xint;
+            return {fac, dfac, static_cast<int>(xfloor)+2};
+        }
+    }
+    static_assert(0 <= depos_order && depos_order <= 3);
+    return {};
+}
+
 #endif // SHAPEFACTORS_H_

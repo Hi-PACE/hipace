@@ -36,7 +36,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
 
         const PhysConst pc = get_phys_const();
         const amrex::Real clight = pc.c;
-        const amrex::Real mu0 = pc.mu0;
 
         // Extract particle properties
         const auto& aos = pti.GetArrayOfStructs(); // For positions
@@ -56,67 +55,41 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
 
-        const amrex::Real charge = plasma.m_charge;
-        const amrex::Real mass = plasma.m_mass;
+        const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
+        const amrex::Real charge_mass = plasma.m_charge / plasma.m_mass;
 
         amrex::ParallelFor(
             amrex::TypeList<amrex::CompileTimeOptions<0,1,2,3>>{},
             {Hipace::m_depos_order_xy},
             pti.numParticles(),
-            [=] AMREX_GPU_DEVICE (int i, auto a_depos_order) {
+            [=] AMREX_GPU_DEVICE (int id, auto a_depos_order) {
                 constexpr int depos_order = a_depos_order.value;
 
-                const auto position = pos_structs[i];
-                if (position.id() < 0) return;
-                const amrex::Real psi = psip[i];
-                const amrex::Real vx = uxp[i] / (psi * clight);
-                const amrex::Real vy = uyp[i] / (psi * clight);
+                if (pos_structs[id].id() < 0) return;
+                const amrex::Real psi = psip[id];
+                const amrex::Real vx = uxp[id] / (psi * clight);
+                const amrex::Real vy = uyp[id] / (psi * clight);
 
-                const amrex::Real xmid = (position.pos(0) - x_pos_offset)*dx_inv;
-                amrex::Real sx_cell[depos_order + 1];
-                const int i_cell = compute_shape_factor<depos_order>(sx_cell, xmid);
+                const amrex::Real xmid = (pos_structs[id].pos(0) - x_pos_offset)*dx_inv;
+                const amrex::Real ymid = (pos_structs[id].pos(1) - y_pos_offset)*dy_inv;
 
-                // y direction
-                const amrex::Real ymid = (position.pos(1) - y_pos_offset)*dy_inv;
-                amrex::Real sy_cell[depos_order + 1];
-                const int j_cell = compute_shape_factor<depos_order>(sy_cell, ymid);
+                const amrex::Real global_fac = charge_invvol_mu0 * wp[id];
 
-                const amrex::Real global_fac = charge * wp[i] * invvol * mu0;
+                for (int iy=0; iy <= depos_order+1; ++iy) {
 
-                for (int iy=0; iy <= depos_order+2; ++iy) {
-                    amrex::Real shape_y = 0._rt;
-                    amrex::Real shape_dy = 0._rt;
-                    if (iy != 0 && iy != depos_order + 2) {
-                        shape_y = sy_cell[iy-1] * global_fac;
-                    }
-                    if (iy < depos_order + 1) {
-                        shape_dy = sy_cell[iy];
-                    }
-                    if (iy > 1) {
-                        shape_dy -= sy_cell[iy-2];
-                    }
-                    shape_dy *= dy_inv * 0.5_rt * clight * global_fac;
+                    for (int ix=0; ix <= depos_order+1; ++ix) {
 
-                    for (int ix=0; ix <= depos_order+2; ++ix) {
-                        amrex::Real shape_x = 0._rt;
-                        amrex::Real shape_dx = 0._rt;
-                        if (ix != 0 && ix != depos_order + 2) {
-                            shape_x = sx_cell[ix-1];
-                        }
-                        if (ix < depos_order + 1) {
-                            shape_dx = sx_cell[ix];
-                        }
-                        if (ix > 1) {
-                            shape_dx -= sx_cell[ix-2];
-                        }
-                        shape_dx *= dx_inv * 0.5_rt * clight;
+                        auto [shape_y, shape_dy, j] = single_shape_factor_derivative<depos_order>(ymid, iy);
+                        shape_y *= global_fac;
+                        shape_dy *= dy_inv * clight * global_fac;
 
-                        if ((ix==0 || ix==depos_order + 2) && (iy==0 || iy==depos_order + 2)) {
-                            continue;
-                        }
+                        auto [shape_x, shape_dx, i] = single_shape_factor_derivative<depos_order>(xmid, ix);
+                        shape_dx *= dx_inv * clight;
 
-                        const int i = i_cell + ix - 1;
-                        const int j = j_cell + iy - 1;
+                        const amrex::Real Bz_v = arr(i,j,Bz);
+                        const amrex::Real Ez_v = arr(i,j,Ez);
+                        const amrex::Real ExmBy_v = arr(i,j,ExmBy);
+                        const amrex::Real EypBx_v = arr(i,j,EypBx);
 
                         // calculate gamma/psi for plasma particles
                         const amrex::Real gamma_psi = 0.5_rt * (
@@ -126,18 +99,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                             + 1._rt
                         );
 
-                        const amrex::Real Bz_v = arr(i,j,Bz);
-                        const amrex::Real Ez_v = arr(i,j,Ez);
-                        const amrex::Real ExmBy_v = arr(i,j,ExmBy);
-                        const amrex::Real EypBx_v = arr(i,j,EypBx);
-
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sy),
                             - shape_x * shape_y * (
                                 - Bz_v * vx
                                 + ( Ez_v * vy
                                 + ExmBy_v * (          - vx * vy)
                                 + EypBx_v * (gamma_psi - vy * vy) ) / clight
-                            ) * charge / (psi * mass)
+                            ) * charge_mass / psi
                             - shape_dx * shape_y * (
                                 - vx * vy
                             )
@@ -152,7 +120,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                                 + ( Ez_v * vx
                                 + ExmBy_v * (gamma_psi - vx * vx)
                                 + EypBx_v * (          - vx * vy) ) / clight
-                            ) * charge / (psi * mass)
+                            ) * charge_mass / psi
                             + shape_dx * shape_y * (
                                 gamma_psi - vx * vx - 1._rt
                             )

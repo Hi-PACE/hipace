@@ -620,7 +620,6 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
 
     FillBoundaryChargeCurrents(lev);
 
-    m_fields.SolvePoissonEz(Geom(), lev, islice);
     m_fields.SolvePoissonBz(Geom(), lev, islice);
 
     // Modifies Bx and By in the current slice and the force terms of the plasma particles
