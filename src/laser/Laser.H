@@ -29,7 +29,7 @@ namespace LaserFFT {
     using cufftComplex = cuComplex;
 #  else
     const auto VendorExecute = cufftExecZ2Z;
-    const auto cuufft_type = CUFFT_Z2Z;
+    const auto cufft_type = CUFFT_Z2Z;
     using cufftComplex = cuDoubleComplex;
 #  endif
 #elif defined(AMREX_USE_HIP)
