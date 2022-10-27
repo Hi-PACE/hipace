@@ -1178,6 +1178,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
 
 #ifdef AMREX_USE_MPI
     if (step == 0) return;
+    if (m_numprocs_z == 1) return;
 
     // Receive physical time
     if (it == m_numprocs_z - 1 && !only_ghost) {
@@ -1337,6 +1338,7 @@ Hipace::Notify (const int step, const int it,
 
 #ifdef AMREX_USE_MPI
     constexpr int lev = 0;
+    if (m_numprocs_z == 1) return;
 
     const bool only_time = m_physical_time >= m_max_time;
     NotifyFinish(it, only_ghost, only_time); // finish the previous send
