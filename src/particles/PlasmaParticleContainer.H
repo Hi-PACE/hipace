@@ -11,6 +11,7 @@
 
 #include "fields/Fields.H"
 #include "utils/Parser.H"
+#include "utils/GPUUtil.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
@@ -162,7 +163,7 @@ class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs,Pla
 public:
     using amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>::ParIter;
     /** Constructor */
-    PlasmaParticleIterator (ContainerType& pc, int level): ParIter(pc, level) {}
+    PlasmaParticleIterator (ContainerType& pc, int level): ParIter(pc, level, DfltMfi) {}
 };
 
 #endif

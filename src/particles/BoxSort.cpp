@@ -21,10 +21,10 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     constexpr unsigned int max_unsigned_int = std::numeric_limits<unsigned int>::max();
 
     int num_boxes = a_ba.size();
-    m_box_counts.resize(0);
-    m_box_offsets.resize(0);
     m_box_counts.resize(num_boxes+1, 0);
+    m_box_counts_cpu.resize(num_boxes+1);
     m_box_offsets.resize(num_boxes+1);
+    m_box_offsets_cpu.resize(num_boxes+1);
 
     amrex::Gpu::DeviceVector<unsigned int> dst_indices(np);
 
@@ -62,13 +62,28 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
                                                                              dst_indices.dataPtr());
 
     a_beam.swap(tmp);
+#ifdef AMREX_USE_GPU
+    amrex::Gpu::dtoh_memcpy_async(m_box_counts_cpu.dataPtr(), m_box_counts.dataPtr(),
+                                  m_box_counts.size() * sizeof(index_type));
+
+    amrex::Gpu::dtoh_memcpy_async(m_box_offsets_cpu.dataPtr(), m_box_offsets.dataPtr(),
+                                  m_box_offsets.size() * sizeof(index_type));
+
+    amrex::Gpu::streamSynchronize();
+#else
+    std::memcpy(m_box_counts_cpu.dataPtr(), m_box_counts.dataPtr(),
+                m_box_counts.size() * sizeof(index_type));
+
+    std::memcpy(m_box_offsets_cpu.dataPtr(), m_box_offsets.dataPtr(),
+                m_box_offsets.size() * sizeof(index_type));
+#endif
 }
 
 int
 BoxSorter::leftmostBoxWithParticles () const
 {
     int boxid = 0;
-    while (m_box_counts[boxid]==0 && boxid<amrex::ParallelDescriptor::NProcs()-1){
+    while (m_box_counts_cpu[boxid]==0 && boxid<amrex::ParallelDescriptor::NProcs()-1){
         boxid++;
     }
     return boxid;

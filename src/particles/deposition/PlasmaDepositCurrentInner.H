@@ -152,14 +152,14 @@ void doDepositionShapeN (const bool use_laser,
 
         Array3<amrex::Real> const isl_arr =
             do_tiling ? tmp_densities[ithread].array() : isl_fab.array();
-        const int jx  = do_tiling ? 0 : jx_cmp;
-        const int jy  = do_tiling ? 1 : jy_cmp;
-        const int jz  = do_tiling ? 2 : jz_cmp;
-        const int rho = do_tiling ? 3 : rho_cmp;
-        const int jxx = do_tiling ? 4 : jxx_cmp;
-        const int jxy = do_tiling ? 5 : jxy_cmp;
-        const int jyy = do_tiling ? 6 : jyy_cmp;
-        const int mult = do_tiling ? 7 : mult_cmp;
+        const int jx  = (do_tiling && jx_cmp  != -1) ? 0 : jx_cmp;
+        const int jy  = (do_tiling && jy_cmp  != -1) ? 1 : jy_cmp;
+        const int jz  = (do_tiling && jz_cmp  != -1) ? 2 : jz_cmp;
+        const int rho = (do_tiling && rho_cmp != -1) ? 3 : rho_cmp;
+        const int jxx = (do_tiling && jxx_cmp != -1) ? 4 : jxx_cmp;
+        const int jxy = (do_tiling && jxy_cmp != -1) ? 5 : jxy_cmp;
+        const int jyy = (do_tiling && jyy_cmp != -1) ? 6 : jyy_cmp;
+        const int mult = (do_tiling && mult_cmp != -1) ? 7 : mult_cmp;
 
         int ntiley = 0;
         if (do_tiling) {

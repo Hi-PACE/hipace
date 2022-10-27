@@ -381,7 +381,7 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const Array2<amrex::Real> dst_array = dst.array(mfi);
         const auto src_a_array = to_array2(src_a.array(mfi));
         const auto src_b_array = to_array2(src_b.array(mfi));
@@ -465,7 +465,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
-    for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
+    for (amrex::MFIter mfi(slice_mf, DfltMfi); mfi.isValid(); ++mfi) {
         auto slice_array = slice_func.array(mfi);
         amrex::Array4<amrex::Real> diag_array = diag_fab.array();
 
@@ -683,7 +683,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             rel_z}, geom[lev-1]};
         amrex::MultiFab staging_area = getStagingArea(lev);
 
-        for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
+        for (amrex::MFIter mfi(staging_area, DfltMfi); mfi.isValid(); ++mfi)
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
             const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
@@ -715,7 +715,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         rel_z}, geom[lev-1]};
     amrex::MultiFab field_fine = getField(lev, WhichSlice::This, component);
 
-    for (amrex::MFIter mfi( field_fine, false); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
     {
         auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
         const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
@@ -796,7 +796,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(f_ExmBy, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(f_ExmBy, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const Array2<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
         const Array2<amrex::Real> array_EypBx = f_EypBx.array(mfi);
         const Array2<amrex::Real const> array_Psi = f_Psi.const_array(mfi);
@@ -1022,7 +1022,7 @@ Fields::ComputeRelBFieldError (
     amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_B(norm_B);
     amrex::Real* p_norm_B = gpu_norm_B.dataPtr();
 
-    for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(Bx, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         Array2<amrex::Real const> const Bx_array = Bx.array(mfi, Bx_comp);
         Array2<amrex::Real const> const Bx_iter_array = Bx_iter.array(mfi, Bx_iter_comp);
@@ -1045,7 +1045,6 @@ Fields::ComputeRelBFieldError (
         }
         );
     }
-    // no cudaDeviceSynchronize required here, as there is one in the MFIter destructor called above.
     norm_Bdiff = gpu_norm_Bdiff.dataValue();
     norm_B = gpu_norm_B.dataValue();
 
