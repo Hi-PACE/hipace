@@ -98,7 +98,7 @@ public:
      */
     const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
 
-    /** Retun the 3D FArrayBox containing the laser envelope, const version */
+    /** Return the 3D FArrayBox containing the laser envelope, const version */
     const amrex::FArrayBox& getFAB () const {return m_F;}
 
     /** Retun the 3D FArrayBox containing the laser envelope, non-const version */
@@ -135,7 +135,7 @@ public:
     void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
-     * The complex phase of the envelope is evaluated everywhere.
+     * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
      * \param[in] fields Field object
      * \param[in] geom Geometry object

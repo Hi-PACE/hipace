@@ -4,7 +4,8 @@ hipace.verbose=3
 
 amr.n_cell = 128 128 50 # 128 128 100
 
-# plasmas.sort_bin_size = 8
+my_constants.kp_inv = 10.e-6
+
 hipace.file_prefix = new
 hipace.do_tiling = 0
 
@@ -20,11 +21,6 @@ laser.lambda0 = .8e-6
 laser.focal_distance = 0.001
 
 hipace.bxby_solver=explicit
-
-my_constants.kp_inv = 10.e-6
-my_constants.kp = 1. / kp_inv
-my_constants.wp = clight * kp
-my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
 
 amr.blocking_factor = 2
 amr.max_level = 0
@@ -42,9 +38,5 @@ geometry.is_periodic = true  true  false  # Is periodic?
 beams.names = no_beam
 
 plasmas.names = no_plasma
-plasma.density(x,y,z) = ne
-plasma.ppc = 1 1
-plasma.u_mean = 0.0 0.0 0.
-plasma.element = electron
 
 diagnostic.diag_type = xz

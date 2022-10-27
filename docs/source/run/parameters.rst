@@ -501,7 +501,7 @@ The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^
 The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse duration ``laser.tau``.
 
 * ``laser.use_laser`` (`0` or `1`) optional (default `0`)
-    Weather to activate the laser envelope solver.
+    Whether to activate the laser envelope solver.
 
 * ``laser.a0`` (`float`) optional (default `0`)
     Peak normalized vector potential of the laser pulse.
@@ -529,6 +529,18 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
     With the multigrid solver, we could drop this assumption.
+
+* ``laser.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+    Relative error tolerance of the multigrid solver used for the laser pulse.
+
+* ``laser.MG_tolerance_abs`` (`float`) optional (default `0.`)
+    Absolute error tolerance of the multigrid solver used for the laser pulse.
+
+* ``laser.MG_verbose`` (`int`) optional (default `0`)
+    Level of verbosity of the multigrid solver used for the laser pulse.
+
+* ``laser.3d_on_host`` (`0` or `1`) optional (default `0`)
+    When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
 
 Diagnostic parameters
 ---------------------

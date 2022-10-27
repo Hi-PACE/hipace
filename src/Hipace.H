@@ -270,8 +270,6 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
-    /** Laser instance (soon to be multi laser container) */
-    Laser m_laser;
     /** Number of time iterations */
     static int m_max_step;
     /** Maximum simulation time */
@@ -341,6 +339,8 @@ public:
     static bool m_use_laser;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+    /** Laser instance (soon to be multi laser container) */
+    Laser m_laser;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
 #ifdef HIPACE_USE_OPENPMD

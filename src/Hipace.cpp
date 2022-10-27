@@ -1496,8 +1496,6 @@ Hipace::Notify (const int step, const int it,
         if (only_ghost) return;
         if (!m_laser.m_use_laser) return;
         const amrex::FArrayBox& laser_fab = m_laser.getFAB();
-        // Note that there is only one local Box in slice multifab's boxarray.
-        // const int box_index = laser_fab.IndexArray();
         amrex::Array4<amrex::Real const> const& laser_arr = laser_fab.array();
         const amrex::Box& lbx = laser_fab.box(); // does not include ghost cells
         const std::size_t nreals = lbx.numPts()*laser_fab.nComp();

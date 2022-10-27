@@ -46,6 +46,9 @@ Laser::ReadParameters ()
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
+    queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
+    queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
+    queryWithParser(pp, "MG_verbose", m_MG_verbose);
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
 }
 
@@ -139,9 +142,10 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-        // Compute initial field on the current (device) slice n00j00 for current
+        // Compute initial field on the current (device) slice np1j00
         InitLaserSlice(gm, isl);
-        // Copy: (device) slice to (host) 3D array. A = np1j00
+        // Copy: (device) slice np1j00 to the right location
+        // in the (host) 3D array of the current time.
         Copy(isl, true);
     }
 
@@ -167,8 +171,6 @@ Laser::Copy (int isl, bool to3d)
     amrex::MultiFab& np1j00 = m_slices[WhichLaserSlice::np1j00];
     amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
     amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
-    const int izmax = m_F.box().bigEnd(2);
-    const int izmin = m_F.box().smallEnd(2);
 
     for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -184,7 +186,7 @@ Laser::Copy (int isl, bool to3d)
         amrex::Array4<amrex::Real> host_arr = m_F.array();
         amrex::ParallelFor(
         bx, 2,
-        [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+        [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
         {
             // +2 in 3D array means old.
             // 2 components for complex numbers.
@@ -278,7 +280,6 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
         Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
         Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
         Array3<Complex> rhs_arr = m_rhs.array();
-        Array3<amrex::Real> acoeff_imag_arr = acoeff_imag.array();
 
         constexpr int lev = 0;
         const amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[mfi];
@@ -532,7 +533,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         amrex::Real djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
         amrex::ParallelFor(
             bx, 1,
-            [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
+            [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
             {
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
@@ -585,7 +586,7 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         // Transform rhs to Fourier space
 #ifdef AMREX_USE_CUDA
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
-        cufftSetStream ( m_plan_fwd, stream);
+        cufftSetStream(m_plan_fwd, stream);
         cufftResult result;
         result = LaserFFT::VendorExecute(
             m_plan_fwd,
@@ -670,8 +671,7 @@ Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
 
     // Basic laser parameters and constants
     Complex I(0,1);
-    const amrex::Real c = get_phys_const().c;
-    const int dcomp = 0; // NOTE, this may change when we use slices with Comps
+    constexpr int dcomp = 0;
     const amrex::Real a0 = m_a0;
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
     const amrex::Real w0 = m_w0[0];

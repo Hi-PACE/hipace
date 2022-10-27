@@ -241,7 +241,6 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
 
     // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid a_arr
     // the derivative is calculated on the fly
-    // TODO: complex conjugate will be needed when a becomes complex (required for laser evolution)
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
