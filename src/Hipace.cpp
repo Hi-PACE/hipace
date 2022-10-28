@@ -669,6 +669,9 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
 {
     m_fields.setVal(0., lev, WhichSlice::This,
         "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+    if (m_use_laser) {
+        m_fields.setVal(0., lev, WhichSlice::This, "chi");
+    }
 
     m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
                                     true, false, false, lev);
