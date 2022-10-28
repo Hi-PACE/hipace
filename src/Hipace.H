@@ -197,6 +197,9 @@ public:
      */
     void ResetAllQuantities ();
 
+    /** \brief reset all laser slices to 0 */
+    void ResetLaser ();
+
     /**
        \brief Calls FillBoundary on charges and currents on WhichSlice::This
      *
@@ -253,7 +256,10 @@ public:
     MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
     /** status of the physical time send request */
     MPI_Request m_tsend_request = MPI_REQUEST_NULL;
-
+    // Laser buffer
+    amrex::Real* m_lsend_buffer = nullptr;
+    // status of laser send
+    MPI_Request m_lsend_request = MPI_REQUEST_NULL;
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
     /** Whether to use normalized units */
@@ -264,8 +270,6 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
-    /** Laser instance (soon to be multi laser container) */
-    Laser m_laser;
     /** Number of time iterations */
     static int m_max_step;
     /** Maximum simulation time */
@@ -331,8 +335,12 @@ public:
     static int m_MG_verbose;
     /** Whether to use amrex MLMG solver */
     static bool m_use_amrex_mlmg;
+    /** Whether the simulation uses a laser pulse */
+    static bool m_use_laser;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+    /** Laser instance (soon to be multi laser container) */
+    Laser m_laser;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
 #ifdef HIPACE_USE_OPENPMD

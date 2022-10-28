@@ -93,12 +93,14 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         const int jxx_cmp = deposit_j_squared ? Comps[which_slice]["jxx"+plasma_str] : -1;
         const int jxy_cmp = deposit_j_squared ? Comps[which_slice]["jxy"+plasma_str] : -1;
         const int jyy_cmp = deposit_j_squared ? Comps[which_slice]["jyy"+plasma_str] : -1;
+        const int chi_cmp = which_slice == WhichSlice::This && Hipace::m_use_laser ?
+            Comps[WhichSlice::This]["chi"] : -1;
 
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
         // extract the laser Fields
         const bool use_laser = laser.m_use_laser;
-        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::This);
+        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::n00j00);
 
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
@@ -108,7 +110,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         DepositCurrent_middle(Hipace::m_outer_depos_loop, Hipace::m_depos_order_xy,
                               use_laser, Hipace::m_do_tiling, can_ionize,
                               pti, isl_fab, jx_cmp, jy_cmp, jz_cmp, rho_cmp, jxx_cmp, jxy_cmp,
-                              jyy_cmp, a_mf, tmp_dens, dx, x_pos_offset,
+                              jyy_cmp, chi_cmp, a_mf, tmp_dens, dx, x_pos_offset,
                               y_pos_offset, z_pos_offset, q, temp_slice,
                               deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                               max_qsa_weighting_factor, bins, bin_size);

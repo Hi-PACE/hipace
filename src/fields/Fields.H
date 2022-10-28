@@ -11,6 +11,7 @@
 
 #include "fft_poisson_solver/FFTPoissonSolver.H"
 #include "diagnostics/Diagnostic.H"
+#include "laser/Laser.H"
 #include "utils/GPUUtil.H"
 
 #include <AMReX_MultiFab.H>
@@ -20,6 +21,7 @@
 #include <algorithm>
 
 class Hipace;
+class Laser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
@@ -156,10 +158,12 @@ public:
      * \param[in] calc_geom main geometry
      * \param[in] diag_comps_vect the field components to copy
      * \param[in] ncomp number of components to copy
+     * \param[in] laser Laser object
      */
      void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
                 amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
-                const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp);
+                const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
+                Laser& laser);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *

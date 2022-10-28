@@ -19,6 +19,15 @@
 #include "utils/GPUUtil.H"
 #include <AMReX.H>
 
+namespace
+{
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    amrex::Real abssq(amrex::Real r, amrex::Real i)
+    {
+        return r*r + i*i;
+    }
+}
+
 /**
  * \brief Field gather for a single particle
  *
@@ -241,23 +250,27 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
 
     // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid a_arr
     // the derivative is calculated on the fly
-    // TODO: complex conjugate will be needed when a becomes complex (required for laser evolution)
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                Aabssqp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z)*
-                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z);
-                AabssqDxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]/(2.0_rt*dx[0])*
-                  ( a_arr(j_cell+ix+1, k_cell+iy  , amrex::lbound(a_arr).z)*
-                    a_arr(j_cell+ix+1, k_cell+iy  , amrex::lbound(a_arr).z)
-                   -a_arr(j_cell+ix-1, k_cell+iy  , amrex::lbound(a_arr).z)*
-                    a_arr(j_cell+ix-1, k_cell+iy  , amrex::lbound(a_arr).z));
-                AabssqDyp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]/(2.0_rt*dx[1])*
-                  ( a_arr(j_cell+ix  , k_cell+iy+1, amrex::lbound(a_arr).z)*
-                    a_arr(j_cell+ix  , k_cell+iy+1, amrex::lbound(a_arr).z)
-                   -a_arr(j_cell+ix  , k_cell+iy-1, amrex::lbound(a_arr).z)*
-                    a_arr(j_cell+ix  , k_cell+iy-1, amrex::lbound(a_arr).z));
+                const amrex::Real x00y00 = abssq(
+                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z,0),
+                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z,1) );
+                const amrex::Real xp1y00 = abssq(
+                    a_arr(j_cell+ix+1, k_cell+iy  , amrex::lbound(a_arr).z,0),
+                    a_arr(j_cell+ix+1, k_cell+iy  , amrex::lbound(a_arr).z,1) );
+                const amrex::Real xm1y00 = abssq(
+                    a_arr(j_cell+ix-1, k_cell+iy  , amrex::lbound(a_arr).z,0),
+                    a_arr(j_cell+ix-1, k_cell+iy  , amrex::lbound(a_arr).z,1) );
+                const amrex::Real x00yp1 = abssq(
+                    a_arr(j_cell+ix  , k_cell+iy+1, amrex::lbound(a_arr).z,0),
+                    a_arr(j_cell+ix  , k_cell+iy+1, amrex::lbound(a_arr).z,1) );
+                const amrex::Real x00ym1 = abssq(
+                    a_arr(j_cell+ix  , k_cell+iy-1, amrex::lbound(a_arr).z,0),
+                    a_arr(j_cell+ix  , k_cell+iy-1, amrex::lbound(a_arr).z,1) );
+                Aabssqp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*x00y00;
+                AabssqDxp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]/(2.0_rt*dx[0])*(xp1y00-xm1y00);
+                AabssqDyp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]/(2.0_rt*dx[1])*(x00yp1-x00ym1);
             }
         }
     }
@@ -366,9 +379,10 @@ void doLaserGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<=depos_order_z; iz++){
         for (int iy=0; iy<=depos_order_xy; iy++){
             for (int ix=0; ix<=depos_order_xy; ix++){
-                Aabssqp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*
-                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z)*
-                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z);
+                const amrex::Real x00y00 = abssq(
+                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z,0),
+                    a_arr(j_cell+ix  , k_cell+iy  , amrex::lbound(a_arr).z,1) );
+                Aabssqp += sx_cell[ix]*sy_cell[iy]*sz_cell[iz]*x00y00;
             }
         }
     }
