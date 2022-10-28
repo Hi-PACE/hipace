@@ -244,7 +244,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
     const PhysConst phc = get_phys_const();
     const amrex::Real c = phc.c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
-    const amrex::Real chi_fac = phc.q_e/(c*c*phc.m_e*phc.ep0);
+    const amrex::Real chi_fac = -1; // phc.q_e / electron charge
 
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];

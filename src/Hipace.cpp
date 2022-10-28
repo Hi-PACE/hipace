@@ -611,7 +611,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
-    // deposit jx, jy, jz, rho and Mult for all plasmas
+    // deposit jx, jy, jz, rho and chi for all plasmas
     m_multi_plasma.DepositCurrent(
         m_fields, m_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
 
@@ -656,12 +656,18 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
     m_fields.setVal(0., lev, WhichSlice::This,
         "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
 
+    if (m_use_laser) {
+        m_fields.setVal(0., lev, WhichSlice::This, "chi");
+    }
+
+    // push plasma
     m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
                                     true, false, false, lev);
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+    // deposit jx jy jz rho and maybe chi
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, false, geom[lev], lev);
+        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_use_laser, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 
@@ -671,6 +677,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
     }
 
+    // deposit jx jy jz and maybe rho on This slice
     m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin, m_box_sorters,
                                      ibox, m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho,
                                      WhichSlice::This);
@@ -679,6 +686,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
     }
 
+    // deposit grid current into jz_beam
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
 
     FillBoundaryChargeCurrents(lev);
@@ -746,12 +754,12 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const int psl = WhichSlice::Previous1;
     const amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
 
-    int ncomp_mult = 1;
+    int ncomp_chi = 1;
 #ifdef AMREX_USE_LINEAR_SOLVERS
     // 2 components only for AMReX MLMG
     if (m_use_amrex_mlmg) {
-        ncomp_mult = 2;
-        AMREX_ALWAYS_ASSERT(Comps[isl]["Mult"] + 1 == Comps[isl]["Mult2"]);
+        ncomp_chi = 2;
+        AMREX_ALWAYS_ASSERT(Comps[isl]["chi"] + 1 == Comps[isl]["chi2"]);
     }
 #endif
     AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
@@ -830,13 +838,13 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[isl]["Bx"], 2);
-    amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[isl]["Mult"], ncomp_mult);
+    amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[isl]["chi"], ncomp_chi);
     amrex::MultiFab S (slicemf, amrex::make_alias, Comps[isl]["Sy"], 2);
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
-        // Copy Mult to Mult2
-        m_fields.duplicate<1>(lev, isl, {"Mult2"}, isl, {"Mult"});
+        // Copy chi to chi2
+        m_fields.duplicate<1>(lev, isl, {"chi2"}, isl, {"chi"});
         amrex::Gpu::streamSynchronize();
         if (!m_mlalaplacian){
             // If first call, initialize the MG solver
@@ -936,14 +944,14 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
                           Comps[WhichSlice::This]["By"], 0, 1, m_fields.m_slices_nguards);
 
-    /* shift force terms, update force terms using guessed Bx and By */
+    // shift force terms, update force terms using guessed Bx and By
     m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, false, true, true, lev);
 
     const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
 
-    /* Begin of predictor corrector loop  */
+    // Begin of predictor corrector loop
     int i_iter = 0;
-    /* resetting the initial B-field error for mixing between iterations */
+    // resetting the initial B-field error for mixing between iterations
     relative_Bfield_error = 1.0;
     while (( relative_Bfield_error > m_predcorr_B_error_tolerance )
            && ( i_iter < m_predcorr_max_iterations ))
@@ -951,14 +959,15 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         i_iter++;
         m_predcorr_avg_iterations += 1.0;
 
-        /* Push particles to the next slice */
+        // Push particles to the next temp slice
         m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], true, true, false, false, lev);
 
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
-        /* deposit current to next slice */
+        // plasmas deposit jx jy to next temp slice
         m_multi_plasma.DepositCurrent(
             m_fields, m_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
+        // beams deposit jx jy to the next slice
         m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins, m_box_sorters,
             ibox, m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
 
@@ -983,7 +992,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
         if (i_iter == 1) relative_Bfield_error_prev_iter = relative_Bfield_error;
 
-        /* Mixing the calculated B fields to the actual B field and shifting iterated B fields */
+        // Mixing the calculated B fields to the actual B field and shifting iterated B fields
         m_fields.MixAndShiftBfields(
             Bx_iter, Bx_prev_iter, Comps[WhichSlice::This]["Bx"], relative_Bfield_error,
             relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
@@ -991,7 +1000,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             By_iter, By_prev_iter, Comps[WhichSlice::This]["By"], relative_Bfield_error,
             relative_Bfield_error_prev_iter, m_predcorr_B_mixing_factor, lev);
 
-        /* resetting current in the next slice to clean temporarily used current*/
+        // resetting current in the next slice to clean temporarily used current
         m_fields.setVal(0., lev, WhichSlice::Next, "jx", "jy");
 
         if (!m_fields.m_extended_solve) {
@@ -1002,11 +1011,11 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             amrex::ParallelContext::pop();
         }
 
-        /* Update force terms using the calculated Bx and By */
+        // Update force terms using the calculated Bx and By
         m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev],
                                         false, false, true, false, lev);
 
-        /* Shift relative_Bfield_error values */
+        // Shift relative_Bfield_error values
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
 

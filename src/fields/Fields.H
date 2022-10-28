@@ -181,7 +181,7 @@ public:
                       const amrex::Real patch_hi);
 
     /** add rho of the ions to rho (this slice) */
-    void AddRhoIons (const int lev, bool inverse=false);
+    void AddRhoIons (const int lev);
 
     /** \brief Set up boundary conditions before poisson solve
      * lev==0: leave at zero
@@ -394,10 +394,10 @@ public:
      */
     template<int ncomps>
     void duplicate (const int lev,
-                    const int islice_dst, const amrex::GpuArray<const char*, ncomps> comps_dst
+                    const int islice_dst, const amrex::GpuArray<const char*, ncomps> comps_dst,
                     const int islice_src, const amrex::GpuArray<const char*, ncomps> comps_src) {
-        const amrex::GpuArray<int, ncomps> c_idx_src = {};
-        const amrex::GpuArray<int, ncomps> c_idx_dst = {};
+        amrex::GpuArray<int, ncomps> c_idx_src = {};
+        amrex::GpuArray<int, ncomps> c_idx_dst = {};
         for (int i=0; i<ncomps; ++i) {
             c_idx_src[i] = Comps[islice_src][comps_src[i]];
             c_idx_dst[i] = Comps[islice_dst][comps_dst[i]];

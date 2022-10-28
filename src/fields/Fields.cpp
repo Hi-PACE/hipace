@@ -74,18 +74,14 @@ Fields::AllocData (
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
 
             isl = WhichSlice::This;
-            // (Bx, By), (Sy, Sx) and (Mult, Mult2) adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "Mult");
+            // (Bx, By), (Sy, Sx) and (chi, chi2) adjacent for explicit solver
+            Comps[isl].multi_emplace(N_Comps[isl], "chi");
             if (Hipace::m_use_amrex_mlmg) {
-                Comps[isl].multi_emplace(N_Comps[isl], "Mult2");
+                Comps[isl].multi_emplace(N_Comps[isl], "chi2");
             }
             Comps[isl].multi_emplace(N_Comps[isl], "Sy", "Sx", "ExmBy", "EypBx", "Ez",
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
-
-            if (Hipace::m_use_laser) {
-                Comps[isl].multi_emplace(N_Comps[isl], "chi");
-            }
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -516,7 +512,7 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         }
-        duplicate<4>(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     }
+        duplicate<4>(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
                           WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
     } else {
         shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
