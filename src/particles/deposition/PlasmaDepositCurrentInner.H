@@ -116,8 +116,10 @@ void doDepositionShapeN (const bool use_laser,
     const amrex::Real dx_inv = 1._rt/dx[0];
     const amrex::Real dy_inv = 1._rt/dx[1];
 
-    const amrex::Real clightinv = 1.0_rt/get_phys_const().c;
-    const amrex::Real mu0 = get_phys_const().mu0;
+    const PhysConst pc = get_phys_const();
+    const amrex::Real clightinv = 1.0_rt/pc.c;
+    const amrex::Real mu0 = pc.mu0;
+    const amrex::Real laser_fac = (pc.m_e/pc.q_e/mass) * (pc.m_e/pc.q_e/mass);
 
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
@@ -183,7 +185,7 @@ void doDepositionShapeN (const bool use_laser,
                     wp, uxp, uyp, psip,
                     max_qsa_weighting_factor, p_n_qsa_violation,
                     charge, mass, clightinv, mu0, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
-                    isl_arr,
+                    isl_arr, laser_fac,
                     jx, jy, jz, rho, chi,
                     // tiling
                     indices, offsets, itile, itilex_bs, itiley_bs,
@@ -208,6 +210,14 @@ void doDepositionShapeN (const bool use_laser,
                 const amrex::ParticleReal xp = positions.pos(0);
                 const amrex::ParticleReal yp = positions.pos(1);
 
+                // calculate charge of the plasma particles
+                amrex::Real q = charge;
+                if constexpr (t_can_ionize) {
+                    if (ion_lev) { // can_ionize
+                        q *= ion_lev[ip];
+                    }
+                }
+
                 amrex::ParticleReal Aabssqp = 0._rt;
 
                 if constexpr (t_use_laser) {
@@ -216,13 +226,14 @@ void doDepositionShapeN (const bool use_laser,
                                             Aabssqp, a_arr, dx_arr,
                                             x_pos_offset, y_pos_offset, z_pos_offset);
                     }
+                    Aabssqp *= laser_fac * q * q;
                 }
 
                 // calculate gamma/psip for plasma particles
                 const amrex::Real gamma_psi = (1.0_rt + uxp[ip]*uxp[ip]*clightinv*clightinv
                                                       + uyp[ip]*uyp[ip]*clightinv*clightinv
                                                       + psip[ip]*psip[ip]
-                                                      + 0.5_rt*Aabssqp)
+                                                      + 0.5_rt*Aabssqp) // TODO: add proper units
                                                       / (2.0_rt * psip[ip]*psip[ip]);
 
                 if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && ox == 0)
@@ -236,14 +247,6 @@ void doDepositionShapeN (const bool use_laser,
 
                 const amrex::Real ux_fact = uxp[ip] / psip[ip];
                 const amrex::Real uy_fact = uyp[ip] / psip[ip];
-
-                // calculate charge of the plasma particles
-                amrex::Real q = charge;
-                if constexpr (t_can_ionize) {
-                    if (ion_lev) { // can_ionize
-                        q *= ion_lev[ip];
-                    }
-                }
 
                 for (int iy=0; iy <= depos_order_xy; ++iy) {
                     for (int ix=0; ix <= inner_depos_order_x; ++ix) {

@@ -655,7 +655,6 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
 {
     m_fields.setVal(0., lev, WhichSlice::This,
         "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
-
     if (m_use_laser) {
         m_fields.setVal(0., lev, WhichSlice::This, "chi");
     }
@@ -814,7 +813,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
             });
     }
     // Deposit Sx and Sy for every plasma species
-    m_multi_plasma.ExplicitDeposition(m_fields, geom[lev], lev);
+    m_multi_plasma.ExplicitDeposition(m_fields, m_laser, geom[lev], lev);
 
     // construct slice geometry
     // Set the lo and hi of domain and probdomain in the z direction

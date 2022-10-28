@@ -94,10 +94,11 @@ MultiPlasma::DepositCurrent (
 }
 
 void
-MultiPlasma::ExplicitDeposition (Fields& fields, amrex::Geometry const& gm, int const lev)
+MultiPlasma::ExplicitDeposition (Fields& fields, const Laser& laser,
+                                 amrex::Geometry const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        ::ExplicitDeposition(m_all_plasmas[i], fields, gm, lev);
+        ::ExplicitDeposition(m_all_plasmas[i], fields, laser, gm, lev);
     }
 }
 

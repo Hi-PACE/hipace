@@ -76,7 +76,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
     const amrex::Real q = (which_slice == WhichSlice::RhoIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
     const bool can_ionize = plasma.m_can_ionize;
-    const bool explicit_solve = Hipace::GetInstance().m_explicit;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)

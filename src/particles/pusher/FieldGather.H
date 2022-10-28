@@ -19,15 +19,6 @@
 #include "utils/GPUUtil.H"
 #include <AMReX.H>
 
-namespace
-{
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    amrex::Real abssq(amrex::Real r, amrex::Real i)
-    {
-        return r*r + i*i;
-    }
-}
-
 /**
  * \brief Field gather for a single particle
  *

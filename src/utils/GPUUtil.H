@@ -183,4 +183,10 @@ T to_array3 (T&& in) {
 inline amrex::MFItInfo DfltMfi; // Default MFIter
 inline amrex::MFItInfo DfltMfiTlng; // Default MFIter with Tiling
 
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real abssq(amrex::Real r, amrex::Real i)
+{
+    return r*r + i*i;
+}
+
 #endif

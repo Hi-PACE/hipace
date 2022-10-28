@@ -57,7 +57,8 @@ public:
         bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
         int const lev);
 
-    void ExplicitDeposition (Fields& fields, amrex::Geometry const& gm, int const lev);
+    void ExplicitDeposition (Fields& fields, const Laser& laser,
+                             amrex::Geometry const& gm, int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *

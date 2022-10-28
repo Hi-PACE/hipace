@@ -12,7 +12,7 @@
 #include "fields/Fields.H"
 
 void
-ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
+ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser& laser,
                     amrex::Geometry const& gm, const int lev);
 
 #endif //  EXPLICITDEPOSITION_H_
