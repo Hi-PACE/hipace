@@ -529,6 +529,7 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
     With the multigrid solver, we could drop this assumption.
+    For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
 
 * ``laser.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.
