@@ -83,6 +83,10 @@ Fields::AllocData (
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
 
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            }
+
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
                 // for interpolating boundary conditions to level 1
@@ -108,6 +112,10 @@ Fields::AllocData (
             // Bx and By adjacent for explicit solver
             Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
                                                    "jx", "jy", "jz", "rho");
+
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            }
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -166,7 +174,7 @@ Fields::AllocData (
         for (int i=0; i<num_threads; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
-            // jx jy jz rho Mult
+            // jx jy jz rho chi
             m_tmp_densities[i].resize(bx, 5);
         }
     }
@@ -390,7 +398,8 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
 void
 Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
               amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
-              const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp)
+              const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
+              Laser& laser)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
@@ -442,9 +451,10 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
     diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     if (diag_box.isEmpty()) return;
-
     auto& slice_mf = m_slices[lev][WhichSlice::This];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
+    auto& laser_mf = laser.getSlices(WhichLaserSlice::n00j00);
+    auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
     for (amrex::MFIter mfi(slice_mf, DfltMfi); mfi.isValid(); ++mfi) {
@@ -463,6 +473,17 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 const amrex::Real y = j * dy + poff_diag_y;
                 const int m = n[diag_comps];
                 diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
+            });
+
+        if (!laser.m_use_laser) continue;
+        auto laser_array = laser_func.array(mfi);
+        amrex::ParallelFor(diag_box,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+            {
+                const amrex::Real x = i * dx + poff_diag_x;
+                const amrex::Real y = j * dy + poff_diag_y;
+                diag_array(i,j,k,ncomp  ) += rel_z_data[k-k_min] * laser_array(x,y,0);
+                diag_array(i,j,k,ncomp+1) += rel_z_data[k-k_min] * laser_array(x,y,1);
             });
     }
 }

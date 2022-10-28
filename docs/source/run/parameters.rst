@@ -497,11 +497,11 @@ Option: ``from_file``
 Laser parameters
 ----------------
 
-Currently, only a single, static laser pulse is available. The laser profile is defined by
-:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`. The laser pulse length
-:math:`L0 = \tau / c_0`
-can be specified via the pulse duration ``laser.tau``.
-If no ``laser.a0`` is provided, no laser will be initialized.
+The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
+The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse duration ``laser.tau``.
+
+* ``laser.use_laser`` (`0` or `1`) optional (default `0`)
+    Whether to activate the laser envelope solver.
 
 * ``laser.a0`` (`float`) optional (default `0`)
     Peak normalized vector potential of the laser pulse.
@@ -519,8 +519,29 @@ If no ``laser.a0`` is provided, no laser will be initialized.
     The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
     Use either the pulse length or the pulse duration.
 
-* ``laser.lambda0`` (`float`) optional (default `0`)
-    The laser pulse wavelength. Currently not used in the code.
+* ``laser.lambda0`` (`float`)
+    The laser pulse wavelength.
+
+* ``laser.focal_distance`` (`float`)
+    Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
+
+* ``laser.solver_type`` (`string`) optional (default `fft`)
+    Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
+    Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
+    With the multigrid solver, we could drop this assumption.
+    For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
+
+* ``laser.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+    Relative error tolerance of the multigrid solver used for the laser pulse.
+
+* ``laser.MG_tolerance_abs`` (`float`) optional (default `0.`)
+    Absolute error tolerance of the multigrid solver used for the laser pulse.
+
+* ``laser.MG_verbose`` (`int`) optional (default `0`)
+    Level of verbosity of the multigrid solver used for the laser pulse.
+
+* ``laser.3d_on_host`` (`0` or `1`) optional (default `0`)
+    When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
 
 Diagnostic parameters
 ---------------------
@@ -551,6 +572,8 @@ Diagnostic parameters
     always be added to the first plasma species in case multiple plasma species are available.
     **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
     output, please use ``hipace.output_period = -1``.
+    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,

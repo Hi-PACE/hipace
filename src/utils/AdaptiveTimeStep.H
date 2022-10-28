@@ -20,12 +20,12 @@ private:
     /** container including dt, min_gamma, sum of weights and the sum of weights times gamma */
     amrex::Vector<amrex::Vector<amrex::Real>> m_timestep_data;
 
-    /** Whether to use an adaptive time step */
-    bool m_do_adaptive_time_step = false;
     /** Number of time steps per betatron period for the adaptive time step */
     amrex::Real m_nt_per_betatron = 40.;
 
 public:
+    /** Whether to use an adaptive time step */
+    bool m_do_adaptive_time_step = false;
     /** Constructor */
     explicit AdaptiveTimeStep (const int nbeams);
 
