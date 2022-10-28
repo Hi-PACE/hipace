@@ -68,23 +68,20 @@ Fields::AllocData (
         if (m_explicit) {
             // explicit solver:
             // beams share rho_beam jx_beam jy_beam jz_beam
-            // but all plasma species have separate rho jx jy jz jxx jxy jyy
+            // rho jx jy jz for all plasmas and beams
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
 
             isl = WhichSlice::This;
             // (Bx, By), (Sy, Sx) and (Mult, Mult2) adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "Mult", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
-                "Bx", "By", "Bz", "Psi", "jx_beam", "jy_beam", "jz_beam", "rho_beam");
+            Comps[isl].multi_emplace(N_Comps[isl], "Mult");
             if (Hipace::m_use_amrex_mlmg) {
                 Comps[isl].multi_emplace(N_Comps[isl], "Mult2");
             }
-            for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-                Comps[isl].multi_emplace(N_Comps[isl],
-                    "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-                    "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
-            }
+            Comps[isl].multi_emplace(N_Comps[isl], "Sy", "Sx", "ExmBy", "EypBx", "Ez",
+                "Bx", "By", "Bz", "Psi",
+                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -99,12 +96,6 @@ Fields::AllocData (
             isl = WhichSlice::RhoIons;
             if (m_any_neutral_background) {
                 Comps[isl].multi_emplace(N_Comps[isl], "rho");
-            }
-
-            // set up m_all_charge_currents_names
-            m_all_charge_currents_names.push_back("_beam");
-            for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-                m_all_charge_currents_names.push_back("_"+plasma_name);
             }
         } else {
             // predictor-corrector:
@@ -132,16 +123,7 @@ Fields::AllocData (
             if (m_any_neutral_background) {
                 Comps[isl].multi_emplace(N_Comps[isl], "rho");
             }
-
-            // set up m_all_charge_currents_names
-            m_all_charge_currents_names.push_back("");
         }
-    }
-
-    // warning because the field output for rho might be confusing
-    if (m_explicit && m_any_neutral_background && Hipace::GetInstance().m_multi_plasma.m_nplasmas > 1) {
-        amrex::Print() << "WARNING: The neutralizing background of all plasma species combined will"
-            << " be added to rho_" << Hipace::GetInstance().m_multi_plasma.GetNames()[0] << "\n";
     }
 
     // allocate memory for fields
@@ -184,8 +166,8 @@ Fields::AllocData (
         for (int i=0; i<num_threads; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
-            // jx jy jz rho jxx jxy jyy
-            m_tmp_densities[i].resize(bx, 7);
+            // jx jy jz rho Mult
+            m_tmp_densities[i].resize(bx, 5);
         }
     }
 }
@@ -513,6 +495,8 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         }
+        duplicate<4>(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     }
+                          WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
     } else {
         shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
         if (mesh_refinement) {
@@ -527,21 +511,14 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
 }
 
 void
-Fields::AddRhoIons (const int lev, bool inverse)
+Fields::AddRhoIons (const int lev)
 {
     if (!m_any_neutral_background) return;
     HIPACE_PROFILE("Fields::AddRhoIons()");
-    const std::string plasma_str = m_explicit
-                                   ? "_" + Hipace::GetInstance().m_multi_plasma.GetNames()[0] : "";
-    if (!inverse){
-        amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"+plasma_str],
-            1, m_slices_nguards);
-    } else {
-        amrex::MultiFab::Subtract(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"+plasma_str],
-            1, m_slices_nguards);
-    }
+
+    amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
+        Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"],
+        1, m_slices_nguards);
 }
 
 /** \brief Sets non zero Dirichlet Boundary conditions in RHS which is the source of the Poisson
@@ -765,15 +742,14 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    bool do_add = false;
-    for (const std::string& field_name : m_all_charge_currents_names) {
-        // Add beam rho-Jz/c contribution to the RHS
-        // for predictor corrector the beam deposits directly to rho and jz
-        if (field_name == "_beam" && !Hipace::m_do_beam_jz_minus_rho) continue;
+    LinCombination(m_source_nguard, getStagingArea(lev),
+        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
+        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"), false);
+
+    if (Hipace::m_do_beam_jz_minus_rho) {
         LinCombination(m_source_nguard, getStagingArea(lev),
-            1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"+field_name),
-            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"+field_name), do_add);
-        do_add = true;
+            1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
+            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_Beam"), true);
     }
 
     SetBoundaryCondition(geom, lev, "Psi", islice);
@@ -829,16 +805,11 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
-    bool do_add = false;
-    for (const std::string& field_name : m_all_charge_currents_names) {
-        LinCombination(m_source_nguard, getStagingArea(lev),
-            1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"+field_name), geom[lev]},
-            1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"+field_name), geom[lev]},
-            do_add);
-        do_add = true;
-    }
+    LinCombination(m_source_nguard, getStagingArea(lev),
+        1._rt/(phys_const.ep0*phys_const.c),
+        derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+        1._rt/(phys_const.ep0*phys_const.c),
+        derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
     SetBoundaryCondition(geom, lev, "Ez", islice);
     // Solve Poisson equation.
@@ -912,16 +883,12 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
-    bool do_add = false;
-    for (const std::string& field_name : m_all_charge_currents_names) {
-        LinCombination(m_source_nguard, getStagingArea(lev),
-            phys_const.mu0,
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"+field_name), geom[lev]},
-            -phys_const.mu0,
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"+field_name), geom[lev]},
-            do_add);
-        do_add = true;
-    }
+    LinCombination(m_source_nguard, getStagingArea(lev),
+        phys_const.mu0,
+        derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+        -phys_const.mu0,
+        derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+
 
     SetBoundaryCondition(geom, lev, "Bz", islice);
     // Solve Poisson equation.

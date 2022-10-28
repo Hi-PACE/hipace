@@ -50,9 +50,6 @@
  * \param[in] jy_cmp array component of current density jy
  * \param[in] jz_cmp array component of current density jz
  * \param[in] rho_cmp array component of charge density rho
- * \param[in] jxx_cmp array component of current density jxx
- * \param[in] jxy_cmp array component of current density jxy
- * \param[in] jyy_cmp array component of current density jyy
  * \param[in] mult_cmp array component of current density mult
  * \param[in] a_mf MultiFab containing the normalized vector potential of the laser a
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
@@ -63,10 +60,6 @@
  * \param[in] charge of a particle
  * \param[in] mass of a particle
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
- * \param[in] deposit_jx_jy if true, deposit to jx and jy
- * \param[in] deposit_jz if true, deposit to jz
- * \param[in] deposit_j_squared if true, deposit jxx, jxy and jyy
- * \param[in] deposit_rho if true, deposit to rho
  * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  * \param[in] bins objects containing indices of plasma particles in each tile
  * \param[in] bin_size tile size (square)
@@ -81,9 +74,6 @@ void doDepositionShapeN (const bool use_laser,
                          const int jy_cmp,
                          const int jz_cmp,
                          const int rho_cmp,
-                         const int jxx_cmp,
-                         const int jxy_cmp,
-                         const int jyy_cmp,
                          const int mult_cmp,
                          const amrex::MultiFab& a_mf,
                          amrex::Vector<amrex::FArrayBox>& tmp_densities,
@@ -94,8 +84,7 @@ void doDepositionShapeN (const bool use_laser,
                          amrex::Real const charge,
                          amrex::Real const mass,
                          const bool temp_slice,
-                         const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
+                         const amrex::Real max_qsa_weighting_factor,
                          const PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
@@ -152,14 +141,11 @@ void doDepositionShapeN (const bool use_laser,
 
         Array3<amrex::Real> const isl_arr =
             do_tiling ? tmp_densities[ithread].array() : isl_fab.array();
-        const int jx  = (do_tiling && jx_cmp  != -1) ? 0 : jx_cmp;
-        const int jy  = (do_tiling && jy_cmp  != -1) ? 1 : jy_cmp;
-        const int jz  = (do_tiling && jz_cmp  != -1) ? 2 : jz_cmp;
-        const int rho = (do_tiling && rho_cmp != -1) ? 3 : rho_cmp;
-        const int jxx = (do_tiling && jxx_cmp != -1) ? 4 : jxx_cmp;
-        const int jxy = (do_tiling && jxy_cmp != -1) ? 5 : jxy_cmp;
-        const int jyy = (do_tiling && jyy_cmp != -1) ? 6 : jyy_cmp;
-        const int mult = (do_tiling && mult_cmp != -1) ? 7 : mult_cmp;
+        const int jx   = (do_tiling && jx_cmp   != -1) ? 0 : jx_cmp;
+        const int jy   = (do_tiling && jy_cmp   != -1) ? 1 : jy_cmp;
+        const int jz   = (do_tiling && jz_cmp   != -1) ? 2 : jz_cmp;
+        const int rho  = (do_tiling && rho_cmp  != -1) ? 3 : rho_cmp;
+        const int mult = (do_tiling && mult_cmp != -1) ? 4 : mult_cmp;
 
         int ntiley = 0;
         if (do_tiling) {
@@ -198,7 +184,7 @@ void doDepositionShapeN (const bool use_laser,
                     max_qsa_weighting_factor, p_n_qsa_violation,
                     charge, mass, clightinv, mu0, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
                     isl_arr,
-                    jx, jy, jz, rho, jxx, jxy, jyy, mult,
+                    jx, jy, jz, rho, mult,
                     // tiling
                     indices, offsets, itile, itilex_bs, itiley_bs,
                     // laser
@@ -291,9 +277,6 @@ void doDepositionShapeN (const bool use_laser,
                         const amrex::Real wqy = charge_density * uy_fact;
                         const amrex::Real wqz = charge_density * (gamma_psi-1._rt) / clightinv;
                         const amrex::Real wq  = charge_density * gamma_psi;
-                        const amrex::Real wqxx = wqx * ux_fact;
-                        const amrex::Real wqxy = wqx * uy_fact;
-                        const amrex::Real wqyy = wqy * uy_fact;
                         const amrex::Real wmult = charge_density * q * mu0 / (psip[ip] * mass);
 
                         // Deposit current into isl_arr
@@ -306,11 +289,6 @@ void doDepositionShapeN (const bool use_laser,
                         }
                         if (rho != -1) { // deposit_rho
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
-                        }
-                        if (jxx != -1) { // deposit_j_squared
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxx), wqxx);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxy), wqxy);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
                         }
                         if (mult != -1) { // deposit_mult
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, mult), wmult);
@@ -327,20 +305,18 @@ void doDepositionShapeN (const bool use_laser,
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
                 srcbx.grow(Fields::m_slices_nguards);
                 dstbx.grow(Fields::m_slices_nguards);
-                if (deposit_jx_jy) {
+                if (jx_cmp != -1) {
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 0, jx_cmp, 1);
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 1, jy_cmp, 1);
                 }
-                if (deposit_jz) {
+                if (jz_cmp != -1) {
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 2, jz_cmp, 1);
                 }
-                if (deposit_rho) {
+                if (rho_cmp != -1) {
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 3, rho_cmp, 1);
                 }
-                if (deposit_j_squared) {
-                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, jxx_cmp, 1);
-                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 5, jxy_cmp, 1);
-                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 6, jyy_cmp, 1);
+                if (mult_cmp != -1) {
+                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, mult_cmp, 1);
                 }
             }
 #endif

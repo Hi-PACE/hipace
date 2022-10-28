@@ -585,57 +585,46 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Bo
                                   const int islice, const int islice_local,
                                   const amrex::Vector<BeamBins>& beam_bin)
 {
-    // Set all quantities to 0 except Bx and By: the previous slice serves as initial
-    // guess.
-    m_fields.setVal(0., lev, WhichSlice::This, "ExmBy", "EypBx", "Ez", "Bz", "Psi",
-        "jx_beam", "jy_beam", "jz_beam", "rho_beam", "Mult");
-    for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
-        m_fields.setVal(0., lev, WhichSlice::This,
-            "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-            "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
-    }
+    // Set all quantities to 0 except:
+    // Bx and By: the previous slice serves as initial guess.
+    // jx_beam and jy_beam are used from the previous "Next" slice
+    // jx and jy are initially set to jx_beam and jy_beam
+    m_fields.setVal(0., lev, WhichSlice::This, "Mult", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
+        "Bz", "Psi", "jz_beam", "rho_beam", "jz", "rho");
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+
+    // deposit jx, jy, jz, rho and Mult for all plasmas
     m_multi_plasma.DepositCurrent(
         m_fields, m_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
-    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
-                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                     WhichSlice::Next);
+    // deposit jx_beam and jy_beam in the Next slice
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin, m_box_sorters,
+        ibox, m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
     // need to exchange jx_beam jy_beam
-    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
-        "jx_beam", "jy_beam");
+    m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next, "jx_beam", "jy_beam");
 
     m_fields.AddRhoIons(lev);
 
-    FillBoundaryChargeCurrents(lev);
-
-    if (!m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-    }
-
-    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
-                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                     WhichSlice::This, m_do_beam_jz_minus_rho);
-
-    if (m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
-    }
-
-    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
+    // deposit jz_beam and maybe rho_beam on This slice
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin, m_box_sorters,
+        ibox, false, true, m_do_beam_jz_minus_rho, WhichSlice::This);
 
     FillBoundaryChargeCurrents(lev);
 
+    m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
     m_fields.SolvePoissonEz(Geom(), lev, islice);
     m_fields.SolvePoissonBz(Geom(), lev, islice);
 
-    // Modifies Bx and By in the current slice and the force terms of the plasma particles
-    m_fields.AddRhoIons(lev, true);
+    // deposit grid current into jz_beam
+    m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
+    // No FillBoundary because grid current only deposits in the middle of the field
+
+    // Modifies Bx, By, Sx and Sy in the current slice
     ExplicitSolveBxBy(lev);
-    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true,
-                                    true, lev);
-    m_fields.AddRhoIons(lev);
+    // shift and update force terms, push plasma particles
+    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, true, true, true, lev);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
@@ -665,9 +654,9 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
     }
 
-    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin,
-                                     m_box_sorters, ibox, m_do_beam_jx_jy_deposition,
-                                     WhichSlice::This, m_do_beam_jz_minus_rho);
+    m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, beam_bin, m_box_sorters,
+                                     ibox, m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho,
+                                     WhichSlice::This);
 
     if (m_do_beam_jz_minus_rho) {
         m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
@@ -708,12 +697,7 @@ Hipace::FillBoundaryChargeCurrents (int lev) {
     if (!m_fields.m_extended_solve) {
         if (m_explicit) {
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                "jx_beam", "jy_beam", "jz_beam", "rho_beam");
-            for (const std::string& plasma_name : m_multi_plasma.GetNames()) {
-                m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
-                    "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-                    "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
-            }
+                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
         } else {
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
                 "jx", "jy", "jz", "rho");
@@ -734,28 +718,18 @@ Hipace::ExplicitSolveBxBy (const int lev)
     const amrex::MultiFab& nslicemf = m_fields.getSlices(lev, nsl);
     const int psl = WhichSlice::Previous1;
     const amrex::MultiFab& pslicemf = m_fields.getSlices(lev, psl);
-    const amrex::BoxArray ba = slicemf.boxArray();
-    const amrex::DistributionMapping dm = slicemf.DistributionMap();
 
     int ncomp_mult = 1;
 #ifdef AMREX_USE_LINEAR_SOLVERS
-    // Later this should have only 1 component, but we have 2 for now, with always the same values.
+    // 2 components only for AMReX MLMG
     if (m_use_amrex_mlmg) {
         ncomp_mult = 2;
         AMREX_ALWAYS_ASSERT(Comps[isl]["Mult"] + 1 == Comps[isl]["Mult2"]);
-        m_fields.setVal(0., lev, isl, "Mult2");
     }
 #endif
     AMREX_ALWAYS_ASSERT(Comps[isl]["Bx"] + 1 == Comps[isl]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[isl]["Sy"] + 1 == Comps[isl]["Sx"]);
-    m_fields.setVal(0., lev, isl, "Sy", "Sx");
 
-    // extract a of the Laser
-    const amrex::MultiFab& A_mf = m_laser.getSlices(WhichLaserSlice::This);
-
-    PhysConst pc = m_phys_const;
-
-    // dx, dy, dz in normalized units
     const amrex::Real dx = Geom(lev).CellSize(Direction::x);
     const amrex::Real dy = Geom(lev).CellSize(Direction::y);
     const amrex::Real dz = Geom(lev).CellSize(Direction::z);
@@ -778,6 +752,8 @@ Hipace::ExplicitSolveBxBy (const int lev)
         const int prev_jxb = Comps[psl]["jx_beam"];
         const int prev_jyb = Comps[psl]["jy_beam"];
 
+        const amrex::Real mu0 = m_phys_const.mu0;
+
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
@@ -792,17 +768,17 @@ Hipace::ExplicitSolveBxBy (const int lev)
                 const amrex::Real cdz_jyb =   dz_jyb;
 
                 // sy, to compute Bx
-                isl_arr(i,j,Sy) =   pc.mu0 * (
+                isl_arr(i,j,Sy) =   mu0 * (
                                     + cdy_jzb
                                     + cdz_jyb);
 
                 // sx, to compute By
-                isl_arr(i,j,Sx) = - pc.mu0 * (
+                isl_arr(i,j,Sx) = - mu0 * (
                                     + cdx_jzb
                                     + cdz_jxb);
             });
     }
-
+    // Deposit Sx and Sy for every plasma species
     m_multi_plasma.ExplicitDeposition(m_fields, geom[lev], lev);
 
     // construct slice geometry
@@ -832,11 +808,9 @@ Hipace::ExplicitSolveBxBy (const int lev)
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
-<<<<<<< HEAD
-        AMREX_ALWAYS_ASSERT(m_use_amrex_mlmg!=m_use_amrex_mlmg); // not supported
-=======
+        // Copy Mult to Mult2
+        m_fields.duplicate<1>(lev, isl, {"Mult2"}, isl, {"Mult"});
         amrex::Gpu::streamSynchronize();
->>>>>>> development
         if (!m_mlalaplacian){
             // If first call, initialize the MG solver
             amrex::LPInfo lpinfo{};
@@ -877,7 +851,7 @@ Hipace::ExplicitSolveBxBy (const int lev)
     } else
 #endif
     {
-        AMREX_ALWAYS_ASSERT(ba.size() == 1);
+        AMREX_ALWAYS_ASSERT(slicemf.boxArray().size() == 1);
         if (!m_hpmg) {
             m_hpmg = std::make_unique<hpmg::MultiGrid>(slice_geom);
         }
@@ -959,7 +933,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             m_fields, m_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
         m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, islice_local, bins, m_box_sorters,
-                                         ibox, m_do_beam_jx_jy_deposition, WhichSlice::Next);
+            ibox, m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
 
         if (!m_fields.m_extended_solve) {
             amrex::ParallelContext::push(m_comm_xy);

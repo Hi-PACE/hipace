@@ -55,7 +55,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& laser,
                 const int which_slice, const bool temp_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                const bool deposit_j_squared, amrex::Geometry const& gm, int const lev,
+                const bool deposit_mult, amrex::Geometry const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
@@ -85,16 +85,11 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
         amrex::FArrayBox& isl_fab = fields.getSlices(lev, which_slice)[pti];
-        const std::string plasma_str = explicit_solve && which_slice != WhichSlice::RhoIons ?
-                                       "_" + plasma.GetName() : "";
-        const int  jx_cmp = deposit_jx_jy     ? Comps[which_slice]["jx" +plasma_str] : -1;
-        const int  jy_cmp = deposit_jx_jy     ? Comps[which_slice]["jy" +plasma_str] : -1;
-        const int  jz_cmp = deposit_jz        ? Comps[which_slice]["jz" +plasma_str] : -1;
-        const int rho_cmp = deposit_rho       ? Comps[which_slice]["rho"+plasma_str] : -1;
-        const int jxx_cmp = false ? Comps[which_slice]["jxx"+plasma_str] : -1;
-        const int jxy_cmp = false ? Comps[which_slice]["jxy"+plasma_str] : -1;
-        const int jyy_cmp = false ? Comps[which_slice]["jyy"+plasma_str] : -1;
-        const int mult_cmp = deposit_j_squared ? Comps[which_slice]["Mult"] : -1;
+        const int   jx_cmp = deposit_jx_jy     ? Comps[which_slice]["jx"]   : -1;
+        const int   jy_cmp = deposit_jx_jy     ? Comps[which_slice]["jy"]   : -1;
+        const int   jz_cmp = deposit_jz        ? Comps[which_slice]["jz"]   : -1;
+        const int  rho_cmp = deposit_rho       ? Comps[which_slice]["rho"]  : -1;
+        const int mult_cmp = deposit_mult      ? Comps[which_slice]["Mult"] : -1;
 
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
@@ -109,10 +104,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
 
         DepositCurrent_middle(Hipace::m_outer_depos_loop, Hipace::m_depos_order_xy,
                               use_laser, Hipace::m_do_tiling, can_ionize,
-                              pti, isl_fab, jx_cmp, jy_cmp, jz_cmp, rho_cmp, jxx_cmp, jxy_cmp,
-                              jyy_cmp, mult_cmp, a_mf, tmp_dens, dx, x_pos_offset,
+                              pti, isl_fab, jx_cmp, jy_cmp, jz_cmp, rho_cmp, mult_cmp,
+                              a_mf, tmp_dens, dx, x_pos_offset,
                               y_pos_offset, z_pos_offset, q, mass, temp_slice,
-                              deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
                               max_qsa_weighting_factor, bins, bin_size);
     }
 }
