@@ -52,7 +52,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
             plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
         const Array3<const amrex::Real> a_laser_arr = laser.m_use_laser ?
-            laser.getSlices(WhichLaserSlice::n00j00)[pti].array() :
+            laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
             amrex::Array4<const amrex::Real>(nullptr, {0,0,0}, {0,0,1}, 0);
 
         const amrex::Real * AMREX_RESTRICT dx = gm.CellSize();
@@ -101,6 +101,28 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                 amrex::Real sy_cell[depos_order + 1];
                 const int j_cell = compute_shape_factor<depos_order>(sy_cell, ymid);
 
+                amrex::Real Aabssqp = 0._rt;
+                [[maybe_unused]] auto laser_arr = a_laser_arr;
+                if constexpr (use_laser.value) {
+                    for (int iy=0; iy<=depos_order; iy++){
+                        for (int ix=0; ix<=depos_order; ix++){
+                            const amrex::Real x00y00 = abssq(
+                                laser_arr(i_cell+ix, j_cell+iy, 0),
+                                laser_arr(i_cell+ix, j_cell+iy, 1) );
+                            // TODO: fix units
+                            Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
+                        }
+                    }
+                }
+
+                // calculate gamma/psi for plasma particles
+                const amrex::Real gamma_psi = 0.5_rt * (
+                    (1._rt + 0.5_rt * Aabssqp) / (psi * psi)
+                    + vx * vx
+                    + vy * vy
+                    + 1._rt
+                );
+
                 for (int iy=0; iy <= depos_order+2; ++iy) {
                     amrex::Real shape_y = 0._rt;
                     amrex::Real shape_dy = 0._rt;
@@ -141,15 +163,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                         const amrex::Real ExmBy_v = arr(i,j,ExmBy);
                         const amrex::Real EypBx_v = arr(i,j,EypBx);
 
-                        amrex::Real Aabssqp = 0._rt;
                         amrex::Real AabssqDxp = 0._rt;
                         amrex::Real AabssqDyp = 0._rt;
-                        [[maybe_unused]] auto laser_arr = a_laser_arr;
                         [[maybe_unused]] auto laser_fac = a_laser_fac;
                         if constexpr (use_laser.value) {
-                            const amrex::Real x00y00 = abssq(
-                                laser_arr(i  , j  , 0),
-                                laser_arr(i  , j  , 1));
                             const amrex::Real xp1y00 = abssq(
                                 laser_arr(i+1, j  , 0),
                                 laser_arr(i+1, j  , 1));
@@ -162,20 +179,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                             const amrex::Real x00ym1 = abssq(
                                 laser_arr(i  , j-1, 0),
                                 laser_arr(i  , j-1, 1));
-                            Aabssqp = x00y00 * laser_fac * q_mass * q_mass;
-                            AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv
-                                        * laser_fac * q_mass * clight;
-                            AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv
-                                        * laser_fac * q_mass * clight;
+                            AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
+                            AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
                         }
-
-                        // calculate gamma/psi for plasma particles
-                        const amrex::Real gamma_psi = 0.5_rt * (
-                            (1._rt + 0.5_rt * Aabssqp) / (psi * psi)
-                            + vx * vx
-                            + vy * vy
-                            + 1._rt
-                        );
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sy),
                             - shape_x * shape_y * (
@@ -183,7 +189,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                                 + ( Ez_v * vy
                                 + ExmBy_v * (          - vx * vy)
                                 + EypBx_v * (gamma_psi - vy * vy) ) / clight
-                                - 0.25_rt * AabssqDyp / psi
+                                - 0.25_rt * AabssqDyp * q_mass / psi
                             ) * q_mass / psi
                             - shape_dx * shape_y * (
                                 - vx * vy
@@ -199,7 +205,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                                 + ( Ez_v * vx
                                 + ExmBy_v * (gamma_psi - vx * vx)
                                 + EypBx_v * (          - vx * vy) ) / clight
-                                - 0.25_rt * AabssqDxp / psi
+                                - 0.25_rt * AabssqDxp * q_mass / psi
                             ) * q_mass / psi
                             + shape_dx * shape_y * (
                                 gamma_psi - vx * vx - 1._rt

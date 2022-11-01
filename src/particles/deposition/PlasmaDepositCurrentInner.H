@@ -119,7 +119,6 @@ void doDepositionShapeN (const bool use_laser,
     const PhysConst pc = get_phys_const();
     const amrex::Real clightinv = 1.0_rt/pc.c;
     const amrex::Real mu0 = pc.mu0;
-    const amrex::Real laser_fac = (pc.m_e/pc.q_e/mass) * (pc.m_e/pc.q_e/mass);
 
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
@@ -185,7 +184,7 @@ void doDepositionShapeN (const bool use_laser,
                     wp, uxp, uyp, psip,
                     max_qsa_weighting_factor, p_n_qsa_violation,
                     charge, mass, clightinv, mu0, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
-                    isl_arr, laser_fac,
+                    isl_arr,
                     jx, jy, jz, rho, chi,
                     // tiling
                     indices, offsets, itile, itilex_bs, itiley_bs,
@@ -226,14 +225,13 @@ void doDepositionShapeN (const bool use_laser,
                                             Aabssqp, a_arr, dx_arr,
                                             x_pos_offset, y_pos_offset, z_pos_offset);
                     }
-                    Aabssqp *= laser_fac * q * q;
                 }
 
                 // calculate gamma/psip for plasma particles
                 const amrex::Real gamma_psi = (1.0_rt + uxp[ip]*uxp[ip]*clightinv*clightinv
                                                       + uyp[ip]*uyp[ip]*clightinv*clightinv
                                                       + psip[ip]*psip[ip]
-                                                      + 0.5_rt*Aabssqp) // TODO: add proper units
+                                                      + 0.5_rt*Aabssqp) // TODO: fix units
                                                       / (2.0_rt * psip[ip]*psip[ip]);
 
                 if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && ox == 0)

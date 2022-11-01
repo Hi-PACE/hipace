@@ -148,17 +148,6 @@ PlasmaParticleContainer::ReadParameters ()
                                        phys_const_SI.c * phys_const_SI.c ) );
         }
     }
-
-    // FIXME assert to be removed once the bug in the explicit solver if fixed.
-    amrex::ParmParse pph("hipace");
-    std::string solver;
-    queryWithParser(pph, "bxby_solver", solver);
-    if (solver=="explicit") {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_u_std[Direction::z] < 0.01,
-        "Currently, the explicit solver does not work for plasma momentum spread > 0.01 in z "
-        "direction. Please use a lower <plasma name>.temperature_in_ev or <plasma name>.u_std.");
-    }
-
 }
 
 void
