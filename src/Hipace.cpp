@@ -1315,20 +1315,31 @@ Hipace::Wait (const int step, int it, bool only_ghost)
             bx.bigEnd(2)-bx.smallEnd(2)+1 == nz_laser,
             "Laser requires all sub-domains to be the same size, i.e., nz%nrank=0");
         const std::size_t nreals = bx.numPts()*laser_fab.nComp();
-        auto lrecv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
-            (sizeof(amrex::Real)*nreals);
-        auto const buf = amrex::makeArray4(lrecv_buffer, bx, laser_fab.nComp());
         MPI_Status lstatus;
-        MPI_Recv(lrecv_buffer, nreals,
-                 amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 (m_rank_z+1)%m_numprocs_z, lcomm_z_tag, m_comm_z, &lstatus);
-        amrex::ParallelFor
-            (bx, laser_fab.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-            {
-                laser_arr(i,j,k,n) = buf(i,j,k,n);
-            });
-        amrex::Gpu::Device::synchronize();
-        amrex::The_Pinned_Arena()->free(lrecv_buffer);
+
+        if (m_laser.is3dOnHost()) {
+            // Directly receive envelope in laser fab
+            MPI_Recv(laser_fab.dataPtr(), nreals,
+                     amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                     (m_rank_z+1)%m_numprocs_z, lcomm_z_tag, m_comm_z, &lstatus);
+        } else {
+            // Receive envelope in a host buffer, and copy to laser fab on device
+            auto lrecv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+                (sizeof(amrex::Real)*nreals);
+            MPI_Recv(lrecv_buffer, nreals,
+                     amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+                     (m_rank_z+1)%m_numprocs_z, lcomm_z_tag, m_comm_z, &lstatus);
+
+            auto const buf = amrex::makeArray4(lrecv_buffer, bx, laser_fab.nComp());
+            amrex::ParallelFor
+                (bx, laser_fab.nComp(),
+                 [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                 {
+                     laser_arr(i,j,k,n) = buf(i,j,k,n);
+                 });
+            amrex::Gpu::streamSynchronize();
+            amrex::The_Pinned_Arena()->free(lrecv_buffer);
+        }
     }
 #endif
 }
@@ -1506,13 +1517,21 @@ Hipace::Notify (const int step, const int it,
         const std::size_t nreals = lbx.numPts()*laser_fab.nComp();
         m_lsend_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*nreals);
-        auto const buf = amrex::makeArray4(m_lsend_buffer, lbx, laser_fab.nComp());
-        amrex::ParallelFor
-            (lbx, laser_fab.nComp(), [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-            {
-                buf(i,j,k,n) = laser_arr(i,j,k,n);
-            });
-        amrex::Gpu::Device::synchronize();
+        if (m_laser.is3dOnHost()) {
+            amrex::Gpu::streamSynchronize();
+            // Copy from laser envelope 3D array (on host) to MPI buffer (on host)
+            laser_fab.copyToMem<amrex::RunOn::Host>(lbx, 0, laser_fab.nComp(), m_lsend_buffer);
+        } else {
+            // Copy from laser envelope 3D array (on device) to MPI buffer (on host)
+            auto const buf = amrex::makeArray4(m_lsend_buffer, lbx, laser_fab.nComp());
+            amrex::ParallelFor
+                (lbx, laser_fab.nComp(),
+                 [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                 {
+                     buf(i,j,k,n) = laser_arr(i,j,k,n);
+                 });
+            amrex::Gpu::streamSynchronize();
+        }
         MPI_Isend(m_lsend_buffer, nreals,
                   amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
                   (m_rank_z-1+m_numprocs_z)%m_numprocs_z, lcomm_z_tag, m_comm_z, &m_lsend_request);

@@ -104,6 +104,9 @@ public:
     /** Retun the 3D FArrayBox containing the laser envelope, non-const version */
     amrex::FArrayBox& getFAB () {return m_F;}
 
+    /** getter function, whether 3D envelope is store in host memory */
+    int is3dOnHost () const {return m_3d_on_host;}
+
     /** \brief Allocate laser multifab
      * \param[in] slice_ba box array of the slice
      * \param[in] slice_dm corresponding distribution mapping
