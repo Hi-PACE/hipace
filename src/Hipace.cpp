@@ -1518,6 +1518,7 @@ Hipace::Notify (const int step, const int it,
         m_lsend_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*nreals);
         if (m_laser.is3dOnHost()) {
+            amrex::Gpu::streamSynchronize();
             // Copy from laser envelope 3D array (on host) to MPI buffer (on host)
             laser_fab.copyToMem<amrex::RunOn::Host>(lbx, 0, laser_fab.nComp(), m_lsend_buffer);
         } else {
