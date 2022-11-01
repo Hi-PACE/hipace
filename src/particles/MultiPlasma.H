@@ -57,6 +57,13 @@ public:
         bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
         int const lev);
 
+    /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields
+     *
+     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
+     * \param[in] gm Geometry of the simulation, to get the cell size etc.
+     * \param[in] lev MR level
+     */
     void ExplicitDeposition (Fields& fields, const Laser& laser,
                              amrex::Geometry const& gm, int const lev);
 

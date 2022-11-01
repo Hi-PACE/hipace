@@ -36,6 +36,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
 
         const PhysConst pc = get_phys_const();
         const amrex::Real clight = pc.c;
+        // The laser a0 is always normalized
         const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
 
         // Extract particle properties
@@ -51,6 +52,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
         int const * const AMREX_RESTRICT a_ion_lev =
             plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
+        // Construct empty Array4 with one z slice so that Array3 constructor works for no laser
         const Array3<const amrex::Real> a_laser_arr = laser.m_use_laser ?
             laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
             amrex::Array4<const amrex::Real>(nullptr, {0,0,0}, {0,0,1}, 0);
@@ -67,9 +69,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
         const amrex::Real charge_mass = plasma.m_charge / plasma.m_mass;
 
         amrex::ParallelFor(
-            amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>,
-                            amrex::CompileTimeOptions<false, true>,
-                            amrex::CompileTimeOptions<false, true>>{},
+            amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>,      // depos_order
+                            amrex::CompileTimeOptions<false, true>,     // can_ionize
+                            amrex::CompileTimeOptions<false, true>>{},  // use_laser
             {Hipace::m_depos_order_xy, plasma.m_can_ionize, laser.m_use_laser},
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip, auto a_depos_order, auto can_ionize, auto use_laser) {
@@ -102,10 +104,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                 const int j_cell = compute_shape_factor<depos_order>(sy_cell, ymid);
 
                 amrex::Real Aabssqp = 0._rt;
+                // Rename variable for NVCC lambda capture to work
                 [[maybe_unused]] auto laser_arr = a_laser_arr;
                 if constexpr (use_laser.value) {
                     for (int iy=0; iy<=depos_order; iy++){
                         for (int ix=0; ix<=depos_order; ix++){
+                            // Its important that Aabssqp is first fully gathered and not used
+                            // directly per cell like AabssqDxp and AabssqDyp
                             const amrex::Real x00y00 = abssq(
                                 laser_arr(i_cell+ix, j_cell+iy, 0),
                                 laser_arr(i_cell+ix, j_cell+iy, 1) );
@@ -124,7 +129,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                 );
 
                 for (int iy=0; iy <= depos_order+2; ++iy) {
+                    // normal shape factor
                     amrex::Real shape_y = 0._rt;
+                    // derivative shape factor
                     amrex::Real shape_dy = 0._rt;
                     if (iy != 0 && iy != depos_order + 2) {
                         shape_y = sy_cell[iy-1] * global_fac;
@@ -152,12 +159,14 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                         shape_dx *= dx_inv * 0.5_rt * clight;
 
                         if ((ix==0 || ix==depos_order + 2) && (iy==0 || iy==depos_order + 2)) {
+                            // corners have a shape factor of zero
                             continue;
                         }
 
                         const int i = i_cell + ix - 1;
                         const int j = j_cell + iy - 1;
 
+                        // get fields per cell instead of gathering them to avoid blurring
                         const amrex::Real Bz_v = arr(i,j,Bz);
                         const amrex::Real Ez_v = arr(i,j,Ez);
                         const amrex::Real ExmBy_v = arr(i,j,ExmBy);

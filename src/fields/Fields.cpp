@@ -766,7 +766,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     if (Hipace::m_do_beam_jz_minus_rho) {
         LinCombination(m_source_nguard, getStagingArea(lev),
             1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
-            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_Beam"), true);
+            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
     }
 
     SetBoundaryCondition(geom, lev, "Psi", islice);
