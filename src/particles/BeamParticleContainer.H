@@ -30,8 +30,11 @@ struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 
 
     template<class...Args>
     void build (Args&&...args) {
+        // call build function of the underlying DenseBins object
+        // with all of the arguments forwarded
         amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
 
+        // after every build call copy offsets array form GPU to CPU
         const auto offset_size = numBins() + 1;
         const auto offsets_gpu = offsetsPtr();
         m_offsets_cpu.resize(offset_size);
@@ -45,6 +48,7 @@ struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 
 #endif
     }
 
+    // get offsets array on the CPU
     const index_type* offsetsPtrCpu () const noexcept { return m_offsets_cpu.dataPtr(); }
 
     amrex::Vector<index_type> m_offsets_cpu;
