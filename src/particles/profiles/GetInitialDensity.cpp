@@ -11,11 +11,10 @@
 GetInitialDensity::GetInitialDensity (const std::string& name)
 {
     amrex::ParmParse pp(name);
-    amrex::ParmParse pp_alt("beams");
     std::string profile;
     getWithParser(pp, "density", m_density);
     m_density = std::abs(m_density);
-    getWithParserAlt(pp, "profile", profile, pp_alt);
+    getWithParser(pp, "profile", profile);
 
     if        (profile == "gaussian") {
         m_profile = BeamProfileType::Gaussian;

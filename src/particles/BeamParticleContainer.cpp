@@ -54,12 +54,12 @@ BeamParticleContainer::ReadParameters ()
     DeprecatedInput(m_name, "dy_per_dzeta", "position_mean = \"x_center+(z-z_center)"
         "*dx_per_dzeta\" \"y_center+(z-z_center)*dy_per_dzeta\" \"z_center\"");
 
-    getWithParserAlt(pp, "injection_type", m_injection_type, pp_alt);
+    getWithParser(pp, "injection_type", m_injection_type);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
-    queryWithParserAlt(pp, "do_z_push", m_do_z_push, pp_alt);
+    queryWithParser(pp, "do_z_push", m_do_z_push);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
-    queryWithParserAlt(pp, "n_subcycles", m_n_subcycles, pp_alt);
+    queryWithParser(pp, "n_subcycles", m_n_subcycles);
     queryWithParser(pp, "finest_level", m_finest_level);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
@@ -78,7 +78,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     if (m_injection_type == "fixed_ppc") {
 
         amrex::Vector<amrex::Real> tmp_vector;
-        if (queryWithParserAlt(pp, "ppc", tmp_vector, pp_alt)){
+        if (queryWithParser(pp, "ppc", tmp_vector)){
             AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
             for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
         }
@@ -87,10 +87,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         getWithParser(pp, "radius", m_radius);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> position_mean{0., 0., 0.};
         queryWithParser(pp, "position_mean", position_mean);
-        queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
+        queryWithParser(pp, "min_density", m_min_density);
         m_min_density = std::abs(m_min_density);
         amrex::Vector<int> random_ppc {false, false, false};
-        queryWithParserAlt(pp, "random_ppc", random_ppc, pp_alt);
+        queryWithParser(pp, "random_ppc", random_ppc);
         const GetInitialDensity get_density(m_name);
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
@@ -103,7 +103,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Real zmin = -std::numeric_limits<amrex::Real>::infinity();
         amrex::Real zmax = std::numeric_limits<amrex::Real>::infinity();
         std::string profile = "gaussian";
-        queryWithParserAlt(pp, "profile", profile, pp_alt);
+        queryWithParser(pp, "profile", profile);
         if (profile == "can") {
             can = true;
             getWithParser(pp, "zmin", zmin);
@@ -124,12 +124,12 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         getWithParser(pp, "position_std", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
-        getWithParserAlt(pp, "num_particles", m_num_particles, pp_alt);
+        getWithParser(pp, "num_particles", m_num_particles);
         bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
         bool peak_density_is_specified = queryWithParser(pp, "density", m_density);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
             "Please specify exlusively either total_charge or density of the beam");
-        queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
+        queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
 

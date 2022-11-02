@@ -339,7 +339,7 @@ which are valid only for certain beam types, are introduced further below under
 "Option: ``<injection_type>``".
 
 
-* ``<beam name> or beams.injection_type`` (`string`)
+* ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are ``fixed_ppc``, ``fixed_weight``,
     and ``from_file``. ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
     varying weights. It can be either a Gaussian or a flattop beam. ``fixed_weight`` generates a
@@ -376,14 +376,14 @@ which are valid only for certain beam types, are introduced further below under
     either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
 
-* ``<beam name> or beams.profile`` (`string`)
+* ``<beam name>.profile`` (`string`)
     Beam profile.
     When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
     (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
-* ``<beam name> or beams.n_subcycles`` (`int`) optional (default `1`)
+* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
@@ -429,7 +429,7 @@ which are valid only for certain beam types, are introduced further below under
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name> or beams.num_particles`` (`int`)
+* ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.total_charge`` (`float`)
@@ -443,32 +443,32 @@ Option: ``fixed_weight``
     :math:`\zeta` is hereby the particle position relative to the mean
     longitudinal position of the beam.
 
-* ``<beam name> or beams.do_symmetrize`` (`bool`) optional (default `0`)
+* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
     `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
     divisible by 4.
 
-* ``<beam name> or beams.do_z_push`` (`bool`) optional (default `1`)
+* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name> or beams.ppc`` (3 `int`) (default `1 1 1`)
+* ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
 
 * ``<beam name>.radius`` (`float`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
     injected.
 
-* ``<beam name> or beams.min_density`` (`float`) optional (default `0`)
+* ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
     The absolute value of this parameter is used when initializing the beam.
 
-* ``<beam name> or beams.random_ppc`` (3 `bool`) optional (default `0 0 0`)
+* ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
     Whether the position in `(x y z)` of the particles is randomized within the cell.
 
 Option: ``from_file``
