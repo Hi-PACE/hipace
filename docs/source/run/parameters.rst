@@ -223,8 +223,10 @@ Explicit solver parameters
 Plasma parameters
 -----------------
 
-For the plasma parameters, first the names of the plasmas need to be specified. Afterwards, the
-plasma parameters for each plasma are specified via ``<plasma name>.<plasma property> = ...``.
+The name of all plasma species must be specified with `plasmas.names = ...`.
+Then, properties can be set per plasma species with ``<plasma name>.<plasma property> = ...``,
+or sometimes for all plasma species at the same time with ``plasmas.<plasma property> = ...``.
+When both are specified, the per-species value is used.
 
 * ``plasmas.names`` (`string`)
     The names of the plasmas, separated by a space.
