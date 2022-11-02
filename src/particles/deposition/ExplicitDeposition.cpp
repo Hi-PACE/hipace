@@ -66,7 +66,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
 
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
-        const amrex::Real charge_mass = plasma.m_charge / plasma.m_mass;
+        const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
         amrex::ParallelFor(
             amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>,      // depos_order
@@ -84,12 +84,12 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                 const amrex::Real vy = uyp[ip] / (psi * clight);
 
                 amrex::Real q_invvol_mu0 = charge_invvol_mu0;
-                amrex::Real q_mass = charge_mass;
+                amrex::Real q_mass_ratio = charge_mass_ratio;
 
                 [[maybe_unused]] auto ion_lev = a_ion_lev;
                 if constexpr (can_ionize.value) {
                     q_invvol_mu0 *= ion_lev[ip];
-                    q_mass *= ion_lev[ip];
+                    q_mass_ratio *= ion_lev[ip];
                 }
 
                 const amrex::Real global_fac = q_invvol_mu0 * wp[ip];
@@ -198,8 +198,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                                 + ( Ez_v * vy
                                 + ExmBy_v * (          - vx * vy)
                                 + EypBx_v * (gamma_psi - vy * vy) ) / clight
-                                - 0.25_rt * AabssqDyp * q_mass / psi
-                            ) * q_mass / psi
+                                - 0.25_rt * AabssqDyp * q_mass_ratio / psi
+                            ) * q_mass_ratio / psi
                             - shape_dx * shape_y * (
                                 - vx * vy
                             )
@@ -214,8 +214,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                                 + ( Ez_v * vx
                                 + ExmBy_v * (gamma_psi - vx * vx)
                                 + EypBx_v * (          - vx * vy) ) / clight
-                                - 0.25_rt * AabssqDxp * q_mass / psi
-                            ) * q_mass / psi
+                                - 0.25_rt * AabssqDxp * q_mass_ratio / psi
+                            ) * q_mass_ratio / psi
                             + shape_dx * shape_y * (
                                 gamma_psi - vx * vx - 1._rt
                             )
