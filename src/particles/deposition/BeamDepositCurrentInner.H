@@ -109,7 +109,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
         "jx, jy, jz and rho must be exactly one cell thick in the z direction.");
 
     BeamBins::index_type const * const indices = bins.permutationPtr();
-    BeamBins::index_type const * const offsets = bins.offsetsPtr();
+    BeamBins::index_type const * const offsets = bins.offsetsPtrCpu();
     BeamBins::index_type cell_start = 0, cell_stop = 0;
 
     // The particles that are in slice islice are

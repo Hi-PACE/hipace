@@ -13,8 +13,6 @@
 
 #include <AMReX_MultiFab.H>
 
-using BeamBins = amrex::DenseBins<BeamParticleContainer::ParticleType>;
-
 /** \brief Find particles that are in each slice, and return collections of indices per slice.
  *
  * Note that this does *not* rearrange particle arrays
