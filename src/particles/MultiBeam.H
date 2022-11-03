@@ -165,14 +165,6 @@ public:
      * \param[in] ibeam index of the beam
      */
     int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];}
-
-    /** \brief Allows beams.all_from_file to specify the input file of all beams that have
-     * no injection_type. Also passes down beams.iteration, beams.plasma_density and
-     * beams.file_coordinates_xyz to the individual beams if applicable.
-     *
-     * \param[in] beam_names names of all beams.
-     */
-    void MultiFromFileMacro (const amrex::Vector<std::string> beam_names);
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
