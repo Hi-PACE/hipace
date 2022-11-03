@@ -223,24 +223,22 @@ Explicit solver parameters
 Plasma parameters
 -----------------
 
-For the plasma parameters, first the names of the plasmas need to be specified. Afterwards, the
-plasma parameters for each plasma are specified via ``<plasma name>.<plasma property> = ...``.
+The name of all plasma species must be specified with `plasmas.names = ...`.
+Then, properties can be set per plasma species with ``<plasma name>.<plasma property> = ...``,
+or sometimes for all plasma species at the same time with ``plasmas.<plasma property> = ...``.
+When both are specified, the per-species value is used.
 
 * ``plasmas.names`` (`string`)
     The names of the plasmas, separated by a space.
     To run without plasma, choose the name ``no_plasma``.
 
-* ``plasmas.nominal_density`` (`string`) optional (default `1.` in normalized units, `1.e23` in SI units)
-    Nominal density (in number per cubic meter) by which quantities are normalized in the explicit solver.
-    This should be roughly the peak density of the unperturbed plasma.
-
-* ``<plasma name>.density(x,y,z)`` (`float`) optional (default `0.`)
+* ``<plasma name> or plasmas.density(x,y,z)`` (`float`) optional (default `0.`)
     The plasma density as function of `x`, `y` and `z`. `x` and `y` coordinates are taken from
     the simulation box and :math:`z = time \cdot c`. The density gets recalculated at the beginning
     of every timestep. If specified as a command line parameter, quotation marks must be added:
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
-* ``<plasma name>.min_density`` (`float`) optional (default `0`)
+* ``<plasma name> or plasmas.min_density`` (`float`) optional (default `0`)
     Minimal density below which particles are not injected.
     Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
 
@@ -252,7 +250,7 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
-* ``<plasma name>.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name> or plasmas.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
@@ -260,14 +258,14 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.level`` (`integer`) optional (default `0`)
     Level of mesh refinement to which the plasma is assigned.
 
-* ``<plasma name>.radius`` (`float`) optional (default `infinity`)
+* ``<plasma name> or plasmas.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
-* ``<plasma name>.hollow_core_radius`` (`float`) optional (default `0.`)
+* ``<plasma name> or plasmas.hollow_core_radius`` (`float`) optional (default `0.`)
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
 
-* ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
+* ``<plasma name> or plasmas.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
     as violating the quasi-static approximation and are removed from the simulation.
 
@@ -298,6 +296,9 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
+
+* ``<plasma name> or plasmas.neutralize_background`` (`bool`) optional (default `1`)
+    Whether to add a neutralizing background of immobile particles of opposite charge.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
     Tile size for plasma current deposition, when running on CPU.
@@ -475,12 +476,12 @@ Option: ``fixed_ppc``
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name>.input_file`` (`string`)
+* ``<beam name> or beams.input_file`` (`string`)
     Name of the input file. **Note:** Reading in files with digits in their names (e.g.
     ``openpmd_002135.h5``) can be problematic, it is advised to read them via ``openpmd_%T.h5`` and then
     specify the iteration via ``beam_name.iteration = 2135``.
 
-* ``<beam name>.iteration`` (`integer`) optional (default `0`)
+* ``<beam name> or beams.iteration`` (`integer`) optional (default `0`)
     Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
     or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
     time of the simulation is set to the time of the given iteration (if available).
@@ -488,11 +489,6 @@ Option: ``from_file``
 * ``<beam name>.openPMD_species_name`` (`string`) optional (default `<beam name>`)
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
-
-* ``beams.all_from_file`` (`string`)
-    Name of the input file for all beams. This macro then passes it down to all individual beams
-    without a specified ``injection_type``. Additionally the input parameters ``beams.iteration``,
-    ``beams.plasma_density`` and ``beams.file_coordinates_xyz`` are passed down if applicable.
 
 Laser parameters
 ----------------

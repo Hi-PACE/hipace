@@ -72,10 +72,11 @@ amrex::Real
 BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     using namespace amrex::literals;
+    amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_alt("beams");
     amrex::Real ptime {0.};
     if (m_injection_type == "fixed_ppc") {
 
-        amrex::ParmParse pp(m_name);
         amrex::Vector<amrex::Real> tmp_vector;
         if (queryWithParser(pp, "ppc", tmp_vector)){
             AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
@@ -97,7 +98,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     } else if (m_injection_type == "fixed_weight") {
 
-        amrex::ParmParse pp(m_name);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         bool can = false;
         amrex::Real zmin = -std::numeric_limits<amrex::Real>::infinity();
@@ -153,9 +153,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
-        amrex::ParmParse pp(m_name);
-        amrex::ParmParse pp_alt("beams");
-        getWithParser(pp, "input_file", m_input_file);
+        getWithParserAlt(pp, "input_file", m_input_file, pp_alt);
         bool coordinates_specified = queryWithParserAlt(pp, "file_coordinates_xyz",
                                                         m_file_coordinates_xyz, pp_alt);
         queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);

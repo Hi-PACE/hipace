@@ -26,6 +26,7 @@ PlasmaParticleContainer::ReadParameters ()
     PhysConst phys_const = get_phys_const();
 
     amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_alt("plasmas");
     std::string element = "";
     amrex::Real mass_Da = 0;
     queryWithParser(pp, "element", element);
@@ -62,7 +63,7 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial Ion level must be specified");
     }
-    queryWithParser(pp, "neutralize_background", m_neutralize_background);
+    queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
         "Cannot use neutralize_background for Ion plasma");
 
@@ -82,10 +83,10 @@ PlasmaParticleContainer::ReadParameters ()
                     "The same functionality can be obtained with the parser using "
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
-    bool density_func_specified = queryWithParser(pp, "density(x,y,z)", density_func_str);
+    bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
     m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
 
-    queryWithParser(pp, "min_density", m_min_density);
+    queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
 
     std::string density_table_file_name{};
     m_use_density_table = queryWithParser(pp, "density_table_file", density_table_file_name);
@@ -109,14 +110,14 @@ PlasmaParticleContainer::ReadParameters ()
     }
 
     queryWithParser(pp, "level", m_level);
-    queryWithParser(pp, "radius", m_radius);
-    queryWithParser(pp, "hollow_core_radius", m_hollow_core_radius);
+    queryWithParserAlt(pp, "radius", m_radius, pp_alt);
+    queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
-    queryWithParser(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor);
+    queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
     amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "ppc", tmp_vector)){
+    if (queryWithParserAlt(pp, "ppc", tmp_vector, pp_alt)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
         "ppc is only specified in transverse directions for plasma particles, "
         "it is 1 in the longitudinal direction z. "
