@@ -465,7 +465,7 @@ MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_
     FArrayBox afab(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr());
 
     auto const& array_m_acf = m_acf[0].array();
-    auto const& array_a_acf = a_acf.const_array();
+    auto const& array_a_acf = afab.const_array();
     hpmg::ParallelFor(m_acf[0].box(),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
