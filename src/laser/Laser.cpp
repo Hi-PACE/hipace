@@ -327,16 +327,16 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
         const amrex::Real tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
 
         amrex::Real dt1 = tj00 - tjp1;
-        amrex::Real dt2 = tj00 - tjp2;
+        amrex::Real dt2 = tjp1 - tjp2;
         if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
         if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
         if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
         if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
-        Complex edt1 = amrex::exp(I*dt1);
-        Complex edt2 = amrex::exp(I*dt2);
+        Complex edt1 = amrex::exp(I*(tj00-tjp1));
+        Complex edt2 = amrex::exp(I*(tj00-tjp2));
 
         // D_j^n as defined in Benedetti's 2017 paper
-        djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
+        djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
         acoeff_real_scalar = step == 0 ? 6._rt/(c*dt*dz)
             : 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
         acoeff_imag_scalar = step == 0 ? -4._rt * ( k0 + djn ) / (c*dt)
@@ -524,16 +524,16 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         const amrex::Real tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
 
         amrex::Real dt1 = tj00 - tjp1;
-        amrex::Real dt2 = tj00 - tjp2;
+        amrex::Real dt2 = tjp1 - tjp2;
         if (dt1 <-1.5_rt*MathConst::pi) dt1 += 2._rt*MathConst::pi;
         if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
         if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
         if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
-        Complex edt1 = amrex::exp(I*dt1);
-        Complex edt2 = amrex::exp(I*dt2);
+        Complex edt1 = amrex::exp(I*(tj00-tjp1));
+        Complex edt2 = amrex::exp(I*(tj00-tjp2));
 
         // D_j^n as defined in Benedetti's 2017 paper
-        amrex::Real djn = ( -3._rt*tj00 + 4._rt*tjp1 - tjp2 ) / (2._rt*dz);
+        amrex::Real djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
         amrex::ParallelFor(
             bx, 1,
             [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
