@@ -15,8 +15,6 @@
 #ifndef HIPACE_PROFILERWRAPPER_H_
 #define HIPACE_PROFILERWRAPPER_H_
 
-#include "Hipace.H"
-
 #include <AMReX_BLProfiler.H>
 #include <AMReX_GpuDevice.H>
 
