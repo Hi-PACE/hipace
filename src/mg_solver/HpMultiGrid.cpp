@@ -6,7 +6,6 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "HpMultiGrid.H"
-#include "utils/GPUUtil.H"
 #include <algorithm>
 
 using namespace amrex;
@@ -465,12 +464,12 @@ MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_
     AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_acf.box(),2,0).contains(m_domain.front()));
     FArrayBox afab(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr());
 
-    Array2<amrex::Real> const& array_m_acf = m_acf[0].array();
-    Array2<const amrex::Real> const& array_a_acf = a_acf.const_array();
+    auto const& array_m_acf = m_acf[0].array();
+    auto const& array_a_acf = afab.const_array();
     hpmg::ParallelFor(m_acf[0].box(),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
-            array_m_acf(i,j) = array_a_acf(i,j);
+            array_m_acf(i,j,0) = array_a_acf(i,j,0);
         });
 
     average_down_acoef();
