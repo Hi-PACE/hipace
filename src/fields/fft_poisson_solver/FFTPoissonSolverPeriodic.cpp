@@ -8,6 +8,7 @@
  */
 #include "FFTPoissonSolverPeriodic.H"
 #include "fft/AnyFFT.H"
+#include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
