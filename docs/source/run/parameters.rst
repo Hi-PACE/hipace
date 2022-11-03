@@ -521,7 +521,7 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
 * ``laser.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
-* ``laser.solver_type`` (`string`) optional (default `fft`)
+* ``laser.solver_type`` (`string`) optional (default `multigrid`)
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
     With the multigrid solver, we could drop this assumption.
@@ -535,6 +535,9 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
 
 * ``laser.MG_verbose`` (`int`) optional (default `0`)
     Level of verbosity of the multigrid solver used for the laser pulse.
+
+* ``laser.MG_average_rhs`` (`0` or `1`) optional (default `1`)
+    Whether to use the most stable discretization for the envelope solver. Slightly more expensive.
 
 * ``laser.3d_on_host`` (`0` or `1`) optional (default `0`)
     When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
