@@ -253,7 +253,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
     const amrex::Real c = phc.c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
     const amrex::Real chi_fac = phc.q_e/(c*c*phc.m_e*phc.ep0);
-    const amrex::Real do_avg_rhs = m_MG_average_rhs;
+    const bool do_avg_rhs = m_MG_average_rhs;
 
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
@@ -279,7 +279,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        const auto box_local = do_avg_rhs ? bx : amrex::Box({0,0,0},{0,0,0});
+        const auto box_local = bx;
         acoeff_real.resize(box_local, 1, amrex::The_Arena());
         rhs_mg.resize(bx, 2, amrex::The_Arena());
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
@@ -389,9 +389,13 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
                     rhs =
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*edt1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*edt2
-                        - chi_fac * isl_arr(i,j,chi) * an00j00 * (2._rt-do_avg_rhs)
                         - lapA
                         + ( -6._rt/(c*dt*dz) + 4._rt*I*djn/(c*dt) + I*4._rt*k0/(c*dt) ) * an00j00;
+                    if (do_avg_rhs) {
+                        rhs -= chi_fac * isl_arr(i,j,chi) * an00j00;
+                    } else {
+                        rhs -= chi_fac * isl_arr(i,j,chi) * an00j00 * 2._rt;
+                    }
                 } else {
                     const Complex anm1jp1 = nm1jp1_arr(i,j,0) + I * nm1jp1_arr(i,j,1);
                     const Complex anm1jp2 = nm1jp2_arr(i,j,0) + I * nm1jp2_arr(i,j,1);
@@ -403,10 +407,13 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
                         + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*edt1
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*edt2
                         - 4._rt/(c*c*dt*dt)*an00j00
-                        - chi_fac * isl_arr(i,j,chi) * anm1j00 * do_avg_rhs
-                        - chi_fac * isl_arr(i,j,chi) * an00j00 * 2._rt * (1._rt-do_avg_rhs)
                         - lapA
                         + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
+                    if (do_avg_rhs) {
+                        rhs -= chi_fac * isl_arr(i,j,chi) * anm1j00;
+                    } else {
+                        rhs -= chi_fac * isl_arr(i,j,chi) * an00j00 * 2._rt;
+                    }
                 }
                 rhs_arr(i,j,0) = rhs;
                 rhs_mg_arr(i,j,0) = rhs.real();
