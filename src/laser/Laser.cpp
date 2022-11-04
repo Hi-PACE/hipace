@@ -279,7 +279,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        acoeff_imag.resize(bx, 1, amrex::The_Arena());
+        acoeff_real.resize(bx, 1, amrex::The_Arena());
         rhs_mg.resize(bx, 2, amrex::The_Arena());
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
