@@ -376,7 +376,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
                 const Complex anp1jp1 = np1jp1_arr(i,j,0) + I * np1jp1_arr(i,j,1);
                 const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
                 acoeff_real_arr(i,j,0) = do_avg_rhs ?
-                    acoeff_real_scalar - chi_fac * isl_arr(i,j,chi) : acoeff_real_scalar;
+                    acoeff_real_scalar + isl_arr(i,j,chi) : acoeff_real_scalar;
 
                 Complex rhs;
                 if (step == 0) {
