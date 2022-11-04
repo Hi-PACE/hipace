@@ -193,7 +193,7 @@ private:
     amrex::Real m_MG_tolerance_rel = 1.e-4;
     amrex::Real m_MG_tolerance_abs = 0.;
     int m_MG_verbose = 0;
-    /** Whether to use time-averaged RHS in envelope solver. More accurate and more expensive. */
+    /** Whether to use time-averaged RHS in envelope solver. */
     bool m_MG_average_rhs = true;
     /** hpmg solver for the envelope solver */
     std::unique_ptr<hpmg::MultiGrid> m_mg;

@@ -537,7 +537,7 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
     Level of verbosity of the multigrid solver used for the laser pulse.
 
 * ``laser.MG_average_rhs`` (`0` or `1`) optional (default `1`)
-    Whether to use the most stable discretization for the envelope solver. Slightly more expensive.
+    Whether to use the most stable discretization for the envelope solver.
 
 * ``laser.3d_on_host`` (`0` or `1`) optional (default `0`)
     When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).

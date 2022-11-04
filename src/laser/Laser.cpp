@@ -52,7 +52,7 @@ Laser::ReadParameters ()
     mg_param_given += queryWithParser(pp, "MG_verbose", m_MG_verbose);
     mg_param_given += queryWithParser(pp, "MG_average_rhs", m_MG_average_rhs);
 
-    // Check Raise warning if user specifies MG parameters without MG using the solver
+    // Raise warning if user specifies MG parameters without using the MG solver
     if (mg_param_given && (m_solver_type != "multigrid")) {
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
     }
@@ -279,8 +279,7 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        const auto box_local = bx;
-        acoeff_real.resize(box_local, 1, amrex::The_Arena());
+        acoeff_imag.resize(bx, 1, amrex::The_Arena());
         rhs_mg.resize(bx, 2, amrex::The_Arena());
         Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
         Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
