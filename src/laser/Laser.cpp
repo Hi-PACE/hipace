@@ -377,15 +377,15 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
                 const Complex an00j00 = n00j00_arr(i,j,0) + I * n00j00_arr(i,j,1);
                 const Complex anp1jp1 = np1jp1_arr(i,j,0) + I * np1jp1_arr(i,j,1);
                 const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
+                acoeff_real_arr(i,j,0) = do_avg_rhs ?
+                    acoeff_real_scalar - chi_fac * isl_arr(i,j,chi) : acoeff_real_scalar;
+
                 Complex rhs;
                 if (step == 0) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = n00jp1_arr(i,j,0) + I * n00jp1_arr(i,j,1);
                     const Complex an00jp2 = n00jp2_arr(i,j,0) + I * n00jp2_arr(i,j,1);
-                    if (do_avg_rhs) {
-                        acoeff_real_arr(i,j,0) = acoeff_real_scalar - chi_fac * isl_arr(i,j,chi);
-                    }
                     rhs =
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*edt1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*edt2
@@ -400,9 +400,6 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
                     const Complex anm1jp1 = nm1jp1_arr(i,j,0) + I * nm1jp1_arr(i,j,1);
                     const Complex anm1jp2 = nm1jp2_arr(i,j,0) + I * nm1jp2_arr(i,j,1);
                     const Complex anm1j00 = nm1j00_arr(i,j,0) + I * nm1j00_arr(i,j,1);
-                    if (do_avg_rhs) {
-                        acoeff_real_arr(i,j,0) = acoeff_real_scalar - chi_fac * isl_arr(i,j,chi);
-                    }
                     rhs =
                         + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*edt1
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*edt2
@@ -445,13 +442,8 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
     }
 
     const int max_iters = 200;
-    if (do_avg_rhs) {
-        m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
-                     m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
-    } else {
-        m_mg->solve2(np1j00[0], rhs_mg, acoeff_real_scalar, acoeff_imag_scalar,
-                     m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
-    }
+    m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
+                 m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
 }
 
 void
