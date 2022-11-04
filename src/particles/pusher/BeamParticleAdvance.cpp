@@ -67,7 +67,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
     BeamBins::index_type const * const indices = bins.permutationPtr();
-    BeamBins::index_type const * const offsets = bins.offsetsPtr();
+    BeamBins::index_type const * const offsets = bins.offsetsPtrCpu();
     BeamBins::index_type const
         cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
     // The particles that are in slice islice_local are

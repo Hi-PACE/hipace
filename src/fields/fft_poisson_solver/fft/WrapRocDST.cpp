@@ -10,9 +10,9 @@
 #include "RocFFTUtils.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/Parser.H"
 
 #include <AMReX_Config.H>
-
 
 namespace AnyDST
 {

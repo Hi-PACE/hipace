@@ -8,6 +8,7 @@
  */
 #include "FFTPoissonSolverDirichlet.H"
 #include "fft/AnyDST.H"
+#include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"

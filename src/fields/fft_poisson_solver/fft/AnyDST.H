@@ -11,6 +11,7 @@
 #include "AnyFFT.H"
 
 #include <AMReX_GpuComplex.H>
+#include <AMReX_FArrayBox.H>
 
 #include <memory>
 

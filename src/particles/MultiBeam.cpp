@@ -19,8 +19,9 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     getWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
     DeprecatedInput("beams", "insitu_freq", "insitu_period");
+    DeprecatedInput("beams", "all_from_file",
+        "injection_type = from_file\nand beams.input_file = <file name>\n");
     m_nbeams = m_names.size();
-    MultiFromFileMacro(m_names);
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
@@ -136,7 +137,7 @@ int
 MultiBeam::NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx)
 {
     BeamBins::index_type const * offsets = 0;
-    offsets = bins[ibeam].offsetsPtr();
+    offsets = bins[ibeam].offsetsPtrCpu();
     return offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)]
         - offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
 }
@@ -194,25 +195,6 @@ MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_
                 uzp_dst[idx] = uzp_src[idx];
             }
             );
-    }
-}
-
-void
-MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
-{
-    amrex::ParmParse pp("beams");
-    std::string all_input_file = "";
-    if(!queryWithParser(pp, "all_from_file", all_input_file)) {
-        return;
-    }
-
-    for( std::string name : beam_names ) {
-        amrex::ParmParse pp_beam(name);
-        if(!pp_beam.contains("injection_type")) {
-            std::string str_from_file = "from_file";
-            pp_beam.add("injection_type", str_from_file);
-            pp_beam.add("input_file", all_input_file);
-        }
     }
 }
 

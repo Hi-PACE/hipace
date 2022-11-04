@@ -420,15 +420,16 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
 
     // Put contributions from i_slice to different diag_fab slices in GPU vector
     m_rel_z_vec.resize(k_max+1-k_min);
+    m_rel_z_vec_cpu.resize(k_max+1-k_min);
     for (int k=k_min; k<=k_max; ++k) {
         const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
         const amrex::Real mid_i_slice = (pos - poff_calc_z)/calc_geom.CellSize(2);
         amrex::Real sz_cell[depos_order_z + 1];
         const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
-        m_rel_z_vec[k-k_min] = 0;
+        m_rel_z_vec_cpu[k-k_min] = 0;
         for (int i=0; i<=depos_order_z; ++i) {
             if (k_cell+i == i_slice) {
-                m_rel_z_vec[k-k_min] = sz_cell[i];
+                m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
             }
         }
     }
@@ -437,11 +438,11 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     int k_start = k_min;
     int k_stop = k_max;
     for (int k=k_min; k<=k_max; ++k) {
-        if (m_rel_z_vec[k-k_min] == 0) ++k_start;
+        if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
         else break;
     }
     for (int k=k_max; k>=k_min; --k) {
-        if (m_rel_z_vec[k-k_min] == 0) --k_stop;
+        if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
         else break;
     }
     diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
@@ -451,6 +452,16 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
     auto& laser_mf = laser.getSlices(WhichLaserSlice::n00j00);
     auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
+
+#ifdef AMREX_USE_GPU
+    // This async copy happens on the same stream as the ParallelFor below, which uses the copied array.
+    // Therefore, it is safe to do it async.
+    amrex::Gpu::htod_memcpy_async(m_rel_z_vec.dataPtr(), m_rel_z_vec_cpu.dataPtr(),
+                                  m_rel_z_vec_cpu.size() * sizeof(amrex::Real));
+#else
+    std::memcpy(m_rel_z_vec.dataPtr(), m_rel_z_vec_cpu.dataPtr(),
+                m_rel_z_vec_cpu.size() * sizeof(amrex::Real));
+#endif
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
     for (amrex::MFIter mfi(slice_mf, DfltMfi); mfi.isValid(); ++mfi) {

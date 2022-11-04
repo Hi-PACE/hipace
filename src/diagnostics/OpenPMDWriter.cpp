@@ -10,6 +10,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
+#include "Hipace.H"
 
 #ifdef HIPACE_USE_OPENPMD
 
