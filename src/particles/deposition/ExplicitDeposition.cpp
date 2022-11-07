@@ -8,7 +8,7 @@
 #include "ExplicitDeposition.H"
 
 #include "Hipace.H"
-#include "particles/ShapeFactors.H"
+#include "particles/particles_utils/ShapeFactors.H"
 #include "utils/Constants.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/GPUUtil.H"

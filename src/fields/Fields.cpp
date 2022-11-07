@@ -14,7 +14,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
-#include "particles/ShapeFactors.H"
+#include "particles/particles_utils/ShapeFactors.H"
 
 using namespace amrex::literals;
 

@@ -11,7 +11,7 @@
 #include "particles/plasma/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-#include "particles/FieldGather.H"
+#include "particles/particles_utils/FieldGather.H"
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
 

@@ -16,7 +16,7 @@
 #ifndef HIPACE_BEAMDEPOSITCURRENTINNER_H_
 #define HIPACE_BEAMDEPOSITCURRENTINNER_H_
 
-#include "particles/ShapeFactors.H"
+#include "particles/particles_utils/ShapeFactors.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "Hipace.H"

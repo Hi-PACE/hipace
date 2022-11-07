@@ -8,7 +8,7 @@
  */
 #include "BeamParticleAdvance.H"
 #include "ExternalFields.H"
-#include "particles/FieldGather.H"
+#include "particles/particles_utils/FieldGather.H"
 #include "utils/Constants.H"
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"

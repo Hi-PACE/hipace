@@ -16,9 +16,9 @@
 #ifndef HIPACE_PLASMADEPOSITCURRENTINNER_H_
 #define HIPACE_PLASMADEPOSITCURRENTINNER_H_
 
-#include "particles/ShapeFactors.H"
+#include "particles/particles_utils/ShapeFactors.H"
 #include "particles/sorting/TileSort.H"
-#include "particles/FieldGather.H"
+#include "particles/particles_utils/FieldGather.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "Hipace.H"
