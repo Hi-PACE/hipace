@@ -6,9 +6,9 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "MultiBeam.H"
-#include "deposition/BeamDepositCurrent.H"
-#include "particles/SliceSort.H"
-#include "pusher/BeamParticleAdvance.H"
+#include "particles/deposition/BeamDepositCurrent.H"
+#include "particles/sorting/SliceSort.H"
+#include "particles/pusher/BeamParticleAdvance.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/HipaceProfilerWrapper.H"
 

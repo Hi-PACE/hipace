@@ -8,7 +8,7 @@
  */
 #include "BeamParticleContainer.H"
 #include "utils/Constants.H"
-#include "ParticleUtil.H"
+#include "particles/ParticleUtil.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include <AMReX_REAL.H>

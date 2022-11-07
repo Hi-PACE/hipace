@@ -9,8 +9,8 @@
 #ifndef HIPACE_BeamParticleContainer_H_
 #define HIPACE_BeamParticleContainer_H_
 
-#include "profiles/GetInitialDensity.H"
-#include "profiles/GetInitialMomentum.H"
+#include "particles/profiles/GetInitialDensity.H"
+#include "particles/profiles/GetInitialMomentum.H"
 #include "utils/Parser.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>

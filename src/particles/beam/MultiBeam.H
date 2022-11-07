@@ -10,8 +10,8 @@
 
 #include "BeamParticleContainer.H"
 #include "fields/Fields.H"
-#include "particles/SliceSort.H"
-#include "particles/BoxSort.H"
+#include "particles/sorting/SliceSort.H"
+#include "particles/sorting/BoxSort.H"
 
 class MultiBeam
 {

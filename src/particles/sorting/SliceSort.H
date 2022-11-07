@@ -8,7 +8,7 @@
 #ifndef HIPACE_SLICESORT_H_
 #define HIPACE_SLICESORT_H_
 
-#include "BeamParticleContainer.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "BoxSort.H"
 
 #include <AMReX_MultiFab.H>

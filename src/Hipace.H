@@ -11,9 +11,9 @@
 
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
-#include "particles/MultiPlasma.H"
-#include "particles/MultiBeam.H"
-#include "particles/BeamParticleContainer.H"
+#include "particles/plasma/MultiPlasma.H"
+#include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
 #include "laser/Laser.H"

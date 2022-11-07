@@ -12,10 +12,10 @@
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
-#include "pusher/PlasmaParticleAdvance.H"
-#include "pusher/BeamParticleAdvance.H"
-#include "pusher/FieldGather.H"
-#include "pusher/GetAndSetPosition.H"
+#include "particles/pusher/PlasmaParticleAdvance.H"
+#include "particles/pusher/BeamParticleAdvance.H"
+#include "particles/FieldGather.H"
+#include "particles/pusher/GetAndSetPosition.H"
 #include <cmath>
 #include <fstream>
 #include <sstream>

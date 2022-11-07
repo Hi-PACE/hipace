@@ -7,8 +7,8 @@
  */
 #include "PlasmaDepositCurrent.H"
 
-#include "particles/PlasmaParticleContainer.H"
-#include "particles/deposition/PlasmaDepositCurrentInner.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
+#include "PlasmaDepositCurrentInner.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "Hipace.H"

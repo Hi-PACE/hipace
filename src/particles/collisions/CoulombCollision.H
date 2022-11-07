@@ -1,7 +1,7 @@
 #ifndef HIPACE_COULOMB_COLLISION_H_
 #define HIPACE_COULOMB_COLLISION_H_
 
-#include "PlasmaParticleContainer.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
 
 #include <AMReX_DenseBins.H>
 #include <AMReX_REAL.H>

@@ -8,8 +8,8 @@
 #ifndef ADAPTIVETIMESTEP_H_
 #define ADAPTIVETIMESTEP_H_
 
-#include "particles/MultiBeam.H"
-#include "particles/BeamParticleContainer.H"
+#include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include <AMReX_AmrCore.H>
 
 /** \brief class handling the adaptive time step */

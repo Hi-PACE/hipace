@@ -9,8 +9,8 @@
  */
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
-#include "particles/SliceSort.H"
-#include "particles/BoxSort.H"
+#include "particles/sorting/SliceSort.H"
+#include "particles/sorting/BoxSort.H"
 #include "utils/IOUtil.H"
 #include "utils/GPUUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"

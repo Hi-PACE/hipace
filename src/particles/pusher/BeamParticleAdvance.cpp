@@ -7,8 +7,8 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "BeamParticleAdvance.H"
-#include "particles/ExternalFields.H"
-#include "FieldGather.H"
+#include "ExternalFields.H"
+#include "particles/FieldGather.H"
 #include "utils/Constants.H"
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
