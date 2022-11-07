@@ -40,7 +40,7 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME \
-    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"
+    --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"
 
 echo "Start testing new current deposition"
 
@@ -55,4 +55,4 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name ${TEST_NAME}_cd2 \
     --test-name $TEST_NAME \
-    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"
+    --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"

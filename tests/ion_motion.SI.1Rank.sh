@@ -42,4 +42,4 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME/e \
     --test-name $TEST_NAME \
-    --skip "{'lev=0' : ['Sy', 'Sx', 'Mult']}"
+    --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"

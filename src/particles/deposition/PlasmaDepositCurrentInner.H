@@ -50,9 +50,6 @@
  * \param[in] jy_cmp array component of current density jy
  * \param[in] jz_cmp array component of current density jz
  * \param[in] rho_cmp array component of charge density rho
- * \param[in] jxx_cmp array component of current density jxx
- * \param[in] jxy_cmp array component of current density jxy
- * \param[in] jyy_cmp array component of current density jyy
  * \param[in] chi_cmp array component of current density chi
  * \param[in] a_mf MultiFab containing the normalized vector potential of the laser a
  * \param[in] tmp_densities tmp FABs where densities are deposited to avoid race conditions with tiling
@@ -61,11 +58,8 @@
  * \param[in] y_pos_offset offset for converting positions to indexes
  * \param[in] z_pos_offset offset for converting positions to indexes
  * \param[in] charge of a particle
+ * \param[in] mass of a particle
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
- * \param[in] deposit_jx_jy if true, deposit to jx and jy
- * \param[in] deposit_jz if true, deposit to jz
- * \param[in] deposit_j_squared if true, deposit jxx, jxy and jyy
- * \param[in] deposit_rho if true, deposit to rho
  * \param[in] max_qsa_weighting_factor maximum allowed weighting factor gamma/(Psi+1)
  * \param[in] bins objects containing indices of plasma particles in each tile
  * \param[in] bin_size tile size (square)
@@ -80,9 +74,6 @@ void doDepositionShapeN (const bool use_laser,
                          const int jy_cmp,
                          const int jz_cmp,
                          const int rho_cmp,
-                         const int jxx_cmp,
-                         const int jxy_cmp,
-                         const int jyy_cmp,
                          const int chi_cmp,
                          const amrex::MultiFab& a_mf,
                          amrex::Vector<amrex::FArrayBox>& tmp_densities,
@@ -91,9 +82,9 @@ void doDepositionShapeN (const bool use_laser,
                          amrex::Real const y_pos_offset,
                          amrex::Real const z_pos_offset,
                          amrex::Real const charge,
+                         amrex::Real const mass,
                          const bool temp_slice,
-                         const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                         const bool deposit_j_squared, const amrex::Real max_qsa_weighting_factor,
+                         const amrex::Real max_qsa_weighting_factor,
                          const PlasmaBins& bins, int bin_size)
 {
     using namespace amrex::literals;
@@ -120,23 +111,25 @@ void doDepositionShapeN (const bool use_laser,
     int const * const AMREX_RESTRICT ion_lev =
         can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
+    // Extract laser array from MultiFab
+    const amrex::Array4<const amrex::Real> a_arr =
+        use_laser ? a_mf[pti].array() : amrex::Array4<const amrex::Real>();
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+
     // Extract box properties
     const amrex::Real invvol = Hipace::m_normalized_units ? 1._rt : 1._rt/(dx[0]*dx[1]*dx[2]);
     const amrex::Real dx_inv = 1._rt/dx[0];
     const amrex::Real dy_inv = 1._rt/dx[1];
 
-    const PhysConst phys_const = get_phys_const();
-    const amrex::Real clightinv = 1.0_rt/phys_const.c;
+    const PhysConst pc = get_phys_const();
+    const amrex::Real clightinv = 1.0_rt/pc.c;
+    const amrex::Real charge_invvol = charge * invvol;
+    const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
 
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* const AMREX_RESTRICT p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
 
-    // optional lambda capture for laser
-    // Extract laser array from MultiFab
-    const amrex::Array4<const amrex::Real> a_arr =
-        use_laser ? a_mf[pti].array() : amrex::Array4<const amrex::Real>();
-    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -150,15 +143,11 @@ void doDepositionShapeN (const bool use_laser,
 
         Array3<amrex::Real> const isl_arr =
             do_tiling ? tmp_densities[ithread].array() : isl_fab.array();
-
         const int jx  = (do_tiling && jx_cmp  != -1) ? 0 : jx_cmp;
         const int jy  = (do_tiling && jy_cmp  != -1) ? 1 : jy_cmp;
         const int jz  = (do_tiling && jz_cmp  != -1) ? 2 : jz_cmp;
         const int rho = (do_tiling && rho_cmp != -1) ? 3 : rho_cmp;
-        const int jxx = (do_tiling && jxx_cmp != -1) ? 4 : jxx_cmp;
-        const int jxy = (do_tiling && jxy_cmp != -1) ? 5 : jxy_cmp;
-        const int jyy = (do_tiling && jyy_cmp != -1) ? 6 : jyy_cmp;
-        const int chi = (do_tiling && chi_cmp != -1) ? 7 : chi_cmp;
+        const int chi = (do_tiling && chi_cmp != -1) ? 4 : chi_cmp;
 
         int ntiley = 0;
         if (do_tiling) {
@@ -195,9 +184,10 @@ void doDepositionShapeN (const bool use_laser,
                     pos_structs,
                     wp, uxp, uyp, psip,
                     max_qsa_weighting_factor, p_n_qsa_violation,
-                    charge, clightinv, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
+                    clightinv, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
+                    charge_invvol, charge_mu0_mass_ratio,
                     isl_arr,
-                    jx, jy, jz, rho, jxx, jxy, jyy, chi,
+                    jx, jy, jz, rho, chi,
                     // tiling
                     indices, offsets, itile, itilex_bs, itiley_bs,
                     // laser
@@ -217,12 +207,23 @@ void doDepositionShapeN (const bool use_laser,
 
                 const auto positions = pos_structs[ip];
                 if (positions.id() < 0) return;
+                const amrex::Real psi = psip[ip];
+                const amrex::Real xp = positions.pos(0);
+                const amrex::Real yp = positions.pos(1);
+                const amrex::Real vx_c = uxp[ip] / psi;
+                const amrex::Real vy_c = uyp[ip] / psi;
 
-                const amrex::ParticleReal xp = positions.pos(0);
-                const amrex::ParticleReal yp = positions.pos(1);
+                // calculate charge of the plasma particles
+                amrex::Real q_invvol = charge_invvol;
+                amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
+                if constexpr (t_can_ionize) {
+                    if (ion_lev) { // can_ionize
+                        q_invvol *= ion_lev[ip];
+                        q_mu0_mass_ratio *= ion_lev[ip];
+                    }
+                }
 
-                amrex::ParticleReal Aabssqp = 0._rt;
-
+                amrex::Real Aabssqp = 0._rt;
                 if constexpr (t_use_laser) {
                     if (a_arr) { // use_laser
                         doLaserGatherShapeN<depos_order_xy,0> (xp, yp, 0._rt, // zp not used
@@ -231,12 +232,13 @@ void doDepositionShapeN (const bool use_laser,
                     }
                 }
 
-                // calculate gamma/psip for plasma particles
-                const amrex::Real gamma_psi = (1.0_rt + uxp[ip]*uxp[ip]*clightinv*clightinv
-                                                      + uyp[ip]*uyp[ip]*clightinv*clightinv
-                                                      + psip[ip]*psip[ip]
-                                                      + 0.5_rt*Aabssqp)
-                                                      / (2.0_rt * psip[ip]*psip[ip]);
+                // calculate gamma/psi for plasma particles
+                const amrex::Real gamma_psi = 0.5_rt * (
+                    (1._rt + 0.5_rt * Aabssqp) / (psi * psi) // TODO: fix units
+                    + vx_c * vx_c * clightinv * clightinv
+                    + vy_c * vy_c * clightinv * clightinv
+                    + 1._rt
+                );
 
                 if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && ox == 0)
                 {
@@ -245,17 +247,6 @@ void doDepositionShapeN (const bool use_laser,
                     wp[ip] = 0.0_rt;
                     pos_structs[ip].id() = -std::abs(positions.id());
                     return;
-                }
-
-                const amrex::Real ux_fact = uxp[ip] / psip[ip];
-                const amrex::Real uy_fact = uyp[ip] / psip[ip];
-
-                // calculate charge of the plasma particles
-                amrex::Real q = charge;
-                if constexpr (t_can_ionize) {
-                    if (ion_lev) { // can_ionize
-                        q *= ion_lev[ip];
-                    }
                 }
 
                 for (int iy=0; iy <= depos_order_xy; ++iy) {
@@ -284,16 +275,13 @@ void doDepositionShapeN (const bool use_laser,
                             }
                         }
 
-                        const amrex::Real charge_density = q * wp[ip] * invvol * shape_x * shape_y;
+                        const amrex::Real charge_density = q_invvol * wp[ip] * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx = charge_density * ux_fact;
-                        const amrex::Real wqy = charge_density * uy_fact;
-                        const amrex::Real wqz = charge_density * (gamma_psi-1._rt) / clightinv;
-                        const amrex::Real wq  = charge_density * gamma_psi;
-                        const amrex::Real wqxx = wqx * ux_fact;
-                        const amrex::Real wqxy = wqx * uy_fact;
-                        const amrex::Real wqyy = wqy * uy_fact;
-                        const amrex::Real gamma = gamma_psi*psip[ip];
+                        const amrex::Real wqx  = charge_density * vx_c;
+                        const amrex::Real wqy  = charge_density * vy_c;
+                        const amrex::Real wqz  = charge_density * (gamma_psi-1._rt) / clightinv;
+                        const amrex::Real wq   = charge_density * gamma_psi;
+                        const amrex::Real wchi = charge_density * q_mu0_mass_ratio / psi;
 
                         // Deposit current into isl_arr
                         if (jx != -1) { // deposit_jx_jy
@@ -306,13 +294,8 @@ void doDepositionShapeN (const bool use_laser,
                         if (rho != -1) { // deposit_rho
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
                         }
-                        if (jxx != -1) { // deposit_j_squared
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxx), wqxx);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jxy), wqxy);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jyy), wqyy);
-                        }
-                        if (chi != -1) {
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wq/gamma);
+                        if (chi != -1) { // deposit_chi
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wchi);
                         }
                     }
                 }
@@ -326,20 +309,18 @@ void doDepositionShapeN (const bool use_laser,
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
                 srcbx.grow(Fields::m_slices_nguards);
                 dstbx.grow(Fields::m_slices_nguards);
-                if (deposit_jx_jy) {
+                if (jx_cmp != -1) {
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 0, jx_cmp, 1);
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 1, jy_cmp, 1);
                 }
-                if (deposit_jz) {
+                if (jz_cmp != -1) {
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 2, jz_cmp, 1);
                 }
-                if (deposit_rho) {
+                if (rho_cmp != -1) {
                     isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 3, rho_cmp, 1);
                 }
-                if (deposit_j_squared) {
-                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, jxx_cmp, 1);
-                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 5, jxy_cmp, 1);
-                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 6, jyy_cmp, 1);
+                if (chi_cmp != -1) {
+                    isl_fab.atomicAdd(tmp_densities[ithread], srcbx, dstbx, 4, chi_cmp, 1);
                 }
             }
 #endif

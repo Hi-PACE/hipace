@@ -6,23 +6,19 @@
     "ExmBy": 0.0,
     "EypBx": 0.0,
     "Ez": 0.0,
-    "Mult": 0.0,
     "Psi": 0.0,
     "Sx": 0.0,
     "Sy": 0.0,
     "chi": 0.0,
     "jx_beam": 0.0,
-    "jx_no_plasma": 0.0,
-    "jxx_no_plasma": 0.0,
-    "jxy_no_plasma": 0.0,
+    "jx": 0.0,
     "jy_beam": 0.0,
-    "jy_no_plasma": 0.0,
-    "jyy_no_plasma": 0.0,
+    "jy": 0.0,
     "jz_beam": 0.0,
-    "jz_no_plasma": 0.0,
+    "jz": 0.0,
     "laser_imag": 204.838484522,
     "laser_real": 418.9842197546,
     "rho_beam": 0.0,
-    "rho_no_plasma": 0.0
+    "rho": 0.0
   }
 }

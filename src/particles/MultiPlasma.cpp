@@ -7,6 +7,7 @@
  */
 #include "MultiPlasma.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
+#include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -82,13 +83,22 @@ MultiPlasma::maxDensity () const
 void
 MultiPlasma::DepositCurrent (
     Fields & fields, const Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
-    bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
+    bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
     int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, laser, which_slice, temp_slice,
-                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_j_squared,
+                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
+    }
+}
+
+void
+MultiPlasma::ExplicitDeposition (Fields& fields, const Laser& laser,
+                                 amrex::Geometry const& gm, int const lev)
+{
+    for (int i=0; i<m_nplasmas; i++) {
+        ::ExplicitDeposition(m_all_plasmas[i], fields, laser, gm, lev);
     }
 }
 

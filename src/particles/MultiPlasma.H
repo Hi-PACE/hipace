@@ -48,14 +48,24 @@ public:
      * \param[in] deposit_jx_jy if true, deposit to jx and jy
      * \param[in] deposit_jz if true, deposit to jz
      * \param[in] deposit_rho if true, deposit to rho
-     * \param[in] deposit_j_squared if true, deposit jxx, jxy, jyy
+     * \param[in] deposit_chi if true, deposit chi
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
     void DepositCurrent (
         Fields & fields, const Laser & laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
-        bool deposit_jz, bool deposit_rho, bool deposit_j_squared, amrex::Geometry const& gm,
+        bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
         int const lev);
+
+    /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields
+     *
+     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser that affects the plasma during the deposition
+     * \param[in] gm Geometry of the simulation, to get the cell size etc.
+     * \param[in] lev MR level
+     */
+    void ExplicitDeposition (Fields& fields, const Laser& laser,
+                             amrex::Geometry const& gm, int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *

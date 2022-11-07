@@ -36,15 +36,16 @@ public:
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] ibox index of the current box
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
+     * \param[in] do_beam_jz_deposition whether the beam deposits Jz
+     * \param[in] do_beam_rho_deposition whether the beam deposits rho
      * \param[in] which_slice defines if this or the next slice is handled
-     * \param[in] do_beam_jz_minus_rho whether jz_beam-rho_beam is computed and used in the simulation.
-     *            Otherwise, it is assumed to be 0. If true, rho_beam needs to be deposited.
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
         const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-        const bool do_beam_jx_jy_deposition, const int which_slice, const bool do_beam_jz_minus_rho=false);
+        const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+        const bool do_beam_rho_deposition, const int which_slice);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] lev MR level
