@@ -111,6 +111,11 @@ void doDepositionShapeN (const bool use_laser,
     int const * const AMREX_RESTRICT ion_lev =
         can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
+    // Extract laser array from MultiFab
+    const amrex::Array4<const amrex::Real> a_arr =
+        use_laser ? a_mf[pti].array() : amrex::Array4<const amrex::Real>();
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+
     // Extract box properties
     const amrex::Real invvol = Hipace::m_normalized_units ? 1._rt : 1._rt/(dx[0]*dx[1]*dx[2]);
     const amrex::Real dx_inv = 1._rt/dx[0];
@@ -118,17 +123,13 @@ void doDepositionShapeN (const bool use_laser,
 
     const PhysConst pc = get_phys_const();
     const amrex::Real clightinv = 1.0_rt/pc.c;
-    const amrex::Real mu0 = pc.mu0;
+    const amrex::Real charge_invvol = charge * invvol;
+    const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
 
     int n_qsa_violation = 0;
     amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
     int* const AMREX_RESTRICT p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
 
-    // optional lambda capture for laser
-    // Extract laser array from MultiFab
-    const amrex::Array4<const amrex::Real> a_arr =
-        use_laser ? a_mf[pti].array() : amrex::Array4<const amrex::Real>();
-    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -183,7 +184,8 @@ void doDepositionShapeN (const bool use_laser,
                     pos_structs,
                     wp, uxp, uyp, psip,
                     max_qsa_weighting_factor, p_n_qsa_violation,
-                    charge, mass, clightinv, mu0, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
+                    clightinv, x_pos_offset, y_pos_offset, invvol, dx_inv, dy_inv,
+                    charge_invvol, charge_mu0_mass_ratio,
                     isl_arr,
                     jx, jy, jz, rho, chi,
                     // tiling
@@ -205,20 +207,23 @@ void doDepositionShapeN (const bool use_laser,
 
                 const auto positions = pos_structs[ip];
                 if (positions.id() < 0) return;
-
-                const amrex::ParticleReal xp = positions.pos(0);
-                const amrex::ParticleReal yp = positions.pos(1);
+                const amrex::Real psi = psip[ip];
+                const amrex::Real xp = positions.pos(0);
+                const amrex::Real yp = positions.pos(1);
+                const amrex::Real vx_c = uxp[ip] / psi;
+                const amrex::Real vy_c = uyp[ip] / psi;
 
                 // calculate charge of the plasma particles
-                amrex::Real q = charge;
+                amrex::Real q_invvol = charge_invvol;
+                amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
                 if constexpr (t_can_ionize) {
                     if (ion_lev) { // can_ionize
-                        q *= ion_lev[ip];
+                        q_invvol *= ion_lev[ip];
+                        q_mu0_mass_ratio *= ion_lev[ip];
                     }
                 }
 
-                amrex::ParticleReal Aabssqp = 0._rt;
-
+                amrex::Real Aabssqp = 0._rt;
                 if constexpr (t_use_laser) {
                     if (a_arr) { // use_laser
                         doLaserGatherShapeN<depos_order_xy,0> (xp, yp, 0._rt, // zp not used
@@ -227,12 +232,13 @@ void doDepositionShapeN (const bool use_laser,
                     }
                 }
 
-                // calculate gamma/psip for plasma particles
-                const amrex::Real gamma_psi = (1.0_rt + uxp[ip]*uxp[ip]*clightinv*clightinv
-                                                      + uyp[ip]*uyp[ip]*clightinv*clightinv
-                                                      + psip[ip]*psip[ip]
-                                                      + 0.5_rt*Aabssqp) // TODO: fix units
-                                                      / (2.0_rt * psip[ip]*psip[ip]);
+                // calculate gamma/psi for plasma particles
+                const amrex::Real gamma_psi = 0.5_rt * (
+                    (1._rt + 0.5_rt * Aabssqp) / (psi * psi) // TODO: fix units
+                    + vx_c * vx_c * clightinv * clightinv
+                    + vy_c * vy_c * clightinv * clightinv
+                    + 1._rt
+                );
 
                 if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && ox == 0)
                 {
@@ -242,9 +248,6 @@ void doDepositionShapeN (const bool use_laser,
                     pos_structs[ip].id() = -std::abs(positions.id());
                     return;
                 }
-
-                const amrex::Real ux_fact = uxp[ip] / psip[ip];
-                const amrex::Real uy_fact = uyp[ip] / psip[ip];
 
                 for (int iy=0; iy <= depos_order_xy; ++iy) {
                     for (int ix=0; ix <= inner_depos_order_x; ++ix) {
@@ -272,13 +275,13 @@ void doDepositionShapeN (const bool use_laser,
                             }
                         }
 
-                        const amrex::Real charge_density = q * wp[ip] * invvol * shape_x * shape_y;
+                        const amrex::Real charge_density = q_invvol * wp[ip] * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx  = charge_density * ux_fact;
-                        const amrex::Real wqy  = charge_density * uy_fact;
+                        const amrex::Real wqx  = charge_density * vx_c;
+                        const amrex::Real wqy  = charge_density * vy_c;
                         const amrex::Real wqz  = charge_density * (gamma_psi-1._rt) / clightinv;
                         const amrex::Real wq   = charge_density * gamma_psi;
-                        const amrex::Real wchi = charge_density * q * mu0 / (psip[ip] * mass);
+                        const amrex::Real wchi = charge_density * q_mu0_mass_ratio / psi;
 
                         // Deposit current into isl_arr
                         if (jx != -1) { // deposit_jx_jy

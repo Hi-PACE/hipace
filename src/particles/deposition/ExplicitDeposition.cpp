@@ -34,11 +34,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
         const int Ez = Comps[WhichSlice::This]["Ez"];
         const int Bz = Comps[WhichSlice::This]["Bz"];
 
-        const PhysConst pc = get_phys_const();
-        const amrex::Real clight = pc.c;
-        // The laser a0 is always normalized
-        const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
-
         // Extract particle properties
         const auto& aos = pti.GetArrayOfStructs(); // For positions
         const auto& pos_structs = aos.begin();
@@ -57,14 +52,18 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
             laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
             amrex::Array4<const amrex::Real>(nullptr, {0,0,0}, {0,0,1}, 0);
 
+        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
+
         const amrex::Real * AMREX_RESTRICT dx = gm.CellSize();
         const amrex::Real invvol = Hipace::m_normalized_units ? 1._rt : 1._rt/(dx[0]*dx[1]*dx[2]);
         const amrex::Real dx_inv = 1._rt/dx[0];
         const amrex::Real dy_inv = 1._rt/dx[1];
 
-        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
-
+        const PhysConst pc = get_phys_const();
+        const amrex::Real clight = pc.c;
+        // The laser a0 is always normalized
+        const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
@@ -80,6 +79,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                 const auto position = pos_structs[ip];
                 if (position.id() < 0) return;
                 const amrex::Real psi = psip[ip];
+                const amrex::Real xp = positions.pos(0);
+                const amrex::Real yp = positions.pos(1);
                 const amrex::Real vx = uxp[ip] / (psi * clight);
                 const amrex::Real vy = uyp[ip] / (psi * clight);
 
@@ -92,14 +93,14 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                     q_mass_ratio *= ion_lev[ip];
                 }
 
-                const amrex::Real global_fac = q_invvol_mu0 * wp[ip];
+                const amrex::Real charge_density_mu0 = q_invvol_mu0 * wp[ip];
 
-                const amrex::Real xmid = (position.pos(0) - x_pos_offset)*dx_inv;
+                const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 amrex::Real sx_cell[depos_order + 1];
                 const int i_cell = compute_shape_factor<depos_order>(sx_cell, xmid);
 
                 // y direction
-                const amrex::Real ymid = (position.pos(1) - y_pos_offset)*dy_inv;
+                const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
                 amrex::Real sy_cell[depos_order + 1];
                 const int j_cell = compute_shape_factor<depos_order>(sy_cell, ymid);
 
@@ -114,7 +115,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                             const amrex::Real x00y00 = abssq(
                                 laser_arr(i_cell+ix, j_cell+iy, 0),
                                 laser_arr(i_cell+ix, j_cell+iy, 1) );
-                            // TODO: fix units
                             Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
                         }
                     }
@@ -122,7 +122,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
 
                 // calculate gamma/psi for plasma particles
                 const amrex::Real gamma_psi = 0.5_rt * (
-                    (1._rt + 0.5_rt * Aabssqp) / (psi * psi)
+                    (1._rt + 0.5_rt * Aabssqp) / (psi * psi) // TODO: fix units
                     + vx * vx
                     + vy * vy
                     + 1._rt
@@ -134,7 +134,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                     // derivative shape factor
                     amrex::Real shape_dy = 0._rt;
                     if (iy != 0 && iy != depos_order + 2) {
-                        shape_y = sy_cell[iy-1] * global_fac;
+                        shape_y = sy_cell[iy-1] * charge_density_mu0;
                     }
                     if (iy < depos_order + 1) {
                         shape_dy = sy_cell[iy];
@@ -142,7 +142,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
                     if (iy > 1) {
                         shape_dy -= sy_cell[iy-2];
                     }
-                    shape_dy *= dy_inv * 0.5_rt * clight * global_fac;
+                    shape_dy *= dy_inv * 0.5_rt * clight * charge_density_mu0;
 
                     for (int ix=0; ix <= depos_order+2; ++ix) {
                         amrex::Real shape_x = 0._rt;
