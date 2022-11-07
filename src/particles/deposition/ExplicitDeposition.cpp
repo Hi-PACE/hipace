@@ -76,8 +76,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
             [=] AMREX_GPU_DEVICE (int ip, auto a_depos_order, auto can_ionize, auto use_laser) {
                 constexpr int depos_order = a_depos_order.value;
 
-                const auto position = pos_structs[ip];
-                if (position.id() < 0) return;
+                const auto positions = pos_structs[ip];
+                if (positions.id() < 0) return;
                 const amrex::Real psi = psip[ip];
                 const amrex::Real xp = positions.pos(0);
                 const amrex::Real yp = positions.pos(1);
