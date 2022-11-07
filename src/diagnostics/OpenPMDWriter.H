@@ -8,8 +8,8 @@
 #ifndef OPENPMDWRITER_H_
 #define OPENPMDWRITER_H_
 
-#include "particles/MultiBeam.H"
-#include "particles/BeamParticleContainer.H"
+#include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_IntVect.H>

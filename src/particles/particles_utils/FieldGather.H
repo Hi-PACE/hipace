@@ -15,7 +15,7 @@
 #ifndef FIELDGATHER_H_
 #define FIELDGATHER_H_
 
-#include "particles/ShapeFactors.H"
+#include "particles/particles_utils/ShapeFactors.H"
 #include "utils/GPUUtil.H"
 #include <AMReX.H>
 

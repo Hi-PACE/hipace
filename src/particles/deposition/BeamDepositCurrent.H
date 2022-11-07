@@ -9,10 +9,10 @@
 #ifndef BEAMDEPOSITCURRENT_H_
 #define BEAMDEPOSITCURRENT_H_
 
-#include "particles/BeamParticleContainer.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-#include "particles/SliceSort.H"
+#include "particles/sorting/SliceSort.H"
 
 /** Depose current of beam particles on a single slice
  * \param[in] beam species of which the current is deposited

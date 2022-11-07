@@ -8,8 +8,8 @@
 #ifndef PLASMADEPOSITCURRENT_H_
 #define PLASMADEPOSITCURRENT_H_
 
-#include "particles/PlasmaParticleContainer.H"
-#include "particles/TileSort.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
+#include "particles/sorting/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "laser/Laser.H"

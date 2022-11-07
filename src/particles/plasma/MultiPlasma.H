@@ -9,10 +9,10 @@
 #define MULTIPLASMA_H_
 
 #include "PlasmaParticleContainer.H"
-#include "TileSort.H"
+#include "particles/sorting/TileSort.H"
 #include "fields/Fields.H"
 #include "laser/Laser.H"
-#include "CoulombCollision.H"
+#include "particles/collisions/CoulombCollision.H"
 
 class MultiPlasma
 {

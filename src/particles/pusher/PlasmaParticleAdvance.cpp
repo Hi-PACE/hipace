@@ -7,9 +7,9 @@
  */
 #include "PlasmaParticleAdvance.H"
 
-#include "particles/PlasmaParticleContainer.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
 #include "GetDomainLev.H"
-#include "FieldGather.H"
+#include "particles/particles_utils/FieldGather.H"
 #include "PushPlasmaParticles.H"
 #include "UpdateForceTerms.H"
 #include "fields/Fields.H"
@@ -18,7 +18,7 @@
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/GPUUtil.H"
-#include "particles/ParticleUtil.H"
+#include "particles/particles_utils/ParticleUtil.H"
 
 #include <string>
 

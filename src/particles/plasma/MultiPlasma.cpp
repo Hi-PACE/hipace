@@ -9,7 +9,7 @@
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
-#include "TileSort.H"
+#include "particles/sorting/TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "Hipace.H"
 

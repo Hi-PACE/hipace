@@ -8,7 +8,7 @@
 #ifndef EXPLICITDEPOSITION_H_
 #define EXPLICITDEPOSITION_H_
 
-#include "particles/PlasmaParticleContainer.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 
 /** Depose Sx and Sy of particles in species plasma into the current 2D slice in fields

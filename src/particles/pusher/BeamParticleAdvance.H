@@ -8,7 +8,7 @@
 #ifndef BEAMPARTICLEADVANCE_H_
 #define BEAMPARTICLEADVANCE_H_
 
-#include "particles/BeamParticleContainer.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "fields/Fields.H"
 #include "Hipace.H"
 

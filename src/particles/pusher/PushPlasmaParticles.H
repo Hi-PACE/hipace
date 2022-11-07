@@ -8,10 +8,10 @@
 #ifndef PUSHPLASMAPARTICLES_H_
 #define PUSHPLASMAPARTICLES_H_
 
-#include "particles/PlasmaParticleContainer.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
-#include "FieldGather.H"
+#include "particles/particles_utils/FieldGather.H"
 #include "Hipace.H"
 #include "GetAndSetPosition.H"
 

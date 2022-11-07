@@ -8,7 +8,7 @@
  */
 #include "PlasmaParticleContainer.H"
 #include "utils/Constants.H"
-#include "ParticleUtil.H"
+#include "particles/particles_utils/ParticleUtil.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/IonizationEnergiesTable.H"
