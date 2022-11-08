@@ -30,11 +30,13 @@ rm -rf normalized_data_cd2
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         hipace.file_prefix=si_data/ \
         max_step=1
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         beam.injection_type=fixed_weight \
         beam.num_particles=1000000 \
         hipace.file_prefix=si_data_fixed_weight/ \
@@ -42,6 +44,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         hipace.file_prefix=normalized_data/ \
         max_step=1
 

@@ -30,6 +30,7 @@ rm -rf $TEST_NAME
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_ionization_SI \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         hipace.dt = 1e-12 \
         hipace.output_period = 2 \
         hipace.file_prefix=$TEST_NAME \

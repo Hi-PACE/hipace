@@ -27,6 +27,7 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        hipace.bxby_solver = predictor-corrector \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=$TEST_NAME
 

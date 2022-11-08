@@ -28,6 +28,7 @@ TEST_NAME="${FILE_NAME%.*}"
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         beam.profile = gaussian \
         beam.zmin = -5.9 \
         beam.zmax = 5.9 \

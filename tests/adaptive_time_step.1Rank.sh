@@ -28,6 +28,7 @@ rm -rf positive_gradient_data
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         amr.n_cell = 32 32 32 \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \
@@ -47,6 +48,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
+        hipace.bxby_solver = predictor-corrector \
         amr.n_cell = 32 32 32 \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \
