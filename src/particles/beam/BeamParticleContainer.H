@@ -147,6 +147,7 @@ public:
     int m_n_subcycles {1}; /**< Number of sub-cycles in the beam pusher */
     int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
     /** Number of particles on upstream rank (required for IO) */
+    bool m_do_salame = false; /**< If this beam uses salame */
     int m_num_particles_on_upstream_ranks {0};
 
     unsigned long long m_total_num_particles {0};

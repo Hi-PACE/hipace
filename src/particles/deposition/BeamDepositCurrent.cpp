@@ -33,9 +33,10 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     if (beam.m_finest_level < lev) return;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-    which_slice == WhichSlice::This || which_slice == WhichSlice::Next,
-    "Current deposition can only be done in this slice (WhichSlice::This), or the next slice "
-    " (WhichSlice::Next)");
+    which_slice == WhichSlice::This || which_slice == WhichSlice::Next
+    || which_slice == WhichSlice::Salame,
+    "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
+    " (WhichSlice::Next), or the SALAME slice (WhichSlice::Salame)");
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
         "Only order 0 deposition is allowed for beam per-slice deposition");

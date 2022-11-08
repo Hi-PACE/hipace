@@ -114,7 +114,7 @@ void doDepositionShapeN (const BeamParticleContainer& ptile,
 
     // The particles that are in slice islice are
     // given by the indices[cell_start:cell_stop]
-    if (which_slice == WhichSlice::This) {
+    if (which_slice == WhichSlice::This || which_slice == WhichSlice::Salame) {
         cell_start = offsets[islice];
         cell_stop  = offsets[islice+1];
     } else {

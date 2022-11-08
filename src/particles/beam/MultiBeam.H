@@ -31,6 +31,7 @@ public:
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] geom Geometry vector for all levels
      * \param[in] lev MR level
+     * \param[in] step time step of simulation
      * \param[in] islice slice index in which the current is stored
      * \param[in] bins Vector (over species) of particles sorted by slices
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
@@ -41,8 +42,8 @@ public:
      * \param[in] which_slice defines if this or the next slice is handled
      */
     void DepositCurrentSlice (
-        Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-        const amrex::Vector<BeamBins>& bins,
+        Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
+        int islice, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
         const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
         const bool do_beam_rho_deposition, const int which_slice);
@@ -166,6 +167,11 @@ public:
      * \param[in] ibeam index of the beam
      */
     int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];}
+
+    bool isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins);
+
+    bool AnySpeciesSalame ();
+
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

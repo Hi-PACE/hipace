@@ -25,7 +25,7 @@ class Laser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
+    enum slice { Next=0, This, Previous1, Previous2, RhoIons, Salame, N };
 };
 
 struct assert_map : std::map<std::string, int> {
@@ -226,7 +226,7 @@ public:
      * \param[in] islice longitudinal slice
      */
     void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int islice);
+                         const int islice, const int which_slice = WhichSlice::This);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
