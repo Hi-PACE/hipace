@@ -148,7 +148,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
     queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
     queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
-    std::string solver = "predictor-corrector";
+    std::string solver = "explicit";
     queryWithParser(pph, "bxby_solver", solver);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         solver == "predictor-corrector" ||

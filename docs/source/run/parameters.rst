@@ -157,7 +157,7 @@ results in a Helmholtz equation, which is solved with the AMReX multigrid solver
 Currently, the default is to use the predictor-corrector loop.
 Modeling ion motion is not yet supported by the explicit solver
 
-* ``hipace.bxby_solver`` (`string`) optional (default `predictor-corrector`)
+* ``hipace.bxby_solver`` (`string`) optional (default `explicit`)
     Which solver to use.
     Possible values: ``predictor-corrector`` and ``explicit``.
 
