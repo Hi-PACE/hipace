@@ -478,6 +478,114 @@ MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_
 }
 
 void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::Real const acoef_real, amrex::Real const acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = acoef_real;
+            array_m_acf(i,j,0,1) = acoef_imag;
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::Real const acoef_real, amrex::FArrayBox const& acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
+    amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
+                          1, acoef_imag.dataPtr());
+    auto const& ai = ifab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = acoef_real;
+            array_m_acf(i,j,0,1) = ai(i,j,0);
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::FArrayBox const& acoef_real, amrex::Real const acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()));
+    amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
+                          1, acoef_real.dataPtr());
+    auto const& ar = rfab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = ar(i,j,0);
+            array_m_acf(i,j,0,1) = acoef_imag;
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::FArrayBox const& acoef_real, amrex::FArrayBox const& acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()) &&
+                        amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
+    amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
+                          1, acoef_real.dataPtr());
+    amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
+                          1, acoef_imag.dataPtr());
+    auto const& ar = rfab.const_array();
+    auto const& ai = ifab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = ar(i,j,0);
+            array_m_acf(i,j,0,1) = ai(i,j,0);
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
 MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
                        Real const tol_rel, Real const tol_abs, int const nummaxiter,
                        int const verbose)
