@@ -63,18 +63,68 @@ public:
      *
      * \param[in,out] sol the initial guess and final solution
      * \param[in] rhs right hand side
-     * \param[in] acoef_real the real part of the coefficient
-     * \param[in] acoef_imag the imaginary part of the coefficient
+     * \param[in] acoef_real the constant real part of the coefficient
+     * \param[in] acoef_imag the constant imaginary part of the coefficient
      * \param[in] tol_rel relative tolerance
      * \param[in] tol_abs absolute tolerance
      * \param[in] nummaxiter maximum number of iterations
      * \param[in] verbose verbosity level
      */
-    template <typename TR, typename TI>
     void solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
-                 TR const& acoef_real, TI const& acoef_imag,
+                 amrex::Real const acoef_real, amrex::Real const acoef_imag,
                  amrex::Real const tol_rel, amrex::Real const tol_abs,
                  int const nummaxiter, int const verbose);
+
+    /** \brief Solve the Type II equation given the initial guess, right hand side,
+     * and the coefficient.
+     *
+     * \param[in,out] sol the initial guess and final solution
+     * \param[in] rhs right hand side
+     * \param[in] acoef_real the constant real part of the coefficient
+     * \param[in] acoef_imag the array imaginary part of the coefficient
+     * \param[in] tol_rel relative tolerance
+     * \param[in] tol_abs absolute tolerance
+     * \param[in] nummaxiter maximum number of iterations
+     * \param[in] verbose verbosity level
+     */
+    void solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                amrex::Real const acoef_real, amrex::FArrayBox const& acoef_imag,
+                amrex::Real const tol_rel, amrex::Real const tol_abs,
+                int const nummaxiter, int const verbose);
+
+    /** \brief Solve the Type II equation given the initial guess, right hand side,
+     * and the coefficient.
+     *
+     * \param[in,out] sol the initial guess and final solution
+     * \param[in] rhs right hand side
+     * \param[in] acoef_real the array real part of the coefficient
+     * \param[in] acoef_imag the constant imaginary part of the coefficient
+     * \param[in] tol_rel relative tolerance
+     * \param[in] tol_abs absolute tolerance
+     * \param[in] nummaxiter maximum number of iterations
+     * \param[in] verbose verbosity level
+     */
+    void solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                amrex::FArrayBox const& acoef_real, amrex::Real const acoef_imag,
+                amrex::Real const tol_rel, amrex::Real const tol_abs,
+                int const nummaxiter, int const verbose);
+
+    /** \brief Solve the Type II equation given the initial guess, right hand side,
+     * and the coefficient.
+     *
+     * \param[in,out] sol the initial guess and final solution
+     * \param[in] rhs right hand side
+     * \param[in] acoef_real the array real part of the coefficient
+     * \param[in] acoef_imag the array imaginary part of the coefficient
+     * \param[in] tol_rel relative tolerance
+     * \param[in] tol_abs absolute tolerance
+     * \param[in] nummaxiter maximum number of iterations
+     * \param[in] verbose verbosity level
+     */
+    void solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                amrex::FArrayBox const& acoef_real, amrex::FArrayBox const& acoef_imag,
+                amrex::Real const tol_rel, amrex::Real const tol_abs,
+                int const nummaxiter, int const verbose);
 
     /** \brief Average down the coefficient.  Ideally, this function is not
      * supposed to be a public function.  It's made public due to a CUDA
@@ -200,75 +250,6 @@ void ParallelFor (amrex::Box const& box, int ncomp, F&& f) noexcept
 }
 
 #endif
-
-template <typename TR, typename TI>
-void MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
-                        TR const& acoef_real, TI const& acoef_imag,
-                        amrex::Real const tol_rel, amrex::Real const tol_abs,
-                        int const nummaxiter, int const verbose)
-{
-    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
-    m_system_type = 2;
-
-    auto const& array_m_acf = m_acf[0].array();
-    if constexpr (std::is_arithmetic<TR>::value && std::is_arithmetic<TI>::value)
-    {
-        hpmg::ParallelFor(m_acf[0].box(),
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
-            {
-                array_m_acf(i,j,0,0) = acoef_real;
-                array_m_acf(i,j,0,1) = acoef_imag;
-            });
-    }
-    else if constexpr (std::is_arithmetic<TR>::value)
-    {
-        AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
-        amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
-                              1, acoef_imag.dataPtr());
-        auto const& ai = ifab.const_array();
-        hpmg::ParallelFor(m_acf[0].box(),
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
-            {
-                array_m_acf(i,j,0,0) = acoef_real;
-                array_m_acf(i,j,0,1) = ai(i,j,0);
-            });
-    }
-    else if constexpr (std::is_arithmetic<TI>::value)
-    {
-        AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()));
-        amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
-                              1, acoef_real.dataPtr());
-        auto const& ar = rfab.const_array();
-        hpmg::ParallelFor(m_acf[0].box(),
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
-            {
-                array_m_acf(i,j,0,0) = ar(i,j,0);
-                array_m_acf(i,j,0,1) = acoef_imag;
-            });
-    }
-    else
-    {
-        AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()) &&
-                            amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
-        amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
-                              1, acoef_real.dataPtr());
-        amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
-                              1, acoef_imag.dataPtr());
-        auto const& ar = rfab.const_array();
-        auto const& ai = ifab.const_array();
-        hpmg::ParallelFor(m_acf[0].box(),
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
-            {
-                array_m_acf(i,j,0,0) = ar(i,j,0);
-                array_m_acf(i,j,0,1) = ai(i,j,0);
-            });
-
-    }
-
-    average_down_acoef();
-
-    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
-}
 
 }
 
