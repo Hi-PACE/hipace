@@ -6,8 +6,6 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "Salame.H"
-#include "particles/pusher/GetAndSetPosition.H"
-#include "particles/particles_utils/FieldGather.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 
@@ -53,12 +51,7 @@ SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, c
 
     hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
-    //SalameGetJxJyFromBxBy(hipace, lev);
-
-    SalameAdvancePlasmaAutograd(hipace, lev);
-
-    hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
-            WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+    SalameGetJxJyFromBxBy(hipace, lev);
 
     hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
 
@@ -150,93 +143,6 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
                 salame_arr(i,j,jx) =  a1_times_dz * chi_arr(i,j) * salame_arr(i,j,By) / mu0;
                 salame_arr(i,j,jy) = -a1_times_dz * chi_arr(i,j) * salame_arr(i,j,Bx) / mu0;
             });
-    }
-}
-
-void
-SalameAdvancePlasmaAutograd (Hipace* hipace, const int lev)
-{
-    using namespace amrex::literals;
-
-    for (int i=0; i<hipace->m_multi_plasma.GetNPlasmas(); i++) {
-        auto& plasma = hipace->m_multi_plasma.m_all_plasmas[i];
-        auto& bins = hipace->m_multi_plasma.m_all_bins[i];
-
-        if (plasma.m_level != lev) return;
-
-        const auto gm = hipace->Geom(lev);
-        const bool do_tiling = Hipace::m_do_tiling;
-
-        amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
-
-        for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
-        {
-            const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev, WhichSlice::Salame)[pti];
-            Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-            const int bx_comp = Comps[WhichSlice::Salame]["Bx"];
-            const int by_comp = Comps[WhichSlice::Salame]["By"];
-
-            const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
-
-            // Offset for converting positions to indexes
-            amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
-            const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
-            amrex::Real const z_pos_offset = GetPosOffset(2, gm, slice_fab.box());
-
-            auto& soa = pti.GetStructOfArrays();
-
-            amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
-            amrex::Real * const uy_temp = soa.GetRealData(PlasmaIdx::uy_temp).data();
-            int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
-
-            const int depos_order_xy = Hipace::m_depos_order_xy;
-
-            using PTileType = PlasmaParticleContainer::ParticleTileType;
-            const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
-
-            const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
-            const bool can_ionize = plasma.m_can_ionize;
-
-            const int ntiles = do_tiling ? bins.numBins() : 1;
-
-#ifdef AMREX_USE_OMP
-#pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
-#endif
-            for (int itile=0; itile<ntiles; itile++){
-                BeamBins::index_type const * const indices =
-                    do_tiling ? bins.permutationPtr() : nullptr;
-                BeamBins::index_type const * const offsets =
-                    do_tiling ? bins.offsetsPtr() : nullptr;
-                int const num_particles =
-                    do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
-                amrex::ParallelFor(
-                    num_particles,
-                    [=] AMREX_GPU_DEVICE (long idx) {
-                        const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
-                        amrex::ParticleReal xp, yp, zp;
-                        int pid;
-                        getPosition(ip, xp, yp, zp, pid);
-
-                        if (pid < 0) return;
-
-                        amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-                        amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
-
-                        doGatherShapeN(xp, yp,
-                                       ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                                       0, 0, 0, bx_comp, by_comp, 0,
-                                       dx_arr, x_pos_offset, y_pos_offset, depos_order_xy);
-
-                        const amrex::Real q_mass_ratio = can_ionize ?
-                            ion_lev[ip] * charge_mass_ratio : charge_mass_ratio;
-
-                        const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dx_arr[2];
-
-                        ux_temp[ip] =  a1_times_dz * q_mass_ratio * Byp;
-                        uy_temp[ip] = -a1_times_dz * q_mass_ratio * Bxp;
-                    });
-            }
-        }
     }
 }
 
