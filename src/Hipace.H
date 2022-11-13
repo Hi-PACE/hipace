@@ -377,6 +377,7 @@ public:
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
     bool m_explicit = false;
+    int m_salame_n_iter = 3;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.

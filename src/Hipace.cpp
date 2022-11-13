@@ -149,6 +149,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
     queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
     queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
+    queryWithParser(pph, "salame_n_iter", m_salame_n_iter);
     std::string solver = "predictor-corrector";
     queryWithParser(pph, "bxby_solver", solver);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -651,7 +652,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
 
     const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
     if (do_salame) {
-        SalameModule(this, lev, step, islice, islice_local, beam_bin, ibox);
+        SalameModule(this, m_salame_n_iter, lev, step, islice, islice_local, beam_bin, ibox);
     }
 
     // shift and update force terms, push plasma particles

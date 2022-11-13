@@ -12,11 +12,11 @@
 #include "utility"
 
 void
-SalameModule (Hipace* hipace, const int lev, const int step, const int islice,
+SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, const int islice,
               const int islice_local, const amrex::Vector<BeamBins>& beam_bin, const int ibox);
 
 void
-SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev, bool to_this_slice);
+SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev);
 
 void
 SalameGetJxJyFromBxBy (Hipace* hipace, const int lev);

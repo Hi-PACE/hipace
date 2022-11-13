@@ -10,7 +10,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 
 void
-SalameModule (Hipace* hipace, const int lev, const int step, const int islice,
+SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, const int islice,
               const int islice_local, const amrex::Vector<BeamBins>& beam_bin, const int ibox)
 {
     HIPACE_PROFILE("SalameModule()");
@@ -22,8 +22,10 @@ SalameModule (Hipace* hipace, const int lev, const int step, const int islice,
         last_islice = islice;
     }
 
+    for (int iter=0; iter<n_iter; ++iter) {
+
     hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_laser, hipace->Geom(lev),
-                                            true, true, true, true, lev);
+                                            true, true, true, iter==0, lev);
 
     hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                     WhichSlice::Next, {"jx_beam", "jy_beam"});
@@ -43,7 +45,7 @@ SalameModule (Hipace* hipace, const int lev, const int step, const int islice,
     hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
         islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::Salame);
 
-    SalameInitializeSxSyWithBeam(hipace, lev, false);
+    SalameInitializeSxSyWithBeam(hipace, lev);
 
     hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame);
 
@@ -60,62 +62,54 @@ SalameModule (Hipace* hipace, const int lev, const int step, const int islice,
 
     SalameMultiplyBeamWeight(W, hipace, lev, islice_local, beam_bin, ibox);
 
-    hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "jz_beam");
+    hipace->m_fields.setVal(0., lev, WhichSlice::This, "jz_beam", "Sy", "Sx");
 
     hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
-        islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::Salame);
+        islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::This);
 
-    SalameInitializeSxSyWithBeam(hipace, lev, true);
+    hipace->m_grid_current.DepositCurrentSlice(hipace->m_fields, hipace->Geom(lev), lev, islice);
+
+    hipace->InitializeSxSyWithBeam(lev);
+
+    hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_laser,
+                                              hipace->Geom(lev), lev);
 
     hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
+
+    }
 };
 
 
 void
-SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev, bool to_this_slice)
+SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
 {
     using namespace amrex::literals;
 
-    amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
-    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
+    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
 
     const amrex::Real dx = hipace->Geom(lev).CellSize(Direction::x);
     const amrex::Real dy = hipace->Geom(lev).CellSize(Direction::y);
 
-    for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
-        Array3<amrex::Real> const salame_arr = salame_slicemf.array(mfi);
-        Array3<amrex::Real> const isl_arr = slicemf.array(mfi);
+        Array3<amrex::Real> const arr = slicemf.array(mfi);
 
-        const int isl_Sx = Comps[WhichSlice::This]["Sx"];
-        const int isl_Sy = Comps[WhichSlice::This]["Sy"];
-        const int salame_Sx = Comps[WhichSlice::Salame]["Sx"];
-        const int salame_Sy = Comps[WhichSlice::Salame]["Sy"];
-        const int isl_jzb = Comps[WhichSlice::This]["jz_beam"];
-        const int salame_jzb = Comps[WhichSlice::Salame]["jz_beam"];
+        const int Sx = Comps[WhichSlice::Salame]["Sx"];
+        const int Sy = Comps[WhichSlice::Salame]["Sy"];
+        const int jzb = Comps[WhichSlice::Salame]["jz_beam"];
 
         const amrex::Real mu0 = hipace->m_phys_const.mu0;
 
         amrex::ParallelFor(mfi.tilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                const amrex::Real dx_jzb =
-                    (salame_arr(i+1,j,salame_jzb)-salame_arr(i-1,j,salame_jzb))/(2._rt*dx);
-                const amrex::Real dy_jzb =
-                    (salame_arr(i,j+1,salame_jzb)-salame_arr(i,j-1,salame_jzb))/(2._rt*dy);
+                const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))/(2._rt*dx);
+                const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))/(2._rt*dy);
 
-                if (to_this_slice) {
-                    // sy, to compute Bx
-                    isl_arr(i,j,isl_Sy) += mu0 * ( - dy_jzb);
-                    // sx, to compute By
-                    isl_arr(i,j,isl_Sx) -= mu0 * ( - dx_jzb);
-                    isl_arr(i,j,isl_jzb) += salame_arr(i,j,salame_jzb);
-                } else {
-                    // sy, to compute Bx
-                    salame_arr(i,j,salame_Sy) =   mu0 * ( - dy_jzb);
-                    // sx, to compute By
-                    salame_arr(i,j,salame_Sx) = - mu0 * ( - dx_jzb);
-                }
+                // sy, to compute Bx
+                arr(i,j,Sy) =   mu0 * ( - dy_jzb);
+                // sx, to compute By
+                arr(i,j,Sx) = - mu0 * ( - dx_jzb);
             });
     }
 }
@@ -186,7 +180,7 @@ SalameGetW (Hipace* hipace, const int lev)
         sum_W += amrex::get<0>(res);
         sum_jz += amrex::get<1>(res);
     }
-    return {sum_W / sum_jz,  sum_W};
+    return {(sum_W / sum_jz) + 1._rt,  sum_W + sum_jz};
 }
 
 void

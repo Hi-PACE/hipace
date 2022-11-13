@@ -48,13 +48,14 @@ MultiBeam::DepositCurrentSlice (
 
 {
     for (int i=0; i<m_nbeams; i++) {
-        if ((step == 0 && m_all_beams[i].m_do_salame) == (which_slice == WhichSlice::Salame)) {
+        const bool is_salame = m_all_beams[i].m_do_salame && (step == 0);
+        if ( is_salame || (which_slice != WhichSlice::Salame) ) {
             const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
             ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
                                   a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
-                                  do_beam_jx_jy_deposition,
+                                  do_beam_jx_jy_deposition && !is_salame,
                                   do_beam_jz_deposition,
-                                  do_beam_rho_deposition,
+                                  do_beam_rho_deposition && !is_salame,
                                   which_slice, nghost);
         }
     }
