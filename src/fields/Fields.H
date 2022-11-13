@@ -224,6 +224,7 @@ public:
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] islice longitudinal slice
+     * \param[in] which_slice defines if this or the salame slice is handled
      */
     void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                          const int islice, const int which_slice = WhichSlice::This);
