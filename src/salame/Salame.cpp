@@ -6,7 +6,6 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "Salame.H"
-#include "particles/pusher/GetAndSetPosition.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -51,12 +50,12 @@ SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, c
 
     hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
-    //SalameGetJxJyFromBxBy(hipace, lev);
+    SalameGetJxJyFromBxBy(hipace, lev);
 
-    SalameAdvancePlasmaAutograd(hipace, lev);
+    //SalameAdvancePlasmaAutograd(hipace, lev);
 
-    hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
-            WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+    //hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
+    //        WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
 
     hipace->m_multi_plasma.ResetParticles(lev);
 
@@ -67,7 +66,7 @@ SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, c
     amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
                    << " Total weight is " << W_total << '\n';
 
-    SalameMultiplyBeamWeight(W, hipace, lev, islice_local, beam_bin, ibox);
+    SalameMultiplyBeamWeight(W, hipace, islice_local, beam_bin, ibox);
 
     hipace->m_fields.setVal(0., lev, WhichSlice::This, "jz_beam", "Sy", "Sx");
 
@@ -84,7 +83,7 @@ SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, c
     hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
 
     }
-};
+}
 
 
 void
@@ -181,7 +180,6 @@ SalameAdvancePlasmaAutograd (Hipace* hipace, const int lev)
             // Offset for converting positions to indexes
             amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
             const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
-            amrex::Real const z_pos_offset = GetPosOffset(2, gm, slice_fab.box());
 
             auto& soa = pti.GetStructOfArrays();
 
@@ -192,9 +190,6 @@ SalameAdvancePlasmaAutograd (Hipace* hipace, const int lev)
             int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
 
             const int depos_order_xy = Hipace::m_depos_order_xy;
-
-            using PTileType = PlasmaParticleContainer::ParticleTileType;
-            const auto getPosition = GetParticlePosition<PTileType>(pti.GetParticleTile());
 
             const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
             const bool can_ionize = plasma.m_can_ionize;
@@ -215,14 +210,8 @@ SalameAdvancePlasmaAutograd (Hipace* hipace, const int lev)
                     num_particles,
                     [=] AMREX_GPU_DEVICE (long idx) {
                         const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
-                        amrex::ParticleReal xp, yp, zp;
-                        int pid;
-                        getPosition(ip, xp, yp, zp, pid);
-
-                        if (pid < 0) return;
-
-                        xp = x_prev[ip];
-                        yp = y_prev[ip];
+                        const amrex::Real xp = x_prev[ip];
+                        const amrex::Real yp = y_prev[ip];
 
                         amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                         amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
@@ -283,7 +272,7 @@ SalameGetW (Hipace* hipace, const int lev)
 }
 
 void
-SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int lev, const int islice,
+SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice,
                           const amrex::Vector<BeamBins>& bins, const int ibox)
 {
     for (int i=0; i<(hipace->m_multi_beam.get_nbeams()); i++) {

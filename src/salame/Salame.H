@@ -28,7 +28,7 @@ std::pair<amrex::Real, amrex::Real>
 SalameGetW (Hipace* hipace, const int lev);
 
 void
-SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int lev, const int islice,
+SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice,
                           const amrex::Vector<BeamBins>& bins, const int ibox);
 
 #endif //  SALAME_H_
