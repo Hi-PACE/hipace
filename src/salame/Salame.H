@@ -19,6 +19,9 @@ void
 SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev);
 
 void
+SalameAdvancePlasmaAutograd (Hipace* hipace, const int lev);
+
+void
 SalameGetJxJyFromBxBy (Hipace* hipace, const int lev);
 
 std::pair<amrex::Real, amrex::Real>
