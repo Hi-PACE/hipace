@@ -400,10 +400,10 @@ private:
 #endif
     /** hpmg solver for the explicit Bx and by solver */
     std::unique_ptr<hpmg::MultiGrid> m_hpmg;
-
+public:
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
-
+private:
     /** Diagnostics */
     Diagnostic m_diags;
 

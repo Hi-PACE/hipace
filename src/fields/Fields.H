@@ -49,11 +49,11 @@ struct assert_map : std::map<std::string, int> {
 
 /** \brief Map names and indices of each fields in each slice
  */
-inline std::array<assert_map, 5> Comps{};
+inline std::array<assert_map, WhichSlice::N> Comps{};
 
 /** \brief number of fields in each slice
  */
-inline std::array<int, 5> N_Comps {0,0,0,0,0};
+inline std::array<int, WhichSlice::N> N_Comps {0,0,0,0,0,0};
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
@@ -85,7 +85,7 @@ class Fields
 {
 private:
     /** Number of slices in temporary slice object */
-    static constexpr int m_nslices = 5;
+    static constexpr int m_nslices = WhichSlice::N;
 
 public:
     /** Constructor */
@@ -385,6 +385,7 @@ public:
     }
 
     /** \brief copy all selected fields between slices or on the same slice
+     * Uses references to C-arrays as argument so that ncomps can be deduced
      *
      * \param[in] lev level of fields
      * \param[in] islice_dst destination slice
@@ -394,8 +395,8 @@ public:
      */
     template<int ncomps>
     void duplicate (const int lev,
-                    const int islice_dst, const amrex::GpuArray<const char*, ncomps> comps_dst,
-                    const int islice_src, const amrex::GpuArray<const char*, ncomps> comps_src) {
+                    const int islice_dst, const char * const (&comps_dst)[ncomps],
+                    const int islice_src, const char * const (&comps_src)[ncomps]) {
         amrex::GpuArray<int, ncomps> c_idx_src = {};
         amrex::GpuArray<int, ncomps> c_idx_dst = {};
         for (int i=0; i<ncomps; ++i) {

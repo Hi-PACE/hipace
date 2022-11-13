@@ -534,8 +534,8 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         }
-        duplicate<4>(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
-                          WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
+        duplicate(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
+                       WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
     } else {
         shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
         if (mesh_refinement) {

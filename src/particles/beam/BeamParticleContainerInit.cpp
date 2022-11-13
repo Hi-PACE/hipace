@@ -301,36 +301,35 @@ InitBeamFixedWeight (int num_to_add,
                 const amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine);
                 const amrex::Real z = can
                     ? zmin + amrex::Random(engine) * (zmax - zmin)
-                    : amrex::RandomNormal(0, pos_std[2], engine);
+                    : amrex::RandomNormal(0, pos_std[2], engine) + pos_mean_z;
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2], engine, z, duz_per_uz0_dzeta);
 
-                const amrex::Real z_central = z + pos_mean_z;
                 int valid_id = pid;
-                if (z_central < zmin || z_central > zmax) valid_id = -1;
+                if (z < zmin || z > zmax) valid_id = -1;
 
-                const amrex::Real cental_x_pos = pos_mean_x(z_central);
-                const amrex::Real cental_y_pos = pos_mean_y(z_central);
+                const amrex::Real cental_x_pos = pos_mean_x(z);
+                const amrex::Real cental_y_pos = pos_mean_y(z);
 
                 amrex::Real weight = total_charge / (num_to_add * single_charge);
                 if (!do_symmetrize)
                 {
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
-                                       z_central, u[0], u[1], u[2], weight,
+                                       z, u[0], u[1], u[2], weight,
                                        valid_id, procID, i, phys_const.c);
                 } else {
                     weight /= 4;
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
-                                       z_central, u[0], u[1], u[2], weight,
+                                       z, u[0], u[1], u[2], weight,
                                        valid_id, procID, 4*i, phys_const.c);
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
-                                       z_central, -u[0], u[1], u[2], weight,
+                                       z, -u[0], u[1], u[2], weight,
                                        valid_id, procID, 4*i+1, phys_const.c);
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
-                                       z_central, u[0], -u[1], u[2], weight,
+                                       z, u[0], -u[1], u[2], weight,
                                        valid_id, procID, 4*i+2, phys_const.c);
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
-                                       z_central, -u[0], -u[1], u[2], weight,
+                                       z, -u[0], -u[1], u[2], weight,
                                        valid_id, procID, 4*i+3, phys_const.c);
                 }
             });

@@ -11,6 +11,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/sorting/SliceSort.H"
 #include "particles/sorting/BoxSort.H"
+#include "salame/Salame.H"
 #include "utils/IOUtil.H"
 #include "utils/GPUUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
@@ -648,9 +649,9 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
     // Modifies Bx, By using Sx, Sy and chi
     ExplicitMGSolveBxBy(lev, WhichSlice::This);
 
-    bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
+    const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
     if (do_salame) {
-        SalameModule(this, lev, islice);
+        SalameModule(this, lev, step, islice, islice_local, beam_bin, ibox);
     }
 
     // shift and update force terms, push plasma particles
@@ -859,7 +860,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
         // Copy chi to chi2
-        m_fields.duplicate<1>(lev, which_slice_chi, {"chi2"}, which_slice_chi, {"chi"});
+        m_fields.duplicate(lev, which_slice_chi, {"chi2"}, which_slice_chi, {"chi"});
         amrex::Gpu::streamSynchronize();
         if (!m_mlalaplacian){
             // If first call, initialize the MG solver
