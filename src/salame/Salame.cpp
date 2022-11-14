@@ -11,12 +11,12 @@
 #include "utils/HipaceProfilerWrapper.H"
 
 void
-SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, const int islice,
-              const int islice_local, const amrex::Vector<BeamBins>& beam_bin, const int ibox)
+SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
+              const int lev, const int step, const int islice, const int islice_local,
+              const amrex::Vector<BeamBins>& beam_bin, const int ibox)
 {
     HIPACE_PROFILE("SalameModule()");
 
-    static int last_islice = -1;
     if (islice + 1 != last_islice) {
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_target"},
                                         WhichSlice::This, {"Ez"});
@@ -50,12 +50,14 @@ SalameModule (Hipace* hipace, const int n_iter, const int lev, const int step, c
 
     hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
-    SalameGetJxJyFromBxBy(hipace, lev);
+    if (do_advance) {
+        SalameOnlyAdvancePlasma(hipace, lev);
 
-    //SalameAdvancePlasmaAutograd(hipace, lev);
-
-    //hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
-    //        WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+        hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
+                WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+    } else {
+        SalameGetJxJyFromBxBy(hipace, lev);
+    }
 
     hipace->m_multi_plasma.ResetParticles(lev);
 
@@ -153,7 +155,7 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
 }
 
 void
-SalameAdvancePlasmaAutograd (Hipace* hipace, const int lev)
+SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 {
     using namespace amrex::literals;
 

@@ -378,6 +378,8 @@ public:
     int m_skip_empty_comms = false;
     bool m_explicit = false;
     int m_salame_n_iter = 3;
+    bool m_salame_do_advance = true;
+    int m_salame_last_slice = -1;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.
