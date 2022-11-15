@@ -376,9 +376,13 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
+    /** Whether to the explicit solver */
     bool m_explicit = false;
+    /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 3;
+    /** if the SALAME-only field should be computed exactly with plasma particles */
     bool m_salame_do_advance = true;
+    /** last_islice the slice index of the previous slice with SALAME */
     int m_salame_last_slice = -1;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
