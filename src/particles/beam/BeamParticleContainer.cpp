@@ -60,9 +60,9 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     queryWithParser(pp, "finest_level", m_finest_level);
     queryWithParser(pp, "do_salame", m_do_salame);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
@@ -112,6 +112,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         } else if (profile == "gaussian") {
             queryWithParser(pp, "zmin", zmin);
             queryWithParser(pp, "zmax", zmax);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_do_salame ||
+                (zmin != -std::numeric_limits<amrex::Real>::infinity() &&
+                 zmax !=  std::numeric_limits<amrex::Real>::infinity()),
+                "For the SALAME algorithm it is recommended to either use a 'can' profile or "
+                "'zmin' and 'zmax' with a gaussian profile");
         } else {
             amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");
         }
