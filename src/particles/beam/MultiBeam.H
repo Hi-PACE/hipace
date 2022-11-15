@@ -168,8 +168,15 @@ public:
      */
     int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];}
 
+    /** \brief returns if the SALAME algorithm should be used on this slice
+     * \param[in] step time step of simulation
+     * \param[in] islice slice index of the local box
+     * \param[in] bins Vector (over species) of beam particles sorted by slices
+     */
     bool isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins);
 
+    /** \brief returns if any beam uses the SALAME algorithm
+     */
     bool AnySpeciesSalame ();
 
 private:

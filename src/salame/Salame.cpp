@@ -17,6 +17,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 {
     HIPACE_PROFILE("SalameModule()");
 
+    // always use the Ez field from before SALAME has started to avoid buildup of small errors
     if (islice + 1 != last_islice) {
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_target"},
                                         WhichSlice::This, {"Ez"});
@@ -25,15 +26,20 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     for (int iter=0; iter<n_iter; ++iter) {
 
+    // STEP 1: Calculate what Ez would be with the initial SALAME beam weight
+
+    // advance plasma to the temp slice, only shift once
     hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_laser, hipace->Geom(lev),
                                             true, true, true, iter==0, lev);
 
     hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                     WhichSlice::Next, {"jx_beam", "jy_beam"});
 
+    // deposit plasma jx and jy on the next temp slice, to the SALANE slice
     hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
             WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
 
+    // use an initial guess of zero for Bx and By in MG solver to reduce relative error
     hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
 
     hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
@@ -41,6 +47,9 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
     hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_no_salame"},
                                     WhichSlice::Salame, {"Ez"});
 
+    // STEP 2: Calculate the contribution to Ez form only the SALAME beam
+
+    // deposit SALAME beam jz
     hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
         islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::Salame);
 
@@ -50,6 +59,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
+    // get jx jy (SALAME only) on the next slice using Bx By (SALAME only) on this slice
     if (do_advance) {
         SalameOnlyAdvancePlasma(hipace, lev);
 
@@ -59,10 +69,17 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         SalameGetJxJyFromBxBy(hipace, lev);
     }
 
+    // necessary after push to temp slice
     hipace->m_multi_plasma.ResetParticles(lev);
 
     hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
 
+    // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
+    // and update the beam with it
+
+    // W = sum(jz * (Ez_target - Ez_no_salame) / Ez_only_salame) / sum(jz) + 1
+    // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
+    // W_total = W * sum(jz)
     auto [W, W_total] = SalameGetW(hipace, lev);
 
     amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
@@ -70,8 +87,13 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     SalameMultiplyBeamWeight(W, hipace, islice_local, beam_bin, ibox);
 
+    // STEP 4: recompute Bx and By with the new SALAME beam weight.
+    // This is done a bit overkill by depositing again. A linear combination of the available
+    // B-fields would be sufficient but might have some numerical differences.
+
     hipace->m_fields.setVal(0., lev, WhichSlice::This, "jz_beam", "Sy", "Sx");
 
+    // deposit beam jz
     hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
         islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::This);
 
@@ -114,9 +136,10 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
                 const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))/(2._rt*dx);
                 const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))/(2._rt*dy);
 
-                // sy, to compute Bx
+                // same Hipace::InitializeSxSyWithBeam just with only the salame beam
+                // and without transverse currents
+
                 arr(i,j,Sy) =   mu0 * ( - dy_jzb);
-                // sx, to compute By
                 arr(i,j,Sx) = - mu0 * ( - dx_jzb);
             });
     }
@@ -131,6 +154,9 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
     amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
 
+    // first 5. order adams bashforth coefficient, same as in plasma pusher
+    // Analytically the coefficient should be 2 but 1901/720 gives much better results
+    // due to the plasma pusher used in Hipace
     const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * hipace->Geom(lev).CellSize(Direction::z);
 
     for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
@@ -218,6 +244,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                         amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
+                        // Gather Bx and By along with 4 dummy fields to use this funciton
                         doGatherShapeN(xp, yp,
                                        ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
                                        0, 0, 0, bx_comp, by_comp, 0,
@@ -260,6 +287,7 @@ SalameGetW (Hipace* hipace, const int lev)
         reduce_op.eval(mfi.tilebox(), reduce_data,
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept -> ReduceTuple
             {
+                // avoid NaN
                 if (arr(i,j,Ez) == 0._rt) return {0._rt, 0._rt};
                 return {
                     arr(i,j,jz) * (arr(i,j,Ez_target) - arr(i,j,Ez_no_salame)) / arr(i,j,Ez),
@@ -270,6 +298,9 @@ SalameGetW (Hipace* hipace, const int lev)
         sum_W += amrex::get<0>(res);
         sum_jz += amrex::get<1>(res);
     }
+    // first return = sum(jz * (Ez_target - Ez_no_salame) / Ez_only_salame) / sum(jz) + 1
+    // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
+    // second return = first return * sum(jz)
     return {(sum_W / sum_jz) + 1._rt,  sum_W + sum_jz};
 }
 
@@ -305,6 +336,7 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice,
                 // Skip invalid particles and ghost particles not in the last slice
                 if (pos_structs[ip].id() < 0) return;
 
+                // Multiply SALAME beam particles on this slice with W
                 wp[ip] *= W;
             });
     }

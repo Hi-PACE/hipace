@@ -20,7 +20,7 @@
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
  * \param[in] islice slice index of the local box
- * \param[in] bins Vector (over species) of beam particles sorted by slices
+ * \param[in] beam_bin Vector (over species) of beam particles sorted by slices
  * \param[in] ibox index of the current box
  */
 void
