@@ -59,7 +59,7 @@ std::pair<amrex::Real, amrex::Real>
 SalameGetW (Hipace* hipace, const int lev);
 
 /** Multiply SALAME beam weight on this slice with W
- * \param[in] weight multiplier
+ * \param[in] W weight multiplier
  * \param[in] hipace pointer to Hipace instance
  * \param[in] islice slice index of the local box
  * \param[in] bins Vector (over species) of beam particles sorted by slices
