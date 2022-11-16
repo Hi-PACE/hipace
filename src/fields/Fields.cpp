@@ -137,7 +137,7 @@ Fields::AllocData (
             }
 
             isl = WhichSlice::Salame;
-            // empty, not compatable
+            // empty, not compatible
         }
     }
 

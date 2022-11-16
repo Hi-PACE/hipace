@@ -644,13 +644,13 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
     m_grid_current.DepositCurrentSlice(m_fields, geom[lev], lev, islice);
     // No FillBoundary because grid current only deposits in the middle of the field
 
-    // Modifies Sx and Sy with beam contribution
+    // Set Sx and Sy to beam contribution
     InitializeSxSyWithBeam(lev);
 
     // Deposit Sx and Sy for every plasma species
     m_multi_plasma.ExplicitDeposition(m_fields, m_laser, geom[lev], lev);
 
-    // Modifies Bx, By using Sx, Sy and chi
+    // Solves Bx, By using Sx, Sy and chi
     ExplicitMGSolveBxBy(lev, WhichSlice::This);
 
     const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
@@ -715,7 +715,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
     m_fields.SolvePoissonEz(Geom(), lev, islice);
     m_fields.SolvePoissonBz(Geom(), lev, islice);
 
-    // Modifies Bx and By in the current slice and the force terms of the plasma particles
+    // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
     PredictorCorrectorLoopToSolveBxBy(islice_local, lev, step, beam_bin, ibox);
 
     // Push beam particles

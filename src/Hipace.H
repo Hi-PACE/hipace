@@ -198,14 +198,14 @@ public:
                                              const amrex::Vector<BeamBins>& beam_bin);
 
     /**
-     * \brief Initialize Sx and Sy with the beam contiburions
+     * \brief Initialize Sx and Sy with the beam contributions
      *
      * \param[lev] MR level
      */
     void InitializeSxSyWithBeam (const int lev);
 
     /**
-     * \brief Initialize Sx and Sy with the beam contiburions
+     * \brief Initialize Sx and Sy with the beam contributions
      *
      * \param[lev] MR level
      * \param[in] which_slice defines if this or the salame slice is handled
@@ -376,7 +376,7 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
-    /** Whether to the explicit solver */
+    /** Whether the explicit field solver is used */
     bool m_explicit = false;
     /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 3;
