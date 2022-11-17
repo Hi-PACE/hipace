@@ -16,6 +16,7 @@
  * \param[in] n_iter the number of SALAME iterations to be done
  * \param[in] do_advance if the SALAME-only field should be computed exactly with plasma particles
  * \param[in,out] last_islice the slice index of the previous slice with SALAME
+ * \param[in,out] overloaded if the SALAME beam was overloaded in the last slice
  * \param[in] lev MR level
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
@@ -25,8 +26,8 @@
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              const int lev, const int step, const int islice, const int islice_local,
-              const amrex::Vector<BeamBins>& beam_bin, const int ibox);
+              bool& overloaded, const int lev, const int step, const int islice,
+              const int islice_local, const amrex::Vector<BeamBins>& beam_bin, const int ibox);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
  * \param[in] hipace pointer to Hipace instance

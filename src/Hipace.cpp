@@ -655,8 +655,8 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
 
     const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
     if (do_salame) {
-        SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice, lev, step,
-                     islice, islice_local, beam_bin, ibox);
+        SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
+                     m_salame_overloaded, lev, step, islice, islice_local, beam_bin, ibox);
     }
 
     // shift and update force terms, push plasma particles

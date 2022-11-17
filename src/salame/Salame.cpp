@@ -12,8 +12,8 @@
 
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              const int lev, const int step, const int islice, const int islice_local,
-              const amrex::Vector<BeamBins>& beam_bin, const int ibox)
+              bool& overloaded, const int lev, const int step, const int islice,
+              const int islice_local, const amrex::Vector<BeamBins>& beam_bin, const int ibox)
 {
     HIPACE_PROFILE("SalameModule()");
 
@@ -22,6 +22,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_target"},
                                         WhichSlice::This, {"Ez"});
         last_islice = islice;
+        overloaded = false;
     }
 
     for (int iter=0; iter<n_iter; ++iter) {
@@ -81,6 +82,14 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
     // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
     // W_total = W * sum(jz)
     auto [W, W_total] = SalameGetW(hipace, lev);
+
+    if (W < 0 || overloaded) {
+        W = 0;
+        W_total = 0;
+        amrex::Print() << "Salame beam is overloaded, setting weight to zero\n";
+        iter = n_iter-1; // this is the last iteration
+        overloaded = true;
+    }
 
     amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
                    << " Total weight is " << W_total << '\n';
@@ -315,8 +324,8 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice,
 
         const int box_offset = hipace->m_box_sorters[i].boxOffsetsPtr()[ibox];
 
-        const auto& aos = beam.GetArrayOfStructs(); // For id
-        const auto pos_structs = aos.begin() + box_offset;
+        auto& aos = beam.GetArrayOfStructs(); // For id
+        auto pos_structs = aos.begin() + box_offset;
         auto& soa = beam.GetStructOfArrays(); // For momenta and weights
         amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
 
@@ -335,6 +344,12 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice,
                 const int ip = indices[cell_start+idx];
                 // Skip invalid particles and ghost particles not in the last slice
                 if (pos_structs[ip].id() < 0) return;
+
+                // invalidate particles with a weight of zero
+                if (W == 0) {
+                    pos_structs[ip].id() = -pos_structs[ip].id();
+                    return;
+                }
 
                 // Multiply SALAME beam particles on this slice with W
                 wp[ip] *= W;

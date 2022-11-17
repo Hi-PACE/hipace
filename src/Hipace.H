@@ -382,8 +382,10 @@ public:
     int m_salame_n_iter = 3;
     /** if the SALAME-only field should be computed exactly with plasma particles */
     bool m_salame_do_advance = true;
-    /** last_islice the slice index of the previous slice with SALAME */
+    /** the slice index of the previous slice with SALAME */
     int m_salame_last_slice = -1;
+    /** if the SALAME beam was overloaded in the last slice */
+    bool m_salame_overloaded = false;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.
