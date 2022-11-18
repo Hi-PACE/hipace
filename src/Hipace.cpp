@@ -518,9 +518,9 @@ Hipace::Evolve ()
         m_multi_beam.InSituWriteToFile(step, m_physical_time, geom[lev]);
 
         // printing and resetting predictor corrector loop diagnostics
-        if (m_verbose>=2) amrex::AllPrint()<<"Rank "<<rank<<": avg. number of iterations "
-                                   << m_predcorr_avg_iterations << " avg. transverse B field error "
-                                   << m_predcorr_avg_B_error << "\n";
+        if (m_verbose>=2 && !m_explicit) amrex::AllPrint() << "Rank " << rank <<
+                                ": avg. number of iterations " << m_predcorr_avg_iterations <<
+                                " avg. transverse B field error " << m_predcorr_avg_B_error << "\n";
         m_predcorr_avg_iterations = 0.;
         m_predcorr_avg_B_error = 0.;
 
