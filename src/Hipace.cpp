@@ -655,6 +655,9 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
 
     const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
     if (do_salame) {
+        // Modify the beam particle weights on this slice to flatten Ez.
+        // As the beam current is modified, Bx and By are also recomputed.
+        // Plasma particle force terms get shifted
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
                      m_salame_overloaded, lev, step, islice, islice_local, beam_bin, ibox);
     }

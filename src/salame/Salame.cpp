@@ -27,94 +27,93 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     for (int iter=0; iter<n_iter; ++iter) {
 
-    // STEP 1: Calculate what Ez would be with the initial SALAME beam weight
+        // STEP 1: Calculate what Ez would be with the initial SALAME beam weight
 
-    // advance plasma to the temp slice, only shift once
-    hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_laser, hipace->Geom(lev),
-                                            true, true, true, iter==0, lev);
+        // advance plasma to the temp slice, only shift once
+        hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_laser, hipace->Geom(lev),
+                                                true, true, true, iter==0, lev);
 
-    hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
-                                    WhichSlice::Next, {"jx_beam", "jy_beam"});
+        hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
+                                        WhichSlice::Next, {"jx_beam", "jy_beam"});
 
-    // deposit plasma jx and jy on the next temp slice, to the SALANE slice
-    hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
-            WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
-
-    // use an initial guess of zero for Bx and By in MG solver to reduce relative error
-    hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
-
-    hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
-
-    hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_no_salame"},
-                                    WhichSlice::Salame, {"Ez"});
-
-    // STEP 2: Calculate the contribution to Ez form only the SALAME beam
-
-    // deposit SALAME beam jz
-    hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
-        islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::Salame);
-
-    SalameInitializeSxSyWithBeam(hipace, lev);
-
-    hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame);
-
-    hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
-
-    // get jx jy (SALAME only) on the next slice using Bx By (SALAME only) on this slice
-    if (do_advance) {
-        SalameOnlyAdvancePlasma(hipace, lev);
-
+        // deposit plasma jx and jy on the next temp slice, to the SALANE slice
         hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
                 WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
-    } else {
-        SalameGetJxJyFromBxBy(hipace, lev);
-    }
 
-    // necessary after push to temp slice
-    hipace->m_multi_plasma.ResetParticles(lev);
+        // use an initial guess of zero for Bx and By in MG solver to reduce relative error
+        hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
 
-    hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
+        hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
 
-    // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
-    // and update the beam with it
+        hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_no_salame"},
+                                        WhichSlice::Salame, {"Ez"});
 
-    // W = sum(jz * (Ez_target - Ez_no_salame) / Ez_only_salame) / sum(jz) + 1
-    // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
-    // W_total = W * sum(jz)
-    auto [W, W_total] = SalameGetW(hipace, lev);
+        // STEP 2: Calculate the contribution to Ez from only the SALAME beam
 
-    if (W < 0 || overloaded) {
-        W = 0;
-        W_total = 0;
-        amrex::Print() << "Salame beam is overloaded, setting weight to zero\n";
-        iter = n_iter-1; // this is the last iteration
-        overloaded = true;
-    }
+        // deposit SALAME beam jz
+        hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
+            islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::Salame);
 
-    amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
-                   << " Total weight is " << W_total << '\n';
+        SalameInitializeSxSyWithBeam(hipace, lev);
 
-    SalameMultiplyBeamWeight(W, hipace, islice_local, beam_bin, ibox);
+        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame);
 
-    // STEP 4: recompute Bx and By with the new SALAME beam weight.
-    // This is done a bit overkill by depositing again. A linear combination of the available
-    // B-fields would be sufficient but might have some numerical differences.
+        hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
-    hipace->m_fields.setVal(0., lev, WhichSlice::This, "jz_beam", "Sy", "Sx");
+        // get jx jy (SALAME only) on the next slice using Bx By (SALAME only) on this slice
+        if (do_advance) {
+            SalameOnlyAdvancePlasma(hipace, lev);
 
-    // deposit beam jz
-    hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
-        islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::This);
+            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
+                    WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+        } else {
+            SalameGetJxJyFromBxBy(hipace, lev);
+        }
 
-    hipace->m_grid_current.DepositCurrentSlice(hipace->m_fields, hipace->Geom(lev), lev, islice);
+        // necessary after push to temp slice
+        hipace->m_multi_plasma.ResetParticles(lev);
 
-    hipace->InitializeSxSyWithBeam(lev);
+        hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
 
-    hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_laser,
-                                              hipace->Geom(lev), lev);
+        // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
+        // and update the beam with it
 
-    hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
+        // W = sum(jz * (Ez_target - Ez_no_salame) / Ez_only_salame) / sum(jz) + 1
+        // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
+        // W_total = W * sum(jz)
+        auto [W, W_total] = SalameGetW(hipace, lev);
 
+        if (W < 0 || overloaded) {
+            W = 0;
+            W_total = 0;
+            amrex::Print() << "Salame beam is overloaded, setting weight to zero\n";
+            iter = n_iter-1; // this is the last iteration
+            overloaded = true;
+        }
+
+        amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
+                       << " Total weight is " << W_total << '\n';
+
+        SalameMultiplyBeamWeight(W, hipace, islice_local, beam_bin, ibox);
+
+        // STEP 4: recompute Bx and By with the new SALAME beam weight.
+        // This is done a bit overkill by depositing again. A linear combination of the available
+        // B-fields would be sufficient but might have some numerical differences.
+
+        hipace->m_fields.setVal(0., lev, WhichSlice::This, "jz_beam", "Sy", "Sx");
+
+        // deposit beam jz
+        hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->Geom(), lev, step,
+            islice_local, beam_bin, hipace->m_box_sorters, ibox, false, true, false, WhichSlice::This);
+
+        hipace->m_grid_current.DepositCurrentSlice(hipace->m_fields, hipace->Geom(lev), lev, islice);
+
+        hipace->InitializeSxSyWithBeam(lev);
+
+        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_laser,
+                                                  hipace->Geom(lev), lev);
+
+        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
     }
 }
 

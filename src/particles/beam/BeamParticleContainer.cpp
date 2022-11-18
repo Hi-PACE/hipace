@@ -115,7 +115,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_do_salame ||
                 (zmin != -std::numeric_limits<amrex::Real>::infinity() &&
                  zmax !=  std::numeric_limits<amrex::Real>::infinity()),
-                "For the SALAME algorithm it is recommended to either use a 'can' profile or "
+                "For the SALAME algorithm it is mandatory to either use a 'can' profile or "
                 "'zmin' and 'zmax' with a gaussian profile");
         } else {
             amrex::Abort("Only gaussian and can are supported with fixed_weight beam injection");

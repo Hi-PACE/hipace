@@ -148,11 +148,11 @@ General parameters
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
 
 * ``hipace.salame_n_iter`` (`int`) optional (default `3`)
-    How many Iterations the SALAME algorithm should do when its used.
+    Number of iterations the SALAME algorithm should do when it is used.
 
 * ``hipace.salame_do_advance`` (`bool`) optional (default `1`)
-    If the SALAME algorithm should calculate the SALAME-beam-only Ez field
-    by advancing plasma particles or by approximating it using the chi field.
+    Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field
+    by advancing plasma (if `1`) particles or by approximating it using the chi field (if `0`).
 
 Field solver parameters
 -----------------------
@@ -436,9 +436,9 @@ which are valid only for certain beam types, are introduced further below under
     Path of the in-situ output.
 
 * ``<beam name>.do_salame`` (`bool`) optional (default `0`)
-    If the SALAME beam loading algorithm should be used to update the per-slice
-    beam weight in the first time-step such that the Ez field will be constant along the beam.
-    This will ignore the contributions to jx, jy and rho for the beam in the first time-step.
+    Whether to use the SALAME algorithm [S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020)] to automatically flatten the accelerating field in the first time step. If turned on, the per-slice
+    beam weight in the first time-step is adjusted such that the Ez field will be uniform in the beam.
+    This will ignore the contributions to jx, jy and rho from the beam in the first time-step.
     It is recommended to use this option with a fixed weight can beam.
     If a gaussian beam profile is used, then the zmin and zmax parameters should be used.
 

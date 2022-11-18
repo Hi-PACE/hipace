@@ -205,7 +205,7 @@ public:
     void InitializeSxSyWithBeam (const int lev);
 
     /**
-     * \brief Initialize Sx and Sy with the beam contributions
+     * \brief Knowing the sources Sx, Sy and chi, apply MG to solve for Bx, By
      *
      * \param[lev] MR level
      * \param[in] which_slice defines if this or the salame slice is handled
