@@ -414,9 +414,10 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     }
 }
 
-void OpenPMDWriter::reset ()
+void OpenPMDWriter::reset (const int output_step)
 {
     for (int lev = 0; lev<m_outputSeries.size(); ++lev) {
+        if (output_step != m_last_output_dumped[lev]) continue;
         m_outputSeries[lev].reset();
     }
 }

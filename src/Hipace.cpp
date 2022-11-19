@@ -525,11 +525,11 @@ Hipace::Evolve ()
         m_predcorr_avg_B_error = 0.;
 
         m_physical_time += m_dt;
-    }
 
 #ifdef HIPACE_USE_OPENPMD
-    if (m_output_period > 0) m_openpmd_writer.reset();
+        m_openpmd_writer.reset(step);
 #endif
+    }
 }
 
 void
