@@ -57,21 +57,24 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
 
+    m_outputSeries.resize(nlev+1);
+    m_last_output_dumped.resize(nlev+1);
+
     if (nlev > 1) {
         for (int lev=0; lev<nlev; ++lev) {
             std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
                                    + m_openpmd_backend;
 
-            m_outputSeries.push_back(std::make_unique< openPMD::Series >(
-                filename, openPMD::Access::CREATE) );
-            m_last_output_dumped.push_back(-1);
+            m_outputSeries[lev] = std::make_unique< openPMD::Series >(
+                filename, openPMD::Access::CREATE);
+            m_last_output_dumped[lev] = -1;
         }
     } else {
         std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
 
-        m_outputSeries.push_back(std::make_unique< openPMD::Series >(
-            filename, openPMD::Access::CREATE) );
-        m_last_output_dumped.push_back(-1);
+        m_outputSeries[0] = std::make_unique< openPMD::Series >(
+            filename, openPMD::Access::CREATE);
+        m_last_output_dumped[0] = -1;
     }
 
 
