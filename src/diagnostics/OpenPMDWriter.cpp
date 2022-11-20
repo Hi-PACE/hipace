@@ -57,8 +57,8 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
 
-    m_outputSeries.resize(nlev+1);
-    m_last_output_dumped.resize(nlev+1);
+    m_outputSeries.resize(nlev);
+    m_last_output_dumped.resize(nlev);
 
     if (nlev > 1) {
         for (int lev=0; lev<nlev; ++lev) {
