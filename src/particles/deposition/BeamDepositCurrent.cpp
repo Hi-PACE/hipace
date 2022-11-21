@@ -160,34 +160,34 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             // --- Compute shape factors
             // x direction
             const amrex::Real xmid = (pos_structs[ip].pos(0) - x_pos_offset)*dxi;
-            // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
+            // i_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
             amrex::Real sx_cell[depos_order_xy + 1];
-            const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid);
+            const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid);
 
             // y direction
             const amrex::Real ymid = (pos_structs[ip].pos(1) - y_pos_offset)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
-            const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid);
+            const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid);
 
             // Deposit current into jx, jy, jz, rho
             for (int iy=0; iy<=depos_order_xy; iy++){
                 for (int ix=0; ix<=depos_order_xy; ix++){
                     if (jxb_cmp != -1) { // do_beam_jx_jy_deposition
                         amrex::Gpu::Atomic::Add(
-                            isl_arr.ptr(j_cell+ix, k_cell+iy, jxb_cmp),
+                            isl_arr.ptr(i_cell+ix, j_cell+iy, jxb_cmp),
                             sx_cell[ix]*sy_cell[iy]*wqx);
                         amrex::Gpu::Atomic::Add(
-                            isl_arr.ptr(j_cell+ix, k_cell+iy, jyb_cmp),
+                            isl_arr.ptr(i_cell+ix, j_cell+iy, jyb_cmp),
                             sx_cell[ix]*sy_cell[iy]*wqy);
                     }
                     if (jzb_cmp != -1) { // do_beam_jz_deposition
                         amrex::Gpu::Atomic::Add(
-                            isl_arr.ptr(j_cell+ix, k_cell+iy, jzb_cmp),
+                            isl_arr.ptr(i_cell+ix, j_cell+iy, jzb_cmp),
                             sx_cell[ix]*sy_cell[iy]*wqz);
                     }
                     if (rhob_cmp != -1) { // do_beam_rho_deposition
                         amrex::Gpu::Atomic::Add(
-                            isl_arr.ptr(j_cell+ix, k_cell+iy, rhob_cmp),
+                            isl_arr.ptr(i_cell+ix, j_cell+iy, rhob_cmp),
                             sx_cell[ix]*sy_cell[iy]*wq);
                     }
                 }

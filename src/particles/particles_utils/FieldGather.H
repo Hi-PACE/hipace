@@ -318,20 +318,20 @@ void doLaserGatherShapeN (const amrex::Real xp,
 
     // --- Compute shape factors
     // x direction
-    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
+    // i_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
     amrex::Real sx_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
+    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
 
     // y direction
     amrex::Real sy_cell[depos_order_xy + 1];
-    const int k_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
+    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
 
     // Gather field Aabssq, on particle from field on grid a_arr
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
             const amrex::Real x00y00 = abssq(
-                a_arr(j_cell+ix  , k_cell+iy  , 0),
-                a_arr(j_cell+ix  , k_cell+iy  , 1) );
+                a_arr(i_cell+ix  , j_cell+iy  , 0),
+                a_arr(i_cell+ix  , j_cell+iy  , 1) );
             Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
         }
     }
