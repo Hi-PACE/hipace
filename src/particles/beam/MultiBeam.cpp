@@ -40,21 +40,24 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 
 void
 MultiBeam::DepositCurrentSlice (
-    Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-    const amrex::Vector<BeamBins>& bins,
+    Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
+    int islice, const amrex::Vector<BeamBins>& bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
     const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
     const bool do_beam_rho_deposition, const int which_slice)
 
 {
     for (int i=0; i<m_nbeams; i++) {
-        const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
-        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
-                              a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
-                              do_beam_jx_jy_deposition,
-                              do_beam_jz_deposition,
-                              do_beam_rho_deposition,
-                              which_slice, nghost);
+        const bool is_salame = m_all_beams[i].m_do_salame && (step == 0);
+        if ( is_salame || (which_slice != WhichSlice::Salame) ) {
+            const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
+            ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
+                                  a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
+                                  do_beam_jx_jy_deposition && !is_salame,
+                                  do_beam_jz_deposition,
+                                  do_beam_rho_deposition && !is_salame,
+                                  which_slice, nghost);
+        }
     }
 }
 
@@ -219,4 +222,28 @@ MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry&
             beam.InSituWriteToFile(step, time, geom);
         }
     }
+}
+
+bool MultiBeam::AnySpeciesSalame () {
+    for (int i = 0; i < m_nbeams; ++i) {
+        if (m_all_beams[i].m_do_salame) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MultiBeam::isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins)
+{
+    if (step != 0) return false;
+
+    for (int i = 0; i < m_nbeams; ++i) {
+        if (m_all_beams[i].m_do_salame) {
+            BeamBins::index_type const * const offsets = bins[i].offsetsPtrCpu();
+            if ((offsets[islice + 1] - offsets[islice]) > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

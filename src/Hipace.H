@@ -167,29 +167,50 @@ public:
 
     /** \brief Full evolve on 1 subslice with explicit solver
      *
+     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
+     * it is implemented in the WAND-PIC quasistatic PIC code.
+     *
      * \param[in] lev MR level
+     * \param[in] step current time step
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bx current transverse box
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
      * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
-                                   const int islice, const int islice_local,
+    void ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
+                                   const amrex::Box& bx, const int islice, const int islice_local,
                                    const amrex::Vector<BeamBins>& beam_bin);
 
     /** \brief Full evolve on 1 subslice with predictor-corrector solver
      *
      * \param[in] lev MR level
+     * \param[in] step current time step
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bx current transverse box
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
      * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
-                                             const int islice, const int islice_local,
+    void PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const int ibox,
+                                             const amrex::Box& bx, const int islice,
+                                             const int islice_local,
                                              const amrex::Vector<BeamBins>& beam_bin);
+
+    /**
+     * \brief Initialize Sx and Sy with the beam contributions
+     *
+     * \param[lev] MR level
+     */
+    void InitializeSxSyWithBeam (const int lev);
+
+    /**
+     * \brief Knowing the sources Sx, Sy and chi, apply MG to solve for Bx, By
+     *
+     * \param[lev] MR level
+     * \param[in] which_slice defines if this or the salame slice is handled
+     */
+    void ExplicitMGSolveBxBy (const int lev, const int which_slice);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -355,16 +376,16 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
+    /** Whether the explicit field solver is used */
     bool m_explicit = false;
-    /**
-     * \brief Solve for Bx an By in slice MF using the explicit solver
-     *
-     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
-     * it is implemented in the WAND-PIC quasistatic PIC code.
-     *
-     * \param[lev] MR level
-     */
-    void ExplicitSolveBxBy (const int lev);
+    /** the number of SALAME iterations to be done */
+    int m_salame_n_iter = 3;
+    /** if the SALAME-only field should be computed exactly with plasma particles */
+    bool m_salame_do_advance = true;
+    /** the slice index of the previous slice with SALAME */
+    int m_salame_last_slice = -1;
+    /** if the SALAME beam was overloaded in the last slice */
+    bool m_salame_overloaded = false;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.
@@ -388,10 +409,10 @@ private:
 #endif
     /** hpmg solver for the explicit Bx and by solver */
     std::unique_ptr<hpmg::MultiGrid> m_hpmg;
-
+public:
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
-
+private:
     /** Diagnostics */
     Diagnostic m_diags;
 
@@ -425,10 +446,11 @@ private:
      *
      * \param[in] islice_local index of calculated slice
      * \param[in] lev current level
+     * \param[in] step current time step
      * \param[in] bins Vector (over species) of particles sorted by slices
      * \param[in] ibox index of the current box
      */
-    void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
+    void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev, const int step,
                                             const amrex::Vector<BeamBins>& bins, const int ibox);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.

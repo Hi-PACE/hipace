@@ -25,7 +25,7 @@ class Laser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous1, Previous2, RhoIons, N };
+    enum slice { Next=0, This, Previous1, Previous2, RhoIons, Salame, N };
 };
 
 struct assert_map : std::map<std::string, int> {
@@ -49,11 +49,11 @@ struct assert_map : std::map<std::string, int> {
 
 /** \brief Map names and indices of each fields in each slice
  */
-inline std::array<assert_map, 5> Comps{};
+inline std::array<assert_map, WhichSlice::N> Comps{};
 
 /** \brief number of fields in each slice
  */
-inline std::array<int, 5> N_Comps {0,0,0,0,0};
+inline std::array<int, WhichSlice::N> N_Comps {0,0,0,0,0,0};
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
@@ -85,7 +85,7 @@ class Fields
 {
 private:
     /** Number of slices in temporary slice object */
-    static constexpr int m_nslices = 5;
+    static constexpr int m_nslices = WhichSlice::N;
 
 public:
     /** Constructor */
@@ -224,9 +224,10 @@ public:
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] islice longitudinal slice
+     * \param[in] which_slice defines if this or the salame slice is handled
      */
     void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int islice);
+                         const int islice, const int which_slice = WhichSlice::This);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
@@ -385,6 +386,7 @@ public:
     }
 
     /** \brief copy all selected fields between slices or on the same slice
+     * Uses references to C-arrays as argument so that ncomps can be deduced
      *
      * \param[in] lev level of fields
      * \param[in] islice_dst destination slice
@@ -394,8 +396,8 @@ public:
      */
     template<int ncomps>
     void duplicate (const int lev,
-                    const int islice_dst, const amrex::GpuArray<const char*, ncomps> comps_dst,
-                    const int islice_src, const amrex::GpuArray<const char*, ncomps> comps_src) {
+                    const int islice_dst, const char * const (&comps_dst)[ncomps],
+                    const int islice_src, const char * const (&comps_src)[ncomps]) {
         amrex::GpuArray<int, ncomps> c_idx_src = {};
         amrex::GpuArray<int, ncomps> c_idx_dst = {};
         for (int i=0; i<ncomps; ++i) {

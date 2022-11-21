@@ -269,6 +269,7 @@ InitBeamFixedWeight (int num_to_add,
                      const bool can, const amrex::Real zmin, const amrex::Real zmax)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+    using namespace amrex::literals;
 
     if (num_to_add == 0) return;
     if (do_symmetrize) num_to_add /=4;
@@ -293,6 +294,8 @@ InitBeamFixedWeight (int num_to_add,
 
         const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
         const amrex::Real single_charge = m_charge;
+        const amrex::Real z_mean = can ? 0.5_rt * (zmin + zmax) : pos_mean_z;
+
         amrex::ParallelForRNG(
             num_to_add,
             [=] AMREX_GPU_DEVICE (int i, const amrex::RandomEngine& engine) noexcept
@@ -300,12 +303,12 @@ InitBeamFixedWeight (int num_to_add,
                 const amrex::Real x = amrex::RandomNormal(0, pos_std[0], engine);
                 const amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine);
                 const amrex::Real z = can
-                    ? zmin + amrex::Random(engine) * (zmax - zmin)
+                    ? (amrex::Random(engine) - 0.5_rt) * (zmax - zmin)
                     : amrex::RandomNormal(0, pos_std[2], engine);
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2], engine, z, duz_per_uz0_dzeta);
 
-                const amrex::Real z_central = z + pos_mean_z;
+                const amrex::Real z_central = z + z_mean;
                 int valid_id = pid;
                 if (z_central < zmin || z_central > zmax) valid_id = -1;
 

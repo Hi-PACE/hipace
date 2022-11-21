@@ -64,6 +64,7 @@ Fields::AllocData (
         m_explicit = Hipace::GetInstance().m_explicit;
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
         const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
+        const bool any_salame = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame();
 
         if (m_explicit) {
             // explicit solver:
@@ -97,6 +98,13 @@ Fields::AllocData (
             if (m_any_neutral_background) {
                 Comps[isl].multi_emplace(N_Comps[isl], "rho");
             }
+
+            isl = WhichSlice::Salame;
+            if (any_salame) {
+                Comps[isl].multi_emplace(N_Comps[isl], "Ez_target", "Ez_no_salame", "Ez",
+                    "jx", "jy", "jz_beam", "Bx", "By", "Sy", "Sx");
+            }
+
         } else {
             // predictor-corrector:
             // all beams and plasmas share rho jx jy jz
@@ -127,6 +135,9 @@ Fields::AllocData (
             if (m_any_neutral_background) {
                 Comps[isl].multi_emplace(N_Comps[isl], "rho");
             }
+
+            isl = WhichSlice::Salame;
+            // empty, not compatible
         }
     }
 
@@ -523,8 +534,8 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         }
-        duplicate<4>(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
-                          WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
+        duplicate(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
+                       WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
     } else {
         shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
         if (mesh_refinement) {
@@ -821,23 +832,24 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 
 
 void
-Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice)
+Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice,
+                        const int which_slice)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
 
     PhysConst phys_const = get_phys_const();
     // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        Comps[WhichSlice::This]["Ez"], 1);
+    amrex::MultiFab lhs(getSlices(lev, which_slice), amrex::make_alias,
+                        Comps[which_slice]["Ez"], 1);
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
     LinCombination(m_source_nguard, getStagingArea(lev),
         1._rt/(phys_const.ep0*phys_const.c),
-        derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+        derivative<Direction::x>{getField(lev, which_slice, "jx"), geom[lev]},
         1._rt/(phys_const.ep0*phys_const.c),
-        derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+        derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
     SetBoundaryCondition(geom, lev, "Ez", islice);
     // Solve Poisson equation.

@@ -62,9 +62,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
     which_slice == WhichSlice::This || which_slice == WhichSlice::Next ||
-    which_slice == WhichSlice::RhoIons,
+    which_slice == WhichSlice::RhoIons || which_slice == WhichSlice::Salame,
     "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
-    " (WhichSlice::Next) or for the ion charge deposition (WhichSLice::RhoIons)");
+    " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhoIons)"
+    " or for the Salame slice (WhichSlice::Salame)");
 
     // only deposit plasma currents on their according MR level
     if (plasma.m_level != lev) return;
