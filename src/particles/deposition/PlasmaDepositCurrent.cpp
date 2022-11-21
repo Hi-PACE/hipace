@@ -168,7 +168,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
                     amrex::CompileTimeOptions<false, true>, // do_tiling
 #endif
                     amrex::CompileTimeOptions<false, true>  // use_laser
-                >{},  
+                >{},
                 {
                     Hipace::m_depos_order_xy,
                     Hipace::m_outer_depos_loop,
