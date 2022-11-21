@@ -60,24 +60,15 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     m_outputSeries.resize(nlev);
     m_last_output_dumped.resize(nlev);
 
-    if (nlev > 1) {
-        for (int lev=0; lev<nlev; ++lev) {
-            std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
-                                   + m_openpmd_backend;
+    for (int lev=0; lev<nlev; ++lev) {
+        std::string filename = m_file_prefix +
+            (nlev>1 ? "/lev_" + std::to_string(lev) : "") +
+            "/openpmd_%06T." + m_openpmd_backend;
 
-            m_outputSeries[lev] = std::make_unique< openPMD::Series >(
-                filename, openPMD::Access::CREATE);
-            m_last_output_dumped[lev] = -1;
-        }
-    } else {
-        std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
-
-        m_outputSeries[0] = std::make_unique< openPMD::Series >(
+        m_outputSeries[lev] = std::make_unique< openPMD::Series >(
             filename, openPMD::Access::CREATE);
-        m_last_output_dumped[0] = -1;
+        m_last_output_dumped[lev] = -1;
     }
-
-
 
     // TODO: meta-data: author, mesh path, extensions, software
 }
