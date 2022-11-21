@@ -90,16 +90,16 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     const amrex::Real dxi = 1.0/dx[0];
     const amrex::Real dyi = 1.0/dx[1];
     const amrex::Real dzi = 1.0/dx[2];
-    amrex::Real invvol = 1._rt;
+    amrex::Real invvol = dxi * dyi * dzi;
 
     if (Hipace::m_normalized_units) {
         if (lev == 0) {
-            invvol = dxi * dyi * dzi;
+            invvol = 1._rt;
         } else {
             // re-scaling the weight in normalized units to get the same charge density on lev 1
             // Not necessary in SI units, there the weight is the actual charge and not the density
             amrex::Real const * AMREX_RESTRICT dx_lev0 = gm[0].CellSize();
-            invvol = dx_lev0[0] * dx_lev0[1] * dx_lev0[2] * dxi * dyi * dzi * dxi * dyi * dzi;
+            invvol = dx_lev0[0] * dx_lev0[1] * dx_lev0[2] * dxi * dyi * dzi;
         }
     }
 
