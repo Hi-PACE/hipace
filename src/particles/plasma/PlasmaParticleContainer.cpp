@@ -200,7 +200,8 @@ IonizationModule (const int lev,
         const int by_comp = Comps[WhichSlice::This]["By"];
         const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
-        const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+        const amrex::Real dx_inv = 1._rt/dx[0];
+        const amrex::Real dy_inv = 1._rt/dx[1];
 
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
@@ -254,7 +255,7 @@ IonizationModule (const int lev,
             doGatherShapeN(xp, yp,
                            ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
                            exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                           dx_arr, x_pos_offset, y_pos_offset, depos_order_xy);
+                           dx_inv, dy_inv, x_pos_offset, y_pos_offset, depos_order_xy);
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;

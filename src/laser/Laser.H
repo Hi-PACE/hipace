@@ -39,11 +39,13 @@ namespace LaserFFT {
 #else
 #  ifdef AMREX_USE_FLOAT
     using VendorFFT = fftwf_plan;
+    using FFTWComplex = fftwf_complex;
     const auto VendorCreate = fftwf_plan_dft_2d;
     const auto VendorExecute = fftwf_execute;
     const auto VendorDestroy = fftwf_destroy_plan;
 #  else
     using VendorFFT = fftw_plan;
+    using FFTWComplex = fftw_complex;
     const auto VendorCreate = fftw_plan_dft_2d;
     const auto VendorExecute = fftw_execute;
     const auto VendorDestroy = fftw_destroy_plan;

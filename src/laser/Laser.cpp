@@ -113,14 +113,14 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
         // Forward FFT plan
         m_plan_fwd = LaserFFT::VendorCreate(
             fft_size[1], fft_size[0],
-            reinterpret_cast<fftw_complex*>(m_rhs.dataPtr()),
-            reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
+            reinterpret_cast<LaserFFT::FFTWComplex*>(m_rhs.dataPtr()),
+            reinterpret_cast<LaserFFT::FFTWComplex*>(m_rhs_fourier.dataPtr()),
             FFTW_FORWARD, FFTW_ESTIMATE);
         // Backward FFT plan
         m_plan_bkw = LaserFFT::VendorCreate(
             fft_size[1], fft_size[0],
-            reinterpret_cast<fftw_complex*>(m_rhs_fourier.dataPtr()),
-            reinterpret_cast<fftw_complex*>(m_sol.dataPtr()),
+            reinterpret_cast<LaserFFT::FFTWComplex*>(m_rhs_fourier.dataPtr()),
+            reinterpret_cast<LaserFFT::FFTWComplex*>(m_sol.dataPtr()),
             FFTW_BACKWARD, FFTW_ESTIMATE);
 #endif
     }
@@ -266,8 +266,8 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
 
     amrex::FArrayBox rhs_mg;
     amrex::FArrayBox acoeff_real;
-    amrex::Real acoeff_real_scalar;
-    amrex::Real acoeff_imag_scalar;
+    amrex::Real acoeff_real_scalar = 0._rt;
+    amrex::Real acoeff_imag_scalar = 0._rt;
 
     amrex::Real djn {0.};
 
