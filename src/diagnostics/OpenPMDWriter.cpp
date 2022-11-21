@@ -57,24 +57,18 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
 
-    if (nlev > 1) {
-        for (int lev=0; lev<nlev; ++lev) {
-            std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
-                                   + m_openpmd_backend;
+    m_outputSeries.resize(nlev);
+    m_last_output_dumped.resize(nlev);
 
-            m_outputSeries.push_back(std::make_unique< openPMD::Series >(
-                filename, openPMD::Access::CREATE) );
-            m_last_output_dumped.push_back(-1);
-        }
-    } else {
-        std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
+    for (int lev=0; lev<nlev; ++lev) {
+        std::string filename = m_file_prefix +
+            (nlev>1 ? "/lev_" + std::to_string(lev) : "") +
+            "/openpmd_%06T." + m_openpmd_backend;
 
-        m_outputSeries.push_back(std::make_unique< openPMD::Series >(
-            filename, openPMD::Access::CREATE) );
-        m_last_output_dumped.push_back(-1);
+        m_outputSeries[lev] = std::make_unique< openPMD::Series >(
+            filename, openPMD::Access::CREATE);
+        m_last_output_dumped[lev] = -1;
     }
-
-
 
     // TODO: meta-data: author, mesh path, extensions, software
 }
@@ -411,9 +405,10 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     }
 }
 
-void OpenPMDWriter::reset ()
+void OpenPMDWriter::reset (const int output_step)
 {
     for (int lev = 0; lev<m_outputSeries.size(); ++lev) {
+        if (output_step != m_last_output_dumped[lev]) continue;
         m_outputSeries[lev].reset();
     }
 }
