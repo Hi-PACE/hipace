@@ -44,6 +44,7 @@ Laser::ReadParameters ()
     queryWithParser(pp, "focal_distance", m_focal_distance);
     queryWithParser(pp, "position_mean", loc_array);
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
+    queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
 
@@ -297,42 +298,49 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
         Array3<amrex::Real const> const isl_arr = isl_fab.array();
         const int chi = Comps[WhichSlice::This]["chi"];
 
-        int const Nx = bx.length(0);
-        int const Ny = bx.length(1);
+        // Calculate phase terms. 0 if !m_use_phase
+        amrex::Real tj00 = 0.;
+        amrex::Real tjp1 = 0.;
+        amrex::Real tjp2 = 0.;
 
-        // Get the central point. Useful to get the on-axis phase and calculate kx and ky
-        int const imid = (Nx+1)/2;
-        int const jmid = (Ny+1)/2;
+        if (m_use_phase) {
+            int const Nx = bx.length(0);
+            int const Ny = bx.length(1);
 
-        // Calculate complex arguments (theta) needed
-        // Just once, on axis, as done in Wake-T
-        // This is done with a reduce operation, returning the sum of the four elements nearest
-        // the axis (both real and imag parts, and for the 3 arrays relevant) ...
-        amrex::ReduceOps<
-            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-        amrex::ReduceData<
-            amrex::Real, amrex::Real, amrex::Real,
-            amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
-        using ReduceTuple = typename decltype(reduce_data)::Type;
-        reduce_op.eval(bx, reduce_data,
-        [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
-        {
-            if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
-                return {
-                    n00j00_arr(i,j,0), n00j00_arr(i,j,1),
-                    n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
-                    n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
-                };
-            } else {
-                return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
-            }
-        });
-        // ... and taking the argument of the resulting complex number.
-        ReduceTuple hv = reduce_data.value(reduce_op);
-        const amrex::Real tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
-        const amrex::Real tjp1 = std::atan2(amrex::get<3>(hv), amrex::get<2>(hv));
-        const amrex::Real tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
+            // Get the central point.
+            int const imid = (Nx+1)/2;
+            int const jmid = (Ny+1)/2;
+
+            // Calculate complex arguments (theta) needed
+            // Just once, on axis, as done in Wake-T
+            // This is done with a reduce operation, returning the sum of the four elements nearest
+            // the axis (both real and imag parts, and for the 3 arrays relevant) ...
+            amrex::ReduceOps<
+                amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+            amrex::ReduceData<
+                amrex::Real, amrex::Real, amrex::Real,
+                amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
+            using ReduceTuple = typename decltype(reduce_data)::Type;
+            reduce_op.eval(bx, reduce_data,
+                           [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+                           {
+                               if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
+                                   return {
+                                       n00j00_arr(i,j,0), n00j00_arr(i,j,1),
+                                       n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
+                                       n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
+                                   };
+                               } else {
+                                   return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
+                               }
+                           });
+            // ... and taking the argument of the resulting complex number.
+            ReduceTuple hv = reduce_data.value(reduce_op);
+            tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
+            tjp1 = std::atan2(amrex::get<3>(hv), amrex::get<2>(hv));
+            tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
+        }
 
         amrex::Real dt1 = tj00 - tjp1;
         amrex::Real dt2 = tjp1 - tjp2;
@@ -505,39 +513,46 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
         int const Nx = bx.length(0);
         int const Ny = bx.length(1);
 
-        // Get the central point. Useful to get the on-axis phase and calculate kx and ky
+        // Get the central point. Useful to get the on-axis phase and calculate kx and ky.
         int const imid = (Nx+1)/2;
         int const jmid = (Ny+1)/2;
 
-        // Calculate complex arguments (theta) needed
-        // Just once, on axis, as done in Wake-T
-        // This is done with a reduce operation, returning the sum of the four elements nearest
-        // the axis (both real and imag parts, and for the 3 arrays relevant) ...
-        amrex::ReduceOps<
-            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-            amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-        amrex::ReduceData<
-            amrex::Real, amrex::Real, amrex::Real,
-            amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
-        using ReduceTuple = typename decltype(reduce_data)::Type;
-        reduce_op.eval(bx, reduce_data,
-        [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
-        {
-            if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
-                return {
-                    n00j00_arr(i,j,0), n00j00_arr(i,j,1),
-                    n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
-                    n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
-                };
-            } else {
-                return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
-            }
-        });
-        // ... and taking the argument of the resulting complex number.
-        ReduceTuple hv = reduce_data.value(reduce_op);
-        const amrex::Real tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
-        const amrex::Real tjp1 = std::atan2(amrex::get<3>(hv), amrex::get<2>(hv));
-        const amrex::Real tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
+        // Calculate phase terms. 0 if !m_use_phase
+        amrex::Real tj00 = 0.;
+        amrex::Real tjp1 = 0.;
+        amrex::Real tjp2 = 0.;
+
+        if (m_use_phase) {
+            // Calculate complex arguments (theta) needed
+            // Just once, on axis, as done in Wake-T
+            // This is done with a reduce operation, returning the sum of the four elements nearest
+            // the axis (both real and imag parts, and for the 3 arrays relevant) ...
+            amrex::ReduceOps<
+                amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+            amrex::ReduceData<
+                amrex::Real, amrex::Real, amrex::Real,
+                amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
+            using ReduceTuple = typename decltype(reduce_data)::Type;
+            reduce_op.eval(bx, reduce_data,
+                           [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+                           {
+                               if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
+                                   return {
+                                       n00j00_arr(i,j,0), n00j00_arr(i,j,1),
+                                       n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
+                                       n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
+                                   };
+                               } else {
+                                   return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
+                               }
+                           });
+            // ... and taking the argument of the resulting complex number.
+            ReduceTuple hv = reduce_data.value(reduce_op);
+            tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
+            tjp1 = std::atan2(amrex::get<3>(hv), amrex::get<2>(hv));
+            tjp2 = std::atan2(amrex::get<5>(hv), amrex::get<4>(hv));
+        }
 
         amrex::Real dt1 = tj00 - tjp1;
         amrex::Real dt2 = tjp1 - tjp2;

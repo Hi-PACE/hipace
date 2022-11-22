@@ -508,7 +508,7 @@ Laser parameters
 ----------------
 
 The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
-The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse duration ``laser.tau``.
+The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse duration ``laser.tau``. The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
 
 * ``laser.use_laser`` (`0` or `1`) optional (default `0`)
     Whether to activate the laser envelope solver.
@@ -534,6 +534,9 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
 
 * ``laser.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
+
+* ``laser.use_phase`` (`bool`) optional (default `true`)
+    Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accirate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
 * ``laser.solver_type`` (`string`) optional (default `multigrid`)
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
