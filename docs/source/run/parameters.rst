@@ -536,7 +536,7 @@ The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse du
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
 * ``laser.use_phase`` (`bool`) optional (default `true`)
-    Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accirate, but can cause numerical issues in the presence of strong depletion/frequency shift.
+    Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
 * ``laser.solver_type`` (`string`) optional (default `multigrid`)
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
