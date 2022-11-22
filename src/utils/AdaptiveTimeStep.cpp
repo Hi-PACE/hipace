@@ -76,6 +76,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
                              const bool initial)
 {
     HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
+    using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
     if (!Hipace::HeadRank() && initial) return;
@@ -84,6 +85,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
 
     // Extract properties associated with physical size of the box
     const PhysConst phys_const = get_phys_const();
+    const amrex::Real clightinv = 1._rt/phys_const.c;
 
     const int nbeams = beams.get_nbeams();
 
@@ -111,42 +113,32 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_min_uz(m_timestep_data[ibeam][WhichDouble::MinUz]);
-        amrex::Real* p_min_uz = gpu_min_uz.dataPtr();
+        amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
+                         amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
+        amrex::ReduceData<amrex::Real, amrex::Real,
+                          amrex::Real, amrex::Real> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights(
-                m_timestep_data[ibeam][WhichDouble::SumWeights]);
-        amrex::Real* p_sum_weights = gpu_sum_weights.dataPtr();
+        reduce_op.eval(numParticleOnTile, reduce_data,
+            [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
+            {
+                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return {
+                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
+                };
+                return {
+                    wp[ip],
+                    wp[ip] * uzp[ip] * clightinv,
+                    wp[ip] * uzp[ip] * uzp[ip] * clightinv * clightinv,
+                    uzp[ip] * clightinv
+                };
+            });
 
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz(
-            m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]);
-        amrex::Real* p_sum_weights_times_uz = gpu_sum_weights_times_uz.dataPtr();
-
-        amrex::Gpu::DeviceScalar<amrex::Real> gpu_sum_weights_times_uz_squared(
-            m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]);
-        amrex::Real* p_sum_weights_times_uz_squared =
-            gpu_sum_weights_times_uz_squared.dataPtr();
-
-        amrex::ParallelFor(numParticleOnTile,
-            [=] AMREX_GPU_DEVICE (long ip) {
-
-                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return;
-
-                amrex::Gpu::Atomic::Add(p_sum_weights, wp[ip]);
-                amrex::Gpu::Atomic::Add(p_sum_weights_times_uz, wp[ip]*uzp[ip]/phys_const.c);
-                amrex::Gpu::Atomic::Add(p_sum_weights_times_uz_squared, wp[ip]*uzp[ip]*uzp[ip]
-                                        /phys_const.c/phys_const.c);
-                amrex::Gpu::Atomic::Min(p_min_uz, uzp[ip]/phys_const.c);
-
-        }
-        );
-        /* adding beam particle information to time step info */
-        m_timestep_data[ibeam][WhichDouble::SumWeights] = gpu_sum_weights.dataValue();
-        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] = gpu_sum_weights_times_uz.dataValue();
-        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] =
-                                               gpu_sum_weights_times_uz_squared.dataValue();
-        m_timestep_data[ibeam][WhichDouble::MinUz] = std::min(m_timestep_data[ibeam][WhichDouble::MinUz],
-                                               gpu_min_uz.dataValue());
+        auto res = reduce_data.value(reduce_op);
+        m_timestep_data[ibeam][WhichDouble::SumWeights] += amrex::get<0>(res);
+        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] += amrex::get<1>(res);
+        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] += amrex::get<2>(res);
+        m_timestep_data[ibeam][WhichDouble::MinUz] =
+            std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
     }
 
     // only the last box or at initialiyation the adaptive time step is calculated
