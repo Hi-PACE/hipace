@@ -53,4 +53,6 @@ ion.mass_Da = 1.008
 ion.initial_ion_level = 0
 ion.ionization_product = elec
 
+lasers.names = no_laser
+
 diagnostic.diag_type = xyz
