@@ -29,9 +29,9 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beams.names = no_beam \
         geometry.prob_lo     = -20.   -20.   -8  \
         geometry.prob_hi     =  20.    20.    6  \
-        laser.use_laser = 1 \
+        lasers.names = laser \
+        lasers.lambda0 = .8e-6 \
         laser.a0 = 4.5 \
-        laser.lambda0 = .8e-6 \
         laser.position_mean = 0. 0. 0 \
         laser.w0 = 4 4 \
         laser.L0 = 2 \

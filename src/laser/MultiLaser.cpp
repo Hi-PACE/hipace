@@ -1,3 +1,12 @@
+/* Copyright 2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, AlexanderSinn
+ * Severin Diederichs, atmyers, Angel Ferran Pousa
+ * License: BSD-3-Clause-LBNL
+ */
+
 #include "MultiLaser.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
@@ -19,30 +28,19 @@
 void
 MultiLaser::ReadParameters ()
 {
-    amrex::ParmParse pp(m_name);
-    queryWithParser(pp, "use_laser", m_use_laser);
-    queryWithParser(pp, "a0", m_a0);
+    amrex::ParmParse pp("lasers");
+    getWithParser(pp, "names", m_names);
+
+    m_use_laser = m_names[0] != "no_laser";
+
     if (!m_use_laser) return;
 #if defined(AMREX_USE_HIP)
     amrex::Abort("Laser solver not implemented with HIP");
 #endif
-    amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "w0", tmp_vector)){
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == 2,
-        "The laser waist w0 must be provided in x and y, "
-        "so laser.w0 should contain 2 values");
-        for (int i=0; i<2; i++) m_w0[i] = tmp_vector[i];
-    }
 
-    bool length_is_specified = queryWithParser(pp, "L0", m_L0);;
-    bool duration_is_specified = queryWithParser(pp, "tau", m_tau);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
-        "Please specify exlusively either the pulse length L0 or the duration tau of the laser");
-    if (duration_is_specified) m_L0 = m_tau/get_phys_const().c;
+    m_nlasers = m_names.size();
+
     getWithParser(pp, "lambda0", m_lambda0);
-    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-    queryWithParser(pp, "focal_distance", m_focal_distance);
-    queryWithParser(pp, "position_mean", loc_array);
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
@@ -57,8 +55,6 @@ MultiLaser::ReadParameters ()
     if (mg_param_given && (m_solver_type != "multigrid")) {
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
     }
-
-    for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
 }
 
 
@@ -706,18 +702,7 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
     // Basic laser parameters and constants
     Complex I(0,1);
     constexpr int dcomp = 0;
-    const amrex::Real a0 = m_a0;
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
-    const amrex::Real w0 = m_w0[0];
-    const amrex::Real x0 = m_position_mean[0];
-    const amrex::Real y0 = m_position_mean[1];
-    const amrex::Real z0 = m_position_mean[2];
-    const amrex::Real L0 = m_L0;
-    const amrex::Real zfoc = m_focal_distance;
-
-    AMREX_ALWAYS_ASSERT(m_w0[0] == m_w0[1]);
-    AMREX_ALWAYS_ASSERT(x0 == 0._rt);
-    AMREX_ALWAYS_ASSERT(y0 == 0._rt);
 
     // Get grid properties
     const auto plo = geom.ProbLoArray();
@@ -739,21 +724,99 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
             bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
                 const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
                 const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
 
-                // Compute envelope for time step 0
-                Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
-                Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
-                Complex prefactor = a0/diffract_factor;
-                Complex time_exponent = (z-z0+zfoc)*(z-z0+zfoc)/(L0*L0);
-                Complex stcfactor = prefactor * amrex::exp( - time_exponent );
-                Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
-                Complex envelope = stcfactor * amrex::exp( exp_argument );
-                np1j00_arr(i,j,k,dcomp  ) = envelope.real();
-                np1j00_arr(i,j,k,dcomp+1) = envelope.imag();
+                for (const auto& laser : m_all_lasers) {
+                    const amrex::Real a0 = laser.m_a0;
+                    const amrex::Real w0 = laser.m_w0;
+                    const amrex::Real x0 = laser.m_position_mean[0];
+                    const amrex::Real y0 = laser.m_position_mean[1];
+                    const amrex::Real z0 = laser.m_position_mean[2];
+                    const amrex::Real L0 = laser.m_L0;
+                    const amrex::Real zfoc = laser.m_focal_distance;
+
+                    amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
+
+                    // Compute envelope for time step 0
+                    Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
+                    Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
+                    Complex prefactor = a0/diffract_factor;
+                    Complex time_exponent = (z-z0+zfoc)*(z-z0+zfoc)/(L0*L0);
+                    Complex stcfactor = prefactor * amrex::exp( - time_exponent );
+                    Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
+                    Complex envelope = stcfactor * amrex::exp( exp_argument );
+                    np1j00_arr(i,j,k,dcomp  ) += envelope.real();
+                    np1j00_arr(i,j,k,dcomp+1) += envelope.imag();
+                }
             }
             );
     }
 }
+/*
+amrex::Gpu::DeviceVector<amrex::Real>
+MultiLaser::getA0s ()
+{
+    amrex::Gpu::DeviceVector<amrex::Real> a0s(m_nlasers);
+    for (int i=0; i<m_nlasers; i++) {
+        a0s[i] = m_all_lasers[i].getA0();
+    }
+    return a0s;
+}
+
+amrex::Gpu::DeviceVector<amrex::Real>
+MultiLaser::getK0s ()
+{
+    amrex::Gpu::DeviceVector<amrex::Real> k0s(m_nlasers);
+    for (int i=0; i<m_nlasers; i++) {
+        k0s[i] = m_all_lasers[i].getK0();
+    }
+    return k0s;
+}
+
+amrex::Gpu::DeviceVector<amrex::Real>
+MultiLaser::getW0s ()
+{
+    amrex::Gpu::DeviceVector<amrex::Real> w0s(m_nlasers);
+    for (int i=0; i<m_nlasers; i++) {
+        w0s[i] = m_all_lasers[i].getW0();
+    }
+    return w0s;
+}
+
+amrex::Gpu::DeviceVector<amrex::Real>
+MultiLaser::getX0s ()
+{
+    amrex::Gpu::DeviceVector<amrex::Real> x0s(m_nlasers);
+    for (int i=0; i<m_nlasers; i++) {
+        x0s[i] = m_all_lasers[i].getX0();
+    }
+    return x0s;
+}
+
+amrex::Gpu::DeviceVector<amrex::Real>
+MultiLaser::getY0s ()
+{
+    amrex::Gpu::DeviceVector<amrex::Real> y0s(m_nlasers);
+    for (int i=0; i<m_nlasers; i++) {
+        x0s[i] = m_all_lasers[i].getX0();
+    }
+    return x0s;
+}
+
+amrex::Gpu::DeviceVector<amrex::Real>
+MultiLaser::getX0s ()
+{
+    amrex::Gpu::DeviceVector<amrex::Real> x0s(m_nlasers);
+    for (int i=0; i<m_nlasers; i++) {
+        x0s[i] = m_all_lasers[i].getX0();
+    }
+    return x0s;
+}
+
+    amrex::Gpu::DeviceVector<amrex::Real> getX0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getY0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getZ0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getL0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getZfocs ();
+*/

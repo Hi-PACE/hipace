@@ -12,12 +12,13 @@ hipace.do_tiling = 0
 geometry.prob_lo     = -6.*kp_inv   -6.*kp_inv   -8.*kp_inv
 geometry.prob_hi     =  6.*kp_inv    6.*kp_inv    6.*kp_inv
 
-laser.use_laser = 1
+lasers.names = laser
+lasers.lambda0 = .8e-6
+
 laser.a0 = 1
 laser.position_mean = 0. 0. 0
-laser.w0 = 2.*kp_inv 2.*kp_inv
+laser.w0 = 2.*kp_inv
 laser.L0 = 2.*kp_inv
-laser.lambda0 = .8e-6
 laser.focal_distance = 0.001
 
 hipace.bxby_solver=explicit

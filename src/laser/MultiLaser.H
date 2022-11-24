@@ -1,6 +1,16 @@
+/* Copyright 2022
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: MaxThevenet, AlexanderSinn
+ * Severin Diederichs, atmyers, Angel Ferran Pousa
+ * License: BSD-3-Clause-LBNL
+ */
+
 #ifndef MULTILASER_H_
 #define MULTILASER_H_
 
+#include "Laser.H"
 #include "fields/Fields.H"
 #include "mg_solver/HpMultiGrid.H"
 
@@ -171,16 +181,24 @@ public:
 
 private:
 
-    std::string m_name = "laser"; /**< name of the laser */
-    amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
-    amrex::RealVect m_w0 {0., 0., 0.}; /**< Laser waist in x and y (the third value is omitted) */
-    amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
-    amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
-    amrex::Real m_lambda0 {0.}; /**< Laser central wavelength */
-    /** Average position of the Gaussian laser pulse */
-    amrex::RealVect m_position_mean {0., 0., 0.};
+/*
+    amrex::Gpu::DeviceVector<amrex::Real> getA0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getK0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getW0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getX0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getY0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getZ0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getL0s ();
+    amrex::Gpu::DeviceVector<amrex::Real> getZfocs ();
+*/
+    /** Laser central wavelength.
+     * he central wavelength influences the solver. As long as all the lasers are on the same grid
+     * (part of MultiLaser), this must be a property of MultiLaser. */
+    amrex::Real m_lambda0 {0.};
+    amrex::Vector<std::string> m_names; /**< name of the laser */
+    int m_nlasers; /**< Number of laser pulses */
+    amrex::Vector<Laser> m_all_lasers; /**< Each is a laser pulse */
     int m_3d_on_host {0};/** Whether the 3D laser envelope is stored in host or device memory */
-    amrex::Real m_focal_distance {0.};
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
     std::string m_solver_type = "multigrid";
