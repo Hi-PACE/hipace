@@ -723,25 +723,28 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
         amrex::Array4<amrex::Real> const & np1j00_arr = np1j00.array(mfi);
 
         // Initialize a Gaussian laser envelope on slice islice
-        amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
-                const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
-
-                np1j00_arr(i,j,k,dcomp  ) = 0._rt;
-                np1j00_arr(i,j,k,dcomp+1) = 0._rt;
-                for (const auto& laser : m_all_lasers) {
-                    const amrex::Real a0 = laser.m_a0;
-                    const amrex::Real w0 = laser.m_w0;
-                    const amrex::Real x0 = laser.m_position_mean[0];
-                    const amrex::Real y0 = laser.m_position_mean[1];
-                    const amrex::Real z0 = laser.m_position_mean[2];
-                    const amrex::Real L0 = laser.m_L0;
-                    const amrex::Real zfoc = laser.m_focal_distance;
-
+        for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
+            const auto& laser = m_all_lasers[ilaser];
+            const amrex::Real a0 = laser.m_a0;
+            const amrex::Real w0 = laser.m_w0;
+            const amrex::Real x0 = laser.m_position_mean[0];
+            const amrex::Real y0 = laser.m_position_mean[1];
+            const amrex::Real z0 = laser.m_position_mean[2];
+            const amrex::Real L0 = laser.m_L0;
+            const amrex::Real zfoc = laser.m_focal_distance;
+            amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                {
                     amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
+                    const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
+                    const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
+
+                    // For first laser, setval to 0.
+                    if (ilaser == 0) {
+                        np1j00_arr(i,j,k,dcomp  ) = 0._rt;
+                        np1j00_arr(i,j,k,dcomp+1) = 0._rt;
+                    }
 
                     // Compute envelope for time step 0
                     Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
@@ -754,8 +757,8 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
                     np1j00_arr(i,j,k,dcomp  ) += envelope.real();
                     np1j00_arr(i,j,k,dcomp+1) += envelope.imag();
                 }
-            }
-            );
+                );
+        }
     }
 }
 /*
