@@ -508,56 +508,60 @@ Laser parameters
 ----------------
 
 The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
-The laser pulse length :math:`L0 = \tau / c_0` can be specified via the pulse duration ``laser.tau``. The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
+The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
+Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
+which you can find in the output openPMD file as `laser_real` (for the real part of the envelope) and `laser_imag` for its imaginary part.
+Parameters starting with ``lasers.`` apply to all laser pulses, parameters starting with ``<laser name>`` apply to a single laser pulse.
 
-* ``laser.use_laser`` (`0` or `1`) optional (default `0`)
-    Whether to activate the laser envelope solver.
+* ``lasers.names`` (list of `string`)
+    The names of the laser pulses, separated by a space.
+    To run without a laser, choose the name ``no_laser``.
 
-* ``laser.a0`` (`float`) optional (default `0`)
-    Peak normalized vector potential of the laser pulse.
+* ``lasers.lambda0`` (`float`)
+    Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
 
-* ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
-    The mean position of the laser in `x, y, z`.
-
-* ``laser.w0`` (2 `float`) optional (default `0 0`)
-    The laser waist in `x, y`.
-
-* ``laser.L0`` (`float`) optional (default `0`)
-    The laser pulse length in `z`. Use either the pulse length or the pulse duration.
-
-* ``laser.tau`` (`float`) optional (default `0`)
-    The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
-    Use either the pulse length or the pulse duration.
-
-* ``laser.lambda0`` (`float`)
-    The laser pulse wavelength.
-
-* ``laser.focal_distance`` (`float`)
-    Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
-
-* ``laser.use_phase`` (`bool`) optional (default `true`)
+* ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
-* ``laser.solver_type`` (`string`) optional (default `multigrid`)
+* ``lasers.solver_type`` (`string`) optional (default `multigrid`)
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
     With the multigrid solver, we could drop this assumption.
     For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
 
-* ``laser.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+* ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.
 
-* ``laser.MG_tolerance_abs`` (`float`) optional (default `0.`)
+* ``lasers.MG_tolerance_abs`` (`float`) optional (default `0.`)
     Absolute error tolerance of the multigrid solver used for the laser pulse.
 
-* ``laser.MG_verbose`` (`int`) optional (default `0`)
+* ``lasers.MG_verbose`` (`int`) optional (default `0`)
     Level of verbosity of the multigrid solver used for the laser pulse.
 
-* ``laser.MG_average_rhs`` (`0` or `1`) optional (default `1`)
+* ``lasers.MG_average_rhs`` (`0` or `1`) optional (default `1`)
     Whether to use the most stable discretization for the envelope solver.
 
-* ``laser.3d_on_host`` (`0` or `1`) optional (default `0`)
+* ``lasers.3d_on_host`` (`0` or `1`) optional (default `0`)
     When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
+
+* ``<laser name>.a0`` (`float`) optional (default `0`)
+    Peak normalized vector potential of the laser pulse.
+
+* ``<laser name>.position_mean`` (3 `float`) optional (default `0 0 0`)
+    The mean position of the laser in `x, y, z`.
+
+* ``<laser name>.w0`` (2 `float`) optional (default `0 0`)
+    The laser waist in `x, y`.
+
+* ``<laser name>.L0`` (`float`) optional (default `0`)
+    The laser pulse length in `z`. Use either the pulse length or the pulse duration ``<laser name>.tau``.
+
+* ``<laser name>.tau`` (`float`) optional (default `0`)
+    The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
+    Use either the pulse length or the pulse duration.
+
+* ``<laser name>.focal_distance`` (`float`)
+    Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
 Diagnostic parameters
 ---------------------

@@ -30,14 +30,14 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         // STEP 1: Calculate what Ez would be with the initial SALAME beam weight
 
         // advance plasma to the temp slice, only shift once
-        hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_laser, hipace->Geom(lev),
+        hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser, hipace->Geom(lev),
                                                 true, true, true, iter==0, lev);
 
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                         WhichSlice::Next, {"jx_beam", "jy_beam"});
 
         // deposit plasma jx and jy on the next temp slice, to the SALANE slice
-        hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
+        hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
                 WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
 
         // use an initial guess of zero for Bx and By in MG solver to reduce relative error
@@ -64,7 +64,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         if (do_advance) {
             SalameOnlyAdvancePlasma(hipace, lev);
 
-            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_laser,
+            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
                     WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
         } else {
             SalameGetJxJyFromBxBy(hipace, lev);
@@ -110,7 +110,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         hipace->InitializeSxSyWithBeam(lev);
 
-        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_laser,
+        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
                                                   hipace->Geom(lev), lev);
 
         hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);

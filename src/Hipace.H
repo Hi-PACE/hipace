@@ -16,7 +16,7 @@
 #include "particles/beam/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
-#include "laser/Laser.H"
+#include "laser/MultiLaser.H"
 #include "utils/Constants.H"
 #include "utils/Parser.H"
 #include "diagnostics/Diagnostic.H"
@@ -361,7 +361,7 @@ public:
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
-    Laser m_laser;
+    MultiLaser m_multi_laser;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
 #ifdef HIPACE_USE_OPENPMD

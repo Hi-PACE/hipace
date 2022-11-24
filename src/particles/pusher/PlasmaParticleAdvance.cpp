@@ -26,7 +26,7 @@ void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
-                        PlasmaBins& bins, const Laser& laser)
+                        PlasmaBins& bins, const MultiLaser& multi_laser)
 {
     std::string str = "UpdateForcePushParticles_Plasma(    )";
     if (temp_slice) str.at(32) = 't';
@@ -59,8 +59,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
         // extract the laser Fields
-        const bool use_laser = laser.m_use_laser;
-        const amrex::MultiFab& a_mf = laser.getSlices(WhichLaserSlice::n00j00);
+        const bool use_laser = multi_laser.m_use_laser;
+        const amrex::MultiFab& a_mf = multi_laser.getSlices(WhichLaserSlice::n00j00);
 
         // Extract field array from MultiFab
         Array3<const amrex::Real> const& a_arr = use_laser ?

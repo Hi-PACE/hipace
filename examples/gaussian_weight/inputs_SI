@@ -29,4 +29,6 @@ beam.ppc = 2 2 1
 
 plasmas.names = no_plasma
 
+lasers.names = no_laser
+
 diagnostic.diag_type = xyz
