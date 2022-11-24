@@ -214,6 +214,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
                     q_mu0_mass_ratio *= ion_lev[ip];
                 }
 
+                const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
+                const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
+
                 amrex::Real Aabssqp = 0._rt;
                 [[maybe_unused]] auto laser_arr = a_laser_arr;
                 if constexpr (use_laser.value) {
@@ -248,12 +251,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const Laser& l
                         }
                         // --- Compute shape factors
                         // x direction
-                        const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                         auto [shape_x, cell_x] =
                             compute_single_shape_factor<outer_depos_loop_x, depos_order_xy>(xmid, tx);
 
                         // y direction
-                        const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
                         auto [shape_y, cell_y] =
                             compute_single_shape_factor<false, depos_order_xy>(ymid, iy);
 
