@@ -211,7 +211,9 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
             const int bx_comp = Comps[WhichSlice::Salame]["Bx"];
             const int by_comp = Comps[WhichSlice::Salame]["By"];
 
-            const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+            const amrex::Real dx_inv = 1._rt/dx[0];
+            const amrex::Real dy_inv = 1._rt/dx[1];
+            const amrex::Real dz = dx[2];
 
             // Offset for converting positions to indexes
             amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
@@ -224,8 +226,6 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
             amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
             amrex::Real * const uy_temp = soa.GetRealData(PlasmaIdx::uy_temp).data();
             int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
-
-            const int depos_order_xy = Hipace::m_depos_order_xy;
 
             const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
             const bool can_ionize = plasma.m_can_ionize;
@@ -243,25 +243,25 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                 int const num_particles =
                     do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
                 amrex::ParallelFor(
+                    amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+                    {Hipace::m_depos_order_xy},
                     num_particles,
-                    [=] AMREX_GPU_DEVICE (long idx) {
+                    [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                         const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                         const amrex::Real xp = x_prev[ip];
                         const amrex::Real yp = y_prev[ip];
 
-                        amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-                        amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                        amrex::Real Bxp = 0._rt;
+                        amrex::Real Byp = 0._rt;
 
                         // Gather Bx and By along with 4 dummy fields to use this funciton
-                        doGatherShapeN(xp, yp,
-                                       ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                                       0, 0, 0, bx_comp, by_comp, 0,
-                                       dx_arr, x_pos_offset, y_pos_offset, depos_order_xy);
+                        doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
+                            bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                         const amrex::Real q_mass_ratio = can_ionize ?
                             ion_lev[ip] * charge_mass_ratio : charge_mass_ratio;
 
-                        const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dx_arr[2];
+                        const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dz;
 
                         ux_temp[ip] =  a1_times_dz * q_mass_ratio * Byp;
                         uy_temp[ip] = -a1_times_dz * q_mass_ratio * Bxp;

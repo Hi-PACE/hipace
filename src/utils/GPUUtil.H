@@ -33,8 +33,8 @@ struct Array2 {
           ncomp(rhs.ncomp)
 #endif
     {
-        // slice is only one cell thick
-        AMREX_ALWAYS_ASSERT(rhs.begin.z + 1 == rhs.end.z);
+        // slice is only one cell thick if allocated
+        AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin.z + 1 == rhs.end.z);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -118,8 +118,8 @@ struct Array3 {
           ncomp(rhs.ncomp)
 #endif
     {
-        // slice is only one cell thick
-        AMREX_ALWAYS_ASSERT(rhs.begin.z + 1 == rhs.end.z);
+        // slice is only one cell thick if allocated
+        AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin.z + 1 == rhs.end.z);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE

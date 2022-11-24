@@ -33,7 +33,6 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const amrex::Real dt = Hipace::m_dt / n_subcycles;
-    const int depos_order_xy = Hipace::m_depos_order_xy;
 
     // Extract field array from FabArrays in MultiFabs.
     // (because there is currently no transverse parallelization, the index
@@ -47,7 +46,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const int by_comp = Comps[WhichSlice::This]["By"];
     const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
-    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+    const amrex::Real dx_inv = 1._rt/dx[0];
+    const amrex::Real dy_inv = 1._rt/dx[1];
 
     // Offset for converting positions to indexes
     amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
@@ -82,8 +82,10 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const amrex::Real external_Ez_uniform = Hipace::m_external_Ez_uniform;
 
     amrex::ParallelFor(
+        amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+        {Hipace::m_depos_order_xy},
         num_particles,
-        [=] AMREX_GPU_DEVICE (long idx) {
+        [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
             const int ip = indices[cell_start+idx];
 
             amrex::ParticleReal xp, yp, zp;
@@ -111,10 +113,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                doGatherShapeN(xp, yp,
-                               ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                               exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                               dx_arr, x_pos_offset, y_pos_offset, depos_order_xy);
+                doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                    slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                 ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
                                    external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
