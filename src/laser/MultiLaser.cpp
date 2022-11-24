@@ -730,6 +730,8 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
                 const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
                 const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
 
+                np1j00_arr(i,j,k,dcomp  ) = 0._rt;
+                np1j00_arr(i,j,k,dcomp+1) = 0._rt;
                 for (const auto& laser : m_all_lasers) {
                     const amrex::Real a0 = laser.m_a0;
                     const amrex::Real w0 = laser.m_w0;
