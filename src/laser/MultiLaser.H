@@ -1,5 +1,5 @@
-#ifndef LASER_H_
-#define LASER_H_
+#ifndef MULTILASER_H_
+#define MULTILASER_H_
 
 #include "fields/Fields.H"
 #include "mg_solver/HpMultiGrid.H"
@@ -62,7 +62,7 @@ struct WhichLaserSlice {
 
 class Fields;
 
-class Laser
+class MultiLaser
 {
 
     using SpectralFieldLoc = amrex::BaseFab <amrex::GpuComplex<amrex::Real>>;
@@ -74,12 +74,12 @@ private:
 public:
 
     /** Constructor */
-    explicit Laser ()
+    explicit MultiLaser ()
     {
         ReadParameters();
     }
 
-    ~Laser ()
+    ~MultiLaser ()
     {
         if (!m_use_laser) return;
         if (m_solver_type == "fft") {
@@ -223,4 +223,4 @@ private:
 #endif
 };
 
-#endif // LASER_H_
+#endif // MULTILASER_H_

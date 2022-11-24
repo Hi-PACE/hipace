@@ -1,4 +1,4 @@
-#include "Laser.H"
+#include "MultiLaser.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -17,7 +17,7 @@
 #endif
 
 void
-Laser::ReadParameters ()
+MultiLaser::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
     queryWithParser(pp, "use_laser", m_use_laser);
@@ -63,12 +63,12 @@ Laser::ReadParameters ()
 
 
 void
-Laser::InitData (const amrex::BoxArray& slice_ba,
+MultiLaser::InitData (const amrex::BoxArray& slice_ba,
                  const amrex::DistributionMapping& slice_dm)
 {
     if (!m_use_laser) return;
 
-    HIPACE_PROFILE("Laser::InitData()");
+    HIPACE_PROFILE("MultiLaser::InitData()");
 
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
@@ -128,12 +128,12 @@ Laser::InitData (const amrex::BoxArray& slice_ba,
 }
 
 void
-Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
+MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 {
 
     if (!m_use_laser) return;
 
-    HIPACE_PROFILE("Laser::Init3DEnvelope()");
+    HIPACE_PROFILE("MultiLaser::Init3DEnvelope()");
     // Allocate the 3D field on this box
     // Note: box has no guard cells
     m_F.resize(bx, m_nfields_3d, m_3d_on_host ? amrex::The_Pinned_Arena() : amrex::The_Arena());
@@ -163,13 +163,13 @@ Laser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 }
 
 void
-Laser::Copy (int isl, bool to3d)
+MultiLaser::Copy (int isl, bool to3d)
 {
     if (!m_use_laser) return;
 
     using namespace amrex::literals;
 
-    HIPACE_PROFILE("Laser::Copy()");
+    HIPACE_PROFILE("MultiLaser::Copy()");
 
     amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
     amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
@@ -222,7 +222,7 @@ Laser::Copy (int isl, bool to3d)
 }
 
 void
-Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step)
+MultiLaser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step)
 {
 
     if (!m_use_laser) return;
@@ -237,10 +237,10 @@ Laser::AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::R
 }
 
 void
-Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step)
+MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step)
 {
 
-    HIPACE_PROFILE("Laser::AdvanceSliceMG()");
+    HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
 
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
@@ -453,10 +453,10 @@ Laser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex:
 }
 
 void
-Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt, int step)
+MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const amrex::Real dt, int step)
 {
 
-    HIPACE_PROFILE("Laser::AdvanceSliceFFT()");
+    HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
 
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
@@ -694,11 +694,11 @@ Laser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, const
 }
 
 void
-Laser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
+MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
 {
     if (!m_use_laser) return;
 
-    HIPACE_PROFILE("Laser::InitLaserSlice()");
+    HIPACE_PROFILE("MultiLaser::InitLaserSlice()");
 
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;

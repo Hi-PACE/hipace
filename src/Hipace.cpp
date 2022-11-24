@@ -99,7 +99,7 @@ Hipace::Hipace () :
     m_multi_beam(this),
     m_multi_plasma(this),
     m_adaptive_time_step(m_multi_beam.get_nbeams()),
-    m_laser(),
+    m_multi_laser(),
     m_diags(this->maxLevel()+1)
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
@@ -189,7 +189,7 @@ Hipace::Hipace () :
     MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
 #endif
 
-    m_use_laser = m_laser.m_use_laser;
+    m_use_laser = m_multi_laser.m_use_laser;
 }
 
 Hipace::~Hipace ()
@@ -347,8 +347,8 @@ Hipace::MakeNewLevelFromScratch (
     DefineSliceGDB(lev, ba, dm);
     m_fields.AllocData(lev, Geom(), m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
-    m_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
-    m_diags.Initialize(lev, m_laser.m_use_laser);
+    m_multi_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
+    m_diags.Initialize(lev, m_multi_laser.m_use_laser);
 }
 
 void
@@ -436,7 +436,7 @@ Hipace::Evolve ()
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
-        m_multi_plasma.DepositNeutralizingBackground(m_fields, m_laser, WhichSlice::RhoIons, geom[lev],
+        m_multi_plasma.DepositNeutralizingBackground(m_fields, m_multi_laser, WhichSlice::RhoIons, geom[lev],
                                                      finestLevel()+1);
 
         // Loop over longitudinal boxes on this rank, from head to tail
@@ -445,11 +445,11 @@ Hipace::Evolve ()
         {
             const amrex::Box& bx = boxArray(lev)[it];
 
-            if (m_laser.m_use_laser) {
+            if (m_multi_laser.m_use_laser) {
                 AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
                 AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
                 // Before that, the 3D fields of the envelope are not initialized (not even allocated).
-                m_laser.Init3DEnvelope(step, bx, Geom(0));
+                m_multi_laser.Init3DEnvelope(step, bx, Geom(0));
                 if (it == n_boxes-1) ResetLaser();
             }
 
@@ -547,7 +547,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
                                     boxArray(0)[ibox].smallEnd(Direction::z),
                                     m_box_sorters, ibox);
     // Get this laser slice from the 3D array
-    m_laser.Copy(islice_coarse, false);
+    m_multi_laser.Copy(islice_coarse, false);
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
 
@@ -591,8 +591,8 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
         // Advance laser slice by 1 step and store result to 3D array
-        m_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
-        m_laser.Copy(islice_coarse, true);
+        m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
+        m_multi_laser.Copy(islice_coarse, true);
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();
@@ -619,7 +619,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
 
     // deposit jx, jy, jz, rho and chi for all plasmas
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
+        m_fields, m_multi_laser, WhichSlice::This, false, true, true, true, true, geom[lev], lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     // deposit jx_beam and jy_beam in the Next slice
@@ -648,7 +648,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
     InitializeSxSyWithBeam(lev);
 
     // Deposit Sx and Sy for every plasma species
-    m_multi_plasma.ExplicitDeposition(m_fields, m_laser, geom[lev], lev);
+    m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, geom[lev], lev);
 
     // Solves Bx, By using Sx, Sy and chi
     ExplicitMGSolveBxBy(lev, WhichSlice::This);
@@ -664,7 +664,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
 
     // shift and update force terms, push plasma particles
     // don't shift force terms again if salame was used
-    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev],
+    m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev],
                                     false, true, true, !do_salame, lev);
 
     // Push beam particles
@@ -685,13 +685,13 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
     }
 
     // push plasma
-    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false,
+    m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false,
                                     true, false, false, lev);
 
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
     // deposit jx jy jz rho and maybe chi
     m_multi_plasma.DepositCurrent(
-        m_fields, m_laser, WhichSlice::This, false, true, true, true, m_use_laser, geom[lev], lev);
+        m_fields, m_multi_laser, WhichSlice::This, false, true, true, true, m_use_laser, geom[lev], lev);
 
     m_fields.AddRhoIons(lev);
 
@@ -747,7 +747,7 @@ Hipace::ResetLaser ()
     HIPACE_PROFILE("Hipace::ResetLaser()");
 
     for (int sl=WhichLaserSlice::nm1j00; sl<WhichLaserSlice::N; sl++) {
-        m_laser.getSlices(sl).setVal(0.);
+        m_multi_laser.getSlices(sl).setVal(0.);
     }
 }
 
@@ -970,7 +970,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
                           Comps[WhichSlice::This]["By"], 0, 1, m_fields.m_slices_nguards);
 
     // shift force terms, update force terms using guessed Bx and By
-    m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], false, false, true, true, lev);
+    m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, false, true, true, lev);
 
     const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
 
@@ -985,12 +985,12 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_predcorr_avg_iterations += 1.0;
 
         // Push particles to the next temp slice
-        m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev], true, true, false, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], true, true, false, false, lev);
 
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
         // plasmas deposit jx jy to next temp slice
         m_multi_plasma.DepositCurrent(
-            m_fields, m_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
+            m_fields, m_multi_laser, WhichSlice::Next, true, true, false, false, false, geom[lev], lev);
 
         // beams deposit jx jy to the next slice
         m_multi_beam.DepositCurrentSlice(m_fields, geom, lev, step, islice_local, bins,
@@ -1037,7 +1037,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         }
 
         // Update force terms using the calculated Bx and By
-        m_multi_plasma.AdvanceParticles(m_fields, m_laser, geom[lev],
+        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev],
                                         false, false, true, false, lev);
 
         // Shift relative_Bfield_error values
@@ -1114,7 +1114,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     // Receive beam particles.
     {
         const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.begin()+nbeams, 0);
-        if (np_total == 0 && !m_laser.m_use_laser) return;
+        if (np_total == 0 && !m_multi_laser.m_use_laser) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
@@ -1198,9 +1198,9 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     // Receive laser
     {
         if (only_ghost) return;
-        if (!m_laser.m_use_laser) return;
+        if (!m_multi_laser.m_use_laser) return;
         AMREX_ALWAYS_ASSERT(nz_laser > 0);
-        amrex::FArrayBox& laser_fab = m_laser.getFAB();
+        amrex::FArrayBox& laser_fab = m_multi_laser.getFAB();
         amrex::Array4<amrex::Real> laser_arr = laser_fab.array();
         const amrex::Box& bx = laser_fab.box(); // does not include ghost cells
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -1209,7 +1209,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         const std::size_t nreals = bx.numPts()*laser_fab.nComp();
         MPI_Status lstatus;
 
-        if (m_laser.is3dOnHost()) {
+        if (m_multi_laser.is3dOnHost()) {
             // Directly receive envelope in laser fab
             MPI_Recv(laser_fab.dataPtr(), nreals,
                      amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
@@ -1249,8 +1249,8 @@ Hipace::Notify (const int step, const int it,
     const bool only_time = m_physical_time >= m_max_time;
     NotifyFinish(it, only_ghost, only_time); // finish the previous send
     int nz_laser = 0;
-    if (m_laser.m_use_laser){
-        const amrex::Box& laser_bx = m_laser.getFAB().box();
+    if (m_multi_laser.m_use_laser){
+        const amrex::Box& laser_bx = m_multi_laser.getFAB().box();
         nz_laser = laser_bx.bigEnd(2) - laser_bx.smallEnd(2) + 1;
     }
     const int nbeams = m_multi_beam.get_nbeams();
@@ -1309,7 +1309,7 @@ Hipace::Notify (const int step, const int it,
     // Send beam particles. Currently only one tile.
     {
         const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.begin()+nbeams, 0);
-        if (np_total == 0 && !m_laser.m_use_laser) return;
+        if (np_total == 0 && !m_multi_laser.m_use_laser) return;
         const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
         const amrex::Long buffer_size = psize*np_total;
         char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
@@ -1402,14 +1402,14 @@ Hipace::Notify (const int step, const int it,
     // Send laser data
     {
         if (only_ghost) return;
-        if (!m_laser.m_use_laser) return;
-        const amrex::FArrayBox& laser_fab = m_laser.getFAB();
+        if (!m_multi_laser.m_use_laser) return;
+        const amrex::FArrayBox& laser_fab = m_multi_laser.getFAB();
         amrex::Array4<amrex::Real const> const& laser_arr = laser_fab.array();
         const amrex::Box& lbx = laser_fab.box(); // does not include ghost cells
         const std::size_t nreals = lbx.numPts()*laser_fab.nComp();
         m_lsend_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
             (sizeof(amrex::Real)*nreals);
-        if (m_laser.is3dOnHost()) {
+        if (m_multi_laser.is3dOnHost()) {
             amrex::Gpu::streamSynchronize();
             // Copy from laser envelope 3D array (on host) to MPI buffer (on host)
             laser_fab.copyToMem<amrex::RunOn::Host>(lbx, 0, laser_fab.nComp(), m_lsend_buffer);
@@ -1521,7 +1521,7 @@ Hipace::FillDiagnostics (const int lev, int i_slice)
     if (m_diags.hasField()[lev]) {
         m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev),
                       m_diags.getF(lev).box(), Geom(lev),
-                      m_diags.getCompsIdx(), m_diags.getNFields(), m_laser);
+                      m_diags.getCompsIdx(), m_diags.getNFields(), m_multi_laser);
     }
 }
 

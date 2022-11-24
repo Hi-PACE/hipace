@@ -16,7 +16,7 @@
 #include "AMReX_GpuLaunch.H"
 
 void
-ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser& laser,
+ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
                     amrex::Geometry const& gm, const int lev) {
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
@@ -48,8 +48,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
             plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
 
         // Construct empty Array4 with one z slice so that Array3 constructor works for no laser
-        const Array3<const amrex::Real> a_laser_arr = laser.m_use_laser ?
-            laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
+        const Array3<const amrex::Real> a_laser_arr = multi_laser.m_use_laser ?
+            multi_laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
             amrex::Array4<const amrex::Real>(nullptr, {0,0,0}, {0,0,1}, 0);
 
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
@@ -71,7 +71,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Laser
             amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>,      // depos_order
                             amrex::CompileTimeOptions<false, true>,     // can_ionize
                             amrex::CompileTimeOptions<false, true>>{},  // use_laser
-            {Hipace::m_depos_order_xy, plasma.m_can_ionize, laser.m_use_laser},
+            {Hipace::m_depos_order_xy, plasma.m_can_ionize, multi_laser.m_use_laser},
             pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip, auto a_depos_order, auto can_ionize, auto use_laser) {
                 constexpr int depos_order = a_depos_order.value;

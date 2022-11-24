@@ -12,7 +12,7 @@
 #include "particles/sorting/TileSort.H"
 #include "fields/Fields.H"
 #include "Hipace.H"
-#include "laser/Laser.H"
+#include "laser/MultiLaser.H"
 
 /** \brief Gather field values for particles, update the force terms, and push the particles
  * \param[in,out] plasma plasma species to push
@@ -24,13 +24,13 @@
  * \param[in] do_shift boolean to define if the force terms are shifted
  * \param[in] lev MR level
  * \param[in] bins objects containing indices of plasma particles in each tile
- * \param[in] laser laser pulse, which affects the plasma via the ponderomotive force
+ * \param[in] multi_laser Laser pulses, which affects the plasma via the ponderomotive force
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, const bool do_push,
                         const bool do_update, const bool do_shift, int const lev,
-                        PlasmaBins& bins, const Laser& laser);
+                        PlasmaBins& bins, const MultiLaser& multi_laser);
 
 /** \brief Resets the particle position x, y, to x_prev, y_prev
  * \param[in,out] plasma plasma species to reset
