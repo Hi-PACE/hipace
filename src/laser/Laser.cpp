@@ -31,5 +31,5 @@ Laser::Laser (std::string name)
     queryWithParser(pp, "position_mean", loc_array);
     for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
     AMREX_ALWAYS_ASSERT(m_position_mean[0] == 0.);
-    AMREX_ALWAYS_ASSERT(m_position_mean[1] == 0.);    
+    AMREX_ALWAYS_ASSERT(m_position_mean[1] == 0.);
 }
