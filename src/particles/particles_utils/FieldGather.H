@@ -217,7 +217,7 @@ void doBxByGatherShapeN (const amrex::Real xp,
 
 
 /**
- * \brief Field gather for a single particle
+ * \brief Laser field gather for a single particle
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the field gather
  * \param[in] xp Particle position x
@@ -289,7 +289,7 @@ void doLaserGatherShapeN (const amrex::Real xp,
 
 
 /**
- * \brief Field gather for a single particle
+ * \brief Laser field gather for a single particle
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the field gather
  * \param[in] xp Particle position x
