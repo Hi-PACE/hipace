@@ -432,7 +432,7 @@ Hipace::Evolve ()
         }
 #endif
 
-        ResetAllQuantities();
+        ResetAllQuantities(step);
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
@@ -450,7 +450,6 @@ Hipace::Evolve ()
                 AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
                 // Before that, the 3D fields of the envelope are not initialized (not even allocated).
                 m_multi_laser.Init3DEnvelope(step, bx, Geom(0));
-                if (it == n_boxes-1) ResetLaser();
             }
 
             Wait(step, it);
@@ -727,9 +726,13 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
 }
 
 void
-Hipace::ResetAllQuantities ()
+Hipace::ResetAllQuantities (const int step)
 {
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
+
+    if (step != m_numprocs_z - 1 - m_rank_z && m_multi_laser.m_use_laser) {
+        ResetLaser();
+    }
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);
