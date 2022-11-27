@@ -16,19 +16,9 @@
 class Laser
 {
 public:
+
     Laser (std::string name);
-/*
-    amrex::Real getA0 () {return m_a0};
-    amrex::Real getK0 () {return m_k0};
-    amrex::Real getW0 () {return m_w0};
-    amrex::Real getL0 () {return m_l0};
-    amrex::Real getTau () {return m_tau};
-    amrex::Real getLambda () {return m_lambda0};
-    amrex::Real getFoc () {return m_focal_distance};
-    amrex::Real getX0 () {return m_position_mean[0]};
-    amrex::Real getY0 () {return m_position_mean[1]};
-    amrex::Real getZ0 () {return m_position_mean[2]};
-*/
+
     std::string m_name {""};
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::Real m_w0 {0.}; /**< Laser waist */
