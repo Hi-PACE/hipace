@@ -727,8 +727,6 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
             const auto& laser = m_all_lasers[ilaser];
             const amrex::Real a0 = laser.m_a0;
             const amrex::Real w0 = laser.m_w0;
-            const amrex::Real x0 = laser.m_position_mean[0];
-            const amrex::Real y0 = laser.m_position_mean[1];
             const amrex::Real z0 = laser.m_position_mean[2];
             const amrex::Real L0 = laser.m_L0;
             const amrex::Real zfoc = laser.m_focal_distance;
