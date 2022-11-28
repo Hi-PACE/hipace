@@ -432,7 +432,7 @@ Hipace::Evolve ()
         }
 #endif
 
-        ResetAllQuantities(step);
+        ResetAllQuantities();
 
         /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
         if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
@@ -726,13 +726,11 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
 }
 
 void
-Hipace::ResetAllQuantities (const int step)
+Hipace::ResetAllQuantities ()
 {
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
 
-    if (step != m_numprocs_z - 1 - m_rank_z && m_multi_laser.m_use_laser) {
-        ResetLaser();
-    }
+    if (m_use_laser) ResetLaser();
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);

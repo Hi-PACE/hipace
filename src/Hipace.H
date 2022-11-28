@@ -215,9 +215,8 @@ public:
     /** \brief Reset plasma and field slice quantities to initial value.
      *
      * Typically done at the beginning of each iteration.
-     * \param[in] step current time step
      */
-    void ResetAllQuantities (const int step);
+    void ResetAllQuantities ();
 
     /** \brief reset all laser slices to 0 */
     void ResetLaser ();
