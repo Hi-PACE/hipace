@@ -181,16 +181,6 @@ public:
 
 private:
 
-/*
-    amrex::Gpu::DeviceVector<amrex::Real> getA0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getK0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getW0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getX0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getY0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getZ0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getL0s ();
-    amrex::Gpu::DeviceVector<amrex::Real> getZfocs ();
-*/
     /** Laser central wavelength.
      * he central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
