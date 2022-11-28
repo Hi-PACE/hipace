@@ -450,7 +450,6 @@ Hipace::Evolve ()
                 AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
                 // Before that, the 3D fields of the envelope are not initialized (not even allocated).
                 m_multi_laser.Init3DEnvelope(step, bx, Geom(0));
-                if (it == n_boxes-1) ResetLaser();
             }
 
             Wait(step, it);
@@ -730,6 +729,8 @@ void
 Hipace::ResetAllQuantities ()
 {
     HIPACE_PROFILE("Hipace::ResetAllQuantities()");
+
+    if (m_use_laser) ResetLaser();
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         m_multi_plasma.ResetParticles(lev, true);
