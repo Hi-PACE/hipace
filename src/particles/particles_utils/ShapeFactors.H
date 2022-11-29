@@ -218,18 +218,18 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             const amrex::Real xfloor = amrex::Math::floor(xmid);
             const amrex::Real s_x = 1;
             const amrex::Real sdx = 0;
-            return {s_x, sdx, static_cast<int>(xfloor)};
+            return {s_x, -sdx, static_cast<int>(xfloor)};
         } else if constexpr (depos_order==1) {
             const amrex::Real xfloor = amrex::Math::floor(xmid);
             const amrex::Real xint = xmid-xfloor;
             if (ix==0) {
                 const amrex::Real s_x = 1 - xint;
                 const amrex::Real sdx = -1;
-                return {s_x, sdx, static_cast<int>(xfloor)+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)+ix};
             } else {
                 const amrex::Real s_x = xint;
                 const amrex::Real sdx = 1;
-                return {s_x, sdx, static_cast<int>(xfloor)+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)+ix};
             }
         } else if constexpr (depos_order==2) {
             xmid += 0.5_rt;
@@ -239,15 +239,15 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = (1.0_rt/2.0_rt)*xint_2 - 1.0_rt*xint + 0.5_rt;
                 const amrex::Real sdx = xint - 1.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = -xint_2 + 1.0_rt*xint + 0.5_rt;
                 const amrex::Real sdx = 1.0_rt - 2*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else {
                 const amrex::Real s_x = (1.0_rt/2.0_rt)*xint_2;
                 const amrex::Real sdx = xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             }
         } else if constexpr (depos_order==3) {
             const amrex::Real xfloor = amrex::Math::floor(xmid);
@@ -257,19 +257,19 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = -1.0_rt/6.0_rt*xint_3 + (1.0_rt/2.0_rt)*xint_2 - 1.0_rt/2.0_rt*xint + 1.0_rt/6.0_rt;
                 const amrex::Real sdx = -1.0_rt/2.0_rt*xint_2 + xint - 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = (1.0_rt/2.0_rt)*xint_3 - xint_2 + 2.0_rt/3.0_rt;
                 const amrex::Real sdx = (3.0_rt/2.0_rt)*xint_2 - 2*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==2) {
                 const amrex::Real s_x = -1.0_rt/2.0_rt*xint_3 + (1.0_rt/2.0_rt)*xint_2 + (1.0_rt/2.0_rt)*xint + 1.0_rt/6.0_rt;
                 const amrex::Real sdx = -3.0_rt/2.0_rt*xint_2 + xint + 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else {
                 const amrex::Real s_x = (1.0_rt/6.0_rt)*xint_3;
                 const amrex::Real sdx = (1.0_rt/2.0_rt)*xint_2;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             }
         }
     } else if constexpr (derivative_type==1) { // nodal derivative
@@ -279,11 +279,11 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = (xint < 0.5_rt) ?  1 : 0;
                 const amrex::Real sdx = -1;
-                return {s_x, sdx, static_cast<int>(xfloor)+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)+ix};
             } else {
                 const amrex::Real s_x = (xint < 0.5_rt) ?  0 : 1;
                 const amrex::Real sdx = 1;
-                return {s_x, sdx, static_cast<int>(xfloor)+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)+ix};
             }
         } else if constexpr (depos_order==1) {
             xmid += 0.5_rt;
@@ -292,15 +292,15 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = (xint < 0.5_rt) ? 1.0_rt/2.0_rt - xint : 0;
                 const amrex::Real sdx = xint - 1;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = (xint < 0.5_rt) ? xint + 1.0_rt/2.0_rt : 3.0_rt/2.0_rt - xint;
                 const amrex::Real sdx = 1 - 2*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else {
                 const amrex::Real s_x = (xint < 0.5_rt) ? 0 : xint - 1.0_rt/2.0_rt;
                 const amrex::Real sdx = xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             }
         } else if constexpr (depos_order==2) {
             const amrex::Real xfloor = amrex::Math::floor(xmid);
@@ -310,22 +310,22 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     (1.0_rt/2.0_rt)*xint_2 - 1.0_rt/2.0_rt*xint + 1.0_rt/8.0_rt : 0;
                 const amrex::Real sdx = -1.0_rt/2.0_rt*xint_2 + xint - 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     3.0_rt/4.0_rt - xint_2 : (1.0_rt/2.0_rt)*xint_2 - 3.0_rt/2.0_rt*xint + 9.0_rt/8.0_rt;
                 const amrex::Real sdx = (3.0_rt/2.0_rt)*xint_2 - 2*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==2) {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     (1.0_rt/2.0_rt)*xint_2 + (1.0_rt/2.0_rt)*xint + 1.0_rt/8.0_rt : -xint_2 + 2*xint - 1.0_rt/4.0_rt;
                 const amrex::Real sdx = -3.0_rt/2.0_rt*xint_2 + xint + 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     0 : (1.0_rt/2.0_rt)*xint_2 - 1.0_rt/2.0_rt*xint + 1.0_rt/8.0_rt;
                 const amrex::Real sdx = (1.0_rt/2.0_rt)*xint_2;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             }
         } else if constexpr (depos_order==3) {
             xmid += 0.5_rt;
@@ -338,31 +338,31 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
                     -1.0_rt/6.0_rt*xint_3 + (1.0_rt/4.0_rt)*xint_2 - 1.0_rt/8.0_rt*xint + 1.0_rt/48.0_rt :
                     0;
                 const amrex::Real sdx = (1.0_rt/6.0_rt)*xint_3 - 1.0_rt/2.0_rt*xint_2 + (1.0_rt/2.0_rt)*xint - 1.0_rt/6.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     (1.0_rt/2.0_rt)*xint_3 - 1.0_rt/4.0_rt*xint_2 - 5.0_rt/8.0_rt*xint + 23.0_rt/48.0_rt :
                     -1.0_rt/6.0_rt*xint_3 + (3.0_rt/4.0_rt)*xint_2 - 9.0_rt/8.0_rt*xint + 9.0_rt/16.0_rt;
                 const amrex::Real sdx = -2.0_rt/3.0_rt*xint_3 + (3.0_rt/2.0_rt)*xint_2 - 1.0_rt/2.0_rt*xint - 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==2) {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     -1.0_rt/2.0_rt*xint_3 - 1.0_rt/4.0_rt*xint_2 + (5.0_rt/8.0_rt)*xint + 23.0_rt/48.0_rt :
                     (1.0_rt/2.0_rt)*xint_3 - 7.0_rt/4.0_rt*xint_2 + (11.0_rt/8.0_rt)*xint + 17.0_rt/48.0_rt;
                 const amrex::Real sdx = xint_3 - 3.0_rt/2.0_rt*xint_2 - 1.0_rt/2.0_rt*xint + 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==3) {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     (1.0_rt/6.0_rt)*xint_3 + (1.0_rt/4.0_rt)*xint_2 + (1.0_rt/8.0_rt)*xint + 1.0_rt/48.0_rt :
                     -1.0_rt/2.0_rt*xint_3 + (5.0_rt/4.0_rt)*xint_2 - 3.0_rt/8.0_rt*xint + 5.0_rt/48.0_rt;
                 const amrex::Real sdx = -2.0_rt/3.0_rt*xint_3 + (1.0_rt/2.0_rt)*xint_2 + (1.0_rt/2.0_rt)*xint + 1.0_rt/6.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else {
                 const amrex::Real s_x = (xint < 0.5_rt) ?
                     0 :
                     (1.0_rt/6.0_rt)*xint_3 - 1.0_rt/4.0_rt*xint_2 + (1.0_rt/8.0_rt)*xint - 1.0_rt/48.0_rt;
                 const amrex::Real sdx = (1.0_rt/6.0_rt)*xint_3;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             }
         }
     } else if constexpr (derivative_type==2) { // centered derivative
@@ -372,15 +372,15 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = -1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = 1;
                 const amrex::Real sdx = 0;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             }
         } else if constexpr (depos_order==1) {
             const amrex::Real xfloor = amrex::Math::floor(xmid);
@@ -388,19 +388,19 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = (1.0_rt/2.0_rt)*xint - 1.0_rt/2.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = 1 - xint;
                 const amrex::Real sdx = -1.0_rt/2.0_rt*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else if (ix==2) {
                 const amrex::Real s_x = xint;
                 const amrex::Real sdx = 1.0_rt/2.0_rt - 1.0_rt/2.0_rt*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             } else {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = (1.0_rt/2.0_rt)*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-1+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-1+ix};
             }
         } else if constexpr (depos_order==2) {
             xmid += 0.5_rt;
@@ -410,23 +410,23 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = -1.0_rt/4.0_rt*xint_2 + (1.0_rt/2.0_rt)*xint - 1.0_rt/4.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = (1.0_rt/2.0_rt)*xint_2 - xint + 1.0_rt/2.0_rt;
                 const amrex::Real sdx = (1.0_rt/2.0_rt)*xint_2 - 1.0_rt/2.0_rt*xint - 1.0_rt/4.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==2) {
                 const amrex::Real s_x = -xint_2 + xint + 1.0_rt/2.0_rt;
                 const amrex::Real sdx = 1.0_rt/4.0_rt - 1.0_rt/2.0_rt*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==3) {
                 const amrex::Real s_x = (1.0_rt/2.0_rt)*xint_2;
                 const amrex::Real sdx = -1.0_rt/2.0_rt*xint_2 + (1.0_rt/2.0_rt)*xint + 1.0_rt/4.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = (1.0_rt/4.0_rt)*xint_2;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             }
         } else if constexpr (depos_order==3) {
             const amrex::Real xfloor = amrex::Math::floor(xmid);
@@ -436,27 +436,27 @@ derivative_shape_factor_result single_derivative_shape_factor (amrex::Real xmid,
             if (ix==0) {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = (1.0_rt/12.0_rt)*xint_3 - 1.0_rt/4.0_rt*xint_2 + (1.0_rt/4.0_rt)*xint - 1.0_rt/12.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==1) {
                 const amrex::Real s_x = -1.0_rt/6.0_rt*xint_3 + (1.0_rt/2.0_rt)*xint_2 - 1.0_rt/2.0_rt*xint + 1.0_rt/6.0_rt;
                 const amrex::Real sdx = -1.0_rt/4.0_rt*xint_3 + (1.0_rt/2.0_rt)*xint_2 - 1.0_rt/3.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==2) {
                 const amrex::Real s_x = (1.0_rt/2.0_rt)*xint_3 - xint_2 + 2.0_rt/3.0_rt;
                 const amrex::Real sdx = (1.0_rt/6.0_rt)*xint_3 - 1.0_rt/2.0_rt*xint;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==3) {
                 const amrex::Real s_x = -1.0_rt/2.0_rt*xint_3 + (1.0_rt/2.0_rt)*xint_2 + (1.0_rt/2.0_rt)*xint + 1.0_rt/6.0_rt;
                 const amrex::Real sdx = (1.0_rt/6.0_rt)*xint_3 - 1.0_rt/2.0_rt*xint_2 + 1.0_rt/3.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else if (ix==4) {
                 const amrex::Real s_x = (1.0_rt/6.0_rt)*xint_3;
                 const amrex::Real sdx = -1.0_rt/4.0_rt*xint_3 + (1.0_rt/4.0_rt)*xint_2 + (1.0_rt/4.0_rt)*xint + 1.0_rt/12.0_rt;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             } else {
                 const amrex::Real s_x = 0;
                 const amrex::Real sdx = (1.0_rt/12.0_rt)*xint_3;
-                return {s_x, sdx, static_cast<int>(xfloor)-2+ix};
+                return {s_x, -sdx, static_cast<int>(xfloor)-2+ix};
             }
         }
     }
