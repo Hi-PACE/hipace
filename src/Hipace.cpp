@@ -49,6 +49,7 @@ amrex::Real Hipace::m_initial_time = 0.0;
 int Hipace::m_verbose = 0;
 int Hipace::m_depos_order_xy = 2;
 int Hipace::m_depos_order_z = 0;
+int Hipace::m_depos_derivative_type = 2;
 bool Hipace::m_outer_depos_loop = false;
 amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
@@ -128,6 +129,9 @@ Hipace::Hipace () :
                             "Multiple boxes per rank only implemented for one rank.");
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
     queryWithParser(pph, "depos_order_z", m_depos_order_z);
+    queryWithParser(pph, "depos_derivative_type", m_depos_derivative_type);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_depos_order_xy != 0 || m_depos_derivative_type != 0,
+                            "Analytic derivative with depos_order=0 would vanish");
     queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);

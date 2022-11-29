@@ -94,6 +94,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         const amrex::Real dy_inv = 1._rt/dx[1];
 
         const PhysConst pc = get_phys_const();
+        const amrex::Real clight = pc.c;
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real charge_invvol = charge * invvol;
         const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
@@ -168,8 +169,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                     amrex::CompileTimeOptions<false, true>, // do_tiling
 #endif
                     amrex::CompileTimeOptions<false, true>  // use_laser
-                >{},
-                {
+                >{}, {
                     Hipace::m_depos_order_xy,
                     Hipace::m_outer_depos_loop,
                     plasma.m_can_ionize,
@@ -199,11 +199,11 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
                 const auto positions = pos_structs[ip];
                 if (positions.id() < 0) return;
-                const amrex::Real psi = psip[ip];
+                const amrex::Real psi_inv = 1._rt/psip[ip];
                 const amrex::Real xp = positions.pos(0);
                 const amrex::Real yp = positions.pos(1);
-                const amrex::Real vx_c = uxp[ip] / psi;
-                const amrex::Real vy_c = uyp[ip] / psi;
+                const amrex::Real vx_c = uxp[ip] * psi_inv;
+                const amrex::Real vy_c = uyp[ip] * psi_inv;
 
                 // calculate charge of the plasma particles
                 amrex::Real q_invvol = charge_invvol;
@@ -226,7 +226,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
                 // calculate gamma/psi for plasma particles
                 const amrex::Real gamma_psi = 0.5_rt * (
-                    (1._rt + 0.5_rt * Aabssqp) / (psi * psi) // TODO: fix units
+                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv // TODO: fix units
                     + vx_c * vx_c * clightinv * clightinv
                     + vy_c * vy_c * clightinv * clightinv
                     + 1._rt
@@ -269,9 +269,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                         // wqx, wqy wqz are particle current in each direction
                         const amrex::Real wqx  = charge_density * vx_c;
                         const amrex::Real wqy  = charge_density * vy_c;
-                        const amrex::Real wqz  = charge_density * (gamma_psi-1._rt) / clightinv;
+                        const amrex::Real wqz  = charge_density * (gamma_psi-1._rt) * clight;
                         const amrex::Real wq   = charge_density * gamma_psi;
-                        const amrex::Real wchi = charge_density * q_mu0_mass_ratio / psi;
+                        const amrex::Real wchi = charge_density * q_mu0_mass_ratio * psi_inv;
 
                         // Deposit current into isl_arr
                         if (jx != -1) { // deposit_jx_jy
