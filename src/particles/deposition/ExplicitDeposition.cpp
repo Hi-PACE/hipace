@@ -62,7 +62,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const amrex::Real dy_inv = 1._rt/dx[1];
 
         const PhysConst pc = get_phys_const();
-        const amrex::Real clight = pc.c;
+        const amrex::Real a_clight = pc.c;
         const amrex::Real clight_inv = 1._rt/pc.c;
         // The laser a0 is always normalized
         const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
@@ -159,7 +159,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                         amrex::Real AabssqDyp = 0._rt;
                         // Rename variables for NVCC lambda capture to work
                         [[maybe_unused]] auto laser_fac = a_laser_fac;
-                        [[maybe_unused]] auto a_clight = clight;
+                        [[maybe_unused]] auto clight = a_clight;
                         if constexpr (use_laser.value) {
                             const amrex::Real xp1y00 = abssq(
                                 laser_arr(i+1, j  , 0),
@@ -173,8 +173,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             const amrex::Real x00ym1 = abssq(
                                 laser_arr(i  , j-1, 0),
                                 laser_arr(i  , j-1, 1));
-                            AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * a_clight;
-                            AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * a_clight;
+                            AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
+                            AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
                         }
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sy), charge_density_mu0 * (
@@ -190,7 +190,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             )
                             - shape_x * shape_dy * dy_inv * (
                                 gamma_psi - vy * vy - 1._rt
-                            )) * clight
+                            )) * a_clight
                         ));
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sx), charge_density_mu0 * (
@@ -206,7 +206,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             )
                             + shape_x * shape_dy * dy_inv * (
                                 - vx * vy
-                            )) * clight
+                            )) * a_clight
                         ));
                     }
                 }
