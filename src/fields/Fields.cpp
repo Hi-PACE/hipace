@@ -13,7 +13,8 @@
 #include "OpenBoundary.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
-#include "particles/ShapeFactors.H"
+#include "utils/GPUUtil.H"
+#include "particles/particles_utils/ShapeFactors.H"
 
 using namespace amrex::literals;
 
@@ -63,24 +64,25 @@ Fields::AllocData (
         m_explicit = Hipace::GetInstance().m_explicit;
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
         const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
+        const bool any_salame = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame();
 
         if (m_explicit) {
             // explicit solver:
             // beams share rho_beam jx_beam jy_beam jz_beam
-            // but all plasma species have separate rho jx jy jz jxx jxy jyy
+            // rho jx jy jz for all plasmas and beams
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
 
             isl = WhichSlice::This;
-            // Bx and By adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
-                                                   "jx_beam", "jy_beam", "jz_beam", "rho_beam");
-            for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-                Comps[isl].multi_emplace(N_Comps[isl],
-                    "jx_"+plasma_name, "jy_"+plasma_name, "jz_"+plasma_name, "rho_"+plasma_name,
-                    "jxx_"+plasma_name, "jxy_"+plasma_name, "jyy_"+plasma_name);
+            // (Bx, By), (Sy, Sx) and (chi, chi2) adjacent for explicit solver
+            Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            if (Hipace::m_use_amrex_mlmg) {
+                Comps[isl].multi_emplace(N_Comps[isl], "chi2");
             }
+            Comps[isl].multi_emplace(N_Comps[isl], "Sy", "Sx", "ExmBy", "EypBx", "Ez",
+                "Bx", "By", "Bz", "Psi",
+                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -97,11 +99,12 @@ Fields::AllocData (
                 Comps[isl].multi_emplace(N_Comps[isl], "rho");
             }
 
-            // set up m_all_charge_currents_names
-            m_all_charge_currents_names.push_back("_beam");
-            for (const std::string& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-                m_all_charge_currents_names.push_back("_"+plasma_name);
+            isl = WhichSlice::Salame;
+            if (any_salame) {
+                Comps[isl].multi_emplace(N_Comps[isl], "Ez_target", "Ez_no_salame", "Ez",
+                    "jx", "jy", "jz_beam", "Bx", "By", "Sy", "Sx");
             }
+
         } else {
             // predictor-corrector:
             // all beams and plasmas share rho jx jy jz
@@ -113,6 +116,10 @@ Fields::AllocData (
             // Bx and By adjacent for explicit solver
             Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
                                                    "jx", "jy", "jz", "rho");
+
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            }
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
@@ -129,15 +136,9 @@ Fields::AllocData (
                 Comps[isl].multi_emplace(N_Comps[isl], "rho");
             }
 
-            // set up m_all_charge_currents_names
-            m_all_charge_currents_names.push_back("");
+            isl = WhichSlice::Salame;
+            // empty, not compatible
         }
-    }
-
-    // warning because the field output for rho might be confusing
-    if (m_explicit && m_any_neutral_background && Hipace::GetInstance().m_multi_plasma.m_nplasmas > 1) {
-        amrex::Print() << "WARNING: The neutralizing background of all plasma species combined will"
-            << " be added to rho_" << Hipace::GetInstance().m_multi_plasma.GetNames()[0] << "\n";
     }
 
     // allocate memory for fields
@@ -180,8 +181,8 @@ Fields::AllocData (
         for (int i=0; i<num_threads; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
-            // jx jy jz rho jxx jxy jyy
-            m_tmp_densities[i].resize(bx, 7);
+            // jx jy jz rho chi
+            m_tmp_densities[i].resize(bx, 5);
         }
     }
 }
@@ -190,14 +191,14 @@ Fields::AllocData (
 template<int dir>
 struct derivative_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> array;
+    Array2<amrex::Real const> array;
     amrex::Real dx_inv;
 
     // derivative of field in dir direction (x or y)
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
         constexpr bool is_x_dir = dir == Direction::x;
         constexpr bool is_y_dir = dir == Direction::y;
-        return (array(i+is_x_dir,j+is_y_dir,k) - array(i-is_x_dir,j-is_y_dir,k)) * dx_inv;
+        return (array(i+is_x_dir,j+is_y_dir) - array(i-is_x_dir,j-is_y_dir)) * dx_inv;
     }
 };
 
@@ -205,13 +206,13 @@ struct derivative_inner {
 template<>
 struct derivative_inner<Direction::z> {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> array1;
-    amrex::Array4<amrex::Real const> array2;
+    Array2<amrex::Real const> array1;
+    Array2<amrex::Real const> array2;
     amrex::Real dz_inv;
 
     // derivative of field in z direction
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k) const noexcept {
-        return (array1(i,j,k) - array2(i,j,k)) * dz_inv;
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
+        return (array1(i,j) - array2(i,j)) * dz_inv;
     }
 };
 
@@ -298,14 +299,13 @@ struct interpolated_field_xy {
 /** \brief inner version of interpolated_field_z */
 struct interpolated_field_z_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> arr_this;
-    amrex::Array4<amrex::Real const> arr_prev;
+    Array2<amrex::Real const> arr_this;
+    Array2<amrex::Real const> arr_prev;
     amrex::Real rel_z;
-    int lo2;
 
     // linear longitudinal field interpolation
     AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
-        return (1._rt-rel_z)*arr_this(i, j, lo2) + rel_z*arr_prev(i, j, lo2);
+        return (1._rt-rel_z)*arr_this(i, j) + rel_z*arr_prev(i, j);
     }
 };
 
@@ -319,7 +319,7 @@ struct interpolated_field_z {
     // use .array(mfi) like with amrex::MultiFab
     interpolated_field_z_inner array (amrex::MFIter& mfi) const {
         return interpolated_field_z_inner{
-            mfab_this.array(mfi), mfab_prev.array(mfi), rel_z, mfab_this[mfi].box().smallEnd(2)};
+            mfab_this.array(mfi), mfab_prev.array(mfi), rel_z};
     }
 };
 
@@ -328,28 +328,32 @@ struct interpolated_field_z {
 template<int interp_order_xy>
 using interpolated_field_xyz = interpolated_field_xy<interp_order_xy, interpolated_field_z>;
 
-/** \brief inner version of guarded_field */
-struct guarded_field_inner {
+/** \brief inner version of guarded_field_xy */
+struct guarded_field_xy_inner {
     // captured variables for GPU
-    amrex::Array4<amrex::Real const> array;
-    amrex::Box bx;
+    Array3<amrex::Real const> array;
+    int lox;
+    int hix;
+    int loy;
+    int hiy;
 
-    template<class...Args>
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int k, Args...args) const noexcept {
-        if (bx.contains(i,j,k)) {
-            return array(i,j,k,args...);
+    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j, int n) const noexcept {
+        if (lox <= i && i <= hix && loy <= j && j <= hiy) {
+            return array(i,j,n);
         } else return 0._rt;
     }
 };
 
 /** \brief if indices are outside of the fields box zero is returned */
-struct guarded_field {
+struct guarded_field_xy {
     // use brace initialization as constructor
     amrex::MultiFab& mfab; // field to be guarded (zero extended)
 
     // use .array(mfi) like with amrex::MultiFab
-    guarded_field_inner array (amrex::MFIter& mfi) const {
-        return guarded_field_inner{mfab.array(mfi), mfab[mfi].box()};
+    guarded_field_xy_inner array (amrex::MFIter& mfi) const {
+        const amrex::Box bx = mfab[mfi].box();
+        return guarded_field_xy_inner{mfab.const_array(mfi), bx.smallEnd(Direction::x),
+            bx.bigEnd(Direction::x), bx.smallEnd(Direction::y), bx.bigEnd(Direction::y)};
     }
 };
 
@@ -374,25 +378,25 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(dst, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-        const auto dst_array = dst.array(mfi);
-        const auto src_a_array = src_a.array(mfi);
-        const auto src_b_array = src_b.array(mfi);
+    for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
+        const Array2<amrex::Real> dst_array = dst.array(mfi);
+        const auto src_a_array = to_array2(src_a.array(mfi));
+        const auto src_b_array = to_array2(src_b.array(mfi));
         const amrex::Box bx = mfi.growntilebox(box_grow);
         const int box_i_lo = bx.smallEnd(Direction::x);
         const int box_j_lo = bx.smallEnd(Direction::y);
         const int box_i_hi = bx.bigEnd(Direction::x);
         const int box_j_hi = bx.bigEnd(Direction::y);
         amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
             {
                 const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
                 const amrex::Real tmp =
-                    inside ? factor_a * src_a_array(i,j,k) + factor_b * src_b_array(i,j,k) : 0._rt;
+                    inside ? factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j) : 0._rt;
                 if (do_add) {
-                    dst_array(i,j,k) += tmp;
+                    dst_array(i,j) += tmp;
                 } else {
-                    dst_array(i,j,k) = tmp;
+                    dst_array(i,j) = tmp;
                 }
             });
     }
@@ -401,7 +405,8 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
 void
 Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
               amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
-              const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp)
+              const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
+              MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
@@ -426,15 +431,16 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
 
     // Put contributions from i_slice to different diag_fab slices in GPU vector
     m_rel_z_vec.resize(k_max+1-k_min);
+    m_rel_z_vec_cpu.resize(k_max+1-k_min);
     for (int k=k_min; k<=k_max; ++k) {
         const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
         const amrex::Real mid_i_slice = (pos - poff_calc_z)/calc_geom.CellSize(2);
         amrex::Real sz_cell[depos_order_z + 1];
         const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
-        m_rel_z_vec[k-k_min] = 0;
+        m_rel_z_vec_cpu[k-k_min] = 0;
         for (int i=0; i<=depos_order_z; ++i) {
             if (k_cell+i == i_slice) {
-                m_rel_z_vec[k-k_min] = sz_cell[i];
+                m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
             }
         }
     }
@@ -443,28 +449,38 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     int k_start = k_min;
     int k_stop = k_max;
     for (int k=k_min; k<=k_max; ++k) {
-        if (m_rel_z_vec[k-k_min] == 0) ++k_start;
+        if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
         else break;
     }
     for (int k=k_max; k>=k_min; --k) {
-        if (m_rel_z_vec[k-k_min] == 0) --k_stop;
+        if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
         else break;
     }
     diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
     diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     if (diag_box.isEmpty()) return;
-
     auto& slice_mf = m_slices[lev][WhichSlice::This];
-    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field>{{slice_mf}, calc_geom};
+    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
+    auto& laser_mf = multi_laser.getSlices(WhichLaserSlice::n00j00);
+    auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
+
+#ifdef AMREX_USE_GPU
+    // This async copy happens on the same stream as the ParallelFor below, which uses the copied array.
+    // Therefore, it is safe to do it async.
+    amrex::Gpu::htod_memcpy_async(m_rel_z_vec.dataPtr(), m_rel_z_vec_cpu.dataPtr(),
+                                  m_rel_z_vec_cpu.size() * sizeof(amrex::Real));
+#else
+    std::memcpy(m_rel_z_vec.dataPtr(), m_rel_z_vec_cpu.dataPtr(),
+                m_rel_z_vec_cpu.size() * sizeof(amrex::Real));
+#endif
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
-    for (amrex::MFIter mfi(slice_mf); mfi.isValid(); ++mfi) {
+    for (amrex::MFIter mfi(slice_mf, DfltMfi); mfi.isValid(); ++mfi) {
         auto slice_array = slice_func.array(mfi);
         amrex::Array4<amrex::Real> diag_array = diag_fab.array();
 
         const int *diag_comps = diag_comps_vect.data();
         const amrex::Real *rel_z_data = m_rel_z_vec.data();
-        const int lo2 = slice_mf[mfi].box().smallEnd(2);
         const amrex::Real dx = diag_geom.CellSize(0);
         const amrex::Real dy = diag_geom.CellSize(1);
 
@@ -474,7 +490,18 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 const amrex::Real x = i * dx + poff_diag_x;
                 const amrex::Real y = j * dy + poff_diag_y;
                 const int m = n[diag_comps];
-                diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,lo2,m);
+                diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
+            });
+
+        if (!multi_laser.m_use_laser) continue;
+        auto laser_array = laser_func.array(mfi);
+        amrex::ParallelFor(diag_box,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+            {
+                const amrex::Real x = i * dx + poff_diag_x;
+                const amrex::Real y = j * dy + poff_diag_y;
+                diag_array(i,j,k,ncomp  ) += rel_z_data[k-k_min] * laser_array(x,y,0);
+                diag_array(i,j,k,ncomp+1) += rel_z_data[k-k_min] * laser_array(x,y,1);
             });
     }
 }
@@ -507,6 +534,8 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         }
+        duplicate(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
+                       WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
     } else {
         shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
         if (mesh_refinement) {
@@ -521,21 +550,14 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
 }
 
 void
-Fields::AddRhoIons (const int lev, bool inverse)
+Fields::AddRhoIons (const int lev)
 {
     if (!m_any_neutral_background) return;
     HIPACE_PROFILE("Fields::AddRhoIons()");
-    const std::string plasma_str = m_explicit
-                                   ? "_" + Hipace::GetInstance().m_multi_plasma.GetNames()[0] : "";
-    if (!inverse){
-        amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"+plasma_str],
-            1, m_slices_nguards);
-    } else {
-        amrex::MultiFab::Subtract(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-            Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"+plasma_str],
-            1, m_slices_nguards);
-    }
+
+    amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
+        Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"],
+        1, m_slices_nguards);
 }
 
 /** \brief Sets non zero Dirichlet Boundary conditions in RHS which is the source of the Poisson
@@ -548,7 +570,7 @@ Fields::AddRhoIons (const int lev, bool inverse)
  */
 template<class Functional>
 void
-SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver_size,
+SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
                         const amrex::Geometry& geom, const Functional& boundary_value)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
@@ -561,7 +583,6 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver
     const int box_len1 = solver_size.length(1);
     const int box_lo0 = solver_size.smallEnd(0);
     const int box_lo1 = solver_size.smallEnd(1);
-    const int box_lo2 = solver_size.smallEnd(2);
     const amrex::Real dx = geom.CellSize(0);
     const amrex::Real dy = geom.CellSize(1);
     const amrex::Real offset0 = GetPosOffset(0, geom, solver_size);
@@ -591,8 +612,7 @@ SetDirichletBoundaries (amrex::Array4<amrex::Real> RHS, const amrex::Box& solver
             const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
 
             // atomic add because the corners of RHS get two values
-            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx, box_lo2)),
-                                         - boundary_value(x, y) / dxdx);
+            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx)), - boundary_value(x, y) / dxdx);
         });
 }
 
@@ -610,7 +630,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             "Open Boundaries only work for lev0 with everything in one box");
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
-        const auto arr_staging_area = staging_area_fab.array();
+        const Array2<amrex::Real> arr_staging_area = staging_area_fab.array();
         const amrex::Box staging_box = staging_area_fab.box();
 
         const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
@@ -635,7 +655,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         MultipoleTuple coeff_tuple =
         amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
                          staging_area, m_source_nguard,
-            [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int k) noexcept
+            [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int) noexcept
             {
                 const amrex::Real x = (i * dx + poff_x) * scale;
                 const amrex::Real y = (j * dy + poff_y) * scale;
@@ -647,7 +667,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                         0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt
                     };
                 }
-                amrex::Real s_v = arr_staging_area(i, j, k);
+                amrex::Real s_v = arr_staging_area(i, j);
                 return GetMultipoleCoeffs(s_v, x, y);
             }
         );
@@ -679,10 +699,10 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             rel_z}, geom[lev-1]};
         amrex::MultiFab staging_area = getStagingArea(lev);
 
-        for (amrex::MFIter mfi(staging_area, false); mfi.isValid(); ++mfi)
+        for (amrex::MFIter mfi(staging_area, DfltMfi); mfi.isValid(); ++mfi)
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
-            const auto arr_staging_area = staging_area.array(mfi);
+            const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
             const amrex::Box fine_staging_box = staging_area[mfi].box();
 
             SetDirichletBoundaries(arr_staging_area,fine_staging_box,geom[lev],arr_solution_interp);
@@ -711,10 +731,10 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         rel_z}, geom[lev-1]};
     amrex::MultiFab field_fine = getField(lev, WhichSlice::This, component);
 
-    for (amrex::MFIter mfi( field_fine, false); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
     {
         auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
-        auto arr_field_fine = field_fine.array(mfi);
+        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
         const amrex::Box fine_box_extended = mfi.growntilebox(outer_edge);
         const amrex::Box fine_box_narrow = mfi.growntilebox(inner_edge);
 
@@ -729,14 +749,14 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
         const amrex::Real offset1 = GetPosOffset(1, geom[lev], fine_box_extended);
 
         amrex::ParallelFor(fine_box_extended,
-            [=] AMREX_GPU_DEVICE (int i, int j , int k) noexcept
+            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
             {
                 // set interpolated values near edge of fine field between outer_edge and inner_edge
                 // to compensate for incomplete charge/current deposition in those cells
                 if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
                     amrex::Real x = i * dx + offset0;
                     amrex::Real y = j * dy + offset1;
-                    arr_field_fine(i,j,k) = arr_field_coarse_interp(x,y);
+                    arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
                 }
             });
     }
@@ -761,15 +781,14 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    bool do_add = false;
-    for (const std::string& field_name : m_all_charge_currents_names) {
-        // Add beam rho-Jz/c contribution to the RHS
-        // for predictor corrector the beam deposits directly to rho and jz
-        if (field_name == "_beam" && !Hipace::m_do_beam_jz_minus_rho) continue;
+    LinCombination(m_source_nguard, getStagingArea(lev),
+        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
+        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"), false);
+
+    if (Hipace::m_do_beam_jz_minus_rho) {
         LinCombination(m_source_nguard, getStagingArea(lev),
-            1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"+field_name),
-            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"+field_name), do_add);
-        do_add = true;
+            1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
+            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
     }
 
     SetBoundaryCondition(geom, lev, "Psi", islice);
@@ -792,49 +811,45 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(f_ExmBy, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
-        const amrex::Array4<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
-        const amrex::Array4<amrex::Real> array_EypBx = f_EypBx.array(mfi);
-        const amrex::Array4<amrex::Real const> array_Psi = f_Psi.array(mfi);
+    for ( amrex::MFIter mfi(f_ExmBy, DfltMfiTlng); mfi.isValid(); ++mfi ){
+        const Array2<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
+        const Array2<amrex::Real> array_EypBx = f_EypBx.array(mfi);
+        const Array2<amrex::Real const> array_Psi = f_Psi.const_array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
         const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
         const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
         const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
 
         amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            [=] AMREX_GPU_DEVICE(int i, int j, int)
             {
                 // derivatives in x and y direction, no guards needed
-                array_ExmBy(i,j,k) = - (array_Psi(i+1,j,k) - array_Psi(i-1,j,k))*dx_inv;
-                array_EypBx(i,j,k) = - (array_Psi(i,j+1,k) - array_Psi(i,j-1,k))*dy_inv;
+                array_ExmBy(i,j) = - (array_Psi(i+1,j) - array_Psi(i-1,j))*dx_inv;
+                array_EypBx(i,j) = - (array_Psi(i,j+1) - array_Psi(i,j-1))*dy_inv;
             });
     }
 }
 
 
 void
-Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice)
+Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice,
+                        const int which_slice)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
 
     PhysConst phys_const = get_phys_const();
     // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        Comps[WhichSlice::This]["Ez"], 1);
+    amrex::MultiFab lhs(getSlices(lev, which_slice), amrex::make_alias,
+                        Comps[which_slice]["Ez"], 1);
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
-    bool do_add = false;
-    for (const std::string& field_name : m_all_charge_currents_names) {
-        LinCombination(m_source_nguard, getStagingArea(lev),
-            1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"+field_name), geom[lev]},
-            1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"+field_name), geom[lev]},
-            do_add);
-        do_add = true;
-    }
+    LinCombination(m_source_nguard, getStagingArea(lev),
+        1._rt/(phys_const.ep0*phys_const.c),
+        derivative<Direction::x>{getField(lev, which_slice, "jx"), geom[lev]},
+        1._rt/(phys_const.ep0*phys_const.c),
+        derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
     SetBoundaryCondition(geom, lev, "Ez", islice);
     // Solve Poisson equation.
@@ -908,16 +923,12 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
-    bool do_add = false;
-    for (const std::string& field_name : m_all_charge_currents_names) {
-        LinCombination(m_source_nguard, getStagingArea(lev),
-            phys_const.mu0,
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"+field_name), geom[lev]},
-            -phys_const.mu0,
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"+field_name), geom[lev]},
-            do_add);
-        do_add = true;
-    }
+    LinCombination(m_source_nguard, getStagingArea(lev),
+        phys_const.mu0,
+        derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+        -phys_const.mu0,
+        derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+
 
     SetBoundaryCondition(geom, lev, "Bz", islice);
     // Solve Poisson equation.
@@ -1018,30 +1029,29 @@ Fields::ComputeRelBFieldError (
     amrex::Gpu::DeviceScalar<amrex::Real> gpu_norm_B(norm_B);
     amrex::Real* p_norm_B = gpu_norm_B.dataPtr();
 
-    for ( amrex::MFIter mfi(Bx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(Bx, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real const> const & Bx_array = Bx.array(mfi);
-        amrex::Array4<amrex::Real const> const & Bx_iter_array = Bx_iter.array(mfi);
-        amrex::Array4<amrex::Real const> const & By_array = By.array(mfi);
-        amrex::Array4<amrex::Real const> const & By_iter_array = By_iter.array(mfi);
+        Array2<amrex::Real const> const Bx_array = Bx.array(mfi, Bx_comp);
+        Array2<amrex::Real const> const Bx_iter_array = Bx_iter.array(mfi, Bx_iter_comp);
+        Array2<amrex::Real const> const By_array = By.array(mfi, By_comp);
+        Array2<amrex::Real const> const By_iter_array = By_iter.array(mfi, By_iter_comp);
 
         amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::Gpu::Handler const& handler) noexcept
+        [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
         {
             amrex::Gpu::deviceReduceSum(p_norm_B, std::sqrt(
-                                        Bx_array(i, j, k, Bx_comp) * Bx_array(i, j, k, Bx_comp) +
-                                        By_array(i, j, k, By_comp) * By_array(i, j, k, By_comp)),
+                                        Bx_array(i, j) * Bx_array(i, j) +
+                                        By_array(i, j) * By_array(i, j)),
                                         handler);
             amrex::Gpu::deviceReduceSum(p_norm_Bdiff, std::sqrt(
-                            ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) *
-                            ( Bx_array(i, j, k, Bx_comp) - Bx_iter_array(i, j, k, Bx_iter_comp) ) +
-                            ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) ) *
-                            ( By_array(i, j, k, By_comp) - By_iter_array(i, j, k, By_iter_comp) )),
+                            ( Bx_array(i, j) - Bx_iter_array(i, j) ) *
+                            ( Bx_array(i, j) - Bx_iter_array(i, j) ) +
+                            ( By_array(i, j) - By_iter_array(i, j) ) *
+                            ( By_array(i, j) - By_iter_array(i, j) )),
                             handler);
         }
         );
     }
-    // no cudaDeviceSynchronize required here, as there is one in the MFIter destructor called above.
     norm_Bdiff = gpu_norm_Bdiff.dataValue();
     norm_B = gpu_norm_B.dataValue();
 

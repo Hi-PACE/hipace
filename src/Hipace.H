@@ -11,12 +11,12 @@
 
 #include "fields/Fields.H"
 #include "fields/fft_poisson_solver/FFTPoissonSolver.H"
-#include "particles/MultiPlasma.H"
-#include "particles/MultiBeam.H"
-#include "particles/BeamParticleContainer.H"
+#include "particles/plasma/MultiPlasma.H"
+#include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
-#include "laser/Laser.H"
+#include "laser/MultiLaser.H"
 #include "utils/Constants.H"
 #include "utils/Parser.H"
 #include "diagnostics/Diagnostic.H"
@@ -167,35 +167,59 @@ public:
 
     /** \brief Full evolve on 1 subslice with explicit solver
      *
+     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
+     * it is implemented in the WAND-PIC quasistatic PIC code.
+     *
      * \param[in] lev MR level
+     * \param[in] step current time step
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bx current transverse box
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
      * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void ExplicitSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
-                                   const int islice, const int islice_local,
+    void ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
+                                   const amrex::Box& bx, const int islice, const int islice_local,
                                    const amrex::Vector<BeamBins>& beam_bin);
 
     /** \brief Full evolve on 1 subslice with predictor-corrector solver
      *
      * \param[in] lev MR level
+     * \param[in] step current time step
      * \param[in] ibox index of the current box to be calculated
      * \param[in] bx current transverse box
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
      * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void PredictorCorrectorSolveOneSubSlice (const int lev, const int ibox, const amrex::Box& bx,
-                                             const int islice, const int islice_local,
+    void PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const int ibox,
+                                             const amrex::Box& bx, const int islice,
+                                             const int islice_local,
                                              const amrex::Vector<BeamBins>& beam_bin);
+
+    /**
+     * \brief Initialize Sx and Sy with the beam contributions
+     *
+     * \param[lev] MR level
+     */
+    void InitializeSxSyWithBeam (const int lev);
+
+    /**
+     * \brief Knowing the sources Sx, Sy and chi, apply MG to solve for Bx, By
+     *
+     * \param[lev] MR level
+     * \param[in] which_slice defines if this or the salame slice is handled
+     */
+    void ExplicitMGSolveBxBy (const int lev, const int which_slice);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
      * Typically done at the beginning of each iteration.
      */
     void ResetAllQuantities ();
+
+    /** \brief reset all laser slices to 0 */
+    void ResetLaser ();
 
     /**
        \brief Calls FillBoundary on charges and currents on WhichSlice::This
@@ -253,7 +277,10 @@ public:
     MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
     /** status of the physical time send request */
     MPI_Request m_tsend_request = MPI_REQUEST_NULL;
-
+    // Laser buffer
+    amrex::Real* m_lsend_buffer = nullptr;
+    // status of laser send
+    MPI_Request m_lsend_request = MPI_REQUEST_NULL;
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
     /** Whether to use normalized units */
@@ -264,8 +291,6 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
-    /** Laser instance (soon to be multi laser container) */
-    Laser m_laser;
     /** Number of time iterations */
     static int m_max_step;
     /** Maximum simulation time */
@@ -285,9 +310,15 @@ public:
     /** Order of the field gather and current deposition shape factor in the transverse directions
      */
     static int m_depos_order_xy;
-    /** Order of the field gather and current deposition shape factorin the longitudinal direction
+    /** Order of the field gather and current deposition shape factor in the longitudinal direction
      */
     static int m_depos_order_z;
+    /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
+     */
+    static int m_depos_derivative_type;
+    /* if the loop over depos_order is included in the loop over particles
+     */
+    static bool m_outer_depos_loop;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_error_tolerance;
@@ -307,8 +338,6 @@ public:
     static bool m_do_beam_jx_jy_deposition;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
     static bool m_do_beam_jz_minus_rho;
-    /** Whether to call amrex::Gpu::synchronize() around all profiler region */
-    static int m_do_device_synchronize;
     /** Whether to use tiling for particle operations */
     static bool m_do_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
@@ -330,8 +359,12 @@ public:
     static int m_MG_verbose;
     /** Whether to use amrex MLMG solver */
     static bool m_use_amrex_mlmg;
+    /** Whether the simulation uses a laser pulse */
+    static bool m_use_laser;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
+    /** Laser instance (soon to be multi laser container) */
+    MultiLaser m_multi_laser;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
 #ifdef HIPACE_USE_OPENPMD
@@ -346,16 +379,16 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
+    /** Whether the explicit field solver is used */
     bool m_explicit = false;
-    /**
-     * \brief Solve for Bx an By in slice MF using the explicit solver
-     *
-     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
-     * it is implemented in the WAND-PIC quasistatic PIC code.
-     *
-     * \param[lev] MR level
-     */
-    void ExplicitSolveBxBy (const int lev);
+    /** the number of SALAME iterations to be done */
+    int m_salame_n_iter = 3;
+    /** if the SALAME-only field should be computed exactly with plasma particles */
+    bool m_salame_do_advance = true;
+    /** the slice index of the previous slice with SALAME */
+    int m_salame_last_slice = -1;
+    /** if the SALAME beam was overloaded in the last slice */
+    bool m_salame_overloaded = false;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.
@@ -379,10 +412,10 @@ private:
 #endif
     /** hpmg solver for the explicit Bx and by solver */
     std::unique_ptr<hpmg::MultiGrid> m_hpmg;
-
+public:
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
-
+private:
     /** Diagnostics */
     Diagnostic m_diags;
 
@@ -416,10 +449,11 @@ private:
      *
      * \param[in] islice_local index of calculated slice
      * \param[in] lev current level
+     * \param[in] step current time step
      * \param[in] bins Vector (over species) of particles sorted by slices
      * \param[in] ibox index of the current box
      */
-    void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev,
+    void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev, const int step,
                                             const amrex::Vector<BeamBins>& bins, const int ibox);
 
     /** \brief define Geometry, DistributionMapping and BoxArray for the slice.

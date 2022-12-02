@@ -61,7 +61,7 @@ void UpdateForceTerms(const amrex::ParticleReal& uxp,
     using namespace amrex::literals;
 
     const amrex::Real gammap = (1.0_rt + uxp*uxp*clightsq
-                                       + uyp*uyp*clightsq
+                                       + uyp*uyp*clightsq // TODO: fix units of Aabssqp
                                        + psip*psip + 0.5_rt*Aabssqp)/(2.0_rt * psip );
 
     const amrex::Real charge_mass_ratio = charge / mass;

@@ -106,6 +106,12 @@ General parameters
 * ``hipace.depos_order_z`` (`int`) optional (default `0`)
     Transverse particle shape order. Currently, only `0` is implemented.
 
+* ``hipace.depos_derivative_type`` (`int`) optional (default `2`)
+    Type of derivative used in explicit deposition. `0`: analytic, `1`: nodal, `2`: centered
+
+* ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
+    If the loop over depos_order is included in the loop over particles.
+
 * ``hipace.output_period`` (`integer`) optional (default `-1`)
     Output period. No output is given for ``hipace.output_period = -1``.
     **Warning:** ``hipace.output_period = 0`` will make the simulation crash.
@@ -143,6 +149,13 @@ General parameters
 * ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
+
+* ``hipace.salame_n_iter`` (`int`) optional (default `3`)
+    Number of iterations the SALAME algorithm should do when it is used.
+
+* ``hipace.salame_do_advance`` (`bool`) optional (default `1`)
+    Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field
+    by advancing plasma (if `1`) particles or by approximating it using the chi field (if `0`).
 
 Field solver parameters
 -----------------------
@@ -220,24 +233,22 @@ Explicit solver parameters
 Plasma parameters
 -----------------
 
-For the plasma parameters, first the names of the plasmas need to be specified. Afterwards, the
-plasma parameters for each plasma are specified via ``<plasma name>.<plasma property> = ...``.
+The name of all plasma species must be specified with `plasmas.names = ...`.
+Then, properties can be set per plasma species with ``<plasma name>.<plasma property> = ...``,
+or sometimes for all plasma species at the same time with ``plasmas.<plasma property> = ...``.
+When both are specified, the per-species value is used.
 
 * ``plasmas.names`` (`string`)
     The names of the plasmas, separated by a space.
     To run without plasma, choose the name ``no_plasma``.
 
-* ``plasmas.nominal_density`` (`string`) optional (default `1.` in normalized units, `1.e23` in SI units)
-    Nominal density (in number per cubic meter) by which quantities are normalized in the explicit solver.
-    This should be roughly the peak density of the unperturbed plasma.
-
-* ``<plasma name>.density(x,y,z)`` (`float`) optional (default `0.`)
+* ``<plasma name> or plasmas.density(x,y,z)`` (`float`) optional (default `0.`)
     The plasma density as function of `x`, `y` and `z`. `x` and `y` coordinates are taken from
     the simulation box and :math:`z = time \cdot c`. The density gets recalculated at the beginning
     of every timestep. If specified as a command line parameter, quotation marks must be added:
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
-* ``<plasma name>.min_density`` (`float`) optional (default `0`)
+* ``<plasma name> or plasmas.min_density`` (`float`) optional (default `0`)
     Minimal density below which particles are not injected.
     Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
 
@@ -249,7 +260,7 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
-* ``<plasma name>.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name> or plasmas.ppc`` (2 `integer`) optional (default `0 0`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
@@ -257,14 +268,14 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.level`` (`integer`) optional (default `0`)
     Level of mesh refinement to which the plasma is assigned.
 
-* ``<plasma name>.radius`` (`float`) optional (default `infinity`)
+* ``<plasma name> or plasmas.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
-* ``<plasma name>.hollow_core_radius`` (`float`) optional (default `0.`)
+* ``<plasma name> or plasmas.hollow_core_radius`` (`float`) optional (default `0.`)
     Inner radius of a hollow core plasma. The hollow core radius must be smaller than the plasma
     radius itself.
 
-* ``<plasma name>.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
+* ``<plasma name> or plasmas.max_qsa_weighting_factor`` (`float`) optional (default `35.`)
     The maximum allowed weighting factor :math:`\gamma /(\psi+1)` before particles are considered
     as violating the quasi-static approximation and are removed from the simulation.
 
@@ -295,6 +306,9 @@ plasma parameters for each plasma are specified via ``<plasma name>.<plasma prop
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable.
+
+* ``<plasma name> or plasmas.neutralize_background`` (`bool`) optional (default `1`)
+    Whether to add a neutralizing background of immobile particles of opposite charge.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
     Tile size for plasma current deposition, when running on CPU.
@@ -329,16 +343,6 @@ parameters for each beam are specified via ``<beam name>.<beam property> = ...``
 * ``beams.names`` (`string`)
     The names of the particle beams, separated by a space.
     To run without beams, choose the name ``no_beam``.
-
-* ``beams.insitu_freq`` (`int`) optional (default ``-1``)
-    Frequency of in-situ diagnostics, computing the main per-slice beam quantities for the main beam parameters (width, energy spread, emittance, etc.).
-    The data is written to a text file:
-      * 1 file per time step.
-      * 1 line per file.
-      * [time step], [physical time], [all quantities for slice 0], [all quantities for slice 1], ..., [all quantities for slice nz-1]
-      * all quantities are: [number of macro-particles], sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
-        where "<>" stands for averaging over all particles in the current slice, "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
-    When <0, the in-situ diagnostics are not activated.
 
 General beam parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -400,8 +404,46 @@ which are valid only for certain beam types, are introduced further below under
     Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
     up to its finest level. The beam will be pushed by the fields of the finest level.
 
-* ``<beam name>.insitu_sep`` (`string`) optional (default ``" "``)
-    Separator used in the text file of in-situ diagnostics.
+* ``<beam name> or beams.insitu_period`` (`int`) optional (default ``-1``)
+    Period of in-situ diagnostics, for computing the main per-slice beam quantities for the main
+    beam parameters (width, energy spread, emittance, etc.).
+    For this the following quantities are calculated per slice and stored:
+    ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2], np``
+    where "[]" stands for averaging over all particles in the current slice,
+    "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+    Averages and totals over all slices are also provided for convenience under the
+    respective ``average`` and ``total`` subcategories.
+
+    Additionally, some metadata is also available:
+    ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
+    ``time`` and ``step`` refers to the physical time of the simulation and step number of the
+    current timestep.
+    ``n_slices`` equal to the number of slices in the zeta direction.
+    ``charge`` and ``mass`` relate to a single beam particle and are for example equal to the
+    electron charge and mass.
+    ``z_lo`` and ``z_hi`` are the lower and upper bounds of the z-axis of the simulation domain
+    specified in the input file and can be used to generate a z/zeta-axis for plotting.
+    ``normalized_density_factor`` is equal to ``dx * dy * dz`` in normalized units and 1 in
+    SI units. It can be used to convert ``sum(w)``, which specifies the beam density in normalized
+    units and beam weight an SI units, to the beam weight in both unit systems.
+
+    The data is written to a file at ``<insitu_file_prefix>/reduced_<beam name>.<MPI rank number>.txt``.
+    The in-situ diagnostics file format consists of a header part in ASCII containing a JSON object.
+    When this is parsed into Python it can be converted to a NumPy structured datatype.
+    The rest of the file, following immediately after the closing }, is in binary format and
+    contains all of the in-situ diagnostic along with some meta data. This part can be read using the
+    structured datatype of the first section.
+    Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+
+* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"diags/insitu"``)
+    Path of the in-situ output.
+
+* ``<beam name>.do_salame`` (`bool`) optional (default `0`)
+    Whether to use the SALAME algorithm [S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020)] to automatically flatten the accelerating field in the first time step. If turned on, the per-slice
+    beam weight in the first time-step is adjusted such that the Ez field will be uniform in the beam.
+    This will ignore the contributions to jx, jy and rho from the beam in the first time-step.
+    It is recommended to use this option with a fixed weight can beam.
+    If a gaussian beam profile is used, then the zmin and zmax parameters should be used.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -451,12 +493,12 @@ Option: ``fixed_ppc``
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
 
-* ``<beam name>.input_file`` (`string`)
+* ``<beam name> or beams.input_file`` (`string`)
     Name of the input file. **Note:** Reading in files with digits in their names (e.g.
     ``openpmd_002135.h5``) can be problematic, it is advised to read them via ``openpmd_%T.h5`` and then
     specify the iteration via ``beam_name.iteration = 2135``.
 
-* ``<beam name>.iteration`` (`integer`) optional (default `0`)
+* ``<beam name> or beams.iteration`` (`integer`) optional (default `0`)
     Iteration of the openPMD file to be read in. If the openPMD file contains multiple iterations,
     or multiple openPMD files are read in, the iteration can be specified. **Note:** The physical
     time of the simulation is set to the time of the given iteration (if available).
@@ -465,38 +507,64 @@ Option: ``from_file``
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
 
-* ``beams.all_from_file`` (`string`)
-    Name of the input file for all beams. This macro then passes it down to all individual beams
-    without a specified ``injection_type``. Additionally the input parameters ``beams.iteration``,
-    ``beams.plasma_density`` and ``beams.file_coordinates_xyz`` are passed down if applicable.
-
 Laser parameters
 ----------------
 
-Currently, only a single, static laser pulse is available. The laser profile is defined by
-:math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`. The laser pulse length
-:math:`L0 = \tau / c_0`
-can be specified via the pulse duration ``laser.tau``.
-If no ``laser.a0`` is provided, no laser will be initialized.
+The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
+The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
+Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
+which you can find in the output openPMD file as `laser_real` (for the real part of the envelope) and `laser_imag` for its imaginary part.
+Parameters starting with ``lasers.`` apply to all laser pulses, parameters starting with ``<laser name>`` apply to a single laser pulse.
 
-* ``laser.a0`` (`float`) optional (default `0`)
+* ``lasers.names`` (list of `string`)
+    The names of the laser pulses, separated by a space.
+    To run without a laser, choose the name ``no_laser``.
+
+* ``lasers.lambda0`` (`float`)
+    Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
+
+* ``lasers.use_phase`` (`bool`) optional (default `true`)
+    Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
+
+* ``lasers.solver_type`` (`string`) optional (default `multigrid`)
+    Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
+    Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
+    With the multigrid solver, we could drop this assumption.
+    For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
+
+* ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+    Relative error tolerance of the multigrid solver used for the laser pulse.
+
+* ``lasers.MG_tolerance_abs`` (`float`) optional (default `0.`)
+    Absolute error tolerance of the multigrid solver used for the laser pulse.
+
+* ``lasers.MG_verbose`` (`int`) optional (default `0`)
+    Level of verbosity of the multigrid solver used for the laser pulse.
+
+* ``lasers.MG_average_rhs`` (`0` or `1`) optional (default `1`)
+    Whether to use the most stable discretization for the envelope solver.
+
+* ``lasers.3d_on_host`` (`0` or `1`) optional (default `0`)
+    When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
+
+* ``<laser name>.a0`` (`float`) optional (default `0`)
     Peak normalized vector potential of the laser pulse.
 
-* ``laser.position_mean`` (3 `float`) optional (default `0 0 0`)
+* ``<laser name>.position_mean`` (3 `float`) optional (default `0 0 0`)
     The mean position of the laser in `x, y, z`.
 
-* ``laser.w0`` (2 `float`) optional (default `0 0`)
+* ``<laser name>.w0`` (2 `float`) optional (default `0 0`)
     The laser waist in `x, y`.
 
-* ``laser.L0`` (`float`) optional (default `0`)
-    The laser pulse length in `z`. Use either the pulse length or the pulse duration.
+* ``<laser name>.L0`` (`float`) optional (default `0`)
+    The laser pulse length in `z`. Use either the pulse length or the pulse duration ``<laser name>.tau``.
 
-* ``laser.tau`` (`float`) optional (default `0`)
+* ``<laser name>.tau`` (`float`) optional (default `0`)
     The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
     Use either the pulse length or the pulse duration.
 
-* ``laser.lambda0`` (`float`) optional (default `0`)
-    The laser pulse wavelength. Currently not used in the code.
+* ``<laser name>.focal_distance`` (`float`)
+    Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
 Diagnostic parameters
 ---------------------
@@ -527,6 +595,8 @@ Diagnostic parameters
     always be added to the first plasma species in case multiple plasma species are available.
     **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
     output, please use ``hipace.output_period = -1``.
+    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,

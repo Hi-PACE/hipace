@@ -9,8 +9,8 @@
 #ifndef HIPACE_BeamParticleContainer_H_
 #define HIPACE_BeamParticleContainer_H_
 
-#include "profiles/GetInitialDensity.H"
-#include "profiles/GetInitialMomentum.H"
+#include "particles/profiles/GetInitialDensity.H"
+#include "particles/profiles/GetInitialMomentum.H"
 #include "utils/Parser.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
@@ -26,7 +26,33 @@ struct BeamIdx
     };
 };
 
-using BeamBins = amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>;
+struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType> {
+
+    template<class...Args>
+    void build (Args&&...args) {
+        // call build function of the underlying DenseBins object
+        // with all of the arguments forwarded
+        amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
+
+        // after every build call copy offsets array form GPU to CPU
+        const auto offset_size = numBins() + 1;
+        const auto offsets_gpu = offsetsPtr();
+        m_offsets_cpu.resize(offset_size);
+#ifdef AMREX_USE_GPU
+        amrex::Gpu::dtoh_memcpy_async(m_offsets_cpu.dataPtr(), offsets_gpu,
+                                      offset_size * sizeof(index_type));
+        amrex::Gpu::streamSynchronize();
+#else
+        std::memcpy(m_offsets_cpu.dataPtr(), offsets_gpu,
+                    offset_size * sizeof(index_type));
+#endif
+    }
+
+    // get offsets array on the CPU
+    const index_type* offsetsPtrCpu () const noexcept { return m_offsets_cpu.dataPtr(); }
+
+    amrex::Vector<index_type> m_offsets_cpu;
+};
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
@@ -46,10 +72,9 @@ public:
 
     /** \brief Allocate beam particle data and initialize particles with requested beam profile
      * \param[in] geom Geometry object for the whole domain
-     * \param[in] do_insitu Whether in-situ diagnostics are activated for this species
      * \return physical time at which the simulation will start
      */
-    amrex::Real InitData (const amrex::Geometry& geom, bool do_insitu);
+    amrex::Real InitData (const amrex::Geometry& geom);
 
     /** Initialize a beam with a fix number of particles per cell */
     void InitBeamFixedPPC (
@@ -112,8 +137,9 @@ public:
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
+     * \param[in] geom Geometry object for the whole domain
      */
-    void InSituWriteToFile (int step, amrex::Real time);
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
@@ -121,6 +147,7 @@ public:
     int m_n_subcycles {1}; /**< Number of sub-cycles in the beam pusher */
     int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
     /** Number of particles on upstream rank (required for IO) */
+    bool m_do_salame = false; /**< Whether this beam uses salame */
     int m_num_particles_on_upstream_ranks {0};
 
     unsigned long long m_total_num_particles {0};
@@ -128,6 +155,8 @@ public:
     unsigned long long get_total_num_particles () const {return m_total_num_particles;}
 
     amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
+
+    bool doInSitu (int step);
 
 private:
     std::string m_name; /**< name of the species */
@@ -150,32 +179,41 @@ private:
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Density of plasma to convert from_file beam to normalized units */
-    amrex::Real m_plasma_density;
+    amrex::Real m_plasma_density = 0;
     std::string m_input_file; /**< Path to bean input file */
     /** Coordinates used in input file, are converted to Hipace Coordinates x y z respectively */
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name; /**< the name of the particle species in the beam file */
+    int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_rnp {13};
-    /** Number of integer beam properties for in-situ reduced diagnostics. */
-    int m_insitu_inp {1};
+    int m_insitu_nrp {13};
+    /** Number of int beam properties for in-situ per-slice reduced diagnostics. */
+    int m_insitu_nip {1};
     /** Per-slice real beam properties:
      *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
      * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
      * where [] means average over all particles within slice.
-     * Per-slice emittance: sqrt( ([x^2]-[x]^2) * ([ux^2]-[uxm]^2) - ([x*ux]-[x][ux])^2 ).
+     * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
      * Projected emittance: Same as above AFTER averaging all these quantities over slices.
      * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
-     * sum(w) should never be 0. When it is, it is replaced by 1 to avoid nans and these
-     * diags are incorrect.
+     * Np: number of particles in this slice
      */
-    std::vector<amrex::Real> m_insitu_rdata;
-    /** Per-slice integer beam properties:
-     * 0: number of particles in this slice */
-    std::vector<int> m_insitu_idata;
-    /** Separator when writing to file */
-    std::string m_insitu_sep = " ";
+    amrex::Vector<amrex::Real> m_insitu_rdata;
+    /** Per-slice int beam properties:
+     *  0
+     * Np
+     * Np: number of particles in this slice
+     */
+    amrex::Vector<int> m_insitu_idata;
+    /** Sum of all per-slice real beam properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_rdata;
+    /** Sum of all per-slice int beam properties */
+    amrex::Vector<int> m_insitu_sum_idata;
+    /** Prefix/path for the output files */
+    std::string m_insitu_file_prefix = "diags/insitu";
+    /** How often the insitu beam diagnostics should be computed and written */
+    int m_insitu_period {-1};
 };
 
 #endif

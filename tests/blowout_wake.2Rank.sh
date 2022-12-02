@@ -26,6 +26,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 rm -rf si_data
 rm -rf si_data_fixed_weight
 rm -rf normalized_data
+rm -rf normalized_data_cd2
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         plasmas.sort_bin_size = 8 \
@@ -54,5 +55,20 @@ $HIPACE_EXAMPLE_DIR/analysis.py \
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name normalized_data/ \
+    --test-name blowout_wake.2Rank \
+    --skip "{'beam': 'id'}"
+
+echo "Start testing new current deposition"
+
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        plasmas.sort_bin_size = 8 \
+        hipace.file_prefix=normalized_data_cd2/ \
+        hipace.outer_depos_loop = true \
+        max_step=1
+
+# Compare the results with checksum benchmark
+$HIPACE_TEST_DIR/checksum/checksumAPI.py \
+    --evaluate \
+    --file_name normalized_data_cd2/ \
     --test-name blowout_wake.2Rank \
     --skip "{'beam': 'id'}"

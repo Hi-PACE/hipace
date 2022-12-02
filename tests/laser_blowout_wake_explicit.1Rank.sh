@@ -29,9 +29,11 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beams.names = no_beam \
         geometry.prob_lo     = -20.   -20.   -8  \
         geometry.prob_hi     =  20.    20.    6  \
+        lasers.names = laser \
+        lasers.lambda0 = .8e-6 \
         laser.a0 = 4.5 \
         laser.position_mean = 0. 0. 0 \
-        laser.w0 = 4 4 \
+        laser.w0 = 4 \
         laser.L0 = 2 \
         amr.n_cell = 128 128 100 \
 
@@ -40,4 +42,5 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME \
-    --skip-particles
+    --skip-particles \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"

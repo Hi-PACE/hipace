@@ -6,77 +6,27 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "HpMultiGrid.H"
-#include "utils/HipaceProfilerWrapper.H"
 #include <algorithm>
 
 using namespace amrex;
 
 namespace hpmg {
 
-#if defined(AMREX_USE_GPU) || !defined(AMREX_USE_OMP)
-
-using amrex::ParallelFor;
-
-#else
-
-// amrex::ParallelFor does not do OpenMP.  Thus we have hpmg::ParallelFor.
-
-template <typename T, typename F>
-void ParallelFor (T n, F&& f) noexcept
-{
-#pragma omp parallel for simd
-    for (T i = 0; i < n; ++i) {
-        f(i);
-    }
-}
-
-template <typename F>
-void ParallelFor (Box const& box, F&& f) noexcept
-{
-    const auto lo = amrex::lbound(box);
-    const auto hi = amrex::ubound(box);
-#pragma omp parallel for collapse(2)
-    for (int k = lo.z; k <= hi.z; ++k) {
-    for (int j = lo.y; j <= hi.y; ++j) {
-#pragma omp simd
-    for (int i = lo.x; i <= hi.x; ++i) {
-        f(i,j,k);
-    }}}
-}
-
-template <typename F>
-void ParallelFor (Box const& box, int ncomp, F&& f) noexcept
-{
-    const auto lo = amrex::lbound(box);
-    const auto hi = amrex::ubound(box);
-#pragma omp parallel for collapse(3)
-    for (int n = 0; n < ncomp; ++n) {
-        for (int k = lo.z; k <= hi.z; ++k) {
-        for (int j = lo.y; j <= hi.y; ++j) {
-#pragma omp simd
-        for (int i = lo.x; i <= hi.x; ++i) {
-            f(i,j,k,n);
-        }}}
-    }
-}
-
-#endif
-
 namespace {
 
 constexpr int n_cell_single = 32; // switch to single block when box is smaller than this
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-Real residual (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-               Array4<Real> const& phi, Real rhs, Real acf, Real facx, Real facy)
+Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+                Array4<Real> const& phi, Real facx, Real facy)
 {
-    Real lap;
+    Real lap = Real(-2.)*(facx+facy)*phi(i,j,0,n);
     if (i == ilo) {
-        lap = facx * (Real(4./3.)*phi(i+1,j,0,n) - Real(2.)*phi(i,j,0,n));
+        lap += facx * (Real(4./3.)*phi(i+1,j,0,n) - Real(2.)*phi(i,j,0,n));
     } else if (i == ihi) {
-        lap = facx * (Real(4./3.)*phi(i-1,j,0,n) - Real(2.)*phi(i,j,0,n));
+        lap += facx * (Real(4./3.)*phi(i-1,j,0,n) - Real(2.)*phi(i,j,0,n));
     } else {
-        lap = facx * (phi(i-1,j,0,n) + phi(i+1,j,0,n));
+        lap += facx * (phi(i-1,j,0,n) + phi(i+1,j,0,n));
     }
     if (j == jlo) {
         lap += facy * (Real(4./3.)*phi(i,j+1,0,n) - Real(2.)*phi(i,j,0,n));
@@ -85,13 +35,40 @@ Real residual (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
     } else {
         lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
     }
-    return rhs + (acf+Real(2.)*(facx+facy))*phi(i,j,0,n) - lap;
+    return lap;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+Real residual1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+                Array4<Real> const& phi, Real rhs, Real acf, Real facx, Real facy)
+{
+    Real lap = laplacian(i,j,n,ilo,jlo,ihi,jhi,phi,facx,facy);
+    return rhs + acf*phi(i,j,0,n) - lap;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+Real residual2r (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                 Array4<Real> const& phi, Real rhs, Real acf_r, Real acf_i,
+                 Real facx, Real facy)
+{
+    Real lap = laplacian(i,j,0,ilo,jlo,ihi,jhi,phi,facx,facy);
+    return rhs + acf_r*phi(i,j,0,0) - acf_i*phi(i,j,0,1) - lap;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+Real residual2i (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                 Array4<Real> const& phi, Real rhs, Real acf_r, Real acf_i,
+                 Real facx, Real facy)
+{
+    Real lap = laplacian(i,j,1,ilo,jlo,ihi,jhi,phi,facx,facy);
+    return rhs + acf_i*phi(i,j,0,0) + acf_r*phi(i,j,0,1) - lap;
 }
 
 // res = rhs - L(phi)
 void compute_residual (Box const& box, Array4<Real> const& res,
                        Array4<Real> const& phi, Array4<Real const> const& rhs,
-                       Array4<Real const> const& acf, Real dx, Real dy)
+                       Array4<Real const> const& acf, Real dx, Real dy,
+                       int system_type)
 {
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
@@ -99,16 +76,26 @@ void compute_residual (Box const& box, Array4<Real> const& res,
     int const jhi = box.bigEnd(1);
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
-    hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
-    {
-        res(i,j,0,n) = residual(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n),
-                                acf(i,j,0), facx, facy);
-    });
+    if (system_type == 1) {
+        hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        {
+            res(i,j,0,n) = residual1(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n),
+                                     acf(i,j,0), facx, facy);
+        });
+    } else {
+        hpmg::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            res(i,j,0,0) = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0),
+                                      acf(i,j,0,0), acf(i,j,0,1), facx, facy);
+            res(i,j,0,1) = residual2i(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1),
+                                      acf(i,j,0,0), acf(i,j,0,1), facx, facy);
+        });
+    }
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void gs (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-         Array4<Real> const& phi, Real rhs, Real acf, Real facx, Real facy)
+void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+          Array4<Real> const& phi, Real rhs, Real acf, Real facx, Real facy)
 {
     Real lap;
     Real c0 = -(acf+Real(2.)*(facx+facy));
@@ -133,9 +120,46 @@ void gs (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
     phi(i,j,0,n) = (rhs - lap) / c0;
 }
 
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
+          Array4<Real> const& phi, Real rhs_r, Real rhs_i,
+          Real ar, Real ai, Real facx, Real facy)
+{
+    Real lap[2];
+    Real c0 = Real(-2.)*(facx+facy);
+    if (i == ilo) {
+        lap[0] = facx * Real(4./3.)*phi(i+1,j,0,0);
+        lap[1] = facx * Real(4./3.)*phi(i+1,j,0,1);
+        c0 -= Real(2.)*facx;
+    } else if (i == ihi) {
+        lap[0] = facx * Real(4./3.)*phi(i-1,j,0,0);
+        lap[1] = facx * Real(4./3.)*phi(i-1,j,0,1);
+        c0 -= Real(2.)*facx;
+    } else {
+        lap[0] = facx * (phi(i-1,j,0,0) + phi(i+1,j,0,0));
+        lap[1] = facx * (phi(i-1,j,0,1) + phi(i+1,j,0,1));
+    }
+    if (j == jlo) {
+        lap[0] += facy * Real(4./3.)*phi(i,j+1,0,0);
+        lap[1] += facy * Real(4./3.)*phi(i,j+1,0,1);
+        c0 -= Real(2.)*facy;
+    } else if (j == jhi) {
+        lap[0] += facy * Real(4./3.)*phi(i,j-1,0,0);
+        lap[1] += facy * Real(4./3.)*phi(i,j-1,0,1);
+        c0 -= Real(2.)*facy;
+    } else {
+        lap[0] += facy * (phi(i,j-1,0,0) + phi(i,j+1,0,0));
+        lap[1] += facy * (phi(i,j-1,0,1) + phi(i,j+1,0,1));
+    }
+    Real c[2] = {c0-ar, -ai};
+    Real cmag = Real(1.)/(c[0]*c[0] + c[1]*c[1]);
+    phi(i,j,0,0) = ((rhs_r-lap[0])*c[0] + (rhs_i-lap[1])*c[1]) * cmag;
+    phi(i,j,0,1) = ((rhs_i-lap[1])*c[0] - (rhs_r-lap[0])*c[1]) * cmag;
+}
+
 void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
            Array4<Real const> const& rhs, Array4<Real const> const& acf,
-           Real dx, Real dy)
+           Real dx, Real dy, int system_type)
 {
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
@@ -143,12 +167,22 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
     int const jhi = box.bigEnd(1);
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
-    hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
-    {
-        if ((i+j+icolor)%2 == 0) {
-            gs(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n), acf(i,j,0), facx, facy);
-        }
-    });
+    if (system_type == 1) {
+        hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        {
+            if ((i+j+icolor)%2 == 0) {
+                gs1(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n), acf(i,j,0), facx, facy);
+            }
+        });
+    } else {
+        hpmg::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            if ((i+j+icolor)%2 == 0) {
+                gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), rhs(i,j,0,1),
+                    acf(i,j,0,0), acf(i,j,0,1), facx, facy);
+            }
+        });
+    }
 }
 
 void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine)
@@ -172,6 +206,175 @@ void interpolation (Box const& box, Array4<Real> const& fine, Array4<Real const>
         fine(i,j,0,n) += crse(ic,jc,0,n);
     });
 }
+
+#if defined(AMREX_USE_GPU)
+
+#if defined(AMREX_USE_DPCPP)
+#define HPMG_SYNCTHREADS item.barrier(sycl::access::fence_space::global_and_local)
+#else
+#define HPMG_SYNCTHREADS __syncthreads()
+#endif
+
+template <int NS, typename FGS, typename FRES>
+void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
+                      Array4<Real> const* res, Array4<Real> const* cor,
+                      Array4<Real> const* rescor, int nlevs,
+                      FGS&& fgs, FRES&& fres)
+{
+    static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
+#if defined(AMREX_USE_DPCPP)
+    amrex::launch(1, 1024, Gpu::gpuStream(),
+    [=] (sycl::nd_item<1> const& item) noexcept
+#else
+    amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
+    [=] AMREX_GPU_DEVICE () noexcept
+#endif
+    {
+        Real facx = Real(1.)/(dx0*dx0);
+        Real facy = Real(1.)/(dy0*dy0);
+        int lenx = cor[0].end.x - cor[0].begin.x;
+        int leny = cor[0].end.y - cor[0].begin.y;
+        int ncells = lenx*leny;
+#if defined(AMREX_USE_DPCPP)
+        const int icell = item.get_local_linear_id();
+#else
+        const int icell = threadIdx.x;
+#endif
+
+        for (int ilev = 0; ilev < nlevs-1; ++ilev) {
+            if (icell < ncells) {
+                cor[ilev].p[icell] = Real(0.);
+                cor[ilev].p[icell+ncells] = Real(0.);
+            }
+            HPMG_SYNCTHREADS;
+
+            for (int is = 0; is < 4; ++is) {
+                if (icell < ncells) {
+                    int j = icell /   lenx;
+                    int i = icell - j*lenx;
+                    j += cor[ilev].begin.y;
+                    i += cor[ilev].begin.x;
+                    if ((i+j+is)%2 == 0) {
+                        fgs(i, j,
+                            cor[ilev].begin.x, cor[ilev].begin.y,
+                            cor[ilev].end.x-1, cor[ilev].end.y-1,
+                            cor[ilev],
+                            res[ilev](i,j,0,0),
+                            res[ilev](i,j,0,1),
+                            acf[ilev], facx, facy);
+                    }
+                }
+                HPMG_SYNCTHREADS;
+            }
+
+            if (icell < ncells) {
+                int j = icell /   lenx;
+                int i = icell - j*lenx;
+                j += cor[ilev].begin.y;
+                i += cor[ilev].begin.x;
+                fres(i, j,
+                     rescor[ilev](i,j,0,0),
+                     rescor[ilev](i,j,0,1),
+                     cor[ilev].begin.x, cor[ilev].begin.y,
+                     cor[ilev].end.x-1, cor[ilev].end.y-1,
+                     cor[ilev],
+                     res[ilev](i,j,0,0),
+                     res[ilev](i,j,0,1),
+                     acf[ilev], facx, facy);
+            }
+            HPMG_SYNCTHREADS;
+
+            lenx = cor[ilev+1].end.x - cor[ilev+1].begin.x;
+            leny = cor[ilev+1].end.y - cor[ilev+1].begin.y;
+            ncells = lenx*leny;
+            if (icell < ncells) {
+                int j = icell /   lenx;
+                int i = icell - j*lenx;
+                j += cor[ilev+1].begin.y;
+                i += cor[ilev+1].begin.x;
+                for (int n = 0; n < 2; ++n) {
+                    res[ilev+1](i,j,0,n) = Real(0.25)*(rescor[ilev](2*i  ,2*j  ,0,n) +
+                                                       rescor[ilev](2*i+1,2*j  ,0,n) +
+                                                       rescor[ilev](2*i  ,2*j+1,0,n) +
+                                                       rescor[ilev](2*i+1,2*j+1,0,n));
+                }
+            }
+            HPMG_SYNCTHREADS;
+
+            facx *= Real(0.25);
+            facy *= Real(0.25);
+        }
+
+        // bottom
+        {
+            const int ilev = nlevs-1;
+            if (icell < ncells) {
+                cor[ilev].p[icell] = Real(0.);
+                cor[ilev].p[icell+ncells] = Real(0.);
+            }
+            HPMG_SYNCTHREADS;
+
+            for (int is = 0; is < NS; ++is) {
+                if (icell < ncells) {
+                    int j = icell /   lenx;
+                    int i = icell - j*lenx;
+                    j += cor[ilev].begin.y;
+                    i += cor[ilev].begin.x;
+                    if ((i+j+is)%2 == 0) {
+                        fgs(i, j,
+                            cor[ilev].begin.x, cor[ilev].begin.y,
+                            cor[ilev].end.x-1, cor[ilev].end.y-1,
+                            cor[ilev],
+                            res[ilev](i,j,0,0),
+                            res[ilev](i,j,0,1),
+                            acf[ilev], facx, facy);
+                    }
+                }
+                HPMG_SYNCTHREADS;
+            }
+        }
+
+        for (int ilev = nlevs-2; ilev >=0; --ilev) {
+            lenx = cor[ilev].end.x - cor[ilev].begin.x;
+            leny = cor[ilev].end.y - cor[ilev].begin.y;
+            ncells = lenx*leny;
+            facx *= Real(4.);
+            facy *= Real(4.);
+
+            if (icell < ncells) {
+                int j = icell /   lenx;
+                int i = icell - j*lenx;
+                j += cor[ilev].begin.y;
+                i += cor[ilev].begin.x;
+                int ic = amrex::coarsen(i,2);
+                int jc = amrex::coarsen(j,2);
+                cor[ilev](i,j,0,0) += cor[ilev+1](ic,jc,0,0);
+                cor[ilev](i,j,0,1) += cor[ilev+1](ic,jc,0,1);
+            }
+
+            for (int is = 0; is < 4; ++is) {
+                HPMG_SYNCTHREADS;
+                if (icell < ncells) {
+                    int j = icell /   lenx;
+                    int i = icell - j*lenx;
+                    j += cor[ilev].begin.y;
+                    i += cor[ilev].begin.x;
+                    if ((i+j+is)%2 == 0) {
+                        fgs(i, j,
+                            cor[ilev].begin.x, cor[ilev].begin.y,
+                            cor[ilev].end.x-1, cor[ilev].end.y-1,
+                            cor[ilev],
+                            res[ilev](i,j,0,0),
+                            res[ilev](i,j,0,1),
+                            acf[ilev], facx, facy);
+                    }
+                }
+            }
+        }
+    });
+}
+
+#endif // AMREX_USE_GPU
 
 } // namespace {}
 
@@ -209,7 +412,7 @@ MultiGrid::MultiGrid (Geometry const& geom)
 
     m_acf.reserve(m_num_mg_levels);
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
-        m_acf.emplace_back(m_domain[ilev], 1);
+        m_acf.emplace_back(m_domain[ilev], 2);
         if (ilev >= m_single_block_level_begin) {
             m_h_array4.push_back(m_acf[ilev].array());
         }
@@ -251,40 +454,165 @@ MultiGrid::MultiGrid (Geometry const& geom)
 }
 
 void
-MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_acf,
-                  Real const tol_rel, Real const tol_abs, int const nummaxiter,
-                  int const verbose)
+MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_acf,
+                   Real const tol_rel, Real const tol_abs, int const nummaxiter,
+                   int const verbose)
 {
-    HIPACE_PROFILE("hpmg::MultiGrid::solve()");
+    HIPACE_PROFILE("hpmg::MultiGrid::solve1()");
+    m_system_type = 1;
 
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_rhs.box(),2,0) == m_domain.front() &&
-                        amrex::makeSlab(a_acf.box(),2,0) == m_domain.front() &&
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_acf.box(),2,0).contains(m_domain.front()));
+    FArrayBox afab(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr());
+
+    auto const& array_m_acf = m_acf[0].array();
+    auto const& array_a_acf = afab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0) = array_a_acf(i,j,0);
+        });
+
+    average_down_acoef();
+
+    solve_doit(a_sol, a_rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::Real const acoef_real, amrex::Real const acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = acoef_real;
+            array_m_acf(i,j,0,1) = acoef_imag;
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::Real const acoef_real, amrex::FArrayBox const& acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
+    amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
+                          1, acoef_imag.dataPtr());
+    auto const& ai = ifab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = acoef_real;
+            array_m_acf(i,j,0,1) = ai(i,j,0);
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::FArrayBox const& acoef_real, amrex::Real const acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()));
+    amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
+                          1, acoef_real.dataPtr());
+    auto const& ar = rfab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = ar(i,j,0);
+            array_m_acf(i,j,0,1) = acoef_imag;
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                   amrex::FArrayBox const& acoef_real, amrex::FArrayBox const& acoef_imag,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs,
+                   int const nummaxiter, int const verbose)
+{
+    HIPACE_PROFILE("hpmg::MultiGrid::solve2()");
+    m_system_type = 2;
+
+    auto const& array_m_acf = m_acf[0].array();
+
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()) &&
+                        amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
+    amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
+                          1, acoef_real.dataPtr());
+    amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
+                          1, acoef_imag.dataPtr());
+    auto const& ar = rfab.const_array();
+    auto const& ai = ifab.const_array();
+    hpmg::ParallelFor(m_acf[0].box(),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            array_m_acf(i,j,0,0) = ar(i,j,0);
+            array_m_acf(i,j,0,1) = ai(i,j,0);
+        });
+
+    average_down_acoef();
+
+    solve_doit(sol, rhs, tol_rel, tol_abs, nummaxiter, verbose);
+}
+
+void
+MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
+                       Real const tol_rel, Real const tol_abs, int const nummaxiter,
+                       int const verbose)
+{
+    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_rhs.box(),2,0).contains(m_domain.front()) &&
                         a_sol.nComp() >= 2 && a_rhs.nComp() >= 2);
-
-#ifdef AMREX_USE_GPU
-    Gpu::Device::setStreamIndex(0); // Use non-null stream
-#endif
 
     m_sol = FArrayBox(amrex::makeSlab(a_sol.box(), 2, 0), 2, a_sol.dataPtr());
     m_rhs = FArrayBox(amrex::makeSlab(a_rhs.box(), 2, 0), 2, a_rhs.dataPtr());
 
-    average_down_acoef(FArrayBox(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr()));
-
     compute_residual(m_domain[0], m_res[0].array(), m_sol.array(),
-                     m_rhs.const_array(), m_acf[0].const_array(), m_dx, m_dy);
+                     m_rhs.const_array(), m_acf[0].const_array(), m_dx, m_dy,
+                     m_system_type);
 
     Real resnorm0, rhsnorm0;
     {
         ReduceOps<ReduceOpMax,ReduceOpMax> reduce_op;
         ReduceData<Real,Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
-        Long const N = m_domain[0].numPts() * 2; // 2 components
-        Real const* p_res = m_res[0].dataPtr();
-        Real const* p_rhs = m_rhs.dataPtr();
-        reduce_op.eval(N, reduce_data, [=] AMREX_GPU_DEVICE (Long i) -> ReduceTuple
-        {
-            return {std::abs(p_res[i]), std::abs(p_rhs[i])};
-        });
+        const auto& array_res = m_res[0].const_array();
+        const auto& array_rhs = m_rhs.const_array();
+        reduce_op.eval(m_domain[0], 2, reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept -> ReduceTuple
+            {
+                return {std::abs(array_res(i,j,0,n)), std::abs(array_rhs(i,j,0,n))};
+            });
+
         auto hv = reduce_data.value(reduce_op);
         resnorm0 = amrex::get<0>(hv);
         rhsnorm0 = amrex::get<1>(hv);
@@ -320,7 +648,9 @@ MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_a
             vcycle();
 
             compute_residual(m_domain[0], m_res[0].array(), m_sol.array(),
-                             m_rhs.const_array(), m_acf[0].const_array(), m_dx, m_dy);
+                             m_rhs.const_array(), m_acf[0].const_array(), m_dx, m_dy,
+                             m_system_type);
+
             Real const* pres0 = m_res[0].dataPtr();
             norminf = Reduce::Max<Real>(m_domain[0].numPts()*2,
                                         [=] AMREX_GPU_DEVICE (Long i) -> Real
@@ -359,17 +689,17 @@ MultiGrid::solve (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_a
             amrex::Abort("hpmg failed");
         }
     }
-
-#ifdef AMREX_USE_GPU
-    Gpu::Device::setStreamIndex(-1); // reset stream
-#endif
 }
 
 void
 MultiGrid::vcycle ()
 {
 #if defined(AMREX_USE_CUDA)
-    if (!m_cuda_graph_vcycle_created) {
+    const int igraph = m_system_type-1;
+    bool& graph_created = m_cuda_graph_vcycle_created[igraph];
+    cudaGraph_t& graph = m_cuda_graph_vcycle[igraph];
+    cudaGraphExec_t& graph_exe = m_cuda_graph_exe_vcycle[igraph];
+    if (!graph_created) {
     cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
@@ -383,12 +713,14 @@ MultiGrid::vcycle ()
         Real dy = m_dy * fac;
         for (int is = 0; is < 4; ++is) {
             gsrb(is, m_domain[ilev], m_cor[ilev].array(),
-                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy);
+                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
+                 m_system_type);
         }
 
         // rescor = res - L(cor)
         compute_residual(m_domain[ilev], m_rescor[ilev].array(), m_cor[ilev].array(),
-                         m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy);
+                         m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
+                         m_system_type);
 
         // res[ilev+1] = R(rescor[ilev])
         restriction(m_domain[ilev+1], m_res[ilev+1].array(), m_rescor[ilev].const_array());
@@ -405,16 +737,17 @@ MultiGrid::vcycle ()
         Real dy = m_dy * fac;
         for (int is = 0; is < 4; ++is) {
             gsrb(is, m_domain[ilev], m_cor[ilev].array(),
-                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy);
+                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
+                 m_system_type);
         }
     }
 
 #if defined(AMREX_USE_CUDA)
-    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_vcycle);
-    cudaGraphInstantiate(&m_cuda_graph_exe_vcycle, m_cuda_graph_vcycle, NULL, NULL, 0);
-    m_cuda_graph_vcycle_created = true;
+    cudaStreamEndCapture(Gpu::gpuStream(), &graph);
+    cudaGraphInstantiate(&graph_exe, graph, NULL, NULL, 0);
+    graph_created = true;
     }
-    cudaGraphLaunch(m_cuda_graph_exe_vcycle, Gpu::gpuStream());
+    cudaGraphLaunch(graph_exe, Gpu::gpuStream());
 #endif
 
     auto const& sol = m_sol.array();
@@ -438,237 +771,147 @@ MultiGrid::bottomsolve ()
     Array4<amrex::Real> const* cor = m_cor_a;
     Array4<amrex::Real> const* rescor = m_rescor_a;
     int nlevs = m_num_single_block_levels;
-#if defined(AMREX_USE_DPCPP)
-    amrex::Abort("DPCPP todo");
-#else
-    static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
-    amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
-    [=] AMREX_GPU_DEVICE () noexcept
-    {
-        Real facx = Real(1.)/(dx0*dx0);
-        Real facy = Real(1.)/(dy0*dy0);
-        int lenx = cor[0].end.x - cor[0].begin.x;
-        int leny = cor[0].end.y - cor[0].begin.y;
-        int ncells = lenx*leny;
-        const int icell = threadIdx.x;
 
-        for (int ilev = 0; ilev < nlevs-1; ++ilev) {
-            if (icell < ncells) {
-                cor[ilev].p[icell] = Real(0.);
-                cor[ilev].p[icell+ncells] = Real(0.);
-            }
-            __syncthreads();
-
-            for (int is = 0; is < 4; ++is) {
-                if (icell < ncells) {
-                    int j = icell /   lenx;
-                    int i = icell - j*lenx;
-                    j += cor[ilev].begin.y;
-                    i += cor[ilev].begin.x;
-                    if ((i+j+is)%2 == 0) {
-                        for (int n = 0; n < 2; ++n) {
-                            gs(i, j, n,
-                               cor[ilev].begin.x, cor[ilev].begin.y,
-                               cor[ilev].end.x-1, cor[ilev].end.y-1,
-                               cor[ilev], res[ilev](i,j,0,n), acf[ilev](i,j,0), facx, facy);
-                        }
-                    }
-                }
-                __syncthreads();
-            }
-
-            if (icell < ncells) {
-                int j = icell /   lenx;
-                int i = icell - j*lenx;
-                j += cor[ilev].begin.y;
-                i += cor[ilev].begin.x;
-                for (int n = 0; n < 2; ++n) {
-                    rescor[ilev](i,j,0,n) =
-                        residual(i, j, n,
-                                 cor[ilev].begin.x, cor[ilev].begin.y,
-                                 cor[ilev].end.x-1, cor[ilev].end.y-1,
-                                 cor[ilev], res[ilev](i,j,0,n), acf[ilev](i,j,0), facx, facy);
-                }
-            }
-            __syncthreads();
-
-            lenx = cor[ilev+1].end.x - cor[ilev+1].begin.x;
-            leny = cor[ilev+1].end.y - cor[ilev+1].begin.y;
-            ncells = lenx*leny;
-            if (icell < ncells) {
-                int j = icell /   lenx;
-                int i = icell - j*lenx;
-                j += cor[ilev+1].begin.y;
-                i += cor[ilev+1].begin.x;
-                for (int n = 0; n < 2; ++n) {
-                    res[ilev+1](i,j,0,n) = Real(0.25)*(rescor[ilev](2*i  ,2*j  ,0,n) +
-                                                       rescor[ilev](2*i+1,2*j  ,0,n) +
-                                                       rescor[ilev](2*i  ,2*j+1,0,n) +
-                                                       rescor[ilev](2*i+1,2*j+1,0,n));
-                }
-            }
-            __syncthreads();
-
-            facx *= Real(0.25);
-            facy *= Real(0.25);
-        }
-
-        // bottom
-        {
-            const int ilev = nlevs-1;
-            if (icell < ncells) {
-                cor[ilev].p[icell] = Real(0.);
-                cor[ilev].p[icell+ncells] = Real(0.);
-            }
-            __syncthreads();
-
-            for (int is = 0; is < nsweeps; ++is) {
-                if (icell < ncells) {
-                    int j = icell /   lenx;
-                    int i = icell - j*lenx;
-                    j += cor[ilev].begin.y;
-                    i += cor[ilev].begin.x;
-                    if ((i+j+is)%2 == 0) {
-                        for (int n = 0; n < 2; ++n) {
-                            gs(i, j, n,
-                               cor[ilev].begin.x, cor[ilev].begin.y,
-                               cor[ilev].end.x-1, cor[ilev].end.y-1,
-                               cor[ilev], res[ilev](i,j,0,n), acf[ilev](i,j,0), facx, facy);
-                        }
-                    }
-                }
-                __syncthreads();
-            }
-        }
-
-        for (int ilev = nlevs-2; ilev >=0; --ilev) {
-            lenx = cor[ilev].end.x - cor[ilev].begin.x;
-            leny = cor[ilev].end.y - cor[ilev].begin.y;
-            ncells = lenx*leny;
-            facx *= Real(4.);
-            facy *= Real(4.);
-
-            if (icell < ncells) {
-                int j = icell /   lenx;
-                int i = icell - j*lenx;
-                j += cor[ilev].begin.y;
-                i += cor[ilev].begin.x;
-                int ic = amrex::coarsen(i,2);
-                int jc = amrex::coarsen(j,2);
-                cor[ilev](i,j,0,0) += cor[ilev+1](ic,jc,0,0);
-                cor[ilev](i,j,0,1) += cor[ilev+1](ic,jc,0,1);
-            }
-
-            for (int is = 0; is < 4; ++is) {
-                __syncthreads();
-                if (icell < ncells) {
-                    int j = icell /   lenx;
-                    int i = icell - j*lenx;
-                    j += cor[ilev].begin.y;
-                    i += cor[ilev].begin.x;
-                    if ((i+j+is)%2 == 0) {
-                        for (int n = 0; n < 2; ++n) {
-                            gs(i, j, n,
-                               cor[ilev].begin.x, cor[ilev].begin.y,
-                               cor[ilev].end.x-1, cor[ilev].end.y-1,
-                               cor[ilev], res[ilev](i,j,0,n), acf[ilev](i,j,0), facx, facy);
-                        }
-                    }
-                }
-            }
-        }
-    });
-#endif
+    if (m_system_type == 1) {
+        bottomsolve_gpu<nsweeps>(dx0, dy0, acf, res, cor, rescor, nlevs,
+            [=] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                                  Array4<Real> const& phi, Real rhs0, Real rhs1,
+                                  Array4<Real> const& acf, Real facx, Real facy)
+            {
+                Real a = acf(i,j,0);
+                gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs0, a, facx, facy);
+                gs1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs1, a, facx, facy);
+            },
+            [=] AMREX_GPU_DEVICE (int i, int j, Real& res0, Real& res1,
+                                  int ilo, int jlo, int ihi, int jhi,
+                                  Array4<Real> const& phi, Real rhs0, Real rhs1,
+                                  Array4<Real> const& acf, Real facx, Real facy)
+            {
+                Real a = acf(i,j,0);
+                res0 = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs0, a, facx, facy);
+                res1 = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs1, a, facx, facy);
+            });
+    } else {
+        bottomsolve_gpu<nsweeps>(dx0, dy0, acf, res, cor, rescor, nlevs,
+            [=] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                                  Array4<Real> const& phi, Real rhs0, Real rhs1,
+                                  Array4<Real> const& acf, Real facx, Real facy)
+            {
+                Real ar = acf(i,j,0,0);
+                Real ai = acf(i,j,0,1);
+                gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs0, rhs1, ar, ai, facx, facy);
+            },
+            [=] AMREX_GPU_DEVICE (int i, int j, Real& res0, Real& res1,
+                                  int ilo, int jlo, int ihi, int jhi,
+                                  Array4<Real> const& phi, Real rhs_r, Real rhs_i,
+                                  Array4<Real> const& acf, Real facx, Real facy)
+            {
+                Real ar = acf(i,j,0,0);
+                Real ai = acf(i,j,0,1);
+                res0 = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs_r, ar, ai, facx, facy);
+                res1 = residual2i(i, j, ilo, jlo, ihi, jhi, phi, rhs_i, ar, ai, facx, facy);
+            });
+    }
 #else
     const int ilev = m_single_block_level_begin;
     m_cor[ilev].setVal(Real(0.));
     for (int is = 0; is < nsweeps; ++is) {
         gsrb(is, m_domain[ilev], m_cor[ilev].array(),
-             m_res[ilev].const_array(), m_acf[ilev].const_array(), dx0, dy0);
+             m_res[ilev].const_array(), m_acf[ilev].const_array(), dx0, dy0,
+             m_system_type);
     }
 #endif
 }
 
 void
-MultiGrid::average_down_acoef (FArrayBox const& a_acf)
+MultiGrid::average_down_acoef ()
 {
-#if defined(AMREX_USE_GPU)
-    Gpu::dtod_memcpy_async(m_acf[0].dataPtr(), a_acf.dataPtr(), m_acf[0].nBytes());
-#else
-    Real const* psrc = a_acf.dataPtr();
-    Real * pdst = m_acf[0].dataPtr();
-    hpmg::ParallelFor(m_acf[0].size(), [=] (Long i) noexcept { pdst[i] = psrc[i]; });
-#endif
-
+    const int ncomp = (m_system_type == 1) ? 1 : 2;
 #if defined(AMREX_USE_CUDA)
-    if (!m_cuda_graph_acf_created) {
+    const int igraph = m_system_type-1;
+    bool& graph_created = m_cuda_graph_acf_created[igraph];
+    cudaGraph_t& graph = m_cuda_graph_acf[igraph];
+    cudaGraphExec_t& graph_exe = m_cuda_graph_exe_acf[igraph];
+    if (!graph_created) {
     cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
     for (int ilev = 1; ilev <= m_single_block_level_begin; ++ilev) {
         auto const& crse = m_acf[ilev].array();
         auto const& fine = m_acf[ilev-1].const_array();
-        hpmg::ParallelFor(m_domain[ilev], [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(m_domain[ilev], ncomp,
+        [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
         {
-            crse(i,j,0) = Real(0.25)*(fine(2*i  ,2*j  ,0) +
-                                      fine(2*i+1,2*j  ,0) +
-                                      fine(2*i  ,2*j+1,0) +
-                                      fine(2*i+1,2*j+1,0));
+            crse(i,j,0,n) = Real(0.25)*(fine(2*i  ,2*j  ,0,n) +
+                                        fine(2*i+1,2*j  ,0,n) +
+                                        fine(2*i  ,2*j+1,0,n) +
+                                        fine(2*i+1,2*j+1,0,n));
         });
     }
 
 #if defined(AMREX_USE_GPU)
-#if defined (AMREX_USE_DPCPP)
-    amrex::Abort("DPCPP todo");
-#endif
-
     if (m_num_single_block_levels > 1) {
         Array4<Real> const* acf = m_acf_a;
         int nlevels = m_num_single_block_levels;
 
+#if defined(AMREX_USE_DPCPP)
+        amrex::launch(1, 1024, Gpu::gpuStream(),
+        [=] (sycl::nd_item<1> const& item) noexcept
+#else
         amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
         [=] AMREX_GPU_DEVICE () noexcept
+#endif
         {
             for (int ilev = 1; ilev < nlevels; ++ilev) {
                 const int lenx = acf[ilev].end.x - acf[ilev].begin.x;
                 const int leny = acf[ilev].end.y - acf[ilev].begin.y;
                 const int ncells = lenx*leny;
+#if defined(AMREX_USE_DPCPP)
+                for (int icell = item.get_local_range(0)*item.get_group_linear_id()
+                         + item.get_local_linear_id(),
+                         stride = item.get_local_range(0)*item.get_group_range(0);
+#else
                 for (int icell = blockDim.x*blockIdx.x+threadIdx.x, stride = blockDim.x*gridDim.x;
+#endif
                      icell < ncells; icell += stride) {
                     int j = icell /   lenx;
                     int i = icell - j*lenx;
                     j += acf[ilev].begin.y;
                     i += acf[ilev].begin.x;
-                    acf[ilev](i,j,0) = Real(0.25)*(acf[ilev-1](2*i  ,2*j  ,0) +
-                                                   acf[ilev-1](2*i+1,2*j  ,0) +
-                                                   acf[ilev-1](2*i  ,2*j+1,0) +
-                                                   acf[ilev-1](2*i+1,2*j+1,0));
+                    for (int n = 0; n < ncomp; ++n) {
+                        acf[ilev](i,j,0,n) = Real(0.25)*(acf[ilev-1](2*i  ,2*j  ,0,n) +
+                                                         acf[ilev-1](2*i+1,2*j  ,0,n) +
+                                                         acf[ilev-1](2*i  ,2*j+1,0,n) +
+                                                         acf[ilev-1](2*i+1,2*j+1,0,n));
+                    }
                 }
-                __syncthreads();
+                HPMG_SYNCTHREADS;
             }
         });
     }
 #endif
 
 #if defined(AMREX_USE_CUDA)
-    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_acf);
-    cudaGraphInstantiate(&m_cuda_graph_exe_acf, m_cuda_graph_acf, NULL, NULL, 0);
-    m_cuda_graph_acf_created = true;
+    cudaStreamEndCapture(Gpu::gpuStream(), &graph);
+    cudaGraphInstantiate(&graph_exe, graph, NULL, NULL, 0);
+    graph_created = true;
     }
-    cudaGraphLaunch(m_cuda_graph_exe_acf, Gpu::gpuStream());
+    cudaGraphLaunch(graph_exe, Gpu::gpuStream());
 #endif
 }
 
 MultiGrid::~MultiGrid ()
 {
 #if defined(AMREX_USE_CUDA)
-    if (m_cuda_graph_acf_created) {
-        cudaGraphDestroy(m_cuda_graph_acf);
-        cudaGraphExecDestroy(m_cuda_graph_exe_acf);
-    }
-    if (m_cuda_graph_vcycle_created) {
-        cudaGraphDestroy(m_cuda_graph_vcycle);
-        cudaGraphExecDestroy(m_cuda_graph_exe_vcycle);
+    for (int igraph = 0; igraph < m_num_system_types; ++igraph) {
+        if (m_cuda_graph_acf_created[igraph]) {
+            cudaGraphDestroy(m_cuda_graph_acf[igraph]);
+            cudaGraphExecDestroy(m_cuda_graph_exe_acf[igraph]);
+        }
+        if (m_cuda_graph_vcycle_created[igraph]) {
+            cudaGraphDestroy(m_cuda_graph_vcycle[igraph]);
+            cudaGraphExecDestroy(m_cuda_graph_exe_vcycle[igraph]);
+        }
     }
 #endif
 }

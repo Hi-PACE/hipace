@@ -6,20 +6,10 @@
 # Severin Diederichs, atmyers
 # License: BSD-3-Clause-LBNL
 
-target_sources(HiPACE
-  PRIVATE
-    BeamParticleContainer.cpp
-    BeamParticleContainerInit.cpp
-    PlasmaParticleContainer.cpp
-    PlasmaParticleContainerInit.cpp
-    SliceSort.cpp
-    TileSort.cpp
-    BoxSort.cpp
-    MultiBeam.cpp
-    MultiPlasma.cpp
-    CoulombCollision.cpp
-)
-
+add_subdirectory(beam)
+add_subdirectory(collisions)
 add_subdirectory(deposition)
+add_subdirectory(plasma)
 add_subdirectory(pusher)
 add_subdirectory(profiles)
+add_subdirectory(sorting)

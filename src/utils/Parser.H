@@ -23,7 +23,7 @@
 
 
 template<class T>
-inline int
+inline bool
 queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val);
 
 namespace Parser
@@ -304,7 +304,7 @@ getWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
  * \param[out] val value to be filled, see fillWithParserArr and fillWithParser for supported types
  */
 template<class T>
-inline int
+inline bool
 queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
     std::vector<std::string> f;
     const int is_specified = pp.queryarr(str, f);
@@ -312,6 +312,40 @@ queryWithParser (const amrex::ParmParse& pp, char const * const str, T& val) {
         Parser::fillWithParserArr(f, val);
     }
     return is_specified;
+}
+
+/** \brief return if input file contains the expression, if so it is parsed into val.
+ * The input is searched in pp first, if it is not found pp_alt is searched
+ *
+ * \param[in] pp ParmParse that is first searched for the expression
+ * \param[in] str name of expression
+ * \param[out] val value to be filled, see fillWithParserArr and fillWithParser for supported types
+ * \param[in] pp_alt Alternative ParmParse that is searched for the expression with lower priority
+ */
+template<class T>
+inline bool
+queryWithParserAlt (const amrex::ParmParse& pp, char const * const str, T& val,
+                    const amrex::ParmParse& pp_alt) {
+    // uses boolean short circuiting
+    return queryWithParser(pp, str, val) || queryWithParser(pp_alt, str, val);
+}
+
+/** \brief fill val with the evaluated expression from the input file
+ * The input is searched in pp first, if it is not found pp_alt is searched
+ *
+ * \param[in] pp ParmParse that is first searched for the expression
+ * \param[in] str name of expression
+ * \param[out] val value to be filled, see fillWithParserArr and fillWithParser for supported types
+ * \param[in] pp_alt Alternative ParmParse that is searched for the expression with lower priority
+ */
+template<class T>
+inline void
+getWithParserAlt (const amrex::ParmParse& pp, char const * const str, T& val,
+                  const amrex::ParmParse& pp_alt) {
+    if (!queryWithParserAlt(pp, str, val, pp_alt)) {
+        // Use error massage of the get function with the original pp
+        getWithParser(pp, str, val);
+    }
 }
 
 /** \brief return function object for Host and Device from the input file

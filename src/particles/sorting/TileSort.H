@@ -8,7 +8,7 @@
 #ifndef HIPACE_TILESORT_H_
 #define HIPACE_TILESORT_H_
 
-#include "PlasmaParticleContainer.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
 
 #include <AMReX_MultiFab.H>
 

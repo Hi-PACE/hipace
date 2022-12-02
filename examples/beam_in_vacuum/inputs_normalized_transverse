@@ -39,4 +39,7 @@ beam2.position_mean = 0. 0. 0
 beam2.position_std = 8. 0.3 1.41
 
 plasmas.names = no_plasma
+
+lasers.names = no_laser
+
 diagnostic.diag_type = xz

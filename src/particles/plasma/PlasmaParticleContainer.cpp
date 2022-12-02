@@ -11,10 +11,11 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
-#include "pusher/PlasmaParticleAdvance.H"
-#include "pusher/BeamParticleAdvance.H"
-#include "pusher/FieldGather.H"
-#include "pusher/GetAndSetPosition.H"
+#include "utils/GPUUtil.H"
+#include "particles/pusher/PlasmaParticleAdvance.H"
+#include "particles/pusher/BeamParticleAdvance.H"
+#include "particles/particles_utils/FieldGather.H"
+#include "particles/pusher/GetAndSetPosition.H"
 #include <cmath>
 #include <fstream>
 #include <sstream>
@@ -25,6 +26,7 @@ PlasmaParticleContainer::ReadParameters ()
     PhysConst phys_const = get_phys_const();
 
     amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_alt("plasmas");
     std::string element = "";
     amrex::Real mass_Da = 0;
     queryWithParser(pp, "element", element);
@@ -61,7 +63,7 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial Ion level must be specified");
     }
-    queryWithParser(pp, "neutralize_background", m_neutralize_background);
+    queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
         "Cannot use neutralize_background for Ion plasma");
 
@@ -81,10 +83,10 @@ PlasmaParticleContainer::ReadParameters ()
                     "The same functionality can be obtained with the parser using "
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
-    bool density_func_specified = queryWithParser(pp, "density(x,y,z)", density_func_str);
+    bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
     m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
 
-    queryWithParser(pp, "min_density", m_min_density);
+    queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
 
     std::string density_table_file_name{};
     m_use_density_table = queryWithParser(pp, "density_table_file", density_table_file_name);
@@ -108,14 +110,14 @@ PlasmaParticleContainer::ReadParameters ()
     }
 
     queryWithParser(pp, "level", m_level);
-    queryWithParser(pp, "radius", m_radius);
-    queryWithParser(pp, "hollow_core_radius", m_hollow_core_radius);
+    queryWithParserAlt(pp, "radius", m_radius, pp_alt);
+    queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
-    queryWithParser(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor);
+    queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
     amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParser(pp, "ppc", tmp_vector)){
+    if (queryWithParserAlt(pp, "ppc", tmp_vector, pp_alt)){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
         "ppc is only specified in transverse directions for plasma particles, "
         "it is 1 in the longitudinal direction z. "
@@ -142,21 +144,11 @@ PlasmaParticleContainer::ReadParameters ()
     if (temperature_is_specified) {
         const PhysConst phys_const_SI = make_constants_SI();
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-            m_u_std[idim] = sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
-                                /(phys_const_SI.m_e * phys_const_SI.c * phys_const_SI.c ) );
+            m_u_std[idim] = std::sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
+                                       /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
+                                       phys_const_SI.c * phys_const_SI.c ) );
         }
     }
-
-    // FIXME assert to be removed once the bug in the explicit solver if fixed.
-    amrex::ParmParse pph("hipace");
-    std::string solver;
-    queryWithParser(pph, "bxby_solver", solver);
-    if (solver=="explicit") {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_u_std[Direction::z] < 0.01,
-        "Currently, the explicit solver does not work for plasma momentum spread > 0.01 in z "
-        "direction. Please use a lower <plasma name>.temperature_in_ev or <plasma name>.u_std.");
-    }
-
 }
 
 void
@@ -196,37 +188,24 @@ IonizationModule (const int lev,
     const PhysConst phys_const = make_constants_SI();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
-    for (amrex::MFIter mfi_ion = MakeMFIter(lev); mfi_ion.isValid(); ++mfi_ion)
+    for (amrex::MFIter mfi_ion = MakeMFIter(lev, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
     {
-        // Extract the fields
-        const amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-        const amrex::MultiFab exmby(S, amrex::make_alias, Comps[WhichSlice::This]["ExmBy"], 1);
-        const amrex::MultiFab eypbx(S, amrex::make_alias, Comps[WhichSlice::This]["EypBx"], 1);
-        const amrex::MultiFab ez(S, amrex::make_alias, Comps[WhichSlice::This]["Ez"], 1);
-        const amrex::MultiFab bx(S, amrex::make_alias, Comps[WhichSlice::This]["Bx"], 1);
-        const amrex::MultiFab by(S, amrex::make_alias, Comps[WhichSlice::This]["By"], 1);
-        const amrex::MultiFab bz(S, amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
-        // Extract FabArray for this box
-        const amrex::FArrayBox& exmby_fab = exmby[mfi_ion];
-        const amrex::FArrayBox& eypbx_fab = eypbx[mfi_ion];
-        const amrex::FArrayBox& ez_fab = ez[mfi_ion];
-        const amrex::FArrayBox& bx_fab = bx[mfi_ion];
-        const amrex::FArrayBox& by_fab = by[mfi_ion];
-        const amrex::FArrayBox& bz_fab = bz[mfi_ion];
         // Extract field array from FabArray
-        amrex::Array4<const amrex::Real> const& exmby_arr = exmby_fab.array();
-        amrex::Array4<const amrex::Real> const& eypbx_arr = eypbx_fab.array();
-        amrex::Array4<const amrex::Real> const& ez_arr = ez_fab.array();
-        amrex::Array4<const amrex::Real> const& bx_arr = bx_fab.array();
-        amrex::Array4<const amrex::Real> const& by_arr = by_fab.array();
-        amrex::Array4<const amrex::Real> const& bz_arr = bz_fab.array();
-        // Extract particle data
-        const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[mfi_ion];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int exmby_comp = Comps[WhichSlice::This]["ExmBy"];
+        const int eypbx_comp = Comps[WhichSlice::This]["EypBx"];
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+        const int bx_comp = Comps[WhichSlice::This]["Bx"];
+        const int by_comp = Comps[WhichSlice::This]["By"];
+        const int bz_comp = Comps[WhichSlice::This]["Bz"];
+
+        const amrex::Real dx_inv = 1._rt/dx[0];
+        const amrex::Real dy_inv = 1._rt/dx[1];
 
         // Offset for converting positions to indexes
-        amrex::Real const x_pos_offset = GetPosOffset(0, geom, ez_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, geom, ez_fab.box());
-        amrex::Real const z_pos_offset = GetPosOffset(2, geom, ez_fab.box());
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
         const int depos_order_xy = Hipace::m_depos_order_xy;
 
@@ -273,11 +252,10 @@ IonizationModule (const int lev,
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
             amrex::ParticleReal Bxp = 0., Byp = 0., Bzp = 0.;
 
-            doGatherShapeN(xp, yp,  0 /* zp not used */,
-                           ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                           exmby_arr, eypbx_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                           dx_arr, x_pos_offset, y_pos_offset, z_pos_offset,
-                           depos_order_xy, 0);
+            doGatherShapeN(xp, yp,
+                           ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
+                           exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                           dx_inv, dy_inv, x_pos_offset, y_pos_offset, depos_order_xy);
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
@@ -302,7 +280,7 @@ IonizationModule (const int lev,
                 amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
             }
         });
-        amrex::Gpu::synchronize();
+        amrex::Gpu::streamSynchronize();
 
         if (num_new_electrons.dataValue() == 0) continue;
 
@@ -390,6 +368,5 @@ IonizationModule (const int lev,
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });
-        amrex::Gpu::synchronize();
     }
 }

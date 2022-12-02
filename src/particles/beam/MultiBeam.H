@@ -10,8 +10,8 @@
 
 #include "BeamParticleContainer.H"
 #include "fields/Fields.H"
-#include "particles/SliceSort.H"
-#include "particles/BoxSort.H"
+#include "particles/sorting/SliceSort.H"
+#include "particles/sorting/BoxSort.H"
 
 class MultiBeam
 {
@@ -31,20 +31,22 @@ public:
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] geom Geometry vector for all levels
      * \param[in] lev MR level
+     * \param[in] step time step of simulation
      * \param[in] islice slice index in which the current is stored
      * \param[in] bins Vector (over species) of particles sorted by slices
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] ibox index of the current box
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
+     * \param[in] do_beam_jz_deposition whether the beam deposits Jz
+     * \param[in] do_beam_rho_deposition whether the beam deposits rho
      * \param[in] which_slice defines if this or the next slice is handled
-     * \param[in] do_beam_jz_minus_rho whether jz_beam-rho_beam is computed and used in the simulation.
-     *            Otherwise, it is assumed to be 0. If true, rho_beam needs to be deposited.
      */
     void DepositCurrentSlice (
-        Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-        const amrex::Vector<BeamBins>& bins,
+        Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
+        int islice, const amrex::Vector<BeamBins>& bins,
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-        const bool do_beam_jx_jy_deposition, const int which_slice, const bool do_beam_jz_minus_rho=false);
+        const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+        const bool do_beam_rho_deposition, const int which_slice);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] lev MR level
@@ -84,6 +86,7 @@ public:
         const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
+     * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] bins Binning object to get particles on current slice.
      * \param[in] islice0 index of the leftmost slice of this box, to select the correct bin.
@@ -91,9 +94,9 @@ public:
      *            particle indices in current box.
      * \param[in] ibox index of box currently being computed.
      */
-    void InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
+    void InSituComputeDiags (int step, int islice, const amrex::Vector<BeamBins>& bins, int islice0,
                              const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
-    void InSituWriteToFile (int step, amrex::Real time);
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      * \return physical time at which the simulation will start
@@ -165,15 +168,17 @@ public:
      */
     int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];}
 
-    /** \brief Allows beams.all_from_file to specify the input file of all beams that have
-     * no injection_type. Also passes down beams.iteration, beams.plasma_density and
-     * beams.file_coordinates_xyz to the individual beams if applicable.
-     *
-     * \param[in] beam_names names of all beams.
+    /** \brief returns if the SALAME algorithm should be used on this slice
+     * \param[in] step time step of simulation
+     * \param[in] islice slice index of the local box
+     * \param[in] bins Vector (over species) of beam particles sorted by slices
      */
-    void MultiFromFileMacro (const amrex::Vector<std::string> beam_names);
-    bool doInSitu (int step);
-    int m_insitu_freq {-1};
+    bool isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins);
+
+    /** \brief returns if any beam uses the SALAME algorithm
+     */
+    bool AnySpeciesSalame ();
+
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

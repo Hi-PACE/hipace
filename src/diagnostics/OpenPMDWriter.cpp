@@ -10,6 +10,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/IOUtil.H"
+#include "Hipace.H"
 
 #ifdef HIPACE_USE_OPENPMD
 
@@ -56,24 +57,18 @@ OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, 
     if (output_period < 0 ||
        (!(output_step == max_step) && output_step % output_period != 0)) return;
 
-    if (nlev > 1) {
-        for (int lev=0; lev<nlev; ++lev) {
-            std::string filename = m_file_prefix + "/lev_" + std::to_string(lev) +  "/openpmd_%06T."
-                                   + m_openpmd_backend;
+    m_outputSeries.resize(nlev);
+    m_last_output_dumped.resize(nlev);
 
-            m_outputSeries.push_back(std::make_unique< openPMD::Series >(
-                filename, openPMD::Access::CREATE) );
-            m_last_output_dumped.push_back(-1);
-        }
-    } else {
-        std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
+    for (int lev=0; lev<nlev; ++lev) {
+        std::string filename = m_file_prefix +
+            (nlev>1 ? "/lev_" + std::to_string(lev) : "") +
+            "/openpmd_%06T." + m_openpmd_backend;
 
-        m_outputSeries.push_back(std::make_unique< openPMD::Series >(
-            filename, openPMD::Access::CREATE) );
-        m_last_output_dumped.push_back(-1);
+        m_outputSeries[lev] = std::make_unique< openPMD::Series >(
+            filename, openPMD::Access::CREATE);
+        m_last_output_dumped[lev] = -1;
     }
-
-
 
     // TODO: meta-data: author, mesh path, extensions, software
 }
@@ -305,8 +300,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     // calculate the multiplier to convert from Hipace to SI units
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
-    double hipace_to_SI_momentum = phys_const_SI.m_e;
-    double hipace_to_unitSI_momentum = phys_const_SI.m_e;
+    double hipace_to_SI_momentum = beam.m_mass;
+    double hipace_to_unitSI_momentum = beam.m_mass;
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 
@@ -319,16 +314,15 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
         const double kp_inv = (double)phys_const_SI.c / omega_p;
         hipace_to_SI_pos = kp_inv;
         hipace_to_SI_weight = n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
-        hipace_to_SI_momentum = phys_const_SI.m_e * phys_const_SI.c;
-        hipace_to_unitSI_momentum = 1.;
+        hipace_to_SI_momentum = beam.m_mass * phys_const_SI.m_e * phys_const_SI.c;
         hipace_to_SI_charge = phys_const_SI.q_e;
         hipace_to_SI_mass = phys_const_SI.m_e;
     }
 
     // temporary workaround until openPMD-viewer does not autonormalize momentum
     if(m_openpmd_viewer_workaround) {
-        if(Hipace::m_normalized_units){
-            hipace_to_unitSI_momentum = phys_const_SI.c;
+        if(Hipace::m_normalized_units) {
+            hipace_to_unitSI_momentum = beam.m_mass * phys_const_SI.c;
         }
     }
 
@@ -411,9 +405,10 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     }
 }
 
-void OpenPMDWriter::reset ()
+void OpenPMDWriter::reset (const int output_step)
 {
     for (int lev = 0; lev<m_outputSeries.size(); ++lev) {
+        if (output_step != m_last_output_dumped[lev]) continue;
         m_outputSeries[lev].reset();
     }
 }

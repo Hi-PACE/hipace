@@ -36,3 +36,5 @@ plasma.ppc = 1 1
 plasma.u_mean = 0.0 0.0 0.
 plasma.element = electron
 diagnostic.diag_type = xyz
+
+lasers.names = no_laser

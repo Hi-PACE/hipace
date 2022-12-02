@@ -6,9 +6,10 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "MultiBeam.H"
-#include "deposition/BeamDepositCurrent.H"
-#include "particles/SliceSort.H"
-#include "pusher/BeamParticleAdvance.H"
+#include "particles/deposition/BeamDepositCurrent.H"
+#include "particles/sorting/SliceSort.H"
+#include "particles/pusher/BeamParticleAdvance.H"
+#include "utils/DeprecatedInput.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
@@ -17,9 +18,10 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
     amrex::ParmParse pp("beams");
     getWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
-    queryWithParser(pp, "insitu_freq", m_insitu_freq);
+    DeprecatedInput("beams", "insitu_freq", "insitu_period");
+    DeprecatedInput("beams", "all_from_file",
+        "injection_type = from_file\nand beams.input_file = <file name>\n");
     m_nbeams = m_names.size();
-    MultiFromFileMacro(m_names);
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
     }
@@ -31,24 +33,31 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 {
     amrex::Real ptime {0.};
     for (auto& beam : m_all_beams) {
-        ptime = beam.InitData(geom, m_insitu_freq>0);
+        ptime = beam.InitData(geom);
     }
     return ptime;
 }
 
 void
 MultiBeam::DepositCurrentSlice (
-    Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, int islice,
-    const amrex::Vector<BeamBins>& bins,
+    Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
+    int islice, const amrex::Vector<BeamBins>& bins,
     const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-    const bool do_beam_jx_jy_deposition, const int which_slice, const bool do_beam_jz_minus_rho)
+    const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+    const bool do_beam_rho_deposition, const int which_slice)
 
 {
     for (int i=0; i<m_nbeams; i++) {
-        const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
-        ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
-                              a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
-                              do_beam_jx_jy_deposition, which_slice, nghost, do_beam_jz_minus_rho);
+        const bool is_salame = m_all_beams[i].m_do_salame && (step == 0);
+        if ( is_salame || (which_slice != WhichSlice::Salame) ) {
+            const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
+            ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
+                                  a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
+                                  do_beam_jx_jy_deposition && !is_salame,
+                                  do_beam_jz_deposition,
+                                  do_beam_rho_deposition && !is_salame,
+                                  which_slice, nghost);
+        }
     }
 }
 
@@ -66,7 +75,7 @@ MultiBeam::findParticlesInEachSlice (int nlev, int ibox, amrex::Box bx,
         }
         bins.emplace_back(bins_per_level);
     }
-    amrex::Gpu::Device::synchronize();
+    amrex::Gpu::streamSynchronize();
     return bins;
 }
 
@@ -131,7 +140,7 @@ int
 MultiBeam::NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx)
 {
     BeamBins::index_type const * offsets = 0;
-    offsets = bins[ibeam].offsetsPtr();
+    offsets = bins[ibeam].offsetsPtrCpu();
     return offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)]
         - offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
 }
@@ -193,65 +202,48 @@ MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_
 }
 
 void
-MultiBeam::MultiFromFileMacro (const amrex::Vector<std::string> beam_names)
+MultiBeam::InSituComputeDiags (int step, int islice, const amrex::Vector<BeamBins>& bins,
+                               int islice0, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+                               const int ibox)
 {
-    amrex::ParmParse pp("beams");
-    std::string all_input_file = "";
-    if(!queryWithParser(pp, "all_from_file", all_input_file)) {
-        return;
-    }
-
-    int iteration = 0;
-    const bool multi_iteration = queryWithParser(pp, "iteration", iteration);
-    amrex::Real plasma_density = 0;
-    const bool multi_plasma_density = queryWithParser(pp, "plasma_density", plasma_density);
-    std::vector<std::string> file_coordinates_xyz;
-    const bool multi_file_coordinates_xyz = queryWithParser(pp, "file_coordinates_xyz",
-                                                            file_coordinates_xyz);
-
-    for( std::string name : beam_names ) {
-        amrex::ParmParse pp_beam(name);
-        if(!pp_beam.contains("injection_type")) {
-            std::string str_from_file = "from_file";
-            pp_beam.add("injection_type", str_from_file);
-            pp_beam.add("input_file", all_input_file);
-
-            if(!pp_beam.contains("iteration") && multi_iteration) {
-                pp_beam.add("iteration", iteration);
-            }
-
-            if(!pp_beam.contains("plasma_density") && multi_plasma_density) {
-                pp_beam.add("plasma_density", plasma_density);
-            }
-
-            if(!pp_beam.contains("file_coordinates_xyz") && multi_file_coordinates_xyz) {
-                pp_beam.addarr("file_coordinates_xyz", file_coordinates_xyz);
-            }
+    for (int i = 0; i < m_nbeams; ++i) {
+        if (m_all_beams[i].doInSitu(step)) {
+            m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
+                                              a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
         }
     }
 }
 
 void
-MultiBeam::InSituComputeDiags (int islice, const amrex::Vector<BeamBins>& bins, int islice0,
-                               const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
-{
-    for (int i = 0; i < m_nbeams; ++i) {
-        m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
-                                          a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
-    }
-}
-
-void
-MultiBeam::InSituWriteToFile (int step, amrex::Real time)
+MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
 {
     for (auto& beam : m_all_beams) {
-        beam.InSituWriteToFile(step, time);
+        if (beam.doInSitu(step)) {
+            beam.InSituWriteToFile(step, time, geom);
+        }
     }
 }
 
-bool
-MultiBeam::doInSitu (int step)
+bool MultiBeam::AnySpeciesSalame () {
+    for (int i = 0; i < m_nbeams; ++i) {
+        if (m_all_beams[i].m_do_salame) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MultiBeam::isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins)
 {
-    if (m_insitu_freq < 0) return false;
-    return step % m_insitu_freq == 0;
+    if (step != 0) return false;
+
+    for (int i = 0; i < m_nbeams; ++i) {
+        if (m_all_beams[i].m_do_salame) {
+            BeamBins::index_type const * const offsets = bins[i].offsetsPtrCpu();
+            if ((offsets[islice + 1] - offsets[islice]) > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

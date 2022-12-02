@@ -26,6 +26,8 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
+rm -rf $TEST_NAME
+rm -rf ${TEST_NAME}_cd2
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
@@ -37,4 +39,20 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --file_name $TEST_NAME \
-    --test-name $TEST_NAME
+    --test-name $TEST_NAME \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"
+
+echo "Start testing new current deposition"
+
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        plasmas.sort_bin_size = 8 \
+        hipace.file_prefix=${TEST_NAME}_cd2 \
+        hipace.bxby_solver=explicit \
+        hipace.outer_depos_loop=true \
+        max_step=1
+
+$HIPACE_TEST_DIR/checksum/checksumAPI.py \
+    --evaluate \
+    --file_name ${TEST_NAME}_cd2 \
+    --test-name $TEST_NAME \
+    --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"

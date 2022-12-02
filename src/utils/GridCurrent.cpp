@@ -8,6 +8,7 @@
 #include "GridCurrent.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
+#include "GPUUtil.H"
 #include "Constants.H"
 
 GridCurrent::GridCurrent ()
@@ -48,23 +49,19 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
 
     // Extract the longitudinal beam current
     amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
-    amrex::MultiFab jz(S, amrex::make_alias, Hipace::GetInstance().m_explicit ?
-        Comps[WhichSlice::This]["jz_beam"] : Comps[WhichSlice::This]["jz"], 1);
-
-    // Extract FabArray for this box
-    amrex::FArrayBox& jz_fab = jz[0];
 
     const amrex::Real z = plo[2] + islice*dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
     const amrex::Real long_pos_factor =  std::exp( -0.5_rt*(delta_z*delta_z) );
     const amrex::Real loc_peak_current_density = m_peak_current_density;
 
-    for ( amrex::MFIter mfi(S, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(S, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
+        Array2<amrex::Real> const jz_arr = S.array(mfi, Hipace::GetInstance().m_explicit ?
+            Comps[WhichSlice::This]["jz_beam"] : Comps[WhichSlice::This]["jz"]);
 
         amrex::ParallelFor( bx,
-        [=] AMREX_GPU_DEVICE(int i, int j, int k)
+        [=] AMREX_GPU_DEVICE(int i, int j, int)
         {
             const amrex::Real x = plo[0] + (i+0.5_rt)*dx_arr[0];
             const amrex::Real y = plo[1] + (j+0.5_rt)*dx_arr[1];
@@ -74,7 +71,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
             const amrex::Real trans_pos_factor =  std::exp( -0.5_rt*(delta_x*delta_x
                                                                     + delta_y*delta_y) );
 
-            jz_arr(i, j, k) += loc_peak_current_density*trans_pos_factor*long_pos_factor;
+            jz_arr(i, j) += loc_peak_current_density*trans_pos_factor*long_pos_factor;
         });
     }
 }

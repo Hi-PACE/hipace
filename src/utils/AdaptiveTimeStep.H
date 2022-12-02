@@ -8,8 +8,8 @@
 #ifndef ADAPTIVETIMESTEP_H_
 #define ADAPTIVETIMESTEP_H_
 
-#include "particles/MultiBeam.H"
-#include "particles/BeamParticleContainer.H"
+#include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include <AMReX_AmrCore.H>
 
 /** \brief class handling the adaptive time step */
@@ -18,16 +18,16 @@ class AdaptiveTimeStep
 private:
 
     /** container including dt, min_gamma, sum of weights and the sum of weights times gamma */
-    amrex::Real m_timestep_data[5] = {0., 1e30, 0., 0., 0.};
+    amrex::Vector<amrex::Vector<amrex::Real>> m_timestep_data;
 
-    /** Whether to use an adaptive time step */
-    bool m_do_adaptive_time_step = false;
     /** Number of time steps per betatron period for the adaptive time step */
     amrex::Real m_nt_per_betatron = 40.;
 
 public:
+    /** Whether to use an adaptive time step */
+    bool m_do_adaptive_time_step = false;
     /** Constructor */
-    explicit AdaptiveTimeStep ();
+    explicit AdaptiveTimeStep (const int nbeams);
 
 #ifdef AMREX_USE_MPI
     /** sends the calculated initial time step to the rank downstream

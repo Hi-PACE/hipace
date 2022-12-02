@@ -8,12 +8,10 @@
 #ifndef HIPACE_SLICESORT_H_
 #define HIPACE_SLICESORT_H_
 
-#include "BeamParticleContainer.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "BoxSort.H"
 
 #include <AMReX_MultiFab.H>
-
-using BeamBins = amrex::DenseBins<BeamParticleContainer::ParticleType>;
 
 /** \brief Find particles that are in each slice, and return collections of indices per slice.
  *

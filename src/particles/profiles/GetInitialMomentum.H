@@ -8,7 +8,7 @@
 #ifndef GETINTIALMOMENTUM_H_
 #define GETINTIALMOMENTUM_H_
 
-#include "particles/ParticleUtil.H"
+#include "particles/particles_utils/ParticleUtil.H"
 #include <AMReX.H>
 #include <AMReX_REAL.H>
 #include <AMReX_RealVect.H>
