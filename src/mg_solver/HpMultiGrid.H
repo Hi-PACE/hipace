@@ -36,9 +36,10 @@ public:
 
     /** \brief Ctor
      *
-     * \param[in] geom Geometry describing a 2D slice
+     * \param[in] geom Geometry for dx and dy
+     * \param[in] domain Box describing a 2D slice
      */
-    explicit MultiGrid (amrex::Geometry const& geom);
+    explicit MultiGrid (amrex::Geometry const& geom, amrex::Box a_domain);
 
     /** \brief Dtor */
     ~MultiGrid ();
@@ -142,6 +143,17 @@ public:
     void solve_doit (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
                      amrex::Real const tol_rel, amrex::Real const tol_abs,
                      int const nummaxiter, int const verbose);
+    /** \brief Centers the input box in x and y around the domain so that only the ghost
+     * cells "overhang". Make it a slab in the z direction and set the index to 0.
+     */
+    amrex::Box center_box (amrex::Box in_box, amrex::Box domain) {
+        amrex::Box out_box = amrex::makeSlab(
+            in_box + (domain.smallEnd() + domain.bigEnd() - in_box.smallEnd() - in_box.bigEnd())/2,
+        2, 0);
+        amrex::Print() << "in box " << in_box << " out box " << out_box << " domain " << domain << '\n';
+        AMREX_ALWAYS_ASSERT(out_box.contains(domain));
+        return out_box;
+    }
 
 private:
 

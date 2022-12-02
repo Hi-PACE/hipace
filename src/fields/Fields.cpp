@@ -87,7 +87,7 @@ Fields::AllocData (
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
                 // for interpolating boundary conditions to level 1
-                Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
+                Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bx", "By", "Bz", "Psi", "rho");
             }
             Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
 
@@ -507,12 +507,10 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
 }
 
 void
-Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real patch_lo,
+Fields::ShiftSlices (int lev, int islice, amrex::Geometry geom, amrex::Real patch_lo,
                      amrex::Real patch_hi)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-
-    for (int lev = 0; lev < nlev; ++lev) {
 
     // skip all slices which are not existing on level 1
     if (lev == 1) {
@@ -520,17 +518,17 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         const amrex::Real* problo = geom.ProbLo();
         const amrex::Real* dx = geom.CellSize();
         const amrex::Real pos = (islice+0.5_rt)*dx[2]+problo[2];
-        if (pos < patch_lo || pos > patch_hi) continue;
+        if (pos < patch_lo || pos > patch_hi) return;
     }
 
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
-    const bool mesh_refinement = nlev != 1;
+    const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
 
     // only shift the slices that are allocated
     if (explicit_solve) {
         if (mesh_refinement) {
             shift(lev, WhichSlice::Previous1, WhichSlice::This,
-                "Ez", "Bz", "rho", "Psi", "jx_beam", "jy_beam");
+                "Ez", "Bx", "By", "Bz", "rho", "Psi", "jx_beam", "jy_beam");
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         }
@@ -544,8 +542,6 @@ Fields::ShiftSlices (int nlev, int islice, amrex::Geometry geom, amrex::Real pat
         } else {
             shift(lev, WhichSlice::Previous1, WhichSlice::This, "Bx", "By", "jx", "jy");
         }
-    }
-
     }
 }
 
@@ -618,14 +614,14 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
 
 void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                              std::string component, const int islice)
+                              std::string component, const int islice,
+                              amrex::MultiFab&& staging_area)
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     if (lev == 0 && m_open_boundary) {
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
 
-        amrex::MultiFab staging_area = getStagingArea(lev);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(staging_area.size() == 1,
             "Open Boundaries only work for lev0 with everything in one box");
         amrex::FArrayBox& staging_area_fab = staging_area[0];
@@ -697,13 +693,12 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             {getField(lev-1, WhichSlice::This, component),
             getField(lev-1, WhichSlice::Previous1, component),
             rel_z}, geom[lev-1]};
-        amrex::MultiFab staging_area = getStagingArea(lev);
 
         for (amrex::MFIter mfi(staging_area, DfltMfi); mfi.isValid(); ++mfi)
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
             const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
-            const amrex::Box fine_staging_box = staging_area[mfi].box();
+            const amrex::Box fine_staging_box = getStagingArea(lev)[mfi].box();
 
             SetDirichletBoundaries(arr_staging_area,fine_staging_box,geom[lev],arr_solution_interp);
         }
@@ -791,7 +786,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
     }
 
-    SetBoundaryCondition(geom, lev, "Psi", islice);
+    SetBoundaryCondition(geom, lev, "Psi", islice, getStagingArea(lev));
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     if (!m_extended_solve) {
@@ -851,7 +846,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
         1._rt/(phys_const.ep0*phys_const.c),
         derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, "Ez", islice);
+    SetBoundaryCondition(geom, lev, "Ez", islice, getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -877,7 +872,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous1, "jy"),
                    getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, "Bx", islice);
+    SetBoundaryCondition(geom, lev, "Bx", islice, getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as Bx_iter.
@@ -903,7 +898,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous1, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, "By", islice);
+    SetBoundaryCondition(geom, lev, "By", islice, getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as By_iter.
@@ -930,7 +925,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
         derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
 
-    SetBoundaryCondition(geom, lev, "Bz", islice);
+    SetBoundaryCondition(geom, lev, "Bz", islice, getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.

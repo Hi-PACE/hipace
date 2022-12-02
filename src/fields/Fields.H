@@ -171,13 +171,13 @@ public:
      * to compute each slice. The current slice is always stored in index 1.
      * Hence, after one slice is computed, slices must be shifted by 1 element.
      *
-     * \param[in] nlev number of MR level
+     * \param[in] lev the MR level
      * \param[in] islice current slice to be shifted
      * \param[in] geom geometry
      * \param[in] patch_lo lower longitudinal end of refined level
      * \param[in] patch_hi upper longitudinal end of refined level
      */
-    void ShiftSlices (int nlev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
+    void ShiftSlices (int lev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
                       const amrex::Real patch_hi);
 
     /** add rho of the ions to rho (this slice) */
@@ -191,9 +191,11 @@ public:
      * \param[in] lev current level
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in] islice longitudinal slice
+     * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               std::string component, const int islice);
+                               std::string component, const int islice,
+                               amrex::MultiFab&& staging_area);
 
     /** \brief Interpolate values from coarse grid to the fine grid
      *

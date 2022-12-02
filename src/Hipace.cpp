@@ -171,8 +171,6 @@ Hipace::Hipace () :
 
     if (maxLevel() > 0) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_explicit, "Mesh refinement + explicit solver is not yet"
-                                " supported! Please use hipace.bxby_solver = predictor-corrector");
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         getWithParser(pph, "patch_lo", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
@@ -587,18 +585,21 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
-        } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
+            if (lev==0) {
+                // Advance laser slice by 1 step and store result to 3D array
+                m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
+                m_multi_laser.Copy(islice_coarse, true);
+            }
 
-        // Advance laser slice by 1 step and store result to 3D array
-        m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
-        m_multi_laser.Copy(islice_coarse, true);
+            // shift slices of all levels
+            m_fields.ShiftSlices(lev, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+
+        } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();
-    } // end for (int lev = 0; lev <= finestLevel(); ++lev)
 
-     // shift slices of all levels
-     m_fields.ShiftSlices(finestLevel()+1, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+    } // end for (int lev = 0; lev <= finestLevel(); ++lev)
 }
 
 
@@ -650,7 +651,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
     m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, geom[lev], lev);
 
     // Solves Bx, By using Sx, Sy and chi
-    ExplicitMGSolveBxBy(lev, WhichSlice::This);
+    ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
 
     const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
     if (do_salame) {
@@ -820,7 +821,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 
 
 void
-Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
+Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int islice)
 {
     HIPACE_PROFILE("Hipace::ExplicitMGSolveBxBy()");
     amrex::ParallelContext::push(m_comm_xy);
@@ -840,23 +841,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Sy"] + 1 == Comps[which_slice]["Sx"]);
 
     // construct slice geometry
-    // Set the lo and hi of domain and probdomain in the z direction
-    amrex::RealBox tmp_probdom({AMREX_D_DECL(Geom(lev).ProbLo(Direction::x),
-                                             Geom(lev).ProbLo(Direction::y),
-                                             Geom(lev).ProbLo(Direction::z))},
-                               {AMREX_D_DECL(Geom(lev).ProbHi(Direction::x),
-                                             Geom(lev).ProbHi(Direction::y),
-                                             Geom(lev).ProbHi(Direction::z))});
-    amrex::Box tmp_dom = Geom(lev).Domain();
-    const amrex::Real hi = Geom(lev).ProbHi(Direction::z);
-    const amrex::Real lo = hi - Geom(lev).CellSize(Direction::z);
-    tmp_probdom.setLo(Direction::z, lo);
-    tmp_probdom.setHi(Direction::z, hi);
-    tmp_dom.setSmall(Direction::z, 0);
-    tmp_dom.setBig(Direction::z, 0);
-    amrex::Geometry slice_geom = amrex::Geometry(
-        tmp_dom, tmp_probdom, Geom(lev).Coord(), Geom(lev).isPeriodic());
-
+    amrex::Geometry slice_geom = m_slice_geom[lev];
     slice_geom.setPeriodicity({0,0,0});
 
     amrex::MultiFab& slicemf_BxBySySx = m_fields.getSlices(lev, which_slice);
@@ -866,25 +851,36 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab& slicemf_chi = m_fields.getSlices(lev, which_slice_chi);
     amrex::MultiFab Mult (slicemf_chi, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
+    if (lev!=0) {
+        m_fields.SetBoundaryCondition(Geom(), lev, "Bx", islice,
+                                      m_fields.getField(lev, which_slice, "Sy"));
+        m_fields.SetBoundaryCondition(Geom(), lev, "By", islice,
+                                      m_fields.getField(lev, which_slice, "Sx"));
+    }
+
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
         // Copy chi to chi2
         m_fields.duplicate(lev, which_slice_chi, {"chi2"}, which_slice_chi, {"chi"});
         amrex::Gpu::streamSynchronize();
-        if (!m_mlalaplacian){
+        if (m_mlalaplacian.size()==0) {
+            m_mlalaplacian.resize(maxLevel()+1);
+            m_mlmg.resize(maxLevel()+1);
+        }
+        if (!m_mlalaplacian[lev]){
             // If first call, initialize the MG solver
             amrex::LPInfo lpinfo{};
             lpinfo.setHiddenDirection(2).setAgglomeration(false).setConsolidation(false);
 
             // make_unique requires explicit types
-            m_mlalaplacian = std::make_unique<amrex::MLALaplacian>(
+            m_mlalaplacian[lev] = std::make_unique<amrex::MLALaplacian>(
                 amrex::Vector<amrex::Geometry>{slice_geom},
-                amrex::Vector<amrex::BoxArray>{S.boxArray()},
-                amrex::Vector<amrex::DistributionMapping>{S.DistributionMap()},
+                amrex::Vector<amrex::BoxArray>{slicemf_BxBySySx.boxArray()},
+                amrex::Vector<amrex::DistributionMapping>{slicemf_BxBySySx.DistributionMap()},
                 lpinfo,
                 amrex::Vector<amrex::FabFactory<amrex::FArrayBox> const*>{}, 2);
 
-            m_mlalaplacian->setDomainBC(
+            m_mlalaplacian[lev]->setDomainBC(
                 {AMREX_D_DECL(amrex::LinOpBCType::Dirichlet,
                               amrex::LinOpBCType::Dirichlet,
                               amrex::LinOpBCType::Dirichlet)},
@@ -892,33 +888,37 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
                               amrex::LinOpBCType::Dirichlet,
                               amrex::LinOpBCType::Dirichlet)});
 
-            m_mlmg = std::make_unique<amrex::MLMG>(*m_mlalaplacian);
-            m_mlmg->setVerbose(m_MG_verbose);
+            m_mlmg[lev] = std::make_unique<amrex::MLMG>(*(m_mlalaplacian[lev]));
+            m_mlmg[lev]->setVerbose(m_MG_verbose);
         }
 
         // BxBy is assumed to have at least one ghost cell in x and y.
         // The ghost cells outside the domain should contain Dirichlet BC values.
         BxBy.setDomainBndry(0.0, slice_geom); // Set Dirichlet BC to zero
-        m_mlalaplacian->setLevelBC(0, &BxBy);
+        m_mlalaplacian[lev]->setLevelBC(0, &BxBy);
 
-        m_mlalaplacian->setACoeffs(0, Mult);
+        m_mlalaplacian[lev]->setACoeffs(0, Mult);
 
         // amrex solves ascalar A phi - bscalar Laplacian(phi) = rhs
         // So we solve Delta BxBy - A * BxBy = S
-        m_mlalaplacian->setScalars(-1.0, -1.0);
+        m_mlalaplacian[lev]->setScalars(-1.0, -1.0);
 
-        m_mlmg->solve({&BxBy}, {&SySx}, m_MG_tolerance_rel, m_MG_tolerance_abs);
+        m_mlmg[lev]->solve({&BxBy}, {&SySx}, m_MG_tolerance_rel, m_MG_tolerance_abs);
     } else
 #endif
     {
         AMREX_ALWAYS_ASSERT(slicemf_BxBySySx.boxArray().size() == 1);
         AMREX_ALWAYS_ASSERT(slicemf_chi.boxArray().size() == 1);
-        if (!m_hpmg) {
-            m_hpmg = std::make_unique<hpmg::MultiGrid>(slice_geom);
+        if (m_hpmg.size()==0) {
+            m_hpmg.resize(maxLevel()+1);
+        }
+        if (!m_hpmg[lev]) {
+            m_hpmg[lev] = std::make_unique<hpmg::MultiGrid>(slice_geom,
+                                                            slicemf_BxBySySx.boxArray()[0]);
         }
         const int max_iters = 200;
-        m_hpmg->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
-                       max_iters, m_MG_verbose);
+        m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
+                            max_iters, m_MG_verbose);
     }
     amrex::ParallelContext::pop();
 }

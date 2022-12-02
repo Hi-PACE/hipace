@@ -443,7 +443,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
 
     slice_geom.setPeriodicity({0,0,0});
     if (!m_mg) {
-        m_mg = std::make_unique<hpmg::MultiGrid>(slice_geom);
+        m_mg = std::make_unique<hpmg::MultiGrid>(slice_geom, np1j00.boxArray()[0]);
     }
 
     const int max_iters = 200;

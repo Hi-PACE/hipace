@@ -378,13 +378,12 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 
 } // namespace {}
 
-MultiGrid::MultiGrid (Geometry const& geom)
+MultiGrid::MultiGrid (Geometry const& geom, Box a_domain)
     : m_dx(geom.CellSize(0)), m_dy(geom.CellSize(1))
 {
-    Box const& a_domain = geom.Domain();
     AMREX_ALWAYS_ASSERT(a_domain.length(2) == 1 && a_domain.cellCentered());
 
-    m_domain.push_back(amrex::makeSlab(a_domain, 2, 0));
+    m_domain.push_back(amrex::makeSlab(Box{{0,0,0}, a_domain.length()-1, a_domain.type()}, 2, 0));
     for (int i = 0; i < 30; ++i) {
         if (m_domain.back().coarsenable(IntVect(2,2,1), IntVect(2,2,1))) {
             m_domain.push_back(amrex::coarsen(m_domain.back(),IntVect(2,2,1)));
@@ -461,8 +460,7 @@ MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_
     HIPACE_PROFILE("hpmg::MultiGrid::solve1()");
     m_system_type = 1;
 
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_acf.box(),2,0).contains(m_domain.front()));
-    FArrayBox afab(amrex::makeSlab(a_acf.box(), 2, 0), 1, a_acf.dataPtr());
+    FArrayBox afab(center_box(a_acf.box(), m_domain.front()), 1, a_acf.dataPtr());
 
     auto const& array_m_acf = m_acf[0].array();
     auto const& array_a_acf = afab.const_array();
@@ -511,9 +509,7 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 
     auto const& array_m_acf = m_acf[0].array();
 
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
-    amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
-                          1, acoef_imag.dataPtr());
+    amrex::FArrayBox ifab(center_box(acoef_imag.box(), m_domain.front()), 1, acoef_imag.dataPtr());
     auto const& ai = ifab.const_array();
     hpmg::ParallelFor(m_acf[0].box(),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
@@ -538,9 +534,7 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 
     auto const& array_m_acf = m_acf[0].array();
 
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()));
-    amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
-                          1, acoef_real.dataPtr());
+    amrex::FArrayBox rfab(center_box(acoef_real.box(), m_domain.front()), 1, acoef_real.dataPtr());
     auto const& ar = rfab.const_array();
     hpmg::ParallelFor(m_acf[0].box(),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
@@ -565,12 +559,8 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 
     auto const& array_m_acf = m_acf[0].array();
 
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(acoef_real.box(),2,0).contains(m_domain.front()) &&
-                        amrex::makeSlab(acoef_imag.box(),2,0).contains(m_domain.front()));
-    amrex::FArrayBox rfab(amrex::makeSlab(acoef_real.box(), 2, 0),
-                          1, acoef_real.dataPtr());
-    amrex::FArrayBox ifab(amrex::makeSlab(acoef_imag.box(), 2, 0),
-                          1, acoef_imag.dataPtr());
+    amrex::FArrayBox rfab(center_box(acoef_real.box(), m_domain.front()), 1, acoef_real.dataPtr());
+    amrex::FArrayBox ifab(center_box(acoef_imag.box(), m_domain.front()), 1, acoef_imag.dataPtr());
     auto const& ar = rfab.const_array();
     auto const& ai = ifab.const_array();
     hpmg::ParallelFor(m_acf[0].box(),
@@ -590,11 +580,10 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
                        Real const tol_rel, Real const tol_abs, int const nummaxiter,
                        int const verbose)
 {
-    AMREX_ALWAYS_ASSERT(amrex::makeSlab(a_rhs.box(),2,0).contains(m_domain.front()) &&
-                        a_sol.nComp() >= 2 && a_rhs.nComp() >= 2);
+    AMREX_ALWAYS_ASSERT(a_sol.nComp() >= 2 && a_rhs.nComp() >= 2);
 
-    m_sol = FArrayBox(amrex::makeSlab(a_sol.box(), 2, 0), 2, a_sol.dataPtr());
-    m_rhs = FArrayBox(amrex::makeSlab(a_rhs.box(), 2, 0), 2, a_rhs.dataPtr());
+    m_sol = FArrayBox(center_box(a_sol.box(), m_domain.front()), 2, a_sol.dataPtr());
+    m_rhs = FArrayBox(center_box(a_rhs.box(), m_domain.front()), 2, a_rhs.dataPtr());
 
     compute_residual(m_domain[0], m_res[0].array(), m_sol.array(),
                      m_rhs.const_array(), m_acf[0].const_array(), m_dx, m_dy,
