@@ -62,7 +62,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const amrex::Real dy_inv = 1._rt/dx[1];
 
         const PhysConst pc = get_phys_const();
-        const amrex::Real clight = pc.c;
+        const amrex::Real a_clight = pc.c;
         const amrex::Real clight_inv = 1._rt/pc.c;
         // The laser a0 is always normalized
         const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
@@ -98,6 +98,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 amrex::Real q_invvol_mu0 = charge_invvol_mu0;
                 amrex::Real q_mass_ratio = charge_mass_ratio;
 
+                // Rename variable for NVCC lambda capture to work
                 [[maybe_unused]] auto ion_lev = a_ion_lev;
                 if constexpr (can_ionize.value) {
                     q_invvol_mu0 *= ion_lev[ip];
@@ -156,7 +157,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
 
                         amrex::Real AabssqDxp = 0._rt;
                         amrex::Real AabssqDyp = 0._rt;
+                        // Rename variables for NVCC lambda capture to work
                         [[maybe_unused]] auto laser_fac = a_laser_fac;
+                        [[maybe_unused]] auto clight = a_clight;
                         if constexpr (use_laser.value) {
                             const amrex::Real xp1y00 = abssq(
                                 laser_arr(i+1, j  , 0),
@@ -187,7 +190,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             )
                             - shape_x * shape_dy * dy_inv * (
                                 gamma_psi - vy * vy - 1._rt
-                            )) * clight
+                            )) * a_clight
                         ));
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sx), charge_density_mu0 * (
@@ -203,7 +206,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             )
                             + shape_x * shape_dy * dy_inv * (
                                 - vx * vy
-                            )) * clight
+                            )) * a_clight
                         ));
                     }
                 }
