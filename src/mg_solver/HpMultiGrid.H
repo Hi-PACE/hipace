@@ -150,7 +150,6 @@ public:
         amrex::Box out_box = amrex::makeSlab(
             in_box + (domain.smallEnd() + domain.bigEnd() - in_box.smallEnd() - in_box.bigEnd())/2,
         2, 0);
-        amrex::Print() << "in box " << in_box << " out box " << out_box << " domain " << domain << '\n';
         AMREX_ALWAYS_ASSERT(out_box.contains(domain));
         return out_box;
     }

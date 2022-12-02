@@ -591,15 +591,19 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
                 m_multi_laser.Copy(islice_coarse, true);
             }
 
-            // shift slices of all levels
-            m_fields.ShiftSlices(lev, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
-
+            if (lev!=0) {
+                // shift slices of level 1
+                m_fields.ShiftSlices(lev, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+            }
         } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();
 
     } // end for (int lev = 0; lev <= finestLevel(); ++lev)
+
+    // shift level 0
+    m_fields.ShiftSlices(0, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
 }
 
 

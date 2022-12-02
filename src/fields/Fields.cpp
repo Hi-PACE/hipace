@@ -562,12 +562,15 @@ Fields::AddRhoIons (const int lev)
  * \param[in] RHS source of the Poisson equation: laplace LHS = RHS
  * \param[in] solver_size size of RHS/poisson solver (no tiling)
  * \param[in] geom geometry of of RHS/poisson solver
+ * \param[in] offset shift boundary value by offset number of cells
+ * \param[in] factor multiply the boundary_value by this factor
  * \param[in] boundary_value functional object (Real x, Real y) -> Real value_of_potential
  */
 template<class Functional>
 void
 SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
-                        const amrex::Geometry& geom, const Functional& boundary_value)
+                        const amrex::Geometry& geom, const amrex::Real offset,
+                        const amrex::Real factor, const Functional& boundary_value)
 {
     // To solve a Poisson equation with non-zero Dirichlet boundary conditions, the source term
     // must be corrected at the outmost grid points in x by -field_value_at_guard_cell / dx^2 and
@@ -599,8 +602,8 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
             const int i_idx = box_lo0 + i_hi_edge*(box_len0-1) + i_is_changing*i;
             const int j_idx = box_lo1 + j_hi_edge*(box_len1-1) + (!i_is_changing)*(i-box_len0);
 
-            const int i_idx_offset = i_idx - i_lo_edge + i_hi_edge;
-            const int j_idx_offset = j_idx - j_lo_edge + j_hi_edge;
+            const amrex::Real i_idx_offset = i_idx + (- i_lo_edge + i_hi_edge) * offset;
+            const amrex::Real j_idx_offset = j_idx + (- j_lo_edge + j_hi_edge) * offset;
 
             const amrex::Real x = i_idx_offset * dx + offset0;
             const amrex::Real y = j_idx_offset * dy + offset1;
@@ -608,7 +611,8 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
             const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
 
             // atomic add because the corners of RHS get two values
-            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx)), - boundary_value(x, y) / dxdx);
+            amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx)),
+                                         - boundary_value(x, y) * factor / dxdx);
         });
 }
 
@@ -674,7 +678,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             amrex::get<0>(coeff_tuple) = 0._rt;
         }
 
-        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
+        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev], 1, 1,
             [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
             {
                 return dxdy_div_4pi*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
@@ -700,7 +704,17 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
             const amrex::Box fine_staging_box = getStagingArea(lev)[mfi].box();
 
-            SetDirichletBoundaries(arr_staging_area,fine_staging_box,geom[lev],arr_solution_interp);
+            amrex::Real offset = 1;
+            amrex::Real factor = 1;
+            if ((component == "Bx" || component == "By") && Hipace::GetInstance().m_explicit) {
+                // hpmg has the boundary condition at a different place
+                // compared to the fft poisson solver
+                offset = 0.5;
+                factor = 8./3.;
+            }
+
+            SetDirichletBoundaries(arr_staging_area, fine_staging_box, geom[lev],
+                                   offset, factor, arr_solution_interp);
         }
     }
 }
