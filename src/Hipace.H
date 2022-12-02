@@ -313,6 +313,9 @@ public:
     /** Order of the field gather and current deposition shape factor in the longitudinal direction
      */
     static int m_depos_order_z;
+    /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
+     */
+    static int m_depos_derivative_type;
     /* if the loop over depos_order is included in the loop over particles
      */
     static bool m_outer_depos_loop;
