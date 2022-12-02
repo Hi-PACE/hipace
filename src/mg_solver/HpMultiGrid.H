@@ -36,10 +36,11 @@ public:
 
     /** \brief Ctor
      *
-     * \param[in] geom Geometry for dx and dy
-     * \param[in] domain Box describing a 2D slice
+     * \param[in] dx Cell spacing in x direction
+     * \param[in] dy Cell spacing in x direction
+     * \param[in] a_domain Box describing a 2D slice
      */
-    explicit MultiGrid (amrex::Geometry const& geom, amrex::Box a_domain);
+    explicit MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain);
 
     /** \brief Dtor */
     ~MultiGrid ();

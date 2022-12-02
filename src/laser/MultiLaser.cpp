@@ -423,27 +423,9 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
             });
     }
 
-    // construct slice geometry
-    // Set the lo and hi of domain and probdomain in the z direction
-    amrex::RealBox tmp_probdom({AMREX_D_DECL(geom.ProbLo(Direction::x),
-                                             geom.ProbLo(Direction::y),
-                                             geom.ProbLo(Direction::z))},
-                               {AMREX_D_DECL(geom.ProbHi(Direction::x),
-                                             geom.ProbHi(Direction::y),
-                                             geom.ProbHi(Direction::z))});
-    amrex::Box tmp_dom = geom.Domain();
-    const amrex::Real hi = geom.ProbHi(Direction::z);
-    const amrex::Real lo = hi - geom.CellSize(2);
-    tmp_probdom.setLo(Direction::z, lo);
-    tmp_probdom.setHi(Direction::z, hi);
-    tmp_dom.setSmall(Direction::z, 0);
-    tmp_dom.setBig(Direction::z, 0);
-    amrex::Geometry slice_geom = amrex::Geometry(
-        tmp_dom, tmp_probdom, geom.Coord(), geom.isPeriodic());
-
-    slice_geom.setPeriodicity({0,0,0});
     if (!m_mg) {
-        m_mg = std::make_unique<hpmg::MultiGrid>(slice_geom, np1j00.boxArray()[0]);
+        m_mg = std::make_unique<hpmg::MultiGrid>(geom.CellSize(0), geom.CellSize(1),
+                                                 np1j00.boxArray()[0]);
     }
 
     const int max_iters = 200;

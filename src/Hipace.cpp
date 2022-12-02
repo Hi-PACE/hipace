@@ -585,13 +585,13 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
-            if (lev==0) {
+            if (lev == 0) {
                 // Advance laser slice by 1 step and store result to 3D array
                 m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
                 m_multi_laser.Copy(islice_coarse, true);
             }
 
-            if (lev!=0) {
+            if (lev != 0) {
                 // shift slices of level 1
                 m_fields.ShiftSlices(lev, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
             }
@@ -871,6 +871,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
             m_mlalaplacian.resize(maxLevel()+1);
             m_mlmg.resize(maxLevel()+1);
         }
+
+        // construct slice geometry
+        amrex::Geometry slice_geom = m_slice_geom[lev];
+        slice_geom.setPeriodicity({0,0,0});
+
         if (!m_mlalaplacian[lev]){
             // If first call, initialize the MG solver
             amrex::LPInfo lpinfo{};
@@ -917,7 +922,8 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
             m_hpmg.resize(maxLevel()+1);
         }
         if (!m_hpmg[lev]) {
-            m_hpmg[lev] = std::make_unique<hpmg::MultiGrid>(slice_geom,
+            m_hpmg[lev] = std::make_unique<hpmg::MultiGrid>(m_slice_geom[lev].CellSize(0),
+                                                            m_slice_geom[lev].CellSize(1),
                                                             slicemf_BxBySySx.boxArray()[0]);
         }
         const int max_iters = 200;

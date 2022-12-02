@@ -378,8 +378,8 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 
 } // namespace {}
 
-MultiGrid::MultiGrid (Geometry const& geom, Box a_domain)
-    : m_dx(geom.CellSize(0)), m_dy(geom.CellSize(1))
+MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain)
+    : m_dx(dx), m_dy(dy)
 {
     AMREX_ALWAYS_ASSERT(a_domain.length(2) == 1 && a_domain.cellCentered());
 
