@@ -160,6 +160,8 @@ Hipace::Hipace () :
     if (solver == "explicit") m_explicit = true;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_explicit || !m_multi_beam.AnySpeciesSalame(),
         "Cannot use SALAME algorithm with predictor-corrector solver");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(maxLevel()==0 || !m_multi_beam.AnySpeciesSalame(),
+        "Cannot use SALAME algorithm with mesh refinement");
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
@@ -844,10 +846,6 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Bx"] + 1 == Comps[which_slice]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Sy"] + 1 == Comps[which_slice]["Sx"]);
 
-    // construct slice geometry
-    amrex::Geometry slice_geom = m_slice_geom[lev];
-    slice_geom.setPeriodicity({0,0,0});
-
     amrex::MultiFab& slicemf_BxBySySx = m_fields.getSlices(lev, which_slice);
     amrex::MultiFab BxBy (slicemf_BxBySySx, amrex::make_alias, Comps[which_slice]["Bx"], 2);
     amrex::MultiFab SySx (slicemf_BxBySySx, amrex::make_alias, Comps[which_slice]["Sy"], 2);
@@ -873,8 +871,10 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
         }
 
         // construct slice geometry
-        amrex::Geometry slice_geom = m_slice_geom[lev];
-        slice_geom.setPeriodicity({0,0,0});
+        const amrex::RealBox slice_box{slicemf_BxBySySx.boxArray()[0], m_slice_geom[lev].CellSize(),
+                                       m_slice_geom[lev].ProbLo()};
+        amrex::Geometry slice_geom{slicemf_BxBySySx.boxArray()[0], slice_box,
+                                   m_slice_geom[lev].CoordInt(), {0,0,0}};
 
         if (!m_mlalaplacian[lev]){
             // If first call, initialize the MG solver
