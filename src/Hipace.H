@@ -360,7 +360,7 @@ public:
     /** Whether the simulation uses a laser pulse */
     static bool m_use_laser;
     /** Whether the simulation uses mesh refinement */
-    static bool m_do_MR
+    static bool m_do_MR;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
