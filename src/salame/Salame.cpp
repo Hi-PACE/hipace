@@ -56,7 +56,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         SalameInitializeSxSyWithBeam(hipace, lev);
 
-        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame);
+        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame, islice);
 
         hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
@@ -113,7 +113,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
                                                   hipace->Geom(lev), lev);
 
-        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
+        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
     }
 }
 

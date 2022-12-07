@@ -209,8 +209,9 @@ public:
      *
      * \param[lev] MR level
      * \param[in] which_slice defines if this or the salame slice is handled
+     * \param[in] islice longitudinal slice
      */
-    void ExplicitMGSolveBxBy (const int lev, const int which_slice);
+    void ExplicitMGSolveBxBy (const int lev, const int which_slice, const int islice);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -361,6 +362,8 @@ public:
     static bool m_use_amrex_mlmg;
     /** Whether the simulation uses a laser pulse */
     static bool m_use_laser;
+    /** Whether the simulation uses mesh refinement */
+    static bool m_do_MR;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
@@ -406,12 +409,12 @@ private:
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     /** Linear operator for the explicit Bx and By solver */
-    std::unique_ptr<amrex::MLALaplacian> m_mlalaplacian;
+    amrex::Vector<std::unique_ptr<amrex::MLALaplacian>> m_mlalaplacian;
     /** Geometric multigrid solver class, for the explicit Bx and By solver */
-    std::unique_ptr<amrex::MLMG> m_mlmg;
+    amrex::Vector<std::unique_ptr<amrex::MLMG>> m_mlmg;
 #endif
     /** hpmg solver for the explicit Bx and by solver */
-    std::unique_ptr<hpmg::MultiGrid> m_hpmg;
+    amrex::Vector<std::unique_ptr<hpmg::MultiGrid>> m_hpmg;
 public:
     /** Used to sort the beam particles into boxes for pipelining */
     amrex::Vector<BoxSorter> m_box_sorters;
