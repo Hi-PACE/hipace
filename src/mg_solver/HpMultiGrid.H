@@ -37,7 +37,7 @@ public:
     /** \brief Ctor
      *
      * \param[in] dx Cell spacing in x direction
-     * \param[in] dy Cell spacing in x direction
+     * \param[in] dy Cell spacing in y direction
      * \param[in] a_domain Box describing a 2D slice
      */
     explicit MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain);
