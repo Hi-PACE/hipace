@@ -64,6 +64,7 @@ amrex::Real Hipace::m_MG_tolerance_abs = 0.;
 int Hipace::m_MG_verbose = 0;
 bool Hipace::m_use_amrex_mlmg = false;
 bool Hipace::m_use_laser = false;
+bool Hipace::m_do_MR = false;
 
 #ifdef AMREX_USE_GPU
 bool Hipace::m_do_tiling = false;
@@ -160,8 +161,6 @@ Hipace::Hipace () :
     if (solver == "explicit") m_explicit = true;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_explicit || !m_multi_beam.AnySpeciesSalame(),
         "Cannot use SALAME algorithm with predictor-corrector solver");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(maxLevel()==0 || !m_multi_beam.AnySpeciesSalame(),
-        "Cannot use SALAME algorithm with mesh refinement");
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
@@ -170,8 +169,8 @@ Hipace::Hipace () :
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
-
-    if (maxLevel() > 0) {
+    m_do_MR = maxLevel() > 0;
+    if (m_do_MR) {
         AMREX_ALWAYS_ASSERT(maxLevel() < 2);
         amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         getWithParser(pph, "patch_lo", loc_array);
@@ -179,6 +178,8 @@ Hipace::Hipace () :
         getWithParser(pph, "patch_hi", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
     }
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_do_MR || !m_multi_beam.AnySpeciesSalame(),
+        "Cannot use SALAME algorithm with mesh refinement");
 
 #ifdef AMREX_USE_MPI
     queryWithParser(pph, "skip_empty_comms", m_skip_empty_comms);
@@ -865,7 +866,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
         // Copy chi to chi2
         m_fields.duplicate(lev, which_slice_chi, {"chi2"}, which_slice_chi, {"chi"});
         amrex::Gpu::streamSynchronize();
-        if (m_mlalaplacian.size()==0) {
+        if (m_mlalaplacian.size()<maxLevel()+1) {
             m_mlalaplacian.resize(maxLevel()+1);
             m_mlmg.resize(maxLevel()+1);
         }
@@ -918,7 +919,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
     {
         AMREX_ALWAYS_ASSERT(slicemf_BxBySySx.boxArray().size() == 1);
         AMREX_ALWAYS_ASSERT(slicemf_chi.boxArray().size() == 1);
-        if (m_hpmg.size()==0) {
+        if (m_hpmg.size()<maxLevel()+1) {
             m_hpmg.resize(maxLevel()+1);
         }
         if (!m_hpmg[lev]) {

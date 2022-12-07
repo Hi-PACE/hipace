@@ -63,7 +63,7 @@ Fields::AllocData (
 
         m_explicit = Hipace::GetInstance().m_explicit;
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
-        const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
+        const bool mesh_refinement = Hipace::m_do_MR;
         const bool any_salame = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame();
 
         if (m_explicit) {
@@ -522,7 +522,7 @@ Fields::ShiftSlices (int lev, int islice, amrex::Geometry geom, amrex::Real patc
     }
 
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
-    const bool mesh_refinement = Hipace::GetInstance().maxLevel() != 0;
+    const bool mesh_refinement = Hipace::m_do_MR;
 
     // only shift the slices that are allocated
     if (explicit_solve) {
