@@ -127,10 +127,28 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
-        amrex::ParallelFor( lhs_mf[mfi].box() & m_stagingArea[mfi].box(),
+
+        amrex::Box temp_box = lhs_mf[mfi].box() & m_stagingArea[mfi].box();
+        temp_box.growHi(0, 1);
+        temp_box.growHi(1, 1);
+        amrex::ParallelFor( temp_box,
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 // Copy field
-                lhs_arr(i,j) = tmp_real_arr(i,j);
+                amrex::Real val = 0;
+                int lo2 = temp_box.smallEnd(2);
+                if (temp_box.contains(i-1,j-1, lo2)) {
+                    val += tmp_real_arr(i-1,j-1);
+                }
+                if (temp_box.contains(i+1,j-1, lo2)) {
+                    val += tmp_real_arr(i,j-1);
+                }
+                if (temp_box.contains(i-1,j+1, lo2)) {
+                    val += tmp_real_arr(i-1,j);
+                }
+                if (temp_box.contains(i+1,j+1, lo2)) {
+                    val += tmp_real_arr(i,j);
+                }
+                lhs_arr(i,j) = 0.25 * val;
             });
     }
 }

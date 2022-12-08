@@ -154,14 +154,17 @@ Fields::AllocData (
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
+    amrex::BoxArray temp_ba = getSlices(lev, WhichSlice::This).boxArray();
+    temp_ba.growHi(0, -1);
+    temp_ba.growHi(1, -1);
     if (m_do_dirichlet_poisson){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichlet>(
-            new FFTPoissonSolverDirichlet(getSlices(lev, WhichSlice::This).boxArray(),
+            new FFTPoissonSolverDirichlet(temp_ba,
                                           getSlices(lev, WhichSlice::This).DistributionMap(),
                                           geom[lev])) );
     } else {
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
-            new FFTPoissonSolverPeriodic(getSlices(lev, WhichSlice::This).boxArray(),
+            new FFTPoissonSolverPeriodic(temp_ba,
                                          getSlices(lev, WhichSlice::This).DistributionMap(),
                                          geom[lev]))  );
     }
@@ -392,7 +395,13 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
             {
                 const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
                 const amrex::Real tmp =
-                    inside ? factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j) : 0._rt;
+                    inside ? 0.25_rt * (
+                        factor_a * (
+                            src_a_array(i,j) + src_a_array(i+1,j) + src_a_array(i,j+1) + src_a_array(i+1,j+1)
+                        ) + factor_b * (
+                            src_b_array(i,j) + src_b_array(i+1,j) + src_b_array(i,j+1) + src_b_array(i+1,j+1)
+                        )
+                    ) : 0._rt;
                 if (do_add) {
                     dst_array(i,j) += tmp;
                 } else {
