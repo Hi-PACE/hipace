@@ -18,6 +18,7 @@
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/GPUUtil.H"
+#include "utils/DualNumbers.H"
 #include "particles/particles_utils/ParticleUtil.H"
 
 #include <string>
@@ -175,76 +176,150 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     AabssqDyp *= 0.25_rt * phys_const.c * phys_const.m_e * mass_inv;
                     charge_mass_ratio *= clight_inv;
 
-                    constexpr int nsub = 32;
+                    constexpr int nsub = 8;
                     const amrex::Real dz_sub = dz/nsub;
 
                     amrex::Real ux_n = Fux1[ip];
                     amrex::Real uy_n = Fuy1[ip];
                     amrex::Real psi_inv_n = Fpsi1[ip];
 
+                    amrex::Real dz_ux_t = 0;
+                    amrex::Real dz_uy_t = 0;
+                    amrex::Real dz_psi_inv_t = 0;
+                    DualNumber dz_ux_d;
+                    DualNumber dz_uy_d;
+                    DualNumber dz_psi_inv_d;
+
+
                     for (int isub=0; isub<nsub; ++isub) {
 
                         const amrex::Real ux_t = ux_n;
                         const amrex::Real uy_t = uy_n;
-                        const amrex::Real psi_t_inv = psi_inv_n;
+                        const amrex::Real psi_inv_t = psi_inv_n;
 
-                        const amrex::Real gammap_psi = 0.5_rt*psi_t_inv*psi_t_inv*(
+                        const amrex::Real gammap_psi = 0.5_rt*psi_inv_t*psi_inv_t*(
                                         1.0_rt
                                         + ux_t*ux_t*clightsq
                                         + uy_t*uy_t*clightsq // TODO: fix units of Aabssqp
                                         + 0.5_rt*Aabssqp)+0.5_rt;
 
-                        ux_n -= dz_sub*(-charge_mass_ratio * (gammap_psi * ExmByp +
-                                Byp + ( uy_t * Bzp ) * psi_t_inv) + AabssqDxp * psi_t_inv);
+                        dz_ux_t = (charge_mass_ratio * (gammap_psi * ExmByp +
+                                Byp + ( uy_t * Bzp ) * psi_inv_t) - AabssqDxp * psi_inv_t);
 
-                        uy_n -= dz_sub*(-charge_mass_ratio * ( gammap_psi * EypBxp -
-                                Bxp - ( ux_t * Bzp ) * psi_t_inv) + AabssqDyp * psi_t_inv);
+                        dz_uy_t = (charge_mass_ratio * ( gammap_psi * EypBxp -
+                                Bxp - ( ux_t * Bzp ) * psi_inv_t) - AabssqDyp * psi_inv_t);
 
-                        psi_inv_n += dz_sub*psi_t_inv*psi_t_inv*(-charge_mass_ratio * clight_inv *
-                                (( ux_t*ExmByp + uy_t*EypBxp ) * clight_inv * psi_t_inv - Ezp ));
+                        dz_psi_inv_t = psi_inv_t*psi_inv_t*(-charge_mass_ratio * clight_inv *
+                                (( ux_t*ExmByp + uy_t*EypBxp ) * clight_inv * psi_inv_t - Ezp ));
+
+                        const DualNumber ux_d{ux_t, dz_ux_t};
+                        const DualNumber uy_d{uy_t, dz_uy_t};
+                        const DualNumber psi_inv_d{psi_inv_t, dz_psi_inv_t};
+
+                        const DualNumber gammap_psi_d = 0.5_rt*psi_inv_d*psi_inv_d*(
+                                        1.0_rt
+                                        + ux_d*ux_d*clightsq
+                                        + uy_d*uy_d*clightsq // TODO: fix units of Aabssqp
+                                        + 0.5_rt*Aabssqp)+0.5_rt;
+
+                        dz_ux_d = (charge_mass_ratio * (gammap_psi_d * ExmByp +
+                                Byp + ( uy_d * Bzp ) * psi_inv_d) - AabssqDxp * psi_inv_d);
+
+                        dz_uy_d = (charge_mass_ratio * ( gammap_psi_d * EypBxp -
+                                Bxp - ( ux_d * Bzp ) * psi_inv_d) - AabssqDyp * psi_inv_d);
+
+                        dz_psi_inv_d = psi_inv_d*psi_inv_d*(-charge_mass_ratio * clight_inv *
+                                (( ux_d*ExmByp + uy_d*EypBxp ) * clight_inv * psi_inv_d - Ezp ));
+
+
+                        /*if (isub==5 || isub==7) {
+                            xp += 2_rt*dz_sub*clight_inv*((ux_n * psi_inv_n) + (1._rt/24._rt)*(
+                                (ux_n*dz_psi_inv_d.epsilon + 2._rt*dz_ux_t*dz_psi_inv_t + dz_ux_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
+                            yp += 2_rt*dz_sub*clight_inv*((uy_n * psi_inv_n) + (1._rt/24._rt)*(
+                                (uy_n*dz_psi_inv_d.epsilon + 2._rt*dz_uy_t*dz_psi_inv_t + dz_uy_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
+                        }*/
+
+                        ux_n += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
+                        uy_n += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
+                        psi_inv_n += dz_sub*dz_psi_inv_t + 0.5_rt*dz_sub*dz_sub*dz_psi_inv_d.epsilon;
 
                     }
-
-                    xp -= dz*(-ux_n * psi_inv_n * clight_inv);
-                    yp -= dz*(-uy_n * psi_inv_n * clight_inv);
-
-                    SetPosition(ip, xp, yp, zp);
-                    if (enforceBC(ip)) return;
 
                     Fux1[ip] = ux_n;
                     Fuy1[ip] = uy_n;
                     Fpsi1[ip] = psi_inv_n;
 
+                    xp += dz*clight_inv*(ux_n * psi_inv_n);
+                    yp += dz*clight_inv*(uy_n * psi_inv_n);
+
+                    SetPosition(ip, xp, yp, zp);
+                    if (enforceBC(ip)) return;
+
                     x_prev[ip] = xp;
                     y_prev[ip] = yp;
+
 
                     for (int isub=0; isub<(nsub/2); ++isub) {
 
                         const amrex::Real ux_t = ux_n;
                         const amrex::Real uy_t = uy_n;
-                        const amrex::Real psi_t_inv = psi_inv_n;
+                        const amrex::Real psi_inv_t = psi_inv_n;
 
-                        const amrex::Real gammap_psi = 0.5_rt*psi_t_inv*psi_t_inv*(
+                        const amrex::Real gammap_psi = 0.5_rt*psi_inv_t*psi_inv_t*(
                                         1.0_rt
                                         + ux_t*ux_t*clightsq
                                         + uy_t*uy_t*clightsq // TODO: fix units of Aabssqp
                                         + 0.5_rt*Aabssqp)+0.5_rt;
 
-                        ux_n -= dz_sub*(-charge_mass_ratio * (gammap_psi * ExmByp +
-                                Byp + ( uy_t * Bzp ) * psi_t_inv) + AabssqDxp * psi_t_inv);
+                        dz_ux_t = (charge_mass_ratio * (gammap_psi * ExmByp +
+                                Byp + ( uy_t * Bzp ) * psi_inv_t) - AabssqDxp * psi_inv_t);
 
-                        uy_n -= dz_sub*(-charge_mass_ratio * ( gammap_psi * EypBxp -
-                                Bxp - ( ux_t * Bzp ) * psi_t_inv) + AabssqDyp * psi_t_inv);
+                        dz_uy_t = (charge_mass_ratio * ( gammap_psi * EypBxp -
+                                Bxp - ( ux_t * Bzp ) * psi_inv_t) - AabssqDyp * psi_inv_t);
 
-                        psi_inv_n += dz_sub*psi_t_inv*psi_t_inv*(-charge_mass_ratio * clight_inv *
-                                (( ux_t*ExmByp + uy_t*EypBxp ) * clight_inv * psi_t_inv - Ezp ));
+                        dz_psi_inv_t = psi_inv_t*psi_inv_t*(-charge_mass_ratio * clight_inv *
+                                (( ux_t*ExmByp + uy_t*EypBxp ) * clight_inv * psi_inv_t - Ezp ));
+
+                        const DualNumber ux_d{ux_t, dz_ux_t};
+                        const DualNumber uy_d{uy_t, dz_uy_t};
+                        const DualNumber psi_inv_d{psi_inv_t, dz_psi_inv_t};
+
+                        const DualNumber gammap_psi_d = 0.5_rt*psi_inv_d*psi_inv_d*(
+                                        1.0_rt
+                                        + ux_d*ux_d*clightsq
+                                        + uy_d*uy_d*clightsq // TODO: fix units of Aabssqp
+                                        + 0.5_rt*Aabssqp)+0.5_rt;
+
+                        dz_ux_d = (charge_mass_ratio * (gammap_psi_d * ExmByp +
+                                Byp + ( uy_d * Bzp ) * psi_inv_d) - AabssqDxp * psi_inv_d);
+
+                        dz_uy_d = (charge_mass_ratio * ( gammap_psi_d * EypBxp -
+                                Bxp - ( ux_d * Bzp ) * psi_inv_d) - AabssqDyp * psi_inv_d);
+
+                        dz_psi_inv_d = psi_inv_d*psi_inv_d*(-charge_mass_ratio * clight_inv *
+                                (( ux_d*ExmByp + uy_d*EypBxp ) * clight_inv * psi_inv_d - Ezp ));
+
+                        /*if (isub==1 || isub==3) {
+                            xp += 2_rt*dz_sub*clight_inv*((ux_n * psi_inv_n) + (1._rt/24._rt)*(
+                                (ux_n*dz_psi_inv_d.epsilon + 2._rt*dz_ux_t*dz_psi_inv_t + dz_ux_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
+                            yp += 2_rt*dz_sub*clight_inv*((uy_n * psi_inv_n) + (1._rt/24._rt)*(
+                                (uy_n*dz_psi_inv_d.epsilon + 2._rt*dz_uy_t*dz_psi_inv_t + dz_uy_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
+                        }*/
+                        /*if (isub==0) {
+                            xp += dz*clight_inv*((ux_n * psi_inv_n) - (1._rt/2._rt)*(
+                                (ux_n*dz_psi_inv_d.epsilon + 2._rt*dz_ux_t*dz_psi_inv_t + dz_ux_d.epsilon*psi_inv_n))*dz*dz);
+                            yp += dz*clight_inv*((uy_n * psi_inv_n) - (1._rt/2._rt)*(
+                                (uy_n*dz_psi_inv_d.epsilon + 2._rt*dz_uy_t*dz_psi_inv_t + dz_uy_d.epsilon*psi_inv_n))*dz*dz);
+                        }*/
+
+                        ux_n += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
+                        uy_n += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
+                        psi_inv_n += dz_sub*dz_psi_inv_t + 0.5_rt*dz_sub*dz_sub*dz_psi_inv_d.epsilon;
 
                     }
-
                     uxp[ip] = ux_n;
                     uyp[ip] = uy_n;
-                    psip[ip] = 1/psi_inv_n;
-
+                    psip[ip] = 1._rt/psi_inv_n;
                 });
         }
     }
