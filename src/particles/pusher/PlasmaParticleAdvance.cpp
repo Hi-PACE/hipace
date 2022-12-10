@@ -77,7 +77,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         if (do_shift)
         {
-            ShiftForceTerms(soa);
+            //ShiftForceTerms(soa);
         }
 
         // loading the data
@@ -156,42 +156,95 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     if (pid < 0) return;
 
                     // define field at particle position reals
-                    amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-                    amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
-                    amrex::ParticleReal Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
+                    amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+                    amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                    amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
-                    if (do_update)
-                    {
-                        // field gather for a single particle
-                        doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
+
+                    doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
                             Bzp, slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                        if (use_laser) {
-                            doLaserGatherShapeN<depos_order.value>(xp, yp, Aabssqp, AabssqDxp,
-                                AabssqDyp, a_arr, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                        }
-                        // update force terms for a single particle
-                        const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
-                        UpdateForceTerms(uxp[ip], uyp[ip], psip[ip], ExmByp, EypBxp, Ezp, Bxp, Byp,
-                                         Bzp, Aabssqp, AabssqDxp, AabssqDyp, Fx1[ip], Fy1[ip],
-                                         Fux1[ip], Fuy1[ip], Fpsi1[ip], clightsq, phys_const, q,
-                                         mass);
+                    const amrex::Real q = can_ionize ? ion_lev[ip] * charge : charge;
+                    amrex::Real charge_mass_ratio = q / mass;
+                    const amrex::Real clight_inv = 1/phys_const.c;
+                    const amrex::Real mass_inv = 1/mass;
+                    Bxp *= phys_const.c;
+                    Byp *= phys_const.c;
+                    AabssqDxp *= 0.25_rt * phys_const.c * phys_const.m_e * mass_inv;
+                    AabssqDyp *= 0.25_rt * phys_const.c * phys_const.m_e * mass_inv;
+                    charge_mass_ratio *= clight_inv;
+
+                    constexpr int nsub = 32;
+                    const amrex::Real dz_sub = dz/nsub;
+
+                    amrex::Real ux_n = Fux1[ip];
+                    amrex::Real uy_n = Fuy1[ip];
+                    amrex::Real psi_inv_n = Fpsi1[ip];
+
+                    for (int isub=0; isub<nsub; ++isub) {
+
+                        const amrex::Real ux_t = ux_n;
+                        const amrex::Real uy_t = uy_n;
+                        const amrex::Real psi_t_inv = psi_inv_n;
+
+                        const amrex::Real gammap_psi = 0.5_rt*psi_t_inv*psi_t_inv*(
+                                        1.0_rt
+                                        + ux_t*ux_t*clightsq
+                                        + uy_t*uy_t*clightsq // TODO: fix units of Aabssqp
+                                        + 0.5_rt*Aabssqp)+0.5_rt;
+
+                        ux_n -= dz_sub*(-charge_mass_ratio * (gammap_psi * ExmByp +
+                                Byp + ( uy_t * Bzp ) * psi_t_inv) + AabssqDxp * psi_t_inv);
+
+                        uy_n -= dz_sub*(-charge_mass_ratio * ( gammap_psi * EypBxp -
+                                Bxp - ( ux_t * Bzp ) * psi_t_inv) + AabssqDyp * psi_t_inv);
+
+                        psi_inv_n += dz_sub*psi_t_inv*psi_t_inv*(-charge_mass_ratio * clight_inv *
+                                (( ux_t*ExmByp + uy_t*EypBxp ) * clight_inv * psi_t_inv - Ezp ));
+
                     }
 
-                    if (do_push)
-                    {
-                        // push a single particle
-                        PlasmaParticlePush(xp, yp, zp, uxp[ip], uyp[ip], psip[ip], x_prev[ip],
-                                           y_prev[ip], ux_temp[ip], uy_temp[ip], psi_temp[ip],
-                                           Fx1[ip], Fy1[ip], Fux1[ip], Fuy1[ip], Fpsi1[ip],
-                                           Fx2[ip], Fy2[ip], Fux2[ip], Fuy2[ip], Fpsi2[ip],
-                                           Fx3[ip], Fy3[ip], Fux3[ip], Fuy3[ip], Fpsi3[ip],
-                                           Fx4[ip], Fy4[ip], Fux4[ip], Fuy4[ip], Fpsi4[ip],
-                                           Fx5[ip], Fy5[ip], Fux5[ip], Fuy5[ip], Fpsi5[ip],
-                                           dz, temp_slice, ip, SetPosition, enforceBC );
+                    xp -= dz*(-ux_n * psi_inv_n * clight_inv);
+                    yp -= dz*(-uy_n * psi_inv_n * clight_inv);
+
+                    SetPosition(ip, xp, yp, zp);
+                    if (enforceBC(ip)) return;
+
+                    Fux1[ip] = ux_n;
+                    Fuy1[ip] = uy_n;
+                    Fpsi1[ip] = psi_inv_n;
+
+                    x_prev[ip] = xp;
+                    y_prev[ip] = yp;
+
+                    for (int isub=0; isub<(nsub/2); ++isub) {
+
+                        const amrex::Real ux_t = ux_n;
+                        const amrex::Real uy_t = uy_n;
+                        const amrex::Real psi_t_inv = psi_inv_n;
+
+                        const amrex::Real gammap_psi = 0.5_rt*psi_t_inv*psi_t_inv*(
+                                        1.0_rt
+                                        + ux_t*ux_t*clightsq
+                                        + uy_t*uy_t*clightsq // TODO: fix units of Aabssqp
+                                        + 0.5_rt*Aabssqp)+0.5_rt;
+
+                        ux_n -= dz_sub*(-charge_mass_ratio * (gammap_psi * ExmByp +
+                                Byp + ( uy_t * Bzp ) * psi_t_inv) + AabssqDxp * psi_t_inv);
+
+                        uy_n -= dz_sub*(-charge_mass_ratio * ( gammap_psi * EypBxp -
+                                Bxp - ( ux_t * Bzp ) * psi_t_inv) + AabssqDyp * psi_t_inv);
+
+                        psi_inv_n += dz_sub*psi_t_inv*psi_t_inv*(-charge_mass_ratio * clight_inv *
+                                (( ux_t*ExmByp + uy_t*EypBxp ) * clight_inv * psi_t_inv - Ezp ));
+
                     }
-                    return;
+
+                    uxp[ip] = ux_n;
+                    uyp[ip] = uy_n;
+                    psip[ip] = 1/psi_inv_n;
+
                 });
         }
     }
@@ -293,9 +346,9 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     psi_temp[ip] = 0._rt;
                     Fx1[ip] = 0._rt;
                     Fy1[ip] = 0._rt;
-                    Fux1[ip] = 0._rt;
-                    Fuy1[ip] = 0._rt;
-                    Fpsi1[ip] = 0._rt;
+                    Fux1[ip] = u[0]*phys_const.c;
+                    Fuy1[ip] = u[1]*phys_const.c;
+                    Fpsi1[ip] = 1/(sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2]);
                     Fx2[ip] = 0._rt;
                     Fy2[ip] = 0._rt;
                     Fux2[ip] = 0._rt;
