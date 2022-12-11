@@ -161,7 +161,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
                     amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
-
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
                             Bzp, slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
@@ -176,7 +175,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     AabssqDyp *= 0.25_rt * phys_const.c * phys_const.m_e * mass_inv;
                     charge_mass_ratio *= clight_inv;
 
-                    constexpr int nsub = 8;
+                    constexpr int nsub = 4;
                     const amrex::Real dz_sub = dz/nsub;
 
                     amrex::Real ux_n = Fux1[ip];
@@ -231,14 +230,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         dz_psi_inv_d = psi_inv_d*psi_inv_d*(-charge_mass_ratio * clight_inv *
                                 (( ux_d*ExmByp + uy_d*EypBxp ) * clight_inv * psi_inv_d - Ezp ));
 
-
-                        /*if (isub==5 || isub==7) {
-                            xp += 2_rt*dz_sub*clight_inv*((ux_n * psi_inv_n) + (1._rt/24._rt)*(
-                                (ux_n*dz_psi_inv_d.epsilon + 2._rt*dz_ux_t*dz_psi_inv_t + dz_ux_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
-                            yp += 2_rt*dz_sub*clight_inv*((uy_n * psi_inv_n) + (1._rt/24._rt)*(
-                                (uy_n*dz_psi_inv_d.epsilon + 2._rt*dz_uy_t*dz_psi_inv_t + dz_uy_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
-                        }*/
-
                         ux_n += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
                         uy_n += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
                         psi_inv_n += dz_sub*dz_psi_inv_t + 0.5_rt*dz_sub*dz_sub*dz_psi_inv_d.epsilon;
@@ -258,6 +249,29 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     x_prev[ip] = xp;
                     y_prev[ip] = yp;
 
+                    ExmByp *= -0.5_rt;
+                    EypBxp *= -0.5_rt;
+                    Ezp *= -0.5_rt;
+                    Bxp *= -0.5_rt;
+                    Byp *= -0.5_rt;
+                    Bzp *= -0.5_rt;
+                    Aabssqp *= -0.5_rt;
+                    AabssqDxp *= -0.5_rt;
+                    AabssqDyp *= -0.5_rt;
+
+                    doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
+                            Bzp, slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp,
+                            bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                    ExmByp *= 2._rt;
+                    EypBxp *= 2._rt;
+                    Ezp *= 2._rt;
+                    Bxp *= 2._rt;
+                    Byp *= 2._rt;
+                    Bzp *= 2._rt;
+                    Aabssqp *= 2._rt;
+                    AabssqDxp *= 2._rt;
+                    AabssqDyp *= 2._rt;
 
                     for (int isub=0; isub<(nsub/2); ++isub) {
 
@@ -298,19 +312,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                         dz_psi_inv_d = psi_inv_d*psi_inv_d*(-charge_mass_ratio * clight_inv *
                                 (( ux_d*ExmByp + uy_d*EypBxp ) * clight_inv * psi_inv_d - Ezp ));
-
-                        /*if (isub==1 || isub==3) {
-                            xp += 2_rt*dz_sub*clight_inv*((ux_n * psi_inv_n) + (1._rt/24._rt)*(
-                                (ux_n*dz_psi_inv_d.epsilon + 2._rt*dz_ux_t*dz_psi_inv_t + dz_ux_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
-                            yp += 2_rt*dz_sub*clight_inv*((uy_n * psi_inv_n) + (1._rt/24._rt)*(
-                                (uy_n*dz_psi_inv_d.epsilon + 2._rt*dz_uy_t*dz_psi_inv_t + dz_uy_d.epsilon*psi_inv_n))*2_rt*dz_sub*2_rt*dz_sub);
-                        }*/
-                        /*if (isub==0) {
-                            xp += dz*clight_inv*((ux_n * psi_inv_n) - (1._rt/2._rt)*(
-                                (ux_n*dz_psi_inv_d.epsilon + 2._rt*dz_ux_t*dz_psi_inv_t + dz_ux_d.epsilon*psi_inv_n))*dz*dz);
-                            yp += dz*clight_inv*((uy_n * psi_inv_n) - (1._rt/2._rt)*(
-                                (uy_n*dz_psi_inv_d.epsilon + 2._rt*dz_uy_t*dz_psi_inv_t + dz_uy_d.epsilon*psi_inv_n))*dz*dz);
-                        }*/
 
                         ux_n += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
                         uy_n += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
