@@ -37,6 +37,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     HIPACE_PROFILE(str);
     using namespace amrex::literals;
 
+    AMREX_ALWAYS_ASSERT(!do_update && !do_shift);
+
     // only push plasma particles on their according MR level
     if (plasma.m_level != lev) return;
 
@@ -75,11 +77,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
 
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-
-        if (do_shift)
-        {
-            //ShiftForceTerms(soa);
-        }
 
         // loading the data
         amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
@@ -156,6 +153,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                     if (pid < 0) return;
 
+                    if (temp_slice) {
+                        xp = x_prev[ip];
+                        yp = y_prev[ip];
+                    }
+
                     // define field at particle position reals
                     amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                     amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
@@ -189,6 +191,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     DualNumber dz_uy_d;
                     DualNumber dz_psi_inv_d;
 
+                    amrex::Real ux_mid = 0._rt;
+                    amrex::Real uy_mid = 0._rt;
+                    amrex::Real psi_inv_mid = 0._rt;
 
                     for (int isub=0; isub<nsub; ++isub) {
 
@@ -230,15 +235,17 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         dz_psi_inv_d = psi_inv_d*psi_inv_d*(-charge_mass_ratio * clight_inv *
                                 (( ux_d*ExmByp + uy_d*EypBxp ) * clight_inv * psi_inv_d - Ezp ));
 
+                        if (isub==(nsub/2)) {
+                            ux_mid = ux_n;
+                            uy_mid = uy_n;
+                            psi_inv_mid = psi_inv_n;
+                        }
+
                         ux_n += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
                         uy_n += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
                         psi_inv_n += dz_sub*dz_psi_inv_t + 0.5_rt*dz_sub*dz_sub*dz_psi_inv_d.epsilon;
 
                     }
-
-                    Fux1[ip] = ux_n;
-                    Fuy1[ip] = uy_n;
-                    Fpsi1[ip] = psi_inv_n;
 
                     xp += dz*clight_inv*(ux_n * psi_inv_n);
                     yp += dz*clight_inv*(uy_n * psi_inv_n);
@@ -246,38 +253,33 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     SetPosition(ip, xp, yp, zp);
                     if (enforceBC(ip)) return;
 
-                    x_prev[ip] = xp;
-                    y_prev[ip] = yp;
+                    if (!temp_slice) {
+                        Fux1[ip] = ux_n;
+                        Fuy1[ip] = uy_n;
+                        Fpsi1[ip] = psi_inv_n;
+                        x_prev[ip] = xp;
+                        y_prev[ip] = yp;
+                    }
 
-                    ExmByp *= -0.5_rt;
-                    EypBxp *= -0.5_rt;
-                    Ezp *= -0.5_rt;
-                    Bxp *= -0.5_rt;
-                    Byp *= -0.5_rt;
-                    Bzp *= -0.5_rt;
-                    Aabssqp *= -0.5_rt;
-                    AabssqDxp *= -0.5_rt;
-                    AabssqDyp *= -0.5_rt;
+                    ExmByp = 0._rt;
+                    EypBxp = 0._rt;
+                    Ezp = 0._rt;
+                    Bxp = 0._rt;
+                    Byp = 0._rt;
+                    Bzp = 0._rt;
+                    Aabssqp = 0._rt;
+                    AabssqDxp = 0._rt;
+                    AabssqDyp = 0._rt;
 
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
                             Bzp, slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                    ExmByp *= 2._rt;
-                    EypBxp *= 2._rt;
-                    Ezp *= 2._rt;
-                    Bxp *= 2._rt;
-                    Byp *= 2._rt;
-                    Bzp *= 2._rt;
-                    Aabssqp *= 2._rt;
-                    AabssqDxp *= 2._rt;
-                    AabssqDyp *= 2._rt;
+                    for (int isub=0; isub<nsub; ++isub) {
 
-                    for (int isub=0; isub<(nsub/2); ++isub) {
-
-                        const amrex::Real ux_t = ux_n;
-                        const amrex::Real uy_t = uy_n;
-                        const amrex::Real psi_inv_t = psi_inv_n;
+                        const amrex::Real ux_t = ux_mid;
+                        const amrex::Real uy_t = uy_mid;
+                        const amrex::Real psi_inv_t = psi_inv_mid;
 
                         const amrex::Real gammap_psi = 0.5_rt*psi_inv_t*psi_inv_t*(
                                         1.0_rt
@@ -313,14 +315,14 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         dz_psi_inv_d = psi_inv_d*psi_inv_d*(-charge_mass_ratio * clight_inv *
                                 (( ux_d*ExmByp + uy_d*EypBxp ) * clight_inv * psi_inv_d - Ezp ));
 
-                        ux_n += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
-                        uy_n += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
-                        psi_inv_n += dz_sub*dz_psi_inv_t + 0.5_rt*dz_sub*dz_sub*dz_psi_inv_d.epsilon;
+                        ux_mid += dz_sub*dz_ux_t + 0.5_rt*dz_sub*dz_sub*dz_ux_d.epsilon;
+                        uy_mid += dz_sub*dz_uy_t + 0.5_rt*dz_sub*dz_sub*dz_uy_d.epsilon;
+                        psi_inv_mid += dz_sub*dz_psi_inv_t + 0.5_rt*dz_sub*dz_sub*dz_psi_inv_d.epsilon;
 
                     }
-                    uxp[ip] = ux_n;
-                    uyp[ip] = uy_n;
-                    psip[ip] = 1._rt/psi_inv_n;
+                    uxp[ip] = ux_mid;
+                    uyp[ip] = uy_mid;
+                    psip[ip] = 1._rt/psi_inv_mid;
                 });
         }
     }
@@ -414,9 +416,9 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     w[ip] = w0[ip] * density_func(x0[ip], y0[ip], c_t);
                     uxp[ip] = u[0]*phys_const.c;
                     uyp[ip] = u[1]*phys_const.c;
-                    psip[ip] = sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
-                    x_prev[ip] = 0._rt;
-                    y_prev[ip] = 0._rt;
+                    psip[ip] = std::sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
+                    x_prev[ip] = x0[ip];
+                    y_prev[ip] = y0[ip];
                     ux_temp[ip] = 0._rt;
                     uy_temp[ip] = 0._rt;
                     psi_temp[ip] = 0._rt;
@@ -424,7 +426,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     Fy1[ip] = 0._rt;
                     Fux1[ip] = u[0]*phys_const.c;
                     Fuy1[ip] = u[1]*phys_const.c;
-                    Fpsi1[ip] = 1/(sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2]);
+                    Fpsi1[ip] = 1/(std::sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2]);
                     Fx2[ip] = 0._rt;
                     Fy2[ip] = 0._rt;
                     Fux2[ip] = 0._rt;

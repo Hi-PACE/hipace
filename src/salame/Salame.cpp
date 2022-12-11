@@ -31,7 +31,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         // advance plasma to the temp slice, only shift once
         hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser, hipace->Geom(lev),
-                                                true, true, true, iter==0, lev);
+                                                true, true, false, false, lev);
 
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                         WhichSlice::Next, {"jx_beam", "jy_beam"});
@@ -162,10 +162,7 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
     amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
 
-    // first 5. order adams bashforth coefficient, same as in plasma pusher
-    // Analytically the coefficient should be 2 but 1901/720 gives much better results
-    // due to the plasma pusher used in Hipace
-    const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * hipace->Geom(lev).CellSize(Direction::z);
+    const amrex::Real a1_times_dz = 2._rt * hipace->Geom(lev).CellSize(Direction::z);
 
     for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -223,8 +220,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
             amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
             amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
-            amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
-            amrex::Real * const uy_temp = soa.GetRealData(PlasmaIdx::uy_temp).data();
+            amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
+            amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
             int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
 
             const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
@@ -254,17 +251,15 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         amrex::Real Bxp = 0._rt;
                         amrex::Real Byp = 0._rt;
 
-                        // Gather Bx and By along with 4 dummy fields to use this funciton
+                        // Gather Bx and By
                         doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
                             bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                         const amrex::Real q_mass_ratio = can_ionize ?
                             ion_lev[ip] * charge_mass_ratio : charge_mass_ratio;
 
-                        const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dz;
-
-                        ux_temp[ip] =  a1_times_dz * q_mass_ratio * Byp;
-                        uy_temp[ip] = -a1_times_dz * q_mass_ratio * Bxp;
+                        uxp[ip] =  dz * q_mass_ratio * Byp;
+                        uyp[ip] = -dz * q_mass_ratio * Bxp;
                     });
             }
         }

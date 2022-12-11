@@ -676,7 +676,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
     // shift and update force terms, push plasma particles
     // don't shift force terms again if salame was used
     m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev],
-                                    false, true, true, !do_salame, lev);
+                                    false, true, false, false, lev);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
