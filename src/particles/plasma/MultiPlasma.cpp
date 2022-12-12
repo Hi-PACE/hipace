@@ -82,12 +82,12 @@ MultiPlasma::maxDensity () const
 
 void
 MultiPlasma::DepositCurrent (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice, bool temp_slice,
+    Fields & fields, const MultiLaser & multi_laser, int which_slice,
     bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi,
     amrex::Geometry const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, temp_slice,
+        ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
     }
@@ -104,21 +104,21 @@ MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
 
 void
 MultiPlasma::AdvanceParticles (
-    const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm, bool temp_slice,
-    bool do_push, bool do_update, bool do_shift, int lev)
+    const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm,
+    bool temp_slice, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
-                               do_push, do_update, do_shift, lev, m_all_bins[i], multi_laser);
+                               lev, m_all_bins[i], multi_laser);
     }
 }
 
 void
-MultiPlasma::ResetParticles (int lev, bool initial)
+MultiPlasma::ResetParticles (int lev)
 {
     if (m_nplasmas < 1) return;
     for (auto& plasma : m_all_plasmas) {
-        ResetPlasmaParticles(plasma, lev, initial);
+        ResetPlasmaParticles(plasma, lev);
     }
 }
 
@@ -130,7 +130,7 @@ MultiPlasma::DepositNeutralizingBackground (
         for (int i=0; i<m_nplasmas; i++) {
             if (m_all_plasmas[i].m_neutralize_background){
                 // current of ions is zero, so they are not deposited.
-                ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false, false,
+                ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
                                  false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
             }
         }

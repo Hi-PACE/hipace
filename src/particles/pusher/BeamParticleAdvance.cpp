@@ -60,8 +60,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data() + offset;
 
     const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto setPosition = SetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto enforceBC = EnforceBC<BeamParticleContainer>(
+    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(
         beam, GetDomainLev(gm, box, 1, lev), GetDomainLev(gm, box, 0, lev),
         gm.isPeriodicArray(), offset);
 
@@ -105,8 +104,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                 xp += dt * 0.5_rt * uxp[ip] / gammap;
                 yp += dt * 0.5_rt * uyp[ip] / gammap;
 
-                setPosition(ip, xp, yp, zp);
-                if (enforceBC(ip)) return;
+                if (setPositionEnforceBC(ip, xp, yp, zp)) return;
 
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
@@ -156,8 +154,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                 xp += dt * 0.5_rt * ux_next  / gamma_next;
                 yp += dt * 0.5_rt * uy_next  / gamma_next;
                 if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
-                setPosition(ip, xp, yp, zp);
-                if (enforceBC(ip)) return;
+                if (setPositionEnforceBC(ip, xp, yp, zp)) return;
                 uxp[ip] = ux_next;
                 uyp[ip] = uy_next;
                 uzp[ip] = uz_next;

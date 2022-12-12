@@ -21,23 +21,19 @@
 struct PlasmaIdx
 {
     enum {
-        w = 0,                               // weight
-        w0,                                  // initial weight
-        ux, uy,                              // momentum
-        psi,                                 // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
-        x_prev, y_prev,                      // temporary position
-        ux_temp, uy_temp,                    // momentum
-        psi_temp,                            //
-        Fx1, Fx2, Fx3, Fx4, Fx5,             //
-        Fy1, Fy2, Fy3, Fy4, Fy5,             //
-        Fux1, Fux2, Fux3, Fux4, Fux5,        //
-        Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
-        Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
-        x0, y0,                              // initial positions
+        w = 0,              // weight
+        w0,                 // initial weight
+        ux, uy,             // momentum
+        psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
+        x_prev, y_prev,     // positions on the last non-temp slice
+        ux_half_step,       // momentum half a step behind the current slice
+        uy_half_step,       //
+        psi_inv_half_step,  // inverse psi
+        x0, y0,             // initial positions
         nattribs
     };
     enum {
-        ion_lev = 0,                         // ionization level
+        ion_lev = 0,        // ionization level
         int_nattribs
     };
 };

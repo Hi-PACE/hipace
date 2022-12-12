@@ -44,7 +44,6 @@ public:
      * \param[in,out] fields the general field class, modified by this function
      * \param[in] multi_laser Lasers that affects the plasma during the deposition
      * \param[in] which_slice defines if this or the next slice is handled
-     * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
      * \param[in] deposit_jx_jy if true, deposit to jx and jy
      * \param[in] deposit_jz if true, deposit to jz
      * \param[in] deposit_rho if true, deposit to rho
@@ -53,7 +52,7 @@ public:
      * \param[in] lev MR level
      */
     void DepositCurrent (
-        Fields & fields, const MultiLaser & multi_laser, int which_slice, bool temp_slice, bool deposit_jx_jy,
+        Fields & fields, const MultiLaser & multi_laser, int which_slice, bool deposit_jx_jy,
         bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
         int const lev);
 
@@ -74,27 +73,23 @@ public:
      */
     amrex::Real maxDensity () const;
 
-    /** \brief Loop over plasma species and Gather fields, update forces and push particles
+    /** \brief Gather field values and push particles
      *
      * \param[in,out] fields the general field class, modified by this function
      * \param[in] multi_laser Lasers that affects the plasma during the deposition
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
-     * \param[in] do_push boolean to define if plasma particles are pushed
-     * \param[in] do_update boolean to define if the force terms are updated
-     * \param[in] do_shift boolean to define if the force terms are shifted
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm, bool temp_slice,
-        bool do_push, bool do_update, bool do_shift, int lev);
+        const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm,
+        bool temp_slice, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
      *
      * \param[in] lev MR level
-     * \param[in] initial whether this is initial reset at each time step. iF so, reset everything.
      */
-    void ResetParticles (int lev, bool initial=false);
+    void ResetParticles (int lev);
 
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
