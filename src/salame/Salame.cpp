@@ -21,9 +21,19 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
     if (islice + 1 != last_islice) {
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_target"},
                                         WhichSlice::This, {"Ez"});
-        last_islice = islice;
         overloaded = false;
     }
+
+    last_islice = islice;
+
+    hipace->m_fields.setVal(0., lev, WhichSlice::This, "Sy", "Sx");
+
+    hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
+                                              hipace->Geom(lev), lev);
+
+    // Back up Sx and Sy from the plasma only. This can only be done before the plasma push
+    hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Sy_back", "Sx_back"},
+                                    WhichSlice::This, {"Sy", "Sx"});
 
     for (int iter=0; iter<n_iter; ++iter) {
 
@@ -66,10 +76,6 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
             hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
                     WhichSlice::Salame, true, false, false, false, hipace->Geom(lev), lev);
-
-            // Advance plasma to restore ux and uy
-            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser,
-                                                hipace->Geom(lev), true, lev);
         } else {
             SalameGetJxJyFromBxBy(hipace, lev);
         }
@@ -111,8 +117,9 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         hipace->InitializeSxSyWithBeam(lev);
 
-        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
-                                                  hipace->Geom(lev), lev);
+        // add result of explicit deposition
+        hipace->m_fields.add(lev, WhichSlice::This, {"Sy", "Sx"},
+                                  WhichSlice::Salame, {"Sy_back", "Sx_back"});
 
         hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
     }
@@ -163,7 +170,7 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
     amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
 
-    const amrex::Real dz = 1._rt * hipace->Geom(lev).CellSize(Direction::z);
+    const amrex::Real dz = 1.5_rt * hipace->Geom(lev).CellSize(Direction::z);
 
     for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -259,8 +266,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         const amrex::Real q_mass_ratio = can_ionize ?
                             ion_lev[ip] * charge_mass_ratio : charge_mass_ratio;
 
-                        uxp[ip] =  dz * q_mass_ratio * Byp;
-                        uyp[ip] = -dz * q_mass_ratio * Bxp;
+                        uxp[ip] =  1.5_rt*dz * q_mass_ratio * Byp;
+                        uyp[ip] = -1.5_rt*dz * q_mass_ratio * Bxp;
                     });
             }
         }

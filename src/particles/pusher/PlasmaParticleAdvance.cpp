@@ -22,6 +22,10 @@
 
 #include <string>
 
+// explicitly instantiate template to fix wrong warning with gcc
+template struct PlasmaMomentumDerivative<amrex::Real>;
+template struct PlasmaMomentumDerivative<DualNumber>;
+
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Geometry const& gm, const bool temp_slice, int const lev,
