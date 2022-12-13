@@ -180,7 +180,7 @@ struct EnforceBCandSetPos
      * \param[in] y new x position of particle
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const int ip, RType x, RType y) const noexcept
+    bool operator() (const int ip, RType& x, RType& y) const noexcept
     {
         using namespace amrex::literals;
 
@@ -195,6 +195,8 @@ struct EnforceBCandSetPos
             m_weights[ip] = 0.0_rt;
             m_structs[ip].id() = -std::abs(m_structs[ip].id());
         }
+        x = m_structs[ip].pos(0);
+        y = m_structs[ip].pos(1);
         return invalid;
     }
 
@@ -206,7 +208,7 @@ struct EnforceBCandSetPos
      * \param[in] z new x position of particle
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const int ip, RType x, RType y, RType z) const noexcept
+    bool operator() (const int ip, RType& x, RType& y, RType& z) const noexcept
     {
         using namespace amrex::literals;
 
@@ -222,6 +224,9 @@ struct EnforceBCandSetPos
             m_weights[ip] = 0.0_rt;
             m_structs[ip].id() = -std::abs(m_structs[ip].id());
         }
+        x = m_structs[ip].pos(0);
+        y = m_structs[ip].pos(1);
+        z = m_structs[ip].pos(2);
         return invalid;
     }
 };

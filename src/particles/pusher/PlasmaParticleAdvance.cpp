@@ -150,6 +150,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real uy = uy_half_step[ip];
                     amrex::Real psi_inv = psi_inv_half_step[ip];
 
+                    amrex::Real ux_mid = 0._rt;
+                    amrex::Real uy_mid = 0._rt;
+                    amrex::Real psi_inv_mid = 0._rt;
+
                     for (int isub=0; isub<nsub; ++isub) {
 
                         auto [dz_ux, dz_uy, dz_psi_inv] = PlasmaMomentumPush(
@@ -163,6 +167,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         auto [dz_ux_dual, dz_uy_dual, dz_psi_inv_dual] = PlasmaMomentumPush(
                             ux_dual, uy_dual, psi_inv_dual, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+
+                        if (isub==(nsub/2)) {
+                            ux_mid = ux;
+                            uy_mid = uy;
+                            psi_inv_mid = psi_inv;
+                        }
 
                         ux += sdz*dz_ux + 0.5_rt*sdz*sdz*dz_ux_dual.epsilon;
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
@@ -183,7 +193,35 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         y_prev[ip] = yp;
                     }
 
-                    for (int isub=0; isub<(nsub/2); ++isub) {
+                    ux = ux_mid;
+                    uy = uy_mid;
+                    psi_inv = psi_inv_mid;
+
+                    ExmByp = 0._rt;
+                    EypBxp = 0._rt;
+                    Ezp = 0._rt;
+                    Bxp = 0._rt;
+                    Byp = 0._rt;
+                    Bzp = 0._rt;
+                    Aabssqp = 0._rt;
+                    AabssqDxp = 0._rt;
+                    AabssqDyp = 0._rt;
+
+                    doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
+                            Bzp, slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp,
+                            bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                    if (use_laser) {
+                        doLaserGatherShapeN<depos_order.value>(xp, yp, Aabssqp, AabssqDxp,
+                            AabssqDyp, a_arr, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                    }
+                    Bxp *= clight;
+                    Byp *= clight;
+                    Aabssqp *= 0.5_rt; // TODO: fix units of Aabssqp
+                    AabssqDxp *= 0.25_rt * me_clight_mass_ratio;
+                    AabssqDyp *= 0.25_rt * me_clight_mass_ratio;
+
+                    for (int isub=0; isub<nsub; ++isub) {
 
                         auto [dz_ux, dz_uy, dz_psi_inv] = PlasmaMomentumPush(
                             ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
