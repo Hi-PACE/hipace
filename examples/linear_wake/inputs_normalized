@@ -9,9 +9,6 @@ amr.max_level = 0
 
 max_step = 0
 
-hipace.numprocs_x = 1
-hipace.numprocs_y = 1
-
 hipace.depos_order_xy = 2
 
 geometry.coord_sys   = 0                  # 0: Cartesian
