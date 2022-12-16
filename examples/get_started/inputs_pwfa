@@ -22,6 +22,7 @@ geometry.is_periodic = true  true  false  # Is periodic?
 geometry.prob_lo     = -250.e-6 -250.e-6 -250.e-6  # physical domain
 geometry.prob_hi     =  250.e-6  250.e-6  110.e-6
 
+lasers.names = no_laser
 beams.names = driver witness
 
 driver.position_mean = 0. 0. 0.
