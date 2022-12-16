@@ -31,4 +31,14 @@ Then you can use the `openPMD-viewer <https://github.com/openPMD/openPMD-viewer>
    x, z = ts.get_particle(species='beam', iteration=iteration, var_list=['x', 'z'])
    F, m = ts.get_field(field='Ez', iteration=iteration)
 
-Also please have a look at the production runs for beam-driven and laser-driven wakefield at ``examples/inputs_pwfa`` and ``examples/inputs_lwfa``, respectively. Additional examples can be found in ``examples/``.
+Also please have a look at the production runs for beam-driven and laser-driven wakefield:
+
+.. toctree::
+    :maxdepth: 1
+
+    inputs_pwfa.rst
+    inputs_lwfa.rst
+
+Both use realistic resolutions and run well on modern GPUs (as an estimate, each should take less than 5 min on 16 modern GPUs, e.g., nvidia A100).
+
+Additional examples can be found in ``examples/``.
