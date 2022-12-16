@@ -31,4 +31,4 @@ Then you can use the `openPMD-viewer <https://github.com/openPMD/openPMD-viewer>
    x, z = ts.get_particle(species='beam', iteration=iteration, var_list=['x', 'z'])
    F, m = ts.get_field(field='Ez', iteration=iteration)
 
-Other examples can be found in ``examples/``
+Also please have a look at the production runs for beam-driven and laser-driven wakefield at ``examples/inputs_pwfa`` and ``examples/inputs_lwfa``, respectively. Additional examples can be found in ``examples/``.
