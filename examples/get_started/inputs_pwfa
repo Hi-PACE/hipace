@@ -1,0 +1,57 @@
+max_step = 300
+amr.n_cell = 1024 1024 1024
+
+hipace.bxby_solver = explicit
+
+amr.blocking_factor = 2
+amr.max_level = 0
+
+hipace.max_time = 0.3/clight
+hipace.output_period = 1
+hipace.verbose = 1
+
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
+hipace.depos_order_xy = 2
+hipace.dt = adaptive
+hipace.nt_per_betatron = 30
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = true  true  false  # Is periodic?
+geometry.prob_lo     = -250.e-6 -250.e-6 -250.e-6  # physical domain
+geometry.prob_hi     =  250.e-6  250.e-6  110.e-6
+
+beams.names = driver witness
+
+driver.position_mean = 0. 0. 0.
+driver.position_std = 2.e-6 2.e-6 30.e-6
+driver.injection_type = fixed_weight
+driver.num_particles = 1000000
+driver.total_charge = .6e-9
+driver.u_mean = 0. 0. 1000.
+driver.u_std = 2. 2. 10.
+driver.do_symmetrize = 1
+
+witness.position_mean = 0. 0. -160.e-6
+witness.position_std = 2.e-6 2.e-6 5.e-6
+witness.injection_type = fixed_weight
+witness.num_particles = 1000000
+witness.total_charge = .2e-9
+witness.u_mean = 0. 0. 1000.
+witness.u_std = 2. 2. 10.
+witness.do_symmetrize = 1
+
+plasmas.names = electron ion
+
+electron.density(x,y,z) = 2.e22
+electron.ppc = 1 1
+electron.u_mean = 0.0 0.0 0.
+electron.element = electron
+
+ion.density(x,y,z) = 2.e22
+ion.ppc = 1 1
+ion.u_mean = 0.0 0.0 0.
+ion.element = H
+
+diagnostic.diag_type = xz
