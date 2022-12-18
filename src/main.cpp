@@ -15,11 +15,13 @@
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc,argv);
+    StreamProfilerNode::Initialize();
     {
         HIPACE_PROFILE("main()");
         Hipace hipace;
         hipace.InitData();
         hipace.Evolve();
     }
+    StreamProfilerNode::Finalize();
     amrex::Finalize();
 }
