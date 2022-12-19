@@ -38,7 +38,7 @@ struct StreamProfilerNode {
     std::map<std::string, StreamProfilerNode> m_children{};
 
     unsigned long long m_ncalls = 0;
-    static constexpr int m_nevents = 4;
+    static constexpr int m_nevents = 8;
 
     Event_t m_start[m_nevents];
     Event_t m_stop[m_nevents];
@@ -71,7 +71,9 @@ struct StreamProfilerNode {
 
         if (m_ncalls > m_nevents) {
             float time = 0.;
-            AMREX_CUDA_SAFE_CALL(cudaEventSynchronize(m_stop[ievent]));
+            if (cudaEventQuery(m_stop[ievent]) != cudaSuccess) {
+                AMREX_CUDA_SAFE_CALL(cudaEventSynchronize(m_stop[ievent]));
+            }
             AMREX_CUDA_SAFE_CALL(cudaEventElapsedTime(&time, m_start[ievent], m_stop[ievent]));
             m_time_inc += time/1000.;
             m_time_inc_sq += time/1000.*time/1000.;
@@ -117,8 +119,8 @@ struct StreamProfiler {
 
 
 #define HIPACE_PROFILE(fname) StreamProfiler BL_PROFILE_PASTE(PROF_SCOPE_, __COUNTER__){fname}
-#define HIPACE_DETAIL_PROFILE(fname) HIPACE_PROFILE(fname)
-
+//#define HIPACE_DETAIL_PROFILE(fname) HIPACE_PROFILE(fname)
+#define HIPACE_DETAIL_PROFILE(fname)
 
 /*
 template<int detail_level>
