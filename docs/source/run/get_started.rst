@@ -39,6 +39,6 @@ Also please have a look at the production runs for beam-driven and laser-driven 
     inputs_pwfa.rst
     inputs_lwfa.rst
 
-Both use realistic resolutions and run well on modern GPUs (as an estimate, each should take less than 5 min on 16 modern GPUs, e.g., nvidia A100).
+Both use realistic resolutions and run well on modern GPUs (as an estimate, each should take less than 5 min on 16 modern GPUs, e.g., NVIDIA A100).
 
 Additional examples can be found in ``examples/``.
