@@ -379,3 +379,18 @@ then
                      --test-name laser_evolution.SI.2Rank \
                      --skip-particles
 fi
+
+# production.SI.2Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "production.SI.2Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R production.SI.2Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/production.SI.2Rank_pwfa \
+                     --test-name production.SI.2Rank_pwfa
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/production.SI.2Rank_lwfa \
+                     --test-name production.SI.2Rank_lwfa
+fi

@@ -1,0 +1,45 @@
+max_step = 500
+amr.n_cell = 256 256 1024
+
+my_constants.kp_inv = clight/wp
+my_constants.kp = wp/clight
+my_constants.wp = sqrt( ne * q_e^2/(m_e *epsilon0) )
+my_constants.ne = 1.0505e23
+my_constants.Rm = 3*kp_inv
+my_constants.Lramp = 6.e-3
+
+hipace.verbose = 1
+hipace.bxby_solver = explicit
+hipace.dt = 10.*kp_inv/clight
+hipace.output_period = 10
+hipace.numprocs_x = 1
+hipace.numprocs_y = 1
+
+amr.blocking_factor = 2
+amr.max_level = 0
+
+geometry.coord_sys   = 0                  # 0: Cartesian
+geometry.is_periodic = true  true  false  # Is periodic?
+geometry.prob_lo     = -18*kp_inv   -18*kp_inv   -7.5*kp_inv
+geometry.prob_hi     =  18*kp_inv    18*kp_inv    1.5*kp_inv
+
+lasers.names = laser
+lasers.lambda0 = 800e-9
+lasers.solver_type = multigrid
+lasers.MG_tolerance_rel = 1e-5
+laser.a0 = 1.9
+laser.position_mean = 0. 0. 0
+laser.w0 = 3*kp_inv
+laser.L0 = 0.5*kp_inv
+
+beams.names = no_beam
+
+plasmas.names = plasma
+plasma.density(x,y,z) = "ne*(1+4*(x^2+y^2)/(kp^2 * Rm^4 ) ) *
+                         if (z > Lramp, 1, .5*(1-cos(pi*z/Lramp))) *
+                         if (z>0,1,0)"
+plasma.ppc = 1 1
+plasma.element = electron
+plasma.radius = 23.*kp_inv
+
+diagnostic.diag_type = xz

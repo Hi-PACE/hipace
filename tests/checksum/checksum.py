@@ -68,7 +68,7 @@ class Checksum:
                 data['lev=' + str(lev)] = data_lev
 
         # Compute checksum for particle quantities
-        if do_particles:
+        if do_particles and species_list is not None:
             for species in species_list:
                 part_fields = ds.get_species_attributes(species)
                 data_species = {}
