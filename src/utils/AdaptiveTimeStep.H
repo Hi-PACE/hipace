@@ -22,6 +22,7 @@ private:
 
     /** Number of time steps per betatron period for the adaptive time step */
     amrex::Real m_nt_per_betatron = 40.;
+    amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
 
 public:
     /** Whether to use an adaptive time step */
