@@ -66,7 +66,7 @@ General parameters
     Time step to advance the particle beam. For adaptive time step, use ``"adaptive"``.
 
 * ``hipace.dt_max`` (`float`) optional (default `inf`)
-    Only used of ``hipace.dt = adaptive``. Upper bound of the adaptive time step: if the computed adaptive time step is is larger than ``dt_max``, then ``dt_max`` is used instead.
+    Only used if ``hipace.dt = adaptive``. Upper bound of the adaptive time step: if the computed adaptive time step is is larger than ``dt_max``, then ``dt_max`` is used instead.
     Useful when the plasma profile starts with a very low density (e.g. in the presence of a realistic density ramp), to avoid unreasonably large time steps.
 
 * ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
