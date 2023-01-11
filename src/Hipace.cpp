@@ -459,7 +459,9 @@ Hipace::Evolve ()
 
             Wait(step, it);
             // Only reset plasma after receiving time step, to use proper density
-            for (int lev=0; lev<=finestLevel(); ++lev) m_multi_plasma.ResetParticles(lev, true);
+            // WARNING: handling of lev is to be improved: this loops over levels, but
+            // lev is set to 0 above.
+            for (int lv=0; lv<=finestLevel(); ++lv) m_multi_plasma.ResetParticles(lv, true);
 
             if (m_physical_time >= m_max_time) {
                 Notify(step, it); // just send signal to finish simulation
