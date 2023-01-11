@@ -458,6 +458,9 @@ Hipace::Evolve ()
             }
 
             Wait(step, it);
+            // Only reset plasma after receiving time step, to use proper density
+            for (int lev=0; lev<=finestLevel(); ++lev) m_multi_plasma.ResetParticles(lev, true);
+
             if (m_physical_time >= m_max_time) {
                 Notify(step, it); // just send signal to finish simulation
                 if (m_physical_time > m_max_time) break;
@@ -745,7 +748,6 @@ Hipace::ResetAllQuantities ()
     if (m_use_laser) ResetLaser();
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        m_multi_plasma.ResetParticles(lev, true);
         for (amrex::MultiFab& slice : m_fields.getSlices(lev)) {
             if (slice.nComp() != 0) {
                 slice.setVal(0., m_fields.m_slices_nguards);
