@@ -439,11 +439,6 @@ Hipace::Evolve ()
 
         ResetAllQuantities();
 
-        /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
-        m_multi_plasma.DepositNeutralizingBackground(m_fields, m_multi_laser, WhichSlice::RhoIons, geom[lev],
-                                                     finestLevel()+1);
-
         // Loop over longitudinal boxes on this rank, from head to tail
         const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
         for (int it = n_boxes-1; it >= 0; --it)
@@ -458,10 +453,16 @@ Hipace::Evolve ()
             }
 
             Wait(step, it);
-            // Only reset plasma after receiving time step, to use proper density
-            // WARNING: handling of lev is to be improved: this loops over levels, but
-            // lev is set to 0 above.
-            for (int lv=0; lv<=finestLevel(); ++lv) m_multi_plasma.ResetParticles(lv, true);
+            if (it == n_boxes-1) {
+                // Only reset plasma after receiving time step, to use proper density
+                // WARNING: handling of lev is to be improved: this loops over levels, but
+                // lev is set to 0 above.
+                for (int lv=0; lv<=finestLevel(); ++lv) m_multi_plasma.ResetParticles(lv, true);
+                /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
+                if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
+                m_multi_plasma.DepositNeutralizingBackground(
+                    m_fields, m_multi_laser, WhichSlice::RhoIons, geom[lev], finestLevel()+1);
+            }
 
             if (m_physical_time >= m_max_time) {
                 Notify(step, it); // just send signal to finish simulation
