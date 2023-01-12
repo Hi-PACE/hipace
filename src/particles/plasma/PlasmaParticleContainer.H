@@ -26,10 +26,20 @@ struct PlasmaIdx
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
         x_prev, y_prev,     // positions on the last non-temp slice
+
+        x0, y0,             // initial positions
+#ifndef HIPACE_USE_AB5_PUSH
         ux_half_step,       // momentum half a step behind the current slice
         uy_half_step,       //
         psi_inv_half_step,  // inverse psi
-        x0, y0,             // initial positions
+#else
+        ux_prev, uy_prev, psi_prev,          // previous momentum
+        Fx1, Fx2, Fx3, Fx4, Fx5,             // AB5 force terms
+        Fy1, Fy2, Fy3, Fy4, Fy5,             //
+        Fux1, Fux2, Fux3, Fux4, Fux5,        //
+        Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
+        Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
+#endif
         nattribs
     };
     enum {

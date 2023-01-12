@@ -79,9 +79,13 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
+#ifndef HIPACE_USE_AB5_PUSH
         amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
         amrex::Real * const psi_inv_half_step =soa.GetRealData(PlasmaIdx::psi_inv_half_step).data();
+#else
+        auto arrdata = soa.realarray();
+#endif
         int * const ion_lev = plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data()
                                                   : nullptr;
 
@@ -142,6 +146,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     Aabssqp *= 0.5_rt; // TODO: fix units of Aabssqp
                     AabssqDxp *= 0.25_rt * me_clight_mass_ratio;
                     AabssqDyp *= 0.25_rt * me_clight_mass_ratio;
+
+#ifndef HIPACE_USE_AB5_PUSH
 
                     constexpr int nsub = 4;
                     const amrex::Real sdz = dz/nsub;
@@ -205,8 +211,88 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     uxp[ip] = ux;
                     uyp[ip] = uy;
                     psip[ip] = 1._rt/psi_inv;
+#else
+                    amrex::Real ux = arrdata[PlasmaIdx::ux_prev][ip];
+                    amrex::Real uy = arrdata[PlasmaIdx::uy_prev][ip];
+                    amrex::Real psi = arrdata[PlasmaIdx::psi_prev][ip];
+                    const amrex::Real psi_inv = 1._rt / psi;
+
+                    auto [dz_ux, dz_uy, dz_psi_inv] = PlasmaMomentumPush(
+                        ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                        Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+
+                    arrdata[PlasmaIdx::Fx1][ip] = clight_inv*(ux * psi_inv);
+                    arrdata[PlasmaIdx::Fy1][ip] = clight_inv*(uy * psi_inv);
+                    arrdata[PlasmaIdx::Fux1][ip] = dz_ux;
+                    arrdata[PlasmaIdx::Fuy1][ip] = dz_uy;
+                    arrdata[PlasmaIdx::Fpsi1][ip] = -dz_psi_inv * psi * psi;
+
+                    const amrex::Real ab5_coeffs[5] = {
+                        ( 1901._rt / 720._rt ) * dz,    // a1 times dz
+                        ( -1387._rt / 360._rt ) * dz,   // a2 times dz
+                        ( 109._rt / 30._rt ) * dz,      // a3 times dz
+                        ( -637._rt / 360._rt ) * dz,    // a4 times dz
+                        ( 251._rt / 720._rt ) * dz      // a5 times dz
+                    };
+
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                    for (int iab=0; iab<5; ++iab) {
+                        xp  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fx1}   + iab][ip];
+                        yp  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fy1}   + iab][ip];
+                        ux  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fux1}  + iab][ip];
+                        uy  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fuy1}  + iab][ip];
+                        psi += ab5_coeffs[iab] * arrdata[PlasmaIdx::Fpsi1 + iab][ip];
+                    }
+
+                    if (setPositionEnforceBC(ip, xp, yp)) return;
+
+                    if (!temp_slice) {
+                        arrdata[PlasmaIdx::ux_prev][ip] = ux;
+                        arrdata[PlasmaIdx::uy_prev][ip] = uy;
+                        arrdata[PlasmaIdx::psi_prev][ip] = psi;
+                        x_prev[ip] = xp;
+                        y_prev[ip] = yp;
+                    }
+
+                    uxp[ip] = ux;
+                    uyp[ip] = uy;
+                    psip[ip] = psi;
+#endif
                 });
         }
+
+#ifdef HIPACE_USE_AB5_PUSH
+        if (!temp_slice) {
+            auto& rd = soa.GetRealData();
+
+            // shift force terms
+            rd[PlasmaIdx::Fx5].swap(rd[PlasmaIdx::Fx4]);
+            rd[PlasmaIdx::Fy5].swap(rd[PlasmaIdx::Fy4]);
+            rd[PlasmaIdx::Fux5].swap(rd[PlasmaIdx::Fux4]);
+            rd[PlasmaIdx::Fuy5].swap(rd[PlasmaIdx::Fuy4]);
+            rd[PlasmaIdx::Fpsi5].swap(rd[PlasmaIdx::Fpsi4]);
+
+            rd[PlasmaIdx::Fx4].swap(rd[PlasmaIdx::Fx3]);
+            rd[PlasmaIdx::Fy4].swap(rd[PlasmaIdx::Fy3]);
+            rd[PlasmaIdx::Fux4].swap(rd[PlasmaIdx::Fux3]);
+            rd[PlasmaIdx::Fuy4].swap(rd[PlasmaIdx::Fuy3]);
+            rd[PlasmaIdx::Fpsi4].swap(rd[PlasmaIdx::Fpsi3]);
+
+            rd[PlasmaIdx::Fx3].swap(rd[PlasmaIdx::Fx2]);
+            rd[PlasmaIdx::Fy3].swap(rd[PlasmaIdx::Fy2]);
+            rd[PlasmaIdx::Fux3].swap(rd[PlasmaIdx::Fux2]);
+            rd[PlasmaIdx::Fuy3].swap(rd[PlasmaIdx::Fuy2]);
+            rd[PlasmaIdx::Fpsi3].swap(rd[PlasmaIdx::Fpsi2]);
+
+            rd[PlasmaIdx::Fx2].swap(rd[PlasmaIdx::Fx1]);
+            rd[PlasmaIdx::Fy2].swap(rd[PlasmaIdx::Fy1]);
+            rd[PlasmaIdx::Fux2].swap(rd[PlasmaIdx::Fux1]);
+            rd[PlasmaIdx::Fuy2].swap(rd[PlasmaIdx::Fuy1]);
+            rd[PlasmaIdx::Fpsi2].swap(rd[PlasmaIdx::Fpsi1]);
+        }
+#endif
     }
 }
 
@@ -234,9 +320,13 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
+#ifndef HIPACE_USE_AB5_PUSH
         amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
         amrex::Real * const psi_inv_half_step =soa.GetRealData(PlasmaIdx::psi_inv_half_step).data();
+#else
+        auto arrdata = soa.realarray();
+#endif
         amrex::Real * const x0 = soa.GetRealData(PlasmaIdx::x0).data();
         amrex::Real * const y0 = soa.GetRealData(PlasmaIdx::y0).data();
         amrex::Real * const w = soa.GetRealData(PlasmaIdx::w).data();
@@ -270,9 +360,22 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
                 psip[ip] = std::sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
                 x_prev[ip] = x0[ip];
                 y_prev[ip] = y0[ip];
+#ifndef HIPACE_USE_AB5_PUSH
                 ux_half_step[ip] = u[0]*phys_const.c;
                 uy_half_step[ip] = u[1]*phys_const.c;
                 psi_inv_half_step[ip] = 1._rt/psip[ip];
+#else
+                arrdata[PlasmaIdx::ux_prev ][ip] = u[0]*phys_const.c;
+                arrdata[PlasmaIdx::uy_prev ][ip] = u[1]*phys_const.c;
+                arrdata[PlasmaIdx::psi_prev][ip] = psip[ip];
+
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                    arrdata[iforce][ip] = 0._rt;
+                }
+#endif
                 ion_lev[ip] = init_ion_lev;
             }
             );

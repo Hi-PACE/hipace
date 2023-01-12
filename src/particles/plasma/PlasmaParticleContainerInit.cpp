@@ -191,9 +191,22 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
                 arrdata[PlasmaIdx::x_prev   ][pidx] = x;
                 arrdata[PlasmaIdx::y_prev   ][pidx] = y;
+#ifndef HIPACE_USE_AB5_PUSH
                 arrdata[PlasmaIdx::ux_half_step][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy_half_step][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi_inv_half_step][pidx] = 1._rt/arrdata[PlasmaIdx::psi][pidx];
+#else
+                arrdata[PlasmaIdx::ux_prev ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy_prev ][pidx] = u[1] * c_light;
+                arrdata[PlasmaIdx::psi_prev][pidx] = arrdata[PlasmaIdx::psi][pidx];
+
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                    arrdata[iforce][pidx] = 0._rt;
+                }
+#endif
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;

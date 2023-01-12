@@ -335,9 +335,22 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::psi     ][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::x_prev  ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
+#ifndef HIPACE_USE_AB5_PUSH
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::psi_inv_half_step][pidx] = 1._rt/1._rt;
+#else
+                arrdata_elec[PlasmaIdx::ux_prev ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::uy_prev ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::psi_prev][pidx] = 1._rt;
+
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                    arrdata_elec[iforce][pidx] = 0._rt;
+                }
+#endif
                 arrdata_elec[PlasmaIdx::x0      ][pidx] = arrdata_ion[PlasmaIdx::x0    ][ip];
                 arrdata_elec[PlasmaIdx::y0      ][pidx] = arrdata_ion[PlasmaIdx::y0    ][ip];
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
