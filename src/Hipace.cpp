@@ -727,12 +727,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
     // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
     PredictorCorrectorLoopToSolveBxBy(islice_local, lev, step, beam_bin, ibox);
 
-    // push plasma
-    m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
-
-    // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                           beam_bin, m_box_sorters, ibox);
+    // Push beam and plasma in SolveOneSlice
 }
 
 void
