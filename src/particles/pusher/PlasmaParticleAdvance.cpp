@@ -239,10 +239,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 #pragma unroll
 #endif
                     for (int iab=0; iab<5; ++iab) {
-                        xp  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fx1}   + iab][ip];
-                        yp  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fy1}   + iab][ip];
-                        ux  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fux1}  + iab][ip];
-                        uy  += ab5_coeffs[iab] * arrdata[int{PlasmaIdx::Fuy1}  + iab][ip];
+                        xp  += ab5_coeffs[iab] * arrdata[PlasmaIdx::Fx1   + iab][ip];
+                        yp  += ab5_coeffs[iab] * arrdata[PlasmaIdx::Fy1   + iab][ip];
+                        ux  += ab5_coeffs[iab] * arrdata[PlasmaIdx::Fux1  + iab][ip];
+                        uy  += ab5_coeffs[iab] * arrdata[PlasmaIdx::Fuy1  + iab][ip];
                         psi += ab5_coeffs[iab] * arrdata[PlasmaIdx::Fpsi1 + iab][ip];
                     }
 

@@ -592,6 +592,13 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
+            // Push plasma particles
+            m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
+
+            // Push beam particles
+            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                                beam_bin, m_box_sorters, ibox);
+
             if (lev == 0) {
                 // Advance laser slice by 1 step and store result to 3D array
                 m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
@@ -664,20 +671,14 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
     // Solves Bx, By using Sx, Sy and chi
     ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
 
-    const bool do_salame = m_multi_beam.isSalameNow(step, islice_local, beam_bin);
-    if (do_salame) {
+    if (m_multi_beam.isSalameNow(step, islice_local, beam_bin)) {
         // Modify the beam particle weights on this slice to flatten Ez.
         // As the beam current is modified, Bx and By are also recomputed.
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
                      m_salame_overloaded, lev, step, islice, islice_local, beam_bin, ibox);
     }
 
-    // Push plasma particles
-    m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
-
-    // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                           beam_bin, m_box_sorters, ibox);
+    // Push beam and plasma in SolveOneSlice
 }
 
 void
@@ -692,9 +693,8 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
         m_fields.setVal(0., lev, WhichSlice::This, "chi");
     }
 
-
-
     if (m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+
     // deposit jx jy jz rho and maybe chi
     m_multi_plasma.DepositCurrent(
         m_fields, m_multi_laser, WhichSlice::This, true, true, true, m_use_laser, geom[lev], lev);
@@ -727,12 +727,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
     // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
     PredictorCorrectorLoopToSolveBxBy(islice_local, lev, step, beam_bin, ibox);
 
-    // push plasma
-    m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
-
-    // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                           beam_bin, m_box_sorters, ibox);
+    // Push beam and plasma in SolveOneSlice
 }
 
 void
