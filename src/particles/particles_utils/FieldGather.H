@@ -32,8 +32,7 @@
  * \param[in,out] Byp Magnetic field on particles: By
  * \param[in,out] Bzp Magnetic field on particles: Bz
  * \param[in] slice_arr slice array for WhichSlice::This
- * \param[in] exmby_comp field component for field Ex - c*By
- * \param[in] eypbx_comp field array for field  Ey + c*Bx
+ * \param[in] psi_comp field component for field Psi
  * \param[in] ez_comp field array for field  Ez
  * \param[in] bx_comp field array for field  Bx
  * \param[in] by_comp field array for field  By
@@ -54,8 +53,7 @@ void doGatherShapeN (const amrex::Real xp,
                      amrex::Real& Byp,
                      amrex::Real& Bzp,
                      Array3<amrex::Real const> const& slice_arr,
-                     const int exmby_comp,
-                     const int eypbx_comp,
+                     const int psi_comp,
                      const int ez_comp,
                      const int bx_comp,
                      const int by_comp,
@@ -69,25 +67,30 @@ void doGatherShapeN (const amrex::Real xp,
     const amrex::Real x = (xp-x_pos_offset)*dx_inv;
     const amrex::Real y = (yp-y_pos_offset)*dy_inv;
 
-    // --- Compute shape factors
-    // x direction
-    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-    amrex::Real sx_cell[depos_order_xy + 1];
-    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
-
-    // y direction
-    amrex::Real sy_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
+    constexpr int derivative_type = 1;
 
     // Gather field on particle from field on grid
-    for (int iy=0; iy<=depos_order_xy; iy++){
-        for (int ix=0; ix<=depos_order_xy; ix++){
-            ExmByp += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, exmby_comp);
-            EypBxp += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, eypbx_comp);
-            Ezp    += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, ez_comp);
-            Bxp    += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, bx_comp);
-            Byp    += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, by_comp);
-            Bzp    += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, bz_comp);
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+    for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+        for (int ix=0; ix<=depos_order_xy+derivative_type; ix++){
+
+            // Compute shape factors
+            auto [shape_y, shape_dy, j] =
+                single_derivative_shape_factor<derivative_type, depos_order_xy>(y, iy);
+            auto [shape_x, shape_dx, i] =
+                single_derivative_shape_factor<derivative_type, depos_order_xy>(x, ix);
+
+            ExmByp += (shape_dx* shape_y) * slice_arr(i+ix, j+iy, psi_comp) * dx_inv;
+            EypBxp += (shape_x * shape_dy)* slice_arr(i+ix, j+iy, psi_comp) * dy_inv;
+            Ezp    += (shape_x * shape_y) * slice_arr(i+ix, j+iy, ez_comp);
+            Bxp    += (shape_x * shape_y) * slice_arr(i+ix, j+iy, bx_comp);
+            Byp    += (shape_x * shape_y) * slice_arr(i+ix, j+iy, by_comp);
+            Bzp    += (shape_x * shape_y) * slice_arr(i+ix, j+iy, bz_comp);
         }
     }
 }
@@ -106,8 +109,7 @@ void doGatherShapeN (const amrex::Real xp,
  * \param[in,out] Byp Magnetic field on particles: By
  * \param[in,out] Bzp Magnetic field on particles: Bz
  * \param[in] slice_arr slice array for WhichSlice::This
- * \param[in] exmby_comp field component for field Ex - c*By
- * \param[in] eypbx_comp field array for field  Ey + c*Bx
+ * \param[in] psi_comp field component for field Psi
  * \param[in] ez_comp field array for field  Ez
  * \param[in] bx_comp field array for field  Bx
  * \param[in] by_comp field array for field  By
@@ -128,8 +130,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      amrex::ParticleReal& Byp,
                      amrex::ParticleReal& Bzp,
                      Array3<amrex::Real const> const& slice_arr,
-                     const int exmby_comp,
-                     const int eypbx_comp,
+                     const int psi_comp,
                      const int ez_comp,
                      const int bx_comp,
                      const int by_comp,
@@ -142,19 +143,19 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 {
     if (depos_order_xy == 0) {
         doGatherShapeN<0>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
     } else if (depos_order_xy == 1)  {
         doGatherShapeN<1>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
     } else if (depos_order_xy == 2)  {
         doGatherShapeN<2>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
     } else if (depos_order_xy == 3)  {
         doGatherShapeN<3>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
     }
 }
