@@ -803,13 +803,6 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     SetBoundaryCondition(geom, lev, "Psi", islice, getStagingArea(lev));
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
-    if (!m_extended_solve) {
-        /* ---------- Transverse FillBoundary Psi ---------- */
-        amrex::ParallelContext::push(m_comm_xy);
-        lhs.FillBoundary(geom[lev].periodicity());
-        amrex::ParallelContext::pop();
-    }
-
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
 
     // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
