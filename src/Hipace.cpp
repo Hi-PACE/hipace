@@ -1052,6 +1052,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             amrex::ParallelContext::pop();
         }
 
+        m_multi_plasma.ResetParticles(lev);
+
         // Update force terms using the calculated Bx and By
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev],
                                         false, false, true, false, lev);
