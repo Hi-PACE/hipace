@@ -397,6 +397,12 @@ if(BUILD_TESTING)
                          $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                  WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
+
+        add_test(NAME production.SI.2Rank
+                 COMMAND ${HiPACE_SOURCE_DIR}/tests/production.SI.2Rank.sh
+                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
     endif()
 endif()
 

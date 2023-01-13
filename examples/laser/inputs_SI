@@ -28,9 +28,6 @@ amr.max_level = 0
 
 hipace.output_period = 1
 
-hipace.numprocs_x = 1
-hipace.numprocs_y = 1
-
 hipace.depos_order_xy = 0
 
 geometry.coord_sys   = 0                  # 0: Cartesian

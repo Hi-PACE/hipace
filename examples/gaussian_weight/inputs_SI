@@ -6,8 +6,6 @@ amr.max_level = 0
 max_step = 0
 hipace.output_period = 1
 
-hipace.numprocs_x = 1
-hipace.numprocs_y = 1
 hipace.predcorr_B_mixing_factor = 0.95
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 0 0 0      # Is periodic?

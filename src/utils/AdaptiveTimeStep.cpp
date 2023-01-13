@@ -30,6 +30,7 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
     if (str_dt == "adaptive"){
         m_do_adaptive_time_step = true;
         queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
+        queryWithParser(ppa, "dt_max", m_dt_max);
     }
     DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
 
@@ -141,7 +142,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
             std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
     }
 
-    // only the last box or at initialiyation the adaptive time step is calculated
+    // only the last box or at initialization the adaptive time step is calculated
     // from the full beam information
     if (it == 0 || initial)
     {
@@ -184,6 +185,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         }
         /* set the new time step */
         dt = *std::min_element(new_dts.begin(), new_dts.end());
-
+        // Make sure the new time step is smaller than the upper bound
+        dt = std::min(dt, m_dt_max);
     }
 }
