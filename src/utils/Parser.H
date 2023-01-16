@@ -360,7 +360,11 @@ makeFunctionWithParser (std::string const& func_str,
                         amrex::Parser& parser,
                         amrex::Vector<std::string> const& varnames)
 {
-    parser.define(func_str);
+    std::string clean_str = func_str;
+    for (char& c : clean_str) {
+        if (c=='\n' || c=='\r' || c=='\t') c = ' ';
+    }
+    parser.define(clean_str);
     Parser::initParser(parser, varnames);
     return parser.compile<N>();
 }

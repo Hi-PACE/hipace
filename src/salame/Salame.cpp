@@ -21,9 +21,11 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
     if (islice + 1 != last_islice) {
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_target"},
                                         WhichSlice::This, {"Ez"});
-        last_islice = islice;
         overloaded = false;
+        hipace->m_salame_zeta_initial = islice * hipace->Geom(lev).CellSize(2) +
+            GetPosOffset(2, hipace->Geom(lev), hipace->Geom(lev).Domain());
     }
+    last_islice = islice;
 
     for (int iter=0; iter<n_iter; ++iter) {
 
@@ -78,10 +80,10 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
         // and update the beam with it
 
-        // W = sum(jz * (Ez_target - Ez_no_salame) / Ez_only_salame) / sum(jz) + 1
-        // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
+        // W = (Ez_target - Ez_no_salame) / Ez_only_salame + 1
+        // + 1 because Ez_no_salame already includes the SALAME beam with a weight of 1
         // W_total = W * sum(jz)
-        auto [W, W_total] = SalameGetW(hipace, lev);
+        auto [W, W_total] = SalameGetW(hipace, lev, islice);
 
         if (W < 0 || overloaded) {
             W = 0;
@@ -272,18 +274,22 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 }
 
 std::pair<amrex::Real, amrex::Real>
-SalameGetW (Hipace* hipace, const int lev)
+SalameGetW (Hipace* hipace, const int lev, const int islice)
 {
     using namespace amrex::literals;
 
-    amrex::Real sum_W = 0._rt;
+    amrex::Real sum_Ez_target = 0._rt;
+    amrex::Real sum_Ez_no_salame = 0._rt;
+    amrex::Real sum_Ez_only_salame = 0._rt;
     amrex::Real sum_jz = 0._rt;
 
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
-        amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-        amrex::ReduceData<amrex::Real, amrex::Real> reduce_data(reduce_op);
+        amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
+                         amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<amrex::Real, amrex::Real,
+                          amrex::Real, amrex::Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         Array3<amrex::Real> const arr = slicemf.array(mfi);
 
@@ -295,21 +301,34 @@ SalameGetW (Hipace* hipace, const int lev)
         reduce_op.eval(mfi.tilebox(), reduce_data,
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept -> ReduceTuple
             {
-                // avoid NaN
-                if (arr(i,j,Ez) == 0._rt) return {0._rt, 0._rt};
                 return {
-                    arr(i,j,jz) * (arr(i,j,Ez_target) - arr(i,j,Ez_no_salame)) / arr(i,j,Ez),
+                    arr(i,j,jz) * arr(i,j,Ez_target),
+                    arr(i,j,jz) * arr(i,j,Ez_no_salame),
+                    arr(i,j,jz) * arr(i,j,Ez),
                     arr(i,j,jz)
                 };
             });
         auto res = reduce_data.value(reduce_op);
-        sum_W += amrex::get<0>(res);
-        sum_jz += amrex::get<1>(res);
+        sum_Ez_target += amrex::get<0>(res);
+        sum_Ez_no_salame += amrex::get<1>(res);
+        sum_Ez_only_salame += amrex::get<2>(res);
+        sum_jz += amrex::get<3>(res);
     }
-    // first return = sum(jz * (Ez_target - Ez_no_salame) / Ez_only_salame) / sum(jz) + 1
-    // + 1 because Ez_only_salame already includes the SALAME beam with a weight of 1
-    // second return = first return * sum(jz)
-    return {(sum_W / sum_jz) + 1._rt,  sum_W + sum_jz};
+
+    sum_Ez_target /= sum_jz;
+    sum_Ez_no_salame /= sum_jz;
+    sum_Ez_only_salame /= sum_jz;
+
+    // - 1 because this is for the Ez field of the next slice
+    const amrex::Real zeta = (islice-1) * hipace->Geom(lev).CellSize(2) +
+                             GetPosOffset(2, hipace->Geom(lev), hipace->Geom(lev).Domain());
+    // update target with user funciton
+    sum_Ez_target = hipace->m_salame_target_func(
+                        zeta,  hipace->m_salame_zeta_initial, sum_Ez_target);
+
+    // + 1 because sum_Ez_no_salame already includes the SALAME beam with a weight of 1
+    amrex::Real W = (sum_Ez_target - sum_Ez_no_salame)/sum_Ez_only_salame + 1._rt;
+    return {W,  W * sum_jz};
 }
 
 void
