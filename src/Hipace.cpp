@@ -439,11 +439,6 @@ Hipace::Evolve ()
 
         ResetAllQuantities();
 
-        /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
-        if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
-        m_multi_plasma.DepositNeutralizingBackground(m_fields, m_multi_laser, WhichSlice::RhoIons, geom[lev],
-                                                     finestLevel()+1);
-
         // Loop over longitudinal boxes on this rank, from head to tail
         const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
         for (int it = n_boxes-1; it >= 0; --it)
@@ -458,6 +453,17 @@ Hipace::Evolve ()
             }
 
             Wait(step, it);
+            if (it == n_boxes-1) {
+                // Only reset plasma after receiving time step, to use proper density
+                // WARNING: handling of lev is to be improved: this loops over levels, but
+                // lev is set to 0 above.
+                for (int lv=0; lv<=finestLevel(); ++lv) m_multi_plasma.ResetParticles(lv, true);
+                /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
+                if (m_do_tiling) m_multi_plasma.TileSort(boxArray(lev)[0], geom[lev]);
+                m_multi_plasma.DepositNeutralizingBackground(
+                    m_fields, m_multi_laser, WhichSlice::RhoIons, geom[lev], finestLevel()+1);
+            }
+
             if (m_physical_time >= m_max_time) {
                 Notify(step, it); // just send signal to finish simulation
                 if (m_physical_time > m_max_time) break;
@@ -745,7 +751,6 @@ Hipace::ResetAllQuantities ()
     if (m_use_laser) ResetLaser();
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        m_multi_plasma.ResetParticles(lev, true);
         for (amrex::MultiFab& slice : m_fields.getSlices(lev)) {
             if (slice.nComp() != 0) {
                 slice.setVal(0., m_fields.m_slices_nguards);
@@ -1052,6 +1057,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             amrex::ParallelContext::pop();
         }
 
+        // resetting the particle position after they have been pushed to the next slice
+        m_multi_plasma.ResetParticles(lev);
+
         // Update force terms using the calculated Bx and By
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev],
                                         false, false, true, false, lev);
@@ -1059,9 +1067,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         // Shift relative_Bfield_error values
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
-
-    /* resetting the particle position after they have been pushed to the next slice */
-    m_multi_plasma.ResetParticles(lev);
 
     if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
     {

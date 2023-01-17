@@ -32,7 +32,7 @@ struct GetParticlePosition
     using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
-    const PType* AMREX_RESTRICT m_structs;
+    const PType* m_structs;
 
     /** Default constructor */
     GetParticlePosition () = default;
@@ -87,7 +87,7 @@ struct SetParticlePosition
     using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
-    PType* AMREX_RESTRICT m_structs;
+    PType* m_structs;
 
     /** Constructor.
      * \param a_ptile tile containing the macroparticles
@@ -143,8 +143,8 @@ struct EnforceBC
     using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
-    PType* AMREX_RESTRICT m_structs;
-    RType* AMREX_RESTRICT m_weights;
+    PType* m_structs;
+    RType* m_weights;
 
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;

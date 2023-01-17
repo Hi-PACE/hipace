@@ -285,11 +285,11 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev, const bool
                     uxp[ip] = u[0]*phys_const.c;
                     uyp[ip] = u[1]*phys_const.c;
                     psip[ip] = sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
-                    x_prev[ip] = 0._rt;
-                    y_prev[ip] = 0._rt;
-                    ux_temp[ip] = 0._rt;
-                    uy_temp[ip] = 0._rt;
-                    psi_temp[ip] = 0._rt;
+                    x_prev[ip] = x0[ip];
+                    y_prev[ip] = y0[ip];
+                    ux_temp[ip] = uxp[ip];
+                    uy_temp[ip] = uyp[ip];
+                    psi_temp[ip] = psip[ip];
                     Fx1[ip] = 0._rt;
                     Fy1[ip] = 0._rt;
                     Fux1[ip] = 0._rt;
