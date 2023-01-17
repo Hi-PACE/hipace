@@ -1057,6 +1057,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             amrex::ParallelContext::pop();
         }
 
+        // resetting the particle position after they have been pushed to the next slice
+        m_multi_plasma.ResetParticles(lev);
+
         // Update force terms using the calculated Bx and By
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev],
                                         false, false, true, false, lev);
@@ -1064,9 +1067,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         // Shift relative_Bfield_error values
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } /* end of predictor corrector loop */
-
-    /* resetting the particle position after they have been pushed to the next slice */
-    m_multi_plasma.ResetParticles(lev);
 
     if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
     {

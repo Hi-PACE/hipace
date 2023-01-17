@@ -115,8 +115,9 @@ void PlasmaParticlePush (
         SetPosition(ip, xp, yp, zp);
         if (enforceBC(ip)) return;
 
-        x_prev = xp;
-        y_prev = yp;
+        // avoid segfault for periodic particle boundaries.
+        x_prev = enforceBC.m_structs[ip].pos(0);
+        y_prev = enforceBC.m_structs[ip].pos(1);
         uxp -= a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
             + a4_times_dz * Fux4 + a5_times_dz * Fux5;
         uyp -= a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
