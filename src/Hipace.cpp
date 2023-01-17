@@ -156,6 +156,11 @@ Hipace::Hipace () :
     queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
     queryWithParser(pph, "salame_n_iter", m_salame_n_iter);
     queryWithParser(pph, "salame_do_advance", m_salame_do_advance);
+    std::string salame_target_str = "Ez_initial";
+    queryWithParser(pph, "salame_Ez_target(zeta,zeta_initial,Ez_initial)", salame_target_str);
+    m_salame_target_func = makeFunctionWithParser<3>(salame_target_str, m_salame_parser,
+                                                     {"zeta", "zeta_initial", "Ez_initial"});
+
     std::string solver = "predictor-corrector";
     queryWithParser(pph, "bxby_solver", solver);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
