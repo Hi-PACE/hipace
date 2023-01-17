@@ -256,7 +256,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         amrex::Real Bxp = 0._rt;
                         amrex::Real Byp = 0._rt;
 
-                        // Gather Bx and By along with 4 dummy fields to use this funciton
+                        // Gather Bx and By along with 4 dummy fields to use this function
                         doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
                             bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
@@ -322,7 +322,7 @@ SalameGetW (Hipace* hipace, const int lev, const int islice)
     // - 1 because this is for the Ez field of the next slice
     const amrex::Real zeta = (islice-1) * hipace->Geom(lev).CellSize(2) +
                              GetPosOffset(2, hipace->Geom(lev), hipace->Geom(lev).Domain());
-    // update target with user funciton
+    // update target with user function
     sum_Ez_target = hipace->m_salame_target_func(
                         zeta,  hipace->m_salame_zeta_initial, sum_Ez_target);
 
