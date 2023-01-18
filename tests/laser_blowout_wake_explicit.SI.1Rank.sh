@@ -26,7 +26,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         hipace.bxby_solver=explicit \
         max_step = 0 \
         beams.names = no_beam \
-        geometry.prob_lo     = -20.*kp_inv   -20.*kp_inv   -8.*kp_inv  \
+        geometry.prob_lo     = -20.*kp_inv   -20.*kp_inv   -7.5*kp_inv  \
         geometry.prob_hi     =  20.*kp_inv    20.*kp_inv    6.*kp_inv  \
         lasers.names = laser \
         lasers.lambda0 = .8e-6 \
