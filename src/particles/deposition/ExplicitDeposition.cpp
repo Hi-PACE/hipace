@@ -161,20 +161,23 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                         [[maybe_unused]] auto laser_fac = a_laser_fac;
                         [[maybe_unused]] auto clight = a_clight;
                         if constexpr (use_laser.value) {
-                            const amrex::Real xp1y00 = abssq(
-                                laser_arr(i+1, j  , 0),
-                                laser_arr(i+1, j  , 1));
-                            const amrex::Real xm1y00 = abssq(
-                                laser_arr(i-1, j  , 0),
-                                laser_arr(i-1, j  , 1));
-                            const amrex::Real x00yp1 = abssq(
-                                laser_arr(i  , j+1, 0),
-                                laser_arr(i  , j+1, 1));
-                            const amrex::Real x00ym1 = abssq(
-                                laser_arr(i  , j-1, 0),
-                                laser_arr(i  , j-1, 1));
-                            AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
-                            AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
+                            // avoid going outside of domain
+                            if (shape_x * shape_y != 0._rt) {
+                                const amrex::Real xp1y00 = abssq(
+                                    laser_arr(i+1, j  , 0),
+                                    laser_arr(i+1, j  , 1));
+                                const amrex::Real xm1y00 = abssq(
+                                    laser_arr(i-1, j  , 0),
+                                    laser_arr(i-1, j  , 1));
+                                const amrex::Real x00yp1 = abssq(
+                                    laser_arr(i  , j+1, 0),
+                                    laser_arr(i  , j+1, 1));
+                                const amrex::Real x00ym1 = abssq(
+                                    laser_arr(i  , j-1, 0),
+                                    laser_arr(i  , j-1, 1));
+                                AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
+                                AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
+                            }
                         }
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sy), charge_density_mu0 * (
