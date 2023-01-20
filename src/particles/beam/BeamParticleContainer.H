@@ -97,6 +97,7 @@ public:
                               const amrex::Real pos_mean_z,
                               const amrex::RealVect pos_std,
                               const amrex::Real total_charge,
+                              const amrex::Real z_foc,
                               const bool do_symmetrize,
                               const bool can, const amrex::Real zmin, const amrex::Real zmax);
 
@@ -170,6 +171,8 @@ private:
     amrex::Parser m_pos_mean_y_parser;
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
+    /** Distance at which the beam is focused, starting from its initial position */
+    amrex::Real m_z_foc {0.};
     amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;
