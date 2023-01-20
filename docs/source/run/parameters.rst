@@ -486,6 +486,10 @@ Option: ``fixed_weight``
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
+* ``<beam name>.f_foc`` (`float`) optional (default `0.`)
+    Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
+    The beam is assumed to propagate ballistically in-between.
+
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^
 
