@@ -301,13 +301,17 @@ InitBeamFixedWeight (int num_to_add,
             num_to_add,
             [=] AMREX_GPU_DEVICE (int i, const amrex::RandomEngine& engine) noexcept
             {
+                amrex::Real x = amrex::RandomNormal(0, pos_std[0], engine);
+                amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine);
                 const amrex::Real z = can
                     ? (amrex::Random(engine) - 0.5_rt) * (zmax - zmin)
                     : amrex::RandomNormal(0, pos_std[2], engine);
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2], engine, z, duz_per_uz0_dzeta);
-                const amrex::Real x = amrex::RandomNormal(0, pos_std[0], engine) - z_foc*u[0]/get_momentum.m_u_mean[2];
-                const amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine) - z_foc*u[1]/get_momentum.m_u_mean[2];
+
+                // Propagate each electron ballistically for z_foc
+                x -= z_foc*u[0]/get_momentum.m_u_mean[2];
+                y -= z_foc*u[1]/get_momentum.m_u_mean[2];
 
                 const amrex::Real z_central = z + z_mean;
                 int valid_id = pid;
