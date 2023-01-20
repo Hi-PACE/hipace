@@ -123,6 +123,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         std::array<std::string, 3> pos_mean_arr{"","",""};
         getWithParser(pp, "position_mean", pos_mean_arr);
+        queryWithParser(pp, "z_foc", m_z_foc);
         auto pos_mean_x = makeFunctionWithParser<1>(pos_mean_arr[0], m_pos_mean_x_parser, {"z"});
         auto pos_mean_y = makeFunctionWithParser<1>(pos_mean_arr[1], m_pos_mean_y_parser, {"z"});
         amrex::Real pos_mean_z = 0;
@@ -155,7 +156,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, pos_mean_x, pos_mean_y, pos_mean_z,
-                            m_position_std, m_total_charge, m_do_symmetrize, can, zmin, zmax);
+                            m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax);
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
