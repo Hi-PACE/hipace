@@ -66,14 +66,13 @@ MultiBeam::findParticlesInEachSlice (int nlev, int ibox, amrex::Box bx,
                                      amrex::Vector<amrex::Geometry> const& geom,
                                      const amrex::Vector<BoxSorter>& a_box_sorter_vec)
 {
-    amrex::Vector<amrex::Vector<BeamBins>> bins;
+    amrex::Vector<amrex::Vector<BeamBins>> bins(nlev);
     for (int lev = 0; lev < nlev; ++lev) {
-        amrex::Vector<BeamBins> bins_per_level;
+        bins[lev].resize(m_nbeams);
         for (int i=0; i<m_nbeams; i++) {
-            bins_per_level.emplace_back(::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i],
-                                                                   geom, a_box_sorter_vec[i]));
+            bins[lev][i] = ::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i],
+                                                      geom, a_box_sorter_vec[i]);
         }
-        bins.emplace_back(bins_per_level);
     }
     amrex::Gpu::streamSynchronize();
     return bins;
