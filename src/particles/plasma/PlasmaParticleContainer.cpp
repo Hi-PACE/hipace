@@ -193,8 +193,7 @@ IonizationModule (const int lev,
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[mfi_ion];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-        const int exmby_comp = Comps[WhichSlice::This]["ExmBy"];
-        const int eypbx_comp = Comps[WhichSlice::This]["EypBx"];
+        const int psi_comp = Comps[WhichSlice::This]["Psi"];
         const int ez_comp = Comps[WhichSlice::This]["Ez"];
         const int bx_comp = Comps[WhichSlice::This]["Bx"];
         const int by_comp = Comps[WhichSlice::This]["By"];
@@ -254,7 +253,7 @@ IonizationModule (const int lev,
 
             doGatherShapeN(xp, yp,
                            ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                           exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                           psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                            dx_inv, dy_inv, x_pos_offset, y_pos_offset, depos_order_xy);
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;

@@ -39,8 +39,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     // we want in the slice multifab is always 0. Fix later.
     const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[0];
     Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-    const int exmby_comp = Comps[WhichSlice::This]["ExmBy"];
-    const int eypbx_comp = Comps[WhichSlice::This]["EypBx"];
+    const int psi_comp = Comps[WhichSlice::This]["Psi"];
     const int ez_comp = Comps[WhichSlice::This]["Ez"];
     const int bx_comp = Comps[WhichSlice::This]["Bx"];
     const int by_comp = Comps[WhichSlice::This]["By"];
@@ -114,7 +113,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
                 // field gather for a single particle
                 doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                    slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp, bz_comp,
+                    slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                 ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
