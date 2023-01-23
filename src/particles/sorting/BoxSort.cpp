@@ -6,12 +6,15 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "BoxSort.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_ParticleTransformation.H>
 
 void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
                                     const amrex::BoxArray a_ba, const amrex::Geometry& a_geom)
 {
+    HIPACE_PROFILE("sortBeamParticlesByBox()");
+
     if (! m_particle_locator.isValid(a_ba)) m_particle_locator.build(a_ba, a_geom);
     auto assign_grid = m_particle_locator.getGridAssignor();
 
