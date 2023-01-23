@@ -450,14 +450,14 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain)
     : m_dx(dx), m_dy(dy)
 {
-    AMREX_ALWAYS_ASSERT(a_domain.length(2) == 1 && a_domain.cellCentered() &&
-                        a_domain.length(0)%2 == a_domain.length(1)%2 &&
-                        a_domain.smallEnd(0)%2 == 0 &&
-                        a_domain.smallEnd(1)%2 == 0);
+    IntVect const a_domain_len = a_domain.length();
 
-    IndexType const index_type = a_domain.coarsenable(IntVect(2,2,1)) ?
+    AMREX_ALWAYS_ASSERT(a_domain_len[2] == 1 && a_domain.cellCentered() &&
+                        a_domain_len[0]%2 == a_domain_len[1]%2);
+
+    IndexType const index_type = (a_domain_len[0]%2 == 0) ?
         IndexType::TheCellType() : IndexType(IntVect(1,1,0));
-    m_domain.push_back(amrex::makeSlab(Box{{0,0,0}, a_domain.length()-1, index_type}, 2, 0));
+    m_domain.push_back(amrex::makeSlab(Box{{0,0,0}, a_domain_len-1, index_type}, 2, 0));
     if (!index_type.cellCentered()) {
         m_domain[0].growHi(0,2).growHi(1,2);
     }
