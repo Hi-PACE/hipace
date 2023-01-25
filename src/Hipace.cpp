@@ -597,14 +597,14 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
             FillDiagnostics(lev, islice);
 
-            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
-
             m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
 
             if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
             // Push plasma particles
             m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
+
+            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
 
             // Push beam particles
             m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,

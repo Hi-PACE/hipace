@@ -173,7 +173,11 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
     amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
 
+#ifdef HIPACE_USE_AB5_PUSH
+    const amrex::Real dz = ( 1901._rt / 720._rt ) * hipace->Geom(lev).CellSize(Direction::z);
+#else
     const amrex::Real dz = 1.5_rt * hipace->Geom(lev).CellSize(Direction::z);
+#endif
 
     for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -269,8 +273,13 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         const amrex::Real q_mass_ratio = can_ionize ?
                             ion_lev[ip] * charge_mass_ratio : charge_mass_ratio;
 
+#ifdef HIPACE_USE_AB5_PUSH
+                        uxp[ip] =  ( 1901._rt / 720._rt )*dz * q_mass_ratio * Byp;
+                        uyp[ip] = -( 1901._rt / 720._rt )*dz * q_mass_ratio * Bxp;
+#else
                         uxp[ip] =  1.5_rt*dz * q_mass_ratio * Byp;
                         uyp[ip] = -1.5_rt*dz * q_mass_ratio * Bxp;
+#endif
                     });
             }
         }

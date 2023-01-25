@@ -222,9 +222,11 @@ IonizationModule (const int lev,
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
-        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
-        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
-        const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
+        const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
+        const amrex::Real * const y_prev = soa_ion.GetRealData(PlasmaIdx::y_prev).data();
+        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
+        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
+        const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -244,6 +246,9 @@ IonizationModule (const int lev,
             amrex::ParticleReal xp, yp, zp;
             int pid;
             getPosition(ip, xp, yp, zp, pid);
+            // avoid temp slice
+            xp = x_prev[ip];
+            yp = y_prev[ip];
 
             if (pid < 0) return;
 
@@ -334,15 +339,10 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::psi     ][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::x_prev  ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
-#ifndef HIPACE_USE_AB5_PUSH
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::psi_half_step][pidx] = 1._rt;
-#else
-                arrdata_elec[PlasmaIdx::ux_prev ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::uy_prev ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::psi_prev][pidx] = 1._rt;
-
+#ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
 #endif

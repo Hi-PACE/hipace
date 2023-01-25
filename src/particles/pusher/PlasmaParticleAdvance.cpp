@@ -78,11 +78,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
-#ifndef HIPACE_USE_AB5_PUSH
         amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
         amrex::Real * const psi_half_step =soa.GetRealData(PlasmaIdx::psi_half_step).data();
-#else
+#ifdef HIPACE_USE_AB5_PUSH
         auto arrdata = soa.realarray();
 #endif
         int * const ion_lev = plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data()
@@ -215,9 +214,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     uyp[ip] = uy;
                     psip[ip] = psi;
 #else
-                    amrex::Real ux = arrdata[PlasmaIdx::ux_prev][ip];
-                    amrex::Real uy = arrdata[PlasmaIdx::uy_prev][ip];
-                    amrex::Real psi = arrdata[PlasmaIdx::psi_prev][ip];
+                    amrex::Real ux = ux_half_step[ip];
+                    amrex::Real uy = uy_half_step[ip];
+                    amrex::Real psi = psi_half_step[ip];
                     const amrex::Real psi_inv = 1._rt/psi;
 
                     auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
@@ -252,9 +251,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     if (setPositionEnforceBC(ip, xp, yp)) return;
 
                     if (!temp_slice) {
-                        arrdata[PlasmaIdx::ux_prev][ip] = ux;
-                        arrdata[PlasmaIdx::uy_prev][ip] = uy;
-                        arrdata[PlasmaIdx::psi_prev][ip] = psi;
+                        ux_half_step[ip] = ux;
+                        uy_half_step[ip] = uy;
+                        psi_half_step[ip] = psi;
                         x_prev[ip] = xp;
                         y_prev[ip] = yp;
                     }
@@ -323,11 +322,10 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
         amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
         amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
         amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
-#ifndef HIPACE_USE_AB5_PUSH
         amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
         amrex::Real * const psi_half_step =soa.GetRealData(PlasmaIdx::psi_half_step).data();
-#else
+#ifdef HIPACE_USE_AB5_PUSH
         auto arrdata = soa.realarray();
 #endif
         amrex::Real * const x0 = soa.GetRealData(PlasmaIdx::x0).data();
@@ -363,15 +361,10 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
                 psip[ip] = std::sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
                 x_prev[ip] = x0[ip];
                 y_prev[ip] = y0[ip];
-#ifndef HIPACE_USE_AB5_PUSH
                 ux_half_step[ip] = u[0]*phys_const.c;
                 uy_half_step[ip] = u[1]*phys_const.c;
                 psi_half_step[ip] = psip[ip];
-#else
-                arrdata[PlasmaIdx::ux_prev ][ip] = u[0]*phys_const.c;
-                arrdata[PlasmaIdx::uy_prev ][ip] = u[1]*phys_const.c;
-                arrdata[PlasmaIdx::psi_prev][ip] = psip[ip];
-
+#ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
 #endif

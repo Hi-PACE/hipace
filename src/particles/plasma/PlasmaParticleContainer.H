@@ -28,12 +28,10 @@ struct PlasmaIdx
         x_prev, y_prev,     // positions on the last non-temp slice
 
         x0, y0,             // initial positions
-#ifndef HIPACE_USE_AB5_PUSH
-        ux_half_step,       // momentum half a step behind the current slice
-        uy_half_step,       //
-        psi_half_step,      //
-#else
-        ux_prev, uy_prev, psi_prev,          // previous momentum
+        ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
+        uy_half_step,       // at the same step for AB5 pusher
+        psi_half_step,      // never effected by temp slice
+#ifdef HIPACE_USE_AB5_PUSH
         Fx1, Fx2, Fx3, Fx4, Fx5,             // AB5 force terms
         Fy1, Fy2, Fy3, Fy4, Fy5,             //
         Fux1, Fux2, Fux3, Fux4, Fux5,        //
