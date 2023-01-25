@@ -194,7 +194,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 #ifndef HIPACE_USE_AB5_PUSH
                 arrdata[PlasmaIdx::ux_half_step][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy_half_step][pidx] = u[1] * c_light;
-                arrdata[PlasmaIdx::psi_inv_half_step][pidx] = 1._rt/arrdata[PlasmaIdx::psi][pidx];
+                arrdata[PlasmaIdx::psi_half_step][pidx] = arrdata[PlasmaIdx::psi][pidx];
 #else
                 arrdata[PlasmaIdx::ux_prev ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy_prev ][pidx] = u[1] * c_light;

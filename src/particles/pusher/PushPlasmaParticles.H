@@ -14,7 +14,7 @@ template<class T>
 struct PlasmaMomentumDerivative {
     T dz_ux;
     T dz_uy;
-    T dz_psi_inv;
+    T dz_psi;
 };
 
 /** \brief Find the derivative of the Plasma momentum.
@@ -68,10 +68,10 @@ PlasmaMomentumDerivative<T> PlasmaMomentumPush (
     const T dz_uy = (charge_mass_clight_ratio * (gamma_psi * EypBx
                     - Bx_clight - ( ux * Bz ) * psi_inv) - AabssqDy_norm * psi_inv);
 
-    const T dz_psi_inv = psi_inv * psi_inv * (-charge_mass_clight_ratio * clight_inv *
+    const T dz_psi = (charge_mass_clight_ratio * clight_inv *
                          (( ux * ExmBy + uy * EypBx ) * clight_inv * psi_inv - Ez ));
 
-    return {dz_ux, dz_uy, dz_psi_inv};
+    return {dz_ux, dz_uy, dz_psi};
 }
 
 #endif //  PUSHPLASMAPARTICLES_H_

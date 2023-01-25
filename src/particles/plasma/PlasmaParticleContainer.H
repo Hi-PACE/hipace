@@ -31,7 +31,7 @@ struct PlasmaIdx
 #ifndef HIPACE_USE_AB5_PUSH
         ux_half_step,       // momentum half a step behind the current slice
         uy_half_step,       //
-        psi_inv_half_step,  // inverse psi
+        psi_half_step,      //
 #else
         ux_prev, uy_prev, psi_prev,          // previous momentum
         Fx1, Fx2, Fx3, Fx4, Fx5,             // AB5 force terms

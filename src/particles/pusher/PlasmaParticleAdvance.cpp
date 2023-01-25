@@ -81,7 +81,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 #ifndef HIPACE_USE_AB5_PUSH
         amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
-        amrex::Real * const psi_inv_half_step =soa.GetRealData(PlasmaIdx::psi_inv_half_step).data();
+        amrex::Real * const psi_half_step =soa.GetRealData(PlasmaIdx::psi_half_step).data();
 #else
         auto arrdata = soa.realarray();
 #endif
@@ -153,70 +153,74 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                     amrex::Real ux = ux_half_step[ip];
                     amrex::Real uy = uy_half_step[ip];
-                    amrex::Real psi_inv = psi_inv_half_step[ip];
+                    amrex::Real psi = psi_half_step[ip];
 
                     for (int isub=0; isub<nsub; ++isub) {
 
-                        auto [dz_ux, dz_uy, dz_psi_inv] = PlasmaMomentumPush(
+                        const amrex::Real psi_inv = 1._rt/psi;
+
+                        auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
                             ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
 
                         const DualNumber ux_dual{ux, dz_ux};
                         const DualNumber uy_dual{uy, dz_uy};
-                        const DualNumber psi_inv_dual{psi_inv, dz_psi_inv};
+                        const DualNumber psi_inv_dual{psi_inv, -psi_inv*psi_inv*dz_psi};
 
-                        auto [dz_ux_dual, dz_uy_dual, dz_psi_inv_dual] = PlasmaMomentumPush(
+                        auto [dz_ux_dual, dz_uy_dual, dz_psi_dual] = PlasmaMomentumPush(
                             ux_dual, uy_dual, psi_inv_dual, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
 
                         ux += sdz*dz_ux + 0.5_rt*sdz*sdz*dz_ux_dual.epsilon;
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
-                        psi_inv += sdz*dz_psi_inv + 0.5_rt*sdz*sdz*dz_psi_inv_dual.epsilon;
+                        psi += sdz*dz_psi + 0.5_rt*sdz*sdz*dz_psi_dual.epsilon;
 
                     }
 
-                    xp += dz*clight_inv*(ux * psi_inv);
-                    yp += dz*clight_inv*(uy * psi_inv);
+                    xp += dz*clight_inv*(ux * (1._rt/psi));
+                    yp += dz*clight_inv*(uy * (1._rt/psi));
 
                     if (setPositionEnforceBC(ip, xp, yp)) return;
 
                     if (!temp_slice) {
                         ux_half_step[ip] = ux;
                         uy_half_step[ip] = uy;
-                        psi_inv_half_step[ip] = psi_inv;
+                        psi_half_step[ip] = psi;
                         x_prev[ip] = xp;
                         y_prev[ip] = yp;
                     }
 
                     for (int isub=0; isub<(nsub/2); ++isub) {
 
-                        auto [dz_ux, dz_uy, dz_psi_inv] = PlasmaMomentumPush(
+                        const amrex::Real psi_inv = 1._rt/psi;
+
+                        auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
                             ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
 
                         const DualNumber ux_dual{ux, dz_ux};
                         const DualNumber uy_dual{uy, dz_uy};
-                        const DualNumber psi_inv_dual{psi_inv, dz_psi_inv};
+                        const DualNumber psi_inv_dual{psi_inv, -psi_inv*psi_inv*dz_psi};
 
-                        auto [dz_ux_dual, dz_uy_dual, dz_psi_inv_dual] = PlasmaMomentumPush(
+                        auto [dz_ux_dual, dz_uy_dual, dz_psi_dual] = PlasmaMomentumPush(
                             ux_dual, uy_dual, psi_inv_dual, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
 
                         ux += sdz*dz_ux + 0.5_rt*sdz*sdz*dz_ux_dual.epsilon;
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
-                        psi_inv += sdz*dz_psi_inv + 0.5_rt*sdz*sdz*dz_psi_inv_dual.epsilon;
+                        psi += sdz*dz_psi + 0.5_rt*sdz*sdz*dz_psi_dual.epsilon;
 
                     }
                     uxp[ip] = ux;
                     uyp[ip] = uy;
-                    psip[ip] = 1._rt/psi_inv;
+                    psip[ip] = psi;
 #else
                     amrex::Real ux = arrdata[PlasmaIdx::ux_prev][ip];
                     amrex::Real uy = arrdata[PlasmaIdx::uy_prev][ip];
                     amrex::Real psi = arrdata[PlasmaIdx::psi_prev][ip];
-                    const amrex::Real psi_inv = 1._rt / psi;
+                    const amrex::Real psi_inv = 1._rt/psi;
 
-                    auto [dz_ux, dz_uy, dz_psi_inv] = PlasmaMomentumPush(
+                    auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
                         ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                         Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
 
@@ -224,7 +228,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     arrdata[PlasmaIdx::Fy1][ip] = clight_inv*(uy * psi_inv);
                     arrdata[PlasmaIdx::Fux1][ip] = dz_ux;
                     arrdata[PlasmaIdx::Fuy1][ip] = dz_uy;
-                    arrdata[PlasmaIdx::Fpsi1][ip] = -dz_psi_inv * psi * psi;
+                    arrdata[PlasmaIdx::Fpsi1][ip] = dz_psi;
 
                     const amrex::Real ab5_coeffs[5] = {
                         ( 1901._rt / 720._rt ) * dz,    // a1 times dz
@@ -322,7 +326,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
 #ifndef HIPACE_USE_AB5_PUSH
         amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
-        amrex::Real * const psi_inv_half_step =soa.GetRealData(PlasmaIdx::psi_inv_half_step).data();
+        amrex::Real * const psi_half_step =soa.GetRealData(PlasmaIdx::psi_half_step).data();
 #else
         auto arrdata = soa.realarray();
 #endif
@@ -362,7 +366,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
 #ifndef HIPACE_USE_AB5_PUSH
                 ux_half_step[ip] = u[0]*phys_const.c;
                 uy_half_step[ip] = u[1]*phys_const.c;
-                psi_inv_half_step[ip] = 1._rt/psip[ip];
+                psi_half_step[ip] = psip[ip];
 #else
                 arrdata[PlasmaIdx::ux_prev ][ip] = u[0]*phys_const.c;
                 arrdata[PlasmaIdx::uy_prev ][ip] = u[1]*phys_const.c;

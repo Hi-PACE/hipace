@@ -337,7 +337,7 @@ IonizationModule (const int lev,
 #ifndef HIPACE_USE_AB5_PUSH
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::psi_inv_half_step][pidx] = 1._rt/1._rt;
+                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = 1._rt;
 #else
                 arrdata_elec[PlasmaIdx::ux_prev ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_prev ][pidx] = 0._rt;
