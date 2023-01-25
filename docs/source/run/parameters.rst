@@ -161,6 +161,15 @@ General parameters
     Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field
     by advancing plasma (if `1`) particles or by approximating it using the chi field (if `0`).
 
+* ``hipace.salame_Ez_target(zeta,zeta_initial,Ez_initial)`` (`string`) optional (default `Ez_initial`)
+    Parser function to specify the target Ez field at the witness beam for SALAME.
+    ``zeta``: position of the Ez field to set.
+    ``zeta_initial``: position where the SALAME algorithm first started.
+    ``Ez_initial``: field value at `zeta_initial`.
+    For `zeta` equal to `zeta_initial`, the function should return `Ez_initial`.
+    The default value of this function corresponds to a flat Ez field at the position of the SALAME beam.
+    Note: `zeta` is always less than or equal to `zeta_initial` and `Ez_initial` is typically below zero for electron beams.
+
 Field solver parameters
 -----------------------
 
@@ -476,6 +485,10 @@ Option: ``fixed_weight``
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
+
+* ``<beam name>.z_foc`` (`float`) optional (default `0.`)
+    Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
+    The beam is assumed to propagate ballistically in-between.
 
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^

@@ -49,8 +49,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[pti];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-        const int exmby_comp = Comps[WhichSlice::This]["ExmBy"];
-        const int eypbx_comp = Comps[WhichSlice::This]["EypBx"];
+        const int psi_comp = Comps[WhichSlice::This]["Psi"];
         const int ez_comp = Comps[WhichSlice::This]["Ez"];
         const int bx_comp = Comps[WhichSlice::This]["Bx"];
         const int by_comp = Comps[WhichSlice::This]["By"];
@@ -129,7 +128,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
-                            Bzp, slice_arr, exmby_comp, eypbx_comp, ez_comp, bx_comp, by_comp,
+                            Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                     if (use_laser) {

@@ -129,7 +129,7 @@ public:
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
     bool m_use_density_table; /**< if a density value table was specified */
-    /** plasma density value table, key: position=c*time, value=density funciton string */
+    /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
     int m_level {0}; /**< mesh refinement level on which the plasma lives */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating

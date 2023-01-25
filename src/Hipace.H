@@ -392,6 +392,12 @@ public:
     int m_salame_last_slice = -1;
     /** if the SALAME beam was overloaded in the last slice */
     bool m_salame_overloaded = false;
+    /** the slice index of the previous slice with SALAME */
+    amrex::Real m_salame_zeta_initial = 0;
+    /** Parser for m_salame_target_func */
+    amrex::Parser m_salame_parser;
+    /** Function to get the target Ez field for SALAME */
+    amrex::ParserExecutor<3> m_salame_target_func;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.

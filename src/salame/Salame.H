@@ -54,10 +54,11 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev);
  * The average is weighted using the SALAME beam current.
  * \param[in] hipace pointer to Hipace instance
  * \param[in] lev MR level
+ * \param[in] islice slice index of the whole domain
  * \return new beam weighting factor and new total SALAME beam current on this slice
  */
 std::pair<amrex::Real, amrex::Real>
-SalameGetW (Hipace* hipace, const int lev);
+SalameGetW (Hipace* hipace, const int lev, const int islice);
 
 /** Multiply SALAME beam weight on this slice with W
  * \param[in] W weight multiplier
