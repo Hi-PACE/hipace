@@ -147,10 +147,11 @@ public:
     /** \brief Centers the input box in x and y around the domain so that only the ghost
      * cells "overhang". Make it a slab in the z direction and set the index to 0.
      */
-    amrex::Box center_box (amrex::Box in_box, amrex::Box domain) {
+    static amrex::Box center_box (amrex::Box in_box, amrex::Box domain) {
         amrex::Box out_box = amrex::makeSlab(
             in_box + (domain.smallEnd() + domain.bigEnd() - in_box.smallEnd() - in_box.bigEnd())/2,
         2, 0);
+        out_box.setType(domain.ixType());
         AMREX_ALWAYS_ASSERT(out_box.contains(domain));
         return out_box;
     }
