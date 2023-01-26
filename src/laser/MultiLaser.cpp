@@ -324,7 +324,13 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
             reduce_op.eval(bx, reduce_data,
                            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
                            {
-                               if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
+                               // Even number of transverse cells: average 2 cells
+                               // Odd number of cells: only keep central one
+                               const bool do_keep_x = Nx % 2 == 0 ?
+                                   i == imid-1 || i == imid : i == imid;
+                               const bool do_keep_y = Ny % 2 == 0 ?
+                                   j == jmid-1 || j == jmid : j == jmid;
+                               if ( do_keep_x && do_keep_y ) {
                                    return {
                                        n00j00_arr(i,j,0), n00j00_arr(i,j,1),
                                        n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
@@ -518,7 +524,13 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
             reduce_op.eval(bx, reduce_data,
                            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
                            {
-                               if ( ( i == imid-1 || i == imid ) && ( j == jmid-1 || j == jmid ) ) {
+                               // Even number of transverse cells: average 2 cells
+                               // Odd number of cells: only keep central one
+                               const bool do_keep_x = Nx % 2 == 0 ?
+                                   i == imid-1 || i == imid : i == imid;
+                               const bool do_keep_y = Ny % 2 == 0 ?
+                                   j == jmid-1 || j == jmid : j == jmid;
+                               if ( do_keep_x && do_keep_y ) {
                                    return {
                                        n00j00_arr(i,j,0), n00j00_arr(i,j,1),
                                        n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
