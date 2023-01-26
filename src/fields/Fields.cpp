@@ -706,7 +706,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 
             amrex::Real offset = 1;
             amrex::Real factor = 1;
-            if ((component == "Bx" || component == "By") && Hipace::GetInstance().m_explicit) {
+            if ((component == "Bx" || component == "By") && Hipace::GetInstance().m_explicit &&
+                (getSlices(lev)[WhichSlice::This].box(0).length(0) % 2 == 0)) {
                 // hpmg has the boundary condition at a different place
                 // compared to the fft poisson solver
                 offset = 0.5;
