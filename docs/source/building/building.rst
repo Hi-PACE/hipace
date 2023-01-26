@@ -165,7 +165,7 @@ or by providing arguments to the CMake call
  ``HiPACE_amrex_branch``       ``development``                           Repository branch for ``HiPACE_amrex_repo``
  ``HiPACE_amrex_internal``     **ON**/OFF                                Needs a pre-installed AMReX library if set to ``OFF``
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
- ``HiPACE_AB5_PUSH``           ON/**OFF**                                Use fifth-order Adams-Bashforth Plasma Pusher instead of the leapfrog pusher
+ ``HiPACE_AB5_PUSH``           **ON**/OFF                                Use fifth-order Adams-Bashforth Plasma Pusher instead of the leapfrog pusher
 =============================  ========================================  ===============================================================================
 
 HiPACE++ can be configured in further detail with options from AMReX, which are documented in the `AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.

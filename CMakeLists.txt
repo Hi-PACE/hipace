@@ -68,7 +68,7 @@ set_default_install_dirs()
 #
 option(HiPACE_MPI            "Multi-node support (message-passing)"             ON)
 option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                        ON)
-option(HiPACE_AB5_PUSH       "Use fifth order Adams-Bashforth Plasma Pusher"    OFF)
+option(HiPACE_AB5_PUSH       "Use fifth order Adams-Bashforth Plasma Pusher"    ON)
 
 set(HiPACE_PRECISION_VALUES SINGLE DOUBLE)
 set(HiPACE_PRECISION DOUBLE CACHE STRING "Floating point precision (SINGLE/DOUBLE)")
