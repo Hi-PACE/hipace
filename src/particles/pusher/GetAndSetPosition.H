@@ -138,7 +138,7 @@ struct SetParticlePosition
  *         inside a ParallelFor kernel
  */
 template <class T_ParTile>
-struct EnforceBC
+struct EnforceBCandSetPos
 {
     using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
@@ -148,8 +148,7 @@ struct EnforceBC
 
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;
-    amrex::GpuArray<int,AMREX_SPACEDIM> m_is_per;
-    amrex::GpuArray<int,AMREX_SPACEDIM> m_periodicity;
+    int m_is_per;
 
     /** Constructor.
      * \param a_ptile tile containing the macroparticles
@@ -158,17 +157,15 @@ struct EnforceBC
      * \param is_per periodicity
      * \param a_offset offset to apply to the particle indices
      */
-    EnforceBC (T_ParTile& a_ptile, const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& plo,
-               const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& phi,
-               const amrex::GpuArray<int,AMREX_SPACEDIM>& is_per, int a_offset = 0) noexcept
+    EnforceBCandSetPos (T_ParTile& a_ptile, const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& plo,
+        const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& phi,
+        const amrex::GpuArray<int,AMREX_SPACEDIM>& is_per, int a_offset = 0) noexcept
     {
 
         m_plo    = plo;
         m_phi    = phi;
-        m_is_per = is_per;
-        AMREX_ALWAYS_ASSERT(m_is_per[0] == m_is_per[1]);
-
-        m_periodicity = {true, true, false};
+        m_is_per = is_per[0];
+        AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
 
         auto& aos = a_ptile.GetArrayOfStructs();
         m_structs = aos().dataPtr() + a_offset;
@@ -176,23 +173,60 @@ struct EnforceBC
         m_weights = soa.GetRealData(BeamIdx::w).data() + a_offset;
     }
 
-    /** \brief enforces the boundary condition to the particle at index `i + a_offset`
-     * and returns if the particle is invalid
+    /** \brief set position and enforces the boundary condition to the particle
+     * at index `i + a_offset` and returns if the particle is invalid
      * \param[in] ip index of the particle
+     * \param[in] x new x position of particle
+     * \param[in] y new x position of particle
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const int ip) const noexcept
+    bool operator() (const int ip, RType& x, RType& y) const noexcept
     {
         using namespace amrex::literals;
 
+        m_structs[ip].pos(0) = x;
+        m_structs[ip].pos(1) = y;
+
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
-        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_plo, m_phi, m_periodicity);
-        const bool invalid = (shifted && !m_is_per[0]);
+        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_plo, m_phi, {true, true, false});
+        const bool invalid = (shifted && !m_is_per);
         if (invalid) {
             m_weights[ip] = 0.0_rt;
             m_structs[ip].id() = -std::abs(m_structs[ip].id());
         }
+        x = m_structs[ip].pos(0);
+        y = m_structs[ip].pos(1);
+        return invalid;
+    }
+
+    /** \brief set position and enforces the boundary condition to the particle
+     * at index `i + a_offset` and returns if the particle is invalid
+     * \param[in] ip index of the particle
+     * \param[in] x new x position of particle
+     * \param[in] y new x position of particle
+     * \param[in] z new x position of particle
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    bool operator() (const int ip, RType& x, RType& y, RType& z) const noexcept
+    {
+        using namespace amrex::literals;
+
+        m_structs[ip].pos(0) = x;
+        m_structs[ip].pos(1) = y;
+        m_structs[ip].pos(2) = z;
+
+        // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
+        // however there is no Geometry object to get this.
+        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_plo, m_phi, {true, true, false});
+        const bool invalid = (shifted && !m_is_per);
+        if (invalid) {
+            m_weights[ip] = 0.0_rt;
+            m_structs[ip].id() = -std::abs(m_structs[ip].id());
+        }
+        x = m_structs[ip].pos(0);
+        y = m_structs[ip].pos(1);
+        z = m_structs[ip].pos(2);
         return invalid;
     }
 };

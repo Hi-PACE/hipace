@@ -102,7 +102,7 @@ Fields::AllocData (
             isl = WhichSlice::Salame;
             if (any_salame) {
                 Comps[isl].multi_emplace(N_Comps[isl], "Ez_target", "Ez_no_salame", "Ez",
-                    "jx", "jy", "jz_beam", "Bx", "By", "Sy", "Sx");
+                    "jx", "jy", "jz_beam", "Bx", "By", "Sy", "Sx", "Sy_back", "Sx_back");
             }
 
         } else {

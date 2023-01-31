@@ -188,37 +188,20 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::w0       ][pidx] = scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
-                arrdata[PlasmaIdx::psi      ][pidx] = sqrt(1.+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
+                arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
                 arrdata[PlasmaIdx::x_prev   ][pidx] = x;
                 arrdata[PlasmaIdx::y_prev   ][pidx] = y;
-                arrdata[PlasmaIdx::ux_temp  ][pidx] = u[0] * c_light;
-                arrdata[PlasmaIdx::uy_temp  ][pidx] = u[1] * c_light;
-                arrdata[PlasmaIdx::psi_temp ][pidx] = sqrt(1.+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
-                arrdata[PlasmaIdx::Fx1      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fx2      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fx3      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fx4      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fx5      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fy1      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fy2      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fy3      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fy4      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fy5      ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fux1     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fux2     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fux3     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fux4     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fux5     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fuy1     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fuy2     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fuy3     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fuy4     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fuy5     ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fpsi1    ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fpsi2    ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fpsi3    ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fpsi4    ][pidx] = 0.;
-                arrdata[PlasmaIdx::Fpsi5    ][pidx] = 0.;
+                arrdata[PlasmaIdx::ux_half_step][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy_half_step][pidx] = u[1] * c_light;
+                arrdata[PlasmaIdx::psi_half_step][pidx] = arrdata[PlasmaIdx::psi][pidx];
+#ifdef HIPACE_USE_AB5_PUSH
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                    arrdata[iforce][pidx] = 0._rt;
+                }
+#endif
                 arrdata[PlasmaIdx::x0       ][pidx] = x;
                 arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;

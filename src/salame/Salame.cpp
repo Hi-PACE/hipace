@@ -27,20 +27,29 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
     }
     last_islice = islice;
 
+    hipace->m_fields.setVal(0., lev, WhichSlice::This, "Sy", "Sx");
+
+    hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
+                                              hipace->Geom(lev), lev);
+
+    // Back up Sx and Sy from the plasma only. This can only be done before the plasma push
+    hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Sy_back", "Sx_back"},
+                                    WhichSlice::This, {"Sy", "Sx"});
+
     for (int iter=0; iter<n_iter; ++iter) {
 
         // STEP 1: Calculate what Ez would be with the initial SALAME beam weight
 
-        // advance plasma to the temp slice, only shift once
-        hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser, hipace->Geom(lev),
-                                                true, true, true, iter==0, lev);
+        // advance plasma to the temp slice
+        hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser,
+                                                hipace->Geom(lev), true, lev);
 
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                         WhichSlice::Next, {"jx_beam", "jy_beam"});
 
         // deposit plasma jx and jy on the next temp slice, to the SALANE slice
         hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
-                WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+                WhichSlice::Salame, true, false, false, false, hipace->Geom(lev), lev);
 
         // use an initial guess of zero for Bx and By in MG solver to reduce relative error
         hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
@@ -67,13 +76,10 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             SalameOnlyAdvancePlasma(hipace, lev);
 
             hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
-                    WhichSlice::Salame, true, true, false, false, false, hipace->Geom(lev), lev);
+                    WhichSlice::Salame, true, false, false, false, hipace->Geom(lev), lev);
         } else {
             SalameGetJxJyFromBxBy(hipace, lev);
         }
-
-        // necessary after push to temp slice
-        hipace->m_multi_plasma.ResetParticles(lev);
 
         hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
 
@@ -112,8 +118,9 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         hipace->InitializeSxSyWithBeam(lev);
 
-        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
-                                                  hipace->Geom(lev), lev);
+        // add result of explicit deposition
+        hipace->m_fields.add(lev, WhichSlice::This, {"Sy", "Sx"},
+                                  WhichSlice::Salame, {"Sy_back", "Sx_back"});
 
         hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
     }
@@ -164,10 +171,11 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
     amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
 
-    // first 5. order adams bashforth coefficient, same as in plasma pusher
-    // Analytically the coefficient should be 2 but 1901/720 gives much better results
-    // due to the plasma pusher used in Hipace
-    const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * hipace->Geom(lev).CellSize(Direction::z);
+#ifdef HIPACE_USE_AB5_PUSH
+    const amrex::Real dz = ( 1901._rt / 720._rt ) * hipace->Geom(lev).CellSize(Direction::z);
+#else
+    const amrex::Real dz = 1.5_rt * hipace->Geom(lev).CellSize(Direction::z);
+#endif
 
     for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -184,8 +192,8 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
         amrex::ParallelFor(mfi.tilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                salame_arr(i,j,jx) =  a1_times_dz * chi_arr(i,j) * salame_arr(i,j,By) / mu0;
-                salame_arr(i,j,jy) = -a1_times_dz * chi_arr(i,j) * salame_arr(i,j,Bx) / mu0;
+                salame_arr(i,j,jx) =  dz * chi_arr(i,j) * salame_arr(i,j,By) / mu0;
+                salame_arr(i,j,jy) = -dz * chi_arr(i,j) * salame_arr(i,j,Bx) / mu0;
             });
     }
 }
@@ -225,8 +233,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
             amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
             amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
-            amrex::Real * const ux_temp = soa.GetRealData(PlasmaIdx::ux_temp).data();
-            amrex::Real * const uy_temp = soa.GetRealData(PlasmaIdx::uy_temp).data();
+            amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
+            amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
             int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
 
             const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
@@ -256,17 +264,20 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         amrex::Real Bxp = 0._rt;
                         amrex::Real Byp = 0._rt;
 
-                        // Gather Bx and By along with 4 dummy fields to use this function
+                        // Gather Bx and By
                         doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
                             bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                         const amrex::Real q_mass_ratio = can_ionize ?
                             ion_lev[ip] * charge_mass_ratio : charge_mass_ratio;
 
-                        const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dz;
-
-                        ux_temp[ip] =  a1_times_dz * q_mass_ratio * Byp;
-                        uy_temp[ip] = -a1_times_dz * q_mass_ratio * Bxp;
+#ifdef HIPACE_USE_AB5_PUSH
+                        uxp[ip] =  ( 1901._rt / 720._rt )*dz * q_mass_ratio * Byp;
+                        uyp[ip] = -( 1901._rt / 720._rt )*dz * q_mass_ratio * Bxp;
+#else
+                        uxp[ip] =  1.5_rt*dz * q_mass_ratio * Byp;
+                        uyp[ip] = -1.5_rt*dz * q_mass_ratio * Bxp;
+#endif
                     });
             }
         }

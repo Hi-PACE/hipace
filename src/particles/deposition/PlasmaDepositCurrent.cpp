@@ -21,7 +21,7 @@
 
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLaser& multi_laser,
-                const int which_slice, const bool temp_slice,
+                const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, amrex::Geometry const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size)
@@ -74,12 +74,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
         amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
-        const amrex::Real * const AMREX_RESTRICT uxp =
-            soa.GetRealData(temp_slice ? PlasmaIdx::ux_temp : PlasmaIdx::ux).data();
-        const amrex::Real * const AMREX_RESTRICT uyp =
-            soa.GetRealData(temp_slice ? PlasmaIdx::uy_temp : PlasmaIdx::uy).data();
-        const amrex::Real * const AMREX_RESTRICT psip =
-            soa.GetRealData(temp_slice ? PlasmaIdx::psi_temp : PlasmaIdx::psi).data();
+        const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
+        const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
+        const amrex::Real * const AMREX_RESTRICT psip = soa.GetRealData(PlasmaIdx::psi).data();
 
         int const * const AMREX_RESTRICT a_ion_lev =
             plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;

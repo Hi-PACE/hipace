@@ -222,9 +222,11 @@ IonizationModule (const int lev,
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
-        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux).data();
-        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy).data();
-        const amrex::Real * const psip = soa_ion.GetRealData(PlasmaIdx::psi).data();
+        const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
+        const amrex::Real * const y_prev = soa_ion.GetRealData(PlasmaIdx::y_prev).data();
+        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
+        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
+        const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -244,6 +246,9 @@ IonizationModule (const int lev,
             amrex::ParticleReal xp, yp, zp;
             int pid;
             getPosition(ip, xp, yp, zp, pid);
+            // avoid temp slice
+            xp = x_prev[ip];
+            yp = y_prev[ip];
 
             if (pid < 0) return;
 
@@ -334,34 +339,17 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::psi     ][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::x_prev  ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
-                arrdata_elec[PlasmaIdx::ux_temp ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::uy_temp ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::psi_temp][pidx] = 1._rt;
-                arrdata_elec[PlasmaIdx::Fx1     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fx2     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fx3     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fx4     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fx5     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fy1     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fy2     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fy3     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fy4     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fy5     ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fux1    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fux2    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fux3    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fux4    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fux5    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fuy1    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fuy2    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fuy3    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fuy4    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fuy5    ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fpsi1   ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fpsi2   ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fpsi3   ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fpsi4   ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::Fpsi5   ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = 1._rt;
+#ifdef HIPACE_USE_AB5_PUSH
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                    arrdata_elec[iforce][pidx] = 0._rt;
+                }
+#endif
                 arrdata_elec[PlasmaIdx::x0      ][pidx] = arrdata_ion[PlasmaIdx::x0    ][ip];
                 arrdata_elec[PlasmaIdx::y0      ][pidx] = arrdata_ion[PlasmaIdx::y0    ][ip];
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;

@@ -8,139 +8,70 @@
 #ifndef PUSHPLASMAPARTICLES_H_
 #define PUSHPLASMAPARTICLES_H_
 
-#include "particles/plasma/PlasmaParticleContainer.H"
-#include "fields/Fields.H"
-#include "utils/Constants.H"
-#include "particles/particles_utils/FieldGather.H"
-#include "Hipace.H"
-#include "GetAndSetPosition.H"
+#include <AMReX_Config.H>
 
-/** \brief Pushing the plasma particles (currently only with a 5th order Adams Bashforth Pusher)
+template<class T>
+struct PlasmaMomentumDerivative {
+    T dz_ux;
+    T dz_uy;
+    T dz_psi;
+};
+
+/** \brief Find the derivative of the Plasma momentum.
+ * This function can be used with dual numbers to find the second derivative.
  *
- * \param[in,out] xp position in x direction
- * \param[in,out] yp position in y direction
- * \param[in,out] zp position in z direction
- * \param[in,out] uxp momentum in x direction
- * \param[in,out] uyp momentum in y direction
- * \param[in,out] psip plasma pseudo-potential
- * \param[in,out] x_prev previous position in x direction
- * \param[in,out] y_prev previous position in y direction
- * \param[in,out] ux_temp temporary momentum in x direction
- * \param[in,out] uy_temp temporary momentum in y direction
- * \param[in,out] psi_temp temporary plasma pseudo-potential
- * \param[in] Fx1 force term acting on x position of the particle
- * \param[in] Fy1 force term acting on y position of the particle
- * \param[in] Fux1 force term acting on x momentum of the particle
- * \param[in] Fuy1 force term acting on y momentum of the particle
- * \param[in] Fpsi1 force term acting on the plasma pseudo-potential of the particle
- * \param[in] Fx2 force term acting on x position of the particle
- * \param[in] Fy2 force term acting on y position of the particle
- * \param[in] Fux2 force term acting on x momentum of the particle
- * \param[in] Fuy2 force term acting on y momentum of the particle
- * \param[in] Fpsi2 force term acting on the plasma pseudo-potential of the particle
- * \param[in] Fx3 force term acting on x position of the particle
- * \param[in] Fy3 force term acting on y position of the particle
- * \param[in] Fux3 force term acting on x momentum of the particle
- * \param[in] Fuy3 force term acting on y momentum of the particle
- * \param[in] Fpsi3 force term acting on the plasma pseudo-potential of the particle
- * \param[in] Fx4 force term acting on x position of the particle
- * \param[in] Fy4 force term acting on y position of the particle
- * \param[in] Fux4 force term acting on x momentum of the particle
- * \param[in] Fuy4 force term acting on y momentum of the particle
- * \param[in] Fpsi4 force term acting on the plasma pseudo-potential of the particle
- * \param[in] Fx5 force term acting on x position of the particle
- * \param[in] Fy5 force term acting on y position of the particle
- * \param[in] Fux5 force term acting on x momentum of the particle
- * \param[in] Fuy5 force term acting on y momentum of the particle
- * \param[in] Fpsi5 force term acting on the plasma pseudo-potential of the particle
- * \param[in] dz longitudinal size of the cell
- * \param[in] temp_slice if true, the temporary data (x_temp, ...) is used
- * \param[in] ip index of the plasma particle
- * \param[in] SetPosition Functor for setting the particle position
- * \param[in] enforceBC Functor for applying the boundary conditions to a single plasma particle
+ * \param[in] ux gamma * beta_x * clight
+ * \param[in] uy gamma * beta_y * clight
+ * \param[in] psi_inv 1 / (1 + norm_Psi)
+ * \param[in] ExmBy Ex - clight * By
+ * \param[in] EypBx Ey - clight * Bx
+ * \param[in] Ez Ez
+ * \param[in] Bx_clight Bx * clight
+ * \param[in] By_clight By * clight
+ * \param[in] Bz Bz
+ * \param[in] Aabssq_norm Aabssqp * 0.5 TODO: fix units of Aabssqp
+ * \param[in] AabssqDx_norm AabssqDx * 0.25 * clight * m_e / mass
+ * \param[in] AabssqDy_norm AabssqDy * 0.25 * clight * m_e / mass
+ * \param[in] clight_inv 1 / clight
+ * \param[in] charge_mass_clight_ratio charge / (mass * clight)
  */
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void PlasmaParticlePush (
-    amrex::ParticleReal& xp, amrex::ParticleReal& yp, amrex::ParticleReal& zp,
-    amrex::ParticleReal& uxp, amrex::ParticleReal& uyp, amrex::ParticleReal& psip,
-    amrex::ParticleReal& x_prev, amrex::ParticleReal& y_prev, amrex::ParticleReal& ux_temp,
-    amrex::ParticleReal& uy_temp, amrex::ParticleReal& psi_temp,
-    const amrex::ParticleReal& Fx1,
-    const amrex::ParticleReal& Fy1,
-    const amrex::ParticleReal& Fux1,
-    const amrex::ParticleReal& Fuy1,
-    const amrex::ParticleReal& Fpsi1,
-    const amrex::ParticleReal& Fx2,
-    const amrex::ParticleReal& Fy2,
-    const amrex::ParticleReal& Fux2,
-    const amrex::ParticleReal& Fuy2,
-    const amrex::ParticleReal& Fpsi2,
-    const amrex::ParticleReal& Fx3,
-    const amrex::ParticleReal& Fy3,
-    const amrex::ParticleReal& Fux3,
-    const amrex::ParticleReal& Fuy3,
-    const amrex::ParticleReal& Fpsi3,
-    const amrex::ParticleReal& Fx4,
-    const amrex::ParticleReal& Fy4,
-    const amrex::ParticleReal& Fux4,
-    const amrex::ParticleReal& Fuy4,
-    const amrex::ParticleReal& Fpsi4,
-    const amrex::ParticleReal& Fx5,
-    const amrex::ParticleReal& Fy5,
-    const amrex::ParticleReal& Fux5,
-    const amrex::ParticleReal& Fuy5,
-    const amrex::ParticleReal& Fpsi5,
-    const amrex::Real dz,
-    const bool temp_slice,
-    const long ip,
-    const SetParticlePosition<PlasmaParticleContainer::ParticleTileType>& SetPosition,
-    const EnforceBC<PlasmaParticleContainer::ParticleTileType>& enforceBC )
 
+template<class T>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+PlasmaMomentumDerivative<T> PlasmaMomentumPush (
+    const T& ux,
+    const T& uy,
+    const T& psi_inv,
+    amrex::Real ExmBy,
+    amrex::Real EypBx,
+    amrex::Real Ez,
+    amrex::Real Bx_clight,
+    amrex::Real By_clight,
+    amrex::Real Bz,
+    amrex::Real Aabssq_norm,
+    amrex::Real AabssqDx_norm,
+    amrex::Real AabssqDy_norm,
+    amrex::Real clight_inv,
+    amrex::Real charge_mass_clight_ratio)
 {
     using namespace amrex::literals;
-    /* Fifth order adams bashforth coefficients */
-    const amrex::Real a1_times_dz = ( 1901._rt / 720._rt ) * dz;
-    const amrex::Real a2_times_dz = ( -1387._rt / 360._rt ) * dz;
-    const amrex::Real a3_times_dz = ( 109._rt / 30._rt ) * dz;
-    const amrex::Real a4_times_dz = ( -637._rt / 360._rt ) * dz;
-    const amrex::Real a5_times_dz = ( 251._rt / 720._rt ) * dz;
 
-    if (!temp_slice)
-    {
-        xp -= a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
-            + a4_times_dz * Fx4 + a5_times_dz * Fx5;
-        yp -= a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
-            + a4_times_dz * Fy4 + a5_times_dz * Fy5;
+    const T gamma_psi = 0.5_rt*psi_inv*psi_inv*(
+                        1.0_rt + Aabssq_norm
+                        + ux*ux*(clight_inv*clight_inv)
+                        + uy*uy*(clight_inv*clight_inv))
+                        + 0.5_rt;
 
-        SetPosition(ip, xp, yp, zp);
-        if (enforceBC(ip)) return;
+    const T dz_ux = (charge_mass_clight_ratio * (gamma_psi * ExmBy
+                    + By_clight + ( uy * Bz ) * psi_inv) - AabssqDx_norm * psi_inv);
 
-        // avoid segfault for periodic particle boundaries.
-        x_prev = enforceBC.m_structs[ip].pos(0);
-        y_prev = enforceBC.m_structs[ip].pos(1);
-        uxp -= a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
-            + a4_times_dz * Fux4 + a5_times_dz * Fux5;
-        uyp -= a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
-            + a4_times_dz * Fuy4 + a5_times_dz * Fuy5;
-        psip -= a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
-            + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5;
-    }
-    else
-    {
-        xp = x_prev - ( a1_times_dz * Fx1 + a2_times_dz * Fx2 + a3_times_dz * Fx3
-                 + a4_times_dz * Fx4 + a5_times_dz * Fx5 );
-        yp = y_prev - ( a1_times_dz * Fy1 + a2_times_dz * Fy2 + a3_times_dz * Fy3
-                 + a4_times_dz * Fy4 + a5_times_dz * Fy5 );
+    const T dz_uy = (charge_mass_clight_ratio * (gamma_psi * EypBx
+                    - Bx_clight - ( ux * Bz ) * psi_inv) - AabssqDy_norm * psi_inv);
 
-        SetPosition(ip, xp, yp, zp);
-        if (enforceBC(ip)) return;
-        ux_temp = uxp - ( a1_times_dz * Fux1 + a2_times_dz * Fux2 + a3_times_dz * Fux3
-                  + a4_times_dz * Fux4 + a5_times_dz * Fux5 );
-        uy_temp = uyp - ( a1_times_dz * Fuy1 + a2_times_dz * Fuy2 + a3_times_dz * Fuy3
-                  + a4_times_dz * Fuy4 + a5_times_dz * Fuy5 );
-        psi_temp = psip - ( a1_times_dz * Fpsi1 + a2_times_dz * Fpsi2 + a3_times_dz * Fpsi3
-                  + a4_times_dz * Fpsi4 + a5_times_dz * Fpsi5 );
-    }
+    const T dz_psi = (charge_mass_clight_ratio * clight_inv *
+                         (( ux * ExmBy + uy * EypBx ) * clight_inv * psi_inv - Ez ));
+
+    return {dz_ux, dz_uy, dz_psi};
 }
 
 #endif //  PUSHPLASMAPARTICLES_H_

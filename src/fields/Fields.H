@@ -436,6 +436,55 @@ public:
         }
     }
 
+    /** \brief add all selected fields between slices or on the same slice
+     * Uses references to C-arrays as argument so that ncomps can be deduced
+     *
+     * \param[in] lev level of fields
+     * \param[in] islice_dst destination slice
+     * \param[in] comps_dst array of destination component names
+     * \param[in] islice_src source slice
+     * \param[in] comps_src array of source component names
+     */
+    template<int ncomps>
+    void add (const int lev,
+              const int islice_dst, const char * const (&comps_dst)[ncomps],
+              const int islice_src, const char * const (&comps_src)[ncomps]) {
+        amrex::GpuArray<int, ncomps> c_idx_src = {};
+        amrex::GpuArray<int, ncomps> c_idx_dst = {};
+        for (int i=0; i<ncomps; ++i) {
+            c_idx_src[i] = Comps[islice_src][comps_src[i]];
+            c_idx_dst[i] = Comps[islice_dst][comps_dst[i]];
+        }
+
+        const amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
+        amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
+
+        for (amrex::MFIter mfi(mfab_dst, DfltMfi); mfi.isValid(); ++mfi) {
+            const Array3<amrex::Real> array_dst = mfab_dst.array(mfi);
+            // only one Kernel for all fields
+            if (islice_dst != islice_src) {
+                const Array3<amrex::Real const> array_src = mfab_src.const_array(mfi);
+                amrex::ParallelFor(mfi.growntilebox(),
+                    [=] AMREX_GPU_DEVICE(int i, int j, int)
+                    {
+                        for (int n=0; n<ncomps; ++n) {
+                            array_dst(i,j,c_idx_dst[n]) += array_src(i,j,c_idx_src[n]);
+                        }
+                    });
+            } else {
+                amrex::ParallelFor(mfi.growntilebox(),
+                    [=] AMREX_GPU_DEVICE(int i, int j, int)
+                    {
+                        for (int n=0; n<ncomps; ++n) {
+                            // array_src == array_dst here
+                            array_dst(i,j,c_idx_dst[n]) += array_dst(i,j,c_idx_src[n]);
+                        }
+                    });
+            }
+
+        }
+    }
+
     /** \brief call amrex FillBoundary for multiple fields
      *
      * \param[in] period periodicity of the fields
