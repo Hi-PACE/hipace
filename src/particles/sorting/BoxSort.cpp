@@ -21,8 +21,6 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     int const np = a_beam.numParticles();
     BeamParticleContainer::ParticleType* particle_ptr = a_beam.GetArrayOfStructs()().data();
 
-    constexpr unsigned int max_unsigned_int = std::numeric_limits<unsigned int>::max();
-
     int num_boxes = a_ba.size();
     m_box_counts.resize(num_boxes+1, 0);
     m_box_counts_cpu.resize(num_boxes+1);
@@ -42,8 +40,8 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
             dst_box = num_boxes;
             particle_ptr[i].id() = -std::abs(particle_ptr[i].id());
         }
-        unsigned int index = amrex::Gpu::Atomic::Inc(
-            &p_box_counts[dst_box], max_unsigned_int);
+        unsigned int index = amrex::Gpu::Atomic::Add(
+            &p_box_counts[dst_box], 1u);
         p_dst_indices[i] = index;
     });
 
