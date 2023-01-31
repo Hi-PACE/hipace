@@ -27,8 +27,6 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
     }
     last_islice = islice;
 
-    last_islice = islice;
-
     hipace->m_fields.setVal(0., lev, WhichSlice::This, "Sy", "Sx");
 
     hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,

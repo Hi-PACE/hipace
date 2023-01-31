@@ -66,9 +66,15 @@ set_default_install_dirs()
 
 # Options and Variants ########################################################
 #
-option(HiPACE_MPI            "Multi-node support (message-passing)"             ON)
-option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                        ON)
-option(HiPACE_AB5_PUSH       "Use fifth order Adams-Bashforth Plasma Pusher"    ON)
+option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
+option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                  ON)
+
+set(HiPACE_PUSHER_VALUES LEAPFROG AB5)
+set(HiPACE_PUSHER AB5 CACHE STRING "Plasma pusher (AB5/LEAPFROG)")
+set_property(CACHE HiPACE_PUSHER PROPERTY STRINGS ${HiPACE_PUSHER_VALUES})
+if(NOT HiPACE_PUSHER IN_LIST HiPACE_PUSHER_VALUES)
+    message(FATAL_ERROR "HiPACE_PUSHER (${HiPACE_PUSHER}) must be one of ${HiPACE_PUSHER_VALUES}")
+endif()
 
 set(HiPACE_PRECISION_VALUES SINGLE DOUBLE)
 set(HiPACE_PRECISION DOUBLE CACHE STRING "Floating point precision (SINGLE/DOUBLE)")
@@ -156,7 +162,7 @@ if(HiPACE_OPENPMD)
     target_link_libraries(HiPACE PUBLIC openPMD::openPMD)
 endif()
 
-if(HiPACE_AB5_PUSH)
+if(HiPACE_PUSHER STREQUAL "AB5")
     target_compile_definitions(HiPACE PUBLIC HIPACE_USE_AB5_PUSH)
 endif()
 

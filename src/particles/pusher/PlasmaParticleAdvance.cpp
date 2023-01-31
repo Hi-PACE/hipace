@@ -154,6 +154,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real uy = uy_half_step[ip];
                     amrex::Real psi = psi_half_step[ip];
 
+                    // full push in momentum
+                    // from t-1/2 to t+1/2
+                    // using the fields at t
                     for (int isub=0; isub<nsub; ++isub) {
 
                         const amrex::Real psi_inv = 1._rt/psi;
@@ -176,12 +179,17 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                     }
 
+                    // full push in position
+                    // from t to t+1
+                    // using the momentum at t+1/2
                     xp += dz*clight_inv*(ux * (1._rt/psi));
                     yp += dz*clight_inv*(uy * (1._rt/psi));
 
                     if (setPositionEnforceBC(ip, xp, yp)) return;
 
                     if (!temp_slice) {
+                        // update values of the last non temp slice
+                        // the next push always starts from these
                         ux_half_step[ip] = ux;
                         uy_half_step[ip] = uy;
                         psi_half_step[ip] = psi;
@@ -189,6 +197,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         y_prev[ip] = yp;
                     }
 
+                    // half push in momentum
+                    // from t+1/2 to t+1
+                    // still using the fields at t as an approximation
+                    // the result is used for current deposition etc. but not in the pusher
                     for (int isub=0; isub<(nsub/2); ++isub) {
 
                         const amrex::Real psi_inv = 1._rt/psi;
@@ -251,6 +263,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     if (setPositionEnforceBC(ip, xp, yp)) return;
 
                     if (!temp_slice) {
+                        // update values of the last non temp slice
+                        // the next push always starts from these
                         ux_half_step[ip] = ux;
                         uy_half_step[ip] = uy;
                         psi_half_step[ip] = psi;
