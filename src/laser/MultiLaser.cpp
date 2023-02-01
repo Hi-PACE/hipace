@@ -139,27 +139,105 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
     if (step > 0) return;
 
-    // In order to use the normal Copy function, we use slice np1j00 as a tmp array
-    // to initialize the laser in the loop over slices below.
-    // We need to keep the value in np1j00, as it is shifted to np1jp1 and used to compute
-    // the following slices. This is relevant for the first slices at step 0 of every box
-    // (except for the head box).
-    amrex::FArrayBox store_np1j00;
-    store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
-    store_np1j00.copy<amrex::RunOn::Device>(m_slices[WhichLaserSlice::np1j00][0]);
+    if (m_laser_from_file) {
 
-    // Loop over slices
-    for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-        // Compute initial field on the current (device) slice np1j00
-        InitLaserSlice(gm, isl);
-        // Copy: (device) slice np1j00 to the right location
-        // in the (host) 3D array of the current time.
-        Copy(isl, true);
+    } else {
+        // In order to use the normal Copy function, we use slice np1j00 as a tmp array
+        // to initialize the laser in the loop over slices below.
+        // We need to keep the value in np1j00, as it is shifted to np1jp1 and used to compute
+        // the following slices. This is relevant for the first slices at step 0 of every box
+        // (except for the head box).
+        amrex::FArrayBox store_np1j00;
+        store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
+        store_np1j00.copy<amrex::RunOn::Device>(m_slices[WhichLaserSlice::np1j00][0]);
+
+        // Loop over slices
+        for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
+            // Compute initial field on the current (device) slice np1j00
+            InitLaserSlice(gm, isl);
+            // Copy: (device) slice np1j00 to the right location
+            // in the (host) 3D array of the current time.
+            Copy(isl, true);
+        }
+
+        // Reset np1j00 to its original value.
+        m_slices[WhichLaserSlice::np1j00][0].copy<amrex::RunOn::Device>(store_np1j00);
+    }
+}
+
+void
+MultiLaser::GetEnvelopeFromFileHelper () {
+    openPMD::Datatype input_type = openPMD::Datatype::INT;
+    bool species_known;
+    {
+        // Check what kind of Datatype is used in the Laser file
+        auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
+
+        if(!series.iterations.contains(num_iteration)) {
+            amrex::Abort("Could not find iteration " + std::to_string(num_iteration) +
+                                                        " in file " + input_file + "\n");
+        }
+
+        auto iteration = series.iterations[num_iteration];
+
+        if(!iteration.meshes.contains("laserEnvelope")) {
+            amrex::Abort("Could not find mesh 'laserEnvelope' in file " + input_file + "\n");
+        }
+
+        auto mesh = series.iterations[num_iteration].meshes["laserEnvelope"];
+
+        if(mesh.contains("r")) {
+            amrex::Abort("Could not find component 'r' in file " + input_file + "\n");
+        }
+
+        if(mesh.contains("i")) {
+            amrex::Abort("Could not find component 'r' in file " + input_file + "\n");
+        }
+
+        input_type = mesh["r"].getDatatype();
     }
 
-    // Reset np1j00 to its original value.
-    m_slices[WhichLaserSlice::np1j00][0].copy<amrex::RunOn::Device>(store_np1j00);
+    if (input_type == openPMD::Datatype::CFLOAT) {
+        GetEnvolopeFromFile<std::complex<float>>();
+    } else if (input_type == openPMD::Datatype::CDOUBLE) {
+        GetEnvolopeFromFile<std::complex<double>>();
+    } else {
+        amrex::Abort("Unknown Datatype used in Laser input file. Must use double or float\n");
+    }
 }
+
+template<typename input_type>
+void
+MultiLaser::GetEnvolopeFromFile () {
+    auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
+    auto laser = series[num_iteration].meshes["laserEnvolope"];
+    auto laser_comp = laser[openPMD::RecordComponent::SCALAR];
+
+    const std::vector<std::string> axis_labels = laser.axisLabels();
+    assert(axis_labels[0] == "t" && axis_labels[1] == "x" && axis_labels[2] == "y");
+
+    const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
+
+    auto extend = laser_comp.getExtent();
+
+    double unitSI = laser_comp.unitSI();
+
+
+    amrex::Dim3 arr_begin = {lo_y, lo_x, lo_t};
+    amrex::Dim3 arr_end = {lo_y + extent[0], lo_x + extent[1], lo_t + extent[2]};
+    amrex::Array4<input_type> laser_arr(data.get(), arr_begin, arr_end, 1);
+
+    amrex::For(box, [&](int i, int j, int k) {
+        input_file_arr(i, j, k, 0) = static_cast<amrex::Real>(
+            laser_arr(j, i, 2*lo_t + extent[2] - k).real() * unitSI;
+        )
+        input_file_arr(i, j, k, 1) = static_cast<amrex::Real>(
+            laser_arr(j, i, 2*lo_t + extent[2] - k).imag() * unitSI;
+        )
+    });
+
+}
+
 
 void
 MultiLaser::Copy (int isl, bool to3d)
