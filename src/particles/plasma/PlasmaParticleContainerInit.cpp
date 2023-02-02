@@ -38,10 +38,28 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const amrex::Real scale_fac = Hipace::m_normalized_units?
                                   1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
+
+    amrex::IntVect box_nodal{0, 0, 0};
+    amrex::IntVect box_grow{0, 0, 0};
+    amrex::Real x_offset = 0._rt;
+    amrex::Real y_offset = 0._rt;
+
+    if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && a_num_particles_per_cell[0] % 2 == 1) {
+        box_nodal[0] = 1;
+        box_grow[0] = -1;
+        x_offset = -0.5_rt;
+    }
+
+    if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && a_num_particles_per_cell[1] % 2 == 1) {
+        box_nodal[1] = 1;
+        box_grow[1] = -1;
+        y_offset = -0.5_rt;
+    }
+
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
     {
 
-        const amrex::Box& tile_box  = mfi.tilebox();
+        const amrex::Box& tile_box  = mfi.tilebox(box_nodal, box_grow);
 
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
@@ -67,8 +85,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
+                amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
@@ -163,8 +181,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
+                amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
                 amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 const amrex::Real rsq = x*x + y*y;
