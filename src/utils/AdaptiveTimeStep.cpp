@@ -123,7 +123,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
-                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return {
+                if ( wp[ip] <= 0._rt ) return {
                     0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
                 };
                 return {
