@@ -110,9 +110,12 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
 
 
         // Extract particle properties
+        const auto& aos = beam.GetArrayOfStructs(); // For positions
+        const auto& pos_structs = aos.begin() + box_offset;
         const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
         const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
@@ -123,7 +126,7 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
-                if ( std::abs(wp[ip]) < std::numeric_limits<amrex::Real>::epsilon() ) return {
+                if (pos_structs[ip].id() < 0) return {
                     0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
                 };
                 return {
