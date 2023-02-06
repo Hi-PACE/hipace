@@ -39,19 +39,19 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                                   1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
 
-    amrex::IntVect box_nodal{0, 0, 0};
+    amrex::IntVect box_nodal{amrex::IndexType::CELL,amrex::IndexType::CELL,amrex::IndexType::CELL};
     amrex::IntVect box_grow{0, 0, 0};
     amrex::Real x_offset = 0._rt;
     amrex::Real y_offset = 0._rt;
 
     if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && a_num_particles_per_cell[0] % 2 == 1) {
-        box_nodal[0] = 1;
+        box_nodal[0] = amrex::IndexType::NODE;
         box_grow[0] = -1;
         x_offset = -0.5_rt;
     }
 
     if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && a_num_particles_per_cell[1] % 2 == 1) {
-        box_nodal[1] = 1;
+        box_nodal[1] = amrex::IndexType::NODE;
         box_grow[1] = -1;
         y_offset = -0.5_rt;
     }
