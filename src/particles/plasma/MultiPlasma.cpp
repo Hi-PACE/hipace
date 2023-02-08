@@ -17,7 +17,7 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
 {
 
     amrex::ParmParse pp("plasmas");
-    getWithParser(pp, "names", m_names);
+    queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
     queryWithParser(pp, "collisions", m_collision_names);

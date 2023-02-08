@@ -33,8 +33,4 @@ hipace.depos_order_xy = 0
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
 
-beams.names = no_beam
-
-plasmas.names = no_plasma
-
 diagnostic.diag_type = xz

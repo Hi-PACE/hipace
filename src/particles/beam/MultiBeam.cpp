@@ -16,7 +16,7 @@ MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
 {
 
     amrex::ParmParse pp("beams");
-    getWithParser(pp, "names", m_names);
+    queryWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
     DeprecatedInput("beams", "insitu_freq", "insitu_period");
     DeprecatedInput("beams", "all_from_file",

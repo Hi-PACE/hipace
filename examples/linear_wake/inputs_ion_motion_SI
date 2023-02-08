@@ -54,6 +54,4 @@ ions.neutralize_background = false
 "ions.density(x,y,z)" = ne
 ions.ppc = 1 1
 
-lasers.names = no_laser
-
 diagnostic.diag_type = xyz

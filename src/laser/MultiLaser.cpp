@@ -29,7 +29,7 @@ void
 MultiLaser::ReadParameters ()
 {
     amrex::ParmParse pp("lasers");
-    getWithParser(pp, "names", m_names);
+    queryWithParser(pp, "names", m_names);
 
     m_use_laser = m_names[0] != "no_laser";
 

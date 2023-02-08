@@ -251,7 +251,7 @@ Then, properties can be set per plasma species with ``<plasma name>.<plasma prop
 or sometimes for all plasma species at the same time with ``plasmas.<plasma property> = ...``.
 When both are specified, the per-species value is used.
 
-* ``plasmas.names`` (`string`)
+* ``plasmas.names`` (`string`) optional (default `no_plasma`)
     The names of the plasmas, separated by a space.
     To run without plasma, choose the name ``no_plasma``.
 
@@ -353,7 +353,7 @@ Beam parameters
 For the beam parameters, first the names of the beams need to be specified. Afterwards, the beam
 parameters for each beam are specified via ``<beam name>.<beam property> = ...``
 
-* ``beams.names`` (`string`)
+* ``beams.names`` (`string`) optional (default `no_beam`)
     The names of the particle beams, separated by a space.
     To run without beams, choose the name ``no_beam``.
 
@@ -533,7 +533,7 @@ Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored 
 which you can find in the output openPMD file as `laser_real` (for the real part of the envelope) and `laser_imag` for its imaginary part.
 Parameters starting with ``lasers.`` apply to all laser pulses, parameters starting with ``<laser name>`` apply to a single laser pulse.
 
-* ``lasers.names`` (list of `string`)
+* ``lasers.names`` (list of `string`) optional (default `no_laser`)
     The names of the laser pulses, separated by a space.
     To run without a laser, choose the name ``no_laser``.
 
