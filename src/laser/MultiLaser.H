@@ -185,7 +185,7 @@ private:
      * he central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
     amrex::Real m_lambda0 {0.};
-    amrex::Vector<std::string> m_names = {"no_laser"}; /**< name of the laser */
+    amrex::Vector<std::string> m_names {"no_laser"}; /**< name of the laser */
     int m_nlasers; /**< Number of laser pulses */
     amrex::Vector<Laser> m_all_lasers; /**< Each is a laser pulse */
     int m_3d_on_host {0};/** Whether the 3D laser envelope is stored in host or device memory */
