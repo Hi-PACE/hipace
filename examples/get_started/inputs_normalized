@@ -36,10 +36,6 @@ plasma.element = electron               # type of plasma: electron, proton, or a
 plasma.density(x,y,z) = 1.              # density function in the respective unit systems
 plasma.ppc = 1 1                        # particles per cell in x,y
 
-### Laser
-################################
-lasers.names = no_laser                 # name(s) of the laser pulses. Here, no laser pulse used.
-
 ### Diagnostics
 ################################
 diagnostic.diag_type = xz               # 2D xz slice output. Options: xyz, xz, yz

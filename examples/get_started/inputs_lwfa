@@ -32,8 +32,6 @@ laser.position_mean = 0. 0. 0
 laser.w0 = 3*kp_inv
 laser.L0 = 0.5*kp_inv
 
-beams.names = no_beam
-
 plasmas.names = plasma
 plasma.density(x,y,z) = "ne*(1+4*(x^2+y^2)/(kp^2 * Rm^4 ) ) *
                          if (z > Lramp, 1, .5*(1-cos(pi*z/Lramp))) *
