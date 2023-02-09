@@ -108,7 +108,7 @@ General parameters
     Transverse particle shape order. Currently, `0,1,2,3` are implemented.
 
 * ``hipace.depos_order_z`` (`int`) optional (default `0`)
-    Transverse particle shape order. Currently, only `0` is implemented.
+    Longitudinal particle shape order. Currently, only `0` is implemented.
 
 * ``hipace.depos_derivative_type`` (`int`) optional (default `2`)
     Type of derivative used in explicit deposition. `0`: analytic, `1`: nodal, `2`: centered
