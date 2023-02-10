@@ -90,10 +90,6 @@ class MultiLaser
 
     using SpectralFieldLoc = amrex::BaseFab <amrex::GpuComplex<amrex::Real>>;
 
-private:
-
-    static constexpr int m_nslices = WhichLaserSlice::N;
-
 public:
 
     /** Constructor */
@@ -113,14 +109,10 @@ public:
 
     void ReadParameters ();
 
-    /** get function for the 2D slices
-     * \param[in] islice slice index
-     */
+    /** get function for the 2D slices */
     amrex::MultiFab& getSlices () {return m_slices; }
 
-    /** get function for the 2D slices (const version)
-     * \param[in] islice slice index
-     */
+    /** get function for the 2D slices (const version) */
     const amrex::MultiFab& getSlices () const {return m_slices; }
 
     /** Return the 3D FArrayBox containing the laser envelope, const version */

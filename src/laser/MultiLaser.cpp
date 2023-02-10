@@ -73,7 +73,6 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
     // Need at least 1 guard cell transversally for transverse derivative
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
-    AMREX_ALWAYS_ASSERT(WhichLaserSlice::N == m_nslices);
     m_slices.define(
         slice_ba, slice_dm, WhichLaserSlice::N, m_slices_nguards,
         amrex::MFInfo().SetArena(amrex::The_Arena()));
