@@ -461,7 +461,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     if (diag_box.isEmpty()) return;
     auto& slice_mf = m_slices[lev][WhichSlice::This];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
-    auto& laser_mf = multi_laser.getSlices(WhichLaserSlice::n00j00);
+    auto& laser_mf = multi_laser.getSlices();
     auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
 
 #ifdef AMREX_USE_GPU
@@ -500,8 +500,10 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
             {
                 const amrex::Real x = i * dx + poff_diag_x;
                 const amrex::Real y = j * dy + poff_diag_y;
-                diag_array(i,j,k,ncomp  ) += rel_z_data[k-k_min] * laser_array(x,y,0);
-                diag_array(i,j,k,ncomp+1) += rel_z_data[k-k_min] * laser_array(x,y,1);
+                diag_array(i,j,k,ncomp  ) += rel_z_data[k-k_min] *
+                    laser_array(x,y,WhichLaserSlice::n00j00 + WhichLaserSlice::real);
+                diag_array(i,j,k,ncomp+1) += rel_z_data[k-k_min] *
+                    laser_array(x,y,WhichLaserSlice::n00j00 + WhichLaserSlice::imag);
             });
     }
 }

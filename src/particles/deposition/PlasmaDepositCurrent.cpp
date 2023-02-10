@@ -62,7 +62,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
         // extract the laser Fields
-        const amrex::MultiFab& a_mf = multi_laser.getSlices(WhichLaserSlice::n00j00);
+        const amrex::MultiFab& a_mf = multi_laser.getSlices();
 
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
@@ -83,7 +83,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         // Extract laser array from MultiFab
         const Array3<const amrex::Real> a_laser_arr =
-            multi_laser.m_use_laser ? a_mf[pti].const_array() : amrex::Array4<const amrex::Real>();
+            multi_laser.m_use_laser ? a_mf[pti].const_array(WhichLaserSlice::n00j00)
+                                    : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
         const amrex::Real invvol = Hipace::m_normalized_units ? 1._rt : 1._rt/(dx[0]*dx[1]*dx[2]);

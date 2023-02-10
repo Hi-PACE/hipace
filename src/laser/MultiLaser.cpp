@@ -74,13 +74,10 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
     int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     AMREX_ALWAYS_ASSERT(WhichLaserSlice::N == m_nslices);
-    for (int islice=0; islice<WhichLaserSlice::N; islice++) {
-        // 2 components for complex numbers.
-        m_slices[islice].define(
-            slice_ba, slice_dm, 2, m_slices_nguards,
-            amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[islice].setVal(0.0);
-    }
+    m_slices.define(
+        slice_ba, slice_dm, WhichLaserSlice::N, m_slices_nguards,
+        amrex::MFInfo().SetArena(amrex::The_Arena()));
+    m_slices.setVal(0.0);
 
     m_slice_box = slice_ba[0];
     m_sol.resize(m_slice_box, 1, amrex::The_Arena());
@@ -146,7 +143,7 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     // (except for the head box).
     amrex::FArrayBox store_np1j00;
     store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
-    store_np1j00.copy<amrex::RunOn::Device>(m_slices[WhichLaserSlice::np1j00][0]);
+    store_np1j00.copy<amrex::RunOn::Device>(m_slices[0], WhichLaserSlice::np1j00, 0, 2);
 
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -158,7 +155,7 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     }
 
     // Reset np1j00 to its original value.
-    m_slices[WhichLaserSlice::np1j00][0].copy<amrex::RunOn::Device>(store_np1j00);
+    m_slices[0].copy<amrex::RunOn::Device>(store_np1j00, 0, WhichLaserSlice::np1j00, 2);
 }
 
 void
@@ -170,51 +167,34 @@ MultiLaser::Copy (int isl, bool to3d)
 
     HIPACE_PROFILE("MultiLaser::Copy()");
 
-    amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
-    amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
-    amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
-    amrex::MultiFab& n00j00 = m_slices[WhichLaserSlice::n00j00];
-    amrex::MultiFab& n00jp1 = m_slices[WhichLaserSlice::n00jp1];
-    amrex::MultiFab& n00jp2 = m_slices[WhichLaserSlice::n00jp2];
-    amrex::MultiFab& np1j00 = m_slices[WhichLaserSlice::np1j00];
-    amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
-    amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
-
-    for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
-        Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
-        Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
-        Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
-        Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
-        Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
-        Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
-        Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        Array3<amrex::Real> arr = m_slices.array(mfi);
         amrex::Array4<amrex::Real> host_arr = m_F.array();
         amrex::ParallelFor(
         bx, 2,
         [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
         {
+            using namespace WhichLaserSlice;
             // +2 in 3D array means old.
             // 2 components for complex numbers.
             if (to3d){
                 // this slice into old host
-                host_arr(i,j,isl,n+2) = n00j00_arr(i,j,n);
+                host_arr(i,j,isl,n+2) = arr(i, j, n00j00 + n);
                 // next time slice into new host
-                host_arr(i,j,isl,n  ) = np1j00_arr(i,j,n);
+                host_arr(i,j,isl,n  ) = arr(i, j, np1j00 + n);
             } else {
                 // Shift slices of step n-1, and get current slice from 3D array
-                nm1jp2_arr(i,j,n) = nm1jp1_arr(i,j,n);
-                nm1jp1_arr(i,j,n) = nm1j00_arr(i,j,n);
-                nm1j00_arr(i,j,n) = host_arr(i,j,isl,n+2);
+                arr(i, j, nm1jp2 + n) = arr(i, j, nm1jp1 + n);
+                arr(i, j, nm1jp1 + n) = arr(i, j, nm1j00 + n);
+                arr(i, j, nm1j00 + n) = host_arr(i,j,isl,n+2);
                 // Shift slices of step n, and get current slice from 3D array
-                n00jp2_arr(i,j,n) = n00jp1_arr(i,j,n);
-                n00jp1_arr(i,j,n) = n00j00_arr(i,j,n);
-                n00j00_arr(i,j,n) = host_arr(i,j,isl,n);
+                arr(i, j, n00jp2 + n) = arr(i, j, n00jp1 + n);
+                arr(i, j, n00jp1 + n) = arr(i, j, n00j00 + n);
+                arr(i, j, n00j00 + n) = host_arr(i,j,isl,n);
                 // Shift slices of step n+1. Current slice will be computed
-                np1jp2_arr(i,j,n) = np1jp1_arr(i,j,n);
-                np1jp1_arr(i,j,n) = np1j00_arr(i,j,n);
+                arr(i, j, np1jp2 + n) = arr(i, j, np1jp1 + n);
+                arr(i, j, np1jp1 + n) = arr(i, j, np1j00 + n);
             }
         });
     }
@@ -254,16 +234,6 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
     const bool do_avg_rhs = m_MG_average_rhs;
 
-    amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
-    amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
-    amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
-    amrex::MultiFab& n00j00 = m_slices[WhichLaserSlice::n00j00];
-    amrex::MultiFab& n00jp1 = m_slices[WhichLaserSlice::n00jp1];
-    amrex::MultiFab& n00jp2 = m_slices[WhichLaserSlice::n00jp2];
-    amrex::MultiFab& np1j00 = m_slices[WhichLaserSlice::np1j00];
-    amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
-    amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
-
     amrex::FArrayBox rhs_mg;
     amrex::FArrayBox acoeff_real;
     amrex::Real acoeff_real_scalar = 0._rt;
@@ -271,7 +241,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
 
     amrex::Real djn {0.};
 
-    for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         const int imin = bx.smallEnd(0);
         const int imax = bx.bigEnd  (0);
@@ -280,14 +250,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
 
         acoeff_real.resize(bx, 1, amrex::The_Arena());
         rhs_mg.resize(bx, 2, amrex::The_Arena());
-        Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
-        Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
-        Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
-        Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
-        Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
-        Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
-        Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        Array3<amrex::Real> arr = m_slices.array(mfi);
         Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
         Array3<amrex::Real> acoeff_real_arr = acoeff_real.array();
         Array3<Complex> rhs_arr = m_rhs.array();
@@ -322,24 +285,25 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                 amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
             using ReduceTuple = typename decltype(reduce_data)::Type;
             reduce_op.eval(bx, reduce_data,
-                           [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
-                           {
-                               // Even number of transverse cells: average 2 cells
-                               // Odd number of cells: only keep central one
-                               const bool do_keep_x = Nx % 2 == 0 ?
-                                   i == imid-1 || i == imid : i == imid;
-                               const bool do_keep_y = Ny % 2 == 0 ?
-                                   j == jmid-1 || j == jmid : j == jmid;
-                               if ( do_keep_x && do_keep_y ) {
-                                   return {
-                                       n00j00_arr(i,j,0), n00j00_arr(i,j,1),
-                                       n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
-                                       n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
-                                   };
-                               } else {
-                                   return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
-                               }
-                           });
+                [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+                {
+                    using namespace WhichLaserSlice;
+                    // Even number of transverse cells: average 2 cells
+                    // Odd number of cells: only keep central one
+                    const bool do_keep_x = Nx % 2 == 0 ?
+                        i == imid-1 || i == imid : i == imid;
+                    const bool do_keep_y = Ny % 2 == 0 ?
+                        j == jmid-1 || j == jmid : j == jmid;
+                    if ( do_keep_x && do_keep_y ) {
+                        return {
+                            arr(i, j, n00j00 + real), arr(i, j, n00j00 + imag),
+                            arr(i, j, n00jp1 + real), arr(i, j, n00jp1 + imag),
+                            arr(i, j, n00jp2 + real), arr(i, j, n00jp2 + imag)
+                        };
+                    } else {
+                        return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
+                    }
+                });
             // ... and taking the argument of the resulting complex number.
             ReduceTuple hv = reduce_data.value(reduce_op);
             tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
@@ -367,27 +331,28 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
             bx, 1,
             [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
             {
+                using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
                 if (step == 0) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (n00j00_arr(i+1,j,0)+n00j00_arr(i-1,j,0)-2._rt*n00j00_arr(i,j,0))/(dx*dx) +
-                        (n00j00_arr(i,j+1,0)+n00j00_arr(i,j-1,0)-2._rt*n00j00_arr(i,j,0))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00 + real)+arr(i-1, j, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dx*dx) +
+                        (arr(i, j+1, n00j00 + real)+arr(i, j-1, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (n00j00_arr(i+1,j,1)+n00j00_arr(i-1,j,1)-2._rt*n00j00_arr(i,j,1))/(dx*dx) +
-                        (n00j00_arr(i,j+1,1)+n00j00_arr(i,j-1,1)-2._rt*n00j00_arr(i,j,1))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00 + imag)+arr(i-1, j, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dx*dx) +
+                        (arr(i, j+1, n00j00 + imag)+arr(i, j-1, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dy*dy) : 0._rt;
                 } else {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (nm1j00_arr(i+1,j,0)+nm1j00_arr(i-1,j,0)-2._rt*nm1j00_arr(i,j,0))/(dx*dx) +
-                        (nm1j00_arr(i,j+1,0)+nm1j00_arr(i,j-1,0)-2._rt*nm1j00_arr(i,j,0))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00 + real)+arr(i-1, j, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dx*dx) +
+                        (arr(i, j+1, nm1j00 + real)+arr(i, j-1, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (nm1j00_arr(i+1,j,1)+nm1j00_arr(i-1,j,1)-2._rt*nm1j00_arr(i,j,1))/(dx*dx) +
-                        (nm1j00_arr(i,j+1,1)+nm1j00_arr(i,j-1,1)-2._rt*nm1j00_arr(i,j,1))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00 + imag)+arr(i-1, j, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dx*dx) +
+                        (arr(i, j+1, nm1j00 + imag)+arr(i, j-1, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dy*dy) : 0._rt;
                 }
                 const Complex lapA = lapR + I*lapI;
-                const Complex an00j00 = n00j00_arr(i,j,0) + I * n00j00_arr(i,j,1);
-                const Complex anp1jp1 = np1jp1_arr(i,j,0) + I * np1jp1_arr(i,j,1);
-                const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
+                const Complex an00j00 = arr(i, j, n00j00 + real) + I * arr(i, j, n00j00 + imag);
+                const Complex anp1jp1 = arr(i, j, np1jp1 + real) + I * arr(i, j, np1jp1 + imag);
+                const Complex anp1jp2 = arr(i, j, np1jp2 + real) + I * arr(i, j, np1jp2 + imag);
                 acoeff_real_arr(i,j,0) = do_avg_rhs ?
                     acoeff_real_scalar + isl_arr(i,j,chi) : acoeff_real_scalar;
 
@@ -395,8 +360,8 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                 if (step == 0) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
-                    const Complex an00jp1 = n00jp1_arr(i,j,0) + I * n00jp1_arr(i,j,1);
-                    const Complex an00jp2 = n00jp2_arr(i,j,0) + I * n00jp2_arr(i,j,1);
+                    const Complex an00jp1 = arr(i, j, n00jp1 + real) + I * arr(i, j, n00jp1 + imag);
+                    const Complex an00jp2 = arr(i, j, n00jp2 + real) + I * arr(i, j, n00jp2 + imag);
                     rhs =
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*exp1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*exp2
@@ -408,9 +373,9 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                         rhs += isl_arr(i,j,chi) * an00j00 * 2._rt;
                     }
                 } else {
-                    const Complex anm1jp1 = nm1jp1_arr(i,j,0) + I * nm1jp1_arr(i,j,1);
-                    const Complex anm1jp2 = nm1jp2_arr(i,j,0) + I * nm1jp2_arr(i,j,1);
-                    const Complex anm1j00 = nm1j00_arr(i,j,0) + I * nm1j00_arr(i,j,1);
+                    const Complex anm1jp1 = arr(i, j, nm1jp1 + real) + I * arr(i, j, nm1jp1 + imag);
+                    const Complex anm1jp2 = arr(i, j, nm1jp2 + real) + I * arr(i, j, nm1jp2 + imag);
+                    const Complex anm1j00 = arr(i, j, nm1j00 + real) + I * arr(i, j, nm1j00 + imag);
                     rhs =
                         + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*exp1
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*exp2
@@ -431,11 +396,11 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
 
     if (!m_mg) {
         m_mg = std::make_unique<hpmg::MultiGrid>(geom.CellSize(0), geom.CellSize(1),
-                                                 np1j00.boxArray()[0]);
+                                                 m_slices.boxArray()[0]);
     }
 
     const int max_iters = 200;
-    m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
+    m_mg->solve2(m_slices[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
                  m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
 }
 
@@ -457,17 +422,7 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
     const amrex::Real c = phc.c;
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
 
-    amrex::MultiFab& nm1j00 = m_slices[WhichLaserSlice::nm1j00];
-    amrex::MultiFab& nm1jp1 = m_slices[WhichLaserSlice::nm1jp1];
-    amrex::MultiFab& nm1jp2 = m_slices[WhichLaserSlice::nm1jp2];
-    amrex::MultiFab& n00j00 = m_slices[WhichLaserSlice::n00j00];
-    amrex::MultiFab& n00jp1 = m_slices[WhichLaserSlice::n00jp1];
-    amrex::MultiFab& n00jp2 = m_slices[WhichLaserSlice::n00jp2];
-    amrex::MultiFab& np1j00 = m_slices[WhichLaserSlice::np1j00];
-    amrex::MultiFab& np1jp1 = m_slices[WhichLaserSlice::np1jp1];
-    amrex::MultiFab& np1jp2 = m_slices[WhichLaserSlice::np1jp2];
-
-    for ( amrex::MFIter mfi(n00j00, DfltMfi); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         const int imin = bx.smallEnd(0);
         const int imax = bx.bigEnd  (0);
@@ -482,15 +437,7 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
         Array3<Complex> rhs_arr = m_rhs.array();
         amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
-        Array3<amrex::Real> nm1j00_arr = nm1j00.array(mfi);
-        Array3<amrex::Real> nm1jp1_arr = nm1jp1.array(mfi);
-        Array3<amrex::Real> nm1jp2_arr = nm1jp2.array(mfi);
-        Array3<amrex::Real> n00j00_arr = n00j00.array(mfi);
-        Array3<amrex::Real> n00jp1_arr = n00jp1.array(mfi);
-        Array3<amrex::Real> n00jp2_arr = n00jp2.array(mfi);
-        Array3<amrex::Real> np1j00_arr = np1j00.array(mfi);
-        Array3<amrex::Real> np1jp1_arr = np1jp1.array(mfi);
-        Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
+        Array3<amrex::Real> arr = m_slices.array(mfi);
 
         constexpr int lev = 0;
         const amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[mfi];
@@ -522,24 +469,25 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
                 amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
             using ReduceTuple = typename decltype(reduce_data)::Type;
             reduce_op.eval(bx, reduce_data,
-                           [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
-                           {
-                               // Even number of transverse cells: average 2 cells
-                               // Odd number of cells: only keep central one
-                               const bool do_keep_x = Nx % 2 == 0 ?
-                                   i == imid-1 || i == imid : i == imid;
-                               const bool do_keep_y = Ny % 2 == 0 ?
-                                   j == jmid-1 || j == jmid : j == jmid;
-                               if ( do_keep_x && do_keep_y ) {
-                                   return {
-                                       n00j00_arr(i,j,0), n00j00_arr(i,j,1),
-                                       n00jp1_arr(i,j,0), n00jp1_arr(i,j,1),
-                                       n00jp2_arr(i,j,0), n00jp2_arr(i,j,1)
-                                   };
-                               } else {
-                                   return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
-                               }
-                           });
+                [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+                {
+                    using namespace WhichLaserSlice;
+                    // Even number of transverse cells: average 2 cells
+                    // Odd number of cells: only keep central one
+                    const bool do_keep_x = Nx % 2 == 0 ?
+                        i == imid-1 || i == imid : i == imid;
+                    const bool do_keep_y = Ny % 2 == 0 ?
+                        j == jmid-1 || j == jmid : j == jmid;
+                    if ( do_keep_x && do_keep_y ) {
+                        return {
+                            arr(i, j, n00j00 + real), arr(i, j, n00j00 + imag),
+                            arr(i, j, n00jp1 + real), arr(i, j, n00jp1 + imag),
+                            arr(i, j, n00jp2 + real), arr(i, j, n00jp2 + imag)
+                        };
+                    } else {
+                        return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
+                    }
+                });
             // ... and taking the argument of the resulting complex number.
             ReduceTuple hv = reduce_data.value(reduce_op);
             tj00 = std::atan2(amrex::get<1>(hv), amrex::get<0>(hv));
@@ -562,33 +510,34 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
             bx, 1,
             [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
             {
+                using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
                 if (step == 0) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (n00j00_arr(i+1,j,0)+n00j00_arr(i-1,j,0)-2._rt*n00j00_arr(i,j,0))/(dx*dx) +
-                        (n00j00_arr(i,j+1,0)+n00j00_arr(i,j-1,0)-2._rt*n00j00_arr(i,j,0))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00 + real)+arr(i-1, j, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dx*dx) +
+                        (arr(i, j+1, n00j00 + real)+arr(i, j-1, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (n00j00_arr(i+1,j,1)+n00j00_arr(i-1,j,1)-2._rt*n00j00_arr(i,j,1))/(dx*dx) +
-                        (n00j00_arr(i,j+1,1)+n00j00_arr(i,j-1,1)-2._rt*n00j00_arr(i,j,1))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00 + imag)+arr(i-1, j, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dx*dx) +
+                        (arr(i, j+1, n00j00 + imag)+arr(i, j-1, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dy*dy) : 0._rt;
                 } else {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (nm1j00_arr(i+1,j,0)+nm1j00_arr(i-1,j,0)-2._rt*nm1j00_arr(i,j,0))/(dx*dx) +
-                        (nm1j00_arr(i,j+1,0)+nm1j00_arr(i,j-1,0)-2._rt*nm1j00_arr(i,j,0))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00 + real)+arr(i-1, j, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dx*dx) +
+                        (arr(i, j+1, nm1j00 + real)+arr(i, j-1, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (nm1j00_arr(i+1,j,1)+nm1j00_arr(i-1,j,1)-2._rt*nm1j00_arr(i,j,1))/(dx*dx) +
-                        (nm1j00_arr(i,j+1,1)+nm1j00_arr(i,j-1,1)-2._rt*nm1j00_arr(i,j,1))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00 + imag)+arr(i-1, j, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dx*dx) +
+                        (arr(i, j+1, nm1j00 + imag)+arr(i, j-1, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dy*dy) : 0._rt;
                 }
                 const Complex lapA = lapR + I*lapI;
-                const Complex an00j00 = n00j00_arr(i,j,0) + I * n00j00_arr(i,j,1);
-                const Complex anp1jp1 = np1jp1_arr(i,j,0) + I * np1jp1_arr(i,j,1);
-                const Complex anp1jp2 = np1jp2_arr(i,j,0) + I * np1jp2_arr(i,j,1);
+                const Complex an00j00 = arr(i, j, n00j00 + real) + I * arr(i, j, n00j00 + imag);
+                const Complex anp1jp1 = arr(i, j, np1jp1 + real) + I * arr(i, j, np1jp1 + imag);
+                const Complex anp1jp2 = arr(i, j, np1jp2 + real) + I * arr(i, j, np1jp2 + imag);
                 Complex rhs;
                 if (step == 0) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
-                    const Complex an00jp1 = n00jp1_arr(i,j,0) + I * n00jp1_arr(i,j,1);
-                    const Complex an00jp2 = n00jp2_arr(i,j,0) + I * n00jp2_arr(i,j,1);
+                    const Complex an00jp1 = arr(i, j, n00jp1 + real) + I * arr(i, j, n00jp1 + imag);
+                    const Complex an00jp2 = arr(i, j, n00jp2 + real) + I * arr(i, j, n00jp2 + imag);
                     rhs =
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*exp1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*exp2
@@ -596,9 +545,9 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
                         - lapA
                         + ( -6._rt/(c*dt*dz) + 4._rt*I*djn/(c*dt) + I*4._rt*k0/(c*dt) ) * an00j00;
                 } else {
-                    const Complex anm1jp1 = nm1jp1_arr(i,j,0) + I * nm1jp1_arr(i,j,1);
-                    const Complex anm1jp2 = nm1jp2_arr(i,j,0) + I * nm1jp2_arr(i,j,1);
-                    const Complex anm1j00 = nm1j00_arr(i,j,0) + I * nm1j00_arr(i,j,1);
+                    const Complex anm1jp1 = arr(i, j, nm1jp1 + real) + I * arr(i, j, nm1jp1 + imag);
+                    const Complex anm1jp2 = arr(i, j, nm1jp2 + real) + I * arr(i, j, nm1jp2 + imag);
+                    const Complex anm1j00 = arr(i, j, nm1j00 + real) + I * arr(i, j, nm1j00 + imag);
                     rhs =
                         + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*exp1
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*exp2
@@ -675,12 +624,13 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
         amrex::ParallelFor(
             grown_bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+                using namespace WhichLaserSlice;
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
-                    np1j00_arr(i,j,0) = sol_arr(i,j,0).real() * inv_numPts;
-                    np1j00_arr(i,j,1) = sol_arr(i,j,0).imag() * inv_numPts;
+                    arr(i, j, np1j00 + real) = sol_arr(i,j,0).real() * inv_numPts;
+                    arr(i, j, np1j00 + imag) = sol_arr(i,j,0).imag() * inv_numPts;
                 } else {
-                    np1j00_arr(i,j,0) = 0._rt;
-                    np1j00_arr(i,j,1) = 0._rt;
+                    arr(i, j, np1j00 + real) = 0._rt;
+                    arr(i, j, np1j00 + imag) = 0._rt;
                 }
             });
     }
@@ -706,15 +656,12 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
     amrex::Real const * const dx = geom.CellSize();
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
-    // Envelope quantities common for all this slice
-    amrex::MultiFab& np1j00 = getSlices(WhichLaserSlice::np1j00);
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(np1j00, DfltMfiTlng); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real> const & np1j00_arr = np1j00.array(mfi);
+        amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
 
         // Initialize a Gaussian laser envelope on slice islice
         for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
@@ -730,14 +677,15 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
+                    using namespace WhichLaserSlice;
                     amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
 
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
-                        np1j00_arr(i,j,k,dcomp  ) = 0._rt;
-                        np1j00_arr(i,j,k,dcomp+1) = 0._rt;
+                        arr(i, j, k, dcomp + np1j00 + real ) = 0._rt;
+                        arr(i, j, k, dcomp + np1j00 + imag ) = 0._rt;
                     }
 
                     // Compute envelope for time step 0
@@ -748,8 +696,8 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument );
-                    np1j00_arr(i,j,k,dcomp  ) += envelope.real();
-                    np1j00_arr(i,j,k,dcomp+1) += envelope.imag();
+                    arr(i, j, k, dcomp + np1j00 + real ) += envelope.real();
+                    arr(i, j, k, dcomp + np1j00 + imag ) += envelope.imag();
                 }
                 );
         }

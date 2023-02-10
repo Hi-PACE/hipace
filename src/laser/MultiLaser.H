@@ -64,10 +64,23 @@ namespace LaserFFT {
 }
 
 /** \brief describes which slice with respect to the currently calculated is used */
-struct WhichLaserSlice {
+namespace WhichLaserSlice {
     // n stands for the time step, j for the longitudinal slice.
     // n00 is time step n, nm1 is n-1 and np1 is n+1. Similar notation for slice j.
-    enum slice { nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
+    enum r_or_i { real=0, imag=1 };
+
+    enum slice {
+        nm1j00=0,
+        nm1jp1=2,
+        nm1jp2=4,
+        n00j00=6,
+        n00jp1=8,
+        n00jp2=10,
+        np1j00=12,
+        np1jp1=14,
+        np1jp2=16,
+        N=18
+    };
 };
 
 class Fields;
@@ -103,12 +116,12 @@ public:
     /** get function for the 2D slices
      * \param[in] islice slice index
      */
-    amrex::MultiFab& getSlices (int islice) {return m_slices[islice]; }
+    amrex::MultiFab& getSlices () {return m_slices; }
 
     /** get function for the 2D slices (const version)
      * \param[in] islice slice index
      */
-    const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
+    const amrex::MultiFab& getSlices () const {return m_slices; }
 
     /** Return the 3D FArrayBox containing the laser envelope, const version */
     const amrex::FArrayBox& getFAB () const {return m_F;}
@@ -200,7 +213,7 @@ private:
     /** 3D laser data. Could be a vector over levels if MR needed for laser */
     amrex::FArrayBox m_F;
     /** Array of N slices required to compute current slice */
-    std::array<amrex::MultiFab, m_nslices> m_slices;
+    amrex::MultiFab m_slices;
     amrex::Real m_MG_tolerance_rel = 1.e-4;
     amrex::Real m_MG_tolerance_abs = 0.;
     int m_MG_verbose = 0;

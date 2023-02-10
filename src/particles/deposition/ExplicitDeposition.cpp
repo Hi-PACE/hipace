@@ -50,7 +50,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
 
         // Construct empty Array4 if there is no laser
         const Array3<const amrex::Real> a_laser_arr = multi_laser.m_use_laser ?
-            multi_laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
+            multi_laser.getSlices().const_array(pti, WhichLaserSlice::n00j00) :
             amrex::Array4<const amrex::Real>();
 
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
