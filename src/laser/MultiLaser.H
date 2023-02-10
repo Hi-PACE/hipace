@@ -217,7 +217,7 @@ private:
     /** path to input openPMD file */
     std::string m_input_file_path;
     /** name of the openPMD species in the file */
-    std::string m_file_envelope_name = laserEnvelope;
+    std::string m_file_envelope_name = "laserEnvelope";
     /** index of the iteration in the openPMD file */
     int m_file_num_iteration = 0;
 
