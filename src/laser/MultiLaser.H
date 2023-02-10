@@ -134,7 +134,16 @@ public:
      */
     void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
 
+    /** \brief Read in a laser forom an openPMD file
+     *
+     * \param[in] domain size of the level 0 domain
+     */
     void GetEnvelopeFromFileHelper (const amrex::Box& domain);
+
+    /** \brief Read in a laser forom an openPMD file
+     *
+     * \param[in] domain size of the level 0 domain
+     */
     template<typename input_type>
     void GetenvelopeFromFile (const amrex::Box& domain);
 
@@ -199,19 +208,18 @@ private:
     bool m_use_phase {true};
     amrex::Box m_slice_box;
 
-
+    /** if the lasers are initialized from openPMD file */
     bool m_laser_from_file = false;
-
+    /** if the input file was already read */
+    bool m_input_file_is_read = false;
     /** full 3D laser data stored on the host */
     amrex::FArrayBox m_F_input_file;
-
-    bool m_input_file_is_read = false;
-
+    /** path to input openPMD file */
     std::string m_input_file_path;
-    std::string m_file_envelope_name;
-    int m_file_num_iteration;
-
-
+    /** name of the openPMD species in the file */
+    std::string m_file_envelope_name = laserEnvelope;
+    /** index of the iteration in the openPMD file */
+    int m_file_num_iteration = 0;
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};
