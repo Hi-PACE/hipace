@@ -134,6 +134,10 @@ public:
      */
     void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
 
+    void GetEnvelopeFromFileHelper (const amrex::Box& domain);
+    template<typename input_type>
+    void GetenvelopeFromFile (const amrex::Box& domain);
+
     /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
      *
      * \param[in] isl slice index, referring to the 3D slice
@@ -194,6 +198,20 @@ private:
     std::string m_solver_type = "multigrid";
     bool m_use_phase {true};
     amrex::Box m_slice_box;
+
+
+    bool m_laser_from_file = false;
+
+    /** full 3D laser data stored on the host */
+    amrex::FArrayBox m_F_input_file;
+
+    bool m_input_file_is_read = false;
+
+    std::string m_input_file_path;
+    std::string m_file_envelope_name;
+    int m_file_num_iteration;
+
+
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};

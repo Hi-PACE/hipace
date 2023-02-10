@@ -38,9 +38,11 @@ MultiLaser::ReadParameters ()
     amrex::Abort("Laser solver not implemented with HIP");
 #endif
 
+    m_laser_from_file = queryWithParser(pp, "input_file", m_input_file_path);
+
     m_nlasers = m_names.size();
     for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]));
+        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_from_file));
     }
 
     getWithParser(pp, "lambda0", m_lambda0);
@@ -57,6 +59,11 @@ MultiLaser::ReadParameters ()
     // Raise warning if user specifies MG parameters without using the MG solver
     if (mg_param_given && (m_solver_type != "multigrid")) {
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
+    }
+
+    if (m_laser_from_file) {
+        queryWithParser(pp, "openPMD_species_name", m_file_envelope_name);
+        queryWithParser(pp, "iteration", m_file_num_iteration);
     }
 }
 
@@ -140,7 +147,16 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     if (step > 0) return;
 
     if (m_laser_from_file) {
-
+        if (!m_input_file_is_read) {
+            m_F_input_file.resize(gm.Domain(), 2, amrex::The_Pinned_Arena());
+            GetEnvelopeFromFileHelper(gm.Domain());
+            m_input_file_is_read = true;
+        }
+        if (m_3d_on_host) {
+            m_F.copy<amrex::RunOn::Host>(m_F_input_file, bx, 0, bx, 0, 2);
+        } else {
+            m_F.copy<amrex::RunOn::Device>(m_F_input_file, bx, 0, bx, 0, 2);
+        }
     } else {
         // In order to use the normal Copy function, we use slice np1j00 as a tmp array
         // to initialize the laser in the loop over slices below.
@@ -166,41 +182,40 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 }
 
 void
-MultiLaser::GetEnvelopeFromFileHelper () {
+MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
+    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
     openPMD::Datatype input_type = openPMD::Datatype::INT;
-    bool species_known;
     {
         // Check what kind of Datatype is used in the Laser file
-        auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
+        auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
 
-        if(!series.iterations.contains(num_iteration)) {
-            amrex::Abort("Could not find iteration " + std::to_string(num_iteration) +
-                                                        " in file " + input_file + "\n");
+        if(!series.iterations.contains(m_file_num_iteration)) {
+            amrex::Abort("Could not find iteration " + std::to_string(m_file_num_iteration) +
+                         " in file " + m_input_file_path + "\n");
         }
 
-        auto iteration = series.iterations[num_iteration];
+        auto iteration = series.iterations[m_file_num_iteration];
 
-        if(!iteration.meshes.contains("laserEnvelope")) {
-            amrex::Abort("Could not find mesh 'laserEnvelope' in file " + input_file + "\n");
+        if(!iteration.meshes.contains(m_file_envelope_name)) {
+            amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
+                + m_input_file_path + "\n");
         }
 
-        auto mesh = series.iterations[num_iteration].meshes["laserEnvelope"];
+        auto mesh = iteration.meshes[m_file_envelope_name];
 
-        if(mesh.contains("r")) {
-            amrex::Abort("Could not find component 'r' in file " + input_file + "\n");
+        if(!mesh.contains(openPMD::RecordComponent::SCALAR)) {
+            amrex::Abort("Could not find component '" +
+                std::string(openPMD::RecordComponent::SCALAR) +
+                "' in file " + m_input_file_path + "\n");
         }
 
-        if(mesh.contains("i")) {
-            amrex::Abort("Could not find component 'r' in file " + input_file + "\n");
-        }
-
-        input_type = mesh["r"].getDatatype();
+        input_type = mesh[openPMD::RecordComponent::SCALAR].getDatatype();
     }
 
     if (input_type == openPMD::Datatype::CFLOAT) {
-        GetEnvolopeFromFile<std::complex<float>>();
+        GetenvelopeFromFile<std::complex<float>>(domain);
     } else if (input_type == openPMD::Datatype::CDOUBLE) {
-        GetEnvolopeFromFile<std::complex<double>>();
+        GetenvelopeFromFile<std::complex<double>>(domain);
     } else {
         amrex::Abort("Unknown Datatype used in Laser input file. Must use double or float\n");
     }
@@ -208,13 +223,13 @@ MultiLaser::GetEnvelopeFromFileHelper () {
 
 template<typename input_type>
 void
-MultiLaser::GetEnvolopeFromFile () {
-    auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
-    auto laser = series[num_iteration].meshes["laserEnvolope"];
+MultiLaser::GetenvelopeFromFile (const amrex::Box& domain) {
+    auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
+    auto laser = series.iterations[m_file_num_iteration].meshes[m_file_envelope_name];
     auto laser_comp = laser[openPMD::RecordComponent::SCALAR];
 
     const std::vector<std::string> axis_labels = laser.axisLabels();
-    assert(axis_labels[0] == "t" && axis_labels[1] == "x" && axis_labels[2] == "y");
+    AMREX_ALWAYS_ASSERT(axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x");
 
     const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
 
@@ -222,20 +237,42 @@ MultiLaser::GetEnvolopeFromFile () {
 
     double unitSI = laser_comp.unitSI();
 
+    //hipace: xyt in Fortran order
+    //lasy: tyx in C order
 
-    amrex::Dim3 arr_begin = {lo_y, lo_x, lo_t};
-    amrex::Dim3 arr_end = {lo_y + extent[0], lo_x + extent[1], lo_t + extent[2]};
-    amrex::Array4<input_type> laser_arr(data.get(), arr_begin, arr_end, 1);
+    if (domain.length(0) != extend[2] ||
+        domain.length(1) != extend[1] ||
+        domain.length(2) != extend[0]) {
+        amrex::Abort("Incompatible box sizes. HiPACE++ (" +
+        std::to_string(domain.length(0)) + ", " + std::to_string(domain.length(1)) + ", "
+        + std::to_string(domain.length(2)) + "), "
+        + "File (" + std::to_string(extend[2]) + ", " + std::to_string(extend[1]) + ", "
+        + std::to_string(extend[0]) + ")\n");
+    }
 
-    amrex::For(box, [&](int i, int j, int k) {
-        input_file_arr(i, j, k, 0) = static_cast<amrex::Real>(
-            laser_arr(j, i, 2*lo_t + extent[2] - k).real() * unitSI;
-        )
-        input_file_arr(i, j, k, 1) = static_cast<amrex::Real>(
-            laser_arr(j, i, 2*lo_t + extent[2] - k).imag() * unitSI;
-        )
-    });
+    amrex::Dim3 arr_begin = {domain.smallEnd(0), domain.smallEnd(1), domain.smallEnd(2)};
+    amrex::Dim3 arr_end = {domain.smallEnd(0) + domain.length(0),
+                           domain.smallEnd(1) + domain.length(1),
+                           domain.smallEnd(2) + domain.length(2)};
+    amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
+    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
+    const int lo_t = domain.smallEnd(2);
+    const int hi_t = domain.bigEnd(2);
 
+    series.flush();
+
+    for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
+        for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
+            for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
+                laser_arr(i, j, k, 0) = static_cast<amrex::Real>(
+                    input_file_arr(i, j, lo_t + hi_t - k).real() * unitSI
+                );
+                laser_arr(i, j, k, 1) = static_cast<amrex::Real>(
+                    input_file_arr(i, j, lo_t + hi_t - k).imag() * unitSI
+                );
+            }
+        }
+    }
 }
 
 
