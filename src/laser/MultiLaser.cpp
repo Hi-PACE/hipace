@@ -399,7 +399,8 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
     }
 
     const int max_iters = 200;
-    m_mg->solve2(m_slices[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
+    amrex::MultiFab np1j00 (m_slices, amrex::make_alias, WhichLaserSlice::np1j00, 2);
+    m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
                  m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
 }
 
