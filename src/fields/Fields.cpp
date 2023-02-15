@@ -72,36 +72,36 @@ Fields::AllocData (
             // rho jx jy jz for all plasmas and beams
 
             int isl = WhichSlice::Next;
-            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+            Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
 
             isl = WhichSlice::This;
             // (Bx, By), (Sy, Sx) and (chi, chi2) adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "chi");
+            Comps[isl].multi_emplace(N_Comps, "chi");
             if (Hipace::m_use_amrex_mlmg) {
-                Comps[isl].multi_emplace(N_Comps[isl], "chi2");
+                Comps[isl].multi_emplace(N_Comps, "chi2");
             }
-            Comps[isl].multi_emplace(N_Comps[isl], "Sy", "Sx", "ExmBy", "EypBx", "Ez",
+            Comps[isl].multi_emplace(N_Comps, "Sy", "Sx", "ExmBy", "EypBx", "Ez",
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
                 // for interpolating boundary conditions to level 1
-                Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bx", "By", "Bz", "Psi", "rho");
+                Comps[isl].multi_emplace(N_Comps, "Ez", "Bx", "By", "Bz", "Psi", "rho");
             }
-            Comps[isl].multi_emplace(N_Comps[isl], "jx_beam", "jy_beam");
+            Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
 
             isl = WhichSlice::Previous2;
             // empty
 
             isl = WhichSlice::RhoIons;
             if (m_any_neutral_background) {
-                Comps[isl].multi_emplace(N_Comps[isl], "rho");
+                Comps[isl].multi_emplace(N_Comps, "rho");
             }
 
             isl = WhichSlice::Salame;
             if (any_salame) {
-                Comps[isl].multi_emplace(N_Comps[isl], "Ez_target", "Ez_no_salame", "Ez",
+                Comps[isl].multi_emplace(N_Comps, "Ez_target", "Ez_no_salame", "Ez",
                     "jx", "jy", "jz_beam", "Bx", "By", "Sy", "Sx", "Sy_back", "Sx_back");
             }
 
@@ -110,30 +110,30 @@ Fields::AllocData (
             // all beams and plasmas share rho jx jy jz
 
             int isl = WhichSlice::Next;
-            Comps[isl].multi_emplace(N_Comps[isl], "jx", "jy");
+            Comps[isl].multi_emplace(N_Comps, "jx", "jy");
 
             isl = WhichSlice::This;
             // Bx and By adjacent for explicit solver
-            Comps[isl].multi_emplace(N_Comps[isl], "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
-                                                   "jx", "jy", "jz", "rho");
+            Comps[isl].multi_emplace(N_Comps, "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
+                                              "jx", "jy", "jz", "rho");
 
             if (Hipace::m_use_laser) {
-                Comps[isl].multi_emplace(N_Comps[isl], "chi");
+                Comps[isl].multi_emplace(N_Comps, "chi");
             }
 
             isl = WhichSlice::Previous1;
             if (mesh_refinement) {
                 // for interpolating boundary conditions to level 1
-                Comps[isl].multi_emplace(N_Comps[isl], "Ez", "Bz", "Psi", "rho");
+                Comps[isl].multi_emplace(N_Comps, "Ez", "Bz", "Psi", "rho");
             }
-            Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By", "jx", "jy");
+            Comps[isl].multi_emplace(N_Comps, "Bx", "By", "jx", "jy");
 
             isl = WhichSlice::Previous2;
-            Comps[isl].multi_emplace(N_Comps[isl], "Bx", "By");
+            Comps[isl].multi_emplace(N_Comps, "Bx", "By");
 
             isl = WhichSlice::RhoIons;
             if (m_any_neutral_background) {
-                Comps[isl].multi_emplace(N_Comps[isl], "rho");
+                Comps[isl].multi_emplace(N_Comps, "rho");
             }
 
             isl = WhichSlice::Salame;
@@ -142,13 +142,11 @@ Fields::AllocData (
     }
 
     // allocate memory for fields
-    for (int islice=0; islice<WhichSlice::N; islice++) {
-        if (N_Comps[islice] != 0) {
-            m_slices[lev][islice].define(
-                slice_ba, slice_dm, N_Comps[islice], m_slices_nguards,
-                amrex::MFInfo().SetArena(amrex::The_Arena()));
-            m_slices[lev][islice].setVal(0._rt, m_slices_nguards);
-        }
+    if (N_Comps != 0) {
+        m_slices[lev].define(
+            slice_ba, slice_dm, N_Comps, m_slices_nguards,
+            amrex::MFInfo().SetArena(amrex::The_Arena()));
+        m_slices[lev].setVal(0._rt, m_slices_nguards);
     }
 
     // The Poisson solver operates on transverse slices only.
@@ -156,13 +154,13 @@ Fields::AllocData (
     // so the FFTPlans are built on a slice.
     if (m_do_dirichlet_poisson){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichlet>(
-            new FFTPoissonSolverDirichlet(getSlices(lev, WhichSlice::This).boxArray(),
-                                          getSlices(lev, WhichSlice::This).DistributionMap(),
+            new FFTPoissonSolverDirichlet(getSlices(lev).boxArray(),
+                                          getSlices(lev).DistributionMap(),
                                           geom[lev])) );
     } else {
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
-            new FFTPoissonSolverPeriodic(getSlices(lev, WhichSlice::This).boxArray(),
-                                         getSlices(lev, WhichSlice::This).DistributionMap(),
+            new FFTPoissonSolverPeriodic(getSlices(lev).boxArray(),
+                                         getSlices(lev).DistributionMap(),
                                          geom[lev]))  );
     }
     int num_threads = 1;
@@ -459,7 +457,7 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
     diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     if (diag_box.isEmpty()) return;
-    auto& slice_mf = m_slices[lev][WhichSlice::This];
+    auto& slice_mf = m_slices[lev];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
     auto& laser_mf = multi_laser.getSlices(WhichLaserSlice::n00j00);
     auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
@@ -550,10 +548,7 @@ Fields::AddRhoIons (const int lev)
 {
     if (!m_any_neutral_background) return;
     HIPACE_PROFILE("Fields::AddRhoIons()");
-
-    amrex::MultiFab::Add(getSlices(lev, WhichSlice::This), getSlices(lev, WhichSlice::RhoIons),
-        Comps[WhichSlice::RhoIons]["rho"], Comps[WhichSlice::This]["rho"],
-        1, m_slices_nguards);
+    add(lev, WhichSlice::This, {"rho"}, WhichSlice::RhoIons, {"rho"});
 }
 
 /** \brief Sets non zero Dirichlet Boundary conditions in RHS which is the source of the Poisson
@@ -707,7 +702,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             amrex::Real offset = 1;
             amrex::Real factor = 1;
             if ((component == "Bx" || component == "By") && Hipace::GetInstance().m_explicit &&
-                (getSlices(lev)[WhichSlice::This].box(0).length(0) % 2 == 0)) {
+                (getSlices(lev).box(0).length(0) % 2 == 0)) {
                 // hpmg has the boundary condition at a different place
                 // compared to the fft poisson solver
                 offset = 0.5;
@@ -785,8 +780,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     PhysConst phys_const = get_phys_const();
 
     // Left-Hand Side for Poisson equation is Psi in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        Comps[WhichSlice::This]["Psi"], 1);
+    amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
     InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
 
@@ -850,8 +844,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     PhysConst phys_const = get_phys_const();
     // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, which_slice), amrex::make_alias,
-                        Comps[which_slice]["Ez"], 1);
+    amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[which_slice]["Ez"], 1);
 
     // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
     // from the slice MF, and store in the staging area of poisson_solver
@@ -928,8 +921,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
     PhysConst phys_const = get_phys_const();
     // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev, WhichSlice::This), amrex::make_alias,
-                        Comps[WhichSlice::This]["Bz"], 1);
+    amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
 
     // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
     // from the slice MF, and store in the staging area of m_poisson_solver
@@ -959,15 +951,15 @@ Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
                                               ( 2.5_rt * predcorr_B_error_tolerance ), 2));
 
     amrex::MultiFab::LinComb(
-        getSlices(lev, WhichSlice::This),
-        1._rt+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["Bx"],
-        -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["Bx"],
+        getSlices(lev),
+        1._rt+mix_factor_init_guess, getSlices(lev), Comps[WhichSlice::Previous1]["Bx"],
+        -mix_factor_init_guess, getSlices(lev), Comps[WhichSlice::Previous2]["Bx"],
         Comps[WhichSlice::This]["Bx"], 1, m_slices_nguards);
 
     amrex::MultiFab::LinComb(
-        getSlices(lev, WhichSlice::This),
-        1._rt+mix_factor_init_guess, getSlices(lev, WhichSlice::Previous1), Comps[WhichSlice::Previous1]["By"],
-        -mix_factor_init_guess, getSlices(lev, WhichSlice::Previous2), Comps[WhichSlice::Previous2]["By"],
+        getSlices(lev),
+        1._rt+mix_factor_init_guess, getSlices(lev), Comps[WhichSlice::Previous1]["By"],
+        -mix_factor_init_guess, getSlices(lev), Comps[WhichSlice::Previous2]["By"],
         Comps[WhichSlice::This]["By"], 1, m_slices_nguards);
 }
 
@@ -1011,8 +1003,8 @@ Fields::MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_pr
 
     /* calculating the mixed B field  B = a*B + (1-a)*B_prev_iter */
     amrex::MultiFab::LinComb(
-        getSlices(lev, WhichSlice::This),
-        1._rt-predcorr_B_mixing_factor, getSlices(lev, WhichSlice::This), field_comp,
+        getSlices(lev),
+        1._rt-predcorr_B_mixing_factor, getSlices(lev), field_comp,
         predcorr_B_mixing_factor, B_prev_iter, 0,
         field_comp, 1, m_slices_nguards);
 

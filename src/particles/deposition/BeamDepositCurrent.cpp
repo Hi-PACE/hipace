@@ -49,7 +49,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     // Extract FabArray for this box (because there is currently no transverse
     // parallelization, the index we want in the slice multifab is always 0.
     // Fix later.
-    amrex::FArrayBox& isl_fab = fields.getSlices(lev, which_slice)[0];
+    amrex::FArrayBox& isl_fab = fields.getSlices(lev)[0];
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
         "jx, jy, jz and rho must be nodal in all directions.");
 

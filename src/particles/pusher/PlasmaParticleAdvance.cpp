@@ -47,7 +47,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
     {
         // Extract field array from FabArray
-        const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[pti];
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
         const int psi_comp = Comps[WhichSlice::This]["Psi"];
         const int ez_comp = Comps[WhichSlice::This]["Ez"];

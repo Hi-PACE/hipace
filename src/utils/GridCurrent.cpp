@@ -48,7 +48,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
 
     // Extract the longitudinal beam current
-    amrex::MultiFab& S = fields.getSlices(lev, WhichSlice::This);
+    amrex::MultiFab& S = fields.getSlices(lev);
 
     const amrex::Real z = plo[2] + islice*dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
