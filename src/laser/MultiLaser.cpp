@@ -45,7 +45,9 @@ MultiLaser::ReadParameters ()
         m_all_lasers.emplace_back(Laser(m_names[i], m_laser_from_file));
     }
 
-    getWithParser(pp, "lambda0", m_lambda0);
+    if (!m_laser_from_file) {
+        getWithParser(pp, "lambda0", m_lambda0);
+    }
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
@@ -196,6 +198,15 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
 
         auto iteration = series.iterations[m_file_num_iteration];
 
+        if (!iteration.containsAttribute("angularFrequency")) {
+            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
+                + std::to_string(m_file_num_iteration) + " in file "
+                + m_input_file_path + "\n");
+        }
+
+        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+            / iteration.getAttribute("angularFrequency").get<double>();
+
         if(!iteration.meshes.contains(m_file_envelope_name)) {
             amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
                 + m_input_file_path + "\n");
@@ -217,7 +228,7 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
     } else if (input_type == openPMD::Datatype::CDOUBLE) {
         GetenvelopeFromFile<std::complex<double>>(domain);
     } else {
-        amrex::Abort("Unknown Datatype used in Laser input file. Must use double or float\n");
+        amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
     }
 }
 
