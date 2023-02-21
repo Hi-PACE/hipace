@@ -293,7 +293,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
         Array3<Complex> rhs_arr = m_rhs.array();
 
         constexpr int lev = 0;
-        const amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[mfi];
+        const amrex::FArrayBox& isl_fab = fields.getSlices(lev)[mfi];
         Array3<amrex::Real const> const isl_arr = isl_fab.array();
         const int chi = Comps[WhichSlice::This]["chi"];
 
@@ -493,7 +493,7 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
         Array3<amrex::Real> np1jp2_arr = np1jp2.array(mfi);
 
         constexpr int lev = 0;
-        const amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[mfi];
+        const amrex::FArrayBox& isl_fab = fields.getSlices(lev)[mfi];
         Array3<amrex::Real const> const isl_arr = isl_fab.array();
         const int chi = Comps[WhichSlice::This]["chi"];
 

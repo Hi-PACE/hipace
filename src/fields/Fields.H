@@ -53,7 +53,7 @@ inline std::array<assert_map, WhichSlice::N> Comps{};
 
 /** \brief number of fields in each slice
  */
-inline std::array<int, WhichSlice::N> N_Comps {0,0,0,0,0,0};
+inline int N_Comps {0};
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
@@ -83,10 +83,6 @@ GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box)
  */
 class Fields
 {
-private:
-    /** Number of slices in temporary slice object */
-    static constexpr int m_nslices = WhichSlice::N;
-
 public:
     /** Constructor */
     explicit Fields (Hipace const* a_hipace);
@@ -106,28 +102,22 @@ public:
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** get function for the 2D slices */
-    amrex::Vector<std::array<amrex::MultiFab, m_nslices>>& getSlices () {return m_slices; }
+    amrex::Vector<amrex::MultiFab>& getSlices () {return m_slices; }
     /** get function for the 2D slices
      * \param[in] lev MR level
      */
-    std::array<amrex::MultiFab, m_nslices>& getSlices (int lev) {return m_slices[lev]; }
-    /** get function for the 2D slices
-     * \param[in] lev MR level
-     * \param[in] islice slice index
-     */
-    amrex::MultiFab& getSlices (int lev, int islice) {return m_slices[lev][islice]; }
+    amrex::MultiFab& getSlices (int lev) {return m_slices[lev]; }
     /** get function for the 2D slices (const version)
      * \param[in] lev MR level
-     * \param[in] islice slice index
      */
-    const amrex::MultiFab& getSlices (int lev, int islice) const {return m_slices[lev][islice]; }
+    const amrex::MultiFab& getSlices (int lev) const {return m_slices[lev]; }
     /** get amrex::MultiFab of a field in a slice
      * \param[in] lev MR level
      * \param[in] islice slice index
      * \param[in] comp component name of field (see Comps)
      */
     amrex::MultiFab getField (const int lev, const int islice, const std::string comp) {
-        return amrex::MultiFab(getSlices(lev, islice), amrex::make_alias, Comps[islice][comp], 1);
+        return amrex::MultiFab(getSlices(lev), amrex::make_alias, Comps[islice][comp], 1);
     }
     /** get amrex::MultiFab of the poisson staging area
      * \param[in] lev MR level
@@ -140,12 +130,10 @@ public:
     /** check whether the fields are initialized correctly */
     void checkInit() {
         for (auto& slices_lev : m_slices) {
-            for (auto& slice : slices_lev) {
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                    slice.nComp() == 0 || slice.nGrowVect() == m_slices_nguards,
-                    "m_slices[lev][islice].nGrowVect() must be equal to m_slices_nguards"
-                    "for initialized slices");
-            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                slices_lev.nComp() == 0 || slices_lev.nGrowVect() == m_slices_nguards,
+                "m_slices[lev].nGrowVect() must be equal to m_slices_nguards"
+                "for initialized slices");
         }
     }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
@@ -317,7 +305,7 @@ public:
     void setVal (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
-        amrex::MultiFab& mfab = getSlices(lev, islice);
+        amrex::MultiFab& mfab = getSlices(lev);
 
         for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
@@ -343,7 +331,7 @@ public:
     void mult (const amrex::Real val, const int lev, const int islice, Args...comps) {
         static constexpr int ncomps = sizeof...(comps);
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
-        amrex::MultiFab& mfab = getSlices(lev, islice);
+        amrex::MultiFab& mfab = getSlices(lev);
 
         for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
@@ -370,18 +358,16 @@ public:
         static constexpr int ncomps = sizeof...(comps);
         const amrex::GpuArray<int, ncomps> c_idx_src = {Comps[islice_src][comps]...};
         const amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
-        const amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
-        amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
+        amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab_dst, DfltMfi); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real const> array_src = mfab_src.const_array(mfi);
-            const Array3<amrex::Real> array_dst = mfab_dst.array(mfi);
+        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+            const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
                 [=] AMREX_GPU_DEVICE(int i, int j, int)
                 {
                     for (int n=0; n<ncomps; ++n) {
-                        array_dst(i,j,c_idx_dst[n]) = array_src(i,j,c_idx_src[n]);
+                        array(i,j,c_idx_dst[n]) = array(i,j,c_idx_src[n]);
                     }
                 });
         }
@@ -406,33 +392,18 @@ public:
             c_idx_src[i] = Comps[islice_src][comps_src[i]];
             c_idx_dst[i] = Comps[islice_dst][comps_dst[i]];
         }
+        amrex::MultiFab& mfab = getSlices(lev);
 
-        const amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
-        amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
-
-        for (amrex::MFIter mfi(mfab_dst, DfltMfi); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array_dst = mfab_dst.array(mfi);
+        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+            const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            if (islice_dst != islice_src) {
-                const Array3<amrex::Real const> array_src = mfab_src.const_array(mfi);
-                amrex::ParallelFor(mfi.growntilebox(),
-                    [=] AMREX_GPU_DEVICE(int i, int j, int)
-                    {
-                        for (int n=0; n<ncomps; ++n) {
-                            array_dst(i,j,c_idx_dst[n]) = array_src(i,j,c_idx_src[n]);
-                        }
-                    });
-            } else {
-                amrex::ParallelFor(mfi.growntilebox(),
-                    [=] AMREX_GPU_DEVICE(int i, int j, int)
-                    {
-                        for (int n=0; n<ncomps; ++n) {
-                            // array_src == array_dst here
-                            array_dst(i,j,c_idx_dst[n]) = array_dst(i,j,c_idx_src[n]);
-                        }
-                    });
-            }
-
+            amrex::ParallelFor(mfi.growntilebox(),
+                [=] AMREX_GPU_DEVICE(int i, int j, int)
+                {
+                    for (int n=0; n<ncomps; ++n) {
+                        array(i,j,c_idx_dst[n]) = array(i,j,c_idx_src[n]);
+                    }
+                });
         }
     }
 
@@ -455,33 +426,18 @@ public:
             c_idx_src[i] = Comps[islice_src][comps_src[i]];
             c_idx_dst[i] = Comps[islice_dst][comps_dst[i]];
         }
+        amrex::MultiFab& mfab = getSlices(lev);
 
-        const amrex::MultiFab& mfab_src = getSlices(lev, islice_src);
-        amrex::MultiFab& mfab_dst = getSlices(lev, islice_dst);
-
-        for (amrex::MFIter mfi(mfab_dst, DfltMfi); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array_dst = mfab_dst.array(mfi);
+        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+            const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            if (islice_dst != islice_src) {
-                const Array3<amrex::Real const> array_src = mfab_src.const_array(mfi);
-                amrex::ParallelFor(mfi.growntilebox(),
-                    [=] AMREX_GPU_DEVICE(int i, int j, int)
-                    {
-                        for (int n=0; n<ncomps; ++n) {
-                            array_dst(i,j,c_idx_dst[n]) += array_src(i,j,c_idx_src[n]);
-                        }
-                    });
-            } else {
-                amrex::ParallelFor(mfi.growntilebox(),
-                    [=] AMREX_GPU_DEVICE(int i, int j, int)
-                    {
-                        for (int n=0; n<ncomps; ++n) {
-                            // array_src == array_dst here
-                            array_dst(i,j,c_idx_dst[n]) += array_dst(i,j,c_idx_src[n]);
-                        }
-                    });
-            }
-
+            amrex::ParallelFor(mfi.growntilebox(),
+                [=] AMREX_GPU_DEVICE(int i, int j, int)
+                {
+                    for (int n=0; n<ncomps; ++n) {
+                        array(i,j,c_idx_dst[n]) += array(i,j,c_idx_src[n]);
+                    }
+                });
         }
     }
 
@@ -496,7 +452,7 @@ public:
     void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice,
                        Args...comps) {
         std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
-        amrex::MultiFab& mfab = getSlices(lev, islice);
+        amrex::MultiFab& mfab = getSlices(lev);
 
         // optimize adjacent fields to one FillBoundary call
         std::sort(c_idx.begin(), c_idx.end());
@@ -524,8 +480,8 @@ public:
     bool m_extended_solve = false;
 
 private:
-    /** Vector over levels, array of 4 slices required to compute current slice */
-    amrex::Vector<std::array<amrex::MultiFab, m_nslices>> m_slices;
+    /** Vector over levels of all required fields to compute current slice */
+    amrex::Vector<amrex::MultiFab> m_slices;
     /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
     bool m_do_dirichlet_poisson = true;
     /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */

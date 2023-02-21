@@ -24,7 +24,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
 
     for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
 
-        amrex::FArrayBox& isl_fab = fields.getSlices(lev, WhichSlice::This)[pti];
+        amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
         const Array3<amrex::Real> arr = isl_fab.array();
 
         const int Sx = Comps[WhichSlice::This]["Sx"];

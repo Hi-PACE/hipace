@@ -132,7 +132,7 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
 {
     using namespace amrex::literals;
 
-    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
+    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
     const amrex::Real dx = hipace->Geom(lev).CellSize(Direction::x);
     const amrex::Real dy = hipace->Geom(lev).CellSize(Direction::y);
@@ -168,8 +168,7 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
 {
     using namespace amrex::literals;
 
-    amrex::MultiFab& salame_slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
-    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::This);
+    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
 #ifdef HIPACE_USE_AB5_PUSH
     const amrex::Real dz = ( 1901._rt / 720._rt ) * hipace->Geom(lev).CellSize(Direction::z);
@@ -177,23 +176,23 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
     const amrex::Real dz = 1.5_rt * hipace->Geom(lev).CellSize(Direction::z);
 #endif
 
-    for ( amrex::MFIter mfi(salame_slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
-        Array3<amrex::Real> const salame_arr = salame_slicemf.array(mfi);
-        Array2<const amrex::Real> const chi_arr = slicemf.const_array(mfi, Comps[WhichSlice::This]["chi"]);
+        Array3<amrex::Real> const arr = slicemf.array(mfi);
 
         const int Bx = Comps[WhichSlice::Salame]["Bx"];
         const int By = Comps[WhichSlice::Salame]["By"];
         const int jx = Comps[WhichSlice::Salame]["jx"];
         const int jy = Comps[WhichSlice::Salame]["jy"];
+        const int chi = Comps[WhichSlice::This]["chi"];
 
         const amrex::Real mu0 = hipace->m_phys_const.mu0;
 
         amrex::ParallelFor(mfi.tilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                salame_arr(i,j,jx) =  dz * chi_arr(i,j) * salame_arr(i,j,By) / mu0;
-                salame_arr(i,j,jy) = -dz * chi_arr(i,j) * salame_arr(i,j,Bx) / mu0;
+                arr(i,j,jx) =  dz * arr(i,j,chi) * arr(i,j,By) / mu0;
+                arr(i,j,jy) = -dz * arr(i,j,chi) * arr(i,j,Bx) / mu0;
             });
     }
 }
@@ -216,7 +215,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
         for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
         {
-            const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev, WhichSlice::Salame)[pti];
+            const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev)[pti];
             Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
             const int bx_comp = Comps[WhichSlice::Salame]["Bx"];
             const int by_comp = Comps[WhichSlice::Salame]["By"];
@@ -294,7 +293,7 @@ SalameGetW (Hipace* hipace, const int lev, const int islice)
     amrex::Real sum_Ez_only_salame = 0._rt;
     amrex::Real sum_jz = 0._rt;
 
-    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev, WhichSlice::Salame);
+    amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
