@@ -102,6 +102,11 @@ private:
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
     bool m_initialized = false; /**< if this object is fully initialized */
     std::vector<bool> m_has_field; /**< if there is field output to write */
+    bool m_use_custom_size = false; /**< if a user defined diagnostics size should be used*/
+    /** 3D array with lower ends of the diagnostics grid */
+    amrex::Array<amrex::Real, 3> m_diag_lo {0., 0., 0.};
+    /** 3D array with upper ends of the diagnostics grid */
+    amrex::Array<amrex::Real, 3> m_diag_hi {0., 0., 0.};
 };
 
 #endif // DIAGNOSTIC_H_

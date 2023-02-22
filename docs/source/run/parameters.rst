@@ -620,3 +620,9 @@ Diagnostic parameters
     ``none`` or a subset of ``beams.names``.
     **Note:** The option ``none`` only suppressed the output of the beam data. To suppress any
     output, please use ``hipace.output_period = -1``.
+
+* ``diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
+    Lower limit for the diagnostic grid.
+
+* ``diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
+    Upper limit for the diagnostic grid.
