@@ -184,6 +184,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     }
 
     if (m_insitu_period > 0) {
+#ifdef HIPACE_USE_OPENPMD
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
+            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            "Must choose a different insitu file prefix compared to the full diagnostics");
+#endif
         // Allocate memory for in-situ diagnostics
         m_nslices = geom.Domain().length(2);
         m_insitu_rdata.resize(m_nslices*m_insitu_nrp, 0.);
