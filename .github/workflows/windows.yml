@@ -25,8 +25,18 @@ jobs:
         restore-keys: |
           ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-
           ccache-windows-winmsvc-
+    - name: install dependencies
+      run: |
+        Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar
+        cmake -S fftw-3.3.10 -B build_fftw -DCMAKE_BUILD_TYPE=Debug
+        if(!$?) { Exit $LASTEXITCODE }
+        cmake --build build_fftw --config Debug --target install --parallel 2
+        if(!$?) { Exit $LASTEXITCODE }
     - name: Build & Install
       run: |
+        $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
         cmake -S . -B build               `
               -DCMAKE_BUILD_TYPE=Debug    `
               -DCMAKE_VERBOSE_MAKEFILE=ON `
@@ -36,7 +46,7 @@ jobs:
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
 
-        ctest --test-dir build --output-on-failure
+        ctest --test-dir build --build-config Debug --output-on-failure
         if(!$?) { Exit $LASTEXITCODE }
 
   build_win_clang:
@@ -58,10 +68,30 @@ jobs:
           ccache-windows-winclang-${{ hashFiles('.github/workflows/windows.yml') }}-
           ccache-windows-winclang-
     - uses: seanmiddleditch/gha-setup-ninja@master
+    - name: download dependencies
+      run: |
+        Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar
+    - name: install dependencies
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+        cmake -S fftw-3.3.10  ^
+              -B build_fftw   ^
+              -G "Ninja"      ^
+              -DCMAKE_C_COMPILER=clang-cl   ^
+              -DCMAKE_CXX_COMPILER=clang-cl ^
+              -DCMAKE_BUILD_TYPE=Release
+        if errorlevel 1 exit 1
+        cmake --build build_fftw --config Release --target install --parallel 2
+        if errorlevel 1 exit 1
     - name: Build & Install
       shell: cmd
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+
+        $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
               -G "Ninja"      ^
               -DCMAKE_C_COMPILER=clang-cl   ^
@@ -74,5 +104,5 @@ jobs:
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
 
-        ctest --test-dir build --output-on-failure
+        ctest --test-dir build --build-config Release --output-on-failure
         if errorlevel 1 exit 1
