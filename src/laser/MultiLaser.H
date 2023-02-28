@@ -67,19 +67,26 @@ namespace LaserFFT {
 namespace WhichLaserSlice {
     // n stands for the time step, j for the longitudinal slice.
     // n00 is time step n, nm1 is n-1 and np1 is n+1. Similar notation for slice j.
-    enum r_or_i { real=0, imag=1 };
-
     enum slice {
-        nm1j00=0,
-        nm1jp1=2,
-        nm1jp2=4,
-        n00j00=6,
-        n00jp1=8,
-        n00jp2=10,
-        np1j00=12,
-        np1jp1=14,
-        np1jp2=16,
-        N=18
+        nm1j00_r,
+        nm1j00_i,
+        nm1jp1_r,
+        nm1jp1_i,
+        nm1jp2_r,
+        nm1jp2_i,
+        n00j00_r,
+        n00j00_i,
+        n00jp1_r,
+        n00jp1_i,
+        n00jp2_r,
+        n00jp2_i,
+        np1j00_r,
+        np1j00_i,
+        np1jp1_r,
+        np1jp1_i,
+        np1jp2_r,
+        np1jp2_i,
+        N
     };
 };
 

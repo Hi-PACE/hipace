@@ -83,7 +83,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         // Extract laser array from MultiFab
         const Array3<const amrex::Real> a_laser_arr =
-            multi_laser.m_use_laser ? a_mf[pti].const_array(WhichLaserSlice::n00j00)
+            multi_laser.m_use_laser ? a_mf[pti].const_array(WhichLaserSlice::n00j00_r)
                                     : amrex::Array4<const amrex::Real>();
 
         // Extract box properties

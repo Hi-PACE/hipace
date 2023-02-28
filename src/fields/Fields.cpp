@@ -501,9 +501,9 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 const amrex::Real x = i * dx + poff_diag_x;
                 const amrex::Real y = j * dy + poff_diag_y;
                 diag_array(i,j,k,ncomp  ) += rel_z_data[k-k_min] *
-                    laser_array(x,y,WhichLaserSlice::n00j00 + WhichLaserSlice::real);
+                    laser_array(x,y,WhichLaserSlice::n00j00_r);
                 diag_array(i,j,k,ncomp+1) += rel_z_data[k-k_min] *
-                    laser_array(x,y,WhichLaserSlice::n00j00 + WhichLaserSlice::imag);
+                    laser_array(x,y,WhichLaserSlice::n00j00_i);
             });
     }
 }

@@ -61,7 +61,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         // Extract field array from MultiFab
         Array3<const amrex::Real> const& a_arr = use_laser ?
-            a_mf[pti].const_array(WhichLaserSlice::n00j00) : amrex::Array4<const amrex::Real>();
+            a_mf[pti].const_array(WhichLaserSlice::n00j00_r) : amrex::Array4<const amrex::Real>();
 
         const amrex::Real dx_inv = 1._rt/dx[0];
         const amrex::Real dy_inv = 1._rt/dx[1];

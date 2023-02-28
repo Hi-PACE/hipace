@@ -142,7 +142,7 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     // (except for the head box).
     amrex::FArrayBox store_np1j00;
     store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
-    store_np1j00.copy<amrex::RunOn::Device>(m_slices[0], WhichLaserSlice::np1j00, 0, 2);
+    store_np1j00.copy<amrex::RunOn::Device>(m_slices[0], WhichLaserSlice::np1j00_r, 0, 2);
 
     // Loop over slices
     for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -154,7 +154,7 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
     }
 
     // Reset np1j00 to its original value.
-    m_slices[0].copy<amrex::RunOn::Device>(store_np1j00, 0, WhichLaserSlice::np1j00, 2);
+    m_slices[0].copy<amrex::RunOn::Device>(store_np1j00, 0, WhichLaserSlice::np1j00_r, 2);
 }
 
 void
@@ -179,21 +179,21 @@ MultiLaser::Copy (int isl, bool to3d)
             // 2 components for complex numbers.
             if (to3d){
                 // this slice into old host
-                host_arr(i,j,isl,n+2) = arr(i, j, n00j00 + n);
+                host_arr(i,j,isl,n+2) = arr(i, j, n00j00_r + n);
                 // next time slice into new host
-                host_arr(i,j,isl,n  ) = arr(i, j, np1j00 + n);
+                host_arr(i,j,isl,n  ) = arr(i, j, np1j00_r + n);
             } else {
                 // Shift slices of step n-1, and get current slice from 3D array
-                arr(i, j, nm1jp2 + n) = arr(i, j, nm1jp1 + n);
-                arr(i, j, nm1jp1 + n) = arr(i, j, nm1j00 + n);
-                arr(i, j, nm1j00 + n) = host_arr(i,j,isl,n+2);
+                arr(i, j, nm1jp2_r + n) = arr(i, j, nm1jp1_r + n);
+                arr(i, j, nm1jp1_r + n) = arr(i, j, nm1j00_r + n);
+                arr(i, j, nm1j00_r + n) = host_arr(i,j,isl,n+2);
                 // Shift slices of step n, and get current slice from 3D array
-                arr(i, j, n00jp2 + n) = arr(i, j, n00jp1 + n);
-                arr(i, j, n00jp1 + n) = arr(i, j, n00j00 + n);
-                arr(i, j, n00j00 + n) = host_arr(i,j,isl,n);
+                arr(i, j, n00jp2_r + n) = arr(i, j, n00jp1_r + n);
+                arr(i, j, n00jp1_r + n) = arr(i, j, n00j00_r + n);
+                arr(i, j, n00j00_r + n) = host_arr(i,j,isl,n);
                 // Shift slices of step n+1. Current slice will be computed
-                arr(i, j, np1jp2 + n) = arr(i, j, np1jp1 + n);
-                arr(i, j, np1jp1 + n) = arr(i, j, np1j00 + n);
+                arr(i, j, np1jp2_r + n) = arr(i, j, np1jp1_r + n);
+                arr(i, j, np1jp1_r + n) = arr(i, j, np1j00_r + n);
             }
         });
     }
@@ -295,9 +295,9 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                         j == jmid-1 || j == jmid : j == jmid;
                     if ( do_keep_x && do_keep_y ) {
                         return {
-                            arr(i, j, n00j00 + real), arr(i, j, n00j00 + imag),
-                            arr(i, j, n00jp1 + real), arr(i, j, n00jp1 + imag),
-                            arr(i, j, n00jp2 + real), arr(i, j, n00jp2 + imag)
+                            arr(i, j, n00j00_r), arr(i, j, n00j00_i),
+                            arr(i, j, n00jp1_r), arr(i, j, n00jp1_i),
+                            arr(i, j, n00jp2_r), arr(i, j, n00jp2_i)
                         };
                     } else {
                         return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
@@ -335,23 +335,23 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                 amrex::Real lapR, lapI;
                 if (step == 0) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, n00j00 + real)+arr(i-1, j, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dx*dx) +
-                        (arr(i, j+1, n00j00 + real)+arr(i, j-1, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
+                        (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, n00j00 + imag)+arr(i-1, j, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dx*dx) +
-                        (arr(i, j+1, n00j00 + imag)+arr(i, j-1, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00_i)+arr(i-1, j, n00j00_i)-2._rt*arr(i, j, n00j00_i))/(dx*dx) +
+                        (arr(i, j+1, n00j00_i)+arr(i, j-1, n00j00_i)-2._rt*arr(i, j, n00j00_i))/(dy*dy) : 0._rt;
                 } else {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, nm1j00 + real)+arr(i-1, j, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dx*dx) +
-                        (arr(i, j+1, nm1j00 + real)+arr(i, j-1, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00_r)+arr(i-1, j, nm1j00_r)-2._rt*arr(i, j, nm1j00_r))/(dx*dx) +
+                        (arr(i, j+1, nm1j00_r)+arr(i, j-1, nm1j00_r)-2._rt*arr(i, j, nm1j00_r))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, nm1j00 + imag)+arr(i-1, j, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dx*dx) +
-                        (arr(i, j+1, nm1j00 + imag)+arr(i, j-1, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00_i)+arr(i-1, j, nm1j00_i)-2._rt*arr(i, j, nm1j00_i))/(dx*dx) +
+                        (arr(i, j+1, nm1j00_i)+arr(i, j-1, nm1j00_i)-2._rt*arr(i, j, nm1j00_i))/(dy*dy) : 0._rt;
                 }
                 const Complex lapA = lapR + I*lapI;
-                const Complex an00j00 = arr(i, j, n00j00 + real) + I * arr(i, j, n00j00 + imag);
-                const Complex anp1jp1 = arr(i, j, np1jp1 + real) + I * arr(i, j, np1jp1 + imag);
-                const Complex anp1jp2 = arr(i, j, np1jp2 + real) + I * arr(i, j, np1jp2 + imag);
+                const Complex an00j00 = arr(i, j, n00j00_r) + I * arr(i, j, n00j00_i);
+                const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
+                const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 acoeff_real_arr(i,j,0) = do_avg_rhs ?
                     acoeff_real_scalar + isl_arr(i,j,chi) : acoeff_real_scalar;
 
@@ -359,8 +359,8 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                 if (step == 0) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
-                    const Complex an00jp1 = arr(i, j, n00jp1 + real) + I * arr(i, j, n00jp1 + imag);
-                    const Complex an00jp2 = arr(i, j, n00jp2 + real) + I * arr(i, j, n00jp2 + imag);
+                    const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
+                    const Complex an00jp2 = arr(i, j, n00jp2_r) + I * arr(i, j, n00jp2_i);
                     rhs =
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*exp1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*exp2
@@ -372,9 +372,9 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
                         rhs += isl_arr(i,j,chi) * an00j00 * 2._rt;
                     }
                 } else {
-                    const Complex anm1jp1 = arr(i, j, nm1jp1 + real) + I * arr(i, j, nm1jp1 + imag);
-                    const Complex anm1jp2 = arr(i, j, nm1jp2 + real) + I * arr(i, j, nm1jp2 + imag);
-                    const Complex anm1j00 = arr(i, j, nm1j00 + real) + I * arr(i, j, nm1j00 + imag);
+                    const Complex anm1jp1 = arr(i, j, nm1jp1_r) + I * arr(i, j, nm1jp1_i);
+                    const Complex anm1jp2 = arr(i, j, nm1jp2_r) + I * arr(i, j, nm1jp2_i);
+                    const Complex anm1j00 = arr(i, j, nm1j00_r) + I * arr(i, j, nm1j00_i);
                     rhs =
                         + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*exp1
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*exp2
@@ -399,7 +399,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, a
     }
 
     const int max_iters = 200;
-    amrex::MultiFab np1j00 (m_slices, amrex::make_alias, WhichLaserSlice::np1j00, 2);
+    amrex::MultiFab np1j00 (m_slices, amrex::make_alias, WhichLaserSlice::np1j00_r, 2);
     m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
                  m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
 }
@@ -480,9 +480,9 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
                         j == jmid-1 || j == jmid : j == jmid;
                     if ( do_keep_x && do_keep_y ) {
                         return {
-                            arr(i, j, n00j00 + real), arr(i, j, n00j00 + imag),
-                            arr(i, j, n00jp1 + real), arr(i, j, n00jp1 + imag),
-                            arr(i, j, n00jp2 + real), arr(i, j, n00jp2 + imag)
+                            arr(i, j, n00j00_r), arr(i, j, n00j00_i),
+                            arr(i, j, n00jp1_r), arr(i, j, n00jp1_i),
+                            arr(i, j, n00jp2_r), arr(i, j, n00jp2_i)
                         };
                     } else {
                         return {0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt};
@@ -515,29 +515,29 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
                 amrex::Real lapR, lapI;
                 if (step == 0) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, n00j00 + real)+arr(i-1, j, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dx*dx) +
-                        (arr(i, j+1, n00j00 + real)+arr(i, j-1, n00j00 + real)-2._rt*arr(i, j, n00j00 + real))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
+                        (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, n00j00 + imag)+arr(i-1, j, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dx*dx) +
-                        (arr(i, j+1, n00j00 + imag)+arr(i, j-1, n00j00 + imag)-2._rt*arr(i, j, n00j00 + imag))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, n00j00_i)+arr(i-1, j, n00j00_i)-2._rt*arr(i, j, n00j00_i))/(dx*dx) +
+                        (arr(i, j+1, n00j00_i)+arr(i, j-1, n00j00_i)-2._rt*arr(i, j, n00j00_i))/(dy*dy) : 0._rt;
                 } else {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, nm1j00 + real)+arr(i-1, j, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dx*dx) +
-                        (arr(i, j+1, nm1j00 + real)+arr(i, j-1, nm1j00 + real)-2._rt*arr(i, j, nm1j00 + real))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00_r)+arr(i-1, j, nm1j00_r)-2._rt*arr(i, j, nm1j00_r))/(dx*dx) +
+                        (arr(i, j+1, nm1j00_r)+arr(i, j-1, nm1j00_r)-2._rt*arr(i, j, nm1j00_r))/(dy*dy) : 0._rt;
                     lapI = i>imin && i<imax && j>jmin && j<jmax ?
-                        (arr(i+1, j, nm1j00 + imag)+arr(i-1, j, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dx*dx) +
-                        (arr(i, j+1, nm1j00 + imag)+arr(i, j-1, nm1j00 + imag)-2._rt*arr(i, j, nm1j00 + imag))/(dy*dy) : 0._rt;
+                        (arr(i+1, j, nm1j00_i)+arr(i-1, j, nm1j00_i)-2._rt*arr(i, j, nm1j00_i))/(dx*dx) +
+                        (arr(i, j+1, nm1j00_i)+arr(i, j-1, nm1j00_i)-2._rt*arr(i, j, nm1j00_i))/(dy*dy) : 0._rt;
                 }
                 const Complex lapA = lapR + I*lapI;
-                const Complex an00j00 = arr(i, j, n00j00 + real) + I * arr(i, j, n00j00 + imag);
-                const Complex anp1jp1 = arr(i, j, np1jp1 + real) + I * arr(i, j, np1jp1 + imag);
-                const Complex anp1jp2 = arr(i, j, np1jp2 + real) + I * arr(i, j, np1jp2 + imag);
+                const Complex an00j00 = arr(i, j, n00j00_r) + I * arr(i, j, n00j00_i);
+                const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
+                const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 Complex rhs;
                 if (step == 0) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
-                    const Complex an00jp1 = arr(i, j, n00jp1 + real) + I * arr(i, j, n00jp1 + imag);
-                    const Complex an00jp2 = arr(i, j, n00jp2 + real) + I * arr(i, j, n00jp2 + imag);
+                    const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
+                    const Complex an00jp2 = arr(i, j, n00jp2_r) + I * arr(i, j, n00jp2_i);
                     rhs =
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*exp1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*exp2
@@ -545,9 +545,9 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
                         - lapA
                         + ( -6._rt/(c*dt*dz) + 4._rt*I*djn/(c*dt) + I*4._rt*k0/(c*dt) ) * an00j00;
                 } else {
-                    const Complex anm1jp1 = arr(i, j, nm1jp1 + real) + I * arr(i, j, nm1jp1 + imag);
-                    const Complex anm1jp2 = arr(i, j, nm1jp2 + real) + I * arr(i, j, nm1jp2 + imag);
-                    const Complex anm1j00 = arr(i, j, nm1j00 + real) + I * arr(i, j, nm1j00 + imag);
+                    const Complex anm1jp1 = arr(i, j, nm1jp1_r) + I * arr(i, j, nm1jp1_i);
+                    const Complex anm1jp2 = arr(i, j, nm1jp2_r) + I * arr(i, j, nm1jp2_i);
+                    const Complex anm1j00 = arr(i, j, nm1j00_r) + I * arr(i, j, nm1j00_i);
                     rhs =
                         + 4._rt/(c*dt*dz)*(-anp1jp1+anm1jp1)*exp1
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*exp2
@@ -626,11 +626,11 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, 
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 using namespace WhichLaserSlice;
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
-                    arr(i, j, np1j00 + real) = sol_arr(i,j,0).real() * inv_numPts;
-                    arr(i, j, np1j00 + imag) = sol_arr(i,j,0).imag() * inv_numPts;
+                    arr(i, j, np1j00_r) = sol_arr(i,j,0).real() * inv_numPts;
+                    arr(i, j, np1j00_i) = sol_arr(i,j,0).imag() * inv_numPts;
                 } else {
-                    arr(i, j, np1j00 + real) = 0._rt;
-                    arr(i, j, np1j00 + imag) = 0._rt;
+                    arr(i, j, np1j00_r) = 0._rt;
+                    arr(i, j, np1j00_i) = 0._rt;
                 }
             });
     }
@@ -684,8 +684,8 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
 
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
-                        arr(i, j, k, dcomp + np1j00 + real ) = 0._rt;
-                        arr(i, j, k, dcomp + np1j00 + imag ) = 0._rt;
+                        arr(i, j, k, dcomp + np1j00_r ) = 0._rt;
+                        arr(i, j, k, dcomp + np1j00_i ) = 0._rt;
                     }
 
                     // Compute envelope for time step 0
@@ -696,8 +696,8 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice)
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument );
-                    arr(i, j, k, dcomp + np1j00 + real ) += envelope.real();
-                    arr(i, j, k, dcomp + np1j00 + imag ) += envelope.imag();
+                    arr(i, j, k, dcomp + np1j00_r ) += envelope.real();
+                    arr(i, j, k, dcomp + np1j00_i ) += envelope.imag();
                 }
                 );
         }
