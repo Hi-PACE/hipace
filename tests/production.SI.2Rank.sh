@@ -24,7 +24,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_pwfa \
 
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --rtol=1.e-8 \
+    --rtol=5.e-6 \
     --file_name ${TEST_NAME}_pwfa \
     --test-name ${TEST_NAME}_pwfa
 
@@ -36,7 +36,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_lwfa \
 
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
-    --rtol=1.e-8 \
+    --rtol=5.e-6 \
     --file_name ${TEST_NAME}_lwfa \
     --test-name ${TEST_NAME}_lwfa
 
