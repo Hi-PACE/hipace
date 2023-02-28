@@ -134,18 +134,18 @@ public:
      */
     void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
 
-    /** \brief Read in a laser forom an openPMD file
+    /** \brief Read in a laser from an openPMD file
      *
      * \param[in] domain size of the level 0 domain
      */
     void GetEnvelopeFromFileHelper (const amrex::Box& domain);
 
-    /** \brief Read in a laser forom an openPMD file
+    /** \brief Read in a laser from an openPMD file
      *
      * \param[in] domain size of the level 0 domain
      */
     template<typename input_type>
-    void GetenvelopeFromFile (const amrex::Box& domain);
+    void GetEnvelopeFromFile (const amrex::Box& domain);
 
     /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
      *

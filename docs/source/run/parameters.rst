@@ -568,8 +568,8 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     Path to an openPMD file containing a laser envelope. If this parameter is set then the file will
     be used to initialize all lasers instead of using a gaussian profile.
 
-* ``lasers.openPMD_species_name`` (`string`) optional (default `laserEnvelope`)
-    Name of the laser species inside the openPMD file to be read in.
+* ``lasers.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
+    Name of the laser envelope field inside the openPMD file to be read in.
 
 * ``lasers.iteration`` (`int`) optional (default `0`)
     Iteration of the openPMD file to be read in.

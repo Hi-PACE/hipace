@@ -64,7 +64,7 @@ MultiLaser::ReadParameters ()
     }
 
     if (m_laser_from_file) {
-        queryWithParser(pp, "openPMD_species_name", m_file_envelope_name);
+        queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
     }
 }
@@ -224,9 +224,9 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
     }
 
     if (input_type == openPMD::Datatype::CFLOAT) {
-        GetenvelopeFromFile<std::complex<float>>(domain);
+        GetEnvelopeFromFile<std::complex<float>>(domain);
     } else if (input_type == openPMD::Datatype::CDOUBLE) {
-        GetenvelopeFromFile<std::complex<double>>(domain);
+        GetEnvelopeFromFile<std::complex<double>>(domain);
     } else {
         amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
     }
@@ -234,7 +234,7 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
 
 template<typename input_type>
 void
-MultiLaser::GetenvelopeFromFile (const amrex::Box& domain) {
+MultiLaser::GetEnvelopeFromFile (const amrex::Box& domain) {
     auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
     auto laser = series.iterations[m_file_num_iteration].meshes[m_file_envelope_name];
     auto laser_comp = laser[openPMD::RecordComponent::SCALAR];
