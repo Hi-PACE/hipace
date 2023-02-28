@@ -11,7 +11,7 @@ function(find_openpmd)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
         # see https://openpmd-api.readthedocs.io/en/0.14.2/dev/buildoptions.html
-        set(openPMD_USE_MPI         ${HiPACE_MPI} CACHE INTERNAL "")
+        set(openPMD_USE_MPI         OFF           CACHE INTERNAL "")
         set(openPMD_USE_PYTHON      OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_CLI_TOOLS OFF           CACHE INTERNAL "")
         set(openPMD_BUILD_EXAMPLES  OFF           CACHE INTERNAL "")
