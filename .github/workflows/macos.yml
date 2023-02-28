@@ -71,4 +71,5 @@ jobs:
 
     - name: test ImpactX
       run: |
-        ctest --test-dir build --output-on-failure
+        ctest --test-dir build_dp --output-on-failure
+        ctest --test-dir build_sp --output-on-failure
