@@ -80,8 +80,6 @@ jobs:
         cmake -S fftw-3.3.10  ^
               -B build_fftw   ^
               -G "Ninja"      ^
-              -DCMAKE_C_COMPILER=clang-cl   ^
-              -DCMAKE_CXX_COMPILER=clang-cl ^
               -DCMAKE_BUILD_TYPE=Release
         if errorlevel 1 exit 1
         cmake --build build_fftw --config Release --target install --parallel 2
