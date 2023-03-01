@@ -38,12 +38,16 @@ MultiLaser::ReadParameters ()
     amrex::Abort("Laser solver not implemented with HIP");
 #endif
 
+    m_laser_from_file = queryWithParser(pp, "input_file", m_input_file_path);
+
     m_nlasers = m_names.size();
     for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]));
+        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_from_file));
     }
 
-    getWithParser(pp, "lambda0", m_lambda0);
+    if (!m_laser_from_file) {
+        getWithParser(pp, "lambda0", m_lambda0);
+    }
     queryWithParser(pp, "3d_on_host", m_3d_on_host);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
@@ -57,6 +61,11 @@ MultiLaser::ReadParameters ()
     // Raise warning if user specifies MG parameters without using the MG solver
     if (mg_param_given && (m_solver_type != "multigrid")) {
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
+    }
+
+    if (m_laser_from_file) {
+        queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
+        queryWithParser(pp, "iteration", m_file_num_iteration);
     }
 }
 
@@ -139,27 +148,144 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
     if (step > 0) return;
 
-    // In order to use the normal Copy function, we use slice np1j00 as a tmp array
-    // to initialize the laser in the loop over slices below.
-    // We need to keep the value in np1j00, as it is shifted to np1jp1 and used to compute
-    // the following slices. This is relevant for the first slices at step 0 of every box
-    // (except for the head box).
-    amrex::FArrayBox store_np1j00;
-    store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
-    store_np1j00.copy<amrex::RunOn::Device>(m_slices[WhichLaserSlice::np1j00][0]);
+    if (m_laser_from_file) {
+        if (!m_input_file_is_read) {
+            m_F_input_file.resize(gm.Domain(), 2, amrex::The_Pinned_Arena());
+            GetEnvelopeFromFileHelper(gm.Domain());
+            m_input_file_is_read = true;
+        }
+        if (m_3d_on_host) {
+            m_F.copy<amrex::RunOn::Host>(m_F_input_file, bx, 0, bx, 0, 2);
+        } else {
+            m_F.copy<amrex::RunOn::Device>(m_F_input_file, bx, 0, bx, 0, 2);
+        }
+    } else {
+        // In order to use the normal Copy function, we use slice np1j00 as a tmp array
+        // to initialize the laser in the loop over slices below.
+        // We need to keep the value in np1j00, as it is shifted to np1jp1 and used to compute
+        // the following slices. This is relevant for the first slices at step 0 of every box
+        // (except for the head box).
+        amrex::FArrayBox store_np1j00;
+        store_np1j00.resize(m_slice_box, 2, amrex::The_Arena());
+        store_np1j00.copy<amrex::RunOn::Device>(m_slices[WhichLaserSlice::np1j00][0]);
 
-    // Loop over slices
-    for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-        // Compute initial field on the current (device) slice np1j00
-        InitLaserSlice(gm, isl);
-        // Copy: (device) slice np1j00 to the right location
-        // in the (host) 3D array of the current time.
-        Copy(isl, true);
+        // Loop over slices
+        for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
+            // Compute initial field on the current (device) slice np1j00
+            InitLaserSlice(gm, isl);
+            // Copy: (device) slice np1j00 to the right location
+            // in the (host) 3D array of the current time.
+            Copy(isl, true);
+        }
+
+        // Reset np1j00 to its original value.
+        m_slices[WhichLaserSlice::np1j00][0].copy<amrex::RunOn::Device>(store_np1j00);
+    }
+}
+
+void
+MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
+    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
+    openPMD::Datatype input_type = openPMD::Datatype::INT;
+    {
+        // Check what kind of Datatype is used in the Laser file
+        auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
+
+        if(!series.iterations.contains(m_file_num_iteration)) {
+            amrex::Abort("Could not find iteration " + std::to_string(m_file_num_iteration) +
+                         " in file " + m_input_file_path + "\n");
+        }
+
+        auto iteration = series.iterations[m_file_num_iteration];
+
+        if (!iteration.containsAttribute("angularFrequency")) {
+            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
+                + std::to_string(m_file_num_iteration) + " in file "
+                + m_input_file_path + "\n");
+        }
+
+        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+            / iteration.getAttribute("angularFrequency").get<double>();
+
+        if(!iteration.meshes.contains(m_file_envelope_name)) {
+            amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
+                + m_input_file_path + "\n");
+        }
+
+        auto mesh = iteration.meshes[m_file_envelope_name];
+
+        if(!mesh.contains(openPMD::RecordComponent::SCALAR)) {
+            amrex::Abort("Could not find component '" +
+                std::string(openPMD::RecordComponent::SCALAR) +
+                "' in file " + m_input_file_path + "\n");
+        }
+
+        input_type = mesh[openPMD::RecordComponent::SCALAR].getDatatype();
     }
 
-    // Reset np1j00 to its original value.
-    m_slices[WhichLaserSlice::np1j00][0].copy<amrex::RunOn::Device>(store_np1j00);
+    if (input_type == openPMD::Datatype::CFLOAT) {
+        GetEnvelopeFromFile<std::complex<float>>(domain);
+    } else if (input_type == openPMD::Datatype::CDOUBLE) {
+        GetEnvelopeFromFile<std::complex<double>>(domain);
+    } else {
+        amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
+    }
 }
+
+template<typename input_type>
+void
+MultiLaser::GetEnvelopeFromFile (const amrex::Box& domain) {
+    auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
+    auto laser = series.iterations[m_file_num_iteration].meshes[m_file_envelope_name];
+    auto laser_comp = laser[openPMD::RecordComponent::SCALAR];
+
+    const std::vector<std::string> axis_labels = laser.axisLabels();
+    AMREX_ALWAYS_ASSERT(axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x");
+
+    const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
+
+    auto extend = laser_comp.getExtent();
+
+    double unitSI = laser_comp.unitSI();
+
+    //hipace: xyt in Fortran order
+    //lasy: tyx in C order
+
+    if (domain.length(0) != extend[2] ||
+        domain.length(1) != extend[1] ||
+        domain.length(2) != extend[0]) {
+        amrex::Abort("Incompatible box sizes. HiPACE++ (" +
+        std::to_string(domain.length(0)) + ", " + std::to_string(domain.length(1)) + ", "
+        + std::to_string(domain.length(2)) + "), "
+        + "File (" + std::to_string(extend[2]) + ", " + std::to_string(extend[1]) + ", "
+        + std::to_string(extend[0]) + ")\n");
+    }
+
+    amrex::Dim3 arr_begin = {domain.smallEnd(0), domain.smallEnd(1), domain.smallEnd(2)};
+    amrex::Dim3 arr_end = {domain.smallEnd(0) + domain.length(0),
+                           domain.smallEnd(1) + domain.length(1),
+                           domain.smallEnd(2) + domain.length(2)};
+    amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
+    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
+    const int lo_t = domain.smallEnd(2);
+    const int hi_t = domain.bigEnd(2);
+
+    series.flush();
+
+    for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
+        for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
+            for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
+                laser_arr(i, j, k, 0) = static_cast<amrex::Real>(
+                    input_file_arr(i, j, lo_t + hi_t - k).real() * unitSI
+                );
+                laser_arr(i, j, k, 1) = static_cast<amrex::Real>(
+                    input_file_arr(i, j, lo_t + hi_t - k).imag() * unitSI
+                );
+            }
+        }
+    }
+}
+
 
 void
 MultiLaser::Copy (int isl, bool to3d)
