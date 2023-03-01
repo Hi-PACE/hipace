@@ -191,7 +191,7 @@ IonizationModule (const int lev,
     for (amrex::MFIter mfi_ion = MakeMFIter(lev, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
     {
         // Extract field array from FabArray
-        const amrex::FArrayBox& slice_fab = fields.getSlices(lev, WhichSlice::This)[mfi_ion];
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[mfi_ion];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
         const int psi_comp = Comps[WhichSlice::This]["Psi"];
         const int ez_comp = Comps[WhichSlice::This]["Ez"];

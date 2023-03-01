@@ -753,10 +753,8 @@ Hipace::ResetAllQuantities ()
     if (m_use_laser) ResetLaser();
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
-        for (amrex::MultiFab& slice : m_fields.getSlices(lev)) {
-            if (slice.nComp() != 0) {
-                slice.setVal(0., m_fields.m_slices_nguards);
-            }
+        if (m_fields.getSlices(lev).nComp() != 0) {
+            m_fields.getSlices(lev).setVal(0., m_fields.m_slices_nguards);
         }
     }
 }
@@ -788,9 +786,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
     HIPACE_PROFILE("Hipace::InitializeSxSyWithBeam()");
     using namespace amrex::literals;
 
-    amrex::MultiFab& slicemf = m_fields.getSlices(lev, WhichSlice::This);
-    const amrex::MultiFab& nslicemf = m_fields.getSlices(lev, WhichSlice::Next);
-    const amrex::MultiFab& pslicemf = m_fields.getSlices(lev, WhichSlice::Previous1);
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev);
 
     const amrex::Real dx = Geom(lev).CellSize(Direction::x);
     const amrex::Real dy = Geom(lev).CellSize(Direction::y);
@@ -800,9 +796,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 
         amrex::Box const& bx = mfi.tilebox();
 
-        Array3<amrex::Real> const isl_arr = slicemf.array(mfi);
-        Array3<const amrex::Real> const nsl_arr = nslicemf.const_array(mfi);
-        Array3<const amrex::Real> const psl_arr = pslicemf.const_array(mfi);
+        Array3<amrex::Real> const arr = slicemf.array(mfi);
 
         const int Sx = Comps[WhichSlice::This]["Sx"];
         const int Sy = Comps[WhichSlice::This]["Sy"];
@@ -817,20 +811,16 @@ Hipace::InitializeSxSyWithBeam (const int lev)
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                const amrex::Real dx_jzb = (isl_arr(i+1,j,jzb)-isl_arr(i-1,j,jzb))/(2._rt*dx);
-                const amrex::Real dy_jzb = (isl_arr(i,j+1,jzb)-isl_arr(i,j-1,jzb))/(2._rt*dy);
-                const amrex::Real dz_jxb = (psl_arr(i,j,prev_jxb)-nsl_arr(i,j,next_jxb))/(2._rt*dz);
-                const amrex::Real dz_jyb = (psl_arr(i,j,prev_jyb)-nsl_arr(i,j,next_jyb))/(2._rt*dz);
+                const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))/(2._rt*dx);
+                const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))/(2._rt*dy);
+                const amrex::Real dz_jxb = (arr(i,j,prev_jxb)-arr(i,j,next_jxb))/(2._rt*dz);
+                const amrex::Real dz_jyb = (arr(i,j,prev_jyb)-arr(i,j,next_jyb))/(2._rt*dz);
 
                 // calculate contribution to Sx and Sy by all beams (same as with PC solver)
                 // sy, to compute Bx
-                isl_arr(i,j,Sy) =   mu0 * (
-                                    - dy_jzb
-                                    + dz_jyb);
+                arr(i,j,Sy) =   mu0 * ( - dy_jzb + dz_jyb);
                 // sx, to compute By
-                isl_arr(i,j,Sx) = - mu0 * (
-                                    - dx_jzb
-                                    + dz_jxb);
+                arr(i,j,Sx) = - mu0 * ( - dx_jzb + dz_jxb);
             });
     }
 }
@@ -856,12 +846,10 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Bx"] + 1 == Comps[which_slice]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Sy"] + 1 == Comps[which_slice]["Sx"]);
 
-    amrex::MultiFab& slicemf_BxBySySx = m_fields.getSlices(lev, which_slice);
-    amrex::MultiFab BxBy (slicemf_BxBySySx, amrex::make_alias, Comps[which_slice]["Bx"], 2);
-    amrex::MultiFab SySx (slicemf_BxBySySx, amrex::make_alias, Comps[which_slice]["Sy"], 2);
-
-    amrex::MultiFab& slicemf_chi = m_fields.getSlices(lev, which_slice_chi);
-    amrex::MultiFab Mult (slicemf_chi, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev);
+    amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[which_slice]["Bx"], 2);
+    amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
+    amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
     if (lev!=0) {
         m_fields.SetBoundaryCondition(Geom(), lev, "Bx", islice,
@@ -881,9 +869,9 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
         }
 
         // construct slice geometry
-        const amrex::RealBox slice_box{slicemf_BxBySySx.boxArray()[0], m_slice_geom[lev].CellSize(),
+        const amrex::RealBox slice_box{slicemf.boxArray()[0], m_slice_geom[lev].CellSize(),
                                        m_slice_geom[lev].ProbLo()};
-        amrex::Geometry slice_geom{slicemf_BxBySySx.boxArray()[0], slice_box,
+        amrex::Geometry slice_geom{slicemf.boxArray()[0], slice_box,
                                    m_slice_geom[lev].CoordInt(), {0,0,0}};
 
         if (!m_mlalaplacian[lev]){
@@ -894,8 +882,8 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
             // make_unique requires explicit types
             m_mlalaplacian[lev] = std::make_unique<amrex::MLALaplacian>(
                 amrex::Vector<amrex::Geometry>{slice_geom},
-                amrex::Vector<amrex::BoxArray>{slicemf_BxBySySx.boxArray()},
-                amrex::Vector<amrex::DistributionMapping>{slicemf_BxBySySx.DistributionMap()},
+                amrex::Vector<amrex::BoxArray>{slicemf.boxArray()},
+                amrex::Vector<amrex::DistributionMapping>{slicemf.DistributionMap()},
                 lpinfo,
                 amrex::Vector<amrex::FabFactory<amrex::FArrayBox> const*>{}, 2);
 
@@ -926,15 +914,14 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
     } else
 #endif
     {
-        AMREX_ALWAYS_ASSERT(slicemf_BxBySySx.boxArray().size() == 1);
-        AMREX_ALWAYS_ASSERT(slicemf_chi.boxArray().size() == 1);
+        AMREX_ALWAYS_ASSERT(slicemf.boxArray().size() == 1);
         if (m_hpmg.size()<maxLevel()+1) {
             m_hpmg.resize(maxLevel()+1);
         }
         if (!m_hpmg[lev]) {
             m_hpmg[lev] = std::make_unique<hpmg::MultiGrid>(m_slice_geom[lev].CellSize(0),
                                                             m_slice_geom[lev].CellSize(1),
-                                                            slicemf_BxBySySx.boxArray()[0]);
+                                                            slicemf.boxArray()[0]);
         }
         const int max_iters = 200;
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
@@ -951,10 +938,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
 
     amrex::Real relative_Bfield_error_prev_iter = 1.0;
     amrex::Real relative_Bfield_error = m_fields.ComputeRelBFieldError(
-        m_fields.getSlices(lev, WhichSlice::Previous1),
-        m_fields.getSlices(lev, WhichSlice::Previous1),
-        m_fields.getSlices(lev, WhichSlice::Previous2),
-        m_fields.getSlices(lev, WhichSlice::Previous2),
+        m_fields.getSlices(lev), m_fields.getSlices(lev),
+        m_fields.getSlices(lev), m_fields.getSlices(lev),
         Comps[WhichSlice::Previous1]["Bx"], Comps[WhichSlice::Previous1]["By"],
         Comps[WhichSlice::Previous2]["Bx"], Comps[WhichSlice::Previous2]["By"],
         Geom(lev));
@@ -971,23 +956,23 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     }
 
     /* creating temporary Bx and By arrays for the current and previous iteration */
-    amrex::MultiFab Bx_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
-                            m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                            m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab By_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
-                            m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                            m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
+    amrex::MultiFab Bx_iter(m_fields.getSlices(lev).boxArray(),
+                            m_fields.getSlices(lev).DistributionMap(), 1,
+                            m_fields.getSlices(lev).nGrowVect());
+    amrex::MultiFab By_iter(m_fields.getSlices(lev).boxArray(),
+                            m_fields.getSlices(lev).DistributionMap(), 1,
+                            m_fields.getSlices(lev).nGrowVect());
     Bx_iter.setVal(0.0, m_fields.m_slices_nguards);
     By_iter.setVal(0.0, m_fields.m_slices_nguards);
-    amrex::MultiFab Bx_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
-                                 m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                                 m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Copy(Bx_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
+    amrex::MultiFab Bx_prev_iter(m_fields.getSlices(lev).boxArray(),
+                                 m_fields.getSlices(lev).DistributionMap(), 1,
+                                 m_fields.getSlices(lev).nGrowVect());
+    amrex::MultiFab::Copy(Bx_prev_iter, m_fields.getSlices(lev),
                           Comps[WhichSlice::This]["Bx"], 0, 1, m_fields.m_slices_nguards);
-    amrex::MultiFab By_prev_iter(m_fields.getSlices(lev, WhichSlice::This).boxArray(),
-                                 m_fields.getSlices(lev, WhichSlice::This).DistributionMap(), 1,
-                                 m_fields.getSlices(lev, WhichSlice::This).nGrowVect());
-    amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev, WhichSlice::This),
+    amrex::MultiFab By_prev_iter(m_fields.getSlices(lev).boxArray(),
+                                 m_fields.getSlices(lev).DistributionMap(), 1,
+                                 m_fields.getSlices(lev).nGrowVect());
+    amrex::MultiFab::Copy(By_prev_iter, m_fields.getSlices(lev),
                           Comps[WhichSlice::This]["By"], 0, 1, m_fields.m_slices_nguards);
 
     const int islice = islice_local + boxArray(lev)[ibox].smallEnd(Direction::z);
@@ -1027,8 +1012,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_fields.SolvePoissonBy(By_iter, Geom(), lev, islice);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
-            m_fields.getSlices(lev, WhichSlice::This),
-            m_fields.getSlices(lev, WhichSlice::This),
+            m_fields.getSlices(lev), m_fields.getSlices(lev),
             Bx_iter, By_iter,
             Comps[WhichSlice::This]["Bx"], Comps[WhichSlice::This]["By"],
             0, 0, Geom(lev));

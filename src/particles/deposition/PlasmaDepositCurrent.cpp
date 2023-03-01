@@ -52,7 +52,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         // Extract the fields currents
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
-        amrex::FArrayBox& isl_fab = fields.getSlices(lev, which_slice)[pti];
+        amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
         const int  jx_cmp = deposit_jx_jy ? Comps[which_slice]["jx"]  : -1;
         const int  jy_cmp = deposit_jx_jy ? Comps[which_slice]["jy"]  : -1;
         const int  jz_cmp = deposit_jz    ? Comps[which_slice]["jz"]  : -1;
