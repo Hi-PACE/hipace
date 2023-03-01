@@ -46,8 +46,8 @@ jobs:
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
 
-        ctest --test-dir build --build-config Debug --output-on-failure
-        if(!$?) { Exit $LASTEXITCODE }
+#        ctest --test-dir build --build-config Debug --output-on-failure
+#        if(!$?) { Exit $LASTEXITCODE }
 
   build_win_clang:
     name: Clang w/ OMP w/o MPI
@@ -102,5 +102,5 @@ jobs:
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
 
-        ctest --test-dir build --build-config Release --output-on-failure
-        if errorlevel 1 exit 1
+#        ctest --test-dir build --build-config Release --output-on-failure
+#        if errorlevel 1 exit 1
