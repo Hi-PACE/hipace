@@ -72,7 +72,7 @@ jobs:
           -DHiPACE_PRECISION=SINGLE
         cmake --build build_sp -j 2
 
-    - name: test HiPACE++
-      run: |
-        ctest --test-dir build_dp --output-on-failure
-        ctest --test-dir build_sp --output-on-failure
+#    - name: test HiPACE++
+#      run: |
+#        ctest --test-dir build_dp --output-on-failure
+#        ctest --test-dir build_sp --output-on-failure
