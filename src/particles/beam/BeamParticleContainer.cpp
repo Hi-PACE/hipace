@@ -250,7 +250,8 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
     PhysConst const phys_const = get_phys_const();
-    const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
+    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
+    const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
     auto const& ptaos = this->GetArrayOfStructs();
     const auto& pos_structs = ptaos.begin() + box_offset;
@@ -288,20 +289,20 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
                 return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
                     0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
             }
-            const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
-                                                       + uyp[ip]*uyp[ip]*clightsq
-                                                       + uzp[ip]*uzp[ip]*clightsq);
+            const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq_inv
+                                                       + uyp[ip]*uyp[ip]*clightsq_inv
+                                                       + uzp[ip]*uzp[ip]*clightsq_inv);
             return {wp[ip],
                     wp[ip]*pos_structs[ip].pos(0),
                     wp[ip]*pos_structs[ip].pos(0)*pos_structs[ip].pos(0),
                     wp[ip]*pos_structs[ip].pos(1),
                     wp[ip]*pos_structs[ip].pos(1)*pos_structs[ip].pos(1),
-                    wp[ip]*uxp[ip],
-                    wp[ip]*uxp[ip]*uxp[ip],
-                    wp[ip]*uyp[ip],
-                    wp[ip]*uyp[ip]*uyp[ip],
-                    wp[ip]*pos_structs[ip].pos(0)*uxp[ip],
-                    wp[ip]*pos_structs[ip].pos(1)*uyp[ip],
+                    wp[ip]*uxp[ip]*clight_inv,
+                    wp[ip]*uxp[ip]*uxp[ip]*clightsq_inv,
+                    wp[ip]*uyp[ip]*clight_inv,
+                    wp[ip]*uyp[ip]*uyp[ip]*clightsq_inv,
+                    wp[ip]*pos_structs[ip].pos(0)*uxp[ip]*clight_inv,
+                    wp[ip]*pos_structs[ip].pos(1)*uyp[ip]*clight_inv,
                     wp[ip]*gamma,
                     wp[ip]*gamma*gamma,
                     1};
