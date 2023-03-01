@@ -46,9 +46,9 @@ jobs:
         set -e
         brew tap openpmd/openpmd
         brew install openpmd-api
-        python3 -m pip install matplotlib
-        python3 -m pip install numpy
-        python3 -m pip install scipy
+        /usr/bin/env python3 -m pip install matplotlib
+        /usr/bin/env python3 -m pip install numpy
+        /usr/bin/env python3 -m pip install scipy
     - name: CCache Cache
       uses: actions/cache@v3
       # - once stored under a key, they become immutable (even if local cache path content changes)
@@ -72,7 +72,7 @@ jobs:
           -DHiPACE_PRECISION=SINGLE
         cmake --build build_sp -j 2
 
-#    - name: test HiPACE++
-#      run: |
-#        ctest --test-dir build_dp --output-on-failure
-#        ctest --test-dir build_sp --output-on-failure
+    - name: test HiPACE++
+      run: |
+        ctest --test-dir build_dp --output-on-failure
+        ctest --test-dir build_sp --output-on-failure
