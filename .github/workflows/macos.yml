@@ -61,11 +61,6 @@ jobs:
           ccache-macos-appleclang-
     - name: build HiPACE++
       run: |
-        cmake -S . -B build_dp          \
-          -DCMAKE_VERBOSE_MAKEFILE=ON   \
-          -DHiPACE_openpmd_internal=OFF
-        cmake --build build_dp -j 2
-
         cmake -S . -B build_sp          \
           -DCMAKE_VERBOSE_MAKEFILE=ON   \
           -DHiPACE_openpmd_internal=OFF \
@@ -74,5 +69,4 @@ jobs:
 
 #    - name: test HiPACE++
 #      run: |
-#        ctest --test-dir build_dp --output-on-failure
 #        ctest --test-dir build_sp --output-on-failure
