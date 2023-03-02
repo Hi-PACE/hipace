@@ -764,9 +764,7 @@ Hipace::ResetLaser ()
 {
     HIPACE_PROFILE("Hipace::ResetLaser()");
 
-    for (int sl=WhichLaserSlice::nm1j00; sl<WhichLaserSlice::N; sl++) {
-        m_multi_laser.getSlices(sl).setVal(0.);
-    }
+    m_multi_laser.getSlices().setVal(0.);
 }
 
 void
