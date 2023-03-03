@@ -9,6 +9,7 @@
 #define ADAPTIVETIMESTEP_H_
 
 #include "particles/beam/MultiBeam.H"
+#include "particles/plasma/MultiPlasma.H"
 #include "particles/beam/BeamParticleContainer.H"
 #include <AMReX_AmrCore.H>
 
@@ -23,6 +24,7 @@ private:
     /** Number of time steps per betatron period for the adaptive time step */
     amrex::Real m_nt_per_betatron = 40.;
     amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
+    amrex::Real m_min_uz = std::numeric_limits<amrex::Real>::max();
 
 public:
     /** Whether to use an adaptive time step */
@@ -56,6 +58,8 @@ public:
     Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density, const int it=0,
                const amrex::Vector<BoxSorter>& a_box_sorter_vec={}, const bool initial=true);
 
+    void
+    CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPlasma& plasmas);
 };
 
 #endif // ADAPTIVETIMESTEP_H_
