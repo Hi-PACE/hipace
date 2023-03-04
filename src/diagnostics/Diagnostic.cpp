@@ -33,11 +33,8 @@ Diagnostic::Diagnostic (int nlev)
 
     queryWithParser(ppd, "include_ghost_cells", m_include_ghost_cells);
 
-    bool got_lo = queryWithParser(ppd, "patch_lo", m_diag_lo);
-    bool got_hi = queryWithParser(ppd, "patch_hi", m_diag_hi);
-    m_use_custom_size = got_lo && got_hi;
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(got_lo == got_hi,
-        "Must provide either both lo and hi or nothing");
+    m_use_custom_size_lo = queryWithParser(ppd, "patch_lo", m_diag_lo);
+    m_use_custom_size_hi = queryWithParser(ppd, "patch_hi", m_diag_hi);
 
     for(int ilev = 0; ilev<nlev; ++ilev) {
         amrex::Array<int,3> diag_coarsen_arr{1,1,1};
@@ -134,21 +131,27 @@ Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int l
         domain.grow(Fields::m_slices_nguards);
     }
 
-    if (m_use_custom_size) {
+    {
+        // shrink box to user specified bounds m_diag_lo and m_diag_hi (in real space)
         const amrex::Real poff_x = GetPosOffset(0, geom, geom.Domain());
         const amrex::Real poff_y = GetPosOffset(1, geom, geom.Domain());
         const amrex::Real poff_z = GetPosOffset(2, geom, geom.Domain());
         amrex::Box cut_domain = domain;
-        cut_domain.setSmall({
-            static_cast<int>(std::round((m_diag_lo[0] - poff_x)/geom.CellSize(0))),
-            static_cast<int>(std::round((m_diag_lo[1] - poff_y)/geom.CellSize(1))),
-            static_cast<int>(std::round((m_diag_lo[2] - poff_z)/geom.CellSize(2)))
-        });
-        cut_domain.setBig({
-            static_cast<int>(std::round((m_diag_hi[0] - poff_x)/geom.CellSize(0))),
-            static_cast<int>(std::round((m_diag_hi[1] - poff_y)/geom.CellSize(1))),
-            static_cast<int>(std::round((m_diag_hi[2] - poff_z)/geom.CellSize(2)))
-        });
+        if (m_use_custom_size_lo) {
+            cut_domain.setSmall({
+                static_cast<int>(std::round((m_diag_lo[0] - poff_x)/geom.CellSize(0))),
+                static_cast<int>(std::round((m_diag_lo[1] - poff_y)/geom.CellSize(1))),
+                static_cast<int>(std::round((m_diag_lo[2] - poff_z)/geom.CellSize(2)))
+            });
+        }
+        if (m_use_custom_size_hi) {
+            cut_domain.setBig({
+                static_cast<int>(std::round((m_diag_hi[0] - poff_x)/geom.CellSize(0))),
+                static_cast<int>(std::round((m_diag_hi[1] - poff_y)/geom.CellSize(1))),
+                static_cast<int>(std::round((m_diag_hi[2] - poff_z)/geom.CellSize(2)))
+            });
+        }
+        // calculate intersection of boxes to prevent them getting larger
         domain &= cut_domain;
         local_box &= domain;
     }
