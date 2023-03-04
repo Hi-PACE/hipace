@@ -1,0 +1,106 @@
+name: 🪟 Windows
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.head_ref }}-windows
+  cancel-in-progress: true
+
+jobs:
+  build_win_msvc:
+    name: MSVC w/o MPI
+    runs-on: windows-latest
+    if: github.event.pull_request.draft == false
+    steps:
+    - uses: actions/checkout@v3
+    - name: CCache Cache
+      uses: actions/cache@v3
+      # - once stored under a key, they become immutable (even if local cache path content changes)
+      # - for a refresh the key has to change, e.g., hash of a tracked file in the key
+      with:
+        path: |
+          ~/.ccache
+          ~/.cache/ccache
+        key: ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        restore-keys: |
+          ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-
+          ccache-windows-winmsvc-
+    - name: install dependencies
+      run: |
+        Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar
+        cmake -S fftw-3.3.10 -B build_fftw -DCMAKE_BUILD_TYPE=Debug
+        if(!$?) { Exit $LASTEXITCODE }
+        cmake --build build_fftw --config Debug --target install --parallel 2
+        if(!$?) { Exit $LASTEXITCODE }
+    - name: Build & Install
+      run: |
+        $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
+        cmake -S . -B build               `
+              -DCMAKE_BUILD_TYPE=Debug    `
+              -DCMAKE_VERBOSE_MAKEFILE=ON `
+              -DHiPACE_COMPUTE=NOACC      `
+              -DHiPACE_MPI=OFF
+        if(!$?) { Exit $LASTEXITCODE }
+        cmake --build build --config Debug --parallel 2
+        if(!$?) { Exit $LASTEXITCODE }
+
+#        ctest --test-dir build --build-config Debug --output-on-failure
+#        if(!$?) { Exit $LASTEXITCODE }
+
+  build_win_clang:
+    name: Clang w/ OMP w/o MPI
+    runs-on: windows-2019
+    if: github.event.pull_request.draft == false
+    steps:
+    - uses: actions/checkout@v3
+    - name: CCache Cache
+      uses: actions/cache@v3
+      # - once stored under a key, they become immutable (even if local cache path content changes)
+      # - for a refresh the key has to change, e.g., hash of a tracked file in the key
+      with:
+        path: |
+          ~/.ccache
+          ~/.cache/ccache
+        key: ccache-windows-winclang-${{ hashFiles('.github/workflows/windows.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        restore-keys: |
+          ccache-windows-winclang-${{ hashFiles('.github/workflows/windows.yml') }}-
+          ccache-windows-winclang-
+    - uses: seanmiddleditch/gha-setup-ninja@master
+    - name: download dependencies
+      run: |
+        Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar.gz
+        7z.exe x -r fftw-3.3.10.tar
+    - name: install dependencies
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+        cmake -S fftw-3.3.10  ^
+              -B build_fftw   ^
+              -G "Ninja"      ^
+              -DCMAKE_BUILD_TYPE=Release
+        if errorlevel 1 exit 1
+        cmake --build build_fftw --config Release --target install --parallel 2
+        if errorlevel 1 exit 1
+    - name: Build & Install
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+
+        set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
+        cmake -S . -B build   ^
+              -G "Ninja"      ^
+              -DCMAKE_C_COMPILER=clang-cl   ^
+              -DCMAKE_CXX_COMPILER=clang-cl ^
+              -DCMAKE_BUILD_TYPE=Release    ^
+              -DCMAKE_VERBOSE_MAKEFILE=ON   ^
+              -DHiPACE_COMPUTE=OMP          ^
+              -DHiPACE_MPI=OFF
+        if errorlevel 1 exit 1
+        cmake --build build --config Release --parallel 2
+        if errorlevel 1 exit 1
+
+#        ctest --test-dir build --build-config Release --output-on-failure
+#        if errorlevel 1 exit 1

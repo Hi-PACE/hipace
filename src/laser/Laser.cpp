@@ -14,9 +14,10 @@
 #include <AMReX_Vector.H>
 #include <AMReX_ParmParse.H>
 
-Laser::Laser (std::string name)
+Laser::Laser (std::string name, bool laser_from_file)
 {
     m_name = name;
+    if (laser_from_file) return;
     amrex::ParmParse pp(m_name);
     queryWithParser(pp, "a0", m_a0);
     queryWithParser(pp, "w0", m_w0);

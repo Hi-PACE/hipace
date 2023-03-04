@@ -64,10 +64,30 @@ namespace LaserFFT {
 }
 
 /** \brief describes which slice with respect to the currently calculated is used */
-struct WhichLaserSlice {
+namespace WhichLaserSlice {
     // n stands for the time step, j for the longitudinal slice.
     // n00 is time step n, nm1 is n-1 and np1 is n+1. Similar notation for slice j.
-    enum slice { nm1j00, nm1jp1, nm1jp2, n00j00, n00jp1, n00jp2, np1j00, np1jp1, np1jp2, N };
+    enum slice {
+        nm1j00_r,
+        nm1j00_i,
+        nm1jp1_r,
+        nm1jp1_i,
+        nm1jp2_r,
+        nm1jp2_i,
+        n00j00_r,
+        n00j00_i,
+        n00jp1_r,
+        n00jp1_i,
+        n00jp2_r,
+        n00jp2_i,
+        np1j00_r,
+        np1j00_i,
+        np1jp1_r,
+        np1jp1_i,
+        np1jp2_r,
+        np1jp2_i,
+        N
+    };
 };
 
 class Fields;
@@ -76,10 +96,6 @@ class MultiLaser
 {
 
     using SpectralFieldLoc = amrex::BaseFab <amrex::GpuComplex<amrex::Real>>;
-
-private:
-
-    static constexpr int m_nslices = WhichLaserSlice::N;
 
 public:
 
@@ -100,15 +116,11 @@ public:
 
     void ReadParameters ();
 
-    /** get function for the 2D slices
-     * \param[in] islice slice index
-     */
-    amrex::MultiFab& getSlices (int islice) {return m_slices[islice]; }
+    /** get function for the 2D slices */
+    amrex::MultiFab& getSlices () {return m_slices; }
 
-    /** get function for the 2D slices (const version)
-     * \param[in] islice slice index
-     */
-    const amrex::MultiFab& getSlices (int islice) const {return m_slices[islice]; }
+    /** get function for the 2D slices (const version) */
+    const amrex::MultiFab& getSlices () const {return m_slices; }
 
     /** Return the 3D FArrayBox containing the laser envelope, const version */
     const amrex::FArrayBox& getFAB () const {return m_F;}
@@ -133,6 +145,19 @@ public:
      * \param[in] gm Geometry of the problem
      */
     void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
+
+    /** \brief Read in a laser from an openPMD file
+     *
+     * \param[in] domain size of the level 0 domain
+     */
+    void GetEnvelopeFromFileHelper (const amrex::Box& domain);
+
+    /** \brief Read in a laser from an openPMD file
+     *
+     * \param[in] domain size of the level 0 domain
+     */
+    template<typename input_type>
+    void GetEnvelopeFromFile (const amrex::Box& domain);
 
     /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
      *
@@ -195,12 +220,25 @@ private:
     bool m_use_phase {true};
     amrex::Box m_slice_box;
 
+    /** if the lasers are initialized from openPMD file */
+    bool m_laser_from_file = false;
+    /** if the input file was already read */
+    bool m_input_file_is_read = false;
+    /** full 3D laser data stored on the host */
+    amrex::FArrayBox m_F_input_file;
+    /** path to input openPMD file */
+    std::string m_input_file_path;
+    /** name of the openPMD species in the file */
+    std::string m_file_envelope_name = "laserEnvelope";
+    /** index of the iteration in the openPMD file */
+    int m_file_num_iteration = 0;
+
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};
     /** 3D laser data. Could be a vector over levels if MR needed for laser */
     amrex::FArrayBox m_F;
     /** Array of N slices required to compute current slice */
-    std::array<amrex::MultiFab, m_nslices> m_slices;
+    amrex::MultiFab m_slices;
     amrex::Real m_MG_tolerance_rel = 1.e-4;
     amrex::Real m_MG_tolerance_abs = 0.;
     int m_MG_verbose = 0;

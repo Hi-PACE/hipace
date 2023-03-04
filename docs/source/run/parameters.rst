@@ -564,6 +564,16 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.3d_on_host`` (`0` or `1`) optional (default `0`)
     When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
 
+* ``lasers.input_file`` (`string`) optional (default `""`)
+    Path to an openPMD file containing a laser envelope. If this parameter is set then the file will
+    be used to initialize all lasers instead of using a gaussian profile.
+
+* ``lasers.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
+    Name of the laser envelope field inside the openPMD file to be read in.
+
+* ``lasers.iteration`` (`int`) optional (default `0`)
+    Iteration of the openPMD file to be read in.
+
 * ``<laser name>.a0`` (`float`) optional (default `0`)
     Peak normalized vector potential of the laser pulse.
 

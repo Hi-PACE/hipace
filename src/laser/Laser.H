@@ -17,7 +17,7 @@ class Laser
 {
 public:
 
-    Laser (std::string name);
+    Laser (std::string name, bool laser_from_file);
 
     std::string m_name {""};
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
