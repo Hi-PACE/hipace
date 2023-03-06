@@ -31,6 +31,7 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
         m_do_adaptive_time_step = true;
         queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
         queryWithParser(ppa, "dt_max", m_dt_max);
+        queryWithParser(ppa, "adaptive_phase_tolerance", m_adaptive_phase_tolerance);
     }
     DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
 
@@ -162,12 +163,12 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
                                               - mean_uz*mean_uz));
             const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
             const amrex::Real max_supported_uz = 1e30;
-            const amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
+            const amrex::Real chosen_min_uz = std::min(amrex::max(sigma_uz_dev,
                                                        m_timestep_data[ibeam][WhichDouble::MinUz]),
                                                        max_supported_uz);
             m_min_uz = std::min(m_min_uz,
                 chosen_min_uz*beam.m_mass*beam.m_mass/phys_const.m_e/phys_const.m_e);
-            m_min_uz = std::max(m_min_uz, 1.);
+            m_min_uz = amrex::max(m_min_uz, 1.);
 
             if (Hipace::m_verbose >=2 ){
                 amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
@@ -200,11 +201,10 @@ void
 AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPlasma& plasmas)
 {
     HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
+
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
-    // if (!Hipace::HeadRank() && initial) return;
-    // if (!(it == 0 || initial)) return;
 
     const PhysConst pc = get_phys_const();
 
@@ -225,13 +225,12 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
         amrex::Real omgb = omega_p / std::sqrt(2. *m_min_uz);
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
-        // if (std::abs(phase_advance - phase_advance0) > 0.01 * phase_advance0) {
-        if (std::abs(phase_advance - phase_advance0) > 2*MathConst::pi/m_nt_per_betatron/100.) {
-            std::cout<<"i "<<i<<" exit\n";
+        // if (std::abs(phase_advance - phase_advance0) > 0.05 * phase_advance0) {
+        if(std::abs(phase_advance - phase_advance0) >
+           2.*MathConst::pi/m_nt_per_betatron*m_adaptive_phase_tolerance)
+        {
             dt = i*dt_sub;
             return;
         }
-        // amrex::Print()<<"touch this?\n";
-        // amrex::Real dt_sub_density = 2. * MathConst::pi / omega_betatron / m_nt_per_betatron;
     }
 }
