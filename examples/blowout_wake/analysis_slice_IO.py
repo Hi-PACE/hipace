@@ -20,10 +20,10 @@ import math
 import argparse
 from openpmd_viewer import OpenPMDTimeSeries
 
-do_plot = True
+do_plot = False
 field = 'Ez'
 
-ts1 = OpenPMDTimeSeries('full_io') #((0,0,0) (63,87,99) (0,0,0))
+ts1 = OpenPMDTimeSeries('full_io')
 F_full = ts1.get_field(field=field, iteration=ts1.iterations[-1])[0]
 F_full = np.swapaxes(F_full,0,2)
 F_full_xz = (F_full[:,F_full.shape[1]//2,:].squeeze() +
@@ -33,16 +33,16 @@ F_full_yz = (F_full[F_full.shape[0]//2,:,:].squeeze() +
 F_full_cut_xy = F_full[20:45,:,50].squeeze()
 F_full_cut_xz = (F_full[32:49,43,:].squeeze() + F_full[32:49,44,:].squeeze())/2.
 
-ts2 = OpenPMDTimeSeries('slice_io_xz') #((0,0,0) (63,87,99) (0,0,0))
+ts2 = OpenPMDTimeSeries('slice_io_xz')
 F_slice_xz = ts2.get_field(field=field, iteration=ts2.iterations[-1])[0].transpose()
 
-ts3 = OpenPMDTimeSeries('slice_io_yz') #((0,0,0) (63,87,99) (0,0,0))
+ts3 = OpenPMDTimeSeries('slice_io_yz')
 F_slice_yz = ts3.get_field(field=field, iteration=ts3.iterations[-1])[0].transpose()
 
-ts4 = OpenPMDTimeSeries('slice_io_cut_xy') #((20,0,50) (44,87,50) (0,0,0))
+ts4 = OpenPMDTimeSeries('slice_io_cut_xy')
 F_slice_cut_xy = ts4.get_field(field=field, iteration=ts4.iterations[-1])[0].squeeze().transpose()
 
-ts5 = OpenPMDTimeSeries('slice_io_cut_xz') #((32,27,0) (48,60,99) (0,0,0))
+ts5 = OpenPMDTimeSeries('slice_io_cut_xz')
 F_slice_cut_xz = ts5.get_field(field=field, iteration=ts5.iterations[-1])[0].transpose()
 
 if do_plot:
