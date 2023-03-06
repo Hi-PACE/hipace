@@ -7,6 +7,7 @@
  */
 #include "AdaptiveTimeStep.H"
 #include "utils/DeprecatedInput.H"
+#include "particles/particles_utils/FieldGather.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
 #include "Constants.H"
@@ -19,7 +20,7 @@ namespace {
 
 /** \brief describes which double is used for the adaptive time step */
 struct WhichDouble {
-    enum Comp { Dt=0, MinUz, SumWeights, SumWeightsTimesUz, SumWeightsTimesUzSquared, N };
+    enum Comp { Dt=0, MinUz, MinAcc, SumWeights, SumWeightsTimesUz, SumWeightsTimesUzSquared, N };
 };
 
 AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
@@ -38,7 +39,7 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
     // create time step data container per beam
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         amrex::Vector<amrex::Real> ts_data;
-        ts_data.resize(5, 0.);
+        ts_data.resize(6, 0.);
         ts_data[1] = 1e30; // max possible uz be taken into account
         m_timestep_data.emplace_back(ts_data);
     }
@@ -73,29 +74,37 @@ AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
 #endif
 
 void
-AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density,
-                             const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
-                             const bool initial)
+AdaptiveTimeStep::Calculate (
+    amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
+    const amrex::Geometry& geom, const Fields& fields,
+    const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+    const bool initial)
 {
     HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
     if (!Hipace::HeadRank() && initial) return;
+
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real c = phys_const.c;
+    const amrex::Real clightinv = 1._rt/c;
+    amrex::Real plasma_density = plasmas.maxDensity(c * t);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density > 0.,
         "A >0 plasma density must be specified to use an adaptive time step.");
 
-    // Extract properties associated with physical size of the box
-    const PhysConst phys_const = get_phys_const();
-    const amrex::Real clightinv = 1._rt/phys_const.c;
+    constexpr int lev = 0;
 
+    // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
+    const int numprocs_z = Hipace::GetInstance().m_numprocs_z;
 
     amrex::Vector<amrex::Real> new_dts;
     new_dts.resize(nbeams);
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         const auto& beam = beams.getBeam(ibeam);
+        const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
         // first box resets time step data
         if (it == amrex::ParallelDescriptor::NProcs()-1) {
@@ -117,24 +126,40 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
 
-
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
-                         amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
-        amrex::ReduceData<amrex::Real, amrex::Real,
+                         amrex::ReduceOpSum, amrex::ReduceOpMin,
+                         amrex::ReduceOpMin> reduce_op;
+        amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real,
                           amrex::Real, amrex::Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+        amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();
+        const amrex::Real dx_inv = 1._rt/dx[0];
+        const amrex::Real dy_inv = 1._rt/dx[1];
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
                 if (pos_structs[ip].id() < 0) return {
-                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
+                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity(), 0._rt
                 };
+                amrex::Real Ezp = 0._rt;
+                doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
+                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                const amrex::Real uz = uzp[ip] + dt * charge_mass_ratio * Ezp; // 1000000._rt*
+//                std::cout<<Ezp<<' '<<uz<<'\n';
                 return {
                     wp[ip],
-                    wp[ip] * uzp[ip] * clightinv,
-                    wp[ip] * uzp[ip] * uzp[ip] * clightinv * clightinv,
-                    uzp[ip] * clightinv
+                    wp[ip] * uz * clightinv,
+                    wp[ip] * uz * uz * clightinv * clightinv,
+                    uz * clightinv,
+                    charge_mass_ratio * Ezp * clightinv
                 };
             });
 
@@ -144,6 +169,8 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] += amrex::get<2>(res);
         m_timestep_data[ibeam][WhichDouble::MinUz] =
             std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
+        m_timestep_data[ibeam][WhichDouble::MinAcc] =
+            std::min(m_timestep_data[ibeam][WhichDouble::MinAcc], amrex::get<4>(res));
     }
 
     // only the last box or at initialization the adaptive time step is calculated
@@ -163,9 +190,9 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
                                               - mean_uz*mean_uz));
             const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
             const amrex::Real max_supported_uz = 1e30;
-            const amrex::Real chosen_min_uz = std::min(amrex::max(sigma_uz_dev,
-                                                       m_timestep_data[ibeam][WhichDouble::MinUz]),
-                                                       max_supported_uz);
+            amrex::Real chosen_min_uz = std::min(amrex::max(sigma_uz_dev,
+                                                m_timestep_data[ibeam][WhichDouble::MinUz]),
+                                                max_supported_uz);
             m_min_uz = std::min(m_min_uz,
                 chosen_min_uz*beam.m_mass*beam.m_mass/phys_const.m_e/phys_const.m_e);
             m_min_uz = amrex::max(m_min_uz, 1.);
@@ -180,15 +207,28 @@ AdaptiveTimeStep::Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plas
                                 " have non-relativistic velocities!";
             }
 
+//            std::cout<<"chosen "<<chosen_min_uz<<'n';
             new_dts[ibeam] = dt;
-            if (chosen_min_uz > 1) // and density above min density
-            {
-                const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
-                                              / ( phys_const.ep0*phys_const.m_e ));
-                amrex::Real omega_betatron = omega_p / std::sqrt(2.*chosen_min_uz)
-                                            * phys_const.m_e/beam.m_mass;
-                new_dts[ibeam] = 2.*MathConst::pi/omega_betatron / m_nt_per_betatron;
+            // amrex::Real delta = 1/(16.*m_timestep_data[ibeam][WhichDouble::MinAcc]*m_timestep_data[ibeam][WhichDouble::MinAcc]);
+//            if (chosen_min_uz > 1) // and density above min density
+//            {
+                amrex::Real new_dt = dt;
+                amrex::Real new_time = t;
+                for (int i=0; i<numprocs_z; i++){
+                    plasma_density = plasmas.maxDensity(c*new_time);
+                    std::cout<<"chosen_min_uz1 "<<chosen_min_uz<<'\n';
+                    chosen_min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
+                    std::cout<<"chosen_min_uz2 "<<chosen_min_uz<<'\n';
+                    const amrex::Real omega_p = std::sqrt(plasma_density * phys_const.q_e*phys_const.q_e
+                                                  / ( phys_const.ep0*phys_const.m_e ));
+                    amrex::Real omega_b = omega_p / std::sqrt(2.*chosen_min_uz)
+                                                * phys_const.m_e/beam.m_mass;
+                    new_dt = 2.*MathConst::pi/omega_b / m_nt_per_betatron;
+                    new_time += new_dt;
+//                }
+                if (chosen_min_uz > 1) new_dts[ibeam] = new_dt;
             }
+            // m_predicted_time = amrex::min(m_predicted_time, 4._rt/m_timestep_data[ibeam][WhichDouble::MinAcc] - std::sqrt(delta));
         }
         /* set the new time step */
         dt = *std::min_element(new_dts.begin(), new_dts.end());

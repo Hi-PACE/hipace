@@ -316,8 +316,8 @@ Hipace::InitData ()
     constexpr int lev = 0;
     m_initial_time = m_multi_beam.InitData(geom[lev]);
     m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
-    m_adaptive_time_step.Calculate(m_dt, m_multi_beam,
-                                   m_multi_plasma.maxDensity(m_phys_const.c * m_physical_time));
+    m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma, geom[lev],
+                                   m_fields);
     m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.WaitTimeStep(m_dt, m_comm_z);
@@ -530,8 +530,8 @@ Hipace::Evolve ()
 
             if (m_physical_time < m_max_time) {
                 m_adaptive_time_step.Calculate(
-                    m_dt, m_multi_beam, m_multi_plasma.maxDensity(m_phys_const.c*m_physical_time),
-                    it, m_box_sorters, false);
+                    m_physical_time, m_dt, m_multi_beam, m_multi_plasma,
+                    geom[lev], m_fields, it, m_box_sorters, false);
             } else {
                 m_dt = 2.*m_max_time;
             }

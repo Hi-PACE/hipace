@@ -338,4 +338,27 @@ void doLaserGatherShapeN (const amrex::Real xp,
     }
 }
 
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void doGatherEz (const amrex::Real xp,
+                     const amrex::Real yp,
+                     amrex::Real& Ezp,
+                     Array3<amrex::Real const> const& slice_arr,
+                     const int ez_comp,
+                     const amrex::Real dx_inv,
+                     const amrex::Real dy_inv,
+                     const amrex::Real x_pos_offset,
+                     const amrex::Real y_pos_offset)
+{
+    // x,y direction
+    const amrex::Real x = (xp - x_pos_offset) * dx_inv;
+    const amrex::Real y = (yp - y_pos_offset) * dy_inv;
+
+    // Compute shape factors
+    auto [shape_y, shape_dy, j] = single_derivative_shape_factor<0, 0>(y, 0);
+    auto [shape_x, shape_dx, i] = single_derivative_shape_factor<0, 0>(x, 0);
+
+    // Gather Ez on particle from field on grid
+    Ezp += (shape_x * shape_y) * slice_arr(i, j, ez_comp);
+}
+
 #endif // FIELDGATHER_H_

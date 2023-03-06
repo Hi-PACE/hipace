@@ -56,7 +56,8 @@ public:
      * \param[in] initial whether to calculate the initial dt
      */
     void
-    Calculate (amrex::Real& dt, MultiBeam& beams, amrex::Real plasma_density, const int it=0,
+    Calculate (amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
+               const amrex::Geometry& geom, const Fields& fields, const int it=0,
                const amrex::Vector<BoxSorter>& a_box_sorter_vec={}, const bool initial=true);
 
     void
