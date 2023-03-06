@@ -260,7 +260,8 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
         if(std::abs(phase_advance - phase_advance0) >
-           2.*MathConst::pi/m_nt_per_betatron*m_adaptive_phase_tolerance)
+           // 2.*MathConst::pi/m_nt_per_betatron*m_adaptive_phase_tolerance)
+           2.*MathConst::pi*m_adaptive_phase_tolerance)
         {
             dt = i*dt_sub;
             return;
