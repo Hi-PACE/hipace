@@ -25,7 +25,7 @@ private:
     amrex::Real m_nt_per_betatron = 40.;
     amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
     amrex::Real m_min_uz = std::numeric_limits<amrex::Real>::max();
-    amrex::Real m_adaptive_phase_tolerance = 0.0005;
+    amrex::Real m_adaptive_phase_tolerance = 5.e-4;
 
 public:
     /** Whether to use an adaptive time step */
