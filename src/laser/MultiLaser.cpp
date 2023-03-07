@@ -247,9 +247,9 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Box& domain) {
     //hipace: xyt in Fortran order
     //lasy: tyx in C order
 
-    if (domain.length(0) != extend[2] ||
-        domain.length(1) != extend[1] ||
-        domain.length(2) != extend[0]) {
+    if (static_cast<std::uint64_t>(domain.length(0)) != extend[2] ||
+        static_cast<std::uint64_t>(domain.length(1)) != extend[1] ||
+        static_cast<std::uint64_t>(domain.length(2)) != extend[0]) {
         amrex::Abort("Incompatible box sizes. HiPACE++ (" +
         std::to_string(domain.length(0)) + ", " + std::to_string(domain.length(1)) + ", "
         + std::to_string(domain.length(2)) + "), "
