@@ -354,8 +354,8 @@ void doGatherEz (const amrex::Real xp,
     const amrex::Real y = (yp - y_pos_offset) * dy_inv;
 
     // Compute shape factors
-    auto [shape_y, shape_dy, j] = single_derivative_shape_factor<0, 0>(y, 0);
-    auto [shape_x, shape_dx, i] = single_derivative_shape_factor<0, 0>(x, 0);
+    auto [shape_y, j] = compute_single_shape_factor<false, 0>(y, 0);
+    auto [shape_x, i] = compute_single_shape_factor<false, 0>(x, 0);
 
     // Gather Ez on particle from field on grid
     Ezp += (shape_x * shape_y) * slice_arr(i, j, ez_comp);
