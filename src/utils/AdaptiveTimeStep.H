@@ -65,6 +65,7 @@ public:
      * \param[in] beams multibeam containing all beams
      * \param[in] plasmas multiplasma to get density profile info
      * \param[in] geom geometry object
+     * \param[in] fields field object
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] initial whether to calculate the initial dt
