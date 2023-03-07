@@ -33,6 +33,9 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
         queryWithParser(ppa, "nt_per_betatron", m_nt_per_betatron);
         queryWithParser(ppa, "dt_max", m_dt_max);
         queryWithParser(ppa, "adaptive_phase_tolerance", m_adaptive_phase_tolerance);
+        queryWithParser(ppa, "adaptive_predict_step", m_adaptive_predict_step);
+        queryWithParser(ppa, "adaptive_control_phase_advance", m_adaptive_control_phase_advance);
+        queryWithParser(ppa, "adaptive_phase_substeps", m_adaptive_phase_substeps);
     }
     DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
 
@@ -136,13 +139,13 @@ AdaptiveTimeStep::Calculate (
                           amrex::Real, amrex::Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
+        // Data required to gather the Ez field
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
         const int ez_comp = Comps[WhichSlice::This]["Ez"];
         amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();
         const amrex::Real dx_inv = 1._rt/dx[0];
         const amrex::Real dy_inv = 1._rt/dx[1];
-        // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
@@ -211,9 +214,16 @@ AdaptiveTimeStep::Calculate (
 
             new_dts[ibeam] = dt;
 
+            // Calculate the time step for this beam used in the next time iteration of the current
+            // rank, to resolve the betatron period with m_nt_per_betatron points per period,
+            // assuming full blowout regime. The z-dependence of the plasma profile is considered.
+            // As this time step will start in numprocs_z time steps, so the beam may have
+            // propagated a significant distance. If m_adaptive_predict_step is true, we estimate
+            // this distance and use it for a more accurate time step estimation.
             amrex::Real new_dt = dt;
             amrex::Real new_time = t;
-            for (int i = 0; i < numprocs_z; i++)
+            const int niter = m_adaptive_predict_step ? numprocs_z : 1;
+            for (int i = 0; i < niter; i++)
             {
                 plasma_density = plasmas.maxDensity(c * new_time);
                 chosen_min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
@@ -239,11 +249,11 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
+    if (m_adaptive_control_phase_advance == 0) return;
 
     const PhysConst pc = get_phys_const();
 
-    constexpr int nsub = 100;
-    amrex::Real dt_sub = dt / nsub;
+    amrex::Real dt_sub = dt / m_adaptive_phase_substeps;
     amrex::Real phase_advance = 0.;
     amrex::Real phase_advance0 = 0.;
 
@@ -252,7 +262,9 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
     const amrex::Real omega_p = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
     amrex::Real omgb0 = omega_p / std::sqrt(2. *m_min_uz);
 
-    for (int i = 0; i < nsub; i++)
+    // Numerically integrate the phase advance from t to t+dt. The time step is reduced such that
+    // the expected phase advance equals that of a uniform plasma up to a tolerance level.
+    for (int i = 0; i < m_adaptive_phase_substeps; i++)
     {
         const amrex::Real plasma_density = plasmas.maxDensity(pc.c * (t+i*dt_sub));
         const amrex::Real omega_p = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
@@ -260,7 +272,6 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
         if(std::abs(phase_advance - phase_advance0) >
-           // 2.*MathConst::pi/m_nt_per_betatron*m_adaptive_phase_tolerance)
            2.*MathConst::pi*m_adaptive_phase_tolerance)
         {
             dt = i*dt_sub;

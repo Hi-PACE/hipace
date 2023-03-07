@@ -77,6 +77,27 @@ General parameters
     :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
     factors of the slowest particles in all beams.
 
+* ``hipace.adaptive_predict_step`` (`bool`) optional (default `0`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    If true, the current Lorentz factor and accelerating field on the beams are used to predict the (adaptive) ``dt`` of the next time steps.
+    This prediction is used to better estimate the betatron frequency at the beginning of the next step performed by the current rank.
+    It should improves accuracy for parallel simulations (with significant deceleration and/or z-dependent plasma profile).
+    Note: should be on by default once good defaults are determined.
+
+* ``hipace.adaptive_control_phase_advance`` (`bool`) optional (default `0`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    If true, a test on the phase advance sets the time step so it matches the phase advance expected for a uniform plasma (to a certain tolerance).
+    This should improve the accuracy in the presence of density gradients.
+    Note: should be on by default once good defaults are determined.
+
+* ``hipace.adaptive_phase_tolerance`` (`Real`) optional (default `5.e-4`)
+    Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
+    Tolerance for the controlled phase advance described above (lower is more accurate, but should result in more time steps).
+
+* ``hipace.adaptive_phase_substeps`` (`int`) optional (default `100`)
+    Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
+    Number of sub-steps in the controlled phase advance described above (higher is more accurate, but should be slower).
+
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.
 
