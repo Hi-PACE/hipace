@@ -46,17 +46,12 @@ public:
     explicit AdaptiveTimeStep (const int nbeams);
 
 #ifdef AMREX_USE_MPI
-    /** sends the calculated initial time step to the rank downstream
-     * \param[in] dt initial time step
-     * \param[in] a_comm_z longitudinal MPI communicator
-     */
-    void NotifyTimeStep (amrex::Real dt, MPI_Comm a_comm_z);
-
-    /** receives the calculated initial time step to thefrom the rank upstream
+    /** Head rank initial time step
      * \param[in,out] dt initial time step
      * \param[in] a_comm_z longitudinal MPI communicator
+     * \param[in] a_numprocs_z number of ranks in the z direction
      */
-    void WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z);
+    void BroadcastTimeStep (amrex::Real& dt, MPI_Comm a_comm_z, int a_numprocs_z);
 #endif
 
     /** calculate the adaptive time step based on the beam energy

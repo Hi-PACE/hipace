@@ -51,29 +51,16 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
 
 #ifdef AMREX_USE_MPI
 void
-AdaptiveTimeStep::NotifyTimeStep (amrex::Real dt, MPI_Comm a_comm_z)
+AdaptiveTimeStep::BroadcastTimeStep (amrex::Real& dt, MPI_Comm a_comm_z, int a_numprocs_z)
 {
     if (m_do_adaptive_time_step == 0) return;
-    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
-    if (my_rank_z >= 1)
-    {
-        MPI_Send(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 my_rank_z-1, comm_z_tag, a_comm_z);
-    }
+
+    MPI_Bcast(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+              a_numprocs_z - 1, a_comm_z);
+    MPI_Bcast(&m_min_uz, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+              a_numprocs_z - 1, a_comm_z);
 }
 
-void
-AdaptiveTimeStep::WaitTimeStep (amrex::Real& dt, MPI_Comm a_comm_z)
-{
-    if (m_do_adaptive_time_step == 0) return;
-    const int my_rank_z = amrex::ParallelDescriptor::MyProc();
-    if (!Hipace::HeadRank())
-    {
-        MPI_Status status;
-        MPI_Recv(&dt, 1, amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-                 my_rank_z+1, comm_z_tag, a_comm_z, &status);
-    }
-}
 #endif
 
 void
@@ -252,7 +239,7 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
 
     const PhysConst pc = get_phys_const();
 
-    amrex::Real dt_sub = dt / m_adaptive_phase_substeps;
+    amrex::Real dt_sub = 2. * dt / m_adaptive_phase_substeps;
     amrex::Real phase_advance = 0.;
     amrex::Real phase_advance0 = 0.;
 
