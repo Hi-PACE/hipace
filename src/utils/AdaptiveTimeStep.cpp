@@ -158,12 +158,11 @@ AdaptiveTimeStep::Calculate (
                 amrex::Real Ezp = 0._rt;
                 doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
                            dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                const amrex::Real uz = uzp[ip] + dt * charge_mass_ratio * Ezp;
                 return {
                     wp[ip],
-                    wp[ip] * uz * clightinv,
-                    wp[ip] * uz * uz * clightinv * clightinv,
-                    uz * clightinv,
+                    wp[ip] * uzp[ip] * clightinv,
+                    wp[ip] * uzp[ip] * uzp[ip] * clightinv * clightinv,
+                    uzp[ip] * clightinv,
                     charge_mass_ratio * Ezp * clightinv
                 };
             });
@@ -259,16 +258,16 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
 
     // Get plasma density at beginning of step
     const amrex::Real plasma_density = plasmas.maxDensity(pc.c * t);
-    const amrex::Real omega_p = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
-    amrex::Real omgb0 = omega_p / std::sqrt(2. *m_min_uz);
+    const amrex::Real omgp0 = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
+    amrex::Real omgb0 = omgp0 / std::sqrt(2. *m_min_uz);
 
     // Numerically integrate the phase advance from t to t+dt. The time step is reduced such that
     // the expected phase advance equals that of a uniform plasma up to a tolerance level.
     for (int i = 0; i < m_adaptive_phase_substeps; i++)
     {
         const amrex::Real plasma_density = plasmas.maxDensity(pc.c * (t+i*dt_sub));
-        const amrex::Real omega_p = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
-        amrex::Real omgb = omega_p / std::sqrt(2. *m_min_uz);
+        const amrex::Real omgp = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
+        amrex::Real omgb = omgp / std::sqrt(2. *m_min_uz);
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
         if(std::abs(phase_advance - phase_advance0) >

@@ -81,7 +81,7 @@ General parameters
     Only used when using adaptive time step (see ``hipace.dt`` above).
     If true, the current Lorentz factor and accelerating field on the beams are used to predict the (adaptive) ``dt`` of the next time steps.
     This prediction is used to better estimate the betatron frequency at the beginning of the next step performed by the current rank.
-    It should improves accuracy for parallel simulations (with significant deceleration and/or z-dependent plasma profile).
+    It improves accuracy for parallel simulations (with significant deceleration and/or z-dependent plasma profile).
     Note: should be on by default once good defaults are determined.
 
 * ``hipace.adaptive_control_phase_advance`` (`bool`) optional (default `0`)
