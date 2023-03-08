@@ -195,12 +195,12 @@ AdaptiveTimeStep::Calculate (
                                               - mean_uz*mean_uz));
             const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
             const amrex::Real max_supported_uz = 1.e30;
-            amrex::Real chosen_min_uz = std::min(amrex::max(sigma_uz_dev,
+            amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
                                                 m_timestep_data[ibeam][WhichDouble::MinUz]),
                                                 max_supported_uz);
             m_min_uz = std::min(m_min_uz,
                 chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e);
-            m_min_uz = amrex::max(m_min_uz, 1._rt);
+            m_min_uz = std::max(m_min_uz, 1._rt);
 
             if (Hipace::m_verbose >=2 ){
                 amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
