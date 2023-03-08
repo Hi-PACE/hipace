@@ -316,15 +316,23 @@ Hipace::InitData ()
     constexpr int lev = 0;
     m_initial_time = m_multi_beam.InitData(geom[lev]);
     m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, geom);
-    m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma, geom[lev],
-                                   m_fields);
-    if (Hipace::HeadRank()) m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+    if (Hipace::HeadRank()) {
+        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
+                                       m_multi_plasma, geom[lev], m_fields);
+        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+    }
 #ifdef AMREX_USE_MPI
     m_adaptive_time_step.BroadcastTimeStep(m_dt, m_comm_z, m_numprocs_z);
 #endif
-    m_physical_time = m_initial_time + m_dt * (m_numprocs_z-1-amrex::ParallelDescriptor::MyProc());
-    if (!Hipace::HeadRank()) m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
-
+    m_physical_time = m_initial_time;
+#ifdef AMREX_USE_MPI
+    m_physical_time += m_dt * (m_numprocs_z-1-amrex::ParallelDescriptor::MyProc());
+#endif
+    if (!Hipace::HeadRank()) {
+        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
+                                       m_multi_plasma, geom[lev], m_fields);
+        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+    }
     m_fields.checkInit();
 }
 

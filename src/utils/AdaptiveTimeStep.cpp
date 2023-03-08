@@ -239,7 +239,7 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
 
     const PhysConst pc = get_phys_const();
 
-    amrex::Real dt_sub = 2. * dt / m_adaptive_phase_substeps;
+    amrex::Real dt_sub = dt / m_adaptive_phase_substeps;
     amrex::Real phase_advance = 0.;
     amrex::Real phase_advance0 = 0.;
 
