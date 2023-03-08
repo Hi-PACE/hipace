@@ -74,7 +74,6 @@ AdaptiveTimeStep::Calculate (
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
-    if (!Hipace::HeadRank() && initial) return;
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real c = phys_const.c;
@@ -96,6 +95,7 @@ AdaptiveTimeStep::Calculate (
     new_dts.resize(nbeams);
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+        if (!Hipace::HeadRank() && initial) break;
         const auto& beam = beams.getBeam(ibeam);
         const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
@@ -170,34 +170,35 @@ AdaptiveTimeStep::Calculate (
     {
         for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
-            const auto& beam = beams.getBeam(ibeam);
+            if (Hipace::HeadRank() || !initial) {
+                const auto& beam = beams.getBeam(ibeam);
 
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
-                "The sum of all weights is 0! Probably no beam particles are initialized");
-            const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
-                                           /m_timestep_data[ibeam][WhichDouble::SumWeights];
-            const amrex::Real sigma_uz = std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
-                                              /m_timestep_data[ibeam][WhichDouble::SumWeights]
-                                              - mean_uz*mean_uz));
-            const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
-            const amrex::Real max_supported_uz = 1.e30;
-            amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
-                                                m_timestep_data[ibeam][WhichDouble::MinUz]),
-                                                max_supported_uz);
-            m_min_uz = std::min(m_min_uz,
-                chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e);
-            m_min_uz = std::max(m_min_uz, 1._rt);
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
+                    "The sum of all weights is 0! Probably no beam particles are initialized");
+                const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
+                                            /m_timestep_data[ibeam][WhichDouble::SumWeights];
+                const amrex::Real sigma_uz = std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
+                                                /m_timestep_data[ibeam][WhichDouble::SumWeights]
+                                                - mean_uz*mean_uz));
+                const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
+                const amrex::Real max_supported_uz = 1.e30;
+                amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
+                                                    m_timestep_data[ibeam][WhichDouble::MinUz]),
+                                                    max_supported_uz);
+                m_min_uz = std::min(m_min_uz,
+                    chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e);
+                m_min_uz = std::max(m_min_uz, 1._rt);
 
-            if (Hipace::m_verbose >=2 ){
-                amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
-                              << chosen_min_uz << "\n";
+                if (Hipace::m_verbose >=2 ){
+                    amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
+                                << chosen_min_uz << "\n";
+                }
+
+                if (chosen_min_uz < 1) {
+                    amrex::Print()<<"WARNING: beam particles of beam "<< ibeam <<
+                                    " have non-relativistic velocities!";
+                }
             }
-
-            if (chosen_min_uz < 1) {
-                amrex::Print()<<"WARNING: beam particles of beam "<< ibeam <<
-                                " have non-relativistic velocities!";
-            }
-
             new_dts[ibeam] = dt;
 
             // Calculate the time step for this beam used in the next time iteration of the current
@@ -208,16 +209,17 @@ AdaptiveTimeStep::Calculate (
             // this distance and use it for a more accurate time step estimation.
             amrex::Real new_dt = dt;
             amrex::Real new_time = t;
+            amrex::Real min_uz = m_min_uz;
             const int niter = m_adaptive_predict_step ? numprocs_z : 1;
             for (int i = 0; i < niter; i++)
             {
                 plasma_density = plasmas.maxDensity(c * new_time);
-                chosen_min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
+                min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
                 const amrex::Real omega_p = std::sqrt(plasma_density * q_e * q_e / (ep0 * m_e));
-                amrex::Real omega_b = omega_p / std::sqrt(2. * chosen_min_uz) * m_e / beam.m_mass;
+                amrex::Real omega_b = omega_p / std::sqrt(2. * min_uz);
                 new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
                 new_time += new_dt;
-                if (chosen_min_uz > 1) new_dts[ibeam] = new_dt;
+                if (min_uz > 1) new_dts[ibeam] = new_dt;
             }
         }
         /* set the new time step */
