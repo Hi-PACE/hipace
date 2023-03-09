@@ -15,6 +15,7 @@ License: BSD-3-Clause-LBNL
 from benchmark import Benchmark
 from backend.openpmd_backend import Backend
 import sys
+import json
 import numpy as np
 
 class Checksum:
