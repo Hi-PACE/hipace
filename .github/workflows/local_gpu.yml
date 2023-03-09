@@ -20,7 +20,7 @@ jobs:
 #   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/
   build_nvcc:
     name: NVCC 11.8 DP
-    runs-on: gpu-runner-pilot
+    runs-on: self-hosted
     if: github.event.pull_request.draft == false
     env:
       CXXFLAGS: "-Werror"
