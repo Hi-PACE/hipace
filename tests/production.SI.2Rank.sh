@@ -30,7 +30,7 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
 
 # Run the LWFA test and verify checksum
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_lwfa \
-        max_step = 11 \
+        max_step = 10 \
         amr.n_cell = 64 64 100 \
         hipace.file_prefix = ${TEST_NAME}_lwfa
 
