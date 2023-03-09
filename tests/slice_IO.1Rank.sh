@@ -40,5 +40,21 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         amr.n_cell = 64 88 100 \
         hipace.file_prefix=slice_io_yz
 
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        plasmas.sort_bin_size = 8 \
+        diagnostic.diag_type=xyz \
+        amr.n_cell = 64 88 100 \
+        diagnostic.patch_lo = -3 -100  0 \
+        diagnostic.patch_hi =  3  100  0 \
+        hipace.file_prefix=slice_io_cut_xy
+
+mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
+        plasmas.sort_bin_size = 8 \
+        diagnostic.diag_type=xz \
+        amr.n_cell = 64 88 100 \
+        diagnostic.patch_lo =  0 -3 -10 \
+        diagnostic.patch_hi =  4  3  10 \
+        hipace.file_prefix=slice_io_cut_xz
+
 # assert whether the two IO types match
 $HIPACE_EXAMPLE_DIR/analysis_slice_IO.py
