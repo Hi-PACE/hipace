@@ -101,6 +101,8 @@ class Checksum:
                   "have different outer keys:")
             print("Benchmark: %s" % ref_benchmark.data.keys())
             print("IO file  : %s" % self.data.keys())
+            print("\n\n----------------\n\n new file:")
+            print(json.dumps(data, indent=2))
             sys.exit(1)
 
         # Dictionaries have same inner keys (field and particle quantities)?
@@ -113,6 +115,8 @@ class Checksum:
                       % (key1, ref_benchmark.data[key1].keys()))
                 print("IO file   inner keys in %s: %s"
                       % (key1, self.data[key1].keys()))
+                print("\n\n----------------\n\n new file:")
+                print(json.dumps(data, indent=2))
                 sys.exit(1)
 
         # Dictionaries have same values?
@@ -133,6 +137,8 @@ class Checksum:
                           % (key1, key2, self.data[key1][key2]))
                     checksums_differ = True
         if checksums_differ:
+            print("\n\n----------------\n\n new file:")
+            print(json.dumps(data, indent=2))
             sys.exit(1)
         print("Checksum evaluation passed.")
 
