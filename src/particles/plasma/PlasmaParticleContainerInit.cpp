@@ -69,6 +69,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         const amrex::Real c_t = c_light * Hipace::m_physical_time;
         const amrex::Real min_density = m_min_density;
 
+        // Count the total number of particles so only one resize is needed
         const amrex::Long total_num_particles = amrex::Reduce::Sum<amrex::Long>(tile_box.numPts(),
             [=] AMREX_GPU_DEVICE (amrex::Long idx) noexcept
             {
@@ -107,6 +108,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + total_num_particles);
 
+        // The loop over particles is outside the loop over cells
+        // so that particles in the same cell are far apart.
+        // This makes current deposition faster.
         for (int i_part=0; i_part<num_ppc; ++i_part)
         {
             amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
