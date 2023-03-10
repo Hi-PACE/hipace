@@ -117,9 +117,9 @@ class Checksum:
                       % (key1, ref_benchmark.data[key1].keys()))
                 print("IO file   inner keys in %s: %s"
                       % (key1, self.data[key1].keys()))
-            print("\n\n----------------\n\nNew file:")
-            print(json.dumps(self.data, indent=2))
-            print("\n\n----------------\n")
+                print("\n\n----------------\n\nNew file:")
+                print(json.dumps(self.data, indent=2))
+                print("\n\n----------------\n")
                 sys.exit(1)
 
         # Dictionaries have same values?
