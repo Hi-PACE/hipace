@@ -130,6 +130,7 @@ public:
     /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
     int m_level {0}; /**< mesh refinement level on which the plasma lives */
+    bool m_do_symmetrize = false; /**< Option to symmetrize the plasma */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};

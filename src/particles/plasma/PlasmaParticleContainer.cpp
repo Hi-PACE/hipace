@@ -110,6 +110,7 @@ PlasmaParticleContainer::ReadParameters ()
     }
 
     queryWithParser(pp, "level", m_level);
+    queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,

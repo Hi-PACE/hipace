@@ -350,6 +350,12 @@ When both are specified, the per-species value is used.
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+* ``<plasma name> or plasmas.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the plasma in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`).
+    The total number of plasma particles will be multiplied by 4.
+
 Binary collisions for plasma species
 ------------------------------------
 
