@@ -52,7 +52,7 @@ jobs:
 
         cmake -S . -B build            \
           -DCMAKE_VERBOSE_MAKEFILE=ON  \
-          -DAMReX_CUDA_ARCH=6.0        \
+          -DAMReX_CUDA_ARCH=7.0        \
           -DHiPACE_COMPUTE=CUDA        \
           -DHiPACE_PRECISION=SINGLE    \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
