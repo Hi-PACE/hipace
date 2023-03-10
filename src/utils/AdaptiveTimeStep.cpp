@@ -12,12 +12,6 @@
 #include "HipaceProfilerWrapper.H"
 #include "Constants.H"
 
-#ifdef AMREX_USE_MPI
-namespace {
-    constexpr int comm_z_tag = 2000;
-}
-#endif
-
 /** \brief describes which double is used for the adaptive time step */
 struct WhichDouble {
     enum Comp { Dt=0, MinUz, MinAcc, SumWeights, SumWeightsTimesUz, SumWeightsTimesUzSquared, N };
