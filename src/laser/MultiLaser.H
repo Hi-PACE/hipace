@@ -88,7 +88,7 @@ namespace WhichLaserSlice {
         np1jp2_i,
         N
     };
-};
+}
 
 class Fields;
 
