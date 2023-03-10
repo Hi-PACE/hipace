@@ -240,8 +240,8 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
     amrex::Real phase_advance0 = 0.;
 
     // Get plasma density at beginning of step
-    const amrex::Real plasma_density = plasmas.maxDensity(pc.c * t);
-    const amrex::Real omgp0 = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
+    const amrex::Real plasma_density0 = plasmas.maxDensity(pc.c * t);
+    const amrex::Real omgp0 = std::sqrt(plasma_density0 * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
     amrex::Real omgb0 = omgp0 / std::sqrt(2. *m_min_uz);
 
     // Numerically integrate the phase advance from t to t+dt. The time step is reduced such that
