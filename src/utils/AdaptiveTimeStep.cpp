@@ -232,7 +232,7 @@ AdaptiveTimeStep::Calculate (
 void
 AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPlasma& plasmas)
 {
-    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
+    HIPACE_PROFILE("AdaptiveTimeStep::CalculateFromDensity()");
 
     using namespace amrex::literals;
 
@@ -260,8 +260,9 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
         if(std::abs(phase_advance - phase_advance0) >
-           2.*MathConst::pi*m_adaptive_phase_tolerance)
+           2.*MathConst::pi*m_adaptive_phase_tolerance/m_nt_per_betatron)
         {
+            if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep. Consider increasing hipace.adaptive_phase_substeps!\n";
             dt = i*dt_sub;
             return;
         }

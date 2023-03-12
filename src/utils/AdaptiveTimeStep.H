@@ -28,16 +28,16 @@ private:
     /** uz of the slowest particles */
     amrex::Real m_min_uz = std::numeric_limits<amrex::Real>::max();
     /** Whether to predict the next time steps. More accurate for parallel simulations */
-    bool m_adaptive_predict_step = false;
+    bool m_adaptive_predict_step = true;
     /** If true, a test on the phase advance sets the time step so it matches the phase advance
      * expected for a uniform plasma. Relevant in the presence of density gradients.
      * The tolerance on the phase advance difference is controlled by m_adaptive_phase_tolerance */
-    bool m_adaptive_control_phase_advance = false;
+    bool m_adaptive_control_phase_advance = true;
     /** Phase shift tolerance. Relevant when density gradients are present.
      * Lower is more accurate. */
-    amrex::Real m_adaptive_phase_tolerance = 5.e-4;
+    amrex::Real m_adaptive_phase_tolerance = 5.e-5;
     /** Number of substeps on which the phase advance is monitored. */
-    int m_adaptive_phase_substeps = 100;
+    int m_adaptive_phase_substeps = 2000;
 
 public:
     /** Whether to use an adaptive time step */

@@ -145,7 +145,7 @@ public:
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
-    int m_n_subcycles {1}; /**< Number of sub-cycles in the beam pusher */
+    int m_n_subcycles {50}; /**< Number of sub-cycles in the beam pusher */
     int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
