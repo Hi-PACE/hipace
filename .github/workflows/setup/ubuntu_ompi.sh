@@ -19,7 +19,7 @@ sudo apt-get install -y --no-install-recommends \
     libfftw3-dev        \
     libopenmpi-dev      \
     openmpi-bin         \
-    libhdf5-openmpi-dev \
+    libhdf5-dev \
     python3             \
     python3-pip         \
     python3-setuptools
