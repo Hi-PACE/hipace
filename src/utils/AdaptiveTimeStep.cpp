@@ -220,7 +220,7 @@ AdaptiveTimeStep::Calculate (
                 plasma_density = plasmas.maxDensity(c * new_time);
                 min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
                 // Just make sure min_uz is >0, to avoid nans below.
-                min_uz = std::max(min_uz, 1.e-3*m_threshold_uz);
+                min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
                 const amrex::Real omega_p = std::sqrt(plasma_density * q_e * q_e / (ep0 * m_e));
                 amrex::Real omega_b = omega_p / std::sqrt(2. * min_uz);
                 new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
