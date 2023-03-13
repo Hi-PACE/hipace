@@ -236,7 +236,7 @@ if(BUILD_TESTING)
 
     else()
 
-        if (HiPACE_COMPUTE EQUAL CUDA)
+        if (HiPACE_COMPUTE STREQUAL CUDA)
 
                 add_test(NAME blowout_wake.2Rank
                         COMMAND bash ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
