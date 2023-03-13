@@ -27,6 +27,8 @@ private:
     amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
     /** uz of the slowest particles */
     amrex::Real m_min_uz = std::numeric_limits<amrex::Real>::max();
+    /** Threshold beam momentum, below which the time step is not decreased */
+    amrex::Real m_threshold_uz = 2.;
     /** Whether to predict the next time steps. More accurate for parallel simulations */
     bool m_adaptive_predict_step = true;
     /** If true, a test on the phase advance sets the time step so it matches the phase advance

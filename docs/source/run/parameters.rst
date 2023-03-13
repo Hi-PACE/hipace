@@ -98,6 +98,10 @@ General parameters
     Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
     Number of sub-steps in the controlled phase advance described above (higher is more accurate, but should be slower).
 
+* ``hipace.adaptive_threshold_uz`` (`Real`) optional (default `2.`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    Threshold beam momentum, below which the time step is not decreased (to avoid arbitrarily small time steps).
+
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.
 
