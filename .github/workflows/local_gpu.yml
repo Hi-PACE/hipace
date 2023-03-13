@@ -43,4 +43,6 @@ jobs:
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
         cmake --build build -j 4
     - name: Run Tests
-      run: ctest --test-dir build --output-on-failure
+      run: |
+        source $HOME/profile.hipace
+        ctest --test-dir build --output-on-failure
