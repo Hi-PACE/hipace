@@ -22,7 +22,7 @@ private:
     amrex::Vector<amrex::Vector<amrex::Real>> m_timestep_data;
 
     /** Number of time steps per betatron period for the adaptive time step */
-    amrex::Real m_nt_per_betatron = 40.;
+    amrex::Real m_nt_per_betatron = 20.;
     /** Upper bound of the time step. Avoid gigantic time step(s) when beam starts near vacuum */
     amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
     /** uz of the slowest particles */
