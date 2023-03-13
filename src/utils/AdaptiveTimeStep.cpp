@@ -174,7 +174,7 @@ AdaptiveTimeStep::Calculate (
                 const auto& beam = beams.getBeam(ibeam);
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
-                    "The sum of all weights is 0! Probably no beam particles are initialized");
+                    "The sum of all weights is 0! Probably no beam particles are initialized\n");
                 const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
                                             /m_timestep_data[ibeam][WhichDouble::SumWeights];
                 const amrex::Real sigma_uz = std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
@@ -196,7 +196,7 @@ AdaptiveTimeStep::Calculate (
 
                 if (chosen_min_uz < 1) {
                     amrex::Print()<<"WARNING: beam particles of beam "<< ibeam <<
-                                    " have non-relativistic velocities!";
+                                    " have non-relativistic velocities!\n";
                 }
             }
             new_dts[ibeam] = dt;
