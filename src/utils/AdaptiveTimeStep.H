@@ -37,7 +37,7 @@ private:
     bool m_adaptive_control_phase_advance = true;
     /** Phase shift tolerance. Relevant when density gradients are present.
      * Lower is more accurate. */
-    amrex::Real m_adaptive_phase_tolerance = 1.e-4;
+    amrex::Real m_adaptive_phase_tolerance = 4.e-4;
     /** Number of substeps on which the phase advance is monitored. */
     int m_adaptive_phase_substeps = 2000;
 
