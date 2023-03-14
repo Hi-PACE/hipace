@@ -22,22 +22,24 @@ private:
     amrex::Vector<amrex::Vector<amrex::Real>> m_timestep_data;
 
     /** Number of time steps per betatron period for the adaptive time step */
-    amrex::Real m_nt_per_betatron = 40.;
+    amrex::Real m_nt_per_betatron = 20.;
     /** Upper bound of the time step. Avoid gigantic time step(s) when beam starts near vacuum */
     amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
     /** uz of the slowest particles */
     amrex::Real m_min_uz = std::numeric_limits<amrex::Real>::max();
+    /** Threshold beam momentum, below which the time step is not decreased */
+    amrex::Real m_threshold_uz = 2.;
     /** Whether to predict the next time steps. More accurate for parallel simulations */
-    bool m_adaptive_predict_step = false;
+    bool m_adaptive_predict_step = true;
     /** If true, a test on the phase advance sets the time step so it matches the phase advance
      * expected for a uniform plasma. Relevant in the presence of density gradients.
      * The tolerance on the phase advance difference is controlled by m_adaptive_phase_tolerance */
-    bool m_adaptive_control_phase_advance = false;
+    bool m_adaptive_control_phase_advance = true;
     /** Phase shift tolerance. Relevant when density gradients are present.
      * Lower is more accurate. */
-    amrex::Real m_adaptive_phase_tolerance = 5.e-4;
+    amrex::Real m_adaptive_phase_tolerance = 4.e-4;
     /** Number of substeps on which the phase advance is monitored. */
-    int m_adaptive_phase_substeps = 100;
+    int m_adaptive_phase_substeps = 2000;
 
 public:
     /** Whether to use an adaptive time step */
