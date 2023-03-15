@@ -10,6 +10,7 @@ name: 🐧 local CUDA
 on: [push, pull_request]
 
 concurrency:
+  group: ${{ github.ref }}-${{ github.head_ref }}-cudaLocal
   cancel-in-progress: true
 
 jobs:
