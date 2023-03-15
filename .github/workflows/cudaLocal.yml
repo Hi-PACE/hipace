@@ -13,12 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-# Ref.:
-#   https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/ubuntu18.04/10.1/base/Dockerfile
-#   https://github.com/ComputationalRadiationPhysics/picongpu/blob/0.5.0/share/picongpu/dockerfiles/ubuntu-1604/Dockerfile
-#   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/
   build_nvcc:
-    name: NVCC 11.1 DP
+    name: local V100 NVCC 11.1 DP
     runs-on: self-hosted
     if: github.event.pull_request.draft == false
     env:
@@ -29,18 +25,16 @@ jobs:
     - name: Build & Install
       run: |
         source $HOME/profile.hipace
-        # export PATH=/usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
-        # export LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
         which nvcc || echo "nvcc not in PATH!"
 
-        cmake -S . -B build            \
-          -DCMAKE_VERBOSE_MAKEFILE=ON  \
-          -DAMReX_CUDA_ARCH=7.0        \
-          -DHiPACE_COMPUTE=CUDA        \
-          -DHiPACE_PRECISION=DOUBLE    \
+        cmake -S . -B build                                \
+          -DCMAKE_VERBOSE_MAKEFILE=ON                      \
+          -DAMReX_CUDA_ARCH=7.0                            \
+          -DHiPACE_COMPUTE=CUDA                            \
+          -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        cmake --build build -j 4
+        cmake --build build -j 8
     - name: Run Tests
       run: |
         source $HOME/profile.hipace
