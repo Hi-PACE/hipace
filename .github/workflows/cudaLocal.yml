@@ -1,0 +1,43 @@
+# Copyright 2022-2023
+#
+# This file is part of HiPACE++.
+#
+# Authors: Axel Huebl, Maxence Thevenet
+# License: BSD-3-Clause-LBNL
+
+name: 🐧 local CUDA
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.head_ref }}-cudaLocal
+  cancel-in-progress: true
+
+jobs:
+  build_nvcc:
+    name: local V100 NVCC 11.1 DP
+    runs-on: self-hosted
+    if: github.event.pull_request.draft == false
+    env:
+      CXXFLAGS: "-Werror"
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build & Install
+      run: |
+        source $HOME/profile.hipace
+        which nvcc || echo "nvcc not in PATH!"
+
+        cmake -S . -B build                                \
+          -DCMAKE_VERBOSE_MAKEFILE=ON                      \
+          -DAMReX_CUDA_ARCH=7.0                            \
+          -DHiPACE_COMPUTE=CUDA                            \
+          -DHiPACE_PRECISION=DOUBLE                        \
+          -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
+          -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
+        cmake --build build -j 8
+    - name: Run Tests
+      run: |
+        source $HOME/profile.hipace
+        conda activate openpmd
+        ctest --test-dir build --output-on-failure
