@@ -8,6 +8,7 @@
 #ifndef OPENPMDWRITER_H_
 #define OPENPMDWRITER_H_
 
+#include "diagnostics/Diagnostic.H"
 #include "particles/beam/MultiBeam.H"
 #include "particles/beam/BeamParticleContainer.H"
 
@@ -92,29 +93,24 @@ private:
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in,out] iteration openPMD iteration to which the data is written
      * \param[in] output_step current time step to dump
-     * \param[in] lev MR level
      */
-    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Vector<amrex::Geometry> const& geom,
+    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
                          const int slice_dir, const amrex::Vector< std::string > varnames,
-                         openPMD::Iteration iteration, const int output_step, const int lev);
+                         openPMD::Iteration iteration, const int output_step);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
     amrex::Vector<std::string> m_real_names {"weighting", "momentum_x", "momentum_y", "momentum_z"};
 
     /** vector over levels of openPMD-api Series object for output */
-    amrex::Vector<std::unique_ptr< openPMD::Series >> m_outputSeries;
+    std::unique_ptr< openPMD::Series > m_outputSeries;
 
     /** openPMD backend: h5, bp, or json. Default depends on what is available */
     std::string m_openpmd_backend = "default";
 
-    /** Last iteration that had fields written to file.
-     * This is stored to make sure we don't write the last iteration multiple times. */
-    amrex::Vector<int> m_last_field_output_dumped;
-
     /** Last iteration that had beams written to file.
      * This is stored to make sure we don't write the last iteration multiple times. */
-    amrex::Vector<int> m_last_beam_output_dumped;
+    int m_last_beam_output_dumped;
 
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
@@ -129,22 +125,15 @@ public:
      * \param[in] output_step current iteration
      * \param[in] output_period output period
      * \param[in] max_step maximum time step of the simulation
-     * \param[in] nlev number of mesh refinement levels
      */
-    void InitDiagnostics (const int output_step, const int output_period, const int max_step,
-                          const int nlev);
+    void InitDiagnostics (const int output_step, const int output_period, const int max_step);
 
     /** \brief writing openPMD data
      *
-     * \param[in] a_mf Vector (levels) of FArrayBoxes
+     * \param[in] field_diag field diagnostic data
      * \param[in] a_multi_beams multi beam container which is written to openPMD file
-     * \param[in] geom Geometry of the simulation, to get the cell size etc.
-     * \param[in] write_fields if there are fields to write
      * \param[in] physical_time Physical time of the currenerationt it.
      * \param[in] output_step current iteration to be written to file
-     * \param[in] nlev number of MR levels
-     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
-     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in] beamnames list of the names of the beam to be written to file
      * \param[in] it current box number
      * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
@@ -152,12 +141,11 @@ public:
      * \param[in] call_type whether the beams or the fields should be written to file
      */
     void WriteDiagnostics(
-        amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
-        amrex::Vector<amrex::Geometry> const& geom, std::vector<bool> const& write_fields,
-        const amrex::Real physical_time, const int output_step, const int nlev,
-        const int slice_dir, const amrex::Vector< std::string > varnames,
+        const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
+        const amrex::Real physical_time, const int output_step,
         const amrex::Vector< std::string > beamnames, const int it,
-        const amrex::Vector<BoxSorter>& a_box_sorter_vec, amrex::Vector<amrex::Geometry> const& geom3D,
+        const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+        amrex::Vector<amrex::Geometry> const& geom3D,
         const OpenPMDWriterCallType call_type);
 
     /** \brief Resets the openPMD series of all levels

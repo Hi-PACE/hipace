@@ -452,7 +452,7 @@ Hipace::Evolve ()
     {
 #ifdef HIPACE_USE_OPENPMD
         if (m_physical_time <= m_max_time) {
-            m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step, finestLevel()+1);
+            m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step);
         }
 #endif
 
@@ -494,7 +494,7 @@ Hipace::Evolve ()
 
 #ifdef HIPACE_USE_OPENPMD
             if (m_physical_time == m_max_time && it == n_boxes-1) { // init diagnostic if max_time
-                m_openpmd_writer.InitDiagnostics(step, m_output_period, step, finestLevel()+1);
+                m_openpmd_writer.InitDiagnostics(step, m_output_period, step);
             }
 #endif
 
@@ -1526,10 +1526,13 @@ Hipace::GetRefRatio (int lev)
 void
 Hipace::FillDiagnostics (const int lev, int i_slice)
 {
-    if (m_diags.hasField()[lev]) {
-        m_fields.Copy(lev, i_slice, m_diags.getGeom()[lev], m_diags.getF(lev),
-                      m_diags.getF(lev).box(), Geom(lev),
-                      m_diags.getCompsIdx(), m_diags.getNFields(), m_multi_laser);
+    for (auto& fd : m_diags.getFieldData()) {
+        if (fd.m_level == lev && fd.m_has_field) {
+            m_fields.Copy(lev, i_slice, fd.m_geom_io, fd.m_F,
+                fd.m_F.box(), Geom(lev),
+                fd.m_comps_output_idx, fd.m_nfields,
+                fd.m_do_laser, m_multi_laser);
+        }
     }
 }
 
@@ -1543,17 +1546,11 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
         (!(m_physical_time == m_max_time) && !(output_step == m_max_step)
          && output_step % m_output_period != 0 ) ) return;
 
-    // assumption: same order as in struct enum Field Comps
-    amrex::Vector< std::string > varnames = getDiagComps();
-    if (m_diags.doLaser()) varnames.push_back("laser_real");
-    if (m_diags.doLaser()) varnames.push_back("laser_imag");
-    const amrex::Vector< std::string > beamnames = getDiagBeamNames();
-
 #ifdef HIPACE_USE_OPENPMD
     amrex::Gpu::streamSynchronize();
-    m_openpmd_writer.WriteDiagnostics(getDiagF(), m_multi_beam, getDiagGeom(), m_diags.hasField(),
-                        m_physical_time, output_step, finestLevel()+1, getDiagSliceDir(), varnames,
-                        beamnames, it, m_box_sorters, geom, call_type);
+    m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
+                        m_physical_time, output_step, getDiagBeamNames(),
+                        it, m_box_sorters, geom, call_type);
 #else
     amrex::ignore_unused(it, call_type);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
