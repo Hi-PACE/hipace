@@ -51,6 +51,10 @@ struct FieldDiagnosticData
     amrex::Geometry m_geom_io; /**< Diagnostics geometry */
 
     bool m_has_field; /**< if there is field output to write */
+
+    /** Number of iterations between consecutive output dumps.
+     * Default is -1, meaning no output */
+    int m_output_period = -1;
 };
 
 
@@ -72,6 +76,43 @@ public:
 
     amrex::Vector<FieldDiagnosticData>& getFieldData () { return m_field_data; }
 
+
+    static bool hasFieldOutput (const FieldDiagnosticData& fd,
+                         int output_step, int max_step,
+                         amrex::Real output_time, amrex::Real max_time)
+    {
+        return fd.m_output_period >= 0 && (
+            (output_time == max_time) ||
+            (output_step == max_step) ||
+            (output_step % fd.m_output_period == 0) );
+    }
+
+    bool hasAnyFieldOutput (int output_step, int max_step,
+                            amrex::Real output_time, amrex::Real max_time) const
+    {
+        for (const auto& fd : m_field_data) {
+            if (hasFieldOutput(fd, output_step, max_step, output_time, max_time)) return true;
+        }
+        return false;
+    }
+
+    bool hasBeamOutput (int output_step, int max_step,
+                        amrex::Real output_time, amrex::Real max_time) const
+    {
+        return m_beam_output_period >= 0 && (
+            (output_time == max_time) ||
+            (output_step == max_step) ||
+            (output_step % m_beam_output_period == 0) );
+    }
+
+    bool hasAnyOutput (int output_step, int max_step,
+                       amrex::Real output_time, amrex::Real max_time) const
+    {
+        return hasAnyFieldOutput(output_step, max_step, output_time, max_time) ||
+               hasBeamOutput(output_step, max_step, output_time, max_time);
+    }
+
+
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *
      * \param[in] slice_dir slicing direction
@@ -90,11 +131,14 @@ public:
      * \param[in] geom geometry of the full simulation domain
      */
     void ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_domain, const int lev,
-                         amrex::Geometry const& geom);
+                         amrex::Geometry const& geom, int output_step, int max_step,
+                         amrex::Real output_time, amrex::Real max_time);
 
 private:
 
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
+    int m_beam_output_period = -1;
+
     bool m_initialized = false; /**< if this object is fully initialized */
 
     amrex::Vector<FieldDiagnosticData> m_field_data;

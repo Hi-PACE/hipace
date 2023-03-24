@@ -12,6 +12,7 @@
 #include "particles/sorting/SliceSort.H"
 #include "particles/sorting/BoxSort.H"
 #include "salame/Salame.H"
+#include "utils/DeprecatedInput.H"
 #include "utils/IOUtil.H"
 #include "utils/GPUUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
@@ -137,9 +138,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
-    queryWithParser(pph, "output_period", m_output_period);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_period != 0,
-                                     "To avoid output, please use output_period = -1.");
+    DeprecatedInput("hipace", "output_period", "diagnostic.output_period", "", true);
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
@@ -450,12 +449,6 @@ Hipace::Evolve ()
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
     {
-#ifdef HIPACE_USE_OPENPMD
-        if (m_physical_time <= m_max_time) {
-            m_openpmd_writer.InitDiagnostics(step, m_output_period, m_max_step);
-        }
-#endif
-
         ResetAllQuantities();
 
         // Loop over longitudinal boxes on this rank, from head to tail
@@ -493,8 +486,9 @@ Hipace::Evolve ()
             m_dt = std::min(m_dt, m_max_time - m_physical_time);
 
 #ifdef HIPACE_USE_OPENPMD
-            if (m_physical_time == m_max_time && it == n_boxes-1) { // init diagnostic if max_time
-                m_openpmd_writer.InitDiagnostics(step, m_output_period, step);
+            if (it == n_boxes-1
+                && m_diags.hasAnyOutput(step, m_max_step, m_physical_time, m_max_time)) {
+                m_openpmd_writer.InitDiagnostics();
             }
 #endif
 
@@ -513,7 +507,7 @@ Hipace::Evolve ()
             // This handles both beam initialization and particle slippage.
             if (it>0) m_multi_beam.PackLocalGhostParticles(it-1, m_box_sorters);
 
-            ResizeFDiagFAB(it);
+            ResizeFDiagFAB(it, step);
 
             amrex::Vector<amrex::Vector<BeamBins>> bins;
             bins = m_multi_beam.findParticlesInEachSlice(finestLevel()+1, it, bx,
@@ -542,7 +536,6 @@ Hipace::Evolve ()
             } else {
                 m_dt = 2.*m_max_time;
             }
-
 
             // averaging predictor corrector loop diagnostics
             m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
@@ -1487,7 +1480,7 @@ Hipace::NotifyFinish (const int it, bool only_ghost, bool only_time)
 }
 
 void
-Hipace::ResizeFDiagFAB (const int it)
+Hipace::ResizeFDiagFAB (const int it, const int step)
 {
     for (int lev = 0; lev <= finestLevel(); ++lev) {
         amrex::Box local_box = boxArray(lev)[it];
@@ -1509,7 +1502,8 @@ Hipace::ResizeFDiagFAB (const int it)
                                ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1)));
         }
 
-        m_diags.ResizeFDiagFAB(local_box, domain, lev, Geom(lev));
+        m_diags.ResizeFDiagFAB(local_box, domain, lev, Geom(lev),
+                               step, m_max_step, m_physical_time, m_max_time);
     }
 }
 
@@ -1541,10 +1535,15 @@ Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCall
 {
     HIPACE_PROFILE("Hipace::WriteDiagnostics()");
 
-    // Dump every m_output_period steps and after last step
-    if (m_output_period < 0 ||
-        (!(m_physical_time == m_max_time) && !(output_step == m_max_step)
-         && output_step % m_output_period != 0 ) ) return;
+    if (call_type == OpenPMDWriterCallType::beams) {
+        if (!m_diags.hasBeamOutput(output_step, m_max_step, m_physical_time, m_max_time)) {
+            return;
+        }
+    } else if (call_type == OpenPMDWriterCallType::fields) {
+        if (!m_diags.hasAnyFieldOutput(output_step, m_max_step, m_physical_time, m_max_time)) {
+            return;
+        }
+    }
 
 #ifdef HIPACE_USE_OPENPMD
     amrex::Gpu::streamSynchronize();

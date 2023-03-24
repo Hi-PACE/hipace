@@ -13,7 +13,6 @@ Diagnostic::Diagnostic (int nlev)
 {
     amrex::ParmParse ppd("diagnostic");
 
-
     amrex::Vector<std::string> field_diag_names;
 
     for(int ilev = 0; ilev<nlev; ++ilev) {
@@ -61,7 +60,14 @@ Diagnostic::Diagnostic (int nlev)
         fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( fd.m_diag_coarsen.min() >= 1,
             "Coarsening ratio must be >= 1");
+
+        queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_output_period != 0,
+                                        "To avoid output, please use output_period = -1.");
     }
+
+    queryWithParser(ppd, "output_period", m_beam_output_period);
+    queryWithParser(ppd, "beam_output_period", m_beam_output_period);
 }
 
 void
@@ -160,7 +166,8 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
 
 void
 Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_domain, const int lev,
-                            amrex::Geometry const& geom)
+                            amrex::Geometry const& geom, int output_step, int max_step,
+                            amrex::Real output_time, amrex::Real max_time)
 {
     AMREX_ALWAYS_ASSERT(m_initialized);
 
@@ -217,7 +224,8 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
 
         fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-        fd.m_has_field = local_box.ok();
+        fd.m_has_field = local_box.ok()
+                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
         if(fd.m_has_field) {
             fd.m_F.resize(local_box, fd.m_nfields, amrex::The_Pinned_Arena());
