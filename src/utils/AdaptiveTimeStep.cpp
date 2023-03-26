@@ -91,6 +91,8 @@ AdaptiveTimeStep::Calculate (
 
     amrex::Vector<amrex::Real> new_dts;
     new_dts.resize(nbeams);
+    amrex::Vector<amrex::Real> beams_min_uz;
+    beams_min_uz.resize(nbeams, std::numeric_limits<amrex::Real>::max());
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         if (!Hipace::HeadRank() && initial) break;
@@ -183,19 +185,19 @@ AdaptiveTimeStep::Calculate (
                 amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
                                                     m_timestep_data[ibeam][WhichDouble::MinUz]),
                                                     max_supported_uz);
-                m_min_uz = std::min(m_min_uz,
-                    chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e);
+
+                beams_min_uz[ibeam] = chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e;
 
                 if (Hipace::m_verbose >=2 ){
                     amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
-                                << m_min_uz << "\n";
+                                << beams_min_uz[ibeam] << "\n";
                 }
 
-                if (m_min_uz < m_threshold_uz) {
+                if (beams_min_uz[ibeam] < m_threshold_uz) {
                     amrex::Print()<<"WARNING: beam particles of beam "<< ibeam <<
                                     " have non-relativistic velocities!\n";
                 }
-                m_min_uz = std::max(m_min_uz, m_threshold_uz);
+                beams_min_uz[ibeam] = std::max(beams_min_uz[ibeam], m_threshold_uz);
             }
             new_dts[ibeam] = dt;
 
@@ -205,9 +207,10 @@ AdaptiveTimeStep::Calculate (
             // As this time step will start in numprocs_z time steps, so the beam may have
             // propagated a significant distance. If m_adaptive_predict_step is true, we estimate
             // this distance and use it for a more accurate time step estimation.
+
             amrex::Real new_dt = dt;
             amrex::Real new_time = t;
-            amrex::Real min_uz = m_min_uz;
+            amrex::Real min_uz = beams_min_uz[ibeam];
             const int niter = m_adaptive_predict_step ? numprocs_z : 1;
             for (int i = 0; i < niter; i++)
             {
@@ -222,6 +225,7 @@ AdaptiveTimeStep::Calculate (
                 if (min_uz > m_threshold_uz) new_dts[ibeam] = new_dt;
             }
         }
+        m_min_uz = *std::min_element(beams_min_uz.begin(), beams_min_uz.end());
         /* set the new time step */
         dt = *std::min_element(new_dts.begin(), new_dts.end());
         // Make sure the new time step is smaller than the upper bound
