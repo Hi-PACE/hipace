@@ -168,9 +168,9 @@ AdaptiveTimeStep::Calculate (
     // from the full beam information
     if (it == 0 || initial)
     {
-        for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+        if (Hipace::HeadRank() || !initial) {
+            for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
-            if (Hipace::HeadRank() || !initial) {
                 const auto& beam = beams.getBeam(ibeam);
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
@@ -198,9 +198,12 @@ AdaptiveTimeStep::Calculate (
                                     " have non-relativistic velocities!\n";
                 }
                 beams_min_uz[ibeam] = std::max(beams_min_uz[ibeam], m_threshold_uz);
+                new_dts[ibeam] = dt;
             }
-            new_dts[ibeam] = dt;
+            m_min_uz = *std::min_element(beams_min_uz.begin(), beams_min_uz.end());
+        }
 
+        for (int ibeam = 0; ibeam < nbeams; ibeam++) {
             // Calculate the time step for this beam used in the next time iteration of the current
             // rank, to resolve the betatron period with m_nt_per_betatron points per period,
             // assuming full blowout regime. The z-dependence of the plasma profile is considered.
@@ -225,7 +228,6 @@ AdaptiveTimeStep::Calculate (
                 if (min_uz > m_threshold_uz) new_dts[ibeam] = new_dt;
             }
         }
-        m_min_uz = *std::min_element(beams_min_uz.begin(), beams_min_uz.end());
         /* set the new time step */
         dt = *std::min_element(new_dts.begin(), new_dts.end());
         // Make sure the new time step is smaller than the upper bound
