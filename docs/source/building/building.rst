@@ -177,7 +177,7 @@ CMake Option                 Default & Values                                Des
 ``HiPACE_amrex_repo``        ``https://github.com/AMReX-Codes/amrex.git``    Repository URI to pull and build AMReX from
 ``HiPACE_amrex_branch``      ``development``                                 Repository branch for ``HiPACE_amrex_repo``
 ``HiPACE_amrex_internal``    **ON**/OFF                                      Needs a pre-installed AMReX library if set to ``OFF``
-``HiPACE_openpmd_mpi``        ON/**OFF**                                     Build openPMD with MPI support, although I/O is always serial
+``HiPACE_openpmd_mpi``       **ON**/OFF                                      Build openPMD with MPI support, although I/O is always serial
 ``HiPACE_openpmd_src``       *None*                                          Path to openPMD-api source directory (preferred if set)
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``  Repository URI to pull and build openPMD-api from
 ``HiPACE_openpmd_branch``    ``0.14.5``                                      Repository branch for ``HiPACE_openpmd_repo``
