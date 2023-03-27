@@ -617,6 +617,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 Diagnostic parameters
 ---------------------
 
+* ``diagnostic.output_period`` (`integer`) optional (default `-1`)
+    Output period for all diagnostics. Field or beam specific diagnostics can overwrite this parameter.
+    No output is given for ``diagnostic.output_period = -1``.
+    **Warning:** ``diagnostic.output_period = 0`` will make the simulation crash.
+
 Beam diagnostics
 ^^^^^^^^^^^^^^^^
 
@@ -628,8 +633,6 @@ Beam diagnostics
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,
     ``none`` or a subset of ``beams.names``.
-    **Note:** The option ``none`` only suppressed the output of the beam data. To suppress any
-    output, please use ``diagnostic.output_period = -1``.
 
 Field diagnostics
 ^^^^^^^^^^^^^^^^^
@@ -642,11 +645,12 @@ Field diagnostics
 
 * ``<diag name> or diagnostic.level`` (`integer`) optional (default `0`)
     From which mesh refinement level the diagnostics should be collected.
-    If ```<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1.
+    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1.
 
-* ``<diag name> or diagnostic.output_period`` (`integer`) optional (default `-1`)
-    Output period for fields. No output is given for ``diagnostic.output_period = -1``.
-    **Warning:** ``diagnostic.output_period = 0`` will make the simulation crash.
+* ``<diag name>.output_period`` (`integer`) optional (default `-1`)
+    Output period for fields. No output is given for ``<diag name>.output_period = -1``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+    **Warning:** ``<diag name>.output_period = 0`` will make the simulation crash.
 
 * ``<diag name> or diagnostic.diag_type`` (`string`)
     Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
@@ -669,8 +673,6 @@ Field diagnostics
     plasma and the beam. For the explicit solver, the current and charge densities of the beam and
     for all plasmas are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
     ``jx jy jz rho`` are available.
-    **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
-    output, please use ``diagnostic.output_period = -1``.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
