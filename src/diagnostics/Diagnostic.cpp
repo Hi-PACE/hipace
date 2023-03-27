@@ -13,7 +13,7 @@ Diagnostic::Diagnostic (int nlev)
 {
     amrex::ParmParse ppd("diagnostic");
 
-    amrex::Vector<std::string> field_diag_names;
+    amrex::Vector<std::string> field_diag_names{};
 
     for(int ilev = 0; ilev<nlev; ++ilev) {
         field_diag_names.emplace_back("lev"+std::to_string(ilev));
@@ -180,7 +180,7 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
 
     for (auto& fd : m_field_data) {
 
-        if (fd.m_level != lev) return;
+        if (fd.m_level != lev) continue;
 
         amrex::Box local_box = a_local_box;
         amrex::Box domain = a_domain;
