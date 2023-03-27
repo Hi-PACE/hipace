@@ -161,7 +161,11 @@ OpenPMDWriter::WriteFieldData (
             chunk_size.erase(chunk_size.begin() + 2-slice_dir);
         }
 
+#if ((OPENPMDAPI_VERSION_MAJOR > 0) || ((OPENPMDAPI_VERSION_MAJOR == 0) && (OPENPMDAPI_VERSION_MINOR >= 15)))
         field_comp.storeChunkRaw(fab.dataPtr(icomp), chunk_offset, chunk_size);
+#else
+        field_comp.storeChunk(openPMD::shareRaw( fab.dataPtr( icomp ) ), chunk_offset, chunk_size);
+#endif
     }
 }
 
@@ -380,8 +384,13 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
             auto& currRecord = currSpecies[record_name];
             auto& currRecordComp = currRecord[component_name];
 
+#if ((OPENPMDAPI_VERSION_MAJOR > 0) || ((OPENPMDAPI_VERSION_MAJOR == 0) && (OPENPMDAPI_VERSION_MINOR >= 15)))
             currRecordComp.storeChunkRaw(soa.GetRealData(idx).data()+box_offset,
-                {offset}, {numParticleOnTile64});
+                    {offset}, {numParticleOnTile64});
+#else
+            currRecordComp.storeChunk(openPMD::shareRaw(soa.GetRealData(idx).data()+box_offset),
+                    {offset}, {numParticleOnTile64});
+#endif
         } // end for NumSoARealAttributes
     }
 }
