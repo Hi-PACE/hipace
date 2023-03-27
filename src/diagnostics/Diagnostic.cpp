@@ -20,6 +20,9 @@ Diagnostic::Diagnostic (int nlev)
     }
 
     queryWithParser(ppd, "names", field_diag_names);
+    if (field_diag_names.size() > 0 && field_diag_names[0] == "no_field_diag") {
+        field_diag_names.clear();
+    }
 
     m_field_data.resize(field_diag_names.size());
 
@@ -30,6 +33,7 @@ Diagnostic::Diagnostic (int nlev)
 
         amrex::ParmParse pp(fd.m_diag_name);
 
+        if (fd.m_diag_name == "lev1") fd.m_level = 1;
         queryWithParserAlt(pp, "level", fd.m_level, ppd);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( 0 <= fd.m_level && fd.m_level < nlev,
             "Invalid diagnostic refinement level");
@@ -51,7 +55,6 @@ Diagnostic::Diagnostic (int nlev)
         fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
         fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
 
-
         amrex::Array<int,3> diag_coarsen_arr{1,1,1};
         queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
         if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1) {
@@ -68,6 +71,8 @@ Diagnostic::Diagnostic (int nlev)
 
     queryWithParser(ppd, "output_period", m_beam_output_period);
     queryWithParser(ppd, "beam_output_period", m_beam_output_period);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_beam_output_period != 0,
+                                    "To avoid output, please use beam_output_period = -1.");
 }
 
 void
@@ -122,8 +127,10 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
         }
         fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
 
+        fd.m_nfields_with_laser = fd.m_nfields;
+
         if (fd.m_do_laser) {
-            fd.m_nfields += 2;
+            fd.m_nfields_with_laser += 2;
             fd.m_comps_output.push_back("laser_real");
             fd.m_comps_output.push_back("laser_imag");
         }
@@ -225,10 +232,11 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
         fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
         fd.m_has_field = local_box.ok()
-                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
+                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time)
+                         && fd.m_nfields_with_laser != 0;
 
         if(fd.m_has_field) {
-            fd.m_F.resize(local_box, fd.m_nfields, amrex::The_Pinned_Arena());
+            fd.m_F.resize(local_box, fd.m_nfields_with_laser, amrex::The_Pinned_Arena());
             fd.m_F.setVal<amrex::RunOn::Host>(0);
         }
     }

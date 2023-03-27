@@ -14,51 +14,37 @@
 #include <vector>
 
 
-
+/** \brief This struct holds data for one field diagnostic on one MR level */
 struct FieldDiagnosticData
 {
-    std::string m_diag_name;
-
-    int m_level = 0;
-
+    std::string m_diag_name; /**< name used for input parameters and in the output */
+    int m_level = 0; /**< MR level */
     int m_slice_dir; /**< Slicing direction */
-
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
-
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
     bool m_use_custom_size_hi = false; /**< if a user defined diagnostics size should be used (hi)*/
     /** 3D array with lower ends of the diagnostics grid */
     amrex::Array<amrex::Real, 3> m_diag_lo {0., 0., 0.};
     /** 3D array with upper ends of the diagnostics grid */
     amrex::Array<amrex::Real, 3> m_diag_hi {0., 0., 0.};
-
     amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
-
-
-
-
     bool m_do_laser {false}; /**< Whether to output the laser */
-
     int m_nfields; /**< Number of physical fields to write */
+    int m_nfields_with_laser; /**< Number of fields to write including laser */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     /** Component indexes to Write to output file */
     amrex::Gpu::DeviceVector<int> m_comps_output_idx;
-
-
     /** Vector over levels, all fields */
     amrex::FArrayBox m_F;
-
     amrex::Geometry m_geom_io; /**< Diagnostics geometry */
-
     bool m_has_field; /**< if there is field output to write */
-
     /** Number of iterations between consecutive output dumps.
      * Default is -1, meaning no output */
     int m_output_period = -1;
 };
 
 
-/** \brief This class holds data for 1 diagnostics (full or slice) */
+/** \brief This class holds data for all diagnostics */
 class Diagnostic
 {
 
@@ -73,10 +59,17 @@ public:
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
 
-
+    /** \brief return data for all field diagnostics */
     amrex::Vector<FieldDiagnosticData>& getFieldData () { return m_field_data; }
 
-
+    /** \brief determines if a single field diagnostic has any output on in this time step
+     *
+     * \param[in] fd field diagnostic
+     * \param[in] output_step current step index
+     * \param[in] max_step last step index
+     * \param[in] output_time physical time of current step
+     * \param[in] max_time physical time of last step
+     */
     static bool hasFieldOutput (const FieldDiagnosticData& fd,
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
@@ -87,6 +80,13 @@ public:
             (output_step % fd.m_output_period == 0) );
     }
 
+    /** \brief determines if any field diagnostic has any output on in this time step
+     *
+     * \param[in] output_step current step index
+     * \param[in] max_step last step index
+     * \param[in] output_time physical time of current step
+     * \param[in] max_time physical time of last step
+     */
     bool hasAnyFieldOutput (int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time) const
     {
@@ -96,6 +96,13 @@ public:
         return false;
     }
 
+    /** \brief determines if any beam diagnostic has any output on in this time step
+     *
+     * \param[in] output_step current step index
+     * \param[in] max_step last step index
+     * \param[in] output_time physical time of current step
+     * \param[in] max_time physical time of last step
+     */
     bool hasBeamOutput (int output_step, int max_step,
                         amrex::Real output_time, amrex::Real max_time) const
     {
@@ -105,13 +112,19 @@ public:
             (output_step % m_beam_output_period == 0) );
     }
 
+    /** \brief determines if any field or beam diagnostic has any output on in this time step
+     *
+     * \param[in] output_step current step index
+     * \param[in] max_step last step index
+     * \param[in] output_time physical time of current step
+     * \param[in] max_time physical time of last step
+     */
     bool hasAnyOutput (int output_step, int max_step,
                        amrex::Real output_time, amrex::Real max_time) const
     {
         return hasAnyFieldOutput(output_step, max_step, output_time, max_time) ||
                hasBeamOutput(output_step, max_step, output_time, max_time);
     }
-
 
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *
@@ -129,20 +142,22 @@ public:
      * \param[in] a_domain box to which the Geometry of the diagnostics will be resized to
      * \param[in] lev MR level
      * \param[in] geom geometry of the full simulation domain
+     * \param[in] output_step current step index
+     * \param[in] max_step last step index
+     * \param[in] output_time physical time of current step
+     * \param[in] max_time physical time of last step
      */
     void ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_domain, const int lev,
                          amrex::Geometry const& geom, int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time);
 
 private:
-
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
+    /** Number of iterations between consecutive output dumps.
+     * Default is -1, meaning no output */
     int m_beam_output_period = -1;
-
+    amrex::Vector<FieldDiagnosticData> m_field_data; /**< individual field diag data */
     bool m_initialized = false; /**< if this object is fully initialized */
-
-    amrex::Vector<FieldDiagnosticData> m_field_data;
-
 };
 
 #endif // DIAGNOSTIC_H_

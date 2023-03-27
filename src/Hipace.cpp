@@ -486,6 +486,7 @@ Hipace::Evolve ()
             m_dt = std::min(m_dt, m_max_time - m_physical_time);
 
 #ifdef HIPACE_USE_OPENPMD
+            // need correct physical time for this check
             if (it == n_boxes-1
                 && m_diags.hasAnyOutput(step, m_max_step, m_physical_time, m_max_time)) {
                 m_openpmd_writer.InitDiagnostics();
@@ -536,6 +537,7 @@ Hipace::Evolve ()
             } else {
                 m_dt = 2.*m_max_time;
             }
+
 
             // averaging predictor corrector loop diagnostics
             m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
