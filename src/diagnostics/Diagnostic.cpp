@@ -232,8 +232,7 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
         fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
         fd.m_has_field = local_box.ok()
-                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time)
-                         && fd.m_nfields_with_laser != 0;
+                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
         if(fd.m_has_field) {
             fd.m_F.resize(local_box, fd.m_nfields_with_laser, amrex::The_Pinned_Arena());

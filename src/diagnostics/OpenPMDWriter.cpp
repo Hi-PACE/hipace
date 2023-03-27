@@ -72,10 +72,10 @@ OpenPMDWriter::WriteDiagnostics (
     const OpenPMDWriterCallType call_type)
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
+    iteration.setTime(physical_time);
 
     if (call_type == OpenPMDWriterCallType::beams ) {
         const int lev = 0;
-        iteration.setTime(physical_time);
         WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec,
                               geom3D[lev], beamnames, lev);
         m_last_beam_output_dumped = output_step;
