@@ -162,8 +162,10 @@ OpenPMDWriter::WriteFieldData (
         }
 
 #if ((OPENPMDAPI_VERSION_MAJOR > 0) || ((OPENPMDAPI_VERSION_MAJOR == 0) && (OPENPMDAPI_VERSION_MINOR >= 15)))
+        // version 0.15: shareRaw was deprecated
         field_comp.storeChunkRaw(fab.dataPtr(icomp), chunk_offset, chunk_size);
 #else
+        // version 0.14: no storeChunkRaw
         field_comp.storeChunk(openPMD::shareRaw( fab.dataPtr( icomp ) ), chunk_offset, chunk_size);
 #endif
     }
