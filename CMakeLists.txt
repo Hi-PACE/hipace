@@ -66,9 +66,9 @@ set_default_install_dirs()
 
 # Options and Variants ########################################################
 #
-option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
-option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                  ON)
-option(HiPACE_openpmd_mpi    "parallel version of openPMD I/O"            ON)
+option(HiPACE_MPI            "Multi-node support (message-passing)"    ON)
+option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"               ON)
+option(HiPACE_openpmd_mpi    "parallel version of openPMD I/O"         ${HiPACE_MPI})
 
 set(HiPACE_PUSHER_VALUES LEAPFROG AB5)
 set(HiPACE_PUSHER AB5 CACHE STRING "Plasma pusher (AB5/LEAPFROG)")
