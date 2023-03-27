@@ -161,9 +161,6 @@ or by providing arguments to the CMake call
  ``HiPACE_COMPUTE``            NOACC/CUDA/SYCL/HIP/**OMP**               On-node, accelerated computing backend
  ``HiPACE_MPI``                **ON**/OFF                                Multi-node support (message-passing)
  ``HiPACE_PRECISION``          SINGLE/**DOUBLE**                         Floating point precision (single/double)
- ``HiPACE_amrex_repo``         https://github.com/AMReX-Codes/amrex.git  Repository URI to pull and build AMReX from
- ``HiPACE_amrex_branch``       ``development``                           Repository branch for ``HiPACE_amrex_repo``
- ``HiPACE_amrex_internal``     **ON**/OFF                                Needs a pre-installed AMReX library if set to ``OFF``
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
  ``HiPACE_PUSHER``             **AB5**/LEAPFROG                          Use fifth-order Adams-Bashforth or leapfrog Plasma Pusher
 =============================  ========================================  =========================================================
@@ -173,19 +170,20 @@ HiPACE++ can be configured in further detail with options from AMReX, which are 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
 
-===========================  ==============================================  ============================================================
+===========================  ==============================================  =============================================================
 CMake Option                 Default & Values                                Description
----------------------------  ----------------------------------------------  ------------------------------------------------------------
+---------------------------  ----------------------------------------------  -------------------------------------------------------------
 ``HiPACE_amrex_src``         *None*                                          Path to AMReX source directory (preferred if set)
 ``HiPACE_amrex_repo``        ``https://github.com/AMReX-Codes/amrex.git``    Repository URI to pull and build AMReX from
 ``HiPACE_amrex_branch``      ``development``                                 Repository branch for ``HiPACE_amrex_repo``
 ``HiPACE_amrex_internal``    **ON**/OFF                                      Needs a pre-installed AMReX library if set to ``OFF``
+``HiPACE_openpmd_mpi``        ON/**OFF**                                     Build openPMD with MPI support, although I/O is always serial
 ``HiPACE_openpmd_src``       *None*                                          Path to openPMD-api source directory (preferred if set)
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``  Repository URI to pull and build openPMD-api from
 ``HiPACE_openpmd_branch``    ``0.14.5``                                      Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                      Needs a pre-installed openPMD-api library if set to ``OFF``
 ``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                      Compile AMReX multigrid solver. Required for explicit solver
-===========================  ==============================================  ============================================================
+===========================  ==============================================  =============================================================
 
 For example, one can also build against a local AMReX copy.
 Assuming AMReX' source is located in ``$HOME/src/amrex``, add the ``cmake`` argument ``-DHiPACE_amrex_src=$HOME/src/amrex``.
