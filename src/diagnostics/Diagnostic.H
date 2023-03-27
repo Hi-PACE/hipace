@@ -74,7 +74,7 @@ public:
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
-        return fd.m_output_period >= 0 && (
+        return fd.m_output_period >= 0 && fd.m_nfields_with_laser > 0 && (
             (output_time == max_time) ||
             (output_step == max_step) ||
             (output_step % fd.m_output_period == 0) );
@@ -106,7 +106,7 @@ public:
     bool hasBeamOutput (int output_step, int max_step,
                         amrex::Real output_time, amrex::Real max_time) const
     {
-        return m_beam_output_period >= 0 && (
+        return m_beam_output_period >= 0 && m_output_beam_names.size() > 0 && (
             (output_time == max_time) ||
             (output_step == max_step) ||
             (output_step % m_beam_output_period == 0) );
