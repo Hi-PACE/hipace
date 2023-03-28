@@ -153,7 +153,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "reorder_interval", m_reorder_interval, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_reorder_interval != 0,
                                      "To avoid reordering, please use reorder_interval = -1.");
-    amrex::Array<amrex::Real, 2> idx_array
+    amrex::Array<int, 2> idx_array
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);

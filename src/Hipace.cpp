@@ -38,6 +38,11 @@ namespace {
 }
 #endif
 
+int Hipace_early_init::m_depos_order_xy = 2;
+int Hipace_early_init::m_depos_order_z = 0;
+int Hipace_early_init::m_depos_derivative_type = 2;
+bool Hipace_early_init::m_outer_depos_loop = false;
+
 Hipace* Hipace::m_instance = nullptr;
 
 bool Hipace::m_normalized_units = false;
@@ -47,10 +52,6 @@ amrex::Real Hipace::m_max_time = std::numeric_limits<amrex::Real>::infinity();
 amrex::Real Hipace::m_physical_time = 0.0;
 amrex::Real Hipace::m_initial_time = 0.0;
 int Hipace::m_verbose = 0;
-int Hipace::m_depos_order_xy = 2;
-int Hipace::m_depos_order_z = 0;
-int Hipace::m_depos_derivative_type = 2;
-bool Hipace::m_outer_depos_loop = false;
 amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
 int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
