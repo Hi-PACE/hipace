@@ -46,6 +46,19 @@ struct Hipace_early_init
     /** Struct containing physical constants (which values depends on the unit system, determined
      * at runtime): SI or normalized units. */
     PhysConst m_phys_const;
+
+    /** Order of the field gather and current deposition shape factor in the transverse directions
+     */
+    static int m_depos_order_xy;
+    /** Order of the field gather and current deposition shape factor in the longitudinal direction
+     */
+    static int m_depos_order_z;
+    /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
+     */
+    static int m_depos_derivative_type;
+    /* if the loop over depos_order is included in the loop over particles
+     */
+    static bool m_outer_depos_loop;
 };
 
 /** \brief Singleton class, that intialize, runs and finalizes the simulation */
@@ -308,18 +321,6 @@ public:
     static amrex::Real m_initial_time;
     /** Level of verbosity */
     static int m_verbose;
-    /** Order of the field gather and current deposition shape factor in the transverse directions
-     */
-    static int m_depos_order_xy;
-    /** Order of the field gather and current deposition shape factor in the longitudinal direction
-     */
-    static int m_depos_order_z;
-    /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
-     */
-    static int m_depos_derivative_type;
-    /* if the loop over depos_order is included in the loop over particles
-     */
-    static bool m_outer_depos_loop;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
     static amrex::Real m_predcorr_B_error_tolerance;

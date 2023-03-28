@@ -85,6 +85,13 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     }
     Parser::addConstantsToParser(m_phys_const);
     Parser::replaceAmrexParamsWithParser();
+
+    queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
+    queryWithParser(pph, "depos_order_z", m_depos_order_z);
+    queryWithParser(pph, "depos_derivative_type", m_depos_derivative_type);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_depos_order_xy != 0 || m_depos_derivative_type != 0,
+                            "Analytic derivative with depos_order=0 would vanish");
+    queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
 }
 
 Hipace&
@@ -128,12 +135,6 @@ Hipace::Hipace () :
     queryWithParser(pph, "boxes_in_z", m_boxes_in_z);
     if (m_boxes_in_z > 1) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_numprocs_z == 1,
                             "Multiple boxes per rank only implemented for one rank.");
-    queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
-    queryWithParser(pph, "depos_order_z", m_depos_order_z);
-    queryWithParser(pph, "depos_derivative_type", m_depos_derivative_type);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_depos_order_xy != 0 || m_depos_derivative_type != 0,
-                            "Analytic derivative with depos_order=0 would vanish");
-    queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
@@ -604,6 +605,9 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
             // calculate correct slice for refined level
             const int islice = nsubslice*islice_coarse + isubslice;
             const int islice_local = islice - bx.smallEnd(Direction::z);
+
+            // reorder plasma before TileSort
+            m_multi_plasma.ReorderParticles(islice);
 
             if (m_explicit) {
                 ExplicitSolveOneSubSlice(lev, step, ibox, bx, islice, islice_local, bins[lev]);

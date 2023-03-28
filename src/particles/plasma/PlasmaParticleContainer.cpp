@@ -149,6 +149,14 @@ PlasmaParticleContainer::ReadParameters ()
                                        phys_const_SI.c * phys_const_SI.c ) );
         }
     }
+
+    queryWithParserAlt(pp, "reorder_interval", m_reorder_interval, pp_alt);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_reorder_interval != 0,
+                                     "To avoid reordering, please use reorder_interval = -1.");
+    amrex::Array<amrex::Real, 2> idx_array
+        {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
+    queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
+    m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
 }
 
 void
@@ -160,6 +168,15 @@ PlasmaParticleContainer::InitData ()
     InitParticles(m_ppc, m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
 
     m_num_exchange = TotalNumberOfParticles();
+}
+
+void
+PlasmaParticleContainer::ReorderParticles (const int islice)
+{
+    HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
+    if (m_reorder_interval != -1 && islice % m_reorder_interval == 0) {
+        SortParticlesForDeposition(m_reorder_idx_type);
+    }
 }
 
 void

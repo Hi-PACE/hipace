@@ -354,6 +354,15 @@ When both are specified, the per-species value is used.
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+* ``<plasma name> or plasmas.reorder_interval`` (`int`) optional (default `-1`)
+    Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
+    An interval of 1 means reordering is done on every slice.
+    To disable reordering set this to -1.
+
+* ``<plasma name> or plasmas.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if plasma particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+
 Binary collisions for plasma species
 ------------------------------------
 
