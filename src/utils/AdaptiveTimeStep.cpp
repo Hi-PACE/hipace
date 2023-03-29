@@ -198,8 +198,8 @@ AdaptiveTimeStep::Calculate (
                                     " have non-relativistic velocities!\n";
                 }
                 beams_min_uz[ibeam] = std::max(beams_min_uz[ibeam], m_threshold_uz);
-                new_dts[ibeam] = dt;
             }
+            new_dts[ibeam] = dt;
 
             // Calculate the time step for this beam used in the next time iteration of the current
             // rank, to resolve the betatron period with m_nt_per_betatron points per period,
