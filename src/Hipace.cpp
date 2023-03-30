@@ -38,7 +38,7 @@ namespace {
 }
 #endif
 
-Hipace* Hipace::m_instance = nullptr;
+Hipace* Hipace::m_instance =  nullptr;
 
 bool Hipace::m_normalized_units = false;
 int Hipace::m_max_step = 0;
