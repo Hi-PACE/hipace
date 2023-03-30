@@ -75,7 +75,7 @@ bool Hipace::m_do_tiling = true;
 
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
-    Hipace::m_instance =  instance;
+    Hipace::m_instance = instance;
     amrex::ParmParse pph("hipace");
     queryWithParser(pph ,"normalized_units", Hipace::m_normalized_units);
     if (Hipace::m_normalized_units) {
