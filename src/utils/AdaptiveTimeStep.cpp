@@ -274,7 +274,7 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
            2.*MathConst::pi*m_adaptive_phase_tolerance/m_nt_per_betatron)
         {
             if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep."<<
-                                       <<" Consider increasing hipace.adaptive_phase_substeps!\n";
+                                         " Consider increasing hipace.adaptive_phase_substeps!\n";
             dt = i*dt_sub;
             return;
         }
