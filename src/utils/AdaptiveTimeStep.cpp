@@ -173,24 +173,26 @@ AdaptiveTimeStep::Calculate (
             if (Hipace::HeadRank() || !initial) {
                 const auto& beam = beams.getBeam(ibeam);
 
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
-                                                  "The sum of all weights is 0! Probably no beam particles are initialized\n");
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
+                    "The sum of all weights is 0! Probably no beam particles are initialized\n");
                 const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
                     /m_timestep_data[ibeam][WhichDouble::SumWeights];
-                const amrex::Real sigma_uz = std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
-                                                                /m_timestep_data[ibeam][WhichDouble::SumWeights]
-                                                                - mean_uz*mean_uz));
+                const amrex::Real sigma_uz =
+                    std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
+                                       /m_timestep_data[ibeam][WhichDouble::SumWeights]
+                                       - mean_uz*mean_uz));
                 const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
                 const amrex::Real max_supported_uz = 1.e30;
-                amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
-                                                              m_timestep_data[ibeam][WhichDouble::MinUz]),
-                                                     max_supported_uz);
+                amrex::Real chosen_min_uz =
+                    std::min(std::max(sigma_uz_dev, m_timestep_data[ibeam][WhichDouble::MinUz]),
+                             max_supported_uz);
 
                 beams_min_uz[ibeam] = chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e;
 
                 if (Hipace::m_verbose >=2 ){
-                    amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
-                                  << beams_min_uz[ibeam] << "\n";
+                    amrex::Print()<<"Minimum gamma of beam " << ibeam <<
+                        " to calculate new time step: " << beams_min_uz[ibeam] << "\n";
                 }
 
                 if (beams_min_uz[ibeam] < m_threshold_uz) {
@@ -200,13 +202,15 @@ AdaptiveTimeStep::Calculate (
                 beams_min_uz[ibeam] = std::max(beams_min_uz[ibeam], m_threshold_uz);
                 new_dts[ibeam] = dt;
 
-                // Calculate the time step for this beam used in the next time iteration of the current
-                // rank, to resolve the betatron period with m_nt_per_betatron points per period,
-                // assuming full blowout regime. The z-dependence of the plasma profile is considered.
-                // As this time step will start in numprocs_z time steps, so the beam may have
-                // propagated a significant distance. If m_adaptive_predict_step is true, we estimate
-                // this distance and use it for a more accurate time step estimation.
-
+                /*
+                  Calculate the time step for this beam used in the next time iteration
+                  of the current rank, to resolve the betatron period with m_nt_per_betatron
+                  points per period, assuming full blowout regime. The z-dependence of the
+                  plasma profile is considered. As this time step will start in numprocs_z
+                  time steps, so the beam may have propagated a significant distance.
+                  If m_adaptive_predict_step is true, we estimate this distance and use it
+                  for a more accurate time step estimation.
+                */
                 amrex::Real new_dt = dt;
                 amrex::Real new_time = t;
                 amrex::Real min_uz = beams_min_uz[ibeam];
@@ -269,7 +273,8 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
         if(std::abs(phase_advance - phase_advance0) >
            2.*MathConst::pi*m_adaptive_phase_tolerance/m_nt_per_betatron)
         {
-            if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep. Consider increasing hipace.adaptive_phase_substeps!\n";
+            if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep."<<
+                                       <<" Consider increasing hipace.adaptive_phase_substeps!\n";
             dt = i*dt_sub;
             return;
         }
