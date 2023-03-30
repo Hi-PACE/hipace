@@ -162,7 +162,7 @@ public:
     /** initial number of particles before ones are added through ionization */
     std::map<int,unsigned long> m_init_num_par;
     /** After how many slices the particles are reordered. 0: off */
-    int m_reorder_interval = 2;
+    int m_reorder_interval = 0;
     /** 2D reordering index type. 0: cell, 1: node, 2: both */
     amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
