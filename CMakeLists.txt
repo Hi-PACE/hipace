@@ -173,6 +173,9 @@ endif()
 # fancy binary name for build variants
 set_hipace_binary_name()
 
+add_custom_target(touch_version_file
+        COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${HiPACE_SOURCE_DIR}/src/HipaceVersion.H)
+add_dependencies(HiPACE touch_version_file)
 
 # Defines #####################################################################
 #
