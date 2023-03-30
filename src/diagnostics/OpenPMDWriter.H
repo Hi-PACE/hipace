@@ -108,9 +108,13 @@ private:
     /** openPMD backend: h5, bp, or json. Default depends on what is available */
     std::string m_openpmd_backend = "default";
 
-    /** Last iteration that was written to file.
+    /** Last iteration that had fields written to file.
      * This is stored to make sure we don't write the last iteration multiple times. */
-    amrex::Vector<int> m_last_output_dumped;
+    amrex::Vector<int> m_last_field_output_dumped;
+
+    /** Last iteration that had beams written to file.
+     * This is stored to make sure we don't write the last iteration multiple times. */
+    amrex::Vector<int> m_last_beam_output_dumped;
 
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;

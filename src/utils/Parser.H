@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <vector>
 #include <set>
@@ -266,7 +267,7 @@ namespace Parser
         }
     }
 
-    template<class T, long unsigned int size>
+    template<class T, std::size_t size>
     inline void
     fillWithParserArr (std::vector<std::string> const& str_arr, std::array<T,size>& val_arr) {
         const auto n = str_arr.size();

@@ -69,13 +69,38 @@ General parameters
     Only used if ``hipace.dt = adaptive``. Upper bound of the adaptive time step: if the computed adaptive time step is is larger than ``dt_max``, then ``dt_max`` is used instead.
     Useful when the plasma profile starts with a very low density (e.g. in the presence of a realistic density ramp), to avoid unreasonably large time steps.
 
-* ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
+* ``hipace.nt_per_betatron`` (`Real`) optional (default `20.`)
     Only used when using adaptive time step (see ``hipace.dt`` above).
     Number of time steps per betatron period (of the full blowout regime).
     The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N`
     (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with
     :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
     factors of the slowest particles in all beams.
+
+* ``hipace.adaptive_predict_step`` (`bool`) optional (default `1`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    If true, the current Lorentz factor and accelerating field on the beams are used to predict the (adaptive) ``dt`` of the next time steps.
+    This prediction is used to better estimate the betatron frequency at the beginning of the next step performed by the current rank.
+    It improves accuracy for parallel simulations (with significant deceleration and/or z-dependent plasma profile).
+    Note: should be on by default once good defaults are determined.
+
+* ``hipace.adaptive_control_phase_advance`` (`bool`) optional (default `1`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    If true, a test on the phase advance sets the time step so it matches the phase advance expected for a uniform plasma (to a certain tolerance).
+    This should improve the accuracy in the presence of density gradients.
+    Note: should be on by default once good defaults are determined.
+
+* ``hipace.adaptive_phase_tolerance`` (`Real`) optional (default `4.e-4`)
+    Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
+    Tolerance for the controlled phase advance described above (lower is more accurate, but should result in more time steps).
+
+* ``hipace.adaptive_phase_substeps`` (`int`) optional (default `2000`)
+    Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
+    Number of sub-steps in the controlled phase advance described above (higher is more accurate, but should be slower).
+
+* ``hipace.adaptive_threshold_uz`` (`Real`) optional (default `2.`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    Threshold beam momentum, below which the time step is not decreased (to avoid arbitrarily small time steps).
 
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.
@@ -408,7 +433,7 @@ which are valid only for certain beam types, are introduced further below under
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
-* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
+* ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
@@ -564,6 +589,16 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.3d_on_host`` (`0` or `1`) optional (default `0`)
     When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
 
+* ``lasers.input_file`` (`string`) optional (default `""`)
+    Path to an openPMD file containing a laser envelope. If this parameter is set then the file will
+    be used to initialize all lasers instead of using a gaussian profile.
+
+* ``lasers.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
+    Name of the laser envelope field inside the openPMD file to be read in.
+
+* ``lasers.iteration`` (`int`) optional (default `0`)
+    Iteration of the openPMD file to be read in.
+
 * ``<laser name>.a0`` (`float`) optional (default `0`)
     Peak normalized vector potential of the laser pulse.
 
@@ -620,3 +655,9 @@ Diagnostic parameters
     ``none`` or a subset of ``beams.names``.
     **Note:** The option ``none`` only suppressed the output of the beam data. To suppress any
     output, please use ``hipace.output_period = -1``.
+
+* ``diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
+    Lower limit for the diagnostic grid.
+
+* ``diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
+    Upper limit for the diagnostic grid.

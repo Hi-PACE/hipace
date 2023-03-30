@@ -70,12 +70,11 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 }
 
 amrex::Real
-MultiPlasma::maxDensity () const
+MultiPlasma::maxDensity (amrex::Real z) const
 {
     amrex::Real max_density = 0;
-    const amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
     for (auto& plasma : m_all_plasmas) {
-        max_density = amrex::max<amrex::Real>(max_density, plasma.m_density_func(0., 0., c_t));
+        max_density = amrex::max<amrex::Real>(max_density, plasma.m_density_func(0., 0., z));
     }
     return amrex::max(max_density, m_adaptive_density);
 }
