@@ -91,6 +91,8 @@ AdaptiveTimeStep::Calculate (
 
     amrex::Vector<amrex::Real> new_dts;
     new_dts.resize(nbeams);
+    amrex::Vector<amrex::Real> beams_min_uz;
+    beams_min_uz.resize(nbeams, std::numeric_limits<amrex::Real>::max());
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         if (!Hipace::HeadRank() && initial) break;
@@ -171,61 +173,70 @@ AdaptiveTimeStep::Calculate (
             if (Hipace::HeadRank() || !initial) {
                 const auto& beam = beams.getBeam(ibeam);
 
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
                     "The sum of all weights is 0! Probably no beam particles are initialized\n");
                 const amrex::Real mean_uz = m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz]
-                                            /m_timestep_data[ibeam][WhichDouble::SumWeights];
-                const amrex::Real sigma_uz = std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
-                                                /m_timestep_data[ibeam][WhichDouble::SumWeights]
-                                                - mean_uz*mean_uz));
+                    /m_timestep_data[ibeam][WhichDouble::SumWeights];
+                const amrex::Real sigma_uz =
+                    std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
+                                       /m_timestep_data[ibeam][WhichDouble::SumWeights]
+                                       - mean_uz*mean_uz));
                 const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
                 const amrex::Real max_supported_uz = 1.e30;
-                amrex::Real chosen_min_uz = std::min(std::max(sigma_uz_dev,
-                                                    m_timestep_data[ibeam][WhichDouble::MinUz]),
-                                                    max_supported_uz);
-                m_min_uz = std::min(m_min_uz,
-                    chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e);
+                amrex::Real chosen_min_uz =
+                    std::min(std::max(sigma_uz_dev, m_timestep_data[ibeam][WhichDouble::MinUz]),
+                             max_supported_uz);
+
+                beams_min_uz[ibeam] = chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e;
 
                 if (Hipace::m_verbose >=2 ){
-                    amrex::Print()<<"Minimum gamma of beam " << ibeam << " to calculate new time step: "
-                                << m_min_uz << "\n";
+                    amrex::Print()<<"Minimum gamma of beam " << ibeam <<
+                        " to calculate new time step: " << beams_min_uz[ibeam] << "\n";
                 }
 
-                if (m_min_uz < m_threshold_uz) {
+                if (beams_min_uz[ibeam] < m_threshold_uz) {
                     amrex::Print()<<"WARNING: beam particles of beam "<< ibeam <<
-                                    " have non-relativistic velocities!\n";
+                        " have non-relativistic velocities!\n";
                 }
-                m_min_uz = std::max(m_min_uz, m_threshold_uz);
-            }
-            new_dts[ibeam] = dt;
+                beams_min_uz[ibeam] = std::max(beams_min_uz[ibeam], m_threshold_uz);
+                new_dts[ibeam] = dt;
 
-            // Calculate the time step for this beam used in the next time iteration of the current
-            // rank, to resolve the betatron period with m_nt_per_betatron points per period,
-            // assuming full blowout regime. The z-dependence of the plasma profile is considered.
-            // As this time step will start in numprocs_z time steps, so the beam may have
-            // propagated a significant distance. If m_adaptive_predict_step is true, we estimate
-            // this distance and use it for a more accurate time step estimation.
-            amrex::Real new_dt = dt;
-            amrex::Real new_time = t;
-            amrex::Real min_uz = m_min_uz;
-            const int niter = m_adaptive_predict_step ? numprocs_z : 1;
-            for (int i = 0; i < niter; i++)
-            {
-                plasma_density = plasmas.maxDensity(c * new_time);
-                min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
-                // Just make sure min_uz is >0, to avoid nans below.
-                min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
-                const amrex::Real omega_p = std::sqrt(plasma_density * q_e * q_e / (ep0 * m_e));
-                amrex::Real omega_b = omega_p / std::sqrt(2. * min_uz);
-                new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
-                new_time += new_dt;
-                if (min_uz > m_threshold_uz) new_dts[ibeam] = new_dt;
+                /*
+                  Calculate the time step for this beam used in the next time iteration
+                  of the current rank, to resolve the betatron period with m_nt_per_betatron
+                  points per period, assuming full blowout regime. The z-dependence of the
+                  plasma profile is considered. As this time step will start in numprocs_z
+                  time steps, so the beam may have propagated a significant distance.
+                  If m_adaptive_predict_step is true, we estimate this distance and use it
+                  for a more accurate time step estimation.
+                */
+                amrex::Real new_dt = dt;
+                amrex::Real new_time = t;
+                amrex::Real min_uz = beams_min_uz[ibeam];
+                const int niter = m_adaptive_predict_step ? numprocs_z : 1;
+                for (int i = 0; i < niter; i++)
+                {
+                    plasma_density = plasmas.maxDensity(c * new_time);
+                    min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
+                    // Just make sure min_uz is >0, to avoid nans below.
+                    min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
+                    const amrex::Real omega_p = std::sqrt(plasma_density * q_e * q_e / (ep0 * m_e));
+                    amrex::Real omega_b = omega_p / std::sqrt(2. * min_uz);
+                    new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
+                    new_time += new_dt;
+                    if (min_uz > m_threshold_uz) new_dts[ibeam] = new_dt;
+                }
             }
         }
-        /* set the new time step */
-        dt = *std::min_element(new_dts.begin(), new_dts.end());
-        // Make sure the new time step is smaller than the upper bound
-        dt = std::min(dt, m_dt_max);
+        // Store min uz across beams, used in the phase advance method
+        if (Hipace::HeadRank() || !initial) {
+            m_min_uz = *std::min_element(beams_min_uz.begin(), beams_min_uz.end());
+            /* set the new time step */
+            dt = *std::min_element(new_dts.begin(), new_dts.end());
+            // Make sure the new time step is smaller than the upper bound
+            dt = std::min(dt, m_dt_max);
+        }
     }
 }
 
@@ -262,7 +273,8 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
         if(std::abs(phase_advance - phase_advance0) >
            2.*MathConst::pi*m_adaptive_phase_tolerance/m_nt_per_betatron)
         {
-            if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep. Consider increasing hipace.adaptive_phase_substeps!\n";
+            if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep."<<
+                                         " Consider increasing hipace.adaptive_phase_substeps!\n";
             dt = i*dt_sub;
             return;
         }
