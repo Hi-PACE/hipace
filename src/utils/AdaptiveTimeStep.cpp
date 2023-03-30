@@ -169,8 +169,8 @@ AdaptiveTimeStep::Calculate (
     if (it == 0 || initial)
     {
         for (int ibeam = 0; ibeam < nbeams; ibeam++) {
-            if (Hipace::HeadRank() || !initial) {
 
+            if (Hipace::HeadRank() || !initial) {
                 const auto& beam = beams.getBeam(ibeam);
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
