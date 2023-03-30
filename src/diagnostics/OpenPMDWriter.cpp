@@ -166,10 +166,6 @@ OpenPMDWriter::WriteFieldData (
             field_comp.resetDataset(dataset);
         }
 
-        // Store the provided box as a chunk with openpmd
-        std::shared_ptr< amrex::Real const > data;
-        data = openPMD::shareRaw( fab.dataPtr( icomp ) ); // non-owning view until flush()
-
         // Determine the offset and size of this data chunk in the global output
         amrex::IntVect const box_offset =
             {0, 0, data_box.smallEnd(2) - geom[lev].Domain().smallEnd(2)};
@@ -180,7 +176,7 @@ OpenPMDWriter::WriteFieldData (
             chunk_size.erase(chunk_size.begin() + 2-slice_dir);
         }
 
-        field_comp.storeChunk(data, chunk_offset, chunk_size);
+        field_comp.storeChunkRaw(fab.dataPtr(icomp), chunk_offset, chunk_size);
     }
 }
 
@@ -399,8 +395,8 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
             auto& currRecord = currSpecies[record_name];
             auto& currRecordComp = currRecord[component_name];
 
-            currRecordComp.storeChunk(openPMD::shareRaw(soa.GetRealData(idx).data()+box_offset),
-                {offset}, {numParticleOnTile64});
+            currRecordComp.storeChunkRaw(soa.GetRealData(idx).data()+box_offset,
+                                         {offset}, {numParticleOnTile64});
         } // end for NumSoARealAttributes
     }
 }
