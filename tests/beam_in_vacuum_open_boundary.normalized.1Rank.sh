@@ -28,7 +28,8 @@ TEST_NAME="${FILE_NAME%.*}"
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
-        hipace.depos_order_xy=0 \
+        hipace.depos_order_xy = 0 \
+        hipace.bxby_solver = predictor-corrector \
         geometry.is_periodic = false false false \
         fields.extended_solve = true \
         fields.open_boundary = true \
