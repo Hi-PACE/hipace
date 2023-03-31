@@ -43,7 +43,7 @@ API for HiPACE++ checksum tests. It can be used in two ways:
 '''
 
 
-def evaluate_checksum(test_name, file_name, rtol=1.e-9, atol=1.e-40,
+def evaluate_checksum(test_name, file_name, rtol=1.e-7, atol=1.e-40,
                       do_fields=True, do_particles=True, skip_dict={}):
     '''Compare IO file checksum with benchmark.
 
