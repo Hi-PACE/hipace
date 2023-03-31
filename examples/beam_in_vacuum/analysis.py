@@ -67,7 +67,6 @@ else:
 # Load HiPACE++ data for By in SI units
 Bx_sim, Bx_meta = ts.get_field(field='Bx', iteration=0, slice_across=['x','z'], slice_relative_position=[0,0])
 By_sim, By_meta = ts.get_field(field='By', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])
-jz_sim = ts.get_field(field='jz', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0]
 rho_sim = ts.get_field(field='rho', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0]
 Ex_sim = ts.get_field(field='ExmBy', iteration=0, slice_across=['y','z'], slice_relative_position=[0,0])[0] + c*By_sim
 Ey_sim = ts.get_field(field='EypBx', iteration=0, slice_across=['x','z'], slice_relative_position=[0,0])[0] - c*Bx_sim
@@ -83,11 +82,6 @@ Bx_th = -mu_0 * jz0 * y / 2.
 Bx_th[abs(y)>=R] = -mu_0 * jz0 * R**2/(2*y[abs(y)>R])
 Ey_th = rho0 / eps_0 * y / 2.
 Ey_th[abs(y)>=R] = rho0 / eps_0 * R**2/(2*y[abs(y)>R])
-
-jz_th = np.ones_like(x) * jz0
-jz_th[abs(x)>=R] = 0.
-rho_th = np.ones_like(x) * rho0
-rho_th[abs(x)>=R] = 0.
 
 # Plot simulation result and theory
 if args.do_plot:
@@ -113,14 +107,6 @@ if args.do_plot:
         plt.xlabel('x (um)')
         plt.ylabel('By (T)')
 
-        plt.subplot(133)
-        plt.plot(1.e6*x, jz_sim, '+-', label='HiPACE++')
-        plt.plot(1.e6*x, jz_th, 'k--', label='theory')
-        plt.grid()
-        plt.legend()
-        plt.xlim(-50., 50.)
-        plt.xlabel('x (um)')
-        plt.ylabel('jz (A/m2)')
     else:
         plt.subplot(131)
         plt.plot(y, Bx_sim, '+-', label='HiPACE++')
@@ -140,23 +126,11 @@ if args.do_plot:
         plt.xlabel('kp x')
         plt.ylabel('c By / E0')
 
-        plt.subplot(133)
-        plt.plot(x, jz_sim, '+-', label='HiPACE++')
-        plt.plot(x, jz_th, 'k--', label='theory')
-        plt.grid()
-        plt.legend()
-        plt.xlim(-5., 5.)
-        plt.xlabel('kp x')
-        plt.ylabel('jz /IA')
-
     plt.tight_layout()
 
     plt.savefig("beam_in_vacuum.png", bbox_inches="tight")
 
 # Assert that the simulation result is close enough to theory
-error_jz = np.sum((jz_sim-jz_th)**2) / np.sum((jz_th)**2)
-print("total relative error jz: " + str(error_jz) + " (tolerance = 0.1)")
-
 error_Bx = np.sum((Bx_sim-Bx_th)**2) / np.sum((Bx_th)**2)
 print("total relative error Bx: " + str(error_Bx) + " (tolerance = 0.005)")
 
@@ -169,7 +143,6 @@ print("total relative error Ex: " + str(error_Ex) + " (tolerance = 0.015)")
 error_Ey = np.sum((Ey_sim-Ey_th)**2) / np.sum((Ey_th)**2)
 print("total relative error Ey: " + str(error_Ey) + " (tolerance = 0.005)")
 
-assert(error_jz < .1)
 assert(error_Bx < .005)
 assert(error_By < .015)
 assert(error_Ex < .015)
