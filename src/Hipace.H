@@ -383,7 +383,7 @@ public:
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
     /** Whether the explicit field solver is used */
-    bool m_explicit = false;
+    bool m_explicit = true;
     /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 3;
     /** if the SALAME-only field should be computed exactly with plasma particles */

@@ -205,9 +205,9 @@ results in a Helmholtz equation, which is solved with the AMReX multigrid solver
 Currently, the default is to use the predictor-corrector loop.
 Modeling ion motion is not yet supported by the explicit solver
 
-* ``hipace.bxby_solver`` (`string`) optional (default `predictor-corrector`)
+* ``hipace.bxby_solver`` (`string`) optional (default `explicit`)
     Which solver to use.
-    Possible values: ``predictor-corrector`` and ``explicit``.
+    Possible values: ``explicit`` and ``predictor-corrector``.
 
 * ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
     Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.

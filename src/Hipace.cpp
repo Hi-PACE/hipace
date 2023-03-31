@@ -161,12 +161,12 @@ Hipace::Hipace () :
     m_salame_target_func = makeFunctionWithParser<3>(salame_target_str, m_salame_parser,
                                                      {"zeta", "zeta_initial", "Ez_initial"});
 
-    std::string solver = "predictor-corrector";
+    std::string solver = "explicit";
     queryWithParser(pph, "bxby_solver", solver);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         solver == "predictor-corrector" ||
         solver == "explicit",
-        "hipace.bxby_solver must be predictor-corrector or explicit");
+        "hipace.bxby_solver must be explicit or predictor-corrector");
     if (solver == "explicit") m_explicit = true;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_explicit || !m_multi_beam.AnySpeciesSalame(),
         "Cannot use SALAME algorithm with predictor-corrector solver");

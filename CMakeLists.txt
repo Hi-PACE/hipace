@@ -71,7 +71,7 @@ option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"               ON)
 option(HiPACE_openpmd_mpi    "parallel version of openPMD I/O"         ${HiPACE_MPI})
 
 set(HiPACE_PUSHER_VALUES LEAPFROG AB5)
-set(HiPACE_PUSHER AB5 CACHE STRING "Plasma pusher (AB5/LEAPFROG)")
+set(HiPACE_PUSHER LEAPFROG CACHE STRING "Plasma pusher (LEAPFROG/AB5)")
 set_property(CACHE HiPACE_PUSHER PROPERTY STRINGS ${HiPACE_PUSHER_VALUES})
 if(NOT HiPACE_PUSHER IN_LIST HiPACE_PUSHER_VALUES)
     message(FATAL_ERROR "HiPACE_PUSHER (${HiPACE_PUSHER}) must be one of ${HiPACE_PUSHER_VALUES}")
