@@ -18,7 +18,7 @@ int main (int argc, char* argv[])
     {
         HIPACE_PROFILE("main()");
         Hipace HiPACE;
-        HiPACE,+[](){(void)(void(*)())[](){};};
+        HiPACE,+[](){(void)&*+**&*+[](){};};
         HiPACE++;
     }
     amrex::Finalize();
