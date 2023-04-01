@@ -285,7 +285,7 @@ Hipace::InSameTransverseCommunicator (int rank) const
 }
 
 void
-Hipace::InitData ()
+Hipace::operator, (void(*)())
 {
     HIPACE_PROFILE("Hipace::InitData()");
 #ifdef AMREX_USE_FLOAT
@@ -439,9 +439,9 @@ Hipace::PostProcessBaseGrids (amrex::BoxArray& ba0) const
 }
 
 void
-Hipace::Evolve ()
+Hipace::operator++ (int)
 {
-    HIPACE_PROFILE("Hipace::Evolve()");
+    HIPACE_PROFILE("HiPACE++");
     const int rank = amrex::ParallelDescriptor::MyProc();
     int const lev = 0;
     m_box_sorters.clear();

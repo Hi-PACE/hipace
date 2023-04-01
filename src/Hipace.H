@@ -99,10 +99,10 @@ public:
     static amrex::IntVect GetRefRatio (int lev);
 
     /** Init AmrCore and allocate beam and plasma containers */
-    void InitData ();
+    void operator, (void(*)());
 
     /** Run the simulation. This function contains the loop over time steps */
-    void Evolve ();
+    void operator++ (int);
 
     /** \brief Receive field slices from rank upstream
      *
