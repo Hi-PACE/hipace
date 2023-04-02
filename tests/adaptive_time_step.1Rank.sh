@@ -23,7 +23,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Relative tolerance for checksum tests depends on the platform
-RTOL=1e-11 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
 
 rm -rf negative_gradient_data
 rm -rf positive_gradient_data
