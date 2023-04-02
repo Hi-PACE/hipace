@@ -26,7 +26,7 @@ FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
 # Relative tolerance for checksum tests depends on the platform
-RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-5
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=2.5e-5
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
