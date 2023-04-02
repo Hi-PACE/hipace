@@ -93,7 +93,6 @@ class Checksum:
         '''
 
         print("Checksum evaluation started...")
-        print('here rtol', rtol)
 
         ref_benchmark = Benchmark(self.test_name)
 

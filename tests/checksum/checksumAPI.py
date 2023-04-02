@@ -43,7 +43,7 @@ API for HiPACE++ checksum tests. It can be used in two ways:
 '''
 
 
-def evaluate_checksum(test_name, file_name, rtol=1.e-7, atol=1.e-40,
+def evaluate_checksum(test_name, file_name, rtol=1.e-9, atol=1.e-40,
                       do_fields=True, do_particles=True, skip_dict={}):
     '''Compare IO file checksum with benchmark.
 
@@ -148,7 +148,6 @@ if __name__ == '__main__':
                         regression_testing/regtest.py')
 
     args = parser.parse_args()
-    print("rtol", args.rtol)
 
     if args.reset_benchmark:
         reset_benchmark(args.test_name, args.file_name,
