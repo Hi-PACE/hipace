@@ -148,6 +148,7 @@ if __name__ == '__main__':
                         regression_testing/regtest.py')
 
     args = parser.parse_args()
+    print("rtol", args.rtol)
 
     if args.reset_benchmark:
         reset_benchmark(args.test_name, args.file_name,
