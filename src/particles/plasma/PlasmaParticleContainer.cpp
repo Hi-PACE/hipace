@@ -150,7 +150,7 @@ PlasmaParticleContainer::ReadParameters ()
         }
     }
 
-    queryWithParserAlt(pp, "reorder_interval", m_reorder_interval, pp_alt);
+    queryWithParserAlt(pp, "reorder_period", m_reorder_period, pp_alt);
     amrex::Array<int, 2> idx_array
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
@@ -172,7 +172,7 @@ void
 PlasmaParticleContainer::ReorderParticles (const int islice)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
-    if (m_reorder_interval > 0 && islice % m_reorder_interval == 0) {
+    if (m_reorder_period > 0 && islice % m_reorder_period == 0) {
         SortParticlesForDeposition(m_reorder_idx_type);
     }
 }
