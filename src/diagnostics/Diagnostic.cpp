@@ -12,6 +12,7 @@
 Diagnostic::Diagnostic (int nlev)
 {
     amrex::ParmParse ppd("diagnostic");
+    amrex::ParmParse pph("hipace");
 
     amrex::Vector<std::string> field_diag_names{};
 
@@ -64,11 +65,16 @@ Diagnostic::Diagnostic (int nlev)
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( fd.m_diag_coarsen.min() >= 1,
             "Coarsening ratio must be >= 1");
 
+        queryWithParser(pph, "output_period", fd.m_output_period);
         queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_output_period != 0,
                                         "To avoid output, please use output_period = -1.");
     }
 
+    if (queryWithParser(pph, "output_period", m_beam_output_period)) {
+        amrex::Print() << "WARNING: 'hipace.output_period' is deprecated! "
+            "Use 'diagnostic.output_period' instead!\n";
+    }
     queryWithParser(ppd, "output_period", m_beam_output_period);
     queryWithParser(ppd, "beam_output_period", m_beam_output_period);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_beam_output_period != 0,

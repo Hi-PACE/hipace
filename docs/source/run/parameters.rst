@@ -617,18 +617,16 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 Diagnostic parameters
 ---------------------
 
-* ``diagnostic.output_period`` (`integer`) optional (default `-1`)
+* ``diagnostic.output_period`` (`integer`) optional (default `0`)
     Output period for all diagnostics. Field or beam specific diagnostics can overwrite this parameter.
-    No output is given for ``diagnostic.output_period = -1``.
-    **Warning:** ``diagnostic.output_period = 0`` will make the simulation crash.
+    No output is given for ``diagnostic.output_period = 0``.
 
 Beam diagnostics
 ^^^^^^^^^^^^^^^^
 
-* ``diagnostic.beam_output_period`` (`integer`) optional (default `-1`)
-    Output period for the beam. No output is given for ``diagnostic.beam_output_period = -1``.
+* ``diagnostic.beam_output_period`` (`integer`) optional (default `0`)
+    Output period for the beam. No output is given for ``diagnostic.beam_output_period = 0``.
     If ``diagnostic.output_period`` is defined, that value is used as the default for this.
-    **Warning:** ``diagnostic.beam_output_period = 0`` will make the simulation crash.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,
@@ -647,15 +645,14 @@ Field diagnostics
     From which mesh refinement level the diagnostics should be collected.
     If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1.
 
-* ``<diag name>.output_period`` (`integer`) optional (default `-1`)
-    Output period for fields. No output is given for ``<diag name>.output_period = -1``.
+* ``<diag name>.output_period`` (`integer`) optional (default `0`)
+    Output period for fields. No output is given for ``<diag name>.output_period = 0``.
     If ``diagnostic.output_period`` is defined, that value is used as the default for this.
-    **Warning:** ``<diag name>.output_period = 0`` will make the simulation crash.
 
 * ``<diag name> or diagnostic.diag_type`` (`string`)
     Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
-    output. Note that this can cause memory problems in particular on GPUs as the full 3D arrays
-    need to be allocated (on the CPU). `xz` and `yz` generate 2D field outputs at the center of the y-axis and
+    output. Use 3D output with parsimony, it may increase disk Space usage and simulation time
+    significantly. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
     x-axis, respectively. In case of an even number of grid points, the value will be averaged
     between the two inner grid points.
 

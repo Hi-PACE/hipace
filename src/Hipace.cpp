@@ -138,7 +138,6 @@ Hipace::Hipace () :
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
-    DeprecatedInput("hipace", "output_period", "diagnostic.output_period", "", true);
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
