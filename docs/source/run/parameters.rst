@@ -367,7 +367,7 @@ When both are specified, the per-species value is used.
     resulting in node centered reordering giving better performance.
     For shape factors 0 and 2, 1^2 and 3^2 cells are deposited such that cell centered reordering is better.
     The default is chosen accordingly.
-    If `` hipace.depos_derivative_type = 1``, the explicit deposition deposits an additional cell in each direction,
+    If ``hipace.depos_derivative_type = 1``, the explicit deposition deposits an additional cell in each direction,
     making the opposite index type ideal. Since the normal deposition still requires the original index type,
     the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
 
