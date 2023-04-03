@@ -10,13 +10,13 @@ function(find_openpmd)
     if(HiPACE_openpmd_internal OR HiPACE_openpmd_src)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
-        # see https://openpmd-api.readthedocs.io/en/0.14.2/dev/buildoptions.html
-        set(openPMD_USE_MPI         ${HiPACE_MPI} CACHE INTERNAL "")
-        set(openPMD_USE_PYTHON      OFF           CACHE INTERNAL "")
-        set(openPMD_BUILD_CLI_TOOLS OFF           CACHE INTERNAL "")
-        set(openPMD_BUILD_EXAMPLES  OFF           CACHE INTERNAL "")
-        set(openPMD_BUILD_TESTING   OFF           CACHE INTERNAL "")
-        set(openPMD_BUILD_SHARED_LIBS OFF         CACHE INTERNAL "")
+        # see https://openpmd-api.readthedocs.io/en/0.15.0/dev/buildoptions.html
+        set(openPMD_USE_MPI         ${HiPACE_openpmd_mpi} CACHE INTERNAL "")
+        set(openPMD_USE_PYTHON      OFF                   CACHE INTERNAL "")
+        set(openPMD_BUILD_CLI_TOOLS OFF                   CACHE INTERNAL "")
+        set(openPMD_BUILD_EXAMPLES  OFF                   CACHE INTERNAL "")
+        set(openPMD_BUILD_TESTING   OFF                   CACHE INTERNAL "")
+        set(openPMD_BUILD_SHARED_LIBS OFF                 CACHE INTERNAL "")
 
         if(HiPACE_openpmd_src)
             add_subdirectory(${HiPACE_openpmd_src} _deps/localopenpmd-build/)
@@ -60,12 +60,12 @@ function(find_openpmd)
         mark_as_advanced(JSON_ImplicitConversions)
         mark_as_advanced(JSON_MultipleHeaders)
     else()
-        if(HiPACE_MPI)
+        if(HiPACE_openpmd_mpi)
             set(COMPONENT_WMPI MPI)
         else()
             set(COMPONENT_WMPI NOMPI)
         endif()
-        find_package(openPMD 0.14.5 CONFIG REQUIRED COMPONENTS ${COMPONENT_WMPI})
+        find_package(openPMD 0.15.0 CONFIG REQUIRED COMPONENTS ${COMPONENT_WMPI})
         message(STATUS "openPMD-api: Found version '${openPMD_VERSION}'")
     endif()
 endfunction()
@@ -81,7 +81,7 @@ if(HiPACE_OPENPMD)
     set(HiPACE_openpmd_repo "https://github.com/openPMD/openPMD-api.git"
         CACHE STRING
         "Repository URI to pull and build openPMD-api from if(HiPACE_openpmd_internal)")
-    set(HiPACE_openpmd_branch "0.14.5"
+    set(HiPACE_openpmd_branch "0.15.0"
         CACHE STRING
         "Repository branch for HiPACE_openpmd_repo if(HiPACE_openpmd_internal)")
 

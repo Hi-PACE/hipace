@@ -429,7 +429,7 @@ which are valid only for certain beam types, are introduced further below under
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
-* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
+* ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
