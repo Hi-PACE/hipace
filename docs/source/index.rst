@@ -8,13 +8,14 @@ HiPACE++ is a 3D open-source portable (GPU-capable) quasistatic particle-in-cell
 It is a full re-writing of the DESY-LBNL legacy code `HiPACE <http://dx.doi.org/10.1088/0741-3335/56/8/084012>`__, the Highly efficient Plasma Accelerator Emulator.
 Its main features are:
 
-- Multiple beams and multiple plasma species to simulation beam-driven wakefield acceleration
-- Field ionization of the plasma using the ADK model
-- Two field solver methods, the original HiPACE predictor-corrector loop and an `explicit solver <https://arxiv.org/abs/2012.00881>`__
+- Multiple beams and plasma species to simulation beam-driven wakefield acceleration
+- A laser envelope solver to simulate laser-driven wakefield acceleration
+- An advanced `explicit field solver <https://arxiv.org/abs/2012.00881>`__ for increased accuracy
 - Diagnostics compliant with the `openPMD standard <https://github.com/openPMD/openPMD-standard>`__
-- Read an arbitrary particle beam from file
+- Arbitrary profiles for the beams and plasma profiles
+- Readers from files for the beam and laser profiles
 - Adaptive time step and sub-cycling
-- more coming soon...
+- Additional physics (field ionization of the plasma using the ADK model, collisions between plasma species)
 
 HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which provides for particle and field data structures.
 
@@ -25,4 +26,5 @@ HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which 
    run/parameters.rst
    run/get_started.rst
    visualize/visualization.rst
+   run/chat.rst
    contributing/contributing.rst
