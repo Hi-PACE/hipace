@@ -15,7 +15,7 @@ Its main features are:
 - Arbitrary profiles for the beams and plasma profiles
 - Readers from files for the beam and laser profiles
 - Adaptive time step and sub-cycling
-- Additional physics (field ionization of the plasma using the ADK model, collisions between plasma species)
+- Additional physics for the plasma (field ionization, binary collisions, temperature effects)
 
 HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which provides for particle and field data structures.
 
