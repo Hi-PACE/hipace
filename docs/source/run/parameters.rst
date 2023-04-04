@@ -350,6 +350,23 @@ When both are specified, the per-species value is used.
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+* ``<plasma name> or plasmas.reorder_period`` (`int`) optional (default `0`)
+    Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
+    A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
+    To disable reordering set this to 0.
+
+* ``<plasma name> or plasmas.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if plasma particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+    The ideal index type depends on the particle shape factor used for deposition.
+    For shape factors 1 and 3, 2^2 and 4^2 cells are deposited per particle respectively,
+    resulting in node centered reordering giving better performance.
+    For shape factors 0 and 2, 1^2 and 3^2 cells are deposited such that cell centered reordering is better.
+    The default is chosen accordingly.
+    If ``hipace.depos_derivative_type = 1``, the explicit deposition deposits an additional cell in each direction,
+    making the opposite index type ideal. Since the normal deposition still requires the original index type,
+    the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
+
 Binary collisions for plasma species
 ------------------------------------
 

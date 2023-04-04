@@ -138,6 +138,11 @@ public:
      */
     void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
 
+    /** Reorder particles to speed-up current deposition
+     * \param[in] islice zeta slice index
+     */
+    void ReorderParticles (const int islice);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
     /** Number of binary collisions */

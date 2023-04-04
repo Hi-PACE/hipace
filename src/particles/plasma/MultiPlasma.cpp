@@ -193,3 +193,11 @@ MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
             m_all_collisions[i].m_isSameSpecies, m_all_collisions[i].m_CoulombLog);
     }
 }
+
+void
+MultiPlasma::ReorderParticles (const int islice)
+{
+    for (auto& plasma : m_all_plasmas) {
+        plasma.ReorderParticles(islice);
+    }
+}
