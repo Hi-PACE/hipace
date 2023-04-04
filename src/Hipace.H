@@ -298,9 +298,6 @@ public:
     static amrex::Real m_max_time;
     /** Time step for the beam evolution */
     static amrex::Real m_dt;
-    /** Number of iterations between consecutive output dumps.
-     * Default is -1, meaning no output */
-    int m_output_period = -1;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     static amrex::Real m_physical_time;
@@ -431,19 +428,12 @@ private:
     /** \brief resizes the diagnostic fab to the correct box in a loop over boxes
      *
      * \param[in] it index of box to be resized to
+     * \param[in] step current time step
      */
-    void ResizeFDiagFAB (const int it);
+    void ResizeFDiagFAB (const int it, const int step);
     void FillDiagnostics (const int lev, int i_slice);
     /** \brief get diagnostics Component names of Fields to output */
-    amrex::Vector<std::string>& getDiagComps () { return m_diags.getComps(); }
-    /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); }
-    /** \brief get diagnostics multifab */
-    amrex::Vector<amrex::FArrayBox>& getDiagF () { return m_diags.getF(); }
-    /** \brief get diagnostics geometry */
-    amrex::Vector<amrex::Geometry>& getDiagGeom () { return m_diags.getGeom(); }
-    /** \brief get slicing direction of the diagnostics */
-    int getDiagSliceDir () { return m_diags.sliceDir(); }
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

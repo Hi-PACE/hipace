@@ -37,7 +37,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         grid_current.peak_current_density= 0.2 \
         grid_current.position_mean = 0. 0. 0. \
         grid_current.position_std = 0.3 0.3 1.41 \
-        hipace.output_period = 1 \
+        diagnostic.output_period = 1 \
         beam.profile = gaussian \
         beam.position_std = 0.3 0.3 1.41 \
         beam.density = 0.2 \

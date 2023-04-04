@@ -6,6 +6,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "diagnostics/OpenPMDWriter.H"
+#include "diagnostics/Diagnostic.H"
 #include "fields/Fields.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
@@ -48,67 +49,53 @@ OpenPMDWriter::OpenPMDWriter ()
 }
 
 void
-OpenPMDWriter::InitDiagnostics (const int output_step, const int output_period, const int max_step,
-                                const int nlev)
+OpenPMDWriter::InitDiagnostics ()
 {
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
 
-    // Dump every m_output_period steps and after last step
-    if (output_period < 0 ||
-       (!(output_step == max_step) && output_step % output_period != 0)) return;
+    std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
 
-    m_outputSeries.resize(nlev);
-    m_last_field_output_dumped.resize(nlev);
-    m_last_beam_output_dumped.resize(nlev);
-
-    for (int lev=0; lev<nlev; ++lev) {
-        std::string filename = m_file_prefix +
-            (nlev>1 ? "/lev_" + std::to_string(lev) : "") +
-            "/openpmd_%06T." + m_openpmd_backend;
-
-        m_outputSeries[lev] = std::make_unique< openPMD::Series >(
-            filename, openPMD::Access::CREATE);
-        m_last_field_output_dumped[lev] = -1;
-        m_last_beam_output_dumped[lev] = -1;
-    }
+    m_outputSeries = std::make_unique< openPMD::Series >(
+        filename, openPMD::Access::CREATE);
+    m_last_beam_output_dumped = -1;
 
     // TODO: meta-data: author, mesh path, extensions, software
 }
 
 void
 OpenPMDWriter::WriteDiagnostics (
-    amrex::Vector<amrex::FArrayBox> const& a_mf, MultiBeam& a_multi_beam,
-    amrex::Vector<amrex::Geometry> const& geom, std::vector<bool> const& write_fields,
-    const amrex::Real physical_time, const int output_step, const int nlev,
-    const int slice_dir, const amrex::Vector< std::string > varnames,
+    const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
+    const amrex::Real physical_time, const int output_step,
     const amrex::Vector< std::string > beamnames, const int it,
-    const amrex::Vector<BoxSorter>& a_box_sorter_vec, amrex::Vector<amrex::Geometry> const& geom3D,
+    const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+    amrex::Vector<amrex::Geometry> const& geom3D,
     const OpenPMDWriterCallType call_type)
 {
-    for (int lev=0; lev<nlev; ++lev) {
-        openPMD::Iteration iteration = m_outputSeries[lev]->iterations[output_step];
+    openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
+    iteration.setTime(physical_time);
 
-        if (call_type == OpenPMDWriterCallType::beams ) {
-            iteration.setTime(physical_time);
-            if (lev == 0) {
-                WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec,
-                                      geom3D[lev], beamnames, lev);
-                m_last_beam_output_dumped[lev] = output_step;
+    if (call_type == OpenPMDWriterCallType::beams ) {
+        const int lev = 0;
+        WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec,
+                              geom3D[lev], beamnames, lev);
+        m_last_beam_output_dumped = output_step;
+        m_outputSeries->flush();
+    } else if (call_type == OpenPMDWriterCallType::fields) {
+        for (const auto& fd : field_diag) {
+            if (fd.m_has_field) {
+                WriteFieldData(fd.m_F, fd.m_geom_io, fd.m_slice_dir, fd.m_comps_output,
+                           iteration, output_step);
             }
-            m_outputSeries[lev]->flush();
-        } else if (call_type == OpenPMDWriterCallType::fields && write_fields[lev]) {
-            WriteFieldData(a_mf[lev], geom, slice_dir, varnames, iteration, output_step, lev);
-            m_outputSeries[lev]->flush();
-            m_last_field_output_dumped[lev] = output_step;
         }
+        m_outputSeries->flush();
     }
 }
 
 void
 OpenPMDWriter::WriteFieldData (
-    amrex::FArrayBox const& fab, amrex::Vector<amrex::Geometry> const& geom,
+    amrex::FArrayBox const& fab, amrex::Geometry const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
-    openPMD::Iteration iteration, const int output_step, const int lev)
+    openPMD::Iteration iteration, const int output_step)
 {
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
@@ -131,11 +118,11 @@ OpenPMDWriter::WriteFieldData (
 
         //   labels, spacing and offsets
         std::vector< std::string > axisLabels {"z", "y", "x"};
-        auto dCells = utils::getReversedVec(geom[lev].CellSize()); // dx, dy, dz
+        auto dCells = utils::getReversedVec(geom.CellSize()); // dx, dy, dz
         amrex::Vector<double> finalproblo = {AMREX_D_DECL(
-                     static_cast<double>(geom[lev].ProbLo()[2]),
-                     static_cast<double>(geom[lev].ProbLo()[1]),
-                     static_cast<double>(geom[lev].ProbLo()[0])
+                     static_cast<double>(geom.ProbLo()[2]),
+                     static_cast<double>(geom.ProbLo()[1]),
+                     static_cast<double>(geom.ProbLo()[0])
                       )};
         auto offWindow = finalproblo;
         if (slice_dir >= 0) {
@@ -154,21 +141,19 @@ OpenPMDWriter::WriteFieldData (
         // data type and global size of the simulation
         openPMD::Datatype datatype = openPMD::determineDatatype< amrex::Real >();
         amrex::Vector<std::uint64_t> probsize_reformat = {AMREX_D_DECL(
-                     static_cast<std::uint64_t>(geom[lev].Domain().size()[2]),
-                     static_cast<std::uint64_t>(geom[lev].Domain().size()[1]),
-                     static_cast<std::uint64_t>(geom[lev].Domain().size()[0]))};
+                     static_cast<std::uint64_t>(geom.Domain().size()[2]),
+                     static_cast<std::uint64_t>(geom.Domain().size()[1]),
+                     static_cast<std::uint64_t>(geom.Domain().size()[0]))};
         openPMD::Extent global_size = probsize_reformat;
         // If slicing requested, remove number of points for the slicing direction
         if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
 
-        if (m_last_field_output_dumped[lev] != output_step) {
-            openPMD::Dataset dataset(datatype, global_size);
-            field_comp.resetDataset(dataset);
-        }
+        openPMD::Dataset dataset(datatype, global_size);
+        field_comp.resetDataset(dataset);
 
         // Determine the offset and size of this data chunk in the global output
         amrex::IntVect const box_offset =
-            {0, 0, data_box.smallEnd(2) - geom[lev].Domain().smallEnd(2)};
+            {0, 0, data_box.smallEnd(2) - geom.Domain().smallEnd(2)};
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
         openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
         if (slice_dir >= 0) { // remove Ny components
@@ -202,7 +187,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         auto& beam = beams.getBeam(ibeam);
 
         const unsigned long long np = beams.get_total_num_particles(ibeam);
-        if (m_last_beam_output_dumped[lev] != output_step) {
+        if (m_last_beam_output_dumped != output_step) {
             SetupPos(beam_species, beam, np, geom);
             SetupRealProperties(beam_species, m_real_names, np);
         }
@@ -403,12 +388,7 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
 
 void OpenPMDWriter::reset (const int output_step)
 {
-    for (int lev = 0; lev<m_outputSeries.size(); ++lev) {
-        if (output_step == m_last_field_output_dumped[lev] ||
-            output_step == m_last_beam_output_dumped[lev]) {
-            m_outputSeries[lev].reset();
-        }
-    }
+    m_outputSeries.reset();
 }
 
 #endif // HIPACE_USE_OPENPMD
