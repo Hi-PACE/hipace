@@ -186,6 +186,8 @@ Hipace::Hipace () :
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
         getWithParser(pph, "patch_hi", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(GetRefRatio(1)[2] == 1,
+            "Mesh refinement in the zeta direction is not supported");
     }
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_do_MR || !m_multi_beam.AnySpeciesSalame(),
         "Cannot use SALAME algorithm with mesh refinement");
