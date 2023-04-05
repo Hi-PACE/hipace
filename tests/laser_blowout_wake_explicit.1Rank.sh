@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 # This file is part of the HiPACE++ test suite.
-# It runs a Hipace simulation in SI units with the explicit solver
+# It runs a Hipace simulation in SI units
 # in the blowout regime of a laser driver and compares the checksum with a benchmark.
 # This case was benchmarked against the normalized unit case, which itself has been benchmarked
 # INF&RNO simulations and therefore a change in the benchmark
@@ -24,7 +24,6 @@ TEST_NAME="${FILE_NAME%.*}"
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=$TEST_NAME \
-        hipace.bxby_solver=explicit \
         max_step = 0 \
         beams.names = no_beam \
         geometry.prob_lo     = -20.   -20.   -7.5  \

@@ -9,7 +9,6 @@ my_constants.Rm = 3*kp_inv
 my_constants.Lramp = 6.e-3
 
 hipace.verbose = 1
-hipace.bxby_solver = explicit
 hipace.dt = 10.*kp_inv/clight
 hipace.output_period = 10
 hipace.numprocs_x = 1

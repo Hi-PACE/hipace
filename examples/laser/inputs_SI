@@ -21,8 +21,6 @@ laser.w0 = 2.*kp_inv
 laser.L0 = 2.*kp_inv
 laser.focal_distance = 0.001
 
-hipace.bxby_solver=explicit
-
 amr.blocking_factor = 2
 amr.max_level = 0
 

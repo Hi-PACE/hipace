@@ -33,6 +33,8 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.depos_order_xy = 0 \
         hipace.bxby_solver = predictor-corrector \
+        hipace.predcorr_B_mixing_factor = 0.95 \
+        hipace.predcorr_max_iterations = 5 \
         geometry.is_periodic = false false false \
         fields.extended_solve = true \
         fields.open_boundary = true \

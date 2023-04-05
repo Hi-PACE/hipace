@@ -1,8 +1,6 @@
 max_step = 300
 amr.n_cell = 1024 1024 1024
 
-hipace.bxby_solver = explicit
-
 amr.blocking_factor = 2
 amr.max_level = 0
 

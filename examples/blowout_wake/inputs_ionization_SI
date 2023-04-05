@@ -1,10 +1,6 @@
 
 amr.n_cell = 64 64 100
 
-hipace.predcorr_max_iterations = 1
-hipace.predcorr_B_mixing_factor = 0.12
-hipace.predcorr_B_error_tolerance = -1
-
 my_constants.ne = 1.25e24
 my_constants.wp = sqrt(ne * q_e^2  / (epsilon0 * m_e))
 my_constants.kp = wp / clight
