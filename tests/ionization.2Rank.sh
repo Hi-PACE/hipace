@@ -31,7 +31,7 @@ rm -rf $TEST_NAME
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_ionization_SI \
         plasmas.sort_bin_size = 8 \
         hipace.dt = 1e-12 \
-        hipace.output_period = 2 \
+        diagnostic.output_period = 2 \
         hipace.file_prefix=$TEST_NAME \
         max_step=2
 

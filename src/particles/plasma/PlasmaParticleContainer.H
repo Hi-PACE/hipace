@@ -101,6 +101,11 @@ public:
                            const amrex::Geometry& geom,
                            const Fields& fields);
 
+    /** Reorder particles to speed-up current deposition
+     * \param[in] islice zeta slice index
+     */
+    void ReorderParticles (const int islice);
+
     /** Update m_density_func with m_density_table if applicable
      */
     void UpdateDensityFunction ();
@@ -156,6 +161,10 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
     /** initial number of particles before ones are added through ionization */
     std::map<int,unsigned long> m_init_num_par;
+    /** After how many slices the particles are reordered. 0: off */
+    int m_reorder_period = 0;
+    /** 2D reordering index type. 0: cell, 1: node, 2: both */
+    amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
 private:
     std::string m_name; /**< name of the species */

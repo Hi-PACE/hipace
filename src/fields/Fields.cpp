@@ -363,7 +363,7 @@ void
 Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
               amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
               const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-              MultiLaser& multi_laser)
+              bool do_laser, MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
@@ -450,14 +450,14 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
                 diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
             });
 
-        if (!multi_laser.m_use_laser) continue;
+        if (!do_laser) continue;
         auto laser_array = laser_func.array(mfi);
         amrex::ParallelFor(diag_box,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
             {
                 const amrex::Real x = i * dx + poff_diag_x;
                 const amrex::Real y = j * dy + poff_diag_y;
-                diag_array(i,j,k,ncomp  ) += rel_z_data[k-k_min] *
+                diag_array(i,j,k,ncomp) += rel_z_data[k-k_min] *
                     laser_array(x,y,WhichLaserSlice::n00j00_r);
                 diag_array(i,j,k,ncomp+1) += rel_z_data[k-k_min] *
                     laser_array(x,y,WhichLaserSlice::n00j00_i);

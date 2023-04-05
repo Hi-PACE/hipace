@@ -2,7 +2,7 @@ amr.n_cell = 32 32 200
 
 hipace.normalized_units=1
 
-hipace.output_period = 1
+diagnostic.output_period = 1
 
 amr.blocking_factor = 2
 amr.max_level = 0

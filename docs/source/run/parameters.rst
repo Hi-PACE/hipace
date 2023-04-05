@@ -141,10 +141,6 @@ General parameters
 * ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
     If the loop over depos_order is included in the loop over particles.
 
-* ``hipace.output_period`` (`integer`) optional (default `-1`)
-    Output period. No output is given for ``hipace.output_period = -1``.
-    **Warning:** ``hipace.output_period = 0`` will make the simulation crash.
-
 * ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
     Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
     For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
@@ -353,6 +349,23 @@ When both are specified, the per-species value is used.
     When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
+
+* ``<plasma name> or plasmas.reorder_period`` (`int`) optional (default `0`)
+    Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
+    A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
+    To disable reordering set this to 0.
+
+* ``<plasma name> or plasmas.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if plasma particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+    The ideal index type depends on the particle shape factor used for deposition.
+    For shape factors 1 and 3, 2^2 and 4^2 cells are deposited per particle respectively,
+    resulting in node centered reordering giving better performance.
+    For shape factors 0 and 2, 1^2 and 3^2 cells are deposited such that cell centered reordering is better.
+    The default is chosen accordingly.
+    If ``hipace.depos_derivative_type = 1``, the explicit deposition deposits an additional cell in each direction,
+    making the opposite index type ideal. Since the normal deposition still requires the original index type,
+    the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
 
 Binary collisions for plasma species
 ------------------------------------
@@ -621,43 +634,64 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 Diagnostic parameters
 ---------------------
 
+* ``diagnostic.output_period`` (`integer`) optional (default `0`)
+    Output period for all diagnostics. Field or beam specific diagnostics can overwrite this parameter.
+    No output is given for ``diagnostic.output_period = 0``.
 
-* ``diagnostic.diag_type`` (`string`)
-    Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
-    output. Note that this can cause memory problems in particular on GPUs as the full 3D arrays
-    need to be allocated. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
-    x-axis, respectively. In case of an even number of grid points, the value will be averaged
-    between the two inner grid points.
+Beam diagnostics
+^^^^^^^^^^^^^^^^
 
-* ``diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
-    Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
-    obtained through first order interpolation.
-
-* ``diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
-    Whether the field diagnostics should include ghost cells.
-
-* ``diagnostic.field_data`` (`string`) optional (default `all`)
-    Names of the fields written to file, separated by a space. The field names need to be ``all``,
-    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
-    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
-    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
-    for each plasma are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
-    ``jx_<plasma name> jy_<plasma name> jz_<plasma name>`` ``jxx_<plasma name> jxy_<plasma name>
-    jyy_<plasma name> rho_<plasma name>`` are available. Note, that the neutralizing background will
-    always be added to the first plasma species in case multiple plasma species are available.
-    **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
-    output, please use ``hipace.output_period = -1``.
-    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
-    The plasma proper density (n/gamma) is then also accessible via ``chi``.
+* ``diagnostic.beam_output_period`` (`integer`) optional (default `0`)
+    Output period for the beam. No output is given for ``diagnostic.beam_output_period = 0``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,
     ``none`` or a subset of ``beams.names``.
-    **Note:** The option ``none`` only suppressed the output of the beam data. To suppress any
-    output, please use ``hipace.output_period = -1``.
 
-* ``diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
+Field diagnostics
+^^^^^^^^^^^^^^^^^
+
+* ``diagnostic.names`` (`string`) optional (default `lev0`)
+    The names of all field diagnostics, separated by a space.
+    Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
+    To run without field diagnostics, choose the name ``no_field_diag``.
+    If mesh refinement is used, the default becomes ``lev0 lev1``.
+
+* ``<diag name> or diagnostic.level`` (`integer`) optional (default `0`)
+    From which mesh refinement level the diagnostics should be collected.
+    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1.
+
+* ``<diag name>.output_period`` (`integer`) optional (default `0`)
+    Output period for fields. No output is given for ``<diag name>.output_period = 0``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+
+* ``<diag name> or diagnostic.diag_type`` (`string`)
+    Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
+    output. Use 3D output with parsimony, it may increase disk Space usage and simulation time
+    significantly. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
+    x-axis, respectively. In case of an even number of grid points, the value will be averaged
+    between the two inner grid points.
+
+* ``<diag name> or diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
+    Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
+    obtained through first order interpolation.
+
+* ``<diag name> or diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
+    Whether the field diagnostics should include ghost cells.
+
+* ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)
+    Names of the fields written to file, separated by a space. The field names need to be ``all``,
+    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
+    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
+    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
+    for all plasmas are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
+    ``jx jy jz rho`` are available.
+    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    The plasma proper density (n/gamma) is then also accessible via ``chi``.
+
+* ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
     Lower limit for the diagnostic grid.
 
-* ``diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
+* ``<diag name> or diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
     Upper limit for the diagnostic grid.

@@ -146,12 +146,13 @@ public:
      * \param[in] calc_geom main geometry
      * \param[in] diag_comps_vect the field components to copy
      * \param[in] ncomp number of components to copy
+     * \param[in] do_laser if to copy the laser
      * \param[in] multi_laser MultiLaser object
      */
      void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
                 amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
                 const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-                MultiLaser& multi_laser);
+                bool do_laser, MultiLaser& multi_laser);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *

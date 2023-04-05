@@ -7,7 +7,7 @@ amr.blocking_factor = 2
 amr.max_level = 0
 
 hipace.max_time = 0.3/clight
-hipace.output_period = 1
+diagnostic.output_period = 1
 hipace.verbose = 1
 
 hipace.numprocs_x = 1

@@ -6,7 +6,7 @@ amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 0
-hipace.output_period = 1
+diagnostic.output_period = 1
 
 hipace.predcorr_B_mixing_factor = 0.95
 hipace.predcorr_max_iterations = 5

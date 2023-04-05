@@ -10,85 +10,142 @@
 #include <AMReX_ParmParse.H>
 
 Diagnostic::Diagnostic (int nlev)
-    : m_F(nlev),
-      m_diag_coarsen(nlev),
-      m_geom_io(nlev),
-      m_has_field(nlev)
 {
     amrex::ParmParse ppd("diagnostic");
-    std::string str_type;
-    getWithParser(ppd, "diag_type", str_type);
-    if        (str_type == "xyz"){
-        m_diag_type = DiagType::xyz;
-        m_slice_dir = -1;
-    } else if (str_type == "xz") {
-        m_diag_type = DiagType::xz;
-        m_slice_dir = 1;
-    } else if (str_type == "yz") {
-        m_diag_type = DiagType::yz;
-        m_slice_dir = 0;
-    } else {
-        amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
-    }
+    amrex::ParmParse pph("hipace");
 
-    queryWithParser(ppd, "include_ghost_cells", m_include_ghost_cells);
-
-    m_use_custom_size_lo = queryWithParser(ppd, "patch_lo", m_diag_lo);
-    m_use_custom_size_hi = queryWithParser(ppd, "patch_hi", m_diag_hi);
+    amrex::Vector<std::string> field_diag_names{};
 
     for(int ilev = 0; ilev<nlev; ++ilev) {
-        amrex::Array<int,3> diag_coarsen_arr{1,1,1};
-        // set all levels the same for now
-        queryWithParser(ppd, "coarsening", diag_coarsen_arr);
-        if(m_slice_dir == 0 || m_slice_dir == 1) {
-            diag_coarsen_arr[m_slice_dir] = 1;
-        }
-        m_diag_coarsen[ilev] = amrex::IntVect(diag_coarsen_arr);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_diag_coarsen[ilev].min() >= 1,
-            "Coarsening ratio must be >= 1");
+        field_diag_names.emplace_back("lev"+std::to_string(ilev));
     }
+
+    queryWithParser(ppd, "names", field_diag_names);
+    if (field_diag_names.size() > 0 && field_diag_names[0] == "no_field_diag") {
+        field_diag_names.clear();
+    }
+
+    m_field_data.resize(field_diag_names.size());
+
+    for(std::size_t i = 0; i<m_field_data.size(); ++i) {
+        auto& fd = m_field_data[i];
+
+        fd.m_diag_name = field_diag_names[i];
+
+        amrex::ParmParse pp(fd.m_diag_name);
+
+        if (fd.m_diag_name == "lev1") fd.m_level = 1;
+        queryWithParserAlt(pp, "level", fd.m_level, ppd);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( 0 <= fd.m_level && fd.m_level < nlev,
+            "Invalid diagnostic refinement level");
+
+        std::string str_type;
+        getWithParserAlt(pp, "diag_type", str_type, ppd);
+        if        (str_type == "xyz"){
+            fd.m_slice_dir = -1;
+        } else if (str_type == "xz") {
+            fd.m_slice_dir = 1;
+        } else if (str_type == "yz") {
+            fd.m_slice_dir = 0;
+        } else {
+            amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
+        }
+
+        queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
+
+        fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
+        fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
+
+        amrex::Array<int,3> diag_coarsen_arr{1,1,1};
+        queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
+        if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1) {
+            diag_coarsen_arr[fd.m_slice_dir] = 1;
+        }
+        fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( fd.m_diag_coarsen.min() >= 1,
+            "Coarsening ratio must be >= 1");
+
+        queryWithParser(pph, "output_period", fd.m_output_period);
+        queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_output_period != 0,
+                                        "To avoid output, please use output_period = -1.");
+    }
+
+    if (queryWithParser(pph, "output_period", m_beam_output_period)) {
+        amrex::Print() << "WARNING: 'hipace.output_period' is deprecated! "
+            "Use 'diagnostic.output_period' instead!\n";
+    }
+    queryWithParser(ppd, "output_period", m_beam_output_period);
+    queryWithParser(ppd, "beam_output_period", m_beam_output_period);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_beam_output_period != 0,
+                                    "To avoid output, please use beam_output_period = -1.");
 }
 
 void
 Diagnostic::Initialize (const int lev, bool do_laser) {
     if (lev!=0) return;
 
-    m_do_laser = do_laser;
     amrex::ParmParse ppd("diagnostic");
-    queryWithParser(ppd, "field_data", m_comps_output);
-    amrex::Vector<std::string> all_field_comps{};
-    all_field_comps.reserve(Comps[WhichSlice::This].size());
-    for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
-        all_field_comps.push_back(comp);
-    }
-    if(m_comps_output.empty()) {
-        m_comps_output = all_field_comps;
-    }
-    else {
-        for(std::string comp_name : m_comps_output) {
-            if(comp_name == "all" || comp_name == "All") {
-                m_comps_output = all_field_comps;
-                break;
-            }
-            if(comp_name == "none" || comp_name == "None") {
-                m_comps_output.clear();
-                break;
-            }
-            if(Comps[WhichSlice::This].count(comp_name) == 0) {
-                std::stringstream error_str{};
-                error_str << "Unknown field diagnostics component: " << comp_name << "\nmust be "
-                    << "'all', 'none' or a subset of:";
-                for (auto& comp : all_field_comps) {
-                    error_str << " " << comp;
+
+    for (auto& fd : m_field_data) {
+        amrex::ParmParse pp(fd.m_diag_name);
+
+        fd.m_do_laser = do_laser;
+
+        queryWithParserAlt(pp, "field_data", fd.m_comps_output, ppd);
+
+        amrex::Vector<std::string> all_field_comps{};
+        all_field_comps.reserve(Comps[WhichSlice::This].size());
+        for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
+            all_field_comps.push_back(comp);
+        }
+        if(fd.m_comps_output.empty()) {
+            fd.m_comps_output = all_field_comps;
+        }
+        else {
+            for(const std::string& comp_name : fd.m_comps_output) {
+                if(comp_name == "all" || comp_name == "All") {
+                    fd.m_comps_output = all_field_comps;
+                    break;
                 }
-                amrex::Abort(error_str.str());
+                if(comp_name == "none" || comp_name == "None") {
+                    fd.m_comps_output.clear();
+                    fd.m_do_laser = false;
+                    break;
+                }
+                if(Comps[WhichSlice::This].count(comp_name) == 0) {
+                    std::stringstream error_str{};
+                    error_str << "Unknown field diagnostics component: " << comp_name <<"\nmust be "
+                        << "'all', 'none' or a subset of:";
+                    for (auto& comp : all_field_comps) {
+                        error_str << " " << comp;
+                    }
+                    amrex::Abort(error_str.str());
+                }
             }
         }
-    }
-    m_nfields = m_comps_output.size();
-    m_comps_output_idx = amrex::Gpu::DeviceVector<int>(m_nfields);
-    for(int i = 0; i < m_nfields; ++i) {
-        m_comps_output_idx[i] = Comps[WhichSlice::This][m_comps_output[i]];
+
+        fd.m_nfields = fd.m_comps_output.size();
+
+        amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
+        for(int i = 0; i < fd.m_nfields; ++i) {
+            local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
+        }
+        fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
+
+        fd.m_nfields_with_laser = fd.m_nfields;
+
+        if (fd.m_do_laser) {
+            fd.m_nfields_with_laser += 2;
+            fd.m_comps_output.push_back("laser_real");
+            fd.m_comps_output.push_back("laser_imag");
+        }
+
+        if (m_field_data.size() != 1) {
+            for (auto& comp_name : fd.m_comps_output) {
+                comp_name += "_" + fd.m_diag_name;
+            }
+        }
     }
 
     amrex::ParmParse ppb("beams");
@@ -121,78 +178,89 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
 }
 
 void
-Diagnostic::ResizeFDiagFAB (amrex::Box local_box, amrex::Box domain, const int lev,
-                            amrex::Geometry const& geom)
+Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_domain, const int lev,
+                            amrex::Geometry const& geom, int output_step, int max_step,
+                            amrex::Real output_time, amrex::Real max_time)
 {
     AMREX_ALWAYS_ASSERT(m_initialized);
 
-    if (m_include_ghost_cells) {
-        local_box.grow(Fields::m_slices_nguards);
-        domain.grow(Fields::m_slices_nguards);
-    }
+    for (auto& fd : m_field_data) {
 
-    {
-        // shrink box to user specified bounds m_diag_lo and m_diag_hi (in real space)
-        const amrex::Real poff_x = GetPosOffset(0, geom, geom.Domain());
-        const amrex::Real poff_y = GetPosOffset(1, geom, geom.Domain());
-        const amrex::Real poff_z = GetPosOffset(2, geom, geom.Domain());
-        amrex::Box cut_domain = domain;
-        if (m_use_custom_size_lo) {
-            cut_domain.setSmall({
-                static_cast<int>(std::round((m_diag_lo[0] - poff_x)/geom.CellSize(0))),
-                static_cast<int>(std::round((m_diag_lo[1] - poff_y)/geom.CellSize(1))),
-                static_cast<int>(std::round((m_diag_lo[2] - poff_z)/geom.CellSize(2)))
-            });
+        if (fd.m_level != lev) continue;
+
+        amrex::Box local_box = a_local_box;
+        amrex::Box domain = a_domain;
+
+        if (fd.m_include_ghost_cells) {
+            local_box.grow(Fields::m_slices_nguards);
+            domain.grow(Fields::m_slices_nguards);
         }
-        if (m_use_custom_size_hi) {
-            cut_domain.setBig({
-                static_cast<int>(std::round((m_diag_hi[0] - poff_x)/geom.CellSize(0))),
-                static_cast<int>(std::round((m_diag_hi[1] - poff_y)/geom.CellSize(1))),
-                static_cast<int>(std::round((m_diag_hi[2] - poff_z)/geom.CellSize(2)))
-            });
+
+        {
+            // shrink box to user specified bounds m_diag_lo and m_diag_hi (in real space)
+            const amrex::Real poff_x = GetPosOffset(0, geom, geom.Domain());
+            const amrex::Real poff_y = GetPosOffset(1, geom, geom.Domain());
+            const amrex::Real poff_z = GetPosOffset(2, geom, geom.Domain());
+            amrex::Box cut_domain = domain;
+            if (fd.m_use_custom_size_lo) {
+                cut_domain.setSmall({
+                    static_cast<int>(std::round((fd.m_diag_lo[0] - poff_x)/geom.CellSize(0))),
+                    static_cast<int>(std::round((fd.m_diag_lo[1] - poff_y)/geom.CellSize(1))),
+                    static_cast<int>(std::round((fd.m_diag_lo[2] - poff_z)/geom.CellSize(2)))
+                });
+            }
+            if (fd.m_use_custom_size_hi) {
+                cut_domain.setBig({
+                    static_cast<int>(std::round((fd.m_diag_hi[0] - poff_x)/geom.CellSize(0))),
+                    static_cast<int>(std::round((fd.m_diag_hi[1] - poff_y)/geom.CellSize(1))),
+                    static_cast<int>(std::round((fd.m_diag_hi[2] - poff_z)/geom.CellSize(2)))
+                });
+            }
+            // calculate intersection of boxes to prevent them getting larger
+            domain &= cut_domain;
+            local_box &= domain;
         }
-        // calculate intersection of boxes to prevent them getting larger
-        domain &= cut_domain;
-        local_box &= domain;
-    }
 
-    amrex::RealBox diag_domain = geom.ProbDomain();
-    for(int dir=0; dir<=2; ++dir) {
-        // make diag_domain correspond to box
-        diag_domain.setLo(dir, geom.ProbLo(dir)
-            + (domain.smallEnd(dir) - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
-        diag_domain.setHi(dir, geom.ProbHi(dir)
-            + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
-    }
-    // trim the 3D box to slice box for slice IO
-    TrimIOBox(local_box, domain, diag_domain);
+        amrex::RealBox diag_domain = geom.ProbDomain();
+        for(int dir=0; dir<=2; ++dir) {
+            // make diag_domain correspond to box
+            diag_domain.setLo(dir, geom.ProbLo(dir)
+                + (domain.smallEnd(dir) - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
+            diag_domain.setHi(dir, geom.ProbHi(dir)
+                + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
+        }
+        // trim the 3D box to slice box for slice IO
+        TrimIOBox(fd.m_slice_dir, local_box, domain, diag_domain);
 
-    local_box.coarsen(m_diag_coarsen[lev]);
-    domain.coarsen(m_diag_coarsen[lev]);
+        local_box.coarsen(fd.m_diag_coarsen);
+        domain.coarsen(fd.m_diag_coarsen);
 
-    m_geom_io[lev] = amrex::Geometry(domain, &diag_domain, geom.Coord());
+        fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-    m_has_field[lev] = local_box.ok();
+        fd.m_has_field = local_box.ok()
+                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
-    if(m_has_field[lev]) {
-        m_F[lev].resize(local_box, getTotalNFields(), amrex::The_Pinned_Arena());
-        m_F[lev].setVal<amrex::RunOn::Host>(0);
+        if(fd.m_has_field) {
+            fd.m_F.resize(local_box, fd.m_nfields_with_laser, amrex::The_Pinned_Arena());
+            fd.m_F.setVal<amrex::RunOn::Host>(0);
+        }
     }
 }
 
 void
-Diagnostic::TrimIOBox (amrex::Box& box_3d, amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
+Diagnostic::TrimIOBox (int slice_dir, amrex::Box& box_3d,
+                       amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
 {
-    if (m_slice_dir >= 0){
-        const amrex::Real half_cell_size = rbox_3d.length(m_slice_dir) /
-                                           ( 2. * domain_3d.length(m_slice_dir) );
-        const amrex::Real mid = (rbox_3d.lo(m_slice_dir) + rbox_3d.hi(m_slice_dir)) / 2.;
+    if (slice_dir >= 0){
+        const amrex::Real half_cell_size = rbox_3d.length(slice_dir) /
+                                           ( 2. * domain_3d.length(slice_dir) );
+        const amrex::Real mid = (rbox_3d.lo(slice_dir) + rbox_3d.hi(slice_dir)) / 2.;
         // Flatten the box down to 1 cell in the approprate direction.
-        box_3d.setSmall(m_slice_dir, 0);
-        box_3d.setBig  (m_slice_dir, 0);
-        domain_3d.setSmall(m_slice_dir, 0);
-        domain_3d.setBig  (m_slice_dir, 0);
-        rbox_3d.setLo(m_slice_dir, mid - half_cell_size);
-        rbox_3d.setHi(m_slice_dir, mid + half_cell_size);
+        box_3d.setSmall(slice_dir, 0);
+        box_3d.setBig  (slice_dir, 0);
+        domain_3d.setSmall(slice_dir, 0);
+        domain_3d.setBig  (slice_dir, 0);
+        rbox_3d.setLo(slice_dir, mid - half_cell_size);
+        rbox_3d.setHi(slice_dir, mid + half_cell_size);
     }
 }
