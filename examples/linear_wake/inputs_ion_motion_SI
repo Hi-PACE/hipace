@@ -7,11 +7,7 @@ my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
 
 random_seed = 1
 
-hipace.bxby_solver = explicit
 hipace.normalized_units = 0
-hipace.predcorr_B_mixing_factor = 0.0635
-hipace.predcorr_max_iterations = 7
-hipace.predcorr_B_error_tolerance = 0.0001
 
 amr.blocking_factor = 2
 amr.max_level = 0

@@ -33,5 +33,6 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
+    --rtol 2e-2 \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME

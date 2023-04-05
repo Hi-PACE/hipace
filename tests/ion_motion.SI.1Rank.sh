@@ -28,6 +28,9 @@ TEST_NAME="${FILE_NAME%.*}"
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_ion_motion_SI \
         hipace.bxby_solver = predictor-corrector \
+        hipace.predcorr_B_mixing_factor = 0.0635 \
+        hipace.predcorr_max_iterations = 7 \
+        hipace.predcorr_B_error_tolerance = 0.0001 \
         hipace.file_prefix=$TEST_NAME/pc
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_ion_motion_SI \

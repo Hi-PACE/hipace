@@ -8,8 +8,6 @@ amr.max_level = 0
 max_step = 0
 diagnostic.output_period = 1
 
-hipace.predcorr_B_mixing_factor = 0.95
-hipace.predcorr_max_iterations = 5
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -200.   -200.   -2.    # physical domain

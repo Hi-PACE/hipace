@@ -10,7 +10,7 @@
 
 
 # This file is part of the HiPACE++ test suite.
-# It runs a Hipace simulation in normalized units with the explicit solver
+# It runs a Hipace simulation in normalized units
 # in the blowout regime and compares the checksum with a benchmark.
 
 # abort on first encounted error
@@ -32,7 +32,6 @@ rm -rf ${TEST_NAME}_cd2
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=$TEST_NAME \
-        hipace.bxby_solver=explicit \
         max_step=1
 
 # Compare the results with checksum benchmark
@@ -47,7 +46,6 @@ echo "Start testing new current deposition"
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=${TEST_NAME}_cd2 \
-        hipace.bxby_solver=explicit \
         hipace.outer_depos_loop=true \
         max_step=1
 

@@ -162,7 +162,7 @@ or by providing arguments to the CMake call
  ``HiPACE_MPI``                **ON**/OFF                                Multi-node support (message-passing)
  ``HiPACE_PRECISION``          SINGLE/**DOUBLE**                         Floating point precision (single/double)
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
- ``HiPACE_PUSHER``             **AB5**/LEAPFROG                          Use fifth-order Adams-Bashforth or leapfrog Plasma Pusher
+ ``HiPACE_PUSHER``             **LEAPFROG**/AB5                          Use leapfrog or fifth-order Adams-Bashforth plasma pusher
 =============================  ========================================  =========================================================
 
 HiPACE++ can be configured in further detail with options from AMReX, which are documented in the `AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.

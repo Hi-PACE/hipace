@@ -25,10 +25,16 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
+# Relative tolerance for checksum tests depends on the platform
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
+
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
-        hipace.depos_order_xy=0 \
+        hipace.depos_order_xy = 0 \
+        hipace.bxby_solver = predictor-corrector \
+        hipace.predcorr_B_mixing_factor = 0.95 \
+        hipace.predcorr_max_iterations = 5 \
         geometry.is_periodic = false false false \
         fields.extended_solve = true \
         fields.open_boundary = true \
@@ -43,5 +49,6 @@ $HIPACE_EXAMPLE_DIR/analysis_open_boundary.py --normalized-units --output-dir=$T
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
+    --rtol $RTOL \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME

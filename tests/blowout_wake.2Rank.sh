@@ -20,8 +20,13 @@ set -eu -o pipefail
 HIPACE_EXECUTABLE=$1
 HIPACE_SOURCE_DIR=$2
 
+echo $HIPACE_EXECUTABLE
+
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
+
+# Relative tolerance for checksum tests depends on the platform
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=2e-5
 
 rm -rf si_data
 rm -rf si_data_fixed_weight
@@ -54,6 +59,7 @@ $HIPACE_EXAMPLE_DIR/analysis.py \
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
+    --rtol $RTOL \
     --file_name normalized_data/ \
     --test-name blowout_wake.2Rank \
     --skip "{'beam': 'id'}"
@@ -69,6 +75,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
+    --rtol $RTOL \
     --file_name normalized_data_cd2/ \
     --test-name blowout_wake.2Rank \
     --skip "{'beam': 'id'}"
