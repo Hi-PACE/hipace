@@ -63,7 +63,6 @@ Fields::AllocData (
 
         m_explicit = Hipace::GetInstance().m_explicit;
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
-        const bool mesh_refinement = Hipace::m_do_MR;
         const bool any_salame = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame();
 
         if (m_explicit) {
@@ -85,10 +84,6 @@ Fields::AllocData (
                 "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
 
             isl = WhichSlice::Previous1;
-            if (mesh_refinement) {
-                // for interpolating boundary conditions to level 1
-                Comps[isl].multi_emplace(N_Comps, "Ez", "Bx", "By", "Bz", "Psi", "rho");
-            }
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
 
             isl = WhichSlice::Previous2;
@@ -122,10 +117,6 @@ Fields::AllocData (
             }
 
             isl = WhichSlice::Previous1;
-            if (mesh_refinement) {
-                // for interpolating boundary conditions to level 1
-                Comps[isl].multi_emplace(N_Comps, "Ez", "Bz", "Psi", "rho");
-            }
             Comps[isl].multi_emplace(N_Comps, "Bx", "By", "jx", "jy");
 
             isl = WhichSlice::Previous2;
@@ -287,44 +278,12 @@ struct interpolated_field_xy {
 
     // use .array(mfi) like with amrex::MultiFab
     auto array (amrex::MFIter& mfi) const {
-        auto mfab_array = mfab.array(mfi);
+        auto mfab_array = to_array2(mfab.array(mfi));
         return interpolated_field_xy_inner<interp_order_xy, decltype(mfab_array)>{
             mfab_array, 1._rt/geom.CellSize(0), 1._rt/geom.CellSize(1),
             GetPosOffset(0, geom, geom.Domain()), GetPosOffset(1, geom, geom.Domain())};
     }
 };
-
-/** \brief inner version of interpolated_field_z */
-struct interpolated_field_z_inner {
-    // captured variables for GPU
-    Array2<amrex::Real const> arr_this;
-    Array2<amrex::Real const> arr_prev;
-    amrex::Real rel_z;
-
-    // linear longitudinal field interpolation
-    AMREX_GPU_DEVICE amrex::Real operator() (int i, int j) const noexcept {
-        return (1._rt-rel_z)*arr_this(i, j) + rel_z*arr_prev(i, j);
-    }
-};
-
-/** \brief linear longitudinal field interpolation */
-struct interpolated_field_z {
-    // use brace initialization as constructor
-    amrex::MultiFab mfab_this; // field to interpolate on this slice
-    amrex::MultiFab mfab_prev; // field to interpolate on previous slice
-    amrex::Real rel_z; // mixing factor between f_view_this and f_view_prev for z interpolation
-
-    // use .array(mfi) like with amrex::MultiFab
-    interpolated_field_z_inner array (amrex::MFIter& mfi) const {
-        return interpolated_field_z_inner{
-            mfab_this.array(mfi), mfab_prev.array(mfi), rel_z};
-    }
-};
-
-/** \brief interpolate field in interp_order_xy order transversely and
- * first order (linear) longitudinally */
-template<int interp_order_xy>
-using interpolated_field_xyz = interpolated_field_xy<interp_order_xy, interpolated_field_z>;
 
 /** \brief inner version of guarded_field_xy */
 struct guarded_field_xy_inner {
@@ -522,26 +481,15 @@ Fields::ShiftSlices (int lev, int islice, amrex::Geometry geom, amrex::Real patc
     }
 
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
-    const bool mesh_refinement = Hipace::m_do_MR;
 
     // only shift the slices that are allocated
     if (explicit_solve) {
-        if (mesh_refinement) {
-            shift(lev, WhichSlice::Previous1, WhichSlice::This,
-                "Ez", "Bx", "By", "Bz", "rho", "Psi", "jx_beam", "jy_beam");
-        } else {
-            shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
-        }
+        shift(lev, WhichSlice::Previous1, WhichSlice::This, "jx_beam", "jy_beam");
         duplicate(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
                        WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
     } else {
         shift(lev, WhichSlice::Previous2, WhichSlice::Previous1, "Bx", "By");
-        if (mesh_refinement) {
-            shift(lev, WhichSlice::Previous1, WhichSlice::This,
-                "Ez", "Bx", "By", "Bz", "jx", "jy", "rho", "Psi");
-        } else {
-            shift(lev, WhichSlice::Previous1, WhichSlice::This, "Bx", "By", "jx", "jy");
-        }
+        shift(lev, WhichSlice::Previous1, WhichSlice::This, "Bx", "By", "jx", "jy");
     }
 }
 
@@ -686,14 +634,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
         constexpr int interp_order = 2;
 
-        const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
-        const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
-        const amrex::Real rel_z = islice_coarse-static_cast<int>(amrex::Math::floor(islice_coarse));
-
-        auto solution_interp = interpolated_field_xyz<interp_order>{
-            {getField(lev-1, WhichSlice::This, component),
-            getField(lev-1, WhichSlice::Previous1, component),
-            rel_z}, geom[lev-1]};
+        auto solution_interp = interpolated_field_xy<interp_order, amrex::MultiFab>{
+            getField(lev-1, WhichSlice::This, component), geom[lev-1]};
 
         for (amrex::MFIter mfi(staging_area, DfltMfi); mfi.isValid(); ++mfi)
         {
@@ -728,14 +670,8 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
     HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
     constexpr int interp_order = 2;
 
-    const amrex::Real ref_ratio_z = Hipace::GetRefRatio(lev)[2];
-    const amrex::Real islice_coarse = (islice + 0.5_rt) / ref_ratio_z;
-    const amrex::Real rel_z = islice_coarse - static_cast<int>(amrex::Math::floor(islice_coarse));
-
-    auto field_coarse_interp = interpolated_field_xyz<interp_order>{
-        {getField(lev-1, WhichSlice::This, component),
-        getField(lev-1, WhichSlice::Previous1, component),
-        rel_z}, geom[lev-1]};
+    auto field_coarse_interp = interpolated_field_xy<interp_order, amrex::MultiFab>{
+        getField(lev-1, WhichSlice::This, component), geom[lev-1]};
     amrex::MultiFab field_fine = getField(lev, WhichSlice::This, component);
 
     for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
@@ -772,7 +708,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
 void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                   const MPI_Comm& m_comm_xy, const int lev, const int islice)
+                                   const int lev, const int islice)
 {
     /* Solves Laplacian(Psi) =  1/epsilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -802,9 +738,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 
     if (!m_extended_solve) {
         /* ---------- Transverse FillBoundary Psi ---------- */
-        amrex::ParallelContext::push(m_comm_xy);
         lhs.FillBoundary(geom[lev].periodicity());
-        amrex::ParallelContext::pop();
     }
 
     InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);

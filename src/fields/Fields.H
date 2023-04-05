@@ -203,12 +203,11 @@ public:
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
      * \param[in] geom Geometry
-     * \param[in] m_comm_xy transverse communicator on the slice
      * \param[in] lev current level
      * \param[in] islice longitudinal slice
      */
     void SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                    const MPI_Comm& m_comm_xy, const int lev, const int islice);
+                                    const int lev, const int islice);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
