@@ -434,6 +434,15 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
     The charge of a beam particle. Can also be set with ``<beam name>.element``.
 
+* ``<beam name>.profile`` (`string`)
+    Beam profile.
+    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
+    (flat-top radially and longitudinally), ``gaussian`` (Gaussian in all directions),
+    or ``parsed`` (arbitrary analytic function provided by the user).
+    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
+    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
+    (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
+
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
     either ``total_charge`` or ``density`` must be specified.
@@ -443,15 +452,6 @@ which are valid only for certain beam types, are introduced further below under
     The (number) density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
     This function uses the parser, see above.
     Only used when ``<beam name>.injection_type == fixed_ppc`` and ``<beam name>.profile == parsed``.
-
-* ``<beam name>.profile`` (`string`)
-    Beam profile.
-    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
-    (flat-top radially and longitudinally), ``gaussian`` (Gaussian in all directions),
-    or ``parsed`` (arbitrary analytic function provided by the user).
-    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
-    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
-    (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
 * ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
