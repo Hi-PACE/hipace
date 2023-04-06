@@ -169,6 +169,8 @@ private:
     amrex::Parser m_pos_mean_x_parser;
     /** Average y position of the fixed-weight beam depending on z */
     amrex::Parser m_pos_mean_y_parser;
+    /** Density parser for fixed-ppc beam. Owns data for m_density_func */
+    amrex::Parser m_density_parser;
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
     /** Distance at which the beam is focused, starting from its initial position */

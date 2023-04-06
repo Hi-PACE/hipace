@@ -92,7 +92,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         m_min_density = std::abs(m_min_density);
         amrex::Vector<int> random_ppc {false, false, false};
         queryWithParser(pp, "random_ppc", random_ppc);
-        const GetInitialDensity get_density(m_name);
+        const GetInitialDensity get_density(m_name, m_density_parser);
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
                          m_zmax, m_radius, position_mean, m_min_density, random_ppc);
