@@ -20,6 +20,8 @@ GetInitialDensity::GetInitialDensity (const std::string& name)
         m_profile = BeamProfileType::Gaussian;
     } else if (profile == "flattop") {
         m_profile = BeamProfileType::Flattop;
+    } else if (profile == "parsed") {
+        m_profile = BeamProfileType::Parsed;
     } else {
         amrex::Abort("Unknown beam profile!");
     }
@@ -36,5 +38,10 @@ GetInitialDensity::GetInitialDensity (const std::string& name)
                 m_position_std[idim] = loc_array[idim];
             }
         }
+    }
+    if (m_profile == BeamProfileType::Parsed) {
+        std::string density_func_str = "0.";
+        getWithParser(pp, "density(x,y,z)", density_func_str);
+        m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
     }
 }
