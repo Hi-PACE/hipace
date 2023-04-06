@@ -12,14 +12,16 @@ GetInitialDensity::GetInitialDensity (const std::string& name)
 {
     amrex::ParmParse pp(name);
     std::string profile;
-    getWithParser(pp, "density", m_density);
-    m_density = std::abs(m_density);
     getWithParser(pp, "profile", profile);
 
     if        (profile == "gaussian") {
         m_profile = BeamProfileType::Gaussian;
+        getWithParser(pp, "density", m_density);
+        m_density = std::abs(m_density);
     } else if (profile == "flattop") {
         m_profile = BeamProfileType::Flattop;
+        getWithParser(pp, "density", m_density);
+        m_density = std::abs(m_density);
     } else if (profile == "parsed") {
         m_profile = BeamProfileType::Parsed;
     } else {
