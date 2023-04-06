@@ -186,6 +186,8 @@ Hipace::Hipace () :
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_lo[idim] = loc_array[idim];
         getWithParser(pph, "patch_hi", loc_array);
         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) patch_hi[idim] = loc_array[idim];
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(GetRefRatio(1)[2] == 1,
+            "Mesh refinement in the zeta direction is not supported");
     }
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_do_MR || !m_multi_beam.AnySpeciesSalame(),
         "Cannot use SALAME algorithm with mesh refinement");
@@ -566,16 +568,16 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
+Hipace::SolveOneSlice (int islice, const int ibox, int step,
                        const amrex::Vector<amrex::Vector<BeamBins>>& bins)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    m_multi_beam.InSituComputeDiags(step, islice_coarse, bins[0],
+    m_multi_beam.InSituComputeDiags(step, islice, bins[0],
                                     boxArray(0)[ibox].smallEnd(Direction::z),
                                     m_box_sorters, ibox);
     // Get this laser slice from the 3D array
-    m_multi_laser.Copy(islice_coarse, false);
+    m_multi_laser.Copy(islice, false);
 
     for (int lev = 0; lev <= finestLevel(); ++lev) {
 
@@ -583,7 +585,7 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
             // use geometry of coarse grid to determine whether slice is to be solved
             const amrex::Real* problo = Geom(0).ProbLo();
             const amrex::Real* dx = Geom(0).CellSize();
-            amrex::Real pos = (islice_coarse+0.5)*dx[2]+problo[2];
+            amrex::Real pos = (islice+0.5)*dx[2]+problo[2];
             if (pos < patch_lo[2] || pos > patch_hi[2]) continue;
         }
 
@@ -593,58 +595,49 @@ Hipace::SolveOneSlice (int islice_coarse, const int ibox, int step,
 
         const amrex::Box& bx = boxArray(lev)[ibox];
 
-        const int nsubslice = GetRefRatio(lev)[Direction::z];
+        // calculate correct slice for refined level
+        const int islice_local = islice - bx.smallEnd(Direction::z);
 
-        for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice) {
+        // reorder plasma before TileSort
+        m_multi_plasma.ReorderParticles(islice);
 
-            // calculate correct slice for refined level
-            const int islice = nsubslice*islice_coarse + isubslice;
-            const int islice_local = islice - bx.smallEnd(Direction::z);
+        if (m_explicit) {
+            ExplicitSolveOneSubSlice(lev, step, ibox, bx, islice, islice_local, bins[lev]);
+        } else {
+            PredictorCorrectorSolveOneSubSlice(lev, step, ibox, bx, islice,
+                                               islice_local, bins[lev]);
+        }
 
-            // reorder plasma before TileSort
-            m_multi_plasma.ReorderParticles(islice);
+        FillDiagnostics(lev, islice);
 
-            if (m_explicit) {
-                ExplicitSolveOneSubSlice(lev, step, ibox, bx, islice, islice_local, bins[lev]);
-            } else {
-                PredictorCorrectorSolveOneSubSlice(lev, step, ibox, bx, islice,
-                                                   islice_local, bins[lev]);
-            }
+        m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
 
-            FillDiagnostics(lev, islice);
+        if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
 
-            m_multi_plasma.DoFieldIonization(lev, geom[lev], m_fields);
+        // Push plasma particles
+        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
 
-            if (m_multi_plasma.IonizationOn() && m_do_tiling) m_multi_plasma.TileSort(bx, geom[lev]);
+        m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
 
-            // Push plasma particles
-            m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, geom[lev], false, lev);
+        // Push beam particles
+        m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
+                                                bins[lev], m_box_sorters, ibox);
 
-            m_multi_plasma.doCoulombCollision(lev, bx, geom[lev]);
-
-            // Push beam particles
-            m_multi_beam.AdvanceBeamParticlesSlice(m_fields, geom[lev], lev, islice_local, bx,
-                                                   bins[lev], m_box_sorters, ibox);
-
-            if (lev == 0) {
-                // Advance laser slice by 1 step and store result to 3D array
-                m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
-                m_multi_laser.Copy(islice_coarse, true);
-            }
-
-            if (lev != 0) {
-                // shift slices of level 1
-                m_fields.ShiftSlices(lev, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
-            }
-        } // end for (int isubslice = nsubslice-1; isubslice >= 0; --isubslice)
+        if (lev == 0) {
+            // Advance laser slice by 1 step and store result to 3D array
+            m_multi_laser.AdvanceSlice(m_fields, Geom(0), m_dt, step);
+            m_multi_laser.Copy(islice, true);
+        }
 
         // After this, the parallel context is the full 3D communicator again
         amrex::ParallelContext::pop();
 
     } // end for (int lev = 0; lev <= finestLevel(); ++lev)
 
-    // shift level 0
-    m_fields.ShiftSlices(0, islice_coarse, Geom(0), patch_lo[2], patch_hi[2]);
+    // shift all levels
+    for (int lev = 0; lev <= finestLevel(); ++lev) {
+        m_fields.ShiftSlices(lev, islice, Geom(0), patch_lo[2], patch_hi[2]);
+    }
 }
 
 
@@ -681,7 +674,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
 
     FillBoundaryChargeCurrents(lev);
 
-    m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+    m_fields.SolvePoissonExmByAndEypBx(Geom(), lev, islice);
     m_fields.SolvePoissonEz(Geom(), lev, islice);
     m_fields.SolvePoissonBz(Geom(), lev, islice);
 
@@ -731,7 +724,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
     FillBoundaryChargeCurrents(lev);
 
     if (!m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), lev, islice);
     }
 
     // deposit jx jy jz and maybe rho on This slice
@@ -740,7 +733,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const
                                      m_do_beam_jz_minus_rho, WhichSlice::This);
 
     if (m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(Geom(), m_comm_xy, lev, islice);
+        m_fields.SolvePoissonExmByAndEypBx(Geom(), lev, islice);
     }
 
     // deposit grid current into jz_beam
@@ -842,7 +835,6 @@ void
 Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int islice)
 {
     HIPACE_PROFILE("Hipace::ExplicitMGSolveBxBy()");
-    amrex::ParallelContext::push(m_comm_xy);
 
     // always get chi from WhichSlice::This
     const int which_slice_chi = WhichSlice::This;
@@ -939,7 +931,6 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
                             max_iters, m_MG_verbose);
     }
-    amrex::ParallelContext::pop();
 }
 
 void
@@ -960,11 +951,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
     m_fields.InitialBfieldGuess(relative_Bfield_error, m_predcorr_B_error_tolerance, lev);
 
     if (!m_fields.m_extended_solve) {
-        amrex::ParallelContext::push(m_comm_xy);
         // exchange ExmBy EypBx Ez Bx By Bz
         m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
             "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
-        amrex::ParallelContext::pop();
     }
 
     /* creating temporary Bx and By arrays for the current and previous iteration */
@@ -1012,11 +1001,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
             m_box_sorters, ibox, m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
 
         if (!m_fields.m_extended_solve) {
-            amrex::ParallelContext::push(m_comm_xy);
             // need to exchange jx jy jx_beam jy_beam
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::Next,
                 "jx", "jy");
-            amrex::ParallelContext::pop();
         }
 
         /* Calculate Bx and By */
@@ -1043,11 +1030,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev
         m_fields.setVal(0., lev, WhichSlice::Next, "jx", "jy");
 
         if (!m_fields.m_extended_solve) {
-            amrex::ParallelContext::push(m_comm_xy);
             // exchange Bx By
             m_fields.FillBoundary(Geom(lev).periodicity(), lev, WhichSlice::This,
                 "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
-            amrex::ParallelContext::pop();
         }
 
         // Shift relative_Bfield_error values
@@ -1496,16 +1481,15 @@ Hipace::ResizeFDiagFAB (const int it, const int step)
             // boxArray(1) is not correct in z direction. We need to manually enforce a
             // parent/child relationship between lev_0 and lev_1 boxes in z
             const amrex::Box& bx_lev0 = boxArray(0)[it];
-            const int ref_ratio_z = GetRefRatio(lev)[Direction::z];
 
             // This seems to be required for some reason
-            domain.setBig(Direction::z, domain.bigEnd(Direction::z) - ref_ratio_z);
+            domain.setBig(Direction::z, domain.bigEnd(Direction::z) - 1);
 
             // Ensuring the IO boxes on level 1 are aligned with the boxes on level 0
             local_box.setSmall(Direction::z, amrex::max(domain.smallEnd(Direction::z),
-                               ref_ratio_z*bx_lev0.smallEnd(Direction::z)));
+                               bx_lev0.smallEnd(Direction::z)));
             local_box.setBig  (Direction::z, amrex::min(domain.bigEnd(Direction::z),
-                               ref_ratio_z*bx_lev0.bigEnd(Direction::z)+(ref_ratio_z-1)));
+                               bx_lev0.bigEnd(Direction::z)));
         }
 
         m_diags.ResizeFDiagFAB(local_box, domain, lev, Geom(lev),
