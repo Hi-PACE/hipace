@@ -439,10 +439,17 @@ which are valid only for certain beam types, are introduced further below under
     either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
 
+* ``<beam name>.density(x,y,z)`` (`float`)
+    The (number) density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
+    This function uses the parser, see above.
+    Only used when ``<beam name>.injection_type == fixed_ppc`` and ``<beam name>.profile == parsed``.
+
 * ``<beam name>.profile`` (`string`)
     Beam profile.
     When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
-    (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
+    (flat-top radially and longitudinally), ``gaussian`` (Gaussian in all directions),
+    or ``parsed`` (arbitrary analytic function provided by the user).
+    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
