@@ -443,16 +443,6 @@ which are valid only for certain beam types, are introduced further below under
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
-* ``<beam name>.density`` (`float`)
-    Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
-    either ``total_charge`` or ``density`` must be specified.
-    The absolute value of this parameter is used when initializing the beam.
-
-* ``<beam name>.density(x,y,z)`` (`float`)
-    The (number) density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
-    This function uses the parser, see above.
-    Only used when ``<beam name>.injection_type == fixed_ppc`` and ``<beam name>.profile == parsed``.
-
 * ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
@@ -514,6 +504,10 @@ Option: ``fixed_weight``
     The absolute value of this parameter is used when initializing the beam.
     Note that ``<beam name>.zmin`` and ``<beam name>.zmax`` can reduce the total charge.
 
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
+    The absolute value of this parameter is used when initializing the beam.
+
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
     Thereby, `duz_per_uz0_dzeta *` :math:`\zeta` `* uz_mean` is added to `uz` of the each particle.
@@ -544,6 +538,15 @@ Option: ``fixed_ppc``
 * ``<beam name>.radius`` (`float`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
     injected.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam.
+    The absolute value of this parameter is used when initializing the beam.
+
+* ``<beam name>.density(x,y,z)`` (`float`)
+    The density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
+    This function uses the parser, see above.
+    Only used when ``<beam name>.profile == parsed``.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
