@@ -54,7 +54,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         // use an initial guess of zero for Bx and By in MG solver to reduce relative error
         hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
 
-        hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
+        hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, WhichSlice::Salame);
 
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_no_salame"},
                                         WhichSlice::Salame, {"Ez"});
@@ -67,7 +67,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         SalameInitializeSxSyWithBeam(hipace, lev);
 
-        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame, islice);
+        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::Salame);
 
         hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jx", "jy");
 
@@ -81,7 +81,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             SalameGetJxJyFromBxBy(hipace, lev);
         }
 
-        hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, islice, WhichSlice::Salame);
+        hipace->m_fields.SolvePoissonEz(hipace->Geom(), lev, WhichSlice::Salame);
 
         // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
         // and update the beam with it
@@ -122,7 +122,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         hipace->m_fields.add(lev, WhichSlice::This, {"Sy", "Sx"},
                                   WhichSlice::Salame, {"Sy_back", "Sx_back"});
 
-        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
+        hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
     }
 }
 

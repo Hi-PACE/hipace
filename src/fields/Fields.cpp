@@ -563,8 +563,7 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
 
 void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                              std::string component, const int islice,
-                              amrex::MultiFab&& staging_area)
+                              std::string component, amrex::MultiFab&& staging_area)
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
     if (lev == 0 && m_open_boundary) {
@@ -662,8 +661,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 
 void
 Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                   std::string component, const int islice,
-                                   const amrex::IntVect outer_edge, const amrex::IntVect inner_edge)
+                                   std::string component, const amrex::IntVect outer_edge,
+                                   const amrex::IntVect inner_edge)
 {
     if (lev == 0) return; // only interpolate boundaries to lev 1
     if (outer_edge == inner_edge) return;
@@ -707,8 +706,7 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
 
 void
-Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                   const int lev, const int islice)
+Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, const int lev)
 {
     /* Solves Laplacian(Psi) =  1/epsilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
@@ -720,7 +718,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
-    InterpolateFromLev0toLev1(geom, lev, "rho", islice, m_poisson_nguards, -m_slices_nguards);
+    InterpolateFromLev0toLev1(geom, lev, "rho", m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     LinCombination(m_source_nguard, getStagingArea(lev),
@@ -733,7 +731,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
     }
 
-    SetBoundaryCondition(geom, lev, "Psi", islice, getStagingArea(lev));
+    SetBoundaryCondition(geom, lev, "Psi", getStagingArea(lev));
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
     if (!m_extended_solve) {
@@ -741,7 +739,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
         lhs.FillBoundary(geom[lev].periodicity());
     }
 
-    InterpolateFromLev0toLev1(geom, lev, "Psi", islice, m_slices_nguards, m_poisson_nguards);
+    InterpolateFromLev0toLev1(geom, lev, "Psi", m_slices_nguards, m_poisson_nguards);
 
     // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
     amrex::MultiFab f_ExmBy = getField(lev, WhichSlice::This, "ExmBy");
@@ -772,7 +770,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
 
 
 void
-Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice,
+Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                         const int which_slice)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
@@ -790,7 +788,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
         1._rt/(phys_const.ep0*phys_const.c),
         derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, "Ez", islice, getStagingArea(lev));
+    SetBoundaryCondition(geom, lev, "Ez", getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
@@ -799,7 +797,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
 
 void
 Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
-                        const int lev, const int islice)
+                        const int lev)
 {
     /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBx()");
@@ -816,7 +814,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous1, "jy"),
                    getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, "Bx", islice, getStagingArea(lev));
+    SetBoundaryCondition(geom, lev, "Bx", getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as Bx_iter.
@@ -825,7 +823,7 @@ Fields::SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry>
 
 void
 Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
-                        const int lev, const int islice)
+                        const int lev)
 {
     /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
     HIPACE_PROFILE("Fields::SolvePoissonBy()");
@@ -842,7 +840,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous1, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, "By", islice, getStagingArea(lev));
+    SetBoundaryCondition(geom, lev, "By", getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as By_iter.
@@ -850,7 +848,7 @@ Fields::SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry>
 }
 
 void
-Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev, const int islice)
+Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev)
 {
     /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonBz()");
@@ -868,7 +866,7 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
         derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
 
-    SetBoundaryCondition(geom, lev, "Bz", islice, getStagingArea(lev));
+    SetBoundaryCondition(geom, lev, "Bz", getStagingArea(lev));
     // Solve Poisson equation.
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
