@@ -353,7 +353,7 @@ Hipace::MakeGeometry ()
         m_slice_geom[lev].define(slice_box, slice_realbox, amrex::CoordSys::cartesian,
                                  m_3D_geom[lev].isPeriodic());
         m_slice_ba[lev].define(slice_box);
-        m_slice_dm[lev].define(amrex::Vector<int>({0}));
+        m_slice_dm[lev].define(amrex::Vector<int>({amrex::ParallelDescriptor::MyProc()}));
     }
 }
 
