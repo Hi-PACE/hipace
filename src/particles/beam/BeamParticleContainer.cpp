@@ -239,8 +239,7 @@ BeamParticleContainer::doInSitu (int step)
 }
 
 void
-BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int islice0,
-                                           const int box_offset)
+BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags");
 
@@ -253,6 +252,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
+    const int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
     auto const& ptaos = this->GetArrayOfStructs();
     const auto& pos_structs = ptaos.begin() + box_offset;
     auto const& soa = this->GetStructOfArrays();
@@ -261,10 +261,10 @@ BeamParticleContainer::InSituComputeDiags (int islice, const BeamBins& bins, int
     const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
     const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
 
-    BeamBins::index_type const * const indices = bins.permutationPtr();
-    BeamBins::index_type const * const offsets = bins.offsetsPtrCpu();
-    BeamBins::index_type const cell_start = offsets[islice-islice0];
-    BeamBins::index_type const cell_stop = offsets[islice-islice0+1];
+    BeamBins::index_type const * const indices = m_slice_bins.permutationPtr();
+    BeamBins::index_type const * const offsets = m_slice_bins.offsetsPtrCpu();
+    BeamBins::index_type const cell_start = offsets[islice_local];
+    BeamBins::index_type const cell_stop = offsets[islice_local+1];
     int const num_particles = cell_stop-cell_start;
 
     // Tuple contains:

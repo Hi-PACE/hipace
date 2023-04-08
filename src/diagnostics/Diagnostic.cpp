@@ -27,7 +27,7 @@ Diagnostic::Diagnostic (int nlev)
 
     m_field_data.resize(field_diag_names.size());
 
-    for(std::size_t i = 0; i<m_field_data.size(); ++i) {
+    for(amrex::Long i = 0; i<m_field_data.size(); ++i) {
         auto& fd = m_field_data[i];
 
         fd.m_diag_name = field_diag_names[i];

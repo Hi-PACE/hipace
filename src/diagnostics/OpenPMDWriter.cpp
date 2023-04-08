@@ -67,7 +67,6 @@ OpenPMDWriter::WriteDiagnostics (
     const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
     const amrex::Real physical_time, const int output_step,
     const amrex::Vector< std::string > beamnames, const int it,
-    const amrex::Vector<BoxSorter>& a_box_sorter_vec,
     amrex::Vector<amrex::Geometry> const& geom3D,
     const OpenPMDWriterCallType call_type)
 {
@@ -76,7 +75,7 @@ OpenPMDWriter::WriteDiagnostics (
 
     if (call_type == OpenPMDWriterCallType::beams ) {
         const int lev = 0;
-        WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec,
+        WriteBeamParticleData(a_multi_beam, iteration, output_step, it,
                               geom3D[lev], beamnames, lev);
         m_last_beam_output_dumped = output_step;
         m_outputSeries->flush();
@@ -168,7 +167,6 @@ OpenPMDWriter::WriteFieldData (
 void
 OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
                                       const int output_step, const int it,
-                                      const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                                       const amrex::Geometry& geom,
                                       const amrex::Vector< std::string > beamnames, const int lev)
 {
@@ -199,9 +197,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         } else {
             m_offset[ibeam] += m_tmp_offset[ibeam];
         }
-        const uint64_t box_offset = a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
+        const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[it];
 
-        auto const numParticleOnTile = a_box_sorter_vec[ibeam].boxCountsPtr()[it];
+        auto const numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[it];
         uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
 
         if (numParticleOnTile == 0) {

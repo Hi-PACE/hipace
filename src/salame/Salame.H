@@ -21,13 +21,11 @@
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
  * \param[in] islice_local slice index of the local box
- * \param[in] beam_bin Vector (over species) of beam particles sorted by slices
- * \param[in] ibox index of the current box
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
               bool& overloaded, const int lev, const int step, const int islice,
-              const int islice_local, const amrex::Vector<BeamBins>& beam_bin, const int ibox);
+              const int islice_local);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
  * \param[in] hipace pointer to Hipace instance
@@ -64,11 +62,8 @@ SalameGetW (Hipace* hipace, const int lev, const int islice);
  * \param[in] W weight multiplier
  * \param[in] hipace pointer to Hipace instance
  * \param[in] islice slice index of the local box
- * \param[in] bins Vector (over species) of beam particles sorted by slices
- * \param[in] ibox index of the current box
  */
 void
-SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice,
-                          const amrex::Vector<BeamBins>& bins, const int ibox);
+SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice);
 
 #endif //  SALAME_H_

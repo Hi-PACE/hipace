@@ -13,7 +13,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "Hipace.H"
 
-MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
+MultiPlasma::MultiPlasma ()
 {
 
     amrex::ParmParse pp("plasmas");
@@ -26,7 +26,7 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");
-        m_all_plasmas.emplace_back(PlasmaParticleContainer(amr_core, m_names[i]));
+        m_all_plasmas.emplace_back(PlasmaParticleContainer(m_names[i]));
     }
 
     /** Initialize the collision objects */
@@ -123,15 +123,13 @@ MultiPlasma::ResetParticles (int lev)
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const nlev)
+    Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const lev)
 {
-    for (int lev = 0; lev < nlev; ++lev) {
-        for (int i=0; i<m_nplasmas; i++) {
-            if (m_all_plasmas[i].m_neutralize_background){
-                // current of ions is zero, so they are not deposited.
-                ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
-                                 false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
-            }
+    for (int i=0; i<m_nplasmas; i++) {
+        if (m_all_plasmas[i].m_neutralize_background) {
+            // current of ions is zero, so they are not deposited.
+            ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
+                             false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
         }
     }
 }

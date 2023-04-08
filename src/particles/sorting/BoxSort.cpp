@@ -6,6 +6,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "BoxSort.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_ParticleTransformation.H>

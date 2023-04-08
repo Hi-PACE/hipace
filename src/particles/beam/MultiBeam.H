@@ -19,9 +19,8 @@ class MultiBeam
 public:
 
     /** Constructor
-     * \param[in] amr_core AmrCore object
      */
-    MultiBeam (amrex::AmrCore* amr_core);
+    MultiBeam ();
 
     /** Destructor
      */
@@ -33,9 +32,6 @@ public:
      * \param[in] lev MR level
      * \param[in] step time step of simulation
      * \param[in] islice slice index in which the current is stored
-     * \param[in] bins Vector (over species) of particles sorted by slices
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
-     * \param[in] ibox index of the current box
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
      * \param[in] do_beam_jz_deposition whether the beam deposits Jz
      * \param[in] do_beam_rho_deposition whether the beam deposits rho
@@ -43,59 +39,39 @@ public:
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
-        int islice, const amrex::Vector<BeamBins>& bins,
-        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-        const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+        int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
         const bool do_beam_rho_deposition, const int which_slice);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
-     * \param[in] lev MR level
      * \param[in] ibox box index
      * \param[in] bx 3D box on which per-slice sorting is done
      * \param[in] geom Geometry of the simulation domain
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      */
-     amrex::Vector<amrex::Vector<BeamBins>>
-     findParticlesInEachSlice (int lev, int ibox, amrex::Box bx,
-                               amrex::Vector<amrex::Geometry> const& geom,
-                               const amrex::Vector<BoxSorter>& a_box_sorter_vec);
+    void
+    findParticlesInEachSlice (int ibox, amrex::Box bx, amrex::Geometry const& geom);
     /** \brief Loop over all beam species and sort particles by box
      *
-     * \param[in] a_box_sorter_vec Vector of BoxSorter objects for each beam species
      * \param[in] a_ba BoxArray object to put the particles into
      * \param[in] a_geom Geometry object with the low corner of the domain
      */
     void
-    sortParticlesByBox (
-        amrex::Vector<BoxSorter>& a_box_sorter_vec,
-        const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
+    sortParticlesByBox (const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
 
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] gm Geometry object at level lev
      * \param[in] lev MR level
      * \param[in] islice slice index in which the current is stored
-     * \param[in] bx current box to calculate in loop over longutidinal boxes
-     * \param[in] bins Vector (over species) of particles sorted by slices
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
-     * \param[in] ibox index of the current box
      */
     void AdvanceBeamParticlesSlice (
-        const Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
-        const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
-        const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
+        const Fields& fields, amrex::Geometry const& gm, int const lev, const int islice);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] bins Binning object to get particles on current slice.
-     * \param[in] islice0 index of the leftmost slice of this box, to select the correct bin.
-     * \param[in] a_box_sorter_vec Vector (over beams and boxes) of BoxSorter objects, with info on
-     *            particle indices in current box.
-     * \param[in] ibox index of box currently being computed.
+     * \param[in] islice_local local index of the slice
      */
-    void InSituComputeDiags (int step, int islice, const amrex::Vector<BeamBins>& bins, int islice0,
-                             const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox);
+    void InSituComputeDiags (int step, int islice, int islice_local);
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
@@ -107,6 +83,11 @@ public:
      * \param[in] i index of the beam
      */
     BeamParticleContainer& getBeam (int i) {return m_all_beams[i];}
+
+    /** \brief Return 1 species
+     * \param[in] i index of the beam
+     */
+    const BeamParticleContainer& getBeam (int i) const {return m_all_beams[i];}
 
     /** returns the number of beams */
     int get_nbeams () const {return m_nbeams;}
@@ -137,13 +118,14 @@ public:
      * This is the number of particles in the last slice of it, so ghost particles of it+1.
      *
      * \param[in] ibeam index of the beam
-     * \param[in] bins bins object to access particles per slice
      * \param[in] bx box in which we want to acce particles
      */
-    int NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx);
+    int NGhostParticles (int ibeam, amrex::Box bx);
 
     /** \brief remove ghost particles, in practice those after the last slice. */
     void RemoveGhosts ();
+
+    void SetIbox (const int ibox);
 
     /** Return the number of particles in beam ibeam
      *
@@ -158,9 +140,8 @@ public:
      * This function performs both of these tasks.
      *
      * \param[in] it index of the box from which we copy particles to the ghost buffer
-     * \param[in] box_sorters BoxSorter object to access the indices of particles in box it
      */
-    void PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_sorters);
+    void PackLocalGhostParticles (int it);
 
     /** \brief getter function for number of real particles (as opposed to ghost particles)
      *
@@ -171,9 +152,8 @@ public:
     /** \brief returns if the SALAME algorithm should be used on this slice
      * \param[in] step time step of simulation
      * \param[in] islice slice index of the local box
-     * \param[in] bins Vector (over species) of beam particles sorted by slices
      */
-    bool isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins);
+    bool isSalameNow (const int step, const int islice);
 
     /** \brief returns if any beam uses the SALAME algorithm
      */
