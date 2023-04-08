@@ -67,8 +67,6 @@ Diagnostic::Diagnostic (int nlev)
 
         queryWithParser(pph, "output_period", fd.m_output_period);
         queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_output_period != 0,
-                                        "To avoid output, please use output_period = -1.");
     }
 
     if (queryWithParser(pph, "output_period", m_beam_output_period)) {
@@ -77,8 +75,6 @@ Diagnostic::Diagnostic (int nlev)
     }
     queryWithParser(ppd, "output_period", m_beam_output_period);
     queryWithParser(ppd, "beam_output_period", m_beam_output_period);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_beam_output_period != 0,
-                                    "To avoid output, please use beam_output_period = -1.");
 }
 
 void

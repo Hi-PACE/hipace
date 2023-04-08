@@ -15,7 +15,6 @@
 
 MultiPlasma::MultiPlasma ()
 {
-
     amrex::ParmParse pp("plasmas");
     queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
@@ -49,9 +48,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
     HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
         const int lev = plasma.m_level;
-        plasma.SetParticleBoxArray(lev, slice_ba[lev]);
-        plasma.SetParticleDistributionMap(lev, slice_dm[lev]);
-        plasma.SetParticleGeometry(lev, slice_gm[lev]);
+        plasma.SetParGDB(slice_gm, slice_dm, slice_ba, amrex::Vector<amrex::IntVect>{});
         plasma.InitData();
 
         if(plasma.m_can_ionize) {
