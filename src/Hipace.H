@@ -134,7 +134,7 @@ public:
      * \param[in] islice_local local index of the slice
      * \param[in] step current time step
      */
-    void SolveOneSlice (int islice, const int ibox, int step);
+    void SolveOneSlice (int islice, const int islice_local, int step);
 
     /** \brief Full evolve on 1 subslice with explicit solver
      *
