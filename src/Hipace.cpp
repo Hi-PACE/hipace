@@ -273,11 +273,13 @@ Hipace::MakeGeometry ()
     m_slice_dm.resize(m_N_level);
     m_slice_ba.resize(m_N_level);
 
+    // make 3D Geometry, BoxArray, DistributionMapping on level 0
     amrex::ParmParse pp_amr("amr");
     std::array<int, 3> n_cells {0, 0, 0};
     getWithParser(pp_amr, "n_cell", n_cells);
     const amrex::Box domain_3D{amrex::IntVect(0,0,0), n_cells.data()};
 
+    // this will get prob_lo, prob_hi and is_periodic from the input file
     m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, nullptr);
 
     const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
@@ -297,10 +299,11 @@ Hipace::MakeGeometry ()
     m_3D_ba[0].define(bl);
     m_3D_dm[0].define(procmap);
 
-
+    // make 3D Geometry, BoxArray, DistributionMapping on level >= 1
     for (int lev=1; lev<m_N_level; ++lev) {
         amrex::ParmParse pp_mrlev("mr_lev" + std::to_string(lev));
 
+        // get n_cell in x and y direction, z direction is calculated from the patch size
         std::array<int, 2> n_cells_lev {0, 0};
         std::array<amrex::Real, 3> patch_lo_lev {0, 0, 0};
         std::array<amrex::Real, 3> patch_hi_lev {0, 0, 0};
@@ -318,9 +321,9 @@ Hipace::MakeGeometry ()
         const amrex::Box domain_3D_lev{amrex::IntVect(0,0,zeta_lo),
             amrex::IntVect(n_cells_lev[0]-1, n_cells_lev[1]-1, zeta_hi)};
 
+        // non-periodic because it is internal
         m_3D_geom[lev].define(domain_3D_lev, amrex::RealBox(patch_lo_lev, patch_hi_lev),
                               amrex::CoordSys::cartesian, {0, 0, 0});
-
 
         amrex::BoxList bl_lev{};
         amrex::Vector<int> procmap_lev{};
@@ -328,6 +331,7 @@ Hipace::MakeGeometry ()
             if (m_3D_ba[0][i].smallEnd(2) > zeta_hi || m_3D_ba[0][i].bigEnd(2) < zeta_lo) {
                 continue;
             }
+            // enforce parent-child relationship with level 0 BoxArray
             bl_lev.push_back(
                 amrex::Box(domain_3D_lev)
                     .setSmall(2, std::max(domain_3D_lev.smallEnd(2), m_3D_ba[0][i].smallEnd(2)) )
@@ -341,7 +345,7 @@ Hipace::MakeGeometry ()
         m_3D_dm[lev].define(procmap_lev);
     }
 
-
+    // make slice Geometry, BoxArray, DistributionMapping every level
     for (int lev=0; lev<m_N_level; ++lev) {
         amrex::Box slice_box = m_3D_geom[lev].Domain();
         slice_box.setSmall(2, 0);

@@ -60,6 +60,7 @@ struct Hipace_early_init
      */
     static bool m_outer_depos_loop;
 
+    /* Number of mesh refinement levels */
     int m_N_level = 1;
 };
 
@@ -244,19 +245,18 @@ public:
     amrex::Real* m_lsend_buffer = nullptr;
     // status of laser send
     MPI_Request m_lsend_request = MPI_REQUEST_NULL;
-
-
-    // Geometry:
+    /** 3D Geometry, vector over MR levels */
     amrex::Vector<amrex::Geometry> m_3D_geom;
+    /** 3D DistributionMapping. Does not represent the parallelization pipeline correctly */
     amrex::Vector<amrex::DistributionMapping> m_3D_dm;
+    /** 3D BoxArray, vector over MR levels. One box per rank */
     amrex::Vector<amrex::BoxArray> m_3D_ba;
-
+    /** xy slice Geometry, vector over MR levels */
     amrex::Vector<amrex::Geometry> m_slice_geom;
+    /** xy slice DistributionMapping, vector over MR levels */
     amrex::Vector<amrex::DistributionMapping> m_slice_dm;
+    /** xy slice BoxArray, vector over MR levels. Contains only one box */
     amrex::Vector<amrex::BoxArray> m_slice_ba;
-
-
-
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
     /** Whether to use normalized units */

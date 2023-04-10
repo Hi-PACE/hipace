@@ -48,6 +48,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
     HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
         const int lev = plasma.m_level;
+        // last argument is a dummy refinement ratio
         plasma.SetParGDB(slice_gm, slice_dm, slice_ba, amrex::Vector<amrex::IntVect>{});
         plasma.InitData();
 
