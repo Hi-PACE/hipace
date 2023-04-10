@@ -233,7 +233,7 @@ Hipace::InitData ()
 #endif
 
     for (int lev=0; lev<m_N_level; ++lev) {
-        m_fields.AllocData(lev, m_slice_geom[lev], m_slice_ba[lev], m_slice_dm[lev],
+        m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
         if (lev==0) {
             m_multi_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
@@ -397,7 +397,7 @@ Hipace::Evolve ()
                         m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
                     }
                     m_multi_plasma.DepositNeutralizingBackground(
-                        m_fields, m_multi_laser, WhichSlice::RhoIons, m_slice_geom[lev], lev);
+                        m_fields, m_multi_laser, WhichSlice::RhoIons, m_3D_geom[lev], lev);
                 }
             }
 
@@ -523,7 +523,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 
         FillDiagnostics(lev, islice);
 
-        m_multi_plasma.DoFieldIonization(lev, m_slice_geom[lev], m_fields);
+        m_multi_plasma.DoFieldIonization(lev, m_3D_geom[lev], m_fields);
 
         if (m_multi_plasma.IonizationOn() && m_do_tiling) {
             m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
