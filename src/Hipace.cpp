@@ -485,7 +485,7 @@ Hipace::Evolve ()
         m_physical_time += m_dt;
 
 #ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.reset(step);
+        m_openpmd_writer.reset();
 #endif
     }
 }
@@ -597,9 +597,9 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     FillBoundaryChargeCurrents(lev);
 
-    m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev, islice);
-    m_fields.SolvePoissonEz(m_3D_geom, lev, islice);
-    m_fields.SolvePoissonBz(m_3D_geom, lev, islice);
+    m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
+    m_fields.SolvePoissonEz(m_3D_geom, lev);
+    m_fields.SolvePoissonBz(m_3D_geom, lev);
 
     // deposit grid current into jz_beam
     m_grid_current.DepositCurrentSlice(m_fields, m_3D_geom[lev], lev, islice);
@@ -612,7 +612,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
     m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, m_3D_geom[lev], lev);
 
     // Solves Bx, By using Sx, Sy and chi
-    ExplicitMGSolveBxBy(lev, WhichSlice::This, islice);
+    ExplicitMGSolveBxBy(lev, WhichSlice::This);
 
     if (m_multi_beam.isSalameNow(step, islice_local)) {
         // Modify the beam particle weights on this slice to flatten Ez.
@@ -643,7 +643,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
     FillBoundaryChargeCurrents(lev);
 
     if (!m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev, islice);
+        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
     }
 
     // deposit jx jy jz and maybe rho on This slice
@@ -652,7 +652,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
                                      m_do_beam_jz_minus_rho, WhichSlice::This);
 
     if (m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev, islice);
+        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
     }
 
     // deposit grid current into jz_beam
@@ -660,8 +660,8 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
 
     FillBoundaryChargeCurrents(lev);
 
-    m_fields.SolvePoissonEz(m_3D_geom, lev, islice);
-    m_fields.SolvePoissonBz(m_3D_geom, lev, islice);
+    m_fields.SolvePoissonEz(m_3D_geom, lev);
+    m_fields.SolvePoissonBz(m_3D_geom, lev);
 
     // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
     PredictorCorrectorLoopToSolveBxBy(islice, islice_local, lev, step);
@@ -751,7 +751,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 
 
 void
-Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int islice)
+Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
 {
     HIPACE_PROFILE("Hipace::ExplicitMGSolveBxBy()");
 
@@ -775,9 +775,9 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice, const int isl
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
     if (lev!=0) {
-        m_fields.SetBoundaryCondition(m_3D_geom, lev, "Bx", islice,
+        m_fields.SetBoundaryCondition(m_3D_geom, lev, "Bx",
                                       m_fields.getField(lev, which_slice, "Sy"));
-        m_fields.SetBoundaryCondition(m_3D_geom, lev, "By", islice,
+        m_fields.SetBoundaryCondition(m_3D_geom, lev, "By",
                                       m_fields.getField(lev, which_slice, "Sx"));
     }
 
@@ -924,8 +924,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
         }
 
         /* Calculate Bx and By */
-        m_fields.SolvePoissonBx(Bx_iter, m_3D_geom, lev, islice);
-        m_fields.SolvePoissonBy(By_iter, m_3D_geom, lev, islice);
+        m_fields.SolvePoissonBx(Bx_iter, m_3D_geom, lev);
+        m_fields.SolvePoissonBy(By_iter, m_3D_geom, lev);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
             m_fields.getSlices(lev), m_fields.getSlices(lev),

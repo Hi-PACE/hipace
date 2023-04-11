@@ -76,12 +76,11 @@ private:
      * \param[in] it current box number
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] beamnames list of the names of the beam to be written to file
-     * \param[in] lev MR level
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
                                 const int output_step, const int it,
                                 const amrex::Geometry& geom,
-                                const amrex::Vector< std::string > beamnames, const int lev);
+                                const amrex::Vector< std::string > beamnames);
 
     /** \brief writing openPMD field data
      *
@@ -90,11 +89,10 @@ private:
      * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
      * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
      * \param[in,out] iteration openPMD iteration to which the data is written
-     * \param[in] output_step current time step to dump
      */
     void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
                          const int slice_dir, const amrex::Vector< std::string > varnames,
-                         openPMD::Iteration iteration, const int output_step);
+                         openPMD::Iteration iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
@@ -141,9 +139,8 @@ public:
         const OpenPMDWriterCallType call_type);
 
     /** \brief Resets the openPMD series of all levels
-     * \param[in] output_step current iteration
      */
-    void reset (const int output_step);
+    void reset ();
 
     /** Prefix/path for the output files */
     std::string m_file_prefix;
