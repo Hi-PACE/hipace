@@ -222,9 +222,8 @@ public:
      *
      * \param[lev] MR level
      * \param[in] which_slice defines if this or the salame slice is handled
-     * \param[in] islice longitudinal slice
      */
-    void ExplicitMGSolveBxBy (const int lev, const int which_slice, const int islice);
+    void ExplicitMGSolveBxBy (const int lev, const int which_slice);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *

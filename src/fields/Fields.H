@@ -179,25 +179,21 @@ public:
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] component which can be Psi, Ez, By, Bx ...
-     * \param[in] islice longitudinal slice
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               std::string component, const int islice,
-                               amrex::MultiFab&& staging_area);
+                               std::string component, amrex::MultiFab&& staging_area);
 
     /** \brief Interpolate values from coarse grid to the fine grid
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] component which can be Psi or rho
-     * \param[in] islice longitudinal slice
      * \param[in] outer_edge start writing interpolated values at domain + outer_edge
      * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component, const int islice,
-                                    const amrex::IntVect outer_edge,
+                                    std::string component, const amrex::IntVect outer_edge,
                                     const amrex::IntVect inner_edge);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
@@ -205,45 +201,39 @@ public:
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
     void SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                    const int lev, const int islice);
+                                    const int lev);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      * \param[in] which_slice defines if this or the salame slice is handled
      */
     void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int islice, const int which_slice = WhichSlice::This);
+                         const int which_slice = WhichSlice::This);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
     void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev, const int islice);
+                         const int lev);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
     void SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev, const int islice);
+                         const int lev);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
-    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int islice);
+    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices

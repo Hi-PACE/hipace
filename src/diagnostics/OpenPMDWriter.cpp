@@ -77,14 +77,14 @@ OpenPMDWriter::WriteDiagnostics (
     if (call_type == OpenPMDWriterCallType::beams ) {
         const int lev = 0;
         WriteBeamParticleData(a_multi_beam, iteration, output_step, it, a_box_sorter_vec,
-                              geom3D[lev], beamnames, lev);
+                              geom3D[lev], beamnames);
         m_last_beam_output_dumped = output_step;
         m_outputSeries->flush();
     } else if (call_type == OpenPMDWriterCallType::fields) {
         for (const auto& fd : field_diag) {
             if (fd.m_has_field) {
                 WriteFieldData(fd.m_F, fd.m_geom_io, fd.m_slice_dir, fd.m_comps_output,
-                           iteration, output_step);
+                           iteration);
             }
         }
         m_outputSeries->flush();
@@ -95,7 +95,7 @@ void
 OpenPMDWriter::WriteFieldData (
     amrex::FArrayBox const& fab, amrex::Geometry const& geom,
     const int slice_dir, const amrex::Vector< std::string > varnames,
-    openPMD::Iteration iteration, const int output_step)
+    openPMD::Iteration iteration)
 {
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
@@ -170,7 +170,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
                                       const int output_step, const int it,
                                       const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                                       const amrex::Geometry& geom,
-                                      const amrex::Vector< std::string > beamnames, const int lev)
+                                      const amrex::Vector< std::string > beamnames)
 {
     HIPACE_PROFILE("WriteBeamParticleData()");
 
@@ -386,7 +386,7 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     }
 }
 
-void OpenPMDWriter::reset (const int output_step)
+void OpenPMDWriter::reset ()
 {
     m_outputSeries.reset();
 }
