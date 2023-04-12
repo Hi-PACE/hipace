@@ -38,6 +38,7 @@ General parameters
 
 * ``amr.n_cell`` (3 `integer`)
     Number of cells in x, y and z.
+    With the explicit solver (default), the number of cells in the x and y directions must be :math:`2^n-1` (common values are 511, 1023, 2047, best configuration for performance) or :math:`2^n` where :math:`n` is an integer.
 
 * ``amr.max_level`` (`integer`)
     Maximum level of mesh refinement. Currently, mesh refinement is only supported up to level
