@@ -1,5 +1,5 @@
 LUMI @ CSC
-====================
+==========
 
 This page only provides HiPACE++ specific instructions.
 For more information please visit the `LUMI documentation <https://docs.lumi-supercomputer.eu/>`__.
@@ -38,6 +38,7 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
 .. code-block:: bash
 
    source profile.hipace
+   mkdir -p $HOME/src # only the first time, create a src directory to put the codes sources
    git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # only the first time
    cd $HOME/src/hipace
    rm -rf build
