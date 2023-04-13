@@ -719,6 +719,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
     amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
     InterpolateFromLev0toLev1(geom, lev, "rho", m_poisson_nguards, -m_slices_nguards);
+    InterpolateFromLev0toLev1(geom, lev, "jz", m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     LinCombination(m_source_nguard, getStagingArea(lev),
@@ -726,6 +727,9 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
         -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"), false);
 
     if (Hipace::m_do_beam_jz_minus_rho) {
+        InterpolateFromLev0toLev1(geom, lev, "rho_beam", m_poisson_nguards, -m_slices_nguards);
+        InterpolateFromLev0toLev1(geom, lev, "jz_beam", m_poisson_nguards, -m_slices_nguards);
+
         LinCombination(m_source_nguard, getStagingArea(lev),
             1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
@@ -793,6 +797,8 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+
+    InterpolateFromLev0toLev1(geom, lev, "Ez", m_slices_nguards, m_poisson_nguards);
 }
 
 void
@@ -871,6 +877,8 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+
+    InterpolateFromLev0toLev1(geom, lev, "Bz", m_slices_nguards, m_poisson_nguards);
 }
 
 void
