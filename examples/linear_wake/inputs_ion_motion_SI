@@ -9,7 +9,6 @@ random_seed = 1
 
 hipace.normalized_units = 0
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 0
@@ -17,7 +16,6 @@ diagnostic.output_period = 1
 
 hipace.depos_order_xy = 2
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
 geometry.prob_lo     = -8*kp_inv   -8*kp_inv   -6*kp_inv
 geometry.prob_hi     =  8*kp_inv    8*kp_inv    6*kp_inv

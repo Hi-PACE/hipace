@@ -20,7 +20,6 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Vector<amrex::Geometry> const& gm, int const lev ,const int islice,
-                     int const offset, const BeamBins& bins,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
                      const bool do_beam_rho_deposition,
@@ -72,7 +71,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     if (deposit_ghost && !do_beam_jx_jy_deposition) return;
 
     // Ghost particles are indexed [beam.numParticles()-nghost, beam.numParticles()-1]
-    int box_offset = offset;
+    int box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
     if (deposit_ghost) box_offset = beam.numParticles()-nghost;
 
     PhysConst const phys_const = get_phys_const();
@@ -108,8 +107,8 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     Array3<amrex::Real> const isl_arr = isl_fab.array();
 
-    BeamBins::index_type const * const indices = bins.permutationPtr();
-    BeamBins::index_type const * const offsets = bins.offsetsPtrCpu();
+    BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
+    BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
     BeamBins::index_type cell_start = 0;
     BeamBins::index_type cell_stop = 0;
 

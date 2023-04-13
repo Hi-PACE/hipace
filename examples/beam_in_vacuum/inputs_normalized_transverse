@@ -4,7 +4,6 @@ hipace.normalized_units = 1
 hipace.verbose = 1
 diagnostic.output_period = 1
 random_seed = 4
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 9
@@ -13,7 +12,6 @@ hipace.dt = 1.
 
 hipace.depos_order_xy = 2
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -10.   -10.   -10.    # physical domain
 geometry.prob_hi     =  10.    10.    10.

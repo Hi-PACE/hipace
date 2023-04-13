@@ -13,12 +13,10 @@
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/GPUUtil.H"
-#include "GetDomainLev.H"
 
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
-                           amrex::Geometry const& gm, int const lev, const int islice_local,
-                           const amrex::Box box, const int offset, const BeamBins& bins)
+                           amrex::Geometry const& gm, int const lev, const int islice_local)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -53,19 +51,18 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
 
     // Extract particle properties
+    const int offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
     auto& soa = beam.GetStructOfArrays(); // For momenta and weights
     amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data() + offset;
     amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data() + offset;
     amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data() + offset;
 
     const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(
-        beam, GetDomainLev(gm, box, 1, lev), GetDomainLev(gm, box, 0, lev),
-        gm.isPeriodicArray(), offset);
+    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(beam, gm, offset);
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-    BeamBins::index_type const * const indices = bins.permutationPtr();
-    BeamBins::index_type const * const offsets = bins.offsetsPtrCpu();
+    BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
+    BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
     BeamBins::index_type const
         cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
     // The particles that are in slice islice_local are

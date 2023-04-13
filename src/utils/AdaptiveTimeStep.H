@@ -64,13 +64,12 @@ public:
      * \param[in] geom geometry object
      * \param[in] fields field object
      * \param[in] it current box number
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] initial whether to calculate the initial dt
      */
     void
     Calculate (amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
                const amrex::Geometry& geom, const Fields& fields, const int it=0,
-               const amrex::Vector<BoxSorter>& a_box_sorter_vec={}, const bool initial=true);
+               const bool initial=true);
 
     /** Right before starting a time step, correct its dt to account for local plasma density
      * and resolve density gradients.

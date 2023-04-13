@@ -2,13 +2,11 @@ amr.n_cell = 512 768 4
 
 hipace.normalized_units=1
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 0
 diagnostic.output_period = 1
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -200.   -200.   -2.    # physical domain
 geometry.prob_hi     =  200.    200.    2.

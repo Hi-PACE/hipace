@@ -6,7 +6,6 @@ my_constants.wp = sqrt(ne * q_e^2  / (epsilon0 * m_e))
 my_constants.kp = wp / clight
 my_constants.kp_inv = 1. / kp # =4.753069541um
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 2
@@ -14,7 +13,6 @@ diagnostic.output_period = 1
 
 hipace.depos_order_xy = 2
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     0      # Is periodic?
 geometry.prob_lo     = -20.e-6   -20.e-6   -30.e-6    # physical domain
 geometry.prob_hi     =  20.e-6    20.e-6    30.e-6

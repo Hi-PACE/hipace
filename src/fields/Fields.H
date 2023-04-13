@@ -85,7 +85,7 @@ class Fields
 {
 public:
     /** Constructor */
-    explicit Fields (Hipace const* a_hipace);
+    explicit Fields (const int nlev);
 
     /** Allocate MultiFabs for the 3D array and the 2D slices
      * and define the BoxArrays and DistributionMappings.
@@ -96,7 +96,7 @@ public:
      * \param[in] bin_size size of plasma tiles, for tmp arrays
      */
     void AllocData (
-        int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
+        int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm, int bin_size);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
@@ -161,13 +161,8 @@ public:
      * Hence, after one slice is computed, slices must be shifted by 1 element.
      *
      * \param[in] lev the MR level
-     * \param[in] islice current slice to be shifted
-     * \param[in] geom geometry
-     * \param[in] patch_lo lower longitudinal end of refined level
-     * \param[in] patch_hi upper longitudinal end of refined level
      */
-    void ShiftSlices (int lev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
-                      const amrex::Real patch_hi);
+    void ShiftSlices (int lev);
 
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev);

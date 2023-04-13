@@ -13,9 +13,8 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "Hipace.H"
 
-MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
+MultiPlasma::MultiPlasma ()
 {
-
     amrex::ParmParse pp("plasmas");
     queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
@@ -26,7 +25,7 @@ MultiPlasma::MultiPlasma (amrex::AmrCore* amr_core)
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");
-        m_all_plasmas.emplace_back(PlasmaParticleContainer(amr_core, m_names[i]));
+        m_all_plasmas.emplace_back(PlasmaParticleContainer(m_names[i]));
     }
 
     /** Initialize the collision objects */
@@ -49,9 +48,8 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
     HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
         const int lev = plasma.m_level;
-        plasma.SetParticleBoxArray(lev, slice_ba[lev]);
-        plasma.SetParticleDistributionMap(lev, slice_dm[lev]);
-        plasma.SetParticleGeometry(lev, slice_gm[lev]);
+        // last argument is a dummy refinement ratio
+        plasma.SetParGDB(slice_gm, slice_dm, slice_ba, amrex::Vector<amrex::IntVect>{});
         plasma.InitData();
 
         if(plasma.m_can_ionize) {
@@ -123,15 +121,13 @@ MultiPlasma::ResetParticles (int lev)
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const nlev)
+    Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const lev)
 {
-    for (int lev = 0; lev < nlev; ++lev) {
-        for (int i=0; i<m_nplasmas; i++) {
-            if (m_all_plasmas[i].m_neutralize_background){
-                // current of ions is zero, so they are not deposited.
-                ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
-                                 false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
-            }
+    for (int i=0; i<m_nplasmas; i++) {
+        if (m_all_plasmas[i].m_neutralize_background) {
+            // current of ions is zero, so they are not deposited.
+            ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
+                             false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
         }
     }
 }

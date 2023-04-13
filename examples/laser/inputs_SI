@@ -21,14 +21,12 @@ laser.w0 = 2.*kp_inv
 laser.L0 = 2.*kp_inv
 laser.focal_distance = 0.001
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 diagnostic.output_period = 1
 
 hipace.depos_order_xy = 0
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
 
 diagnostic.diag_type = xz

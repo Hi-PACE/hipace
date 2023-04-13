@@ -27,7 +27,7 @@ Diagnostic::Diagnostic (int nlev)
 
     m_field_data.resize(field_diag_names.size());
 
-    for(std::size_t i = 0; i<m_field_data.size(); ++i) {
+    for(amrex::Long i = 0; i<m_field_data.size(); ++i) {
         auto& fd = m_field_data[i];
 
         fd.m_diag_name = field_diag_names[i];
@@ -67,8 +67,6 @@ Diagnostic::Diagnostic (int nlev)
 
         queryWithParser(pph, "output_period", fd.m_output_period);
         queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_output_period != 0,
-                                        "To avoid output, please use output_period = -1.");
     }
 
     if (queryWithParser(pph, "output_period", m_beam_output_period)) {
@@ -77,8 +75,6 @@ Diagnostic::Diagnostic (int nlev)
     }
     queryWithParser(ppd, "output_period", m_beam_output_period);
     queryWithParser(ppd, "beam_output_period", m_beam_output_period);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_beam_output_period != 0,
-                                    "To avoid output, please use beam_output_period = -1.");
 }
 
 void

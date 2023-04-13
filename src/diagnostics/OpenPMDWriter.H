@@ -74,13 +74,11 @@ private:
      * \param[in,out] iteration openPMD iteration to which the data is written
      * \param[in] output_step current time step to dump
      * \param[in] it current box number
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] beamnames list of the names of the beam to be written to file
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
                                 const int output_step, const int it,
-                                const amrex::Vector<BoxSorter>& a_box_sorter_vec,
                                 const amrex::Geometry& geom,
                                 const amrex::Vector< std::string > beamnames);
 
@@ -130,7 +128,6 @@ public:
      * \param[in] output_step current iteration to be written to file
      * \param[in] beamnames list of the names of the beam to be written to file
      * \param[in] it current box number
-     * \param[in] a_box_sorter_vec Vector (over species) of particles sorted by box
      * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
      * \param[in] call_type whether the beams or the fields should be written to file
      */
@@ -138,7 +135,6 @@ public:
         const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
         const amrex::Real physical_time, const int output_step,
         const amrex::Vector< std::string > beamnames, const int it,
-        const amrex::Vector<BoxSorter>& a_box_sorter_vec,
         amrex::Vector<amrex::Geometry> const& geom3D,
         const OpenPMDWriterCallType call_type);
 

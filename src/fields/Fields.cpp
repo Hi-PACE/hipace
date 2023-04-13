@@ -21,8 +21,8 @@ using namespace amrex::literals;
 amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
 amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
 
-Fields::Fields (Hipace const* a_hipace)
-    : m_slices(a_hipace->maxLevel()+1)
+Fields::Fields (const int nlev)
+    : m_slices(nlev)
 {
     amrex::ParmParse ppf("fields");
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
@@ -32,7 +32,7 @@ Fields::Fields (Hipace const* a_hipace)
 
 void
 Fields::AllocData (
-    int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
+    int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
     const amrex::DistributionMapping& slice_dm, int bin_size)
 {
     HIPACE_PROFILE("Fields::AllocData()");
@@ -147,12 +147,12 @@ Fields::AllocData (
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichlet>(
             new FFTPoissonSolverDirichlet(getSlices(lev).boxArray(),
                                           getSlices(lev).DistributionMap(),
-                                          geom[lev])) );
+                                          geom)) );
     } else {
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
             new FFTPoissonSolverPeriodic(getSlices(lev).boxArray(),
                                          getSlices(lev).DistributionMap(),
-                                         geom[lev]))  );
+                                         geom))  );
     }
     int num_threads = 1;
 #ifdef AMREX_USE_OMP
@@ -466,19 +466,9 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
 }
 
 void
-Fields::ShiftSlices (int lev, int islice, amrex::Geometry geom, amrex::Real patch_lo,
-                     amrex::Real patch_hi)
+Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
-
-    // skip all slices which are not existing on level 1
-    if (lev == 1) {
-        // use geometry of coarse grid to determine whether slice is to be solved
-        const amrex::Real* problo = geom.ProbLo();
-        const amrex::Real* dx = geom.CellSize();
-        const amrex::Real pos = (islice+0.5_rt)*dx[2]+problo[2];
-        if (pos < patch_lo || pos > patch_hi) return;
-    }
 
     const bool explicit_solve = Hipace::GetInstance().m_explicit;
 
