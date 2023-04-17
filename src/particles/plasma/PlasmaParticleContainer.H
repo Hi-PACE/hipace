@@ -174,9 +174,9 @@ private:
 class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>
 {
 public:
-    using amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>::ParIter;
     /** Constructor */
-    PlasmaParticleIterator (ContainerType& pc, int level): ParIter(pc, level, DfltMfi) {}
+    PlasmaParticleIterator (ContainerType& pc, int level)
+        : amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, level, DfltMfi) {}
 };
 
 #endif
