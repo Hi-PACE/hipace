@@ -6,6 +6,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "BoxSort.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_ParticleTransformation.H>
@@ -22,9 +23,11 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     BeamParticleContainer::ParticleType* particle_ptr = a_beam.GetArrayOfStructs()().data();
 
     int num_boxes = a_ba.size();
-    m_box_counts.resize(num_boxes+1, 0);
+    m_box_counts.resize(num_boxes+1);
+    m_box_counts.assign(num_boxes+1, 0);
     m_box_counts_cpu.resize(num_boxes+1);
     m_box_offsets.resize(num_boxes+1);
+    m_box_offsets.assign(num_boxes+1, 0);
     m_box_offsets_cpu.resize(num_boxes+1);
 
     amrex::Gpu::DeviceVector<unsigned int> dst_indices(np);

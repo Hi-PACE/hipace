@@ -65,7 +65,7 @@ void
 AdaptiveTimeStep::Calculate (
     amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
     const amrex::Geometry& geom, const Fields& fields,
-    const int it, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
+    const int it,
     const bool initial)
 {
     HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
@@ -107,9 +107,9 @@ AdaptiveTimeStep::Calculate (
             m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30;
         }
 
-        const uint64_t box_offset = initial ? 0 : a_box_sorter_vec[ibeam].boxOffsetsPtr()[it];
+        const uint64_t box_offset = initial ? 0 : beam.m_box_sorter.boxOffsetsPtr()[it];
         const uint64_t numParticleOnTile = initial ? beam.numParticles()
-                                                   : a_box_sorter_vec[ibeam].boxCountsPtr()[it];
+                                                   : beam.m_box_sorter.boxCountsPtr()[it];
 
 
         // Extract particle properties

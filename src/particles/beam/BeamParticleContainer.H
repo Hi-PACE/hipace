@@ -12,6 +12,7 @@
 #include "particles/profiles/GetInitialDensity.H"
 #include "particles/profiles/GetInitialMomentum.H"
 #include "utils/Parser.H"
+#include "particles/sorting/BoxSort.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
@@ -130,11 +131,9 @@ public:
 
     /** Compute reduced beam diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] bins Binning object to get particles on current slice
-     * \param[in] islice0 index of the leftmost slice of this box, to select the correct bin
-     * \param[in] box_offset Index of first particle of the current box.
+     * \param[in] islice_local local index of the slice
      */
-    void InSituComputeDiags (int islice, const BeamBins& bins, int islice0, const int box_offset);
+    void InSituComputeDiags (int islice, int islice_local);
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
@@ -150,6 +149,12 @@ public:
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
     int m_num_particles_on_upstream_ranks {0};
+    /** Used to sort and reorder the beam particles into boxes for pipelining */
+    BoxSorter m_box_sorter;
+    /** the index of the currently active box (level 0) */
+    int m_ibox {-1};
+    /** Used to bin beam particles to a slice within a box */
+    BeamBins m_slice_bins;
 
     unsigned long long m_total_num_particles {0};
 

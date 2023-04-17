@@ -20,9 +20,8 @@ class MultiPlasma
 public:
 
     /** Constructor
-     * \param[in] amr_core AmrCore object
      */
-    MultiPlasma (amrex::AmrCore* amr_core);
+    MultiPlasma ();
 
     /** Destructor */
     ~MultiPlasma () {}
@@ -97,11 +96,11 @@ public:
      * \param[in] multi_laser that affects the plasma during the deposition
      * \param[in] which_slice slice in which the densities are deposited
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
-     * \param[in] nlev number of MR levels
+     * \param[in] lev MR level
      */
     void DepositNeutralizingBackground (
         Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm,
-        int const nlev);
+        int const lev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *

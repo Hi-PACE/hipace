@@ -52,8 +52,8 @@ class PlasmaParticleContainer
 {
 public:
     /** Constructor */
-    explicit PlasmaParticleContainer (amrex::AmrCore* amr_core, std::string name) :
-        amrex::ParticleContainer<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(amr_core->GetParGDB()),
+    explicit PlasmaParticleContainer (std::string name) :
+        amrex::ParticleContainer<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(),
         m_name(name)
     {
         ReadParameters();

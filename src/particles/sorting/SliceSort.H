@@ -17,16 +17,13 @@
  *
  * Note that this does *not* rearrange particle arrays
  *
- * \param[in] lev MR level
  * \param[in] ibox index of the box
  * \param[in] bx 3d box in which particles are sorted per slice
  * \param[in] beam Beam particle container
  * \param[in] geom Geometry
- * \param[in] a_box_sorter object that sorts particles by box
  */
-BeamBins
+void
 findParticlesInEachSlice (
-    int lev, int ibox, amrex::Box bx, BeamParticleContainer& beam,
-    amrex::Vector<amrex::Geometry> const& geom, const BoxSorter& a_box_sorter);
+    int ibox, amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom);
 
 #endif // HIPACE_SLICESORT_H_

@@ -40,21 +40,22 @@ General parameters
     Number of cells in x, y and z.
     With the explicit solver (default), the number of cells in the x and y directions must be either :math:`2^n-1` (common values are 511, 1023, 2047, best configuration for performance) or :math:`2^n` where :math:`n` is an integer. Some other values might work, like :math:`3 \times 2^n-1`, but use at your own risk.
 
-* ``amr.max_level`` (`integer`)
+* ``amr.max_level`` (`integer`) optional (default `0`)
     Maximum level of mesh refinement. Currently, mesh refinement is only supported up to level
     `1`. Note, that the current mesh refinement algorithm is not generally applicable and valid
     only in certain scenarios.
 
     level `0` is supported.
 
-* ``hipace.patch_lo`` (3 `float`)
+* ``mr_lev1.n_cell`` (2 `integer`)
+    Number of cells in x and y for level 1.
+    The number of cells in the zeta direction is calculated form ``patch_lo`` and ``patch_hi``.
+
+* ``mr_lev1.patch_lo`` (3 `float`)
     Lower end of the refined grid in x, y and z.
 
-* ``hipace.patch_hi`` (3 `float`)
+* ``mr_lev1.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
-
-* ``amr.ref_ratio_vect`` (3 `int`)
-    Refinement ratio. Last one must be 1.
 
 * ``max_step`` (`integer`) optional (default `0`)
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the

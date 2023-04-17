@@ -8,7 +8,6 @@
 #include "PlasmaParticleAdvance.H"
 
 #include "particles/plasma/PlasmaParticleContainer.H"
-#include "GetDomainLev.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "PushPlasmaParticles.H"
 #include "fields/Fields.H"
@@ -88,9 +87,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                                                   : nullptr;
 
         using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(
-            pti.GetParticleTile(), GetDomainLev(gm, pti.tilebox(), 1, lev),
-            GetDomainLev(gm, pti.tilebox(), 0, lev), gm.isPeriodicArray());
+        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(pti.GetParticleTile(), gm);
         const amrex::Real dz = dx[2];
 
         const amrex::Real me_clight_mass_ratio = phys_const.c * phys_const.m_e/plasma.m_mass;

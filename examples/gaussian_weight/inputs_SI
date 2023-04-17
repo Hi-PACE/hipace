@@ -1,12 +1,10 @@
 amr.n_cell = 64 64 64
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 0
 diagnostic.output_period = 1
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 0 0 0      # Is periodic?
 geometry.prob_lo     = -200.e-6   -200.e-6   -200.e-6    # physical domain
 geometry.prob_hi     =  200.e-6    200.e-6    200.e-6

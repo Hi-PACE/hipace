@@ -8,9 +8,12 @@
 #ifndef HIPACE_BoxSort_H_
 #define HIPACE_BoxSort_H_
 
-#include "particles/beam/BeamParticleContainer.H"
-
 #include <AMReX_MultiFab.H>
+#include <AMReX_AmrParticles.H>
+#include <AMReX_Particles.H>
+#include <AMReX_AmrCore.H>
+
+class BeamParticleContainer;
 
 class BoxSorter
 {

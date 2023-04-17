@@ -59,10 +59,13 @@ struct Hipace_early_init
     /* if the loop over depos_order is included in the loop over particles
      */
     static bool m_outer_depos_loop;
+
+    /* Number of mesh refinement levels */
+    int m_N_level = 1;
 };
 
 /** \brief Singleton class, that intialize, runs and finalizes the simulation */
-class Hipace final : public Hipace_early_init, public amrex::AmrCore
+class Hipace final : public Hipace_early_init
 {
 public:
     /** Ctor: read general input parameters, call constructors of main member variables
@@ -75,47 +78,13 @@ public:
     /** Get singleton instance */
     static Hipace& GetInstance ();
 
-    /** Virtual functions need to be defined for pure virtual class AmrCore */
-    void MakeNewLevelFromScratch (
-        int lev, amrex::Real time, const amrex::BoxArray& ba,
-        const amrex::DistributionMapping& dm) override;
-
-    /** Tag cells for refinement */
-    virtual void ErrorEst (
-                   int /*lev*/, amrex::TagBoxArray& /*tags*/,
-                   amrex::Real /*time*/, int /*ngrow*/) final;
-
-    /** Make a new level using provided BoxArray and DistributionMapping and
-     * fill with interpolated coarse level data */
-    void MakeNewLevelFromCoarse (
-                                 int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
-                                 const amrex::DistributionMapping& /*dm*/) override {}
-
-    /** Remake an existing level using provided BoxArray and DistributionMapping and fill
-     * with existing fine and coarse data */
-    void RemakeLevel (
-                      int /*lev*/, amrex::Real /*time*/, const amrex::BoxArray& /*ba*/,
-                      const amrex::DistributionMapping& /*dm*/) override {}
-
-    /** Delete level data */
-    void ClearLevel (int /*lev*/) override {}
-
-    /**\brief Apply some user-defined changes the to base grids.
-     *
-     * This function is only called by MakeNewGrids after computing a box array for
-     * the coarsest level and before calling MakeNewLevelFromScratch.
-     * For example, use this function if you want to remove covered grids on
-     * the coarsest refinement level. */
-    void PostProcessBaseGrids (amrex::BoxArray& ba0) const override;
-
-    /** returns refinement ratio for lev = 1 or {1,1,1} for lev = 0 */
-    static amrex::IntVect GetRefRatio (int lev);
-
     /** Init AmrCore and allocate beam and plasma containers */
     void InitData ();
 
     /** Run the simulation. This function contains the loop over time steps */
     void Evolve ();
+
+    void MakeGeometry ();
 
     /** \brief Receive field slices from rank upstream
      *
@@ -137,11 +106,9 @@ public:
      *
      * \param[in] step current time step
      * \param[in] it current box number
-     * \param[in] bins slice indexing
      * \param[in] only_ghost whether to send only ghost particles
      */
-    void Notify (const int step, const int it, const amrex::Vector<BeamBins>& bins={},
-                 bool only_ghost=false);
+    void Notify (const int step, const int it, bool only_ghost=false);
 
     /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
      *
@@ -150,12 +117,6 @@ public:
      * \param[in] only_time whether only the time is send (and no beam particles)
      */
     void NotifyFinish (const int it=0, bool only_ghost=false, bool only_time=false);
-
-    /** \brief return whether rank is in the same transverse communicator w/ me
-     *
-     * \param[in] rank MPI rank to test
-     */
-    bool InSameTransverseCommunicator (int rank) const;
 
     /** \brief Dump simulation data to file
      *
@@ -171,12 +132,10 @@ public:
     /** \brief Full evolve on 1 slice
      *
      * \param[in] islice slice number
-     * \param[in] ibox index of the current box to be calculated
+     * \param[in] islice_local local index of the slice
      * \param[in] step current time step
-     * \param[in] bins an amrex::DenseBins object that orders particles by slice
      */
-    void SolveOneSlice (int islice, const int ibox, int step,
-                        const amrex::Vector<amrex::Vector<BeamBins>>& bins);
+    void SolveOneSlice (int islice, const int islice_local, int step);
 
     /** \brief Full evolve on 1 subslice with explicit solver
      *
@@ -185,30 +144,21 @@ public:
      *
      * \param[in] lev MR level
      * \param[in] step current time step
-     * \param[in] ibox index of the current box to be calculated
-     * \param[in] bx current transverse box
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
-     * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void ExplicitSolveOneSubSlice (const int lev, const int step, const int ibox,
-                                   const amrex::Box& bx, const int islice, const int islice_local,
-                                   const amrex::Vector<BeamBins>& beam_bin);
+    void ExplicitSolveOneSubSlice (const int lev, const int step,
+                                   const int islice, const int islice_local);
 
     /** \brief Full evolve on 1 subslice with predictor-corrector solver
      *
      * \param[in] lev MR level
      * \param[in] step current time step
-     * \param[in] ibox index of the current box to be calculated
-     * \param[in] bx current transverse box
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
-     * \param[in] beam_bin an amrex::DenseBins object that orders particles by slice
      */
-    void PredictorCorrectorSolveOneSubSlice (const int lev, const int step, const int ibox,
-                                             const amrex::Box& bx, const int islice,
-                                             const int islice_local,
-                                             const amrex::Vector<BeamBins>& beam_bin);
+    void PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
+                                             const int islice, const int islice_local);
 
     /**
      * \brief Initialize Sx and Sy with the beam contributions
@@ -294,6 +244,18 @@ public:
     amrex::Real* m_lsend_buffer = nullptr;
     // status of laser send
     MPI_Request m_lsend_request = MPI_REQUEST_NULL;
+    /** 3D Geometry, vector over MR levels */
+    amrex::Vector<amrex::Geometry> m_3D_geom;
+    /** 3D DistributionMapping. Does not represent the parallelization pipeline correctly */
+    amrex::Vector<amrex::DistributionMapping> m_3D_dm;
+    /** 3D BoxArray, vector over MR levels. One box per rank */
+    amrex::Vector<amrex::BoxArray> m_3D_ba;
+    /** xy slice Geometry, vector over MR levels */
+    amrex::Vector<amrex::Geometry> m_slice_geom;
+    /** xy slice DistributionMapping, vector over MR levels */
+    amrex::Vector<amrex::DistributionMapping> m_slice_dm;
+    /** xy slice BoxArray, vector over MR levels. Contains only one box */
+    amrex::Vector<amrex::BoxArray> m_slice_ba;
     /** Pointer to current (and only) instance of class Hipace */
     static Hipace* m_instance;
     /** Whether to use normalized units */
@@ -359,8 +321,6 @@ public:
     static bool m_use_amrex_mlmg;
     /** Whether the simulation uses a laser pulse */
     static bool m_use_laser;
-    /** Whether the simulation uses mesh refinement */
-    static bool m_do_MR;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
@@ -403,12 +363,7 @@ public:
      */
     void CheckGhostSlice (int it);
 
-    amrex::RealVect patch_lo {0., 0., 0.}; /**< 3D array with lower ends of the refined grid */
-    amrex::RealVect patch_hi {0., 0., 0.}; /**< 3D array with upper ends of the refined grid */
 private:
-    amrex::Vector<amrex::Geometry> m_slice_geom;
-    amrex::Vector<amrex::DistributionMapping> m_slice_dm;
-    amrex::Vector<amrex::BoxArray> m_slice_ba;
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     /** Linear operator for the explicit Bx and By solver */
@@ -418,9 +373,6 @@ private:
 #endif
     /** hpmg solver for the explicit Bx and by solver */
     amrex::Vector<std::unique_ptr<hpmg::MultiGrid>> m_hpmg;
-public:
-    /** Used to sort the beam particles into boxes for pipelining */
-    amrex::Vector<BoxSorter> m_box_sorters;
 private:
     /** Diagnostics */
     Diagnostic m_diags;
@@ -446,24 +398,13 @@ private:
      * This modifies component Bx and By, of slice 1 in m_fields.m_slices
      * as well as the plasma particle force terms.
      *
-     * \param[in] islice_local index of calculated slice
+     * \param[in] islice longitudinal slice
+     * \param[in] islice_local local index of the slice
      * \param[in] lev current level
      * \param[in] step current time step
-     * \param[in] bins Vector (over species) of particles sorted by slices
-     * \param[in] ibox index of the current box
      */
-    void PredictorCorrectorLoopToSolveBxBy (const int islice_local, const int lev, const int step,
-                                            const amrex::Vector<BeamBins>& bins, const int ibox);
-
-    /** \brief define Geometry, DistributionMapping and BoxArray for the slice.
-     * The slice MultiFAB and the plasma particles are defined on this GDB.
-     *
-     * \param[in] lev level of mesh refinement
-     * \param[in] ba BoxArray of the whole domain
-     * \param[in] dm DistributionMappint of the whole domain
-     */
-    void DefineSliceGDB (const int lev, const amrex::BoxArray& ba,
-                         const amrex::DistributionMapping& dm);
+    void PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_local,
+                                            const int lev, const int step);
 
     int leftmostBoxWithParticles () const;
 };

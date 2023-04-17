@@ -152,18 +152,15 @@ struct EnforceBCandSetPos
 
     /** Constructor.
      * \param a_ptile tile containing the macroparticles
-     * \param plo lower end of the physical domain where particles should stay
-     * \param phi upper end of the physical domain where particles should stay
-     * \param is_per periodicity
+     * \param geom geometry used for domain size and periodicity
      * \param a_offset offset to apply to the particle indices
      */
-    EnforceBCandSetPos (T_ParTile& a_ptile, const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& plo,
-        const amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>& phi,
-        const amrex::GpuArray<int,AMREX_SPACEDIM>& is_per, int a_offset = 0) noexcept
+    EnforceBCandSetPos (T_ParTile& a_ptile, const amrex::Geometry& geom, int a_offset = 0) noexcept
     {
 
-        m_plo    = plo;
-        m_phi    = phi;
+        m_plo    = geom.ProbLoArray();
+        m_phi    = geom.ProbHiArray();
+        auto is_per = geom.isPeriodicArray();
         m_is_per = is_per[0];
         AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
 
