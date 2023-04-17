@@ -780,9 +780,9 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
-    m_fields.InterpolateFromLev0toLev1(Geom(), lev, "Sy",
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sy",
         m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
-    m_fields.InterpolateFromLev0toLev1(Geom(), lev, "Sx",
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sx",
         m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
 
     if (lev!=0) {
@@ -862,9 +862,9 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
                             max_iters, m_MG_verbose);
     }
 
-    m_fields.InterpolateFromLev0toLev1(Geom(), lev, "Bx",
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
-    m_fields.InterpolateFromLev0toLev1(Geom(), lev, "By",
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 }
 
