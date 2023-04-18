@@ -500,6 +500,10 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     // Get this laser slice from the 3D array
     m_multi_laser.Copy(islice, false);
 
+    m_multi_beam.TagByLevel(m_N_level, m_3D_geom, WhichSlice::This, islice, islice_local);
+    m_multi_beam.TagByLevel(m_N_level, m_3D_geom, WhichSlice::Next, islice, islice_local);
+    m_multi_plasma.TagByLevel(m_N_level, m_3D_geom, islice);
+
     for (int lev=0; lev<m_N_level; ++lev) {
 
         if (lev != 0) {
@@ -536,7 +540,9 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         // Push plasma particles
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom[lev], false, lev);
 
-        m_multi_plasma.doCoulombCollision(lev, m_slice_geom[lev].Domain(), m_slice_geom[lev]);
+        if (lev == 0) {
+            m_multi_plasma.doCoulombCollision(lev, m_slice_geom[lev].Domain(), m_slice_geom[lev]);
+        }
 
         // Push beam particles
         m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom[lev], lev, islice_local);

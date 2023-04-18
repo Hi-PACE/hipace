@@ -25,7 +25,7 @@ findParticlesInEachTile (
 
     // Extract particle structures for this tile
     int count = 0; // number of boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
+    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti) {
         count += 1;
 
         // Extract box properties

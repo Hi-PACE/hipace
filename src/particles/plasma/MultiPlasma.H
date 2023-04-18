@@ -142,6 +142,8 @@ public:
      */
     void ReorderParticles (const int islice);
 
+    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
     /** Number of binary collisions */

@@ -110,6 +110,8 @@ public:
      */
     void UpdateDensityFunction ();
 
+    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice);
+
     /** returns u_mean of the plasma distribution */
     amrex::RealVect GetUMean () const {return m_u_mean;}
 
@@ -134,7 +136,6 @@ public:
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
-    int m_level {0}; /**< mesh refinement level on which the plasma lives */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};

@@ -36,9 +36,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
     " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhoIons)"
     " or for the Salame slice (WhichSlice::Salame)");
 
-    // only deposit plasma currents on their according MR level
-    if (plasma.m_level != lev) return;
-
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
@@ -47,7 +44,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
     const amrex::Real mass = plasma.m_mass;
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
     {
         // Extract the fields currents
         // Do not access the field if the kernel later does not deposit into it,
@@ -196,7 +193,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 const int ox = idx % outer_depos_order_x_1;
 
                 const auto positions = pos_structs[ip];
-                if (positions.id() < 0) return;
+                // only deposit plasma currents on or below their according MR level
+                if (positions.id() < 0 || positions.cpu() < lev) return;
                 const amrex::Real psi_inv = 1._rt/psip[ip];
                 const amrex::Real xp = positions.pos(0);
                 const amrex::Real yp = positions.pos(1);

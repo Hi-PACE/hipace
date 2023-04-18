@@ -35,7 +35,6 @@ namespace
      * \param[in] uz gamma * beta_z
      * \param[in] weight weight of the single particle
      * \param[in] pid particle ID to be assigned to the particle
-     * \param[in] procID processor ID to be assigned to the particle
      * \param[in] ip index of the particle
      * \param[in] speed_of_light speed of light in the current units
      */
@@ -44,13 +43,13 @@ namespace
         BeamParticleContainer::ParticleType* pstruct,
         amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
-        const amrex::Real& uz, const amrex::Real& weight, const int& pid, const int& procID,
+        const amrex::Real& uz, const amrex::Real& weight, const int& pid,
         const int& ip, const amrex::Real& speed_of_light) noexcept
     {
         BeamParticleContainer::ParticleType& p = pstruct[ip];
         // Set particle AoS
         p.id()   = pid > 0 ? pid + ip : pid;
-        p.cpu()  = procID;
+        p.cpu()  = 0; // level 0
         p.pos(0) = x;
         p.pos(1) = y;
         p.pos(2) = z;
@@ -190,7 +189,6 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
         amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
             particle_tile.GetStructOfArrays().realarray();
 
-        int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
@@ -249,7 +247,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
                 const amrex::Real weight = density * scale_fac;
                 AddOneBeamParticle(pstruct, arrdata, x, y, z, u[0], u[1], u[2], weight,
-                                   pid, procID, pidx, phys_const.c);
+                                   pid, pidx, phys_const.c);
 
                 ++pidx;
             }
@@ -289,7 +287,6 @@ InitBeamFixedWeight (int num_to_add,
         amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
             particle_tile.GetStructOfArrays().realarray();
 
-        const int procID = amrex::ParallelDescriptor::MyProc();
         const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
@@ -325,21 +322,21 @@ InitBeamFixedWeight (int num_to_add,
                 {
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
                                        z_central, u[0], u[1], u[2], weight,
-                                       valid_id, procID, i, phys_const.c);
+                                       valid_id, i, phys_const.c);
                 } else {
                     weight /= 4;
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
                                        z_central, u[0], u[1], u[2], weight,
-                                       valid_id, procID, 4*i, phys_const.c);
+                                       valid_id, 4*i, phys_const.c);
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
                                        z_central, -u[0], u[1], u[2], weight,
-                                       valid_id, procID, 4*i+1, phys_const.c);
+                                       valid_id, 4*i+1, phys_const.c);
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
                                        z_central, u[0], -u[1], u[2], weight,
-                                       valid_id, procID, 4*i+2, phys_const.c);
+                                       valid_id, 4*i+2, phys_const.c);
                     AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
                                        z_central, -u[0], -u[1], u[2], weight,
-                                       valid_id, procID, 4*i+3, phys_const.c);
+                                       valid_id, 4*i+3, phys_const.c);
                 }
             });
     }
@@ -693,7 +690,6 @@ InitBeamFromFile (const std::string input_file,
         ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
         amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
             particle_tile.GetStructOfArrays().realarray();
-        const int procID = amrex::ParallelDescriptor::MyProc();
         const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
@@ -707,7 +703,7 @@ InitBeamFromFile (const std::string input_file,
                                (amrex::Real)(u_y_data.get()[i] * unit_uy),
                                (amrex::Real)(u_z_data.get()[i] * unit_uz),
                                (amrex::Real)(w_w_data.get()[i] * unit_ww),
-                               pid, procID, i, phys_const.c);
+                               pid, i, phys_const.c);
         }
     }
 

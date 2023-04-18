@@ -47,9 +47,8 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 {
     HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
-        const int lev = plasma.m_level;
-        // last argument is a dummy refinement ratio
-        plasma.SetParGDB(slice_gm, slice_dm, slice_ba, amrex::Vector<amrex::IntVect>{});
+        // make it think there is only level 0
+        plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
         plasma.InitData();
 
         if(plasma.m_can_ionize) {
@@ -61,7 +60,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
                 "Must specify a valid product plasma for Ionization using ionization_product");
-            plasma.InitIonizationModule(gm[lev], plasma_product);
+            plasma.InitIonizationModule(gm[0], plasma_product); // geometry only for dz
         }
     }
     if (m_nplasmas > 0) m_all_bins.resize(m_nplasmas);
@@ -195,5 +194,13 @@ MultiPlasma::ReorderParticles (const int islice)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.ReorderParticles(islice);
+    }
+}
+
+void
+MultiPlasma::TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice)
+{
+    for (auto& plasma : m_all_plasmas) {
+        plasma.TagByLevel(nlev, geom3D, islice);
     }
 }

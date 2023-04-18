@@ -22,7 +22,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
 
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
+    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti) {
 
         amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
         const Array3<amrex::Real> arr = isl_fab.array();
@@ -88,7 +88,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 constexpr int derivative_type = a_derivative_type.value;
 
                 const auto positions = pos_structs[ip];
-                if (positions.id() < 0) return;
+                if (positions.id() < 0 || positions.cpu() < lev) return;
                 const amrex::Real psi_inv = 1._rt/psip[ip];
                 const amrex::Real xp = positions.pos(0);
                 const amrex::Real yp = positions.pos(1);

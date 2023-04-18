@@ -206,14 +206,12 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
         auto& plasma = hipace->m_multi_plasma.m_all_plasmas[i];
         auto& bins = hipace->m_multi_plasma.m_all_bins[i];
 
-        if (plasma.m_level != lev) return;
-
         const auto gm = hipace->m_3D_geom[lev];
         const bool do_tiling = Hipace::m_do_tiling;
 
         amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
-        for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+        for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
         {
             const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev)[pti];
             Array3<const amrex::Real> const slice_arr = slice_fab.const_array();

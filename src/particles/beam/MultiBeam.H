@@ -111,6 +111,9 @@ public:
      * and return this number */
     int NumIntComps ();
 
+    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int which_slice,
+                     const int islice, const int islice_local);
+
     /** \brief Store number of particles of each beam in m_n_real_particles */
     void StoreNRealParticles ();
 

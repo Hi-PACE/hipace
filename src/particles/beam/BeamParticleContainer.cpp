@@ -61,7 +61,6 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
-    queryWithParser(pp, "finest_level", m_finest_level);
     queryWithParser(pp, "do_salame", m_do_salame);
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
@@ -229,6 +228,62 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
     }
 
     return nparticles;
+}
+
+void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D,
+    const int which_slice, const int islice, const int islice_local, const int nghost)
+{
+    if (nlev==1) return;
+    HIPACE_PROFILE("BeamParticleContainer::TagByLevel");
+
+    const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice_local == 0));
+    int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
+    if (deposit_ghost) box_offset = numParticles()-nghost;
+
+    const auto pos_structs = GetArrayOfStructs().begin() + box_offset;
+
+    BeamBins::index_type const * const indices = m_slice_bins.permutationPtr();
+    BeamBins::index_type const * const offsets = m_slice_bins.offsetsPtrCpu();
+    BeamBins::index_type cell_start = 0;
+    BeamBins::index_type cell_stop = 0;
+    if (which_slice == WhichSlice::This) {
+        cell_start = offsets[islice_local];
+        cell_stop  = offsets[islice_local+1];
+    } else {
+        if (islice > 0) {
+            cell_start = offsets[islice_local-1];
+            cell_stop  = offsets[islice_local];
+        } else {
+            cell_start = 0;
+            cell_stop  = nghost;
+        }
+    }
+
+    int const num_particles = cell_stop-cell_start;
+
+    const int islice_here = islice - (which_slice == WhichSlice::Next);
+    const bool has_zeta = (islice_here >= geom3D[1].Domain().smallEnd(2) &&
+                           islice_here <= geom3D[1].Domain().bigEnd(2));
+    const amrex::Real lo_x = geom3D[1].ProbLo(0);
+    const amrex::Real hi_x = geom3D[1].ProbHi(0);
+    const amrex::Real lo_y = geom3D[1].ProbLo(1);
+    const amrex::Real hi_y = geom3D[1].ProbHi(1);
+
+    amrex::ParallelFor(num_particles,
+        [=] AMREX_GPU_DEVICE (int idx) {
+            // Particles in the same slice must be accessed through the bin sorter.
+            // Ghost particles are simply contiguous in memory.
+            const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
+
+            if (has_zeta &&
+                lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
+                lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+                pos_structs[ip].cpu() = 1;
+            } else {
+                pos_structs[ip].cpu() = 0;
+            }
+        }
+    );
 }
 
 bool

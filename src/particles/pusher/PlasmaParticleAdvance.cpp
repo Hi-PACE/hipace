@@ -33,9 +33,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     HIPACE_PROFILE("AdvancePlasmaParticles()");
     using namespace amrex::literals;
 
-    // only push plasma particles on their according MR level
-    if (plasma.m_level != lev) return;
-
     const bool do_tiling = Hipace::m_do_tiling;
 
     // Extract properties associated with physical size of the box
@@ -43,7 +40,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
@@ -113,7 +110,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 num_particles,
                 [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
-                    if (setPositionEnforceBC.m_structs[ip].id() < 0) return;
+                    // only push plasma particles on their according MR level
+                    if (setPositionEnforceBC.m_structs[ip].id() < 0 ||
+                        setPositionEnforceBC.m_structs[ip].cpu() != lev) return;
 
                     amrex::Real xp = x_prev[ip];
                     amrex::Real yp = y_prev[ip];
@@ -322,7 +321,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
     const int init_ion_lev = plasma.m_init_ion_lev;
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
     {
         unsigned long num_initial_particles = plasma.m_init_num_par[pti.tileIndex()];
         pti.GetParticleTile().resize(num_initial_particles);
