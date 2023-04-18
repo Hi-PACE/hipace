@@ -37,15 +37,20 @@ jobs:
         brew update
         brew install --overwrite python
         brew install ccache
+        brew link ccache
         brew install fftw
+        brew link fftw
         brew install libomp
         brew link --force libomp
         brew install ninja
+        brew link ninja
         brew install open-mpi
+        brew link open-mpi
         brew install pkg-config
         set -e
         brew tap openpmd/openpmd
         brew install openpmd-api
+        brew link openpmd-api
         python3 -m pip install matplotlib
         python3 -m pip install numpy
         python3 -m pip install scipy
