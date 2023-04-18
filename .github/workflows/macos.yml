@@ -57,6 +57,10 @@ jobs:
         restore-keys: |
           ccache-macos-appleclang-${{ hashFiles('.github/workflows/macos.yml') }}-
           ccache-macos-appleclang-
+    - name: Experiment
+      run: ls /usr/local
+    - name: Experiment2
+      run: tree /usr/local
     - name: build HiPACE++
       run: |
         cmake -S . -B build_sp          \
