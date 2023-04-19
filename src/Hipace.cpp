@@ -603,6 +603,12 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     FillBoundaryChargeCurrents(lev);
 
+    // interpolate also inside domain to account for x and y derivative
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jx",
+        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jy",
+        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
+
     m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
     m_fields.SolvePoissonEz(m_3D_geom, lev);
     m_fields.SolvePoissonBz(m_3D_geom, lev);
@@ -780,6 +786,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sy",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sx",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+
     if (lev!=0) {
         m_fields.SetBoundaryCondition(m_3D_geom, lev, "Bx",
                                       m_fields.getField(lev, which_slice, "Sy"));
@@ -856,6 +867,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
                             max_iters, m_MG_verbose);
     }
+
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 }
 
 void
