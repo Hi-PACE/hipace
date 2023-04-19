@@ -18,7 +18,7 @@
 
 void
 ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
-                    amrex::Geometry const& gm, const int lev) {
+                    amrex::Vector<amrex::Geometry> const& gm, const int lev) {
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
 
@@ -53,11 +53,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
             multi_laser.getSlices().const_array(pti, WhichLaserSlice::n00j00_r) :
             amrex::Array4<const amrex::Real>();
 
-        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
+        const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
 
-        const amrex::Real * AMREX_RESTRICT dx = gm.CellSize();
-        const amrex::Real invvol = Hipace::m_normalized_units ? 1._rt : 1._rt/(dx[0]*dx[1]*dx[2]);
+        const amrex::Real * AMREX_RESTRICT dx = gm[lev].CellSize();
+        const amrex::Real invvol = Hipace::m_normalized_units ?
+            gm[0].CellSize(0)*gm[0].CellSize(1) / (gm[lev].CellSize(0)*gm[lev].CellSize(1))
+            : 1._rt/(dx[0]*dx[1]*dx[2]);
         const amrex::Real dx_inv = 1._rt/dx[0];
         const amrex::Real dy_inv = 1._rt/dx[1];
 

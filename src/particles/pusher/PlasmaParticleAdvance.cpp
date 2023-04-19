@@ -27,7 +27,7 @@ template struct PlasmaMomentumDerivative<DualNumber>;
 
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
-                        amrex::Geometry const& gm, const bool temp_slice, int const lev,
+                        amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
                         PlasmaBins& bins, const MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("AdvancePlasmaParticles()");
@@ -36,7 +36,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     const bool do_tiling = Hipace::m_do_tiling;
 
     // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
+    amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
@@ -63,8 +63,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real dy_inv = 1._rt/dx[1];
 
         // Offset for converting positions to indexes
-        amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
+        amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], slice_fab.box());
 
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
@@ -84,8 +84,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                                                   : nullptr;
 
         using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(pti.GetParticleTile(), gm);
-        const amrex::Real dz = dx[2];
+        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(pti.GetParticleTile(), gm[0]);
+        const amrex::Real dz = gm[0].CellSize(2);
 
         const amrex::Real me_clight_mass_ratio = phys_const.c * phys_const.m_e/plasma.m_mass;
         const amrex::Real clight = phys_const.c;

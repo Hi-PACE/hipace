@@ -53,11 +53,11 @@ Fields::AllocData (
             m_source_nguard = -m_slices_nguards;
         } else {
             // Need 1 extra guard cell transversally for transverse derivative
-            int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+            int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
             m_slices_nguards = {nguards_xy, nguards_xy, 0};
             // Poisson solver same size as domain, no ghost cells
             m_poisson_nguards = {0, 0, 0};
-            m_exmby_eypbx_nguard = {0, 0, 0};
+            m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
             m_source_nguard = {0, 0, 0};
         }
 
@@ -652,7 +652,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 void
 Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                    std::string component, const amrex::IntVect outer_edge,
-                                   const amrex::IntVect inner_edge)
+                                   const amrex::IntVect inner_edge, const bool)
 {
     if (lev == 0) return; // only interpolate boundaries to lev 1
     if (outer_edge == inner_edge) return;
@@ -708,8 +708,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
-    InterpolateFromLev0toLev1(geom, lev, "rho", m_poisson_nguards, -m_slices_nguards);
-    InterpolateFromLev0toLev1(geom, lev, "jz", m_poisson_nguards, -m_slices_nguards);
+    InterpolateFromLev0toLev1(geom, lev, "rho", m_poisson_nguards, -m_slices_nguards, true);
+    InterpolateFromLev0toLev1(geom, lev, "jz", m_poisson_nguards, -m_slices_nguards, true);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     LinCombination(m_source_nguard, getStagingArea(lev),
@@ -717,8 +717,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
         -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"), false);
 
     if (Hipace::m_do_beam_jz_minus_rho) {
-        InterpolateFromLev0toLev1(geom, lev, "rho_beam", m_poisson_nguards, -m_slices_nguards);
-        InterpolateFromLev0toLev1(geom, lev, "jz_beam", m_poisson_nguards, -m_slices_nguards);
+        InterpolateFromLev0toLev1(geom, lev, "rho_beam", m_poisson_nguards, -m_slices_nguards, true);
+        InterpolateFromLev0toLev1(geom, lev, "jz_beam", m_poisson_nguards, -m_slices_nguards, true);
 
         LinCombination(m_source_nguard, getStagingArea(lev),
             1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),

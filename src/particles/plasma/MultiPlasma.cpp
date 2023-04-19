@@ -80,7 +80,7 @@ void
 MultiPlasma::DepositCurrent (
     Fields & fields, const MultiLaser & multi_laser, int which_slice,
     bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi,
-    amrex::Geometry const& gm, int const lev)
+    amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice,
@@ -91,7 +91,7 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
-                                 amrex::Geometry const& gm, int const lev)
+                                 amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::ExplicitDeposition(m_all_plasmas[i], fields, multi_laser, gm, lev);
@@ -100,7 +100,7 @@ MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
 
 void
 MultiPlasma::AdvanceParticles (
-    const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm,
+    const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
     bool temp_slice, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
@@ -120,7 +120,8 @@ MultiPlasma::ResetParticles (int lev)
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const lev)
+    Fields & fields, const MultiLaser & multi_laser, int which_slice,
+    amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         if (m_all_plasmas[i].m_neutralize_background) {

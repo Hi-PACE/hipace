@@ -186,10 +186,11 @@ public:
      * \param[in] component which can be Psi or rho
      * \param[in] outer_edge start writing interpolated values at domain + outer_edge
      * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
+     * \param[in] is_density if the field needs to be scaled by the cell volume ratio
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                     std::string component, const amrex::IntVect outer_edge,
-                                    const amrex::IntVect inner_edge);
+                                    const amrex::IntVect inner_edge, const bool=false);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.

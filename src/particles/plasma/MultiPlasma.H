@@ -52,8 +52,8 @@ public:
      */
     void DepositCurrent (
         Fields & fields, const MultiLaser & multi_laser, int which_slice, bool deposit_jx_jy,
-        bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
-        int const lev);
+        bool deposit_jz, bool deposit_rho, bool deposit_chi,
+        amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields
      *
@@ -63,7 +63,7 @@ public:
      * \param[in] lev MR level
      */
     void ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
-                             amrex::Geometry const& gm, int const lev);
+                             amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *
@@ -81,7 +81,7 @@ public:
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm,
+        const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
         bool temp_slice, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
@@ -99,8 +99,8 @@ public:
      * \param[in] lev MR level
      */
     void DepositNeutralizingBackground (
-        Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm,
-        int const lev);
+        Fields & fields, const MultiLaser & multi_laser, int which_slice,
+        amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *

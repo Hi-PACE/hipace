@@ -318,6 +318,9 @@ Hipace::MakeGeometry ()
         const int zeta_hi = amrex::Math::round((patch_hi_lev[2] - pos_offset_z)
                                                 * m_3D_geom[0].InvCellSize(2));
 
+        patch_lo_lev[2] = (zeta_lo-0.5)*m_3D_geom[0].CellSize(2) + pos_offset_z;
+        patch_hi_lev[2] = (zeta_hi+0.5)*m_3D_geom[0].CellSize(2) + pos_offset_z;
+
         const amrex::Box domain_3D_lev{amrex::IntVect(0,0,zeta_lo),
             amrex::IntVect(n_cells_lev[0]-1, n_cells_lev[1]-1, zeta_hi)};
 
@@ -401,7 +404,7 @@ Hipace::Evolve ()
                         m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
                     }
                     m_multi_plasma.DepositNeutralizingBackground(
-                        m_fields, m_multi_laser, WhichSlice::RhoIons, m_3D_geom[lev], lev);
+                        m_fields, m_multi_laser, WhichSlice::RhoIons, m_3D_geom, lev);
                 }
             }
 
@@ -538,7 +541,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         }
 
         // Push plasma particles
-        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom[lev], false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, false, lev);
 
         if (lev == 0) {
             m_multi_plasma.doCoulombCollision(lev, m_slice_geom[lev].Domain(), m_slice_geom[lev]);
@@ -586,7 +589,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     // deposit jx, jy, jz, rho and chi for all plasmas
     m_multi_plasma.DepositCurrent(
-        m_fields, m_multi_laser, WhichSlice::This, true, true, true, true, m_3D_geom[lev], lev);
+        m_fields, m_multi_laser, WhichSlice::This, true, true, true, true, m_3D_geom, lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     // deposit jx_beam and jy_beam in the Next slice
@@ -605,9 +608,9 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     // interpolate also inside domain to account for x and y derivative
     m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jx",
-        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
+        m_fields.m_slices_nguards, -m_fields.m_slices_nguards, true);
     m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jy",
-        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
+        m_fields.m_slices_nguards, -m_fields.m_slices_nguards, true);
 
     m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
     m_fields.SolvePoissonEz(m_3D_geom, lev);
@@ -621,7 +624,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
     InitializeSxSyWithBeam(lev);
 
     // Deposit Sx and Sy for every plasma species
-    m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, m_3D_geom[lev], lev);
+    m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, m_3D_geom, lev);
 
     // Solves Bx, By using Sx, Sy and chi
     ExplicitMGSolveBxBy(lev, WhichSlice::This);
@@ -648,7 +651,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
 
     // deposit jx jy jz rho and maybe chi
     m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
-        true, true, true, m_use_laser, m_3D_geom[lev], lev);
+        true, true, true, m_use_laser, m_3D_geom, lev);
 
     m_fields.AddRhoIons(lev);
 
@@ -787,15 +790,24 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
     m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sy",
-        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards, true);
     m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sx",
-        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards, true);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "chi",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards, true);
 
     if (lev!=0) {
-        m_fields.SetBoundaryCondition(m_3D_geom, lev, "Bx",
+        if (slicemf.box(0).length(0) % 2 == 0) {
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, "Bx",
                                       m_fields.getField(lev, which_slice, "Sy"));
-        m_fields.SetBoundaryCondition(m_3D_geom, lev, "By",
-                                      m_fields.getField(lev, which_slice, "Sx"));
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, "By",
+                                        m_fields.getField(lev, which_slice, "Sx"));
+        } else {
+            m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
+                m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+            m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
+                m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+        }
     }
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -868,10 +880,12 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
                             max_iters, m_MG_verbose);
     }
 
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
-        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
-        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+    if (slicemf.box(0).length(0) % 2 != 0) {
+        m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
+            m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+        m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
+            m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+    }
 }
 
 void
@@ -928,12 +942,12 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
         m_predcorr_avg_iterations += 1.0;
 
         // Push particles to the next temp slice
-        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom[lev], true, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, true, lev);
 
         if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
         // plasmas deposit jx jy to next temp slice
         m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::Next,
-            true, false, false, false, m_3D_geom[lev], lev);
+            true, false, false, false, m_3D_geom, lev);
 
         // beams deposit jx jy to the next slice
         m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,

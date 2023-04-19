@@ -95,7 +95,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             // re-scaling the weight in normalized units to get the same charge density on lev 1
             // Not necessary in SI units, there the weight is the actual charge and not the density
             amrex::Real const * AMREX_RESTRICT dx_lev0 = gm[0].CellSize();
-            invvol = dx_lev0[0] * dx_lev0[1] * dx_lev0[2] * dxi * dyi * dzi;
+            invvol = dx_lev0[0] * dx_lev0[1] * dxi * dyi;
         }
     }
 
