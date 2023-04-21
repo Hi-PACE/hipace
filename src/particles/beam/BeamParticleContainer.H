@@ -27,13 +27,15 @@ struct BeamIdx
     };
 };
 
-struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType> {
+struct BeamBins : amrex::DenseBins<
+        amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>::ParticleType> {
 
     template<class...Args>
     void build (Args&&...args) {
         // call build function of the underlying DenseBins object
         // with all of the arguments forwarded
-        amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
+        amrex::DenseBins<amrex::ParticleTile<
+            amrex::Particle<0, 0>, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
 
         // after every build call copy offsets array form GPU to CPU
         const auto offset_size = numBins() + 1;
@@ -57,12 +59,12 @@ struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
-    : public amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>
+    : public amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>
 {
 public:
     /** Constructor */
     explicit BeamParticleContainer (std::string name) :
-        amrex::ParticleTile<0,0,BeamIdx::nattribs,0>(),
+        amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>(),
         m_name(name)
     {
         ReadParameters();

@@ -84,6 +84,7 @@ public:
     /** Run the simulation. This function contains the loop over time steps */
     void Evolve ();
 
+    /** Make Geometry, DistributionMapping and BoxArray for all MR levels */
     void MakeGeometry ();
 
     /** \brief Receive field slices from rank upstream
