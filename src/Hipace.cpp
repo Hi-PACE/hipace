@@ -597,6 +597,13 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     FillBoundaryChargeCurrents(lev);
 
+    // interpolate jx and jy to level 1 in the domain edges and
+    // also inside ghost cells to account for x and y derivative
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jx",
+        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jy",
+        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
+
     m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
     m_fields.SolvePoissonEz(m_3D_geom, lev);
     m_fields.SolvePoissonBz(m_3D_geom, lev);
@@ -774,12 +781,26 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
-    if (lev!=0) {
+    // interpolate Sx and Sy to level 1 in the domain edges. This also accounts for jx_beam, jy_beam
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sy",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sx",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+
+    if (lev!=0 && (slicemf.box(0).length(0) % 2 == 0)) {
+        // cell centered MG solve: no ghost cells, put boundary condition into source term
+        // node centered MG solve: one ghost cell, use boundary condition from there
         m_fields.SetBoundaryCondition(m_3D_geom, lev, "Bx",
                                       m_fields.getField(lev, which_slice, "Sy"));
         m_fields.SetBoundaryCondition(m_3D_geom, lev, "By",
                                       m_fields.getField(lev, which_slice, "Sx"));
     }
+
+    // interpolate Bx and By to level 1 in the ghost cells
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {

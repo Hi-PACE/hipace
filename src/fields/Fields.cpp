@@ -53,11 +53,11 @@ Fields::AllocData (
             m_source_nguard = -m_slices_nguards;
         } else {
             // Need 1 extra guard cell transversally for transverse derivative
-            int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+            int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
             m_slices_nguards = {nguards_xy, nguards_xy, 0};
             // Poisson solver same size as domain, no ghost cells
             m_poisson_nguards = {0, 0, 0};
-            m_exmby_eypbx_nguard = {0, 0, 0};
+            m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
             m_source_nguard = {0, 0, 0};
         }
 
@@ -708,7 +708,9 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
+    // interpolate rho and jz to level 1 in the domain edges
     InterpolateFromLev0toLev1(geom, lev, "rho", m_poisson_nguards, -m_slices_nguards);
+    InterpolateFromLev0toLev1(geom, lev, "jz", m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     LinCombination(m_source_nguard, getStagingArea(lev),
@@ -716,6 +718,10 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
         -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"), false);
 
     if (Hipace::m_do_beam_jz_minus_rho) {
+        // interpolate rho_beam and jz_beam to level 1 in the domain edges
+        InterpolateFromLev0toLev1(geom, lev, "rho_beam", m_poisson_nguards, -m_slices_nguards);
+        InterpolateFromLev0toLev1(geom, lev, "jz_beam", m_poisson_nguards, -m_slices_nguards);
+
         LinCombination(m_source_nguard, getStagingArea(lev),
             1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
@@ -729,6 +735,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
         lhs.FillBoundary(geom[lev].periodicity());
     }
 
+    // interpolate psi to level 1 in the ghost cells
     InterpolateFromLev0toLev1(geom, lev, "Psi", m_slices_nguards, m_poisson_nguards);
 
     // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
@@ -783,6 +790,9 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // The RHS is in the staging area of poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+
+    // interpolate Ez to level 1 in the ghost cells
+    InterpolateFromLev0toLev1(geom, lev, "Ez", m_slices_nguards, m_poisson_nguards);
 }
 
 void
@@ -861,6 +871,9 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // The RHS is in the staging area of m_poisson_solver.
     // The LHS will be returned as lhs.
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+
+    // interpolate Bz to level 1 in the ghost cells
+    InterpolateFromLev0toLev1(geom, lev, "Bz", m_slices_nguards, m_poisson_nguards);
 }
 
 void
