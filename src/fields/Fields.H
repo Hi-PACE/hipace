@@ -190,7 +190,7 @@ public:
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                     std::string component, const amrex::IntVect outer_edge,
-                                    const amrex::IntVect inner_edge, const bool=false);
+                                    const amrex::IntVect inner_edge);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
