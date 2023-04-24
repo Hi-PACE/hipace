@@ -59,7 +59,6 @@ You can then create your directory in ``/project/project_<project id>``, where y
     #SBATCH --partition=standard-g
     #SBATCH --nodes=2
     #SBATCH --ntasks-per-node=8
-    #SBATCH --cpus-per-task=1
     #SBATCH --gpus-per-node=8
 
     export MPICH_GPU_SUPPORT_ENABLED=1
