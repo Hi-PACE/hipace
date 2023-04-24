@@ -40,7 +40,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
@@ -321,7 +321,7 @@ ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
     const int init_ion_lev = plasma.m_init_ion_lev;
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
     {
         unsigned long num_initial_particles = plasma.m_init_num_par[pti.tileIndex()];
         pti.GetParticleTile().resize(num_initial_particles);

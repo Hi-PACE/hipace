@@ -211,7 +211,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
         amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
 
-        for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
+        for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
         {
             const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev)[pti];
             Array3<const amrex::Real> const slice_arr = slice_fab.const_array();

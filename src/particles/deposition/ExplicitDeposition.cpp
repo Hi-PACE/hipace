@@ -22,7 +22,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
 
-    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti) {
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti) {
 
         amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
         const Array3<amrex::Real> arr = isl_fab.array();

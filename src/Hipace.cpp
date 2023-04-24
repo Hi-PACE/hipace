@@ -883,13 +883,6 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
                             max_iters, m_MG_verbose);
     }
-
-    if (slicemf.box(0).length(0) % 2 != 0) {
-        m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
-            m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
-        m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
-            m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
-    }
 }
 
 void

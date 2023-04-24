@@ -193,7 +193,7 @@ PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geomet
     if (nlev==1) return;
     HIPACE_PROFILE("PlasmaParticleContainer::TagByLevel");
 
-    for (PlasmaParticleIterator pti(*this, 0); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
         auto& aos = pti.GetArrayOfStructs();
         const auto& pos_structs = aos.begin();
@@ -235,7 +235,7 @@ IonizationModule (const int lev,
     const PhysConst phys_const = make_constants_SI();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
-    for (amrex::MFIter mfi_ion = MakeMFIter(lev, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
+    for (amrex::MFIter mfi_ion = MakeMFIter(0, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[mfi_ion];

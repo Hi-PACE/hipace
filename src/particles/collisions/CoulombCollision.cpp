@@ -53,7 +53,7 @@ CoulombCollision::doCoulombCollision (
 
         // Counter to check there is only 1 box
         int count = 0;
-        for (PlasmaParticleIterator pti(species1, lev); pti.isValid(); ++pti) {
+        for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
             // Get particles SoA and AoS data
             auto& soa1 = pti.GetStructOfArrays();
@@ -110,7 +110,7 @@ CoulombCollision::doCoulombCollision (
 
         // Counter to check there is only 1 box
         int count = 0;
-        for (PlasmaParticleIterator pti(species1, lev); pti.isValid(); ++pti) {
+        for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
             // Get particles SoA and AoS data for species 1
             auto& soa1 = pti.GetStructOfArrays();

@@ -44,7 +44,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
     const amrex::Real mass = plasma.m_mass;
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, 0); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
     {
         // Extract the fields currents
         // Do not access the field if the kernel later does not deposit into it,
