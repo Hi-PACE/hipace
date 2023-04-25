@@ -27,6 +27,15 @@ jobs:
       run: |
         Invoke-WebRequest https://github.com/ccache/ccache/releases/download/v4.8/ccache-4.8-windows-x86_64.zip -OutFile ccache-4.8-windows-x86_64.zip
         Expand-Archive ccache-4.8-windows-x86_64.zip
+        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
+        $Env:PATH += ";$ccachepath"
+        $ccachecachedir = Join-Path $HOME ".ccache"
+        $Env:CCACHE_DIR="$ccachecachedir"
+        $Env:CCACHE_DIR
+        $Env:CCACHE_COMPRESS='1'
+        $Env:CCACHE_COMPRESSLEVEL='10'
+        $Env:CCACHE_MAXSIZE='105M'
+        ccache -z
     - name: install dependencies
       run: |
         Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
@@ -71,6 +80,15 @@ jobs:
       run: |
         Invoke-WebRequest https://github.com/ccache/ccache/releases/download/v4.8/ccache-4.8-windows-x86_64.zip -OutFile ccache-4.8-windows-x86_64.zip
         Expand-Archive ccache-4.8-windows-x86_64.zip
+        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
+        $Env:PATH += ";$ccachepath"
+        $ccachecachedir = Join-Path $HOME ".ccache"
+        $Env:CCACHE_DIR="$ccachecachedir"
+        $Env:CCACHE_DIR
+        $Env:CCACHE_COMPRESS='1'
+        $Env:CCACHE_COMPRESSLEVEL='10'
+        $Env:CCACHE_MAXSIZE='105M'
+        ccache -z
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: download dependencies
       run: |

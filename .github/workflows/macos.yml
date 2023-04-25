@@ -18,6 +18,32 @@ jobs:
       SETUPTOOLS_USE_DISTUTILS: stdlib
     steps:
     - uses: actions/checkout@v3
+    - name: Experiment1
+      run: |
+        echo "Caskroom"
+        ls /usr/local/Caskroom
+        echo "Cellar"
+        ls /usr/local/Cellar
+        echo "Frameworks"
+        ls /usr/local/Frameworks
+        echo "Homebrew"
+        ls /usr/local/Homebrew
+        echo "bin"
+        ls /usr/local/bin
+        echo "etc"
+        ls /usr/local/etc
+        echo "include"
+        ls /usr/local/include
+        echo "lib"
+        ls /usr/local/lib
+        echo "opt"
+        ls /usr/local/opt
+        echo "sbin"
+        ls /usr/local/sbin
+        echo "var"
+        ls /usr/local/var
+        echo "Homebrew"
+        ls /Users/runner/Library/Caches/Homebrew
     - name: Brew Cache
       uses: actions/cache@v3
       # - once stored under a key, they become immutable (even if local cache path content changes)
@@ -59,6 +85,32 @@ jobs:
         python3 -m pip install matplotlib
         python3 -m pip install numpy
         python3 -m pip install scipy
+    - name: Experiment2
+      run: |
+        echo "Caskroom"
+        ls /usr/local/Caskroom
+        echo "Cellar"
+        ls /usr/local/Cellar
+        echo "Frameworks"
+        ls /usr/local/Frameworks
+        echo "Homebrew"
+        ls /usr/local/Homebrew
+        echo "bin"
+        ls /usr/local/bin
+        echo "etc"
+        ls /usr/local/etc
+        echo "include"
+        ls /usr/local/include
+        echo "lib"
+        ls /usr/local/lib
+        echo "opt"
+        ls /usr/local/opt
+        echo "sbin"
+        ls /usr/local/sbin
+        echo "var"
+        ls /usr/local/var
+        echo "Homebrew"
+        ls /Users/runner/Library/Caches/Homebrew
     - name: CCache Cache
       uses: actions/cache@v3
       # - once stored under a key, they become immutable (even if local cache path content changes)
