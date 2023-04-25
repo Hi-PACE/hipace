@@ -216,6 +216,7 @@ jobs:
         set -e
         brew tap openpmd/openpmd
         brew install openpmd-api
+        brew link openpmd-api
         python3 -m pip install matplotlib
         python3 -m pip install numpy
         python3 -m pip install scipy
