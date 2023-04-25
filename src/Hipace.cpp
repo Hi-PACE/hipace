@@ -498,6 +498,10 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
+    // Between this push and the corresponding pop at the end of this
+    // for function, the parallelcontext is the transverse communicator
+    amrex::ParallelContext::push(m_comm_xy);
+
     m_multi_beam.InSituComputeDiags(step, islice, islice_local);
 
     // Get this laser slice from the 3D array
@@ -516,10 +520,6 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
                 continue;
             }
         }
-
-        // Between this push and the corresponding pop at the end of this
-        // for loop, the parallelcontext is the transverse communicator
-        amrex::ParallelContext::push(m_comm_xy);
 
         // reorder plasma before TileSort
         m_multi_plasma.ReorderParticles(islice);
@@ -543,23 +543,18 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         // Push plasma particles
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, false, lev);
 
-        if (lev == 0) {
-            m_multi_plasma.doCoulombCollision(lev, m_slice_geom[lev].Domain(), m_slice_geom[lev]);
-        }
-
         // Push beam particles
         m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom[lev], lev, islice_local);
 
-        if (lev == 0) {
-            // Advance laser slice by 1 step and store result to 3D array
-            m_multi_laser.AdvanceSlice(m_fields, m_3D_geom[0], m_dt, step);
-            m_multi_laser.Copy(islice, true);
-        }
-
-        // After this, the parallel context is the full 3D communicator again
-        amrex::ParallelContext::pop();
-
     } // end for (int lev=0; lev<m_N_level; ++lev)
+
+    // collisions for all particles calculated on level 0
+    m_multi_plasma.doCoulombCollision(0, m_slice_geom[0].Domain(), m_slice_geom[0]);
+
+    // Advance laser slice by 1 step and store result to 3D array
+    // no MR for laser
+    m_multi_laser.AdvanceSlice(m_fields, m_3D_geom[0], m_dt, step);
+    m_multi_laser.Copy(islice, true);
 
     // shift all levels
     for (int lev=0; lev<m_N_level; ++lev) {
@@ -573,6 +568,9 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 
         m_fields.ShiftSlices(lev);
     }
+
+    // After this, the parallel context is the full 3D communicator again
+    amrex::ParallelContext::pop();
 }
 
 
