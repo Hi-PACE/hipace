@@ -30,7 +30,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-hip-clang-${{ hashFiles('.github/workflows/hip.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-hip-clang-${{ hashFiles('.github/workflows/hip.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
         restore-keys: |
           ccache-hip-clang-${{ hashFiles('.github/workflows/hip.yml') }}-
           ccache-hip-clang-

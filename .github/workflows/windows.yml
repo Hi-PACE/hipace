@@ -21,7 +21,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
         restore-keys: |
           ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-
           ccache-windows-winmsvc-
@@ -63,7 +63,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-windows-winclang-${{ hashFiles('.github/workflows/windows.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-windows-winclang-${{ hashFiles('.github/workflows/windows.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
         restore-keys: |
           ccache-windows-winclang-${{ hashFiles('.github/workflows/windows.yml') }}-
           ccache-windows-winclang-

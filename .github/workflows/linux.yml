@@ -29,7 +29,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-linux-gccompompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-linux-gccompompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
         restore-keys: |
           ccache-linux-gccompompi-${{ hashFiles('.github/workflows/linux.yml') }}-
           ccache-linux-gccompompi-
@@ -60,7 +60,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-linux-gccnompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-linux-gccnompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
         restore-keys: |
           ccache-linux-gccnompi-${{ hashFiles('.github/workflows/linux.yml') }}-
           ccache-linux-gccnompi-
