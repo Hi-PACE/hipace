@@ -32,6 +32,8 @@ jobs:
         $ccachecachedir = Join-Path $HOME ".ccache"
         $Env:CCACHE_MAXSIZE='105M'
         ccache -z
+        ccache -p
+        ccache -s
     - name: install dependencies
       run: |
         Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
@@ -53,7 +55,7 @@ jobs:
               -DCMAKE_VERBOSE_MAKEFILE=ON `
               -DHiPACE_COMPUTE=NOACC      `
               -DHiPACE_MPI=OFF            `
-              -DCMAKE_CXX_COMPILER_LAUNCHER=$pwd\ccache-4.8-windows-x86_64
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
@@ -90,6 +92,8 @@ jobs:
         $ccachecachedir = Join-Path $HOME ".ccache"
         $Env:CCACHE_DIR="$ccachecachedir"
         ccache -z
+        ccache -p
+        ccache -s
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: download dependencies
       run: |
@@ -125,7 +129,7 @@ jobs:
               -DCMAKE_VERBOSE_MAKEFILE=ON   ^
               -DHiPACE_COMPUTE=OMP          ^
               -DHiPACE_MPI=OFF              ^
-              -DCMAKE_CXX_COMPILER_LAUNCHER=$pwd\ccache-4.8-windows-x86_64
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         if errorlevel 1 exit 1
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
