@@ -30,10 +30,6 @@ jobs:
         $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
         $Env:PATH += ";$ccachepath"
         $ccachecachedir = Join-Path $HOME ".ccache"
-        $Env:CCACHE_DIR="$ccachecachedir"
-        $Env:CCACHE_DIR
-        $Env:CCACHE_COMPRESS='1'
-        $Env:CCACHE_COMPRESSLEVEL='10'
         $Env:CCACHE_MAXSIZE='105M'
         ccache -z
     - name: install dependencies
@@ -85,10 +81,6 @@ jobs:
         $Env:PATH += ";$ccachepath"
         $ccachecachedir = Join-Path $HOME ".ccache"
         $Env:CCACHE_DIR="$ccachecachedir"
-        $Env:CCACHE_DIR
-        $Env:CCACHE_COMPRESS='1'
-        $Env:CCACHE_COMPRESSLEVEL='10'
-        $Env:CCACHE_MAXSIZE='105M'
         ccache -z
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: download dependencies
