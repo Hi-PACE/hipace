@@ -52,7 +52,8 @@ jobs:
               -DCMAKE_BUILD_TYPE=Debug    `
               -DCMAKE_VERBOSE_MAKEFILE=ON `
               -DHiPACE_COMPUTE=NOACC      `
-              -DHiPACE_MPI=OFF
+              -DHiPACE_MPI=OFF            `
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
@@ -62,7 +63,7 @@ jobs:
 
   build_win_clang:
     name: Clang w/ OMP w/o MPI
-    runs-on: windows-2019
+    runs-on: windows-latest
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v3
@@ -88,6 +89,7 @@ jobs:
         $Env:CCACHE_COMPRESS='1'
         $Env:CCACHE_COMPRESSLEVEL='10'
         $Env:CCACHE_MAXSIZE='105M'
+        ccache -z
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: download dependencies
       run: |
