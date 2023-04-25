@@ -41,6 +41,10 @@ jobs:
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build_fftw --config Debug --target install --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
+    - name: Experiment
+      run: |
+        C:/ProgramData/chocolatey/bin/ccache.exe -p
+        C:/ProgramData/chocolatey/bin/ccache.exe -s
     - name: Build & Install
       run: |
         $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
@@ -50,10 +54,14 @@ jobs:
               -DCMAKE_VERBOSE_MAKEFILE=ON `
               -DHiPACE_COMPUTE=NOACC      `
               -DHiPACE_MPI=OFF            `
-              -DCMAKE_CXX_COMPILER_LAUNCHER=$ccachepath
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
+    - name: Experiment2
+      run: |
+        C:/ProgramData/chocolatey/bin/ccache.exe -p
+        C:/ProgramData/chocolatey/bin/ccache.exe -s
 
 #        ctest --test-dir build --build-config Debug --output-on-failure
 #        if(!$?) { Exit $LASTEXITCODE }
@@ -100,6 +108,10 @@ jobs:
         if errorlevel 1 exit 1
         cmake --build build_fftw --config Release --target install --parallel 2
         if errorlevel 1 exit 1
+    - name: Experiment
+      run: |
+        C:/ProgramData/chocolatey/bin/ccache.exe -p
+        C:/ProgramData/chocolatey/bin/ccache.exe -s
     - name: Build & Install
       shell: cmd
       run: |
@@ -115,10 +127,14 @@ jobs:
               -DCMAKE_VERBOSE_MAKEFILE=ON   ^
               -DHiPACE_COMPUTE=OMP          ^
               -DHiPACE_MPI=OFF              ^
-              -DCMAKE_CXX_COMPILER_LAUNCHER=$ccachepath
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         if errorlevel 1 exit 1
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
+    - name: Experiment2
+      run: |
+        C:/ProgramData/chocolatey/bin/ccache.exe -p
+        C:/ProgramData/chocolatey/bin/ccache.exe -s
 
 #        ctest --test-dir build --build-config Release --output-on-failure
 #        if errorlevel 1 exit 1
