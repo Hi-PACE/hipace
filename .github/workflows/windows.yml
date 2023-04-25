@@ -62,7 +62,7 @@ jobs:
 
   build_win_clang:
     name: Clang w/ OMP w/o MPI
-    runs-on: windows-2019
+    runs-on: windows-2020
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v3
