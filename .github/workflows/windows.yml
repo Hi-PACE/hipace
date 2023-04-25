@@ -43,13 +43,14 @@ jobs:
         if(!$?) { Exit $LASTEXITCODE }
     - name: Build & Install
       run: |
+        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
         $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
         cmake -S . -B build               `
               -DCMAKE_BUILD_TYPE=Debug    `
               -DCMAKE_VERBOSE_MAKEFILE=ON `
               -DHiPACE_COMPUTE=NOACC      `
               -DHiPACE_MPI=OFF            `
-              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+              -DCMAKE_CXX_COMPILER_LAUNCHER=$ccachepath
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
@@ -104,6 +105,7 @@ jobs:
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
 
+        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
               -G "Ninja"      ^
@@ -113,7 +115,7 @@ jobs:
               -DCMAKE_VERBOSE_MAKEFILE=ON   ^
               -DHiPACE_COMPUTE=OMP          ^
               -DHiPACE_MPI=OFF              ^
-              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+              -DCMAKE_CXX_COMPILER_LAUNCHER=$ccachepath
         if errorlevel 1 exit 1
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
