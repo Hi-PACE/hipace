@@ -24,7 +24,6 @@ jobs:
       # - for a refresh the key has to change, e.g., hash of a tracked file in the key
       with:
         path: |
-          /usr/local/Cellar/openpmd-api
           /Users/runner/Library/Caches/Homebrew/adios2--2.9.0
           /Users/runner/Library/Caches/Homebrew/adios2_bottle_manifest--2.9.0
           /Users/runner/Library/Caches/Homebrew/bicep--0.16.1
