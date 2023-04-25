@@ -142,6 +142,11 @@ public:
      */
     void ReorderParticles (const int islice);
 
+    /** \brief Store the finest level of every plasma particle in the cpu() attribute.
+     * \param[in] nlev number of MR levels
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] islice current slice
+     */
     void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice);
 
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */

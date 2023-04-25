@@ -278,8 +278,10 @@ void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geo
             if (has_zeta &&
                 lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
                 lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+                // level 1
                 pos_structs[ip].cpu() = 1;
             } else {
+                // level 0
                 pos_structs[ip].cpu() = 0;
             }
         }

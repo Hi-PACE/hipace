@@ -161,6 +161,14 @@ public:
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;}
 
+    /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
+     * \param[in] nlev number of MR levels
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] which_slice slice to mark
+     * \param[in] islice current slice
+     * \param[in] islice_local local index of the slice
+     * \param[in] nghost number of ghost particles
+     */
     void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int which_slice,
                      const int islice, const int islice_local, const int nghost);
 
