@@ -65,7 +65,7 @@ jobs:
       # - for a refresh the key has to change, e.g., hash of a tracked file in the key
       with:
         path: /Users/runner/Library/Caches/ccache
-        key: ccache-macos-appleclang-${{ hashFiles('.github/workflows/macos.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
+        key: ccache-macos-appleclang-${{ hashFiles('.github/workflows/macos.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.pushed_at }}
         restore-keys: |
           ccache-macos-appleclang-${{ hashFiles('.github/workflows/macos.yml') }}-
           ccache-macos-appleclang-

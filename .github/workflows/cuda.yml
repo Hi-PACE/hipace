@@ -39,7 +39,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-cuda-nvcc-${{ hashFiles('.github/workflows/cuda.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.updated_at }}
+        key: ccache-cuda-nvcc-${{ hashFiles('.github/workflows/cuda.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.pushed_at }}
         restore-keys: |
           ccache-cuda-nvcc-${{ hashFiles('.github/workflows/cuda.yml') }}-
           ccache-cuda-nvcc-
