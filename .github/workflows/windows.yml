@@ -62,7 +62,7 @@ jobs:
 
   build_win_clang:
     name: Clang w/ OMP w/o MPI
-    runs-on: windows-2020
+    runs-on: windows-2019
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v3
@@ -88,7 +88,6 @@ jobs:
         $Env:CCACHE_COMPRESS='1'
         $Env:CCACHE_COMPRESSLEVEL='10'
         $Env:CCACHE_MAXSIZE='105M'
-        ccache -z
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: download dependencies
       run: |
