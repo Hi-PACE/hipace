@@ -49,6 +49,8 @@ jobs:
         C:/ProgramData/chocolatey/bin/ccache.exe -s
     - name: Build & Install
       run: |
+        $ccachecachedir = Join-Path $HOME ".ccache"
+        $Env:CCACHE_DIR="$ccachecachedir"
         $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
         cmake -S . -B build               `
               -DCMAKE_BUILD_TYPE=Debug    `
@@ -120,6 +122,8 @@ jobs:
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
 
+        $ccachecachedir = Join-Path $HOME ".ccache"
+        $Env:CCACHE_DIR="$ccachecachedir"
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
               -G "Ninja"      ^

@@ -42,7 +42,7 @@ macro(set_ccache)
         endif()
         mark_as_advanced(CCACHE_PROGRAM)
     else()
-        message(STATUS "Using CCache: ${CCACHE_PROGRAM}")
+        message(STATUS "Using CCache: ${CMAKE_CXX_COMPILER_LAUNCHER}")
     endif()
 endmacro()
 
