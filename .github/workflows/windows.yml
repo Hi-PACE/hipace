@@ -63,7 +63,7 @@ jobs:
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
 
-        $ccachepath\ccache.exe -s
+        & "$ccachepath\ccache.exe" -s
 
 #        ctest --test-dir build --build-config Debug --output-on-failure
 #        if(!$?) { Exit $LASTEXITCODE }
@@ -138,7 +138,7 @@ jobs:
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
 
-        $ccachepath\ccache.exe -s
+        & "$ccachepath\ccache.exe" -s
 
 #        ctest --test-dir build --build-config Release --output-on-failure
 #        if errorlevel 1 exit 1
