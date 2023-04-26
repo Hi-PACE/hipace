@@ -170,7 +170,7 @@ Hipace::Hipace () :
         solver == "predictor-corrector" ||
         solver == "explicit",
         "hipace.bxby_solver must be explicit or predictor-corrector");
-    m_explicit = solver == "explicit";
+    m_explicit = solver == "explicit" ? true : false;
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_explicit || !m_multi_beam.AnySpeciesSalame(),
         "Cannot use SALAME algorithm with predictor-corrector solver");
     queryWithParser(pph, "MG_tolerance_rel", m_MG_tolerance_rel);
