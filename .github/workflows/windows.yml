@@ -43,6 +43,7 @@ jobs:
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
+
 #        ctest --test-dir build --build-config Debug --output-on-failure
 #        if(!$?) { Exit $LASTEXITCODE }
 
@@ -85,6 +86,7 @@ jobs:
       shell: cmd
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
               -G "Ninja"      ^
@@ -97,5 +99,6 @@ jobs:
         if errorlevel 1 exit 1
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
+
 #        ctest --test-dir build --build-config Release --output-on-failure
 #        if errorlevel 1 exit 1
