@@ -24,6 +24,7 @@ jobs:
       # - for a refresh the key has to change, e.g., hash of a tracked file in the key
       with:
         path: |
+          /usr/local/Cellar/ccache
           /usr/local/Cellar/fftw
           /usr/local/Cellar/libomp
           /usr/local/Cellar/ninja
