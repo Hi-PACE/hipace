@@ -46,9 +46,10 @@ jobs:
         $Env:CCACHE_COMPRESS='1'
         $Env:CCACHE_COMPRESSLEVEL='10'
         $Env:CCACHE_MAXSIZE='105M'
-        $ccachepath\ccache.exe -p
-        $ccachepath\ccache.exe -s
-        $ccachepath\ccache.exe -z
+        & "$ccachepath\ccache.exe" -p
+        & "$ccachepath\ccache.exe" -s
+        & "$ccachepath\ccache.exe" -z
+        ls $ccachepath
 
         $Env:CCACHE_DIR="$ccachecachedir"
         $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
@@ -117,9 +118,10 @@ jobs:
         $Env:CCACHE_COMPRESS='1'
         $Env:CCACHE_COMPRESSLEVEL='10'
         $Env:CCACHE_MAXSIZE='105M'
-        $ccachepath\ccache.exe -p
-        $ccachepath\ccache.exe -s
-        $ccachepath\ccache.exe -z
+        & "$ccachepath\ccache.exe" -p
+        & "$ccachepath\ccache.exe" -s
+        & "$ccachepath\ccache.exe" -z
+        ls $ccachepath
 
         $Env:CCACHE_DIR="$ccachecachedir"
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
