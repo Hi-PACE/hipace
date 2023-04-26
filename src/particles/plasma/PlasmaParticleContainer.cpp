@@ -350,7 +350,6 @@ IonizationModule (const int lev,
 
         // Load electron soa and aos after resize
         ParticleType* pstruct_elec = ptile_elec.GetArrayOfStructs()().data();
-        const int procID = amrex::ParallelDescriptor::MyProc();
         const long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons.dataValue());
 

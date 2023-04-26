@@ -12,7 +12,7 @@
 
 PlasmaBins
 findParticlesInEachTile (
-    int lev, amrex::Box bx, int bin_size,
+    amrex::Box bx, int bin_size,
     PlasmaParticleContainer& plasma, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("findParticlesInEachTile()");

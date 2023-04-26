@@ -309,7 +309,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 }
 
 void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
+ResetPlasmaParticles (PlasmaParticleContainer& plasma)
 {
     HIPACE_PROFILE("ResetPlasmaParticles()");
 

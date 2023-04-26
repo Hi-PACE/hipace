@@ -48,7 +48,7 @@ CoulombCollision::doCoulombCollision (
     if ( is_same_species ) // species_1 == species_2
     {
         // Logically particles per-cell, and return indices of particles in each cell
-        PlasmaBins bins1 = findParticlesInEachTile(lev, bx, 1, species1, geom);
+        PlasmaBins bins1 = findParticlesInEachTile(bx, 1, species1, geom);
         int const n_cells = bins1.numBins();
 
         // Counter to check there is only 1 box
@@ -103,8 +103,8 @@ CoulombCollision::doCoulombCollision (
     } else {
 
         // Logically particles per-cell, and return indices of particles in each cell
-        PlasmaBins bins1 = findParticlesInEachTile(lev, bx, 1, species1, geom);
-        PlasmaBins bins2 = findParticlesInEachTile(lev, bx, 1, species2, geom);
+        PlasmaBins bins1 = findParticlesInEachTile(bx, 1, species1, geom);
+        PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
 
         int const n_cells = bins1.numBins();
 

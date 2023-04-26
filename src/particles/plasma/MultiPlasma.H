@@ -85,10 +85,8 @@ public:
         bool temp_slice, int lev);
 
     /** \brief Resets the particle position x, y, to x_prev, y_prev
-     *
-     * \param[in] lev MR level
      */
-    void ResetParticles (int lev);
+    void ResetParticles ();
 
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *

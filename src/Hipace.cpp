@@ -313,10 +313,13 @@ Hipace::MakeGeometry ()
 
         const amrex::Real pos_offset_z = GetPosOffset(2, m_3D_geom[0], m_3D_geom[0].Domain());
 
-        const int zeta_lo = amrex::Math::round((patch_lo_lev[2] - pos_offset_z)
-                                                * m_3D_geom[0].InvCellSize(2));
-        const int zeta_hi = amrex::Math::round((patch_hi_lev[2] - pos_offset_z)
-                                                * m_3D_geom[0].InvCellSize(2));
+        const int zeta_lo = std::max( m_3D_geom[0].Domain().smallEnd(2),
+            int(amrex::Math::round((patch_lo_lev[2] - pos_offset_z) * m_3D_geom[0].InvCellSize(2)))
+        );
+
+        const int zeta_hi = std::min( m_3D_geom[0].Domain().bigEnd(2),
+            int(amrex::Math::round((patch_hi_lev[2] - pos_offset_z) * m_3D_geom[0].InvCellSize(2)))
+        );
 
         patch_lo_lev[2] = (zeta_lo-0.5)*m_3D_geom[0].CellSize(2) + pos_offset_z;
         patch_hi_lev[2] = (zeta_hi+0.5)*m_3D_geom[0].CellSize(2) + pos_offset_z;
@@ -394,9 +397,7 @@ Hipace::Evolve ()
             Wait(step, it);
             if (it == n_boxes-1) {
                 // Only reset plasma after receiving time step, to use proper density
-                for (int lev=0; lev<m_N_level; ++lev) {
-                    m_multi_plasma.ResetParticles(lev);
-                }
+                m_multi_plasma.ResetParticles();
 
                 /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
                 for (int lev=0; lev<m_N_level; ++lev) {

@@ -110,11 +110,11 @@ MultiPlasma::AdvanceParticles (
 }
 
 void
-MultiPlasma::ResetParticles (int lev)
+MultiPlasma::ResetParticles ()
 {
     if (m_nplasmas < 1) return;
     for (auto& plasma : m_all_plasmas) {
-        ResetPlasmaParticles(plasma, lev);
+        ResetPlasmaParticles(plasma);
     }
 }
 
@@ -164,11 +164,10 @@ MultiPlasma::AnySpeciesNeutralizeBackground () const
 void
 MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
 {
-    constexpr int lev = 0;
     m_all_bins.clear();
     for (auto& plasma : m_all_plasmas) {
         m_all_bins.emplace_back(
-            findParticlesInEachTile(lev, bx, m_sort_bin_size, plasma, geom));
+            findParticlesInEachTile(bx, m_sort_bin_size, plasma, geom));
     }
 }
 
