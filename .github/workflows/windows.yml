@@ -27,13 +27,6 @@ jobs:
       run: |
         Invoke-WebRequest https://github.com/ccache/ccache/releases/download/v4.8/ccache-4.8-windows-x86_64.zip -OutFile ccache-4.8-windows-x86_64.zip
         Expand-Archive ccache-4.8-windows-x86_64.zip
-        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
-        $Env:PATH += ";$ccachepath"
-        $ccachecachedir = Join-Path $HOME ".ccache"
-        $Env:CCACHE_MAXSIZE='105M'
-        ccache -z
-        ccache -p
-        ccache -s
     - name: install dependencies
       run: |
         Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
@@ -43,13 +36,20 @@ jobs:
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build_fftw --config Debug --target install --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
-    - name: Experiment
-      run: |
-        C:/ProgramData/chocolatey/bin/ccache.exe -p
-        C:/ProgramData/chocolatey/bin/ccache.exe -s
     - name: Build & Install
       run: |
+        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
+        $Env:PATH += ";$ccachepath"
         $ccachecachedir = Join-Path $HOME ".ccache"
+        $Env:CCACHE_DIR="$ccachecachedir"
+        $Env:CCACHE_DIR
+        $Env:CCACHE_COMPRESS='1'
+        $Env:CCACHE_COMPRESSLEVEL='10'
+        $Env:CCACHE_MAXSIZE='105M'
+        ccache -p
+        ccache -s
+        ccache -z
+
         $Env:CCACHE_DIR="$ccachecachedir"
         $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
         cmake -S . -B build               `
@@ -61,10 +61,8 @@ jobs:
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build --config Debug --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
-    - name: Experiment2
-      run: |
-        C:/ProgramData/chocolatey/bin/ccache.exe -p
-        C:/ProgramData/chocolatey/bin/ccache.exe -s
+
+        ccache -s
 
 #        ctest --test-dir build --build-config Debug --output-on-failure
 #        if(!$?) { Exit $LASTEXITCODE }
@@ -89,13 +87,6 @@ jobs:
       run: |
         Invoke-WebRequest https://github.com/ccache/ccache/releases/download/v4.8/ccache-4.8-windows-x86_64.zip -OutFile ccache-4.8-windows-x86_64.zip
         Expand-Archive ccache-4.8-windows-x86_64.zip
-        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
-        $Env:PATH += ";$ccachepath"
-        $ccachecachedir = Join-Path $HOME ".ccache"
-        $Env:CCACHE_DIR="$ccachecachedir"
-        ccache -z
-        ccache -p
-        ccache -s
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: download dependencies
       run: |
@@ -113,16 +104,23 @@ jobs:
         if errorlevel 1 exit 1
         cmake --build build_fftw --config Release --target install --parallel 2
         if errorlevel 1 exit 1
-    - name: Experiment
-      run: |
-        C:/ProgramData/chocolatey/bin/ccache.exe -p
-        C:/ProgramData/chocolatey/bin/ccache.exe -s
     - name: Build & Install
       shell: cmd
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
 
+        $ccachepath = Join-Path $pwd "ccache-4.8-windows-x86_64"
+        $Env:PATH += ";$ccachepath"
         $ccachecachedir = Join-Path $HOME ".ccache"
+        $Env:CCACHE_DIR="$ccachecachedir"
+        $Env:CCACHE_DIR
+        $Env:CCACHE_COMPRESS='1'
+        $Env:CCACHE_COMPRESSLEVEL='10'
+        $Env:CCACHE_MAXSIZE='105M'
+        ccache -p
+        ccache -s
+        ccache -z
+
         $Env:CCACHE_DIR="$ccachecachedir"
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
@@ -137,10 +135,8 @@ jobs:
         if errorlevel 1 exit 1
         cmake --build build --config Release --parallel 2
         if errorlevel 1 exit 1
-    - name: Experiment2
-      run: |
-        C:/ProgramData/chocolatey/bin/ccache.exe -p
-        C:/ProgramData/chocolatey/bin/ccache.exe -s
+
+        ccache -s
 
 #        ctest --test-dir build --build-config Release --output-on-failure
 #        if errorlevel 1 exit 1
