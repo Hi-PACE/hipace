@@ -399,6 +399,10 @@ Hipace::Evolve ()
                 // Only reset plasma after receiving time step, to use proper density
                 m_multi_plasma.ResetParticles();
 
+                // Use to slice -1 to tag to the finest level of any slice
+                // to deposit the neutralizing background
+                m_multi_plasma.TagByLevel(m_N_level, m_3D_geom, -1);
+
                 /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
                 for (int lev=0; lev<m_N_level; ++lev) {
                     if (m_do_tiling) {

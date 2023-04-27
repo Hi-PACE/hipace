@@ -198,8 +198,9 @@ PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geomet
         auto& aos = pti.GetArrayOfStructs();
         const auto& pos_structs = aos.begin();
 
+        // Use islice == -1 as a wildcard
         const bool has_zeta = (islice >= geom3D[1].Domain().smallEnd(2) &&
-                               islice <= geom3D[1].Domain().bigEnd(2));
+                               islice <= geom3D[1].Domain().bigEnd(2)) || (islice == -1);
         const amrex::Real lo_x = geom3D[1].ProbLo(0);
         const amrex::Real hi_x = geom3D[1].ProbHi(0);
         const amrex::Real lo_y = geom3D[1].ProbLo(1);
