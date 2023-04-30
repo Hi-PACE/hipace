@@ -242,7 +242,6 @@ Hipace::InitData ()
     }
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
-    m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
     if (Hipace::HeadRank()) {
         m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
                                        m_multi_plasma, m_3D_geom[0], m_fields);
@@ -392,7 +391,7 @@ Hipace::Evolve ()
             if (it == n_boxes-1) {
                 // Only reset plasma after receiving time step, to use proper density
                 for (int lev=0; lev<m_N_level; ++lev) {
-                    m_multi_plasma.ResetParticles(lev);
+                    m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
                 }
 
                 /* Store charge density of (immobile) ions into WhichSlice::RhoIons */

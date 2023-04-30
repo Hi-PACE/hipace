@@ -111,15 +111,6 @@ MultiPlasma::AdvanceParticles (
 }
 
 void
-MultiPlasma::ResetParticles (int lev)
-{
-    if (m_nplasmas < 1) return;
-    for (auto& plasma : m_all_plasmas) {
-        ResetPlasmaParticles(plasma, lev);
-    }
-}
-
-void
 MultiPlasma::DepositNeutralizingBackground (
     Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const lev)
 {

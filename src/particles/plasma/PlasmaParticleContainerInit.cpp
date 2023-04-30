@@ -24,6 +24,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
     using namespace amrex::literals;
+    clearParticles();
     const int lev = m_level;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
@@ -102,7 +103,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         auto old_size = particle_tile.GetArrayOfStructs().size();
         auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
-        m_init_num_par[mfi.tileIndex()] = new_size;
 
         int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
@@ -229,7 +229,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 p.pos(2) = z;
 
                 arrdata[PlasmaIdx::w        ][pidx] = scale_fac * density_func(x, y, c_t);
-                arrdata[PlasmaIdx::w0       ][pidx] = scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
@@ -246,8 +245,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     arrdata[iforce][pidx] = 0._rt;
                 }
 #endif
-                arrdata[PlasmaIdx::x0       ][pidx] = x;
-                arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             });
 

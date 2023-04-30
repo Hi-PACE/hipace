@@ -22,12 +22,10 @@ struct PlasmaIdx
 {
     enum {
         w = 0,              // weight
-        w0,                 // initial weight
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
         x_prev, y_prev,     // positions on the last non-temp slice
 
-        x0, y0,             // initial positions
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
         uy_half_step,       // at the same step for AB5 pusher
         psi_half_step,      // never effected by temp slice
@@ -159,8 +157,6 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
     /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
-    /** initial number of particles before ones are added through ionization */
-    std::map<int,unsigned long> m_init_num_par;
     /** After how many slices the particles are reordered. 0: off */
     int m_reorder_period = 0;
     /** 2D reordering index type. 0: cell, 1: node, 2: both */
