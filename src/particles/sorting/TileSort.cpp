@@ -29,15 +29,15 @@ findParticlesInEachTile (
         count += 1;
 
         // Extract box properties
-        const auto lo = lbound(cbx);
-        const auto dxi = amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>({
+        [[maybe_unused]] const auto lo = lbound(cbx);
+        [[maybe_unused]] const auto dxi = amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>({
                 geom.InvCellSizeArray()[0]/bin_size,
                 geom.InvCellSizeArray()[1]/bin_size,
                 1.});
-        const auto plo = geom.ProbLoArray();
+        [[maybe_unused]] const auto plo = geom.ProbLoArray();
 
         // Find the particles that are in each tile and return collections of indices per tile.
-        bins.build(
+        /*bins.build(
             pti.numParticles(), pti.GetArrayOfStructs().begin(), cbx,
             // Pass lambda function that returns the tile index
             [=] AMREX_GPU_DEVICE (const PlasmaParticleContainer::ParticleType& p)
@@ -48,7 +48,7 @@ findParticlesInEachTile (
                         static_cast<int>((p.pos(0)-plo[0])*dxi[0]-lo.x),
                         static_cast<int>((p.pos(1)-plo[1])*dxi[1]-lo.y),
                         0));
-            });
+            });*/
     }
     AMREX_ALWAYS_ASSERT(count <= 1);
     return bins;

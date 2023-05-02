@@ -113,7 +113,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 num_particles,
                 [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
-                    if (setPositionEnforceBC.m_structs[ip].id() < 0) return;
+                    if (setPositionEnforceBC.m_pardata.id(ip) < 0) return;
 
                     amrex::Real xp = x_prev[ip];
                     amrex::Real yp = y_prev[ip];

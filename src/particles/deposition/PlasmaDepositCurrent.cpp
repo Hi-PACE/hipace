@@ -69,14 +69,15 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
 
         // Extract particle properties
-        auto& aos = pti.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin();
-        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        auto& soa = pti.GetStructOfArrays(); // For positions, momenta and weights
 
+        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::x).data();
         amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
         const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const AMREX_RESTRICT psip = soa.GetRealData(PlasmaIdx::psi).data();
+        int * const AMREX_RESTRICT idp = soa.GetIntData(PlasmaIdx::id).data();
 
         int const * const AMREX_RESTRICT a_ion_lev =
             plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
@@ -195,11 +196,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
                 const int ox = idx % outer_depos_order_x_1;
 
-                const auto positions = pos_structs[ip];
-                if (positions.id() < 0) return;
+                if (idp[ip] < 0) return;
                 const amrex::Real psi_inv = 1._rt/psip[ip];
-                const amrex::Real xp = positions.pos(0);
-                const amrex::Real yp = positions.pos(1);
+                const amrex::Real xp = pos_x[ip];
+                const amrex::Real yp = pos_y[ip];
                 const amrex::Real vx_c = uxp[ip] * psi_inv;
                 const amrex::Real vy_c = uyp[ip] * psi_inv;
 
@@ -235,7 +235,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                     // This particle violates the QSA, discard it and do not deposit its current
                     amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
                     wp[ip] = 0.0_rt;
-                    pos_structs[ip].id() = -std::abs(positions.id());
+                    idp[ip] = -std::abs(idp[ip]);
                     return;
                 }
 

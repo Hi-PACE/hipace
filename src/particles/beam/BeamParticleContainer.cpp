@@ -210,13 +210,13 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
         amrex::ReduceData<unsigned long long> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
-        auto const& ptaos = this->GetArrayOfStructs();
-        ParticleType const* pp = ptaos().data();
+        auto const& ptsoa = this->GetStructOfArrays();
+        const auto idp = ptsoa.GetRealData(BeamIdx::id).data();
 
-        reduce_op.eval(ptaos.numParticles(), reduce_data,
+        reduce_op.eval(ptsoa.numParticles(), reduce_data,
                        [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
                        {
-                           return (pp[i].id() > 0) ? 1 : 0;
+                           return (idp[i] > 0) ? 1 : 0;
                        });
         nparticles = static_cast<amrex::Long>(amrex::get<0>(reduce_data.value()));
     }
@@ -253,13 +253,14 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
     const int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
-    auto const& ptaos = this->GetArrayOfStructs();
-    const auto& pos_structs = ptaos.begin() + box_offset;
     auto const& soa = this->GetStructOfArrays();
+    const auto pos_x = soa.GetRealData(BeamIdx::x).data() + box_offset;
+    const auto pos_y = soa.GetRealData(BeamIdx::y).data() + box_offset;
     const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
     const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
     const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
     const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
+    auto idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
 
     BeamBins::index_type const * const indices = m_slice_bins.permutationPtr();
     BeamBins::index_type const * const offsets = m_slice_bins.offsetsPtrCpu();
@@ -285,7 +286,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
         [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
         {
             const int ip = indices[cell_start+i];
-            if (pos_structs[ip].id() < 0) {
+            if (idp[ip] < 0) {
                 return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
                     0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
             }
@@ -293,16 +294,16 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
                                                        + uyp[ip]*uyp[ip]*clightsq_inv
                                                        + uzp[ip]*uzp[ip]*clightsq_inv);
             return {wp[ip],
-                    wp[ip]*pos_structs[ip].pos(0),
-                    wp[ip]*pos_structs[ip].pos(0)*pos_structs[ip].pos(0),
-                    wp[ip]*pos_structs[ip].pos(1),
-                    wp[ip]*pos_structs[ip].pos(1)*pos_structs[ip].pos(1),
+                    wp[ip]*pos_x[ip],
+                    wp[ip]*pos_x[ip]*pos_x[ip],
+                    wp[ip]*pos_y[ip],
+                    wp[ip]*pos_y[ip]*pos_y[ip],
                     wp[ip]*uxp[ip]*clight_inv,
                     wp[ip]*uxp[ip]*uxp[ip]*clightsq_inv,
                     wp[ip]*uyp[ip]*clight_inv,
                     wp[ip]*uyp[ip]*uyp[ip]*clightsq_inv,
-                    wp[ip]*pos_structs[ip].pos(0)*uxp[ip]*clight_inv,
-                    wp[ip]*pos_structs[ip].pos(1)*uyp[ip]*clight_inv,
+                    wp[ip]*pos_x[ip]*uxp[ip]*clight_inv,
+                    wp[ip]*pos_y[ip]*uyp[ip]*clight_inv,
                     wp[ip]*gamma,
                     wp[ip]*gamma*gamma,
                     1};

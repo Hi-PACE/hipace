@@ -13,10 +13,10 @@
 
 void
 findParticlesInEachSlice (
-    int ibox, amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom)
+    [[maybe_unused]] int ibox, [[maybe_unused]] amrex::Box bx, [[maybe_unused]] BeamParticleContainer& beam, [[maybe_unused]] amrex::Geometry const& geom)
 {
     HIPACE_PROFILE("findParticlesInEachSlice()");
-
+    /*
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
 
@@ -41,5 +41,5 @@ findParticlesInEachSlice (
         {
             return amrex::IntVect(
                 AMREX_D_DECL(0, 0, static_cast<int>((p.pos(2)-plo[2])*dxi[2]-lo.z)));
-        });
+        });*/
 }

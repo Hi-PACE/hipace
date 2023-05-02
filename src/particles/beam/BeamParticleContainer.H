@@ -21,21 +21,34 @@
 struct BeamIdx
 {
     enum {
-        w = 0,      // weight
+        x=0, y, z,  // position
+        w,          // weight
         ux, uy, uz, // momentum
         nattribs
     };
+    enum {
+        id=0, cpu,
+        int_nattribs
+    };
 };
 
+using BeamTile = amrex::ParticleTile<
+        amrex::SoAParticle<
+            BeamIdx::nattribs,
+            BeamIdx::int_nattribs
+        >,
+        BeamIdx::nattribs,
+        BeamIdx::int_nattribs
+    >;
+
 struct BeamBins : amrex::DenseBins<
-        amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>::ParticleType> {
+        BeamTile::ParticleType> {
 
     template<class...Args>
     void build (Args&&...args) {
         // call build function of the underlying DenseBins object
         // with all of the arguments forwarded
-        amrex::DenseBins<amrex::ParticleTile<
-            amrex::Particle<0, 0>, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
+        amrex::DenseBins<BeamTile::ParticleType>::build(args...);
 
         // after every build call copy offsets array form GPU to CPU
         const auto offset_size = numBins() + 1;
@@ -58,13 +71,12 @@ struct BeamBins : amrex::DenseBins<
 };
 
 /** \brief Container for particles of 1 beam species. */
-class BeamParticleContainer
-    : public amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>
+class BeamParticleContainer : public BeamTile
 {
 public:
     /** Constructor */
     explicit BeamParticleContainer (std::string name) :
-        amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>(),
+        BeamTile(),
         m_name(name)
     {
         ReadParameters();

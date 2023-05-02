@@ -36,14 +36,15 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const int Bz = Comps[WhichSlice::This]["Bz"];
 
         // Extract particle properties
-        const auto& aos = pti.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin();
-        const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
+        const auto& soa = pti.GetStructOfArrays(); // For positions, momenta and weights
 
+        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
         const amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
         const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
         const amrex::Real * const AMREX_RESTRICT psip = soa.GetRealData(PlasmaIdx::psi).data();
+        const int * const AMREX_RESTRICT idp = soa.GetIntData(PlasmaIdx::id).data();
 
         int const * const AMREX_RESTRICT a_ion_lev =
             plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
@@ -87,11 +88,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 constexpr int depos_order = a_depos_order.value;
                 constexpr int derivative_type = a_derivative_type.value;
 
-                const auto positions = pos_structs[ip];
-                if (positions.id() < 0) return;
+                if (idp[ip] < 0) return;
                 const amrex::Real psi_inv = 1._rt/psip[ip];
-                const amrex::Real xp = positions.pos(0);
-                const amrex::Real yp = positions.pos(1);
+                const amrex::Real xp = pos_x[ip];
+                const amrex::Real yp = pos_y[ip];
                 const amrex::Real vx = uxp[ip] * psi_inv * clight_inv;
                 const amrex::Real vy = uyp[ip] * psi_inv * clight_inv;
 

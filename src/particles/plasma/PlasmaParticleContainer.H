@@ -21,7 +21,8 @@
 struct PlasmaIdx
 {
     enum {
-        w = 0,              // weight
+        x=0, y, z,          // position
+        w,                  // weight
         w0,                 // initial weight
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
@@ -41,19 +42,20 @@ struct PlasmaIdx
         nattribs
     };
     enum {
-        ion_lev = 0,        // ionization level
+        id=0, cpu,
+        ion_lev,            // ionization level
         int_nattribs
     };
 };
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainer<0, 0, PlasmaIdx::nattribs, PlasmaIdx::int_nattribs>
+    : public amrex::ParticleContainerPureSoA<PlasmaIdx::nattribs, PlasmaIdx::int_nattribs>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
-        amrex::ParticleContainer<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(),
+        amrex::ParticleContainerPureSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(),
         m_name(name)
     {
         ReadParameters();
@@ -171,12 +173,12 @@ private:
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>
+class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>
 {
 public:
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc, int level)
-        : amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, level, DfltMfi) {}
+        : amrex::ParIterSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, level, DfltMfi) {}
 };
 
 #endif

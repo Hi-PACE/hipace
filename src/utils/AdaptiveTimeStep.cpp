@@ -113,11 +113,12 @@ AdaptiveTimeStep::Calculate (
 
 
         // Extract particle properties
-        const auto& aos = beam.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin() + box_offset;
         const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
+        const auto pos_x = soa.GetRealData(BeamIdx::x).data() + box_offset;
+        const auto pos_y = soa.GetRealData(BeamIdx::y).data() + box_offset;
         const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+        const auto idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpMin,
@@ -139,11 +140,11 @@ AdaptiveTimeStep::Calculate (
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
-                if (pos_structs[ip].id() < 0) return {
+                if (idp[ip] < 0) return {
                     0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity(), 0._rt
                 };
                 amrex::Real Ezp = 0._rt;
-                doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
+                doGatherEz(pos_x[ip], pos_y[ip], Ezp, slice_arr, ez_comp,
                            dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 return {
                     wp[ip],

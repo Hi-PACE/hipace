@@ -99,7 +99,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         auto& particles = GetParticles(lev);
         auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
 
-        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto old_size = particle_tile.size();
         auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
         m_init_num_par[mfi.tileIndex()] = new_size;
@@ -173,8 +173,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
             if (num_to_add == 0) continue;
 
-            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-
             auto arrdata = particle_tile.GetStructOfArrays().realarray();
             auto int_arrdata = particle_tile.GetStructOfArrays().intarray();
 
@@ -221,12 +219,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
-                ParticleType& p = pstruct[pidx];
-                p.id()   = pid + int(pidx);
-                p.cpu()  = procID;
-                p.pos(0) = x;
-                p.pos(1) = y;
-                p.pos(2) = z;
+                arrdata[PlasmaIdx::id       ][pidx] = pid + int(pidx);
+                arrdata[PlasmaIdx::cpu      ][pidx] = procID;
+                arrdata[PlasmaIdx::x        ][pidx] = x;
+                arrdata[PlasmaIdx::y        ][pidx] = y;
+                arrdata[PlasmaIdx::z        ][pidx] = z;
 
                 arrdata[PlasmaIdx::w        ][pidx] = scale_fac * density_func(x, y, c_t);
                 arrdata[PlasmaIdx::w0       ][pidx] = scale_fac;

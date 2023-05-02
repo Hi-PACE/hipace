@@ -315,7 +315,6 @@ IonizationModule (const int lev,
         ptile_elec.resize(new_size);
 
         // Load electron soa and aos after resize
-        ParticleType* pstruct_elec = ptile_elec.GetArrayOfStructs()().data();
         const int procID = amrex::ParallelDescriptor::MyProc();
         const long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons.dataValue());
@@ -340,11 +339,11 @@ IonizationModule (const int lev,
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 
-                pstruct_elec[pidx].id()   = pid_start + pid;
-                pstruct_elec[pidx].cpu()  = procID;
-                pstruct_elec[pidx].pos(0) = xp;
-                pstruct_elec[pidx].pos(1) = yp;
-                pstruct_elec[pidx].pos(2) = zp;
+                arrdata_elec[PlasmaIdx::id      ][pidx] = pid_start + pid;
+                arrdata_elec[PlasmaIdx::cpu     ][pidx] = procID;
+                arrdata_elec[PlasmaIdx::x       ][pidx] = xp;
+                arrdata_elec[PlasmaIdx::y       ][pidx] = yp;
+                arrdata_elec[PlasmaIdx::z       ][pidx] = zp;
 
                 arrdata_elec[PlasmaIdx::w       ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::w0      ][pidx] = arrdata_ion[PlasmaIdx::w0    ][ip];

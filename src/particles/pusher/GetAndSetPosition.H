@@ -29,10 +29,12 @@
 template <class T_ParTile>
 struct GetParticlePosition
 {
-    using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
-    const PType* m_structs;
+    const RType * pos_x;
+    const RType * pos_y;
+    const RType * pos_z;
+    const int * idp;
 
     /** Default constructor */
     GetParticlePosition () = default;
@@ -43,8 +45,11 @@ struct GetParticlePosition
      */
     GetParticlePosition (const T_ParTile& a_ptile, int a_offset = 0) noexcept
     {
-        const auto& aos = a_ptile.GetArrayOfStructs();
-        m_structs = aos().dataPtr() + a_offset;
+        const auto& soa = a_ptile.GetStructOfArrays();
+        pos_x = soa.GetRealData(0).data() + a_offset;
+        pos_y = soa.GetRealData(1).data() + a_offset;
+        pos_z = soa.GetRealData(2).data() + a_offset;
+        idp = soa.GetIntData(0).data() + a_offset;
     }
 
     /** \brief Get the position of the particle at index `i + a_offset`, and put it in x, y and z
@@ -56,9 +61,9 @@ struct GetParticlePosition
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (const int i, RType& x, RType& y, RType& z) const noexcept
     {
-        x = m_structs[i].pos(0);
-        y = m_structs[i].pos(1);
-        z = m_structs[i].pos(2);
+        x = pos_x[i];
+        y = pos_y[i];
+        z = pos_z[i];
     }
 
     /** \brief Get the position of the particle at index `i + a_offset`, and put it in x, y and z
@@ -71,10 +76,10 @@ struct GetParticlePosition
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator() (const int i, RType& x, RType& y, RType& z, int& id) const noexcept
     {
-        x = m_structs[i].pos(0);
-        y = m_structs[i].pos(1);
-        z = m_structs[i].pos(2);
-        id = m_structs[i].id();
+        x = pos_x[i];
+        y = pos_y[i];
+        z = pos_z[i];
+        id = idp[i];
     }
 };
 
@@ -84,10 +89,12 @@ struct GetParticlePosition
 template <class T_ParTile>
 struct SetParticlePosition
 {
-    using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
-    PType* m_structs;
+    RType * pos_x;
+    RType * pos_y;
+    RType * pos_z;
+    int * idp;
 
     /** Constructor.
      * \param a_ptile tile containing the macroparticles
@@ -95,8 +102,11 @@ struct SetParticlePosition
      */
     SetParticlePosition (T_ParTile& a_ptile, int a_offset = 0) noexcept
     {
-        auto& aos = a_ptile.GetArrayOfStructs();
-        m_structs = aos().dataPtr() + a_offset;
+        auto& soa = a_ptile.GetStructOfArrays();
+        pos_x = soa.GetRealData(0).data() + a_offset;
+        pos_y = soa.GetRealData(1).data() + a_offset;
+        pos_z = soa.GetRealData(2).data() + a_offset;
+        idp = soa.GetIntData(0).data() + a_offset;
     }
 
     /** \brief Set the position of the particle at index `i + a_offset` from values in x, y and z
@@ -109,9 +119,9 @@ struct SetParticlePosition
     void operator() (const int i, RType x, RType y, RType z) const noexcept
     {
 
-        m_structs[i].pos(0) = x;
-        m_structs[i].pos(1) = y;
-        m_structs[i].pos(2) = z;
+        pos_x[i] = x;
+        pos_y[i] = y;
+        pos_z[i] = z;
 
     }
 
@@ -126,10 +136,10 @@ struct SetParticlePosition
     void operator() (const int i, RType x, RType y, RType z, int id) const noexcept
     {
 
-        m_structs[i].pos(0) = x;
-        m_structs[i].pos(1) = y;
-        m_structs[i].pos(2) = z;
-        m_structs[i].id() = id;
+        pos_x[i] = x;
+        pos_y[i] = y;
+        pos_z[i] = z;
+        idp[i] = id;
 
     }
 };
@@ -140,12 +150,10 @@ struct SetParticlePosition
 template <class T_ParTile>
 struct EnforceBCandSetPos
 {
-    using PType = typename T_ParTile::ParticleType;
     using RType = amrex::ParticleReal;
 
-    PType* m_structs;
-    RType* m_weights;
-
+    typename T_ParTile::ParticleTileDataType m_pardata;
+    int m_offset;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;
     int m_is_per;
@@ -164,10 +172,8 @@ struct EnforceBCandSetPos
         m_is_per = is_per[0];
         AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
 
-        auto& aos = a_ptile.GetArrayOfStructs();
-        m_structs = aos().dataPtr() + a_offset;
-        auto& soa = a_ptile.GetStructOfArrays();
-        m_weights = soa.GetRealData(BeamIdx::w).data() + a_offset;
+        m_pardata = a_ptile.getParticleTileData();
+        m_offset = a_offset;
     }
 
     /** \brief set position and enforces the boundary condition to the particle
@@ -181,19 +187,21 @@ struct EnforceBCandSetPos
     {
         using namespace amrex::literals;
 
-        m_structs[ip].pos(0) = x;
-        m_structs[ip].pos(1) = y;
+        auto p = make_particle<typename T_ParTile::ParticleType>{}(m_pardata, ip + m_offset);
+
+        p.pos(0) = x;
+        p.pos(1) = y;
 
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
-        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_plo, m_phi, {true, true, false});
+        const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
-            m_weights[ip] = 0.0_rt;
-            m_structs[ip].id() = -std::abs(m_structs[ip].id());
+            m_pardata.rdata(PlasmaIdx::w)[ip + m_offset] = 0.0_rt;
+            p.id() = -std::abs(p.id());
         }
-        x = m_structs[ip].pos(0);
-        y = m_structs[ip].pos(1);
+        x = p.pos(0);
+        y = p.pos(1);
         return invalid;
     }
 
@@ -209,21 +217,23 @@ struct EnforceBCandSetPos
     {
         using namespace amrex::literals;
 
-        m_structs[ip].pos(0) = x;
-        m_structs[ip].pos(1) = y;
-        m_structs[ip].pos(2) = z;
+        auto p = make_particle<typename T_ParTile::ParticleType>{}(m_pardata, ip + m_offset);
+
+        p.pos(0) = x;
+        p.pos(1) = y;
+        p.pos(2) = z;
 
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
-        const bool shifted = enforcePeriodic(m_structs[ip], m_plo, m_phi, m_plo, m_phi, {true, true, false});
+        const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
-            m_weights[ip] = 0.0_rt;
-            m_structs[ip].id() = -std::abs(m_structs[ip].id());
+            m_pardata.rdata(BeamIdx::w)[ip + m_offset] = 0.0_rt;
+            p.id() = -std::abs(p.id());
         }
-        x = m_structs[ip].pos(0);
-        y = m_structs[ip].pos(1);
-        z = m_structs[ip].pos(2);
+        x = p.pos(0);
+        y = p.pos(1);
+        z = p.pos(2);
         return invalid;
     }
 };

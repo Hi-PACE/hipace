@@ -1495,18 +1495,19 @@ Hipace::CheckGhostSlice (int it)
 
         // Get pointers to ghost particles
         auto& ptile = m_multi_beam.getBeam(ibeam);
-        auto& aos = ptile.GetArrayOfStructs();
-        const auto& pos_structs = aos.begin() + nreal;
+        auto& soa = ptile.GetStructOfArrays();
+        const amrex::Real * const pos_z = soa.GetRealData(BeamIdx::z).data() + nreal;
+        int * const idp = soa.GetIntData(BeamIdx::id).data() + nreal;
 
         // Invalidate particles out of the ghost slice
         amrex::ParallelFor(
             nghost,
             [=] AMREX_GPU_DEVICE (long idx) {
                 // Get zp of ghost particle
-                const amrex::Real zp = pos_structs[idx].pos(2);
+                const amrex::Real zp = pos_z[idx];
                 // Invalidate ghost particle if not in the ghost slice
                 if ( zp < zmin_leftcell || zp > zmax_leftcell ) {
-                    pos_structs[idx].id() = -1;
+                    idp[idx] = -1;
                 }
             }
             );
