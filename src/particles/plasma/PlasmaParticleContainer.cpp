@@ -163,8 +163,6 @@ PlasmaParticleContainer::InitData ()
     resizeData();
 
     InitParticles(m_ppc, m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
-
-    m_num_exchange = TotalNumberOfParticles();
 }
 
 void
@@ -381,7 +379,6 @@ IonizationModule (const int lev,
                 pstruct_elec[pidx].pos(2) = zp;
 
                 arrdata_elec[PlasmaIdx::w       ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
-                arrdata_elec[PlasmaIdx::w0      ][pidx] = arrdata_ion[PlasmaIdx::w0    ][ip];
                 arrdata_elec[PlasmaIdx::ux      ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy      ][pidx] = 0._rt;
                 // later we could consider adding a finite temperature to the ionized electrons
@@ -399,8 +396,6 @@ IonizationModule (const int lev,
                     arrdata_elec[iforce][pidx] = 0._rt;
                 }
 #endif
-                arrdata_elec[PlasmaIdx::x0      ][pidx] = arrdata_ion[PlasmaIdx::x0    ][ip];
-                arrdata_elec[PlasmaIdx::y0      ][pidx] = arrdata_ion[PlasmaIdx::y0    ][ip];
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });

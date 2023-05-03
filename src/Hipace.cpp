@@ -242,7 +242,6 @@ Hipace::InitData ()
     }
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
-    m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
     if (Hipace::HeadRank()) {
         m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
                                        m_multi_plasma, m_3D_geom[0], m_fields);
@@ -397,7 +396,7 @@ Hipace::Evolve ()
             Wait(step, it);
             if (it == n_boxes-1) {
                 // Only reset plasma after receiving time step, to use proper density
-                m_multi_plasma.ResetParticles();
+                m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
 
                 // Even if level 1 doesn't start on the first slice,
                 // we need to deposit a neutralizing background now

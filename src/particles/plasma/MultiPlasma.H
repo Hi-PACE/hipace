@@ -84,10 +84,6 @@ public:
         const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
         bool temp_slice, int lev);
 
-    /** \brief Resets the particle position x, y, to x_prev, y_prev
-     */
-    void ResetParticles ();
-
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
      * \param[in,out] fields the general field class, modified by this function
