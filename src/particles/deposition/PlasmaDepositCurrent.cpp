@@ -84,6 +84,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                                     : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
+        // in normalized units this is rescaling dx and dy for level 1,
+        // while in SI units it's the factor for charge to charge density
         const amrex::Real invvol = Hipace::m_normalized_units ?
             gm[0].CellSize(0)*gm[0].CellSize(1) / (gm[lev].CellSize(0)*gm[lev].CellSize(1))
             : 1._rt/(dx[0]*dx[1]*dx[2]);
