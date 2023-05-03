@@ -301,9 +301,6 @@ When both are specified, the per-species value is used.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
 
-* ``<plasma name>.level`` (`integer`) optional (default `0`)
-    Level of mesh refinement to which the plasma is assigned.
-
 * ``<plasma name> or plasmas.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
 
@@ -449,10 +446,6 @@ which are valid only for certain beam types, are introduced further below under
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
-
-* ``<beam name>.finest_level`` (`int`) optional (default `0`)
-    Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
-    up to its finest level. The beam will be pushed by the fields of the finest level.
 
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``-1``)
     Period of in-situ diagnostics, for computing the main per-slice beam quantities for the main

@@ -32,9 +32,6 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
 
-    // beam deposits only up to its finest level
-    if (beam.m_finest_level < lev) return;
-
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
     which_slice == WhichSlice::This || which_slice == WhichSlice::Next
     || which_slice == WhichSlice::Salame,
@@ -98,7 +95,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             // re-scaling the weight in normalized units to get the same charge density on lev 1
             // Not necessary in SI units, there the weight is the actual charge and not the density
             amrex::Real const * AMREX_RESTRICT dx_lev0 = gm[0].CellSize();
-            invvol = dx_lev0[0] * dx_lev0[1] * dx_lev0[2] * dxi * dyi * dzi;
+            invvol = dx_lev0[0] * dx_lev0[1] * dxi * dyi;
         }
     }
 
@@ -141,7 +138,8 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 
             // Skip invalid particles and ghost particles not in the last slice
-            if (pos_structs[ip].id() < 0) return;
+            // beam deposits only up to its finest level
+            if (pos_structs[ip].id() < 0 || pos_structs[ip].cpu() < lev) return;
             // --- Get particle quantities
             const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
                                                          + uyp[ip]*uyp[ip]*clightsq

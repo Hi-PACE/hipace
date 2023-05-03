@@ -25,7 +25,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
     using namespace amrex::literals;
     clearParticles();
-    const int lev = m_level;
+    const int lev = 0;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
     const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
@@ -104,7 +104,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
 
-        int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + total_num_particles);
 
@@ -223,7 +222,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 ParticleType& p = pstruct[pidx];
                 p.id()   = pid + int(pidx);
-                p.cpu()  = procID;
+                p.cpu()  = 0; // level 0
                 p.pos(0) = x;
                 p.pos(1) = y;
                 p.pos(2) = z;

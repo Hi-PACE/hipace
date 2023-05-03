@@ -25,7 +25,7 @@
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
-                        amrex::Geometry const& gm, const bool temp_slice, int const lev,
+                        amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
                         PlasmaBins& bins, const MultiLaser& multi_laser);
 
 #endif //  PLASMAPARTICLEADVANCE_H_
