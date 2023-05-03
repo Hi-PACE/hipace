@@ -110,6 +110,13 @@ public:
      */
     void UpdateDensityFunction ();
 
+    /** \brief Store the finest level of every plasma particle in the cpu() attribute.
+     * \param[in] nlev number of MR levels
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] islice current slice
+     */
+    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice);
+
     /** returns u_mean of the plasma distribution */
     amrex::RealVect GetUMean () const {return m_u_mean;}
 
@@ -134,7 +141,6 @@ public:
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
-    int m_level {0}; /**< mesh refinement level on which the plasma lives */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
@@ -175,8 +181,8 @@ class PlasmaParticleIterator : public amrex::ParIter<0,0,PlasmaIdx::nattribs,Pla
 {
 public:
     /** Constructor */
-    PlasmaParticleIterator (ContainerType& pc, int level)
-        : amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, level, DfltMfi) {}
+    PlasmaParticleIterator (ContainerType& pc)
+        : amrex::ParIter<0,0,PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
 };
 
 #endif

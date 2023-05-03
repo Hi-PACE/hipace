@@ -47,9 +47,8 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 {
     HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
-        const int lev = plasma.m_level;
-        // last argument is a dummy refinement ratio
-        plasma.SetParGDB(slice_gm, slice_dm, slice_ba, amrex::Vector<amrex::IntVect>{});
+        // make it think there is only level 0
+        plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
         plasma.InitData();
 
         if(plasma.m_can_ionize) {
@@ -61,7 +60,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
                 "Must specify a valid product plasma for Ionization using ionization_product");
-            plasma.InitIonizationModule(gm[lev], plasma_product);
+            plasma.InitIonizationModule(gm[0], plasma_product); // geometry only for dz
         }
     }
     if (m_nplasmas > 0) m_all_bins.resize(m_nplasmas);
@@ -81,7 +80,7 @@ void
 MultiPlasma::DepositCurrent (
     Fields & fields, const MultiLaser & multi_laser, int which_slice,
     bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi,
-    amrex::Geometry const& gm, int const lev)
+    amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice,
@@ -92,7 +91,7 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
-                                 amrex::Geometry const& gm, int const lev)
+                                 amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::ExplicitDeposition(m_all_plasmas[i], fields, multi_laser, gm, lev);
@@ -101,7 +100,7 @@ MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
 
 void
 MultiPlasma::AdvanceParticles (
-    const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm,
+    const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
     bool temp_slice, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
@@ -111,17 +110,18 @@ MultiPlasma::AdvanceParticles (
 }
 
 void
-MultiPlasma::ResetParticles (int lev)
+MultiPlasma::ResetParticles ()
 {
     if (m_nplasmas < 1) return;
     for (auto& plasma : m_all_plasmas) {
-        ResetPlasmaParticles(plasma, lev);
+        ResetPlasmaParticles(plasma);
     }
 }
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm, int const lev)
+    Fields & fields, const MultiLaser & multi_laser, int which_slice,
+    amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         if (m_all_plasmas[i].m_neutralize_background) {
@@ -164,11 +164,10 @@ MultiPlasma::AnySpeciesNeutralizeBackground () const
 void
 MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
 {
-    constexpr int lev = 0;
     m_all_bins.clear();
     for (auto& plasma : m_all_plasmas) {
         m_all_bins.emplace_back(
-            findParticlesInEachTile(lev, bx, m_sort_bin_size, plasma, geom));
+            findParticlesInEachTile(bx, m_sort_bin_size, plasma, geom));
     }
 }
 
@@ -195,5 +194,13 @@ MultiPlasma::ReorderParticles (const int islice)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.ReorderParticles(islice);
+    }
+}
+
+void
+MultiPlasma::TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice)
+{
+    for (auto& plasma : m_all_plasmas) {
+        plasma.TagByLevel(nlev, geom3D, islice);
     }
 }

@@ -109,7 +109,6 @@ PlasmaParticleContainer::ReadParameters ()
                                          "Unable to get any data out of 'density_table_file'");
     }
 
-    queryWithParser(pp, "level", m_level);
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
@@ -188,6 +187,42 @@ PlasmaParticleContainer::UpdateDensityFunction ()
 }
 
 void
+PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D,
+                                     const int islice)
+{
+    if (nlev==1) return;
+    HIPACE_PROFILE("PlasmaParticleContainer::TagByLevel");
+
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        auto& aos = pti.GetArrayOfStructs();
+        const auto& pos_structs = aos.begin();
+
+        // Use islice == -1 as a wildcard
+        const bool has_zeta = (islice >= geom3D[1].Domain().smallEnd(2) &&
+                               islice <= geom3D[1].Domain().bigEnd(2)) || (islice == -1);
+        const amrex::Real lo_x = geom3D[1].ProbLo(0);
+        const amrex::Real hi_x = geom3D[1].ProbHi(0);
+        const amrex::Real lo_y = geom3D[1].ProbLo(1);
+        const amrex::Real hi_y = geom3D[1].ProbHi(1);
+
+        amrex::ParallelFor(pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (int ip) {
+                if (has_zeta &&
+                    lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
+                    lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+                    // level 1
+                    pos_structs[ip].cpu() = 1;
+                } else {
+                    // level 0
+                    pos_structs[ip].cpu() = 0;
+                }
+            }
+        );
+    }
+}
+
+void
 PlasmaParticleContainer::
 IonizationModule (const int lev,
                   const amrex::Geometry& geom,
@@ -203,7 +238,7 @@ IonizationModule (const int lev,
     const PhysConst phys_const = make_constants_SI();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
-    for (amrex::MFIter mfi_ion = MakeMFIter(lev, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
+    for (amrex::MFIter mfi_ion = MakeMFIter(0, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[mfi_ion];
@@ -223,10 +258,10 @@ IonizationModule (const int lev,
 
         const int depos_order_xy = Hipace::m_depos_order_xy;
 
-        auto& plevel_ion = GetParticles(lev);
+        auto& plevel_ion = GetParticles(0);
         auto index = std::make_pair(mfi_ion.index(), mfi_ion.LocalTileIndex());
         if(plevel_ion.find(index) == plevel_ion.end()) continue;
-        auto& ptile_elec = m_product_pc->DefineAndReturnParticleTile(lev,
+        auto& ptile_elec = m_product_pc->DefineAndReturnParticleTile(0,
             mfi_ion.index(), mfi_ion.LocalTileIndex());
         auto& ptile_ion = plevel_ion.at(index);
 
@@ -265,7 +300,7 @@ IonizationModule (const int lev,
             xp = x_prev[ip];
             yp = y_prev[ip];
 
-            if (pid < 0) return;
+            if (pid < 0 || getPosition.m_structs[ip].cpu() != lev) return;
 
             // define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
@@ -316,7 +351,6 @@ IonizationModule (const int lev,
 
         // Load electron soa and aos after resize
         ParticleType* pstruct_elec = ptile_elec.GetArrayOfStructs()().data();
-        const int procID = amrex::ParallelDescriptor::MyProc();
         const long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons.dataValue());
 
@@ -341,7 +375,7 @@ IonizationModule (const int lev,
                 getPosition(ip, xp, yp, zp);
 
                 pstruct_elec[pidx].id()   = pid_start + pid;
-                pstruct_elec[pidx].cpu()  = procID;
+                pstruct_elec[pidx].cpu()  = lev; // current level
                 pstruct_elec[pidx].pos(0) = xp;
                 pstruct_elec[pidx].pos(1) = yp;
                 pstruct_elec[pidx].pos(2) = zp;

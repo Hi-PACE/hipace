@@ -21,9 +21,6 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
 
-    // only finest MR level pushes the beam
-    if (beam.m_finest_level != lev) return;
-
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
     const PhysConst phys_const = get_phys_const();
@@ -85,6 +82,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
             amrex::ParticleReal xp, yp, zp;
             int pid;
+
+            // only finest MR level pushes the beam
+            if (setPositionEnforceBC.m_structs[ip].cpu() != lev) return;
 
             for (int i = 0; i < n_subcycles; i++) {
 

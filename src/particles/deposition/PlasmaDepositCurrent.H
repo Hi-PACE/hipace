@@ -33,7 +33,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLaser& multi_laser,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                bool deposit_chi, amrex::Geometry const& gm, int const lev,
+                bool deposit_chi, amrex::Vector<amrex::Geometry> const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size);
 
 
