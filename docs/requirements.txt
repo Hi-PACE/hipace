@@ -5,9 +5,9 @@
 # Authors: MaxThevenet, Severin Diederichs
 # License: BSD-3-Clause-LBNL
 
-sphinx_rtd_theme>=0.4.0
+sphinx_rtd_theme>=1.0
 recommonmark
-sphinx>=3.0
+sphinx>=7.0
 # docutils 0.17 breaks HTML tags & RTD theme
 # https://github.com/sphinx-doc/sphinx/issues/9001
 docutils<=0.16
