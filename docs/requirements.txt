@@ -5,7 +5,6 @@
 # Authors: MaxThevenet, Severin Diederichs
 # License: BSD-3-Clause-LBNL
 
-pyOpenSSL
 sphinx>=5.3
 sphinx_rtd_theme>=1.1.1
 recommonmark
