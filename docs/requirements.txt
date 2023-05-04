@@ -5,11 +5,12 @@
 # Authors: MaxThevenet, Severin Diederichs
 # License: BSD-3-Clause-LBNL
 
-sphinx_rtd_theme>=1.0
-recommonmark
+pyOpenSSL
 sphinx>=5.3
+sphinx_rtd_theme>=1.1.1
+recommonmark
 # docutils 0.17 breaks HTML tags & RTD theme
 # https://github.com/sphinx-doc/sphinx/issues/9001
-docutils<=0.16
+docutils>=0.17.1
 pygments
 breathe
