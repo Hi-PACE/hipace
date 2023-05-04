@@ -46,7 +46,7 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
    cmake --build build -j 16
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started` section, to prepare an input file that suits your needs.
-You can then create your directory in your ``$SCRATCH``, where you can put your input file and adapt the following submission script:
+You can then create your directory in your ``$PSCRATCH``, where you can put your input file and adapt the following submission script:
 
 .. code-block:: bash
 

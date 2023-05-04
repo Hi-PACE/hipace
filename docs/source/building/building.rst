@@ -125,6 +125,12 @@ If you also want to select a CUDA compiler:
 Build & Test
 ------------
 
+If you have not downloaded HiPACE++ yet, please clone it from GitHub via
+
+.. code-block:: bash
+
+   git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # or choose your preferred path
+
 From the base of the HiPACE++ source directory, execute:
 
 .. code-block:: bash
@@ -182,7 +188,7 @@ CMake Option                 Default & Values                                   
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``      Repository URI to pull and build openPMD-api from
 ``HiPACE_openpmd_branch``    ``0.15.1``                                          Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                          Needs a pre-installed openPMD-api library if set to ``OFF``
-``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver. Required for explicit solver
+``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver.
 ===========================  ==================================================  =============================================================
 
 For example, one can also build against a local AMReX copy.
