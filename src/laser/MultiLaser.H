@@ -22,8 +22,7 @@
 #ifdef AMREX_USE_CUDA
 #  include <cufft.h>
 #elif defined(AMREX_USE_HIP)
-#  include <cstddef>
-#  include <rocfft.h>
+#  include <rocfft/rocfft.h>
 #else
 #  include <fftw3.h>
 #endif
