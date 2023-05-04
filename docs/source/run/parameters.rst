@@ -235,13 +235,13 @@ Explicit solver parameters
     Whether to use the AMReX multigrid solver. Note that this requires the compile time option ``AMReX_LINEAR_SOLVERS`` to be true. Generally not recommended since it is significantly slower than the default HiPACE++ multigrid solver.
 
 * ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
-    Relative error tolerance of the AMReX multigrid solver.
+    Relative error tolerance of the multigrid solvers.
 
 * ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
-    Absolute error tolerance of the AMReX multigrid solver.
+    Absolute error tolerance of the multigrid solvers.
 
 * ``hipace.MG_verbose`` (`int`) optional (default `0`)
-    Level of verbosity of the AMReX multigrid solver.
+    Level of verbosity of the the multigrid solvers.
 
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -273,7 +273,6 @@ Predictor-corrector loop parameters
    A good setting for the fixed number of iterations is usually given by
    ``hipace.predcorr_B_error_tolerance = -1.``, ``hipace.predcorr_max_iterations = 1``,
    ``hipace.predcorr_B_mixing_factor = 0.15``. The B-field error tolerance must be negative.
-
 
 
 Plasma parameters
