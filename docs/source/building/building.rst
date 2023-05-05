@@ -36,8 +36,12 @@ Please see installation instructions below in the Developers section.
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
   - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
-- Nvidia GPU support: `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__ (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
-- CPU-only: `FFTW3 <http://www.fftw.org/>`__ (only used serially; *not* needed for Nvidia GPUs)
+
+Platform-dependent, at least one of the following:
+
+- `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__: for NVIDIA GPU support (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
+- `ROCm 5.1+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
+- `FFTW3 <http://www.fftw.org/>`__: for CPUs (only used serially, but multi-threading supported; *not* needed for GPUs)
 
 Optional dependencies include:
 
@@ -75,6 +79,11 @@ The dependencies can be installed via the package manager
    spack install
 
 (in new terminals, re-activate the environment with ``spack env activate hipace-dev`` again)
+
+.. note::
+   On Ubuntu distributions, the InstallErrror ``"OpenMPI requires both C and Fortran compilers"`` can occur because the Fortran compilers are sometimes not set automatically in Spack.
+   To fix this, the Fortran compilers must be set manually using ``spack config edit compilers`` (more information can be found `here <https://spack.readthedocs.io/en/latest/getting_started.html#compiler-configuration>`__).
+   For GCC, the flags ``f77 : null`` and ``fc : null`` must be set to ``fcc : gfortran`` and ``fc : gfortran``.
 
 .. _install-brew:
 
