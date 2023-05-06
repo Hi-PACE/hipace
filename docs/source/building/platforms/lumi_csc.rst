@@ -19,7 +19,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    module load LUMI
    module load partition/G
    module load PrgEnv-amd/8.3.3
-   module load rocm/5.2.3
+   module load rocm/5.3.3
    module load buildtools/22.08
    module load cray-hdf5/1.12.1.5
 

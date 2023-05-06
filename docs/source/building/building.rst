@@ -40,7 +40,7 @@ Please see installation instructions below in the Developers section.
 Platform-dependent, at least one of the following:
 
 - `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__: for NVIDIA GPU support (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
-- `ROCm 5.1+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
+- `ROCm 5.3+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
 - `FFTW3 <http://www.fftw.org/>`__: for CPUs (only used serially, but multi-threading supported; *not* needed for GPUs)
 
 Optional dependencies include:
