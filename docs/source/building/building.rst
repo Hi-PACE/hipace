@@ -83,7 +83,7 @@ The dependencies can be installed via the package manager
 .. note::
    On Ubuntu distributions, the InstallErrror ``"OpenMPI requires both C and Fortran compilers"`` can occur because the Fortran compilers are sometimes not set automatically in Spack.
    To fix this, the Fortran compilers must be set manually using ``spack config edit compilers`` (more information can be found `here <https://spack.readthedocs.io/en/latest/getting_started.html#compiler-configuration>`__).
-   For GCC, the flags ``f77 : null`` and ``fc : null`` must be set to ``fcc : gfortran`` and ``fc : gfortran``.
+   For GCC, the flags ``f77 : null`` and ``fc : null`` must be set to ``f77 : gfortran`` and ``fc : gfortran``.
 
 .. _install-brew:
 
