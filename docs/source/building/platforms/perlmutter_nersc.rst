@@ -18,7 +18,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
 
    # required dependencies
    module load cmake/3.22.0
-   module load cray-hdf5-parallel/1.12.1.5
+   module load cray-hdf5-parallel/1.12.2.3
 
    # necessary to use CUDA-Aware MPI and run a job
    export CRAY_ACCEL_TARGET=nvidia80
@@ -34,13 +34,18 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    export CUDAHOSTCXX=CC
 
 
-Install HiPACE++ (the first time, and whenever you want the latest version):
+Download HiPACE++ from GitHub (the first time, and whenever you want the latest version):
 
 .. code-block:: bash
 
-   source profile.hipace
-   git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # only the first time
-   cd $HOME/src/hipace
+   git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # or any other path you prefer
+
+Compile the code using CMake
+
+.. code-block:: bash
+
+   source profile.hipace # load the correct modules
+   cd $HOME/src/hipace   # or where HiPACE++ is installed
    rm -rf build
    cmake -S . -B build -DHiPACE_COMPUTE=CUDA
    cmake --build build -j 16
