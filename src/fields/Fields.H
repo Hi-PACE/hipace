@@ -183,13 +183,23 @@ public:
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] component which can be Psi or rho
+     * \param[in] component which can be Psi or rho etc.
      * \param[in] outer_edge start writing interpolated values at domain + outer_edge
      * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
     void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                     std::string component, const amrex::IntVect outer_edge,
                                     const amrex::IntVect inner_edge);
+
+    /** \brief Interpolate the full field from the coarse grid (lev-1) to the fine grid (lev).
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be jx_beam or jy_beam etc.
+     * \param[in] which_slice slice of the field to interpolate
+     */
+    void LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                  const int which_slice, const std::string component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
