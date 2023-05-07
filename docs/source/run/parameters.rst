@@ -203,9 +203,9 @@ Field solver parameters
 -----------------------
 
 Two different field solvers are available to calculate the transverse magnetic fields `Bx`
-and `By`. An analytic integration and an FFT-based predictor-corrector loop. In the analytic
-integration the longitudinal derivative of the transverse currents is calculated explicitly, which
-results in a shielded Poisson equation, which is solved with either the internal HiPACE++ multigrid solver or the AMReX multigrid solver.
+and `By`: an explicit solver (based on analytic integration) and a predictor-corrector loop (based on an FFT solver).
+In the explicit solver, the longitudinal derivative of the transverse currents is calculated explicitly, which
+results in a shielded Poisson equation, solved with either the internal HiPACE++ multigrid solver or the AMReX multigrid solver.
 The default is to use the explicit solver. **We strongly recommend to use the explicit solver**, because we found it to be more robust, faster to converge, and easier to use.
 
 
@@ -232,7 +232,7 @@ Explicit solver parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``hipace.use_amrex_mlmg`` (`bool`) optional (default `0`)
-    Whether to use the AMReX multigrid solver. Note that this requires the compile time option ``AMReX_LINEAR_SOLVERS`` to be true. Generally not recommended since it is significantly slower than the default HiPACE++ multigrid solver.
+    Whether to use the AMReX multigrid solver. Note that this requires the compile-time option ``AMReX_LINEAR_SOLVERS`` to be true. Generally not recommended since it is significantly slower than the default HiPACE++ multigrid solver.
 
 * ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solvers.
