@@ -183,6 +183,10 @@ General parameters
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
 
+* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
+    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+
 * ``hipace.salame_n_iter`` (`int`) optional (default `3`)
     Number of iterations the SALAME algorithm should do when it is used.
 

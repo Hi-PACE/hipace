@@ -34,13 +34,13 @@ public:
      * \param[in] islice slice index in which the current is stored
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
      * \param[in] do_beam_jz_deposition whether the beam deposits Jz
-     * \param[in] do_beam_rho_deposition whether the beam deposits rho
+     * \param[in] do_beam_rhomjz_deposition whether the beam deposits rhomjz
      * \param[in] which_slice defines if this or the next slice is handled
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
         int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
-        const bool do_beam_rho_deposition, const int which_slice);
+        const bool do_beam_rhomjz_deposition, const int which_slice);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] ibox box index

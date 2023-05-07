@@ -67,8 +67,8 @@ Fields::AllocData (
 
         if (m_explicit) {
             // explicit solver:
-            // beams share rho_beam jx_beam jy_beam jz_beam
-            // rho jx jy jz for all plasmas and beams
+            // beams share jx_beam jy_beam jz_beam
+            // jx jy rhomjz for all plasmas and beams
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
@@ -81,7 +81,10 @@ Fields::AllocData (
             }
             Comps[isl].multi_emplace(N_Comps, "Sy", "Sx", "ExmBy", "EypBx", "Ez",
                 "Bx", "By", "Bz", "Psi",
-                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
+                "jx_beam", "jy_beam", "jz_beam", "jx", "jy", "rhomjz");
+            if (Hipace::m_deposit_rho) {
+                Comps[isl].multi_emplace(N_Comps, "rho");
+            }
 
             isl = WhichSlice::Previous1;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
@@ -91,7 +94,7 @@ Fields::AllocData (
 
             isl = WhichSlice::RhoIons;
             if (m_any_neutral_background) {
-                Comps[isl].multi_emplace(N_Comps, "rho");
+                Comps[isl].multi_emplace(N_Comps, "rhomjz");
             }
 
             isl = WhichSlice::Salame;
@@ -102,7 +105,7 @@ Fields::AllocData (
 
         } else {
             // predictor-corrector:
-            // all beams and plasmas share rho jx jy jz
+            // all beams and plasmas share jx jy jz rhomjz
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx", "jy");
@@ -110,10 +113,13 @@ Fields::AllocData (
             isl = WhichSlice::This;
             // Bx and By adjacent for explicit solver
             Comps[isl].multi_emplace(N_Comps, "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "Psi",
-                                              "jx", "jy", "jz", "rho");
+                                              "jx", "jy", "jz", "rhomjz");
 
             if (Hipace::m_use_laser) {
                 Comps[isl].multi_emplace(N_Comps, "chi");
+            }
+            if (Hipace::m_deposit_rho) {
+                Comps[isl].multi_emplace(N_Comps, "rho");
             }
 
             isl = WhichSlice::Previous1;
@@ -124,7 +130,7 @@ Fields::AllocData (
 
             isl = WhichSlice::RhoIons;
             if (m_any_neutral_background) {
-                Comps[isl].multi_emplace(N_Comps, "rho");
+                Comps[isl].multi_emplace(N_Comps, "rhomjz");
             }
 
             isl = WhichSlice::Salame;
@@ -170,8 +176,8 @@ Fields::AllocData (
         for (int i=0; i<num_threads; i++){
             amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
             bx.grow(m_slices_nguards);
-            // jx jy jz rho chi
-            m_tmp_densities[i].resize(bx, 5);
+            // jx jy jz rho chi rhomjz
+            m_tmp_densities[i].resize(bx, 6);
         }
     }
 }
@@ -322,13 +328,12 @@ struct guarded_field_xy {
  * \param[in] src_a first source
  * \param[in] factor_b factor before src_b
  * \param[in] src_b second source
- * \param[in] do_add whether to overwrite (=) or to add (+=) dst.
  */
 template<class FVA, class FVB>
 void
 LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
-                const amrex::Real factor_b, const FVB& src_b, const bool do_add=false)
+                const amrex::Real factor_b, const FVB& src_b)
 {
     HIPACE_PROFILE("Fields::LinCombination()");
 
@@ -348,13 +353,42 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
             {
                 const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
-                const amrex::Real tmp =
+                dst_array(i,j) =
                     inside ? factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j) : 0._rt;
-                if (do_add) {
-                    dst_array(i,j) += tmp;
-                } else {
-                    dst_array(i,j) = tmp;
-                }
+            });
+    }
+}
+
+/** \brief Calculates dst = factor*src. src can be a derivative
+ *
+ * \param[in] box_grow how much the domain of dst should be grown
+ * \param[in] dst destination
+ * \param[in] factor factor before src_a
+ * \param[in] src first source
+ */
+template<class FV>
+void
+LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
+                const amrex::Real factor, const FV& src)
+{
+    HIPACE_PROFILE("Fields::LinCombination()");
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
+        const Array2<amrex::Real> dst_array = dst.array(mfi);
+        const auto src_array = to_array2(src.array(mfi));
+        const amrex::Box bx = mfi.growntilebox(box_grow);
+        const int box_i_lo = bx.smallEnd(Direction::x);
+        const int box_j_lo = bx.smallEnd(Direction::y);
+        const int box_i_hi = bx.bigEnd(Direction::x);
+        const int box_j_hi = bx.bigEnd(Direction::y);
+        amrex::ParallelFor(mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+            {
+                const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
+                dst_array(i,j) = inside ? factor * src_array(i,j) : 0._rt;
             });
     }
 }
@@ -488,7 +522,7 @@ Fields::AddRhoIons (const int lev)
 {
     if (!m_any_neutral_background) return;
     HIPACE_PROFILE("Fields::AddRhoIons()");
-    add(lev, WhichSlice::This, {"rho"}, WhichSlice::RhoIons, {"rho"});
+    add(lev, WhichSlice::This, {"rhomjz"}, WhichSlice::RhoIons, {"rhomjz"});
 }
 
 /** \brief Sets non zero Dirichlet Boundary conditions in RHS which is the source of the Poisson
@@ -742,24 +776,12 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
-    // interpolate rho and jz to level 1 in the domain edges
-    InterpolateFromLev0toLev1(geom, lev, "rho", m_poisson_nguards, -m_slices_nguards);
-    InterpolateFromLev0toLev1(geom, lev, "jz", m_poisson_nguards, -m_slices_nguards);
+    // interpolate rhomjz to level 1 in the domain edges
+    InterpolateFromLev0toLev1(geom, lev, "rhomjz", m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     LinCombination(m_source_nguard, getStagingArea(lev),
-        1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz"),
-        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho"), false);
-
-    if (Hipace::m_do_beam_jz_minus_rho) {
-        // interpolate rho_beam and jz_beam to level 1 in the domain edges
-        InterpolateFromLev0toLev1(geom, lev, "rho_beam", m_poisson_nguards, -m_slices_nguards);
-        InterpolateFromLev0toLev1(geom, lev, "jz_beam", m_poisson_nguards, -m_slices_nguards);
-
-        LinCombination(m_source_nguard, getStagingArea(lev),
-            1._rt/(phys_const.c*phys_const.ep0), getField(lev, WhichSlice::This, "jz_beam"),
-            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rho_beam"), true);
-    }
+        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
 
     SetBoundaryCondition(geom, lev, "Psi", getStagingArea(lev));
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);

@@ -58,6 +58,7 @@ int Hipace::m_predcorr_max_iterations = 30;
 amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
 bool Hipace::m_do_beam_jx_jy_deposition = true;
 bool Hipace::m_do_beam_jz_minus_rho = false;
+bool Hipace::m_deposit_rho = false;
 int Hipace::m_beam_injection_cr = 1;
 amrex::Real Hipace::m_external_ExmBy_slope = 0.;
 amrex::Real Hipace::m_external_Ez_slope = 0.;
@@ -146,6 +147,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
+    queryWithParser(pph, "deposit_rho", m_deposit_rho);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
     queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
@@ -598,11 +600,14 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
     // jx_beam and jy_beam are used from the previous "Next" slice
     // jx and jy are initially set to jx_beam and jy_beam
     m_fields.setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
-        "Bz", "Psi", "jz_beam", "rho_beam", "jz", "rho");
+        "Bz", "Psi", "jz_beam", "rhomjz");
+    if (m_deposit_rho) {
+        m_fields.setVal(0., lev, WhichSlice::This, "rho");
+    }
 
-    // deposit jx, jy, jz, rho and chi for all plasmas
-    m_multi_plasma.DepositCurrent(
-        m_fields, m_multi_laser, WhichSlice::This, true, true, true, true, m_3D_geom, lev);
+    // deposit jx, jy, chi and rhomjz for all plasmas
+    m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
+        true, false, m_deposit_rho, true, true, m_3D_geom, lev);
 
     m_fields.setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     // deposit jx_beam and jy_beam in the Next slice
@@ -613,7 +618,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     m_fields.AddRhoIons(lev);
 
-    // deposit jz_beam and maybe rho_beam on This slice
+    // deposit jz_beam and maybe rhomjz on This slice
     m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
         false, true, m_do_beam_jz_minus_rho, WhichSlice::This);
 
@@ -658,37 +663,31 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
                                             const int islice, const int islice_local)
 {
     m_fields.setVal(0., lev, WhichSlice::This,
-        "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+        "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
     if (m_use_laser) {
         m_fields.setVal(0., lev, WhichSlice::This, "chi");
     }
+    if (m_deposit_rho) {
+        m_fields.setVal(0., lev, WhichSlice::This, "rho");
+    }
 
-    // deposit jx jy jz rho and maybe chi
+    // deposit jx jy jz maybe chi and rhomjz
     m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
-        true, true, true, m_use_laser, m_3D_geom, lev);
+        true, true, m_deposit_rho, m_use_laser, true, m_3D_geom, lev);
 
     m_fields.AddRhoIons(lev);
 
-    FillBoundaryChargeCurrents(lev);
-
-    if (!m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
-    }
-
-    // deposit jx jy jz and maybe rho on This slice
+    // deposit jx jy jz and maybe rhomjz on This slice
     m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
                                      m_do_beam_jx_jy_deposition, true,
                                      m_do_beam_jz_minus_rho, WhichSlice::This);
-
-    if (m_do_beam_jz_minus_rho) {
-        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
-    }
 
     // deposit grid current into jz_beam
     m_grid_current.DepositCurrentSlice(m_fields, m_3D_geom[lev], lev, islice);
 
     FillBoundaryChargeCurrents(lev);
 
+    m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
     m_fields.SolvePoissonEz(m_3D_geom, lev);
     m_fields.SolvePoissonBz(m_3D_geom, lev);
 
@@ -722,13 +721,13 @@ Hipace::ResetLaser ()
 
 void
 Hipace::FillBoundaryChargeCurrents (int lev) {
-    if (!m_fields.m_extended_solve) {
+    if (!m_fields.m_extended_solve && lev==0) {
         if (m_explicit) {
             m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "jx_beam", "jy_beam", "jz_beam", "rho_beam", "jx", "jy", "jz", "rho");
+                "jx_beam", "jy_beam", "jz_beam", "jx", "jy", "rhomjz");
         } else {
             m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "jx", "jy", "jz", "rho");
+                "jx", "jy", "jz", "rhomjz");
         }
     }
 }
@@ -918,7 +917,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
     if (!m_fields.m_extended_solve) {
         // exchange ExmBy EypBx Ez Bx By Bz
         m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-            "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+            "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
     }
 
     /* creating temporary Bx and By arrays for the current and previous iteration */
@@ -957,7 +956,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
         if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
         // plasmas deposit jx jy to next temp slice
         m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::Next,
-            true, false, false, false, m_3D_geom, lev);
+            true, false, false, false, false, m_3D_geom, lev);
 
         // beams deposit jx jy to the next slice
         m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
@@ -995,7 +994,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
         if (!m_fields.m_extended_solve) {
             // exchange Bx By
             m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rho", "Psi");
+                "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
         }
 
         // Shift relative_Bfield_error values

@@ -49,7 +49,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         // deposit plasma jx and jy on the next temp slice, to the SALANE slice
         hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
-                WhichSlice::Salame, true, false, false, false, hipace->m_3D_geom, lev);
+                WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
 
         // use an initial guess of zero for Bx and By in MG solver to reduce relative error
         hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
@@ -76,7 +76,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             SalameOnlyAdvancePlasma(hipace, lev);
 
             hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
-                    WhichSlice::Salame, true, false, false, false, hipace->m_3D_geom, lev);
+                    WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
         } else {
             SalameGetJxJyFromBxBy(hipace, lev);
         }

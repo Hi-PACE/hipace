@@ -23,7 +23,8 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLaser& multi_laser,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                const bool deposit_chi, amrex::Vector<amrex::Geometry> const& gm, int const lev,
+                const bool deposit_chi, const bool deposit_rhomjz,
+                amrex::Vector<amrex::Geometry> const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
@@ -50,11 +51,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
         amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
-        const int  jx_cmp = deposit_jx_jy ? Comps[which_slice]["jx"]  : -1;
-        const int  jy_cmp = deposit_jx_jy ? Comps[which_slice]["jy"]  : -1;
-        const int  jz_cmp = deposit_jz    ? Comps[which_slice]["jz"]  : -1;
-        const int rho_cmp = deposit_rho   ? Comps[which_slice]["rho"] : -1;
-        const int chi_cmp = deposit_chi   ? Comps[which_slice]["chi"] : -1;
+        const int     jx_cmp = deposit_jx_jy  ? Comps[which_slice]["jx"]     : -1;
+        const int     jy_cmp = deposit_jx_jy  ? Comps[which_slice]["jy"]     : -1;
+        const int     jz_cmp = deposit_jz     ? Comps[which_slice]["jz"]     : -1;
+        const int    rho_cmp = deposit_rho    ? Comps[which_slice]["rho"]    : -1;
+        const int    chi_cmp = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
+        const int rhomjz_cmp = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
 
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
@@ -116,11 +118,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         Array3<amrex::Real> const isl_arr =
             do_tiling ? tmp_dens[ithread].array() : isl_fab.array();
-        const int jx  = (do_tiling && jx_cmp  != -1) ? 0 : jx_cmp;
-        const int jy  = (do_tiling && jy_cmp  != -1) ? 1 : jy_cmp;
-        const int jz  = (do_tiling && jz_cmp  != -1) ? 2 : jz_cmp;
-        const int rho = (do_tiling && rho_cmp != -1) ? 3 : rho_cmp;
-        const int chi = (do_tiling && chi_cmp != -1) ? 4 : chi_cmp;
+        const int jx     = (do_tiling && jx_cmp     != -1) ? 0 : jx_cmp;
+        const int jy     = (do_tiling && jy_cmp     != -1) ? 1 : jy_cmp;
+        const int jz     = (do_tiling && jz_cmp     != -1) ? 2 : jz_cmp;
+        const int rho    = (do_tiling && rho_cmp    != -1) ? 3 : rho_cmp;
+        const int chi    = (do_tiling && chi_cmp    != -1) ? 4 : chi_cmp;
+        const int rhomjz = (do_tiling && rhomjz_cmp != -1) ? 5 : rhomjz_cmp;
 
         int ntiley = 0;
         if (do_tiling) {
@@ -267,11 +270,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
                         const amrex::Real charge_density = q_invvol * wp[ip] * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx  = charge_density * vx_c;
-                        const amrex::Real wqy  = charge_density * vy_c;
-                        const amrex::Real wqz  = charge_density * (gamma_psi-1._rt) * clight;
-                        const amrex::Real wq   = charge_density * gamma_psi;
-                        const amrex::Real wchi = charge_density * q_mu0_mass_ratio * psi_inv;
+                        const amrex::Real wqx     = charge_density * vx_c;
+                        const amrex::Real wqy     = charge_density * vy_c;
+                        const amrex::Real wqz     = charge_density * (gamma_psi-1._rt) * clight;
+                        const amrex::Real wq      = charge_density * gamma_psi;
+                        const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
+                        const amrex::Real wrhomjz = charge_density;
 
                         // Deposit current into isl_arr
                         if (jx != -1) { // deposit_jx_jy
@@ -286,6 +290,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                         }
                         if (chi != -1) { // deposit_chi
                             amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wchi);
+                        }
+                        if (rhomjz != -1) { // deposit_rhomjz
+                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rhomjz), wrhomjz);
                         }
                     }
                 }
@@ -311,6 +318,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 }
                 if (chi_cmp != -1) {
                     isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 4, chi_cmp, 1);
+                }
+                if (rhomjz_cmp != -1) {
+                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 5, rhomjz_cmp, 1);
                 }
             }
 #endif

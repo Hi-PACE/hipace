@@ -299,6 +299,8 @@ public:
     static bool m_do_beam_jx_jy_deposition;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
     static bool m_do_beam_jz_minus_rho;
+    /** Whether to deposit  rho (plasma) for diagnostics */
+    static bool m_deposit_rho;
     /** Whether to use tiling for particle operations */
     static bool m_do_tiling;
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
