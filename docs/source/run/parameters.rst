@@ -42,10 +42,16 @@ General parameters
 
 * ``amr.max_level`` (`integer`) optional (default `0`)
     Maximum level of mesh refinement. Currently, mesh refinement is only supported up to level
-    `1`. Note, that the current mesh refinement algorithm is not generally applicable and valid
-    only in certain scenarios.
+    `1`. Note, that the mesh refinement algorithm is still in active development and should be used with care.
 
-    level `0` is supported.
+* ``geometry.patch_lo`` (3 `float`)
+    Lower end of the simulation box in x, y and z.
+
+* ``geometry.patch_hi`` (3 `float`)
+    Higher end of the simulation box in x, y and z.
+
+* ``geometry.is_periodic`` (3 `bool`)
+    Whether the boundary conditions for particles in x, y and z is periodic. Note that particles in z are always removed. This setting will most likely be changed in the near future.
 
 * ``mr_lev1.n_cell`` (2 `integer`)
     Number of cells in x and y for level 1.
@@ -197,11 +203,11 @@ Field solver parameters
 -----------------------
 
 Two different field solvers are available to calculate the transverse magnetic fields `Bx`
-and `By`. An FFT-based predictor-corrector loop and an analytic integration. In the analytic
-integration the longitudinal derivative of the transverse currents is calculated explicitly, which
-results in a Helmholtz equation, which is solved with the AMReX multigrid solver.
-Currently, the default is to use the predictor-corrector loop.
-Modeling ion motion is not yet supported by the explicit solver
+and `By`: an explicit solver (based on analytic integration) and a predictor-corrector loop (based on an FFT solver).
+In the explicit solver, the longitudinal derivative of the transverse currents is calculated explicitly, which
+results in a shielded Poisson equation, solved with either the internal HiPACE++ multigrid solver or the AMReX multigrid solver.
+The default is to use the explicit solver. **We strongly recommend to use the explicit solver**, because we found it to be more robust, faster to converge, and easier to use.
+
 
 * ``hipace.bxby_solver`` (`string`) optional (default `explicit`)
     Which solver to use.
@@ -220,8 +226,22 @@ Modeling ion motion is not yet supported by the explicit solver
     Uses a Taylor approximation of the Greens function to solve the Poisson equations with
     open boundary conditions. It's recommended to use this together with
     ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
-    Not implemented for the explicit Helmholtz solver.
+    Only available with the predictor-corrector solver.
 
+Explicit solver parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``hipace.use_amrex_mlmg`` (`bool`) optional (default `0`)
+    Whether to use the AMReX multigrid solver. Note that this requires the compile-time option ``AMReX_LINEAR_SOLVERS`` to be true. Generally not recommended since it is significantly slower than the default HiPACE++ multigrid solver.
+
+* ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+    Relative error tolerance of the multigrid solvers.
+
+* ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
+    Absolute error tolerance of the multigrid solvers.
+
+* ``hipace.MG_verbose`` (`int`) optional (default `0`)
+    Level of verbosity of the the multigrid solvers.
 
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -254,17 +274,6 @@ Predictor-corrector loop parameters
    ``hipace.predcorr_B_error_tolerance = -1.``, ``hipace.predcorr_max_iterations = 1``,
    ``hipace.predcorr_B_mixing_factor = 0.15``. The B-field error tolerance must be negative.
 
-Explicit solver parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-* ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
-    Relative error tolerance of the AMReX multigrid solver.
-
-* ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
-    Absolute error tolerance of the AMReX multigrid solver.
-
-* ``hipace.MG_verbose`` (`int`) optional (default `0`)
-    Level of verbosity of the AMReX multigrid solver.
 
 Plasma parameters
 -----------------
@@ -325,16 +334,16 @@ When both are specified, the per-species value is used.
     The charge gets multiplied by the current ionization level.
 
 * ``<plasma name>.element`` (`string`) optional (default "")
-    The Physical Element of the plasma. Sets charge, mass and, if available,
-    the specific Ionization Energy of each state.
+    The physical element of the plasma. Sets charge, mass and, if available,
+    the specific ionization energy of each state.
     Options are: ``electron``, ``positron``, ``H``, ``D``, ``T``, ``He``, ``Li``, ``Be``, ``B``, ….
 
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
-    The initial Ionization state of the plasma. `0` for neutral gasses.
-    If set, the Plasma charge gets multiplied by this number.
+    The initial ionization state of the plasma. `0` for neutral gasses.
+    If set, the plasma charge gets multiplied by this number.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced

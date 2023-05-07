@@ -36,8 +36,12 @@ Please see installation instructions below in the Developers section.
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
   - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
-- Nvidia GPU support: `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__ (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
-- CPU-only: `FFTW3 <http://www.fftw.org/>`__ (only used serially; *not* needed for Nvidia GPUs)
+
+Platform-dependent, at least one of the following:
+
+- `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__: for NVIDIA GPU support (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
+- `ROCm 5.1+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
+- `FFTW3 <http://www.fftw.org/>`__: for CPUs (only used serially, but multi-threading supported; *not* needed for GPUs)
 
 Optional dependencies include:
 
@@ -75,6 +79,11 @@ The dependencies can be installed via the package manager
    spack install
 
 (in new terminals, re-activate the environment with ``spack env activate hipace-dev`` again)
+
+.. note::
+   On Ubuntu distributions, the InstallError ``"OpenMPI requires both C and Fortran compilers"`` can occur because the Fortran compilers are sometimes not set automatically in Spack.
+   To fix this, the Fortran compilers must be set manually using ``spack config edit compilers`` (more information can be found `here <https://spack.readthedocs.io/en/latest/getting_started.html#compiler-configuration>`__).
+   For GCC, the flags ``f77 : null`` and ``fc : null`` must be set to ``f77 : gfortran`` and ``fc : gfortran``.
 
 .. _install-brew:
 
@@ -124,6 +133,12 @@ If you also want to select a CUDA compiler:
 
 Build & Test
 ------------
+
+If you have not downloaded HiPACE++ yet, please clone it from GitHub via
+
+.. code-block:: bash
+
+   git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # or choose your preferred path
 
 From the base of the HiPACE++ source directory, execute:
 
@@ -182,7 +197,7 @@ CMake Option                 Default & Values                                   
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``      Repository URI to pull and build openPMD-api from
 ``HiPACE_openpmd_branch``    ``0.15.1``                                          Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                          Needs a pre-installed openPMD-api library if set to ``OFF``
-``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver. Required for explicit solver
+``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver.
 ===========================  ==================================================  =============================================================
 
 For example, one can also build against a local AMReX copy.
