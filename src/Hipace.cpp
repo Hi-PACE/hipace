@@ -524,6 +524,15 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
             if (islice < m_3D_geom[lev].Domain().smallEnd(Direction::z) ||
                 islice > m_3D_geom[lev].Domain().bigEnd(Direction::z)) {
                 continue;
+            } else if (islice == m_3D_geom[lev].Domain().bigEnd(Direction::z)) {
+                // first slice of level 1 (islice goes backwards)
+                // iterpolate jx_beam and jy_beam from level 0 to level 1
+                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::Previous1, "jx_beam");
+                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::Previous1, "jy_beam");
+                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::This, "jx_beam");
+                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::This, "jy_beam");
+                m_fields.duplicate(lev, WhichSlice::This, {"jx"     , "jy"     },
+                                        WhichSlice::This, {"jx_beam", "jy_beam"});
             }
         }
 
