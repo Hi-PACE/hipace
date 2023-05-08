@@ -24,7 +24,7 @@ args = parser.parse_args()
 ts = OpenPMDTimeSeries(args.output_dir)
 
 # Load Hipace data for jz
-jz_sim, jz_info = ts.get_field(field='jz', iteration=1)
+jz_sim, jz_info = ts.get_field(field='jz_beam', iteration=1)
 
 # Assert that the grid current and the beam current cancel each other
 error_jz = np.sum( (jz_sim)**2)

@@ -523,6 +523,9 @@ Fields::AddRhoIons (const int lev)
     if (!m_any_neutral_background) return;
     HIPACE_PROFILE("Fields::AddRhoIons()");
     add(lev, WhichSlice::This, {"rhomjz"}, WhichSlice::RhoIons, {"rhomjz"});
+    if (Hipace::m_deposit_rho) {
+        add(lev, WhichSlice::This, {"rho"}, WhichSlice::RhoIons, {"rhomjz"});
+    }
 }
 
 /** \brief Sets non zero Dirichlet Boundary conditions in RHS which is the source of the Poisson
