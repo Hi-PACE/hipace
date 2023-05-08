@@ -186,6 +186,7 @@ General parameters
 * ``hipace.deposit_rho`` (`bool`) optional (default `0`)
     If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
     Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
 
 * ``hipace.salame_n_iter`` (`int`) optional (default `3`)
     Number of iterations the SALAME algorithm should do when it is used.

@@ -126,6 +126,10 @@ public:
                hasBeamOutput(output_step, max_step, output_time, max_time);
     }
 
+    /** \brief determines if rho is requested as a diagnostic
+     */
+    bool needsRho () const;
+
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *
      * \param[in] slice_dir slicing direction

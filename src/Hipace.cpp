@@ -147,6 +147,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
+    m_deposit_rho = m_diags.needsRho();
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
