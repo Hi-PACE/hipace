@@ -8,7 +8,12 @@
 #ifndef ROCFFTUTILS_H_
 #define ROCFFTUTILS_H_
 
-#include <rocfft/rocfft.h>
+#include <cstddef>
+#if __has_include(<rocfft/rocfft.h>)  // ROCm 5.3+
+#  include <rocfft/rocfft.h>
+#else
+#  include <rocfft.h>
+#endif
 
 #include <string>
 
