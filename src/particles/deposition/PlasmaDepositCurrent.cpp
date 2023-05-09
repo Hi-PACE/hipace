@@ -32,16 +32,16 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
     which_slice == WhichSlice::This || which_slice == WhichSlice::Next ||
-    which_slice == WhichSlice::RhoIons || which_slice == WhichSlice::Salame,
+    which_slice == WhichSlice::RhomJzIons || which_slice == WhichSlice::Salame,
     "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
-    " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhoIons)"
+    " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhomJzIons)"
     " or for the Salame slice (WhichSlice::Salame)");
 
     // Extract properties associated with physical size of the box
     amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
 
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
-    const amrex::Real charge = (which_slice == WhichSlice::RhoIons) ? -plasma.m_charge : plasma.m_charge;
+    const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
 
     // Loop over particle boxes

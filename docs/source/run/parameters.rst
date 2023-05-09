@@ -702,10 +702,12 @@ Field diagnostics
 * ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be ``all``,
     ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
-    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
-    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
-    for all plasmas are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
-    ``jx jy jz rho`` are available.
+    additionally ``jx jy jz rhomjz`` are available, which are the current and charge densities of the
+    plasma and the beam, with ``rhomjz`` equal to :math:`\rho-j_z/c`.
+    For the explicit solver, the current and charge densities of the beam and
+    for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
+    If ``rho`` is explicitly mentioned as ``field_data``, it will be deposited by the plasma
+    to be available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 

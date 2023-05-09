@@ -407,13 +407,13 @@ Hipace::Evolve ()
                 // to deposit the neutralizing background
                 m_multi_plasma.TagByLevel(m_N_level, m_3D_geom, -1);
 
-                /* Store charge density of (immobile) ions into WhichSlice::RhoIons */
+                /* Store charge density of (immobile) ions into WhichSlice::RhomJzIons */
                 for (int lev=0; lev<m_N_level; ++lev) {
                     if (m_do_tiling) {
                         m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
                     }
                     m_multi_plasma.DepositNeutralizingBackground(
-                        m_fields, m_multi_laser, WhichSlice::RhoIons, m_3D_geom, lev);
+                        m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
                 }
             }
 
@@ -619,7 +619,7 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     m_fields.AddRhoIons(lev);
 
-    // deposit jz_beam and maybe rhomjz on This slice
+    // deposit jz_beam and maybe rhomjz of the beam on This slice
     m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
         false, true, m_do_beam_jz_minus_rho, WhichSlice::This);
 
@@ -672,7 +672,7 @@ Hipace::PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
         m_fields.setVal(0., lev, WhichSlice::This, "rho");
     }
 
-    // deposit jx jy jz maybe chi and rhomjz
+    // deposit jx jy jz (maybe chi) and rhomjz
     m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
         true, true, m_deposit_rho, m_use_laser, true, m_3D_geom, lev);
 

@@ -69,6 +69,7 @@ Fields::AllocData (
             // explicit solver:
             // beams share jx_beam jy_beam jz_beam
             // jx jy rhomjz for all plasmas and beams
+            // rho is plasma-only if used
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
@@ -92,7 +93,7 @@ Fields::AllocData (
             isl = WhichSlice::Previous2;
             // empty
 
-            isl = WhichSlice::RhoIons;
+            isl = WhichSlice::RhomJzIons;
             if (m_any_neutral_background) {
                 Comps[isl].multi_emplace(N_Comps, "rhomjz");
             }
@@ -106,6 +107,7 @@ Fields::AllocData (
         } else {
             // predictor-corrector:
             // all beams and plasmas share jx jy jz rhomjz
+            // rho is plasma-only if used
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx", "jy");
@@ -128,7 +130,7 @@ Fields::AllocData (
             isl = WhichSlice::Previous2;
             Comps[isl].multi_emplace(N_Comps, "Bx", "By");
 
-            isl = WhichSlice::RhoIons;
+            isl = WhichSlice::RhomJzIons;
             if (m_any_neutral_background) {
                 Comps[isl].multi_emplace(N_Comps, "rhomjz");
             }
@@ -368,10 +370,10 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
  */
 template<class FV>
 void
-LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
-                const amrex::Real factor, const FV& src)
+Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
+          const amrex::Real factor, const FV& src)
 {
-    HIPACE_PROFILE("Fields::LinCombination()");
+    HIPACE_PROFILE("Fields::Multiply()");
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -522,9 +524,9 @@ Fields::AddRhoIons (const int lev)
 {
     if (!m_any_neutral_background) return;
     HIPACE_PROFILE("Fields::AddRhoIons()");
-    add(lev, WhichSlice::This, {"rhomjz"}, WhichSlice::RhoIons, {"rhomjz"});
+    add(lev, WhichSlice::This, {"rhomjz"}, WhichSlice::RhomJzIons, {"rhomjz"});
     if (Hipace::m_deposit_rho) {
-        add(lev, WhichSlice::This, {"rho"}, WhichSlice::RhoIons, {"rhomjz"});
+        add(lev, WhichSlice::This, {"rho"}, WhichSlice::RhomJzIons, {"rhomjz"});
     }
 }
 
@@ -783,7 +785,7 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
     InterpolateFromLev0toLev1(geom, lev, "rhomjz", m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    LinCombination(m_source_nguard, getStagingArea(lev),
+    Multiply(m_source_nguard, getStagingArea(lev),
         -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
 
     SetBoundaryCondition(geom, lev, "Psi", getStagingArea(lev));
