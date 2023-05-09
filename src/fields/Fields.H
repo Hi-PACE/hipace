@@ -25,7 +25,7 @@ class MultiLaser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous1, Previous2, RhoIons, Salame, N };
+    enum slice { Next=0, This, Previous1, Previous2, RhomJzIons, Salame, N };
 };
 
 struct assert_map : std::map<std::string, int> {

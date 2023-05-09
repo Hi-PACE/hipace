@@ -47,7 +47,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                         WhichSlice::Next, {"jx_beam", "jy_beam"});
 
-        // deposit plasma jx and jy on the next temp slice, to the SALANE slice
+        // deposit plasma jx and jy on the next temp slice, to the SALAME slice
         hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
                 WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
 
