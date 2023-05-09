@@ -363,6 +363,12 @@ When both are specified, the per-species value is used.
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+* ``<plasma name> or plasmas.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the plasma in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three additional particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`).
+    The total number of plasma particles is multiplied by 4. This option is helpful to prevent a numerical seeding of the hosing instability for a plasma with a temperature.
+
 * ``<plasma name> or plasmas.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
     A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
