@@ -240,7 +240,10 @@ void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geo
     int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
     if (deposit_ghost) box_offset = numParticles()-nghost;
 
-    const auto pos_structs = GetArrayOfStructs().begin() + box_offset;
+    auto& soa = GetStructOfArrays();
+    const amrex::Real * const pos_x = soa.GetRealData(BeamIdx::x).data() + box_offset;
+    const amrex::Real * const pos_y = soa.GetRealData(BeamIdx::y).data() + box_offset;
+    int * const cpup = soa.GetIntData(BeamIdx::cpu).data() + box_offset;
 
     BeamBins::index_type const * const indices = m_slice_bins.permutationPtr();
     BeamBins::index_type const * const offsets = m_slice_bins.offsetsPtrCpu();
@@ -276,13 +279,13 @@ void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geo
             const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 
             if (has_zeta &&
-                lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
-                lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+                lo_x < pos_x[ip] && pos_x[ip] < hi_x &&
+                lo_y < pos_y[ip] && pos_y[ip] < hi_y) {
                 // level 1
-                pos_structs[ip].cpu() = 1;
+                cpup[ip] = 1;
             } else {
                 // level 0
-                pos_structs[ip].cpu() = 0;
+                cpup[ip] = 0;
             }
         }
     );

@@ -111,7 +111,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
                     // only push plasma particles on their according MR level
-                    if (setPositionEnforceBC.m_pardata.id(ip) < 0
+                    if (setPositionEnforceBC.m_pardata.id(ip) < 0 ||
                         setPositionEnforceBC.m_pardata.cpu(ip) != lev) return;
 
                     amrex::Real xp = x_prev[ip];

@@ -193,8 +193,10 @@ PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geomet
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        auto& aos = pti.GetArrayOfStructs();
-        const auto& pos_structs = aos.begin();
+        auto& soa = pti.GetStructOfArrays();
+        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
+        int * const AMREX_RESTRICT cpup = soa.GetIntData(PlasmaIdx::cpu).data();
 
         // Use islice == -1 as a wildcard
         const bool has_zeta = (islice >= geom3D[1].Domain().smallEnd(2) &&
@@ -207,13 +209,13 @@ PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geomet
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (has_zeta &&
-                    lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
-                    lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+                    lo_x < pos_x[ip] && pos_x[ip] < hi_x &&
+                    lo_y < pos_y[ip] && pos_y[ip] < hi_y) {
                     // level 1
-                    pos_structs[ip].cpu() = 1;
+                    cpup[ip] = 1;
                 } else {
                     // level 0
-                    pos_structs[ip].cpu() = 0;
+                    cpup[ip] = 0;
                 }
             }
         );
@@ -275,6 +277,7 @@ IonizationModule (const int lev,
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
         const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
+        const int * const cpup = soa_ion.GetIntData(PlasmaIdx::cpu).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -298,7 +301,7 @@ IonizationModule (const int lev,
             xp = x_prev[ip];
             yp = y_prev[ip];
 
-            if (pid < 0 || getPosition.m_pardata.cpu(ip) != lev) return;
+            if (pid < 0 || cpup[ip] != lev) return;
 
             // define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
