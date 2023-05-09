@@ -183,6 +183,11 @@ General parameters
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
 
+* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
+    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
 * ``hipace.salame_n_iter`` (`int`) optional (default `3`)
     Number of iterations the SALAME algorithm should do when it is used.
 
@@ -697,10 +702,12 @@ Field diagnostics
 * ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be ``all``,
     ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
-    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
-    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
-    for all plasmas are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
-    ``jx jy jz rho`` are available.
+    additionally ``jx jy jz rhomjz`` are available, which are the current and charge densities of the
+    plasma and the beam, with ``rhomjz`` equal to :math:`\rho-j_z/c`.
+    For the explicit solver, the current and charge densities of the beam and
+    for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
+    If ``rho`` is explicitly mentioned as ``field_data``, it will be deposited by the plasma
+    to be available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 

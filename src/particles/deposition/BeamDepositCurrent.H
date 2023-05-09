@@ -22,7 +22,7 @@
  * \param[in] islice index of the slice on which the beam particles are pushed
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] do_beam_jz_deposition whether the beams deposit Jz
- * \param[in] do_beam_rho_deposition whether the beams deposit rho
+ * \param[in] do_beam_rhomjz_deposition whether the beams deposit rhomjz
  * \param[in] which_slice defines if this or the next slice is handled
  * \param[in] nghost number of ghost particles, all at the end of the particle array.
  *            Use for depositing transverse currents in the Next slice when processing
@@ -33,7 +33,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Vector<amrex::Geometry> const& gm, int const lev, const int islice,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
-                     const bool do_beam_rho_deposition,
+                     const bool do_beam_rhomjz_deposition,
                      const int which_slice, int nghost);
 
 
