@@ -253,8 +253,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         }
         if (m_do_symmetrize) {
 
-            const amrex::Real x_mid2 = 0.5*(ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
-            const amrex::Real y_mid2 = 0.5*(ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
+            const amrex::Real x_mid2 = (ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
+            const amrex::Real y_mid2 = (ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
             const amrex::Long mirror_offset = total_num_particles/4;
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
