@@ -84,7 +84,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
             int pid;
 
             // only finest MR level pushes the beam
-            if (setPositionEnforceBC.m_structs[ip].cpu() != lev) return;
+            if (setPositionEnforceBC.m_pardata.cpu(ip) != lev) return;
 
             for (int i = 0; i < n_subcycles; i++) {
 

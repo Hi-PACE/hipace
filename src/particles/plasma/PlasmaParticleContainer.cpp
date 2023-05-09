@@ -298,7 +298,7 @@ IonizationModule (const int lev,
             xp = x_prev[ip];
             yp = y_prev[ip];
 
-            if (pid < 0 || getPosition.m_structs[ip].cpu() != lev) return;
+            if (pid < 0 || getPosition.m_pardata.cpu(ip) != lev) return;
 
             // define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
