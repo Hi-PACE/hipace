@@ -24,7 +24,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
     using namespace amrex::literals;
-    const int lev = m_level;
+    clearParticles();
+    const int lev = 0;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
     const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
@@ -102,9 +103,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         auto old_size = particle_tile.size();
         auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
-        m_init_num_par[mfi.tileIndex()] = new_size;
 
-        int procID = amrex::ParallelDescriptor::MyProc();
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + total_num_particles);
 
@@ -220,13 +219,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
                 arrdata[PlasmaIdx::id       ][pidx] = pid + int(pidx);
-                arrdata[PlasmaIdx::cpu      ][pidx] = procID;
+                arrdata[PlasmaIdx::cpu      ][pidx] = 0; // level 0
                 arrdata[PlasmaIdx::x        ][pidx] = x;
                 arrdata[PlasmaIdx::y        ][pidx] = y;
                 arrdata[PlasmaIdx::z        ][pidx] = z;
 
                 arrdata[PlasmaIdx::w        ][pidx] = scale_fac * density_func(x, y, c_t);
-                arrdata[PlasmaIdx::w0       ][pidx] = scale_fac;
                 arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
@@ -243,8 +241,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     arrdata[iforce][pidx] = 0._rt;
                 }
 #endif
-                arrdata[PlasmaIdx::x0       ][pidx] = x;
-                arrdata[PlasmaIdx::y0       ][pidx] = y;
                 int_arrdata[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             });
 

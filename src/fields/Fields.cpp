@@ -696,6 +696,40 @@ Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, c
 
 
 void
+Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                 const int which_slice, const std::string component)
+{
+    if (lev == 0) return; // only interpolate field to lev 1
+    HIPACE_PROFILE("Fields::LevelUp()");
+    constexpr int interp_order = 2;
+
+    auto field_coarse_interp = interpolated_field_xy<interp_order, amrex::MultiFab>{
+        getField(lev-1, which_slice, component), geom[lev-1]};
+    amrex::MultiFab field_fine = getField(lev, which_slice, component);
+
+    for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
+    {
+        auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
+        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
+
+        const amrex::Real dx = geom[lev].CellSize(0);
+        const amrex::Real dy = geom[lev].CellSize(1);
+        const amrex::Real offset0 = GetPosOffset(0, geom[lev], geom[lev].Domain());
+        const amrex::Real offset1 = GetPosOffset(1, geom[lev], geom[lev].Domain());
+
+        amrex::ParallelFor(field_fine[mfi].box(),
+            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
+            {
+                // interpolate the full field
+                const amrex::Real x = i * dx + offset0;
+                const amrex::Real y = j * dy + offset1;
+                arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
+            });
+    }
+}
+
+
+void
 Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, const int lev)
 {
     /* Solves Laplacian(Psi) =  1/epsilon0 * -(rho-Jz/c) and

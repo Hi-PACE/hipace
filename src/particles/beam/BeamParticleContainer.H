@@ -159,7 +159,6 @@ public:
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     int m_n_subcycles {10}; /**< Number of sub-cycles in the beam pusher */
-    int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
     int m_num_particles_on_upstream_ranks {0};
@@ -173,6 +172,17 @@ public:
     unsigned long long m_total_num_particles {0};
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;}
+
+    /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
+     * \param[in] nlev number of MR levels
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] which_slice slice to mark
+     * \param[in] islice current slice
+     * \param[in] islice_local local index of the slice
+     * \param[in] nghost number of ghost particles
+     */
+    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int which_slice,
+                     const int islice, const int islice_local, const int nghost);
 
     amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
 

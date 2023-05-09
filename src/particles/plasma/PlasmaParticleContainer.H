@@ -23,12 +23,10 @@ struct PlasmaIdx
     enum {
         x=0, y, z,          // position
         w,                  // weight
-        w0,                 // initial weight
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
         x_prev, y_prev,     // positions on the last non-temp slice
 
-        x0, y0,             // initial positions
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
         uy_half_step,       // at the same step for AB5 pusher
         psi_half_step,      // never effected by temp slice
@@ -42,7 +40,7 @@ struct PlasmaIdx
         nattribs
     };
     enum {
-        id=0, cpu,
+        id=0, cpu,          // cpu used for MR level
         ion_lev,            // ionization level
         int_nattribs
     };
@@ -112,6 +110,13 @@ public:
      */
     void UpdateDensityFunction ();
 
+    /** \brief Store the finest level of every plasma particle in the cpu() attribute.
+     * \param[in] nlev number of MR levels
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] islice current slice
+     */
+    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice);
+
     /** returns u_mean of the plasma distribution */
     amrex::RealVect GetUMean () const {return m_u_mean;}
 
@@ -136,7 +141,6 @@ public:
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
-    int m_level {0}; /**< mesh refinement level on which the plasma lives */
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
@@ -146,7 +150,6 @@ public:
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
-    amrex::Long m_num_exchange {0}; /** Number of particles that will be exchanged between slices*/
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
@@ -161,8 +164,6 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
     /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
-    /** initial number of particles before ones are added through ionization */
-    std::map<int,unsigned long> m_init_num_par;
     /** After how many slices the particles are reordered. 0: off */
     int m_reorder_period = 0;
     /** 2D reordering index type. 0: cell, 1: node, 2: both */
@@ -177,8 +178,8 @@ class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::nattribs,Plas
 {
 public:
     /** Constructor */
-    PlasmaParticleIterator (ContainerType& pc, int level)
-        : amrex::ParIterSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, level, DfltMfi) {}
+    PlasmaParticleIterator (ContainerType& pc)
+        : amrex::ParIterSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
 };
 
 #endif

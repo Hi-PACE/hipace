@@ -27,23 +27,20 @@ template struct PlasmaMomentumDerivative<DualNumber>;
 
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
-                        amrex::Geometry const& gm, const bool temp_slice, int const lev,
+                        amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
                         PlasmaBins& bins, const MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("AdvancePlasmaParticles()");
     using namespace amrex::literals;
 
-    // only push plasma particles on their according MR level
-    if (plasma.m_level != lev) return;
-
     const bool do_tiling = Hipace::m_do_tiling;
 
     // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
+    amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
@@ -66,8 +63,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real dy_inv = 1._rt/dx[1];
 
         // Offset for converting positions to indexes
-        amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, slice_fab.box());
+        amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], slice_fab.box());
 
         auto& soa = pti.GetStructOfArrays(); // For momenta and weights
 
@@ -87,8 +84,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                                                   : nullptr;
 
         using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(pti.GetParticleTile(), gm);
-        const amrex::Real dz = dx[2];
+        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(pti.GetParticleTile(), gm[0]);
+        const amrex::Real dz = gm[0].CellSize(2);
 
         const amrex::Real me_clight_mass_ratio = phys_const.c * phys_const.m_e/plasma.m_mass;
         const amrex::Real clight = phys_const.c;
@@ -113,7 +110,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 num_particles,
                 [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                     const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
-                    if (setPositionEnforceBC.m_pardata.id(ip) < 0) return;
+                    // only push plasma particles on their according MR level
+                    if (setPositionEnforceBC.m_pardata.id(ip) < 0
+                        setPositionEnforceBC.m_pardata.cpu(ip) != lev) return;
 
                     amrex::Real xp = x_prev[ip];
                     amrex::Real yp = y_prev[ip];
@@ -306,85 +305,5 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
             rd[PlasmaIdx::Fpsi2].swap(rd[PlasmaIdx::Fpsi1]);
         }
 #endif
-    }
-}
-
-void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev)
-{
-    HIPACE_PROFILE("ResetPlasmaParticles()");
-
-    using namespace amrex::literals;
-    const PhysConst phys_const = get_phys_const();
-
-    const amrex::RealVect u_mean = plasma.GetUMean();
-    const amrex::RealVect u_std = plasma.GetUStd();
-    const int init_ion_lev = plasma.m_init_ion_lev;
-
-    // Loop over particle boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti)
-    {
-        unsigned long num_initial_particles = plasma.m_init_num_par[pti.tileIndex()];
-        pti.GetParticleTile().resize(num_initial_particles);
-
-        auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-        amrex::Real * const uxp = soa.GetRealData(PlasmaIdx::ux).data();
-        amrex::Real * const uyp = soa.GetRealData(PlasmaIdx::uy).data();
-        amrex::Real * const psip = soa.GetRealData(PlasmaIdx::psi).data();
-        amrex::Real * const x_prev = soa.GetRealData(PlasmaIdx::x_prev).data();
-        amrex::Real * const y_prev = soa.GetRealData(PlasmaIdx::y_prev).data();
-        amrex::Real * const ux_half_step = soa.GetRealData(PlasmaIdx::ux_half_step).data();
-        amrex::Real * const uy_half_step = soa.GetRealData(PlasmaIdx::uy_half_step).data();
-        amrex::Real * const psi_half_step =soa.GetRealData(PlasmaIdx::psi_half_step).data();
-#ifdef HIPACE_USE_AB5_PUSH
-        auto arrdata = soa.realarray();
-#endif
-        amrex::Real * const x0 = soa.GetRealData(PlasmaIdx::x0).data();
-        amrex::Real * const y0 = soa.GetRealData(PlasmaIdx::y0).data();
-        amrex::Real * const w = soa.GetRealData(PlasmaIdx::w).data();
-        amrex::Real * const w0 = soa.GetRealData(PlasmaIdx::w0).data();
-        int * const ion_lev = soa.GetIntData(PlasmaIdx::ion_lev).data();
-
-        const auto GetPosition =
-            GetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
-        const auto SetPosition =
-            SetParticlePosition<PlasmaParticleContainer::ParticleTileType>(pti.GetParticleTile());
-
-        plasma.UpdateDensityFunction();
-        auto density_func = plasma.m_density_func;
-        const amrex::Real c_t = phys_const.c * Hipace::m_physical_time;
-
-        amrex::ParallelForRNG(
-            pti.numParticles(),
-            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
-
-                amrex::ParticleReal xp, yp, zp;
-                int pid;
-                GetPosition(ip, xp, yp, zp, pid);
-
-                amrex::Real u[3] = {0._rt,0._rt,0._rt};
-                ParticleUtil::get_gaussian_random_momentum(u, u_mean, u_std, engine);
-
-                SetPosition(ip, x0[ip], y0[ip], zp, std::abs(pid));
-                w[ip] = w0[ip] * density_func(x0[ip], y0[ip], c_t);
-                uxp[ip] = u[0]*phys_const.c;
-                uyp[ip] = u[1]*phys_const.c;
-                psip[ip] = std::sqrt(1._rt + u[0]*u[0] + u[1]*u[1] + u[2]*u[2]) - u[2];
-                x_prev[ip] = x0[ip];
-                y_prev[ip] = y0[ip];
-                ux_half_step[ip] = u[0]*phys_const.c;
-                uy_half_step[ip] = u[1]*phys_const.c;
-                psi_half_step[ip] = psip[ip];
-#ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
-                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
-                    arrdata[iforce][ip] = 0._rt;
-                }
-#endif
-                ion_lev[ip] = init_ion_lev;
-            }
-            );
     }
 }

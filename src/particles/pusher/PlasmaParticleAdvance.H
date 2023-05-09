@@ -25,14 +25,7 @@
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
-                        amrex::Geometry const& gm, const bool temp_slice, int const lev,
+                        amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
                         PlasmaBins& bins, const MultiLaser& multi_laser);
-
-/** \brief Resets the particle position x, y, to x_prev, y_prev
- * \param[in,out] plasma plasma species to reset
- * \param[in] lev MR level
- */
-void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev);
 
 #endif //  PLASMAPARTICLEADVANCE_H_

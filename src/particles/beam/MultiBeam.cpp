@@ -83,6 +83,18 @@ MultiBeam::AdvanceBeamParticlesSlice (
     }
 }
 
+void
+MultiBeam::TagByLevel (
+    const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int which_slice,
+    const int islice, const int islice_local)
+{
+    for (int i=0; i<m_nbeams; i++) {
+        const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
+        m_all_beams[i].TagByLevel(nlev, geom3D, which_slice, islice, islice_local, nghost);
+    }
+}
+
+
 int
 MultiBeam::NumRealComps ()
 {

@@ -23,7 +23,6 @@ private:
     /** Width of the Gaussian grid current. */
     amrex::RealVect m_position_std {0., 0., 0.};
     amrex::Real m_peak_current_density {0.}; /**< peak density for the grid current */
-    int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
 
 public:
     /** Constructor */
