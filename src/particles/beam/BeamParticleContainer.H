@@ -42,13 +42,13 @@ using BeamTile = amrex::ParticleTile<
     >;
 
 struct BeamBins : amrex::DenseBins<
-        BeamTile::ParticleType> {
+        BeamTile::ParticleTileDataType> {
 
     template<class...Args>
     void build (Args&&...args) {
         // call build function of the underlying DenseBins object
         // with all of the arguments forwarded
-        amrex::DenseBins<BeamTile::ParticleType>::build(args...);
+        amrex::DenseBins<BeamTile::ParticleTileDataType>::build(args...);
 
         // after every build call copy offsets array form GPU to CPU
         const auto offset_size = numBins() + 1;
