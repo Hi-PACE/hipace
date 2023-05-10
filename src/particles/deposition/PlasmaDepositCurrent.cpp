@@ -69,7 +69,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         auto& soa = pti.GetStructOfArrays(); // For positions, momenta and weights
 
         const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
-        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
         amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
         const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
         const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
