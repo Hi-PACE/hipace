@@ -363,6 +363,12 @@ When both are specified, the per-species value is used.
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+* ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
+    | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.
+    | Note: Using a temperature can affect the performance since the plasma particles loose their order and thus their favorable memory access pattern. The performance can be mostly recovered by reordering the plasma particles (see ``<plasma name> or plasmas.reorder_period``).
+      Furthermore, the noise of the temperature can seed the hosing instability. The amplitude of the seeding is unphysical, because the number of macro-particles is typically orders of magnitude below the number of actual plasma electrons.
+      Since it is often unfeasible to use a sufficient amount of plasma macro-particles per cell to suppress this numerical seed, the plasma can be symmetrized to prevent the onset of the hosing instability (see ``<plasma name> or plasmas.do_symmetrize``).
+
 * ``<plasma name> or plasmas.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes the plasma in the transverse phase space. For each particle with (`x`, `y`, `ux`,
     `uy`), three additional particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
