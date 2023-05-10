@@ -111,6 +111,7 @@ PlasmaParticleContainer::ReadParameters ()
 
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
+    queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");

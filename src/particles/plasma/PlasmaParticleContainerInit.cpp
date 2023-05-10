@@ -71,7 +71,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         const amrex::Real min_density = m_min_density;
 
         // Count the total number of particles so only one resize is needed
-        const amrex::Long total_num_particles = amrex::Reduce::Sum<amrex::Long>(tile_box.numPts(),
+        amrex::Long total_num_particles = amrex::Reduce::Sum<amrex::Long>(tile_box.numPts(),
             [=] AMREX_GPU_DEVICE (amrex::Long idx) noexcept
             {
                 auto [i,j,k] = tile_box.atOffset3d(idx).arr;
@@ -97,15 +97,24 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 return num_particles_cell;
             });
 
+        if (m_do_symmetrize) {
+            total_num_particles *= 4;
+        }
+
         auto& particles = GetParticles(lev);
         auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
 
         auto old_size = particle_tile.GetArrayOfStructs().size();
-        auto new_size = old_size + total_num_particles;
+        const auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
 
-        int pid = ParticleType::NextID();
+        const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + total_num_particles);
+
+        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
+        auto arrdata = particle_tile.GetStructOfArrays().realarray();
+        auto int_arrdata = particle_tile.GetStructOfArrays().intarray();
+        const int init_ion_lev = m_init_ion_lev;
 
         // The loop over particles is outside the loop over cells
         // so that particles in the same cell are far apart.
@@ -171,13 +180,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
             if (num_to_add == 0) continue;
-
-            ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-
-            auto arrdata = particle_tile.GetStructOfArrays().realarray();
-            auto int_arrdata = particle_tile.GetStructOfArrays().intarray();
-
-            const int init_ion_lev = m_init_ion_lev;
 
             amrex::ParallelForRNG(tile_box,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
@@ -249,6 +251,60 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
             old_size += num_to_add;
         }
+        if (m_do_symmetrize) {
+
+            const amrex::Real x_mid2 = (ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
+            const amrex::Real y_mid2 = (ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
+            const amrex::Long mirror_offset = total_num_particles/4;
+            amrex::ParallelFor(mirror_offset,
+            [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
+            {
+                ParticleType& p = pstruct[pidx];
+                const amrex::Real x = p.pos(0);
+                const amrex::Real y = p.pos(1);
+                const amrex::Real x_mirror = x_mid2 - x;
+                const amrex::Real y_mirror = y_mid2 - y;
+
+                const amrex::Real x_arr[3] = {x_mirror, x, x_mirror};
+                const amrex::Real y_arr[3] = {y, y_mirror, y_mirror};
+                const amrex::Real ux_arr[3] = {-1._rt, 1._rt, -1._rt};
+                const amrex::Real uy_arr[3] = {1._rt, -1._rt, -1._rt};
+
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int imirror=0; imirror<3; ++imirror) {
+                    const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
+                    pstruct[midx] = p;
+                    pstruct[midx].id() = pid + int(midx);
+                    pstruct[midx].pos(0) = x_arr[imirror];
+                    pstruct[midx].pos(1) = y_arr[imirror];
+
+                    arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
+                    arrdata[PlasmaIdx::ux][midx] = arrdata[PlasmaIdx::ux][pidx] * ux_arr[imirror];
+                    arrdata[PlasmaIdx::uy][midx] = arrdata[PlasmaIdx::uy][pidx] * uy_arr[imirror];
+                    arrdata[PlasmaIdx::psi][midx] = arrdata[PlasmaIdx::psi][pidx];
+                    arrdata[PlasmaIdx::x_prev][midx] = x_arr[imirror];
+                    arrdata[PlasmaIdx::y_prev][midx] = y_arr[imirror];
+                    arrdata[PlasmaIdx::ux_half_step][midx] =
+                        arrdata[PlasmaIdx::ux_half_step][pidx] * ux_arr[imirror];
+                    arrdata[PlasmaIdx::uy_half_step][midx] =
+                        arrdata[PlasmaIdx::uy_half_step][pidx] * uy_arr[imirror];
+                    arrdata[PlasmaIdx::psi_half_step][midx] =
+                        arrdata[PlasmaIdx::psi_half_step][pidx];
+#ifdef HIPACE_USE_AB5_PUSH
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                    for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                        arrdata[iforce][midx] = 0._rt;
+                    }
+#endif
+                    int_arrdata[PlasmaIdx::ion_lev][midx] = int_arrdata[PlasmaIdx::ion_lev][pidx];
+
+        }
+    });
+}
     }
 
     AMREX_ASSERT(OK());
