@@ -22,8 +22,11 @@
 #ifdef AMREX_USE_CUDA
 #  include <cufft.h>
 #elif defined(AMREX_USE_HIP)
-#  include <cstddef>
-#  include <rocfft.h>
+#  if __has_include(<rocfft/rocfft.h>)  // ROCm 5.3+
+#    include <rocfft/rocfft.h>
+#  else
+#    include <rocfft.h>
+#  endif
 #else
 #  include <fftw3.h>
 #endif
