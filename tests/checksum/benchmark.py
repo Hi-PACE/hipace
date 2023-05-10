@@ -48,7 +48,9 @@ class Benchmark:
         '''
         print("start resetting benchmark...")
         with open(self.json_file, 'w') as outfile:
-            json.dump(self.data, outfile, sort_keys=True, indent=2)
+            # match output of manual reset
+            json.dump(self.data, outfile, indent=2)
+            outfile.write('\n')
         print("benchmark reset successfully.")
 
     def get(self):

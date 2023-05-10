@@ -183,6 +183,11 @@ General parameters
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
 
+* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
+    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
 * ``hipace.salame_n_iter`` (`int`) optional (default `3`)
     Number of iterations the SALAME algorithm should do when it is used.
 
@@ -357,6 +362,18 @@ When both are specified, the per-species value is used.
     When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
+
+* ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
+    | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.
+    | Note: Using a temperature can affect the performance since the plasma particles loose their order and thus their favorable memory access pattern. The performance can be mostly recovered by reordering the plasma particles (see ``<plasma name> or plasmas.reorder_period``).
+      Furthermore, the noise of the temperature can seed the hosing instability. The amplitude of the seeding is unphysical, because the number of macro-particles is typically orders of magnitude below the number of actual plasma electrons.
+      Since it is often unfeasible to use a sufficient amount of plasma macro-particles per cell to suppress this numerical seed, the plasma can be symmetrized to prevent the onset of the hosing instability (see ``<plasma name> or plasmas.do_symmetrize``).
+
+* ``<plasma name> or plasmas.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the plasma in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three additional particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`).
+    The total number of plasma particles is multiplied by 4. This option is helpful to prevent a numerical seeding of the hosing instability for a plasma with a temperature.
 
 * ``<plasma name> or plasmas.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
@@ -697,10 +714,12 @@ Field diagnostics
 * ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)
     Names of the fields written to file, separated by a space. The field names need to be ``all``,
     ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
-    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
-    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
-    for all plasmas are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
-    ``jx jy jz rho`` are available.
+    additionally ``jx jy jz rhomjz`` are available, which are the current and charge densities of the
+    plasma and the beam, with ``rhomjz`` equal to :math:`\rho-j_z/c`.
+    For the explicit solver, the current and charge densities of the beam and
+    for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
+    If ``rho`` is explicitly mentioned as ``field_data``, it will be deposited by the plasma
+    to be available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 

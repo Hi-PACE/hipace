@@ -111,6 +111,7 @@ PlasmaParticleContainer::ReadParameters ()
 
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
+    queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
@@ -374,8 +375,8 @@ IonizationModule (const int lev,
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 
-                arrdata_elec[PlasmaIdx::id      ][pidx] = pid_start + pid;
-                arrdata_elec[PlasmaIdx::cpu     ][pidx] = lev; // current level
+                int_arrdata_elec[PlasmaIdx::id      ][pidx] = pid_start + pid;
+                int_arrdata_elec[PlasmaIdx::cpu     ][pidx] = lev; // current level
                 arrdata_elec[PlasmaIdx::x       ][pidx] = xp;
                 arrdata_elec[PlasmaIdx::y       ][pidx] = yp;
                 arrdata_elec[PlasmaIdx::z       ][pidx] = zp;

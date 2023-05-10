@@ -31,6 +31,7 @@ RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
+        diagnostic.field_data = all rho \
         hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory

@@ -79,12 +79,12 @@ MultiPlasma::maxDensity (amrex::Real z) const
 void
 MultiPlasma::DepositCurrent (
     Fields & fields, const MultiLaser & multi_laser, int which_slice,
-    bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi,
+    bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice,
-                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi,
+                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
     }
 }
@@ -118,7 +118,7 @@ MultiPlasma::DepositNeutralizingBackground (
         if (m_all_plasmas[i].m_neutralize_background) {
             // current of ions is zero, so they are not deposited.
             ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
-                             false, true, false, gm, lev, m_all_bins[i], m_sort_bin_size);
+                             false, false, false, true, gm, lev, m_all_bins[i], m_sort_bin_size);
         }
     }
 }

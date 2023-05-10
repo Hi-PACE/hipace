@@ -47,12 +47,13 @@ public:
      * \param[in] deposit_jz if true, deposit to jz
      * \param[in] deposit_rho if true, deposit to rho
      * \param[in] deposit_chi if true, deposit chi
+     * \param[in] deposit_rhomjz if true, deposit rhomjz
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
     void DepositCurrent (
         Fields & fields, const MultiLaser & multi_laser, int which_slice, bool deposit_jx_jy,
-        bool deposit_jz, bool deposit_rho, bool deposit_chi,
+        bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields

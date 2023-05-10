@@ -41,6 +41,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_lo     = -4.   -4.   -2.  \
         geometry.prob_hi     =  4.    4.    2.  \
         beam.position_mean = 2. -1. 0. \
+        diagnostic.field_data = all rho \
         hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory

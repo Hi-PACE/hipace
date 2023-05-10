@@ -39,6 +39,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         beam.position_std = 20.e-6 20.e-6 14.1e-6 \
         geometry.prob_lo     = -100.e-6   -100.e-6   -60.e-6 \
         geometry.prob_hi     =  100.e-6    100.e-6    60.e-6 \
+        diagnostic.field_data = all rho \
         hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory

@@ -79,7 +79,7 @@ if do_plot:
     plt.tight_layout()
     plt.savefig('img.pdf', bbox_inches='tight')
 
-for field in ['ExmBy', 'EypBx', 'Ez', 'Bx', 'By', 'By', 'jz']:
+for field in ['ExmBy', 'EypBx', 'Ez', 'Bx', 'By', 'By', 'jz_beam']:
     print('comparing ' + field)
     F = ts_ref.get_field(field=field, iteration=ts.iterations[-1])[0]
     Fr = ts.get_field(field=field, iteration=ts.iterations[-1])[0]

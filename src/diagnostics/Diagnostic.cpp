@@ -77,6 +77,22 @@ Diagnostic::Diagnostic (int nlev)
     queryWithParser(ppd, "beam_output_period", m_beam_output_period);
 }
 
+bool
+Diagnostic::needsRho () const {
+    amrex::ParmParse ppd("diagnostic");
+    for (auto& fd : m_field_data) {
+        amrex::ParmParse pp(fd.m_diag_name);
+        amrex::Vector<std::string> comps{};
+        queryWithParserAlt(pp, "field_data", comps, ppd);
+        for (auto& c : comps) {
+            if (c == "rho") {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void
 Diagnostic::Initialize (const int lev, bool do_laser) {
     if (lev!=0) return;
