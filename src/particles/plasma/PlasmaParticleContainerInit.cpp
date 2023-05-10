@@ -257,9 +257,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
-                ParticleType& p = pstruct[pidx];
-                const amrex::Real x = p.pos(0);
-                const amrex::Real y = p.pos(1);
+                const amrex::Real x = arrdata[PlasmaIdx::x][pidx];
+                const amrex::Real y = arrdata[PlasmaIdx::y][pidx];
                 const amrex::Real x_mirror = x_mid2 - x;
                 const amrex::Real y_mirror = y_mid2 - y;
 

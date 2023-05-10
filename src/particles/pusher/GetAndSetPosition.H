@@ -187,7 +187,7 @@ struct EnforceBCandSetPos
     {
         using namespace amrex::literals;
 
-        auto p = make_particle<typename T_ParTile::ParticleType>{}(m_pardata, ip + m_offset);
+        auto p = m_pardata[ip + m_offset];
 
         p.pos(0) = x;
         p.pos(1) = y;
@@ -217,7 +217,7 @@ struct EnforceBCandSetPos
     {
         using namespace amrex::literals;
 
-        auto p = make_particle<typename T_ParTile::ParticleType>{}(m_pardata, ip + m_offset);
+        auto p = m_pardata[ip + m_offset];
 
         p.pos(0) = x;
         p.pos(1) = y;
