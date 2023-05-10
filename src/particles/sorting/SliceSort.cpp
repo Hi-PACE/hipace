@@ -23,8 +23,6 @@ findParticlesInEachSlice (
     const int np = beam.m_box_sorter.boxCountsPtr()[ibox];
     const int offset = beam.m_box_sorter.boxOffsetsPtr()[ibox];
 
-    AMREX_ALWAYS_ASSERT(offset==0);
-
     // Extract box properties
     const auto lo = lbound(cbx);
     const auto dxi = geom.InvCellSizeArray();
@@ -34,9 +32,11 @@ findParticlesInEachSlice (
     beam.m_slice_bins.build(
         np, beam.getParticleTileData(), cbx,
         // Pass lambda function that returns the slice index
-        [=] AMREX_GPU_DEVICE (const BeamParticleContainer::ParticleType& p)
+        [=] AMREX_GPU_DEVICE (const BeamParticleContainer::ParticleTileDataType& pdt,
+                              unsigned int idx)
         noexcept -> amrex::IntVect
         {
+            auto p = pdt[idx + offset];
             return amrex::IntVect(
                 AMREX_D_DECL(0, 0, static_cast<int>((p.pos(2)-plo[2])*dxi[2]-lo.z)));
         });
