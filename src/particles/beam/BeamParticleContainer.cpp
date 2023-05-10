@@ -210,7 +210,7 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
         auto const& ptsoa = this->GetStructOfArrays();
-        const auto idp = ptsoa.GetRealData(BeamIdx::id).data();
+        const int * const idp = ptsoa.GetIntData(BeamIdx::id).data();
 
         reduce_op.eval(ptsoa.numParticles(), reduce_data,
                        [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple

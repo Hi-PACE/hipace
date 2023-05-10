@@ -181,7 +181,7 @@ MultiBeam::PackLocalGhostParticles (int it)
         const auto uxp_src = soa.GetRealData(BeamIdx::ux).data() + offset_box_left;
         const auto uyp_src = soa.GetRealData(BeamIdx::uy).data() + offset_box_left;
         const auto uzp_src = soa.GetRealData(BeamIdx::uz).data() + offset_box_left;
-        const auto idp_src = soa.GetRealData(BeamIdx::id).data() + offset_box_left;
+        const auto idp_src = soa.GetIntData(BeamIdx::id).data() + offset_box_left;
 
         const auto pos_x_dst = soa.GetRealData(BeamIdx::x).data() + old_size;
         const auto pos_y_dst = soa.GetRealData(BeamIdx::y).data() + old_size;
@@ -190,7 +190,7 @@ MultiBeam::PackLocalGhostParticles (int it)
         const auto uxp_dst = soa.GetRealData(BeamIdx::ux).data() + old_size;
         const auto uyp_dst = soa.GetRealData(BeamIdx::uy).data() + old_size;
         const auto uzp_dst = soa.GetRealData(BeamIdx::uz).data() + old_size;
-        const auto idp_dst = soa.GetRealData(BeamIdx::id).data() + old_size;
+        const auto idp_dst = soa.GetIntData(BeamIdx::id).data() + old_size;
 
         amrex::ParallelFor(
             nghost,
