@@ -49,13 +49,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
     // Extract particle properties
     const int offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-    auto& soa = beam.GetStructOfArrays(); // For momenta and weights
-    amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data() + offset;
-    amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data() + offset;
-    amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data() + offset;
+    const auto ptd = beam.getParticleTileData();
 
-    const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(beam, gm, offset);
+    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(gm);
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
     BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
@@ -78,29 +74,31 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
         {Hipace::m_depos_order_xy},
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
-            const int ip = indices[cell_start+idx];
-
-            amrex::ParticleReal xp, yp, zp;
-            int pid;
+            const int ip = indices[cell_start+idx] + offset;
 
             // only finest MR level pushes the beam
-            if (setPositionEnforceBC.m_pardata.cpu(ip) != lev) return;
+            if (ptd.id(ip) < 0 || ptd.cpu(ip) != lev) return;
+
+            amrex::Real xp = ptd.pos(0, ip);
+            amrex::Real yp = ptd.pos(1, ip);
+            amrex::Real zp = ptd.pos(2, ip);
+            amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];
+            amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
+            amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
             for (int i = 0; i < n_subcycles; i++) {
 
-                getPosition(ip, xp, yp, zp, pid);
-                if (pid < 0) return;
-
-                const amrex::ParticleReal gammap = sqrt(
-                    1.0_rt + uxp[ip]*uxp[ip]*clightsq
-                    + uyp[ip]*uyp[ip]*clightsq + uzp[ip]*uzp[ip]*clightsq);
+                const amrex::ParticleReal gammap_inv =
+                    1._rt / std::sqrt( 1.0_rt + ux*ux*clightsq
+                                              + uy*uy*clightsq
+                                              + uz*uz*clightsq );
 
                 // first we do half a step in x,y
                 // This is not required in z, which is pushed in one step later
-                xp += dt * 0.5_rt * uxp[ip] / gammap;
-                yp += dt * 0.5_rt * uyp[ip] / gammap;
+                xp += dt * 0.5_rt * ux * gammap_inv;
+                yp += dt * 0.5_rt * uy * gammap_inv;
 
-                if (setPositionEnforceBC(ip, xp, yp, zp)) return;
+                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
 
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
@@ -115,30 +113,31 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                                    external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
-                const amrex::ParticleReal ux_next = uxp[ip] + dt * charge_mass_ratio
-                    * ( ExmByp + ( phys_const.c - uzp[ip] / gammap ) * Byp );
-                const amrex::ParticleReal uy_next = uyp[ip] + dt * charge_mass_ratio
-                    * ( EypBxp + ( uzp[ip] / gammap - phys_const.c ) * Bxp );
+                const amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
+                    * ( ExmByp + ( phys_const.c - uz * gammap_inv ) * Byp );
+                const amrex::ParticleReal uy_next = uy + dt * charge_mass_ratio
+                    * ( EypBxp + ( uz * gammap_inv - phys_const.c ) * Bxp );
 
                 // Now computing new longitudinal momentum
-                const amrex::ParticleReal ux_intermediate = ( ux_next + uxp[ip] ) * 0.5_rt;
-                const amrex::ParticleReal uy_intermediate = ( uy_next + uyp[ip] ) * 0.5_rt;
-                const amrex::ParticleReal uz_intermediate = uzp[ip]
+                const amrex::ParticleReal ux_intermediate = ( ux_next + ux ) * 0.5_rt;
+                const amrex::ParticleReal uy_intermediate = ( uy_next + uy ) * 0.5_rt;
+                const amrex::ParticleReal uz_intermediate = uz
                     + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
-                const amrex::ParticleReal gamma_intermediate = sqrt(
-                    1.0_rt + ux_intermediate*ux_intermediate*clightsq +
-                    uy_intermediate*uy_intermediate*clightsq +
-                    uz_intermediate*uz_intermediate*clightsq );
+                const amrex::ParticleReal gamma_intermediate_inv =
+                    1._rt / std::sqrt( 1.0_rt + ux_intermediate*ux_intermediate*clightsq
+                                              + uy_intermediate*uy_intermediate*clightsq
+                                              + uz_intermediate*uz_intermediate*clightsq );
 
-                const amrex::ParticleReal uz_next = uzp[ip] + dt * charge_mass_ratio
+                const amrex::ParticleReal uz_next = uz + dt * charge_mass_ratio
                     * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
-                        / gamma_intermediate );
+                    * gamma_intermediate_inv );
 
                 /* computing next gamma value */
-                const amrex::ParticleReal gamma_next = sqrt( 1.0_rt + uz_next*uz_next*clightsq
-                                                             + ux_next*ux_next*clightsq
-                                                             + uy_next*uy_next*clightsq );
+                const amrex::ParticleReal gamma_next_inv =
+                    1._rt / std::sqrt( 1.0_rt + ux_next*ux_next*clightsq
+                                              + uy_next*uy_next*clightsq
+                                              + uz_next*uz_next*clightsq );
 
                 /*
                  * computing positions and setting momenta for the next timestep
@@ -147,13 +146,16 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                  * first-order (i.e. without the intermediary half-step) using
                  * a simple Galilean transformation
                  */
-                xp += dt * 0.5_rt * ux_next  / gamma_next;
-                yp += dt * 0.5_rt * uy_next  / gamma_next;
-                if (do_z_push) zp += dt * ( uz_next  / gamma_next - phys_const.c );
-                if (setPositionEnforceBC(ip, xp, yp, zp)) return;
-                uxp[ip] = ux_next;
-                uyp[ip] = uy_next;
-                uzp[ip] = uz_next;
+                xp += dt * 0.5_rt * ux_next * gamma_next_inv;
+                yp += dt * 0.5_rt * uy_next * gamma_next_inv;
+                if (do_z_push) zp += dt * ( uz_next * gamma_next_inv - phys_const.c );
+                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
+                ux = ux_next;
+                uy = uy_next;
+                uz = uz_next;
             } // end for loop over n_subcycles
+            ptd.rdata(BeamIdx::ux)[ip] = ux;
+            ptd.rdata(BeamIdx::uy)[ip] = uy;
+            ptd.rdata(BeamIdx::uz)[ip] = uz;
         });
 }

@@ -68,19 +68,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
 
         // Extract particle properties
-        auto& soa = pti.GetStructOfArrays(); // For positions, momenta and weights
-
-        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
-        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
-        amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
-        const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
-        const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
-        const amrex::Real * const AMREX_RESTRICT psip = soa.GetRealData(PlasmaIdx::psi).data();
-        int * const AMREX_RESTRICT idp = soa.GetIntData(PlasmaIdx::id).data();
-        int * const AMREX_RESTRICT cpup = soa.GetIntData(PlasmaIdx::cpu).data();
-
-        int const * const AMREX_RESTRICT a_ion_lev =
-            plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         // Extract laser array from MultiFab
         const Array3<const amrex::Real> a_laser_arr =
@@ -202,21 +190,20 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 const int ox = idx % outer_depos_order_x_1;
 
                 // only deposit plasma currents on or below their according MR level
-                if (idp[ip] < 0 || cpup[ip] < lev) return;
+                if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
 
-                const amrex::Real psi_inv = 1._rt/psip[ip];
-                const amrex::Real xp = pos_x[ip];
-                const amrex::Real yp = pos_y[ip];
-                const amrex::Real vx_c = uxp[ip] * psi_inv;
-                const amrex::Real vy_c = uyp[ip] * psi_inv;
+                const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real xp = ptd.pos(0, ip);
+                const amrex::Real yp = ptd.pos(1, ip);
+                const amrex::Real vx_c = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
+                const amrex::Real vy_c = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
 
                 // calculate charge of the plasma particles
-                amrex::Real q_invvol = charge_invvol;
+                amrex::Real q_invvol = charge_invvol * ptd.rdata(PlasmaIdx::w)[ip];
                 amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
-                [[maybe_unused]] auto ion_lev = a_ion_lev;
                 if constexpr (can_ionize.value) {
-                    q_invvol *= ion_lev[ip];
-                    q_mu0_mass_ratio *= ion_lev[ip];
+                    q_invvol *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    q_mu0_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
                 }
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
@@ -241,8 +228,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 {
                     // This particle violates the QSA, discard it and do not deposit its current
                     amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
-                    wp[ip] = 0.0_rt;
-                    idp[ip] = -std::abs(idp[ip]);
+                    ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
+                    ptd.id(ip) = -std::abs(ptd.id(ip));
                     return;
                 }
 
@@ -270,7 +257,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                             cell_y -= itiley_bs;
                         }
 
-                        const amrex::Real charge_density = q_invvol * wp[ip] * shape_x * shape_y;
+                        const amrex::Real charge_density = q_invvol * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
                         const amrex::Real wqx     = charge_density * vx_c;
                         const amrex::Real wqy     = charge_density * vy_c;

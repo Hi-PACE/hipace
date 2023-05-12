@@ -36,7 +36,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const int Bz = Comps[WhichSlice::This]["Bz"];
 
         // Extract particle properties
-        const auto pdt = pti.GetParticleTile().getParticleTileData();
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         // Construct empty Array4 if there is no laser
         const Array3<const amrex::Real> a_laser_arr = multi_laser.m_use_laser ?
@@ -81,22 +81,22 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 constexpr int depos_order = a_depos_order.value;
                 constexpr int derivative_type = a_derivative_type.value;
 
-                if (pdt.id(ip) < 0 || (lev != 0 && pdt.cpu(ip) < lev)) return;
-                const amrex::Real psi_inv = 1._rt/pdt.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real xp = pdt.pos(0, ip);
-                const amrex::Real yp = pdt.pos(1, ip);
-                const amrex::Real vx = pdt.rdata(PlasmaIdx::ux)[ip] * psi_inv * clight_inv;
-                const amrex::Real vy = pdt.rdata(PlasmaIdx::uy)[ip] * psi_inv * clight_inv;
+                if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
+                const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real xp = ptd.pos(0, ip);
+                const amrex::Real yp = ptd.pos(1, ip);
+                const amrex::Real vx = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv * clight_inv;
+                const amrex::Real vy = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv * clight_inv;
 
                 // Rename variable for NVCC lambda capture to work
                 amrex::Real q_invvol_mu0 = charge_invvol_mu0;
                 amrex::Real q_mass_ratio = charge_mass_ratio;
                 if constexpr (can_ionize.value) {
-                    q_invvol_mu0 *= pdt.idata(PlasmaIdx::ion_lev)[ip];
-                    q_mass_ratio *= pdt.idata(PlasmaIdx::ion_lev)[ip];
+                    q_invvol_mu0 *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    q_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
                 }
 
-                const amrex::Real charge_density_mu0 = q_invvol_mu0 * pdt.rdata(PlasmaIdx::w)[ip];
+                const amrex::Real charge_density_mu0 = q_invvol_mu0 * ptd.rdata(PlasmaIdx::w)[ip];
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;

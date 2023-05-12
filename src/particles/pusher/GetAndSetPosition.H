@@ -151,19 +151,16 @@ template <class T_ParTile>
 struct EnforceBCandSetPos
 {
     using RType = amrex::ParticleReal;
+    using PTDType = typename T_ParTile::ParticleTileDataType;
 
-    typename T_ParTile::ParticleTileDataType m_pardata;
-    int m_offset;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
     amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;
     int m_is_per;
 
     /** Constructor.
-     * \param a_ptile tile containing the macroparticles
      * \param geom geometry used for domain size and periodicity
-     * \param a_offset offset to apply to the particle indices
      */
-    EnforceBCandSetPos (T_ParTile& a_ptile, const amrex::Geometry& geom, int a_offset = 0) noexcept
+    EnforceBCandSetPos (const amrex::Geometry& geom) noexcept
     {
 
         m_plo    = geom.ProbLoArray();
@@ -171,23 +168,21 @@ struct EnforceBCandSetPos
         auto is_per = geom.isPeriodicArray();
         m_is_per = is_per[0];
         AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
-
-        m_pardata = a_ptile.getParticleTileData();
-        m_offset = a_offset;
     }
 
-    /** \brief set position and enforces the boundary condition to the particle
-     * at index `i + a_offset` and returns if the particle is invalid
+    /** \brief set position and enforces the boundary condition to the plasma particle
+     * at index `ip` and returns if the particle is invalid
+     * \param[in] ptd ParticleTileData
      * \param[in] ip index of the particle
      * \param[in] x new x position of particle
      * \param[in] y new x position of particle
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const int ip, RType& x, RType& y) const noexcept
+    bool operator() (const PTDType& ptd, const int ip, RType& x, RType& y) const noexcept
     {
         using namespace amrex::literals;
 
-        auto p = m_pardata[ip + m_offset];
+        auto p = ptd[ip];
 
         p.pos(0) = x;
         p.pos(1) = y;
@@ -195,29 +190,31 @@ struct EnforceBCandSetPos
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
         const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
+        if (shifted) {
+            x = p.pos(0);
+            y = p.pos(1);
+        }
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
-            m_pardata.rdata(PlasmaIdx::w)[ip + m_offset] = 0.0_rt;
+            ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
             p.id() = -std::abs(p.id());
         }
-        x = p.pos(0);
-        y = p.pos(1);
         return invalid;
     }
 
-    /** \brief set position and enforces the boundary condition to the particle
-     * at index `i + a_offset` and returns if the particle is invalid
+    /** \brief set position and enforces the boundary condition to the beam particle
+     * \param[in] ptd ParticleTileData
      * \param[in] ip index of the particle
      * \param[in] x new x position of particle
      * \param[in] y new x position of particle
      * \param[in] z new x position of particle
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const int ip, RType& x, RType& y, RType& z) const noexcept
+    bool operator() (const PTDType& ptd, const int ip, RType& x, RType& y, RType& z) const noexcept
     {
         using namespace amrex::literals;
 
-        auto p = m_pardata[ip + m_offset];
+        auto p = ptd[ip];
 
         p.pos(0) = x;
         p.pos(1) = y;
@@ -226,14 +223,16 @@ struct EnforceBCandSetPos
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
         const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
+        if (shifted) {
+            x = p.pos(0);
+            y = p.pos(1);
+            z = p.pos(2);
+        }
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
-            m_pardata.rdata(BeamIdx::w)[ip + m_offset] = 0.0_rt;
+            ptd.rdata(BeamIdx::w)[ip] = 0.0_rt;
             p.id() = -std::abs(p.id());
         }
-        x = p.pos(0);
-        y = p.pos(1);
-        z = p.pos(2);
         return invalid;
     }
 };
