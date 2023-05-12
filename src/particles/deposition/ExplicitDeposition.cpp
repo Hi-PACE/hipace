@@ -36,19 +36,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const int Bz = Comps[WhichSlice::This]["Bz"];
 
         // Extract particle properties
-        const auto& soa = pti.GetStructOfArrays(); // For positions, momenta and weights
-
-        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
-        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
-        const amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
-        const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
-        const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
-        const amrex::Real * const AMREX_RESTRICT psip = soa.GetRealData(PlasmaIdx::psi).data();
-        const int * const AMREX_RESTRICT idp = soa.GetIntData(PlasmaIdx::id).data();
-        const int * const AMREX_RESTRICT cpup = soa.GetIntData(PlasmaIdx::cpu).data();
-
-        int const * const AMREX_RESTRICT a_ion_lev =
-            plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
+        const auto pdt = pti.GetParticleTile().getParticleTileData();
 
         // Construct empty Array4 if there is no laser
         const Array3<const amrex::Real> a_laser_arr = multi_laser.m_use_laser ?
@@ -93,24 +81,22 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 constexpr int depos_order = a_depos_order.value;
                 constexpr int derivative_type = a_derivative_type.value;
 
-                if (idp[ip] < 0 || cpup[ip] < lev) return;
-                const amrex::Real psi_inv = 1._rt/psip[ip];
-                const amrex::Real xp = pos_x[ip];
-                const amrex::Real yp = pos_y[ip];
-                const amrex::Real vx = uxp[ip] * psi_inv * clight_inv;
-                const amrex::Real vy = uyp[ip] * psi_inv * clight_inv;
-
-                amrex::Real q_invvol_mu0 = charge_invvol_mu0;
-                amrex::Real q_mass_ratio = charge_mass_ratio;
+                if (pdt.id(ip) < 0 || (lev != 0 && pdt.cpu(ip) < lev)) return;
+                const amrex::Real psi_inv = 1._rt/pdt.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real xp = pdt.pos(0, ip);
+                const amrex::Real yp = pdt.pos(1, ip);
+                const amrex::Real vx = pdt.rdata(PlasmaIdx::ux)[ip] * psi_inv * clight_inv;
+                const amrex::Real vy = pdt.rdata(PlasmaIdx::uy)[ip] * psi_inv * clight_inv;
 
                 // Rename variable for NVCC lambda capture to work
-                [[maybe_unused]] auto ion_lev = a_ion_lev;
+                amrex::Real q_invvol_mu0 = charge_invvol_mu0;
+                amrex::Real q_mass_ratio = charge_mass_ratio;
                 if constexpr (can_ionize.value) {
-                    q_invvol_mu0 *= ion_lev[ip];
-                    q_mass_ratio *= ion_lev[ip];
+                    q_invvol_mu0 *= pdt.idata(PlasmaIdx::ion_lev)[ip];
+                    q_mass_ratio *= pdt.idata(PlasmaIdx::ion_lev)[ip];
                 }
 
-                const amrex::Real charge_density_mu0 = q_invvol_mu0 * wp[ip];
+                const amrex::Real charge_density_mu0 = q_invvol_mu0 * pdt.rdata(PlasmaIdx::w)[ip];
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
