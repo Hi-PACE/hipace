@@ -468,9 +468,9 @@ public:
     }
 
     /** Number of guard cells for slices MultiFab */
-    static amrex::IntVect m_slices_nguards;
+    inline static amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Number of guard cells for poisson solver MultiFab */
-    static amrex::IntVect m_poisson_nguards;
+    inline static amrex::IntVect m_poisson_nguards {-1, -1, -1};
     /** If the poisson solver should include the guard cells */
     bool m_extended_solve = false;
 

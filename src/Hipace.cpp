@@ -39,42 +39,6 @@ namespace {
 }
 #endif
 
-int Hipace_early_init::m_depos_order_xy = 2;
-int Hipace_early_init::m_depos_order_z = 0;
-int Hipace_early_init::m_depos_derivative_type = 2;
-bool Hipace_early_init::m_outer_depos_loop = false;
-
-Hipace* Hipace::m_instance = nullptr;
-
-bool Hipace::m_normalized_units = false;
-int Hipace::m_max_step = 0;
-amrex::Real Hipace::m_dt = 0.0;
-amrex::Real Hipace::m_max_time = std::numeric_limits<amrex::Real>::infinity();
-amrex::Real Hipace::m_physical_time = 0.0;
-amrex::Real Hipace::m_initial_time = 0.0;
-int Hipace::m_verbose = 0;
-amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
-int Hipace::m_predcorr_max_iterations = 30;
-amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
-bool Hipace::m_do_beam_jx_jy_deposition = true;
-bool Hipace::m_do_beam_jz_minus_rho = false;
-bool Hipace::m_deposit_rho = false;
-int Hipace::m_beam_injection_cr = 1;
-amrex::Real Hipace::m_external_ExmBy_slope = 0.;
-amrex::Real Hipace::m_external_Ez_slope = 0.;
-amrex::Real Hipace::m_external_Ez_uniform = 0.;
-amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
-amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-int Hipace::m_MG_verbose = 0;
-bool Hipace::m_use_amrex_mlmg = false;
-bool Hipace::m_use_laser = false;
-
-#ifdef AMREX_USE_GPU
-bool Hipace::m_do_tiling = false;
-#else
-bool Hipace::m_do_tiling = true;
-#endif
-
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
     Hipace::m_instance = instance;
