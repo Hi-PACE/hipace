@@ -233,7 +233,7 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
     const int islice_local, const int nghost)
 {
-    HIPACE_PROFILE("BeamParticleContainer::TagByLevel");
+    HIPACE_PROFILE("BeamParticleContainer::TagByLevel()");
 
     const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice_local == 0));
     int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];

@@ -189,7 +189,7 @@ void
 PlasmaParticleContainer::TagByLevel (const int current_N_level,
                                      amrex::Vector<amrex::Geometry> const& geom3D)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::TagByLevel");
+    HIPACE_PROFILE("PlasmaParticleContainer::TagByLevel()");
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
