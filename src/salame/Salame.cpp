@@ -134,8 +134,8 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
 
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
-    const amrex::Real dx = hipace->m_3D_geom[lev].CellSize(Direction::x);
-    const amrex::Real dy = hipace->m_3D_geom[lev].CellSize(Direction::y);
+    const amrex::Real dxi = 0.5_rt*hipace->m_3D_geom[lev].InvCellSize(Direction::x);
+    const amrex::Real dyi = 0.5_rt*hipace->m_3D_geom[lev].InvCellSize(Direction::y);
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -150,8 +150,8 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
         amrex::ParallelFor(mfi.tilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))/(2._rt*dx);
-                const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))/(2._rt*dy);
+                const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))*dxi;
+                const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))*dyi;
 
                 // same Hipace::InitializeSxSyWithBeam just with only the salame beam
                 // and without transverse currents
@@ -186,13 +186,13 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
         const int jy = Comps[WhichSlice::Salame]["jy"];
         const int chi = Comps[WhichSlice::This]["chi"];
 
-        const amrex::Real mu0 = hipace->m_phys_const.mu0;
+        const amrex::Real mu0_inv = 1._rt / hipace->m_phys_const.mu0;
 
         amrex::ParallelFor(mfi.tilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                arr(i,j,jx) =  dz * arr(i,j,chi) * arr(i,j,By) / mu0;
-                arr(i,j,jy) = -dz * arr(i,j,chi) * arr(i,j,Bx) / mu0;
+                arr(i,j,jx) =  dz * arr(i,j,chi) * arr(i,j,By) * mu0_inv;
+                arr(i,j,jy) = -dz * arr(i,j,chi) * arr(i,j,Bx) * mu0_inv;
             });
     }
 }
@@ -209,8 +209,6 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
         const auto gm = hipace->m_3D_geom[lev];
         const bool do_tiling = Hipace::m_do_tiling;
 
-        amrex::Real const * AMREX_RESTRICT dx = gm.CellSize();
-
         for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
         {
             const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev)[pti];
@@ -218,9 +216,9 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
             const int bx_comp = Comps[WhichSlice::Salame]["Bx"];
             const int by_comp = Comps[WhichSlice::Salame]["By"];
 
-            const amrex::Real dx_inv = 1._rt/dx[0];
-            const amrex::Real dy_inv = 1._rt/dx[1];
-            const amrex::Real dz = dx[2];
+            const amrex::Real dx_inv = gm.InvCellSize(0);
+            const amrex::Real dy_inv = gm.InvCellSize(1);
+            const amrex::Real dz = gm.CellSize(2);
 
             // Offset for converting positions to indexes
             amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());

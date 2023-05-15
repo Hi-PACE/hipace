@@ -168,8 +168,8 @@ public:
     void AddRhoIons (const int lev);
 
     /** \brief Set up boundary conditions before poisson solve
-     * lev==0: leave at zero
-     * lev!=0: interpolate boundaries from lev-1
+     * lev==0: leave at zero or add open boundaries
+     * lev>0: interpolate boundaries from lev-1
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
@@ -179,7 +179,7 @@ public:
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                std::string component, amrex::MultiFab&& staging_area);
 
-    /** \brief Interpolate values from coarse grid to the fine grid
+    /** \brief Interpolate values from coarse grid (lev-1) to the fine grid (lev)
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
@@ -187,9 +187,9 @@ public:
      * \param[in] outer_edge start writing interpolated values at domain + outer_edge
      * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
-    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component, const amrex::IntVect outer_edge,
-                                    const amrex::IntVect inner_edge);
+    void LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                          std::string component, const amrex::IntVect outer_edge,
+                          const amrex::IntVect inner_edge);
 
     /** \brief Interpolate the full field from the coarse grid (lev-1) to the fine grid (lev).
      *

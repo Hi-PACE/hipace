@@ -186,10 +186,9 @@ PlasmaParticleContainer::UpdateDensityFunction ()
 }
 
 void
-PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D,
-                                     const int islice)
+PlasmaParticleContainer::TagByLevel (const int current_N_level,
+                                     amrex::Vector<amrex::Geometry> const& geom3D)
 {
-    if (nlev==1) return;
     HIPACE_PROFILE("PlasmaParticleContainer::TagByLevel");
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -197,19 +196,34 @@ PlasmaParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geomet
         auto& aos = pti.GetArrayOfStructs();
         const auto& pos_structs = aos.begin();
 
-        // Use islice == -1 as a wildcard
-        const bool has_zeta = (islice >= geom3D[1].Domain().smallEnd(2) &&
-                               islice <= geom3D[1].Domain().bigEnd(2)) || (islice == -1);
-        const amrex::Real lo_x = geom3D[1].ProbLo(0);
-        const amrex::Real hi_x = geom3D[1].ProbHi(0);
-        const amrex::Real lo_y = geom3D[1].ProbLo(1);
-        const amrex::Real hi_y = geom3D[1].ProbHi(1);
+        const int lev1_idx = std::min(1, current_N_level-1);
+        const int lev2_idx = std::min(2, current_N_level-1);
+
+        const amrex::Real lo_x_lev1 = geom3D[lev1_idx].ProbLo(0);
+        const amrex::Real lo_x_lev2 = geom3D[lev2_idx].ProbLo(0);
+
+        const amrex::Real hi_x_lev1 = geom3D[lev1_idx].ProbHi(0);
+        const amrex::Real hi_x_lev2 = geom3D[lev2_idx].ProbHi(0);
+
+        const amrex::Real lo_y_lev1 = geom3D[lev1_idx].ProbLo(1);
+        const amrex::Real lo_y_lev2 = geom3D[lev2_idx].ProbLo(1);
+
+        const amrex::Real hi_y_lev1 = geom3D[lev1_idx].ProbHi(1);
+        const amrex::Real hi_y_lev2 = geom3D[lev2_idx].ProbHi(1);
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
-                if (has_zeta &&
-                    lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
-                    lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+                const amrex::Real xp = pos_structs[ip].pos(0);
+                const amrex::Real yp = pos_structs[ip].pos(1);
+
+                if (current_N_level > 2 &&
+                    lo_x_lev2 < xp && xp < hi_x_lev2 &&
+                    lo_y_lev2 < yp && yp < hi_y_lev2) {
+                    // level 2
+                    pos_structs[ip].cpu() = 2;
+                } else if (current_N_level > 1 &&
+                    lo_x_lev1 < xp && xp < hi_x_lev1 &&
+                    lo_y_lev1 < yp && yp < hi_y_lev1) {
                     // level 1
                     pos_structs[ip].cpu() = 1;
                 } else {
@@ -232,8 +246,6 @@ IonizationModule (const int lev,
     using namespace amrex::literals;
 
     if (!m_can_ionize) return;
-    // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();
     const PhysConst phys_const = make_constants_SI();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
@@ -248,8 +260,9 @@ IonizationModule (const int lev,
         const int by_comp = Comps[WhichSlice::This]["By"];
         const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+        // Extract properties associated with physical size of the box
+        const amrex::Real dx_inv = geom.InvCellSize(0);
+        const amrex::Real dy_inv = geom.InvCellSize(1);
 
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
