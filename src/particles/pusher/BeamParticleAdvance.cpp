@@ -123,15 +123,15 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
             for (int i = 0; i < n_subcycles; i++) {
 
-                const amrex::ParticleReal gammap_inv = std::sqrt( 1._rt
+                const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
                     + ux*ux*clightsq
                     + uy*uy*clightsq
                     + uz*uz*clightsq );
 
                 // first we do half a step in x,y
                 // This is not required in z, which is pushed in one step later
-                xp += dt * 0.5_rt * ux / gammap_inv;
-                yp += dt * 0.5_rt * uy / gammap_inv;
+                xp += dt * 0.5_rt * ux * gammap_inv;
+                yp += dt * 0.5_rt * uy * gammap_inv;
 
                 if (setPositionEnforceBC(ip, xp, yp, zp)) return;
 
@@ -175,9 +175,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
                 const amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
-                    * ( ExmByp + ( clight - uz / gammap_inv ) * Byp );
+                    * ( ExmByp + ( clight - uz * gammap_inv ) * Byp );
                 const amrex::ParticleReal uy_next = uy + dt * charge_mass_ratio
-                    * ( EypBxp + ( uz / gammap_inv - clight ) * Bxp );
+                    * ( EypBxp + ( uz * gammap_inv - clight ) * Bxp );
 
                 // Now computing new longitudinal momentum
                 const amrex::ParticleReal ux_intermediate = ( ux_next + ux ) * 0.5_rt;
