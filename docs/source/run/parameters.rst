@@ -55,7 +55,7 @@ General parameters
 
 * ``mr_lev1.n_cell`` (2 `integer`)
     Number of cells in x and y for level 1.
-    The number of cells in the zeta direction is calculated form ``patch_lo`` and ``patch_hi``.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
 
 * ``mr_lev1.patch_lo`` (3 `float`)
     Lower end of the refined grid in x, y and z.
@@ -65,7 +65,7 @@ General parameters
 
 * ``mr_lev2.n_cell`` (2 `integer`)
     Number of cells in x and y for level 2.
-    The number of cells in the zeta direction is calculated form ``patch_lo`` and ``patch_hi``.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
 
 * ``mr_lev2.patch_lo`` (3 `float`)
     Lower end of the refined grid in x, y and z.
