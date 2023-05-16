@@ -134,8 +134,8 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
 
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
-    const amrex::Real dxi = 0.5_rt*hipace->m_3D_geom[lev].InvCellSize(Direction::x);
-    const amrex::Real dyi = 0.5_rt*hipace->m_3D_geom[lev].InvCellSize(Direction::y);
+    const amrex::Real dxih = 0.5_rt*hipace->m_3D_geom[lev].InvCellSize(Direction::x);
+    const amrex::Real dyih = 0.5_rt*hipace->m_3D_geom[lev].InvCellSize(Direction::y);
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -150,8 +150,8 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
         amrex::ParallelFor(mfi.tilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
             {
-                const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))*dxi;
-                const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))*dyi;
+                const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))*dxih;
+                const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))*dyih;
 
                 // same Hipace::InitializeSxSyWithBeam just with only the salame beam
                 // and without transverse currents

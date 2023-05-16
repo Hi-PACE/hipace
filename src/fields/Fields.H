@@ -179,7 +179,8 @@ public:
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                std::string component, amrex::MultiFab&& staging_area);
 
-    /** \brief Interpolate values from coarse grid (lev-1) to the fine grid (lev)
+    /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
+     * This may include ghost cells.
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
