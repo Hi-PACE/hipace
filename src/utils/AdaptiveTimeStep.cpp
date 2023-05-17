@@ -107,9 +107,9 @@ AdaptiveTimeStep::Calculate (
             m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30;
         }
 
-        const uint64_t box_offset = initial ? 0 : beam.m_box_sorter.boxOffsetsPtr()[it];
+        const uint64_t box_offset = initial ? 0 : beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
         const uint64_t numParticleOnTile = initial ? beam.numParticles()
-                                                   : beam.m_box_sorter.boxCountsPtr()[it];
+                                                   : beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
 
 
         // Extract particle properties
@@ -120,10 +120,9 @@ AdaptiveTimeStep::Calculate (
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
-                         amrex::ReduceOpSum, amrex::ReduceOpMin,
-                         amrex::ReduceOpMin> reduce_op;
-        amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real,
-                          amrex::Real, amrex::Real> reduce_data(reduce_op);
+                         amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
+        amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real>
+                        reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
         // Data required to gather the Ez field
@@ -139,17 +138,13 @@ AdaptiveTimeStep::Calculate (
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
                 if (pos_structs[ip].id() < 0) return {
-                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity(), 0._rt
+                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
                 };
-                amrex::Real Ezp = 0._rt;
-                doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
-                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 return {
                     wp[ip],
                     wp[ip] * uzp[ip] * clightinv,
                     wp[ip] * uzp[ip] * uzp[ip] * clightinv * clightinv,
-                    uzp[ip] * clightinv,
-                    charge_mass_ratio * Ezp * clightinv
+                    uzp[ip] * clightinv
                 };
             });
 
@@ -159,8 +154,6 @@ AdaptiveTimeStep::Calculate (
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] += amrex::get<2>(res);
         m_timestep_data[ibeam][WhichDouble::MinUz] =
             std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
-        m_timestep_data[ibeam][WhichDouble::MinAcc] =
-            std::min(m_timestep_data[ibeam][WhichDouble::MinAcc], amrex::get<4>(res));
     }
 
     // only the last box or at initialization the adaptive time step is calculated
@@ -236,6 +229,73 @@ AdaptiveTimeStep::Calculate (
             // Make sure the new time step is smaller than the upper bound
             dt = std::min(dt, m_dt_max);
         }
+    }
+}
+
+void
+AdaptiveTimeStep::GatherMinAcc (
+    MultiBeam& beams,
+    const amrex::Geometry& geom, const Fields& fields,
+    const int it)
+{
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
+    using namespace amrex::literals;
+
+    if (m_do_adaptive_time_step == 0) return;
+
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real clightinv = 1._rt/phys_const.c;
+
+    constexpr int lev = 0;
+
+    // Extract properties associated with physical size of the box
+    const int nbeams = beams.get_nbeams();
+    const int numprocs_z = Hipace::GetInstance().m_numprocs_z;
+
+    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+        if (!Hipace::HeadRank()) break;
+        const auto& beam = beams.getBeam(ibeam);
+        const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
+
+        // const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[it];
+        // const uint64_t numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[it];
+        const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
+        const uint64_t numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
+
+        // Extract particle properties
+        const auto& aos = beam.GetArrayOfStructs(); // For positions
+        const auto& pos_structs = aos.begin() + box_offset;
+
+        amrex::ReduceOps<amrex::ReduceOpMin> reduce_op;
+        amrex::ReduceData<amrex::Real> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        // Data required to gather the Ez field
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+        const amrex::Real dx_inv = geom.InvCellSize(0);
+        const amrex::Real dy_inv = geom.InvCellSize(1);
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
+
+        reduce_op.eval(numParticleOnTile, reduce_data,
+            [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
+            {
+                if (pos_structs[ip].id() < 0) return { 0._rt };
+                amrex::Real Ezp = 0._rt;
+                // amrex::Print()<<pos_structs[ip].pos(0)<<" "<<pos_structs[ip].pos(1)<<" "<<x_pos_offset<<" "<<y_pos_offset<<" "<<Ezp<<'\n';
+                doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
+                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                // amrex::Print()<<pos_structs[ip].pos(0)<<" "<<pos_structs[ip].pos(1)<<" "<<x_pos_offset<<" "<<y_pos_offset<<" "<<Ezp<<'\n';
+                return {
+                    charge_mass_ratio * Ezp * clightinv
+                };
+            });
+
+        auto res = reduce_data.value(reduce_op);
+        m_timestep_data[ibeam][WhichDouble::MinAcc] =
+            std::min(m_timestep_data[ibeam][WhichDouble::MinAcc], amrex::get<0>(res));
     }
 }
 
