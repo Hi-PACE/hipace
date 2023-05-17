@@ -67,6 +67,9 @@ General parameters
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
 
+* ``random_seed`` (`integer`) optional (default `1`)
+    Passes a seed to the AMReX random number generator on CPU. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
+
 * ``hipace.max_time`` (`float`) optional (default `infinity`)
     Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
 

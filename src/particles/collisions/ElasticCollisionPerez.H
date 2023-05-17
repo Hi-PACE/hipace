@@ -38,6 +38,7 @@
  * @param[in] dt is the time step length between two collision calls.
  * @param[in] L Coulomb log. If <0, measured per cell.
  * @param[in] dV Volume of the corresponding cell.
+ * @param[in] cst physical constants
  * @param[in] engine AMReX engine for the random number generator.
 */
 
@@ -53,12 +54,11 @@ void ElasticCollisionPerez (
     T_R const  q1, T_R const  q2,
     T_R const  m1, T_R const  m2,
     T_R const  T1, T_R const  T2,
-    T_R const  dt, T_R const   L, T_R const dV,
+    T_R const  dt, T_R const   L, T_R const dV, const PhysConst& cst,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
-
-    T_R constexpr inv_c2 = T_R(1.0)/(PhysConstSI::c*PhysConstSI::c);
+    T_R const inv_c2 = T_R(1.0)/(cst.c*cst.c);
     const int NI1 = I1e - I1s;
     const int NI2 = I2e - I2s;
 
@@ -66,12 +66,12 @@ void ElasticCollisionPerez (
     T_R T1t; T_R T2t;
     if ( T1 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1);
+        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1, cst);
     }
     else { T1t = T1; }
     if ( T2 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2);
+        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2, cst);
     }
     else { T2t = T2; }
 
@@ -82,6 +82,7 @@ void ElasticCollisionPerez (
     for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) { n1 += w1[ I1[i1] ]; }
     for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) { n2 += w2[ I2[i2] ]; }
     n1 = n1 / dV; n2 = n2 / dV;
+    // compute n12 according to eq. 16 in Pérez et al., Phys. Plasmas 19 (8) (2012) 083104
     {
       int i1 = I1s; int i2 = I2s;
       for (int k = 0; k < amrex::max(NI1,NI2); ++k)
@@ -99,9 +100,10 @@ void ElasticCollisionPerez (
         lmdD = T_R(0.0);
     }
     else {
-        lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*PhysConstSI::ep0) +
-                                   n2*q2*q2/(T2t*PhysConstSI::ep0) );
+        lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*cst.ep0) +
+                                   n2*q2*q2/(T2t*cst.ep0) );
     }
+    // minimum mean interatomic distance rmin (see Pérez et al., Phys. Plasmas 19 (8) (2012) 083104)
     T_R rmin = std::pow( T_R(4.0) * MathConst::pi / T_R(3.0) *
                amrex::max(n1,n2), T_R(-1.0/3.0) );
     lmdD = amrex::max(lmdD, rmin);
@@ -130,7 +132,7 @@ void ElasticCollisionPerez (
                 u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
                 n1, n2, n12,
                 q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
-                dt * dt_fac, L, lmdD, engine);
+                dt * dt_fac, L, lmdD, cst, engine);
 
             ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
             ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
