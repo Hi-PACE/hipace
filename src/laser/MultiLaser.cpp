@@ -244,21 +244,21 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Box& domain) {
 
     const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
 
-    auto extend = laser_comp.getExtent();
+    auto extent = laser_comp.getExtent();
 
     double unitSI = laser_comp.unitSI();
 
     //hipace: xyt in Fortran order
     //lasy: tyx in C order
 
-    if (static_cast<std::uint64_t>(domain.length(0)) != extend[2] ||
-        static_cast<std::uint64_t>(domain.length(1)) != extend[1] ||
-        static_cast<std::uint64_t>(domain.length(2)) != extend[0]) {
+    if (static_cast<std::uint64_t>(domain.length(0)) != extent[2] ||
+        static_cast<std::uint64_t>(domain.length(1)) != extent[1] ||
+        static_cast<std::uint64_t>(domain.length(2)) != extent[0]) {
         amrex::Abort("Incompatible box sizes. HiPACE++ (" +
         std::to_string(domain.length(0)) + ", " + std::to_string(domain.length(1)) + ", "
         + std::to_string(domain.length(2)) + "), "
-        + "File (" + std::to_string(extend[2]) + ", " + std::to_string(extend[1]) + ", "
-        + std::to_string(extend[0]) + ")\n");
+        + "File (" + std::to_string(extent[2]) + ", " + std::to_string(extent[1]) + ", "
+        + std::to_string(extent[0]) + ")\n");
     }
 
     amrex::Dim3 arr_begin = {domain.smallEnd(0), domain.smallEnd(1), domain.smallEnd(2)};
@@ -271,6 +271,10 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Box& domain) {
     const int hi_t = domain.bigEnd(2);
 
     series.flush();
+
+    const amrex::Real ymid = (y - offset1)*dy_inv;
+    amrex::Real sy_cell[interp_order_xy + 1];
+    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
     for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
         for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
