@@ -139,7 +139,7 @@ void UpdateMomentumPerezElastic (
           ( T_R(4.0) * MathConst::pi * PhysConstSI::ep0 * PhysConstSI::ep0 *
             m1*g1*m2*g2/(inv_c2_SI*inv_c2_SI) ) * gc*p1sm/mass_g * tts2;
 
-amrex::Print() << " s " << s << "\n";
+amrex::Print() << " s " << s << " n1*n2/n12 " << n1*n2/n12 << " gc*p1sm/mass_g " << gc*p1sm/mass_g << " tts2 " << tts2  << "\n";
     // // Compute s' according to eq (21) from Pérez et al., Phys.Plasmas.19.083104 (2012)
     // const auto cbrt_n1 = std::cbrt(n1);
     // const auto cbrt_n2 = std::cbrt(n2);
