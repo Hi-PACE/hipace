@@ -30,16 +30,16 @@ AMREX_GPU_HOST_DEVICE AMREX_INLINE
 void UpdateMomentumPerezElastic (
     T_R& u1x, T_R& u1y, T_R& psi1, T_R& u2x, T_R& u2y, T_R& psi2,
     T_R const n1, T_R const n2, T_R const n12,
-    T_R const q1, T_R const m1, T_R const w1,
-    T_R const q2, T_R const m2, T_R const w2,
+    T_R const q1, T_R m1, T_R const w1,
+    T_R const q2, T_R m2, T_R const w2,
     T_R const dt, T_R const L,  T_R const lmdD,
-    const PhysConst& cst,
+    const PhysConst& cst, const bool normalized_units,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
 
     T_R const inv_c2 = T_R(1.0) / ( cst.c * cst.c );
-
+    T_R constexpr inv_c2_SI = T_R(1.0) / ( PhysConstSI::c * PhysConstSI::c );
     // Convert from pseudo-potential to momentum
 
     // particle's Lorentz factor
@@ -64,13 +64,18 @@ void UpdateMomentumPerezElastic (
     T_R const g1 = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
     T_R const g2 = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
 
+    // FROM HERE ON EVERYTHING IN SI
+
     // Compute momenta
-    T_R const p1x = u1x * m1;
-    T_R const p1y = u1y * m1;
-    T_R const p1z = u1z * m1;
-    T_R const p2x = u2x * m2;
-    T_R const p2y = u2y * m2;
-    T_R const p2z = u2z * m2;
+    T_R const norm_factor = cst.c / PhysConstSI::c;
+    m1 *= PhysConstSI::m_e;
+    m2 *= PhysConstSI::m_e;
+    T_R const p1x = u1x * m1 * norm_factor;
+    T_R const p1y = u1y * m1 * norm_factor;
+    T_R const p1z = u1z * m1 * norm_factor;
+    T_R const p2x = u2x * m2 * norm_factor;
+    T_R const p2y = u2y * m2 * norm_factor;
+    T_R const p2z = u2z * m2 * norm_factor;
 
     // Compute center-of-mass (COM) velocity and gamma
     T_R const mass_g = m1 * g1 + m2 * g2;
@@ -78,7 +83,7 @@ void UpdateMomentumPerezElastic (
     T_R const vcy    = (p1y+p2y) / mass_g;
     T_R const vcz    = (p1z+p2z) / mass_g;
     T_R const vcms   = vcx*vcx + vcy*vcy + vcz*vcz;
-    T_R const gc     = T_R(1.0) / std::sqrt( T_R(1.0) - vcms*inv_c2 );
+    T_R const gc     = T_R(1.0) / std::sqrt( T_R(1.0) - vcms*inv_c2_SI );
 
     // Compute vc dot v1 and v2
     T_R const vcDv1 = (vcx*u1x + vcy*u1y + vcz*u1z) / g1;
@@ -105,8 +110,8 @@ void UpdateMomentumPerezElastic (
     T_R const p1sm = std::sqrt( p1sx*p1sx + p1sy*p1sy + p1sz*p1sz );
 
     // Compute gamma star
-    T_R const g1s = ( T_R(1.0) - vcDv1*inv_c2 )*gc*g1;
-    T_R const g2s = ( T_R(1.0) - vcDv2*inv_c2 )*gc*g2;
+    T_R const g1s = ( T_R(1.0) - vcDv1*inv_c2_SI )*gc*g1;
+    T_R const g2s = ( T_R(1.0) - vcDv2*inv_c2_SI )*gc*g2;
 
     // Compute the Coulomb log lnLmd
     T_R lnLmd;
@@ -114,10 +119,10 @@ void UpdateMomentumPerezElastic (
     else
     {
         // Compute b0 according to eq (22) from Pérez et al., Phys.Plasmas.19.083104 (2012)
-        T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2 /
+        T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2_SI /
                (T_R(4.0)*MathConst::pi*cst.ep0) * gc/mass_g *
-               ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2) + T_R(1.0) ) *
-               ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2) + T_R(1.0) );
+               ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) ) *
+               ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) );
 
         // Compute the minimal impact parameter
         T_R bmin = amrex::max(cst.hbar*MathConst::pi/p1sm,b0);
@@ -128,25 +133,25 @@ void UpdateMomentumPerezElastic (
     }
 
     // Compute s according to eq (17) from Pérez et al., Phys.Plasmas.19.083104 (2012)
-    const auto tts = m1*g1s*m2*g2s/(inv_c2*p1sm*p1sm) + T_R(1.0);
+    const auto tts = m1*g1s*m2*g2s/(inv_c2_SI*p1sm*p1sm) + T_R(1.0);
     const auto tts2 = tts*tts;
     T_R s = n1*n2/n12 * dt*lnLmd*q1*q1*q2*q2 /
-          ( T_R(4.0) * MathConst::pi * cst.ep0 * cst.ep0 *
-            m1*g1*m2*g2/(inv_c2*inv_c2) ) * gc*p1sm/mass_g * tts2;
+          ( T_R(4.0) * MathConst::pi * PhysConstSI::ep0 * PhysConstSI::ep0 *
+            m1*g1*m2*g2/(inv_c2_SI*inv_c2_SI) ) * gc*p1sm/mass_g * tts2;
 
-
-    // Compute s' according to eq (21) from Pérez et al., Phys.Plasmas.19.083104 (2012)
-    const auto cbrt_n1 = std::cbrt(n1);
-    const auto cbrt_n2 = std::cbrt(n2);
-    const auto coeff = static_cast<T_R>(
-        std::pow(4.0*MathConst::pi/3.0,1.0/3.0));
-    T_R const vrel = mass_g*p1sm/(m1*g1s*m2*g2s*gc);
-    T_R const sp = coeff * n1*n2/n12 * dt * vrel * (m1+m2) /
-          amrex::max( m1*cbrt_n1*cbrt_n1,
-                      m2*cbrt_n2*cbrt_n2);
-
-    // Determine s
-    s = amrex::min(s,sp);
+amrex::Print() << " s " << s << "\n";
+    // // Compute s' according to eq (21) from Pérez et al., Phys.Plasmas.19.083104 (2012)
+    // const auto cbrt_n1 = std::cbrt(n1);
+    // const auto cbrt_n2 = std::cbrt(n2);
+    // const auto coeff = static_cast<T_R>(
+    //     std::pow(4.0*MathConst::pi/3.0,1.0/3.0));
+    // T_R const vrel = mass_g*p1sm/(m1*g1s*m2*g2s*gc);
+    // T_R const sp = coeff * n1*n2/n12 * dt * vrel * (m1+m2) /
+    //       amrex::max( m1*cbrt_n1*cbrt_n1,
+    //                   m2*cbrt_n2*cbrt_n2);
+    //
+    // // Determine s
+    // s = amrex::min(s,sp);
 
     // Get random numbers
     T_R r = amrex::Random(engine);
@@ -261,13 +266,15 @@ void UpdateMomentumPerezElastic (
         p2fz = p2fsz;
     }
 
+    // AND BACKTRANSFORMING TO NORMALIZED UNITS
+
     // Rejection method according to eq (14) and following from Pérez et al., Phys.Plasmas.19.083104 (2012)
     r = amrex::Random(engine);
     if ( w2 > r*amrex::max(w1, w2) )
     {
-        u1x  = p1fx / m1;
-        u1y  = p1fy / m1;
-        u1z  = p1fz / m1;
+        u1x  = p1fx / m1 / norm_factor;
+        u1y  = p1fy / m1 / norm_factor;
+        u1z  = p1fz / m1 / norm_factor;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
         psi1 = ga - u1z/cst.c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
@@ -276,9 +283,9 @@ void UpdateMomentumPerezElastic (
     r = amrex::Random(engine);
     if ( w1 > r*amrex::max(w1, w2) )
     {
-        u2x  = p2fx / m2;
-        u2y  = p2fy / m2;
-        u2z  = p2fz / m2;
+        u2x  = p2fx / m2 / norm_factor;
+        u2y  = p2fy / m2 / norm_factor;
+        u2z  = p2fz / m2 / norm_factor;
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
         psi2 = ga - u2z/cst.c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));

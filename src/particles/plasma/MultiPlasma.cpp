@@ -20,6 +20,7 @@ MultiPlasma::MultiPlasma ()
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
     queryWithParser(pp, "collisions", m_collision_names);
+    queryWithParser(pp, "background_density_SI", m_background_density_SI);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
@@ -170,8 +171,8 @@ MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
         // TODO: enable tiling
 
         CoulombCollision::doCoulombCollision(
-            lev, bx, geom, species1, species2,
-            m_all_collisions[i].m_isSameSpecies, m_all_collisions[i].m_CoulombLog);
+            lev, bx, geom, species1, species2, m_all_collisions[i].m_isSameSpecies,
+            m_all_collisions[i].m_CoulombLog, m_background_density_SI);
     }
 }
 

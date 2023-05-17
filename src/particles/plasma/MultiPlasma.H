@@ -162,6 +162,8 @@ private:
     std::vector<std::string> m_collision_names;
     /** Vector of binary collisions */
     amrex::Vector< CoulombCollision > m_all_collisions;
+    /** Background density in SI, used to compute collisions */
+    amrex::Real m_background_density_SI = 0.;
 };
 
 #endif // MULTIPLASMA_H_

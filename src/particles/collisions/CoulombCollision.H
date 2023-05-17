@@ -35,10 +35,12 @@ public:
      * \param[in] is_same_species whether both species are the same (intra-species collisions)
      * \param[in] CoulombLog Value of the Coulomb logarithm used for the collisions. If <0, the
      *            Coulomb logarithm is deduced from the plasma temperature, measured in each cell.
+     * \param[in] background_density_SI background plasma density (only needed for normalized units)
      **/
     static void doCoulombCollision (
         int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
-        PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog);
+        PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog,
+        const amrex::Real background_density_SI);
 
 };
 

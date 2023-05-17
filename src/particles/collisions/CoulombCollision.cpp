@@ -40,7 +40,8 @@ CoulombCollision::CoulombCollision(
 void
 CoulombCollision::doCoulombCollision (
     int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
-    PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog)
+    PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog,
+    const amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
@@ -69,7 +70,7 @@ CoulombCollision::doCoulombCollision (
             amrex::Real m1 = species1.GetMass();
 
             // volume is used to calculate density, but weights already represent density in normalized units
-            const amrex::Real dV = normalized_units ? 1 : geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
+            const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
             const amrex::Real dt = geom.CellSize(2)/cst.c;
 
             amrex::ParallelForRNG(
@@ -96,7 +97,7 @@ CoulombCollision::doCoulombCollision (
                         indices1, indices1,
                         ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
                         q1, q1, m1, m1, -1.0_rt, -1.0_rt,
-                        dt, CoulombLog, dV, cst, engine );
+                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, engine );
                 }
                 );
             count++;
@@ -177,7 +178,7 @@ CoulombCollision::doCoulombCollision (
                         indices1, indices2,
                         ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
                         q1, q2, m1, m2, -1.0_rt, -1.0_rt,
-                        dt, CoulombLog, dV, cst, engine );
+                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, engine );
                 }
                 );
             count++;

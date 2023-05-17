@@ -54,7 +54,8 @@ void ElasticCollisionPerez (
     T_R const  q1, T_R const  q2,
     T_R const  m1, T_R const  m2,
     T_R const  T1, T_R const  T2,
-    T_R const  dt, T_R const   L, T_R const dV, const PhysConst& cst,
+    T_R const  dt, T_R const   L, T_R const dV, const PhysConst& cst, const bool normalized_units,
+    const amrex::Real background_density_SI,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
@@ -81,7 +82,7 @@ void ElasticCollisionPerez (
     T_R n12 = T_R(0.0);
     for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) { n1 += w1[ I1[i1] ]; }
     for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) { n2 += w2[ I2[i2] ]; }
-    n1 = n1 / dV; n2 = n2 / dV;
+
     // compute n12 according to eq. 16 in Pérez et al., Phys. Plasmas 19 (8) (2012) 083104
     {
       int i1 = I1s; int i2 = I2s;
@@ -91,7 +92,17 @@ void ElasticCollisionPerez (
         ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
         ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
       }
-      n12 = n12 / dV;
+
+    }
+
+    if (normalized_units) {
+        n1 = n1 * background_density_SI;
+        n2 = n2 * background_density_SI;
+        n12 = n12 * background_density_SI;
+    } else {
+        n1 = n1 / dV;
+        n2 = n2 / dV;
+        n12 = n12 / dV;
     }
 
     // compute Debye length lmdD
@@ -100,8 +111,8 @@ void ElasticCollisionPerez (
         lmdD = T_R(0.0);
     }
     else {
-        lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*cst.ep0) +
-                                   n2*q2*q2/(T2t*cst.ep0) );
+        lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*PhysConstSI::ep0) +
+                                   n2*q2*q2/(T2t*PhysConstSI::ep0) );
     }
     // minimum mean interatomic distance rmin (see Pérez et al., Phys. Plasmas 19 (8) (2012) 083104)
     T_R rmin = std::pow( T_R(4.0) * MathConst::pi / T_R(3.0) *
@@ -126,13 +137,14 @@ void ElasticCollisionPerez (
             // In the longitudinal push of plasma particles, the dt is different for each particle.
             // The dt applied for collision probability is the average (in the lab frame) of these
             // dts. This is NOT clean. TODO FIXME.
+            if (i1 != 100) continue;
             const amrex::Real dt_fac = 0.5_rt * (g1/psi1[I1[i1]] + g2/psi2[I2[i2]]);
             UpdateMomentumPerezElastic(
                 u1x[ I1[i1] ], u1y[ I1[i1] ], psi1[ I1[i1] ],
                 u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
                 n1, n2, n12,
                 q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
-                dt * dt_fac, L, lmdD, cst, engine);
+                dt * dt_fac, L, lmdD, cst, normalized_units, engine);
 
             ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
             ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
