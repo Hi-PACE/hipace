@@ -308,6 +308,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             });
         } else if (m_reproducible_temperature) {
             const amrex::Long mirror_offset = total_num_particles/(2*m_reproducible_temperature);
+            const amrex::IntVect reproducible_temperature_dim = m_reproducible_temperature_dim;
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
@@ -319,7 +320,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 #endif
                 int icount = 0;
                 for (int idim=0; idim<3; idim++) {
-                    if (!m_reproducible_temperature_dim[idim]) continue;
+                    if (reproducible_temperature_dim[idim]) continue;
                     for (int dir=-1; dir<=1; dir+=2){
                         const amrex::Long midx = icount*mirror_offset +pidx;
                         pstruct[midx] = p;
@@ -328,11 +329,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         pstruct[midx].pos(1) = p.pos(1);
                         arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
 
-                        arrdata[PlasmaIdx::ux][midx] = m_reproducible_temperature_dim[0] ?
+                        arrdata[PlasmaIdx::ux][midx] = reproducible_temperature_dim[0] ?
                             a_u_std[0]*sqrt(2._rt)*dir*dir : 0._rt;
-                        arrdata[PlasmaIdx::uy][midx] = m_reproducible_temperature_dim[1] ?
+                        arrdata[PlasmaIdx::uy][midx] = reproducible_temperature_dim[1] ?
                             a_u_std[1]*sqrt(2._rt)*dir*dir : 0._rt;
-                        arrdata[PlasmaIdx::psi][midx] = m_reproducible_temperature_dim[2] ?
+                        arrdata[PlasmaIdx::psi][midx] = reproducible_temperature_dim[2] ?
                             std::sqrt(1._rt+2._rt*(a_u_std[0]*a_u_std[0]+a_u_std[1]*a_u_std[1]+
                             a_u_std[2]*a_u_std[2]))-a_u_std[2]*sqrt(2._rt)*dir*dir : 0._rt;
                         arrdata[PlasmaIdx::x_prev][midx] = arrdata[PlasmaIdx::x_prev][pidx];
