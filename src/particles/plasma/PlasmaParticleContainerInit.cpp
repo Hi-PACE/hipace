@@ -99,6 +99,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
+        } else if (m_reproducible_temperature) {
+            total_num_particles *= 2*m_reproducible_temperature;
         }
 
         auto& particles = GetParticles(lev);
@@ -302,11 +304,59 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 #endif
                     int_arrdata[PlasmaIdx::ion_lev][midx] = int_arrdata[PlasmaIdx::ion_lev][pidx];
 
-        }
-    });
-}
-    }
+                }
+            });
+        } else if (m_reproducible_temperature) {
+            const amrex::Long mirror_offset = total_num_particles/(2*m_reproducible_temperature);
+            amrex::ParallelFor(mirror_offset,
+            [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
+            {
+                ParticleType& p = pstruct[pidx];
+                const amrex::Real x = p.pos(0);
+                const amrex::Real y = p.pos(1);
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                int icount = 0;
+                for (int idim=0; idim<3; idim++) {
+                    if (!m_reproducible_temperature_dim[idim]) continue;
+                    for (int dir=-1; dir<=1; dir+=2){
+                        const amrex::Long midx = icount*mirror_offset +pidx;
+                        pstruct[midx] = p;
+                        pstruct[midx].id() = pid + int(midx);
+                        pstruct[midx].pos(0) = pstruct[pidx].pos(0);
+                        pstruct[midx].pos(1) = pstruct[pidx].pos(1);
+                        arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
 
+                        arrdata[PlasmaIdx::ux][midx] = m_reproducible_temperature_dim[0] ?
+                            a_u_std[0]*sqrt(2._rt)*dir*dir : 0._rt;
+                        arrdata[PlasmaIdx::uy][midx] = m_reproducible_temperature_dim[1] ?
+                            a_u_std[1]*sqrt(2._rt)*dir*dir : 0._rt;
+                        arrdata[PlasmaIdx::psi][midx] = m_reproducible_temperature_dim[2] ?
+                            std::sqrt(1._rt+2._rt*(a_u_std[0]*a_u_std[0]+a_u_std[1]*a_u_std[1]+
+                            a_u_std[2]*a_u_std[2]))-a_u_std[2]*sqrt(2._rt)*dir*dir : 0._rt;
+                        arrdata[PlasmaIdx::x_prev][midx] = arrdata[PlasmaIdx::x_prev][pidx];
+                        arrdata[PlasmaIdx::y_prev][midx] = arrdata[PlasmaIdx::y_prev][pidx];
+                        arrdata[PlasmaIdx::ux_half_step][midx] = arrdata[PlasmaIdx::ux][midx];
+                        arrdata[PlasmaIdx::uy_half_step][midx] = arrdata[PlasmaIdx::uy][midx];
+                        arrdata[PlasmaIdx::psi_half_step][midx] =
+                            arrdata[PlasmaIdx::psi_half_step][midx];
+    #ifdef HIPACE_USE_AB5_PUSH
+    #ifdef AMREX_USE_GPU
+    #pragma unroll
+    #endif
+                        for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                            arrdata[iforce][midx] = 0._rt;
+                        }
+    #endif
+                        int_arrdata[PlasmaIdx::ion_lev][midx] = int_arrdata[PlasmaIdx::ion_lev][pidx];
+
+                        icount++;
+                    }
+                }
+            });
+        }
+    }
     AMREX_ASSERT(OK());
 }
 
