@@ -233,10 +233,8 @@ AdaptiveTimeStep::Calculate (
 }
 
 void
-AdaptiveTimeStep::GatherMinAcc (
-    MultiBeam& beams,
-    const amrex::Geometry& geom, const Fields& fields,
-    const int it)
+AdaptiveTimeStep::GatherMinAcc (MultiBeam& beams, const amrex::Geometry& geom,
+                                const Fields& fields, const int it)
 {
     HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
     using namespace amrex::literals;
@@ -257,8 +255,6 @@ AdaptiveTimeStep::GatherMinAcc (
         const auto& beam = beams.getBeam(ibeam);
         const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
-        // const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[it];
-        // const uint64_t numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[it];
         const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
         const uint64_t numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
 

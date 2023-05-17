@@ -72,18 +72,14 @@ public:
                const bool initial=true);
 
     /** calculate the adaptive time step based on the beam energy
-     * \param[in] t current physical time
-     * \param[in,out] dt the time step
      * \param[in] beams multibeam containing all beams
-     * \param[in] plasmas multiplasma to get density profile info
      * \param[in] geom geometry object
      * \param[in] fields field object
      * \param[in] it current box number
-     * \param[in] initial whether to calculate the initial dt
      */
     void
-    GatherMinAcc (MultiBeam& beams,
-                  const amrex::Geometry& geom, const Fields& fields, const int it=0);
+    GatherMinAcc (MultiBeam& beams, const amrex::Geometry& geom,
+                  const Fields& fields, const int it);
 
     /** Right before starting a time step, correct its dt to account for local plasma density
      * and resolve density gradients.
