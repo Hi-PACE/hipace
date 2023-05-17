@@ -339,8 +339,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         arrdata[PlasmaIdx::y_prev][midx] = arrdata[PlasmaIdx::y_prev][pidx];
                         arrdata[PlasmaIdx::ux_half_step][midx] = arrdata[PlasmaIdx::ux][midx];
                         arrdata[PlasmaIdx::uy_half_step][midx] = arrdata[PlasmaIdx::uy][midx];
-                        arrdata[PlasmaIdx::psi_half_step][midx] =
-                            arrdata[PlasmaIdx::psi_half_step][midx];
+                        arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi][midx];
     #ifdef HIPACE_USE_AB5_PUSH
     #ifdef AMREX_USE_GPU
     #pragma unroll
