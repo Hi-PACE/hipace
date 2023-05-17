@@ -284,10 +284,8 @@ AdaptiveTimeStep::GatherMinAcc (
             {
                 if (pos_structs[ip].id() < 0) return { 0._rt };
                 amrex::Real Ezp = 0._rt;
-                // amrex::Print()<<pos_structs[ip].pos(0)<<" "<<pos_structs[ip].pos(1)<<" "<<x_pos_offset<<" "<<y_pos_offset<<" "<<Ezp<<'\n';
                 doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
                            dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                // amrex::Print()<<pos_structs[ip].pos(0)<<" "<<pos_structs[ip].pos(1)<<" "<<x_pos_offset<<" "<<y_pos_offset<<" "<<Ezp<<'\n';
                 return {
                     charge_mass_ratio * Ezp * clightinv
                 };
