@@ -18,9 +18,6 @@
 
 using namespace amrex::literals;
 
-amrex::IntVect Fields::m_slices_nguards = {-1, -1, -1};
-amrex::IntVect Fields::m_poisson_nguards = {-1, -1, -1};
-
 Fields::Fields (const int nlev)
     : m_slices(nlev)
 {
@@ -44,7 +41,7 @@ Fields::AllocData (
         if (m_extended_solve) {
             // Need 1 extra guard cell transversally for transverse derivative
             int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
-            m_slices_nguards = {nguards_xy, nguards_xy, 0};
+            m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
             // poisson solver same size as fields
             m_poisson_nguards = m_slices_nguards;
             // one cell less for transverse derivative
@@ -54,11 +51,11 @@ Fields::AllocData (
         } else {
             // Need 1 extra guard cell transversally for transverse derivative
             int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
-            m_slices_nguards = {nguards_xy, nguards_xy, 0};
+            m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
             // Poisson solver same size as domain, no ghost cells
-            m_poisson_nguards = {0, 0, 0};
+            m_poisson_nguards = amrex::IntVect{0, 0, 0};
             m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
-            m_source_nguard = {0, 0, 0};
+            m_source_nguard = amrex::IntVect{0, 0, 0};
         }
 
         m_explicit = Hipace::GetInstance().m_explicit;
