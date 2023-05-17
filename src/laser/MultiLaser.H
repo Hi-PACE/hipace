@@ -151,13 +151,13 @@ public:
 
     /** \brief Read in a laser from an openPMD file
      *
-     * \param[in] domain size of the level 0 domain
+     * \param[in] gm Geometry for level 0
      */
     void GetEnvelopeFromFileHelper (const amrex::Geometry& gm);
 
     /** \brief Read in a laser from an openPMD file
      *
-     * \param[in] domain size of the level 0 domain
+     * \param[in] gm Geometry for level 0
      */
     template<typename input_type>
     void GetEnvelopeFromFile (const amrex::Geometry& gm);
