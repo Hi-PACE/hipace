@@ -41,8 +41,8 @@ General parameters
     With the explicit solver (default), the number of cells in the x and y directions must be either :math:`2^n-1` (common values are 511, 1023, 2047, best configuration for performance) or :math:`2^n` where :math:`n` is an integer. Some other values might work, like :math:`3 \times 2^n-1`, but use at your own risk.
 
 * ``amr.max_level`` (`integer`) optional (default `0`)
-    Maximum level of mesh refinement. Currently, mesh refinement is only supported up to level
-    `1`. Note, that the mesh refinement algorithm is still in active development and should be used with care.
+    Maximum level of mesh refinement. Currently, mesh refinement is supported up to level
+    `2`. Note, that the mesh refinement algorithm is still in active development and should be used with care.
 
 * ``geometry.patch_lo`` (3 `float`)
     Lower end of the simulation box in x, y and z.
@@ -55,12 +55,22 @@ General parameters
 
 * ``mr_lev1.n_cell`` (2 `integer`)
     Number of cells in x and y for level 1.
-    The number of cells in the zeta direction is calculated form ``patch_lo`` and ``patch_hi``.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
 
 * ``mr_lev1.patch_lo`` (3 `float`)
     Lower end of the refined grid in x, y and z.
 
 * ``mr_lev1.patch_hi`` (3 `float`)
+    Upper end of the refined grid in x, y and z.
+
+* ``mr_lev2.n_cell`` (2 `integer`)
+    Number of cells in x and y for level 2.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
+
+* ``mr_lev2.patch_lo`` (3 `float`)
+    Lower end of the refined grid in x, y and z.
+
+* ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
 * ``max_step`` (`integer`) optional (default `0`)
@@ -687,11 +697,11 @@ Field diagnostics
     The names of all field diagnostics, separated by a space.
     Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
     To run without field diagnostics, choose the name ``no_field_diag``.
-    If mesh refinement is used, the default becomes ``lev0 lev1``.
+    If mesh refinement is used, the default becomes ``lev0 lev1`` or ``lev0 lev1 lev2``.
 
 * ``<diag name> or diagnostic.level`` (`integer`) optional (default `0`)
     From which mesh refinement level the diagnostics should be collected.
-    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1.
+    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1 etc.
 
 * ``<diag name>.output_period`` (`integer`) optional (default `0`)
     Output period for fields. No output is given for ``<diag name>.output_period = 0``.

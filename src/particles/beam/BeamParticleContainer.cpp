@@ -149,8 +149,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         }
         if (Hipace::m_normalized_units)
         {
-            auto dx = geom.CellSizeArray();
-            m_total_charge /= dx[0]*dx[1]*dx[2];
+            m_total_charge *= geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
         }
 
         const GetInitialMomentum get_momentum(m_name);
@@ -230,11 +229,11 @@ amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool
     return nparticles;
 }
 
-void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D,
-    const int which_slice, const int islice, const int islice_local, const int nghost)
+void BeamParticleContainer::TagByLevel (const int current_N_level,
+    amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
+    const int islice_local, const int nghost)
 {
-    if (nlev==1) return;
-    HIPACE_PROFILE("BeamParticleContainer::TagByLevel");
+    HIPACE_PROFILE("BeamParticleContainer::TagByLevel()");
 
     const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice_local == 0));
     int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
@@ -250,7 +249,7 @@ void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geo
         cell_start = offsets[islice_local];
         cell_stop  = offsets[islice_local+1];
     } else {
-        if (islice > 0) {
+        if (islice_local > 0) {
             cell_start = offsets[islice_local-1];
             cell_stop  = offsets[islice_local];
         } else {
@@ -261,13 +260,20 @@ void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geo
 
     int const num_particles = cell_stop-cell_start;
 
-    const int islice_here = islice - (which_slice == WhichSlice::Next);
-    const bool has_zeta = (islice_here >= geom3D[1].Domain().smallEnd(2) &&
-                           islice_here <= geom3D[1].Domain().bigEnd(2));
-    const amrex::Real lo_x = geom3D[1].ProbLo(0);
-    const amrex::Real hi_x = geom3D[1].ProbHi(0);
-    const amrex::Real lo_y = geom3D[1].ProbLo(1);
-    const amrex::Real hi_y = geom3D[1].ProbHi(1);
+    const int lev1_idx = std::min(1, current_N_level-1);
+    const int lev2_idx = std::min(2, current_N_level-1);
+
+    const amrex::Real lo_x_lev1 = geom3D[lev1_idx].ProbLo(0);
+    const amrex::Real lo_x_lev2 = geom3D[lev2_idx].ProbLo(0);
+
+    const amrex::Real hi_x_lev1 = geom3D[lev1_idx].ProbHi(0);
+    const amrex::Real hi_x_lev2 = geom3D[lev2_idx].ProbHi(0);
+
+    const amrex::Real lo_y_lev1 = geom3D[lev1_idx].ProbLo(1);
+    const amrex::Real lo_y_lev2 = geom3D[lev2_idx].ProbLo(1);
+
+    const amrex::Real hi_y_lev1 = geom3D[lev1_idx].ProbHi(1);
+    const amrex::Real hi_y_lev2 = geom3D[lev2_idx].ProbHi(1);
 
     amrex::ParallelFor(num_particles,
         [=] AMREX_GPU_DEVICE (int idx) {
@@ -275,9 +281,17 @@ void BeamParticleContainer::TagByLevel (const int nlev, amrex::Vector<amrex::Geo
             // Ghost particles are simply contiguous in memory.
             const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 
-            if (has_zeta &&
-                lo_x < pos_structs[ip].pos(0) && pos_structs[ip].pos(0) < hi_x &&
-                lo_y < pos_structs[ip].pos(1) && pos_structs[ip].pos(1) < hi_y) {
+            const amrex::Real xp = pos_structs[ip].pos(0);
+            const amrex::Real yp = pos_structs[ip].pos(1);
+
+            if (current_N_level > 2 &&
+                lo_x_lev2 < xp && xp < hi_x_lev2 &&
+                lo_y_lev2 < yp && yp < hi_y_lev2) {
+                // level 2
+                pos_structs[ip].cpu() = 2;
+            } else if (current_N_level > 1 &&
+                lo_x_lev1 < xp && xp < hi_x_lev1 &&
+                lo_y_lev1 < yp && yp < hi_y_lev1) {
                 // level 1
                 pos_structs[ip].cpu() = 1;
             } else {

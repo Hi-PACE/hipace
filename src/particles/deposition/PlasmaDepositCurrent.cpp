@@ -37,9 +37,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
     " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhomJzIons)"
     " or for the Salame slice (WhichSlice::Salame)");
 
-    // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
-
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
@@ -86,13 +83,14 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                                     : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
-        // in normalized units this is rescaling dx and dy for level 1,
+        const amrex::Real dx_inv = gm[lev].InvCellSize(0);
+        const amrex::Real dy_inv = gm[lev].InvCellSize(1);
+        const amrex::Real dz_inv = gm[lev].InvCellSize(2);
+        // in normalized units this is rescaling dx and dy for MR,
         // while in SI units it's the factor for charge to charge density
         const amrex::Real invvol = Hipace::m_normalized_units ?
-            gm[0].CellSize(0)*gm[0].CellSize(1) / (gm[lev].CellSize(0)*gm[lev].CellSize(1))
-            : 1._rt/(dx[0]*dx[1]*dx[2]);
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+            gm[0].CellSize(0)*gm[0].CellSize(1)*dx_inv*dy_inv
+            : dx_inv*dy_inv*dz_inv;
 
         const PhysConst pc = get_phys_const();
         const amrex::Real clight = pc.c;

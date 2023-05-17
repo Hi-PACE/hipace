@@ -222,7 +222,7 @@ struct derivative {
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
-        return derivative_inner<dir>{f_view.array(mfi), 1._rt/(2._rt*geom.CellSize(dir))};
+        return derivative_inner<dir>{f_view.array(mfi), 0.5_rt*geom.InvCellSize(dir)};
     }
 };
 
@@ -237,7 +237,7 @@ struct derivative<Direction::z> {
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<Direction::z> array (amrex::MFIter& mfi) const {
         return derivative_inner<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
-            1._rt/(2._rt*geom.CellSize(Direction::z))};
+            0.5_rt*geom.InvCellSize(Direction::z)};
     }
 };
 
@@ -288,7 +288,7 @@ struct interpolated_field_xy {
     auto array (amrex::MFIter& mfi) const {
         auto mfab_array = to_array2(mfab.array(mfi));
         return interpolated_field_xy_inner<interp_order_xy, decltype(mfab_array)>{
-            mfab_array, 1._rt/geom.CellSize(0), 1._rt/geom.CellSize(1),
+            mfab_array, geom.InvCellSize(0), geom.InvCellSize(1),
             GetPosOffset(0, geom, geom.Domain()), GetPosOffset(1, geom, geom.Domain())};
     }
 };
@@ -418,16 +418,16 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     const amrex::Real pos_slice_min = i_slice_min * calc_geom.CellSize(2) + poff_calc_z;
     const amrex::Real pos_slice_max = i_slice_max * calc_geom.CellSize(2) + poff_calc_z;
     const int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
-                                                          / diag_geom.CellSize(2)));
+                                                          * diag_geom.InvCellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
-                                                          / diag_geom.CellSize(2)));
+                                                          * diag_geom.InvCellSize(2)));
 
     // Put contributions from i_slice to different diag_fab slices in GPU vector
     m_rel_z_vec.resize(k_max+1-k_min);
     m_rel_z_vec_cpu.resize(k_max+1-k_min);
     for (int k=k_min; k<=k_max; ++k) {
         const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
-        const amrex::Real mid_i_slice = (pos - poff_calc_z)/calc_geom.CellSize(2);
+        const amrex::Real mid_i_slice = (pos - poff_calc_z)*calc_geom.InvCellSize(2);
         amrex::Real sz_cell[depos_order_z + 1];
         const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
         m_rel_z_vec_cpu[k-k_min] = 0;
@@ -658,7 +658,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             }
         );
 
-    } else if (lev == 1) {
+    } else if (lev > 0) {
         // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
         constexpr int interp_order = 2;
 
@@ -689,13 +689,13 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 
 
 void
-Fields::InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                   std::string component, const amrex::IntVect outer_edge,
-                                   const amrex::IntVect inner_edge)
+Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                         std::string component, const amrex::IntVect outer_edge,
+                         const amrex::IntVect inner_edge)
 {
     if (lev == 0) return; // only interpolate boundaries to lev 1
     if (outer_edge == inner_edge) return;
-    HIPACE_PROFILE("Fields::InterpolateFromLev0toLev1()");
+    HIPACE_PROFILE("Fields::LevelUpBoundary()");
     constexpr int interp_order = 2;
 
     auto field_coarse_interp = interpolated_field_xy<interp_order, amrex::MultiFab>{
@@ -781,8 +781,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
     // Left-Hand Side for Poisson equation is Psi in the slice MF
     amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
 
-    // interpolate rhomjz to level 1 in the domain edges
-    InterpolateFromLev0toLev1(geom, lev, "rhomjz", m_poisson_nguards, -m_slices_nguards);
+    // interpolate rhomjz to lev from lev-1 in the domain edges
+    LevelUpBoundary(geom, lev, "rhomjz", m_poisson_nguards, -m_slices_nguards);
 
     // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
     Multiply(m_source_nguard, getStagingArea(lev),
@@ -796,8 +796,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
         lhs.FillBoundary(geom[lev].periodicity());
     }
 
-    // interpolate psi to level 1 in the ghost cells
-    InterpolateFromLev0toLev1(geom, lev, "Psi", m_slices_nguards, m_poisson_nguards);
+    // interpolate psi to lev from lev-1 in the ghost cells
+    LevelUpBoundary(geom, lev, "Psi", m_slices_nguards, m_poisson_nguards);
 
     // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
     amrex::MultiFab f_ExmBy = getField(lev, WhichSlice::This, "ExmBy");
@@ -813,8 +813,8 @@ Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, c
         const Array2<amrex::Real const> array_Psi = f_Psi.const_array(mfi);
         // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
         const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
-        const amrex::Real dx_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::x));
-        const amrex::Real dy_inv = 1._rt/(2._rt*geom[lev].CellSize(Direction::y));
+        const amrex::Real dx_inv = 0.5_rt*geom[lev].InvCellSize(Direction::x);
+        const amrex::Real dy_inv = 0.5_rt*geom[lev].InvCellSize(Direction::y);
 
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int)
@@ -852,8 +852,8 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // The LHS will be returned as lhs.
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
-    // interpolate Ez to level 1 in the ghost cells
-    InterpolateFromLev0toLev1(geom, lev, "Ez", m_slices_nguards, m_poisson_nguards);
+    // interpolate Ez to lev from lev-1 in the ghost cells
+    LevelUpBoundary(geom, lev, "Ez", m_slices_nguards, m_poisson_nguards);
 }
 
 void
@@ -933,8 +933,8 @@ Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int le
     // The LHS will be returned as lhs.
     m_poisson_solver[lev]->SolvePoissonEquation(lhs);
 
-    // interpolate Bz to level 1 in the ghost cells
-    InterpolateFromLev0toLev1(geom, lev, "Bz", m_slices_nguards, m_poisson_nguards);
+    // interpolate Bz to lev from lev-1 in the ghost cells
+    LevelUpBoundary(geom, lev, "Bz", m_slices_nguards, m_poisson_nguards);
 }
 
 void

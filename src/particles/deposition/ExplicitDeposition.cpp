@@ -56,14 +56,14 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
 
-        const amrex::Real * AMREX_RESTRICT dx = gm[lev].CellSize();
-        // in normalized units this is rescaling dx and dy for level 1,
+        const amrex::Real dx_inv = gm[lev].InvCellSize(0);
+        const amrex::Real dy_inv = gm[lev].InvCellSize(1);
+        const amrex::Real dz_inv = gm[lev].InvCellSize(2);
+        // in normalized units this is rescaling dx and dy for MR,
         // while in SI units it's the factor for charge to charge density
         const amrex::Real invvol = Hipace::m_normalized_units ?
-            gm[0].CellSize(0)*gm[0].CellSize(1) / (gm[lev].CellSize(0)*gm[lev].CellSize(1))
-            : 1._rt/(dx[0]*dx[1]*dx[2]);
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+            gm[0].CellSize(0)*gm[0].CellSize(1)*dx_inv*dy_inv
+            : dx_inv*dy_inv*dz_inv;
 
         const PhysConst pc = get_phys_const();
         const amrex::Real a_clight = pc.c;

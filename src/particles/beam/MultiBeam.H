@@ -60,11 +60,12 @@ public:
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] gm Geometry object at level lev
-     * \param[in] lev MR level
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] islice slice index in which the current is stored
      */
     void AdvanceBeamParticlesSlice (
-        const Fields& fields, amrex::Geometry const& gm, int const lev, const int islice);
+        const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
+        const int islice);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
@@ -112,14 +113,13 @@ public:
     int NumIntComps ();
 
     /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
-     * \param[in] nlev number of MR levels
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] geom3D Geometry object for the whole domain
      * \param[in] which_slice slice to mark
-     * \param[in] islice current slice
      * \param[in] islice_local local index of the slice
      */
-    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int which_slice,
-                     const int islice, const int islice_local);
+    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
+                     const int which_slice, const int islice_local);
 
     /** \brief Store number of particles of each beam in m_n_real_particles */
     void StoreNRealParticles ();

@@ -35,8 +35,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
     const bool do_tiling = Hipace::m_do_tiling;
 
-    // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
@@ -59,8 +57,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         Array3<const amrex::Real> const& a_arr = use_laser ?
             a_mf[pti].const_array(WhichLaserSlice::n00j00_r) : amrex::Array4<const amrex::Real>();
 
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+        // Extract properties associated with physical size of the box
+        const amrex::Real dx_inv = gm[lev].InvCellSize(0);
+        const amrex::Real dy_inv = gm[lev].InvCellSize(1);
 
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], slice_fab.box());
