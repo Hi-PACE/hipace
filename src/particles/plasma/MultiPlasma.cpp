@@ -105,7 +105,7 @@ MultiPlasma::AdvanceParticles (
 {
     for (int i=0; i<m_nplasmas; i++) {
         AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
-                               lev, m_all_bins[i], multi_laser);
+                               lev, multi_laser);
     }
 }
 
