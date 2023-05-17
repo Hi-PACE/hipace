@@ -109,7 +109,7 @@ void UpdateMomentumPerezElastic (
     T_R const g2s = ( T_R(1.0) - vcDv2*inv_c2 )*gc*g2;
 
     // Compute the Coulomb log lnLmd
-    T_R lnLmd = L;
+    T_R lnLmd;
     if ( L > T_R(0.0) ) { lnLmd = L; }
     else
     {
