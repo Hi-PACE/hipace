@@ -90,7 +90,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                         rsq > a_radius*a_radius ||
                         rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                        density_func(x, y, c_t) < min_density) continue;
+                        density_func(x, y, c_t) <= min_density) continue;
 
                     num_particles_cell += 1;
                 }
@@ -142,7 +142,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > a_radius*a_radius ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                    density_func(x, y, c_t) < min_density) return;
+                    density_func(x, y, c_t) <= min_density) return;
 
                 int ix = i - lo.x;
                 int iy = j - lo.y;
@@ -217,7 +217,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > a_radius*a_radius ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                    density_func(x, y, c_t) < min_density) return;
+                    density_func(x, y, c_t) <= min_density) return;
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
