@@ -315,9 +315,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 ParticleType& p = pstruct[pidx];
                 // const amrex::Real x = p.pos(0);
                 // const amrex::Real y = p.pos(1);
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
                 int icount = 0;
                 for (int idim=0; idim<3; idim++) {
                     if (reproducible_temperature_dim[idim]) continue;
@@ -342,9 +339,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         arrdata[PlasmaIdx::uy_half_step][midx] = arrdata[PlasmaIdx::uy][midx];
                         arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi][midx];
     #ifdef HIPACE_USE_AB5_PUSH
-    #ifdef AMREX_USE_GPU
-    #pragma unroll
-    #endif
                         for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                             arrdata[iforce][midx] = 0._rt;
                         }
