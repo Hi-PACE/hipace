@@ -226,39 +226,92 @@ using amrex::ParallelFor;
 template <typename T, typename F>
 void ParallelFor (T n, F&& f) noexcept
 {
+    if (n < 1000) {
+        for (T i = 0; i < n; ++i) {
+            f(i);
+        }
+    } else {
 #pragma omp parallel for simd
-    for (T i = 0; i < n; ++i) {
-        f(i);
+        for (T i = 0; i < n; ++i) {
+            f(i);
+        }
     }
 }
 
 template <typename F>
 void ParallelFor (amrex::Box const& box, F&& f) noexcept
 {
-    const auto lo = amrex::lbound(box);
-    const auto hi = amrex::ubound(box);
-#pragma omp parallel for collapse(2)
-    for (int k = lo.z; k <= hi.z; ++k) {
-    for (int j = lo.y; j <= hi.y; ++j) {
+    if (box.numPts() < 1000) {
+        const auto lo = amrex::lbound(box);
+        const auto hi = amrex::ubound(box);
+        for (int k = lo.z; k <= hi.z; ++k) {
+        for (int j = lo.y; j <= hi.y; ++j) {
 #pragma omp simd
-    for (int i = lo.x; i <= hi.x; ++i) {
-        f(i,j,k);
-    }}}
+        for (int i = lo.x; i <= hi.x; ++i) {
+            f(i,j,k);
+        }}}
+    } else {
+        const auto lo = amrex::lbound(box);
+        const auto hi = amrex::ubound(box);
+
+        constexpr int tilesize = 8;
+#pragma omp parallel for collapse(3)
+        for (int k = lo.z; k <= hi.z; ++k) {
+        for (int jt = lo.y; jt <= hi.y; jt+=tilesize) {
+        for (int it = lo.x; it <= hi.x; it+=tilesize) {
+        for (int j = jt; j < jt+tilesize && j<=hi.y; ++j) {
+        for (int i = it; i < it+tilesize && i<=hi.x; ++i) {
+            f(i,j,k);
+        }}}}}
+
+/*#pragma omp parallel for collapse(3)
+        for (int k = lo.z; k <= hi.z; ++k) {
+        for (int j = lo.y; j <= hi.y; ++j) {
+        for (int i = lo.x; i <= hi.x; ++i) {
+            f(i,j,k);
+        }}}*/
+    }
 }
 
 template <typename F>
 void ParallelFor (amrex::Box const& box, int ncomp, F&& f) noexcept
 {
-    const auto lo = amrex::lbound(box);
-    const auto hi = amrex::ubound(box);
-#pragma omp parallel for collapse(3)
-    for (int n = 0; n < ncomp; ++n) {
-        for (int k = lo.z; k <= hi.z; ++k) {
-        for (int j = lo.y; j <= hi.y; ++j) {
+    if (box.numPts()*ncomp < 1000) {
+        const auto lo = amrex::lbound(box);
+        const auto hi = amrex::ubound(box);
+        for (int n = 0; n < ncomp; ++n) {
+            for (int k = lo.z; k <= hi.z; ++k) {
+            for (int j = lo.y; j <= hi.y; ++j) {
 #pragma omp simd
-        for (int i = lo.x; i <= hi.x; ++i) {
-            f(i,j,k,n);
-        }}}
+            for (int i = lo.x; i <= hi.x; ++i) {
+                f(i,j,k,n);
+            }}}
+        }
+    } else {
+        const auto lo = amrex::lbound(box);
+        const auto hi = amrex::ubound(box);
+
+        constexpr int tilesize = 8;
+#pragma omp parallel for collapse(4)
+        for (int n = 0; n < ncomp; ++n) {
+            for (int k = lo.z; k <= hi.z; ++k) {
+            for (int jt = lo.y; jt <= hi.y; jt+=tilesize) {
+            for (int it = lo.x; it <= hi.x; it+=tilesize) {
+            for (int j = jt; j < jt+tilesize && j<=hi.y; ++j) {
+            for (int i = it; i < it+tilesize && i<=hi.x; ++i) {
+                f(i,j,k,n);
+            }}}}}
+        }
+
+/*#pragma omp parallel for collapse(3)
+        for (int n = 0; n < ncomp; ++n) {
+            for (int k = lo.z; k <= hi.z; ++k) {
+            for (int j = lo.y; j <= hi.y; ++j) {
+#pragma omp simd
+            for (int i = lo.x; i <= hi.x; ++i) {
+                f(i,j,k,n);
+            }}}
+        }*/
     }
 }
 

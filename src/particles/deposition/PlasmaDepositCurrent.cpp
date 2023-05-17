@@ -126,11 +126,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         int ntiley = 0;
         if (do_tiling) {
             const int ng = Fields::m_slices_nguards[0];
-            const int ncellx = isl_fab.box().bigEnd(0)-isl_fab.box().smallEnd(0)+1-2*ng;
-            const int ncelly = isl_fab.box().bigEnd(1)-isl_fab.box().smallEnd(1)+1-2*ng;
-            AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
-            AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
-            ntiley = ncelly / bin_size;
+            const int ncelly = isl_fab.box().length(1)-2*ng;
+            ntiley = (ncelly + bin_size -1) / bin_size;
         }
 
         const int ntiles = do_tiling ? bins.numBins() : 1;
@@ -299,9 +296,11 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
             if (do_tiling) {
                 // If tiling is on, the current was deposited (see above) in temporary tile arrays.
                 // Now, we atomic add from these temporary arrays to the main arrays
-                amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
                 amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, pti.tilebox().smallEnd(2)},
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
+                dstbx &= isl_fab.box();
+                amrex::Box srcbx = dstbx;
+                srcbx -= amrex::IntVect(srcbx.smallEnd());
                 srcbx.grow(Fields::m_slices_nguards);
                 dstbx.grow(Fields::m_slices_nguards);
                 if (jx_cmp != -1) {

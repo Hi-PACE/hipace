@@ -167,9 +167,6 @@ Fields::AllocData (
     }
 #endif
     if (Hipace::m_do_tiling) {
-        const amrex::Box dom_box = slice_ba[0];
-        const amrex::IntVect ncell = dom_box.bigEnd() - dom_box.smallEnd() + 1;
-        AMREX_ALWAYS_ASSERT(ncell[0] % bin_size == 0 && ncell[1] % bin_size == 0);
 
         m_tmp_densities.resize(num_threads);
         for (int i=0; i<num_threads; i++){
