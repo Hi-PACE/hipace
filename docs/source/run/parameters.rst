@@ -309,7 +309,7 @@ When both are specified, the per-species value is used.
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
 * ``<plasma name> or plasmas.min_density`` (`float`) optional (default `0`)
-    Minimal density below which particles are not injected.
+    Particles with a density less than or equal to the minimal density won't be injected.
     Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
 
 * ``<plasma name>.density_table_file`` (`string`) optional (default "")
