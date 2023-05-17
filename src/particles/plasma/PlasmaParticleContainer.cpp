@@ -131,8 +131,8 @@ PlasmaParticleContainer::ReadParameters ()
         }
     }
     if (queryWithParserAlt(pp, "reproducible_temperature_dim", tmp_vector, pp_alt)){
-        AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM-1);
-        for (int i=0; i<AMREX_SPACEDIM-1; i++) {
+        AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
+        for (int i=0; i<AMREX_SPACEDIM; i++) {
             m_reproducible_temperature_dim[i] = tmp_vector[i];
             m_reproducible_temperature += m_reproducible_temperature_dim[i];
         }

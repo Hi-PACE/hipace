@@ -312,8 +312,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
                 ParticleType& p = pstruct[pidx];
-                const amrex::Real x = p.pos(0);
-                const amrex::Real y = p.pos(1);
+                // const amrex::Real x = p.pos(0);
+                // const amrex::Real y = p.pos(1);
 #ifdef AMREX_USE_GPU
 #pragma unroll
 #endif
@@ -324,8 +324,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         const amrex::Long midx = icount*mirror_offset +pidx;
                         pstruct[midx] = p;
                         pstruct[midx].id() = pid + int(midx);
-                        pstruct[midx].pos(0) = pstruct[pidx].pos(0);
-                        pstruct[midx].pos(1) = pstruct[pidx].pos(1);
+                        pstruct[midx].pos(0) = p.pos(0);
+                        pstruct[midx].pos(1) = p.pos(1);
                         arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
 
                         arrdata[PlasmaIdx::ux][midx] = m_reproducible_temperature_dim[0] ?

@@ -150,7 +150,7 @@ public:
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** Directions along which a reproducible temperature is created */
     amrex::IntVect m_reproducible_temperature_dim {0,0,0};
-    int m_reproducible_temperature {0}; /**< Whether a reproducible temperature us used */
+    int m_reproducible_temperature {0}; /**< Whether a reproducible temperature is used */
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
