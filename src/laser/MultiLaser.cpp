@@ -340,9 +340,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         }
     } else if (m_file_geometry == "rt") {
 
-        // nmodes = extent[0]
-        // nt = extent[1]
-        // nz = extent[2]
+        // extent = {nmodes, nt, nr}
 
         // Calculate the min and max of the grid from laser file
         amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
@@ -370,6 +368,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                     const amrex::Real x = i*dx + xmin;
                     const amrex::Real y = j*dy + ymin;
                     const amrex::Real r = sqrt(x*x + y*y);
+                    const amrex::Real theta = std::atan2(y, x);
                     const amrex::Real rmid = (r - rmin_laser)/spacing[1];
                     amrex::Real sr_cell[interp_order_xy+1];
                     const int i_cell = compute_shape_factor<interp_order_xy>(sr_cell, rmid);
@@ -382,21 +381,36 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
 
                     laser_arr(i, j, k, 0) = 0._rt;
                     laser_arr(i, j, k, 1) = 0._rt;
-//                    for (int im=0; im<extent[0]/2+1; im++) {
-                        for (int it=0; it<=interp_order_xy; it++){
-                            for (int ir=0; ir<=interp_order_xy; ir++){
-                                if (i_cell+ir >= 0 && i_cell+ir < extent[2] &&
-                                    k_cell+it >= 0 && k_cell+it < extent[1]) {
-                                    laser_arr(i, j, k, 0) += sr_cell[ir]
-                                        * st_cell[it] * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
-                                    laser_arr(i, j, k, 1) += sr_cell[ir]
-                                        * st_cell[it] * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
+                    for (int it=0; it<=interp_order_xy; it++){
+                        for (int ir=0; ir<=interp_order_xy; ir++){
+                            if (i_cell+ir >= 0 && i_cell+ir < extent[2] &&
+                                k_cell+it >= 0 && k_cell+it < extent[1]) {
+                                // mode 0
+                                laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
+                                    static_cast<amrex::Real>(
+                                    input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
+                                laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
+                                    static_cast<amrex::Real>(
+                                    input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
+                                for (int im=1; im<=extent[0]/2; im++) {
+                                    // cos(m*theta) part of the mode
+                                    laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
+                                        std::cos(im*theta) * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ir, k_cell+it, 2*im-1).real() * unitSI);
+                                    laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
+                                        std::cos(im*theta) * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ir, k_cell+it, 2*im-1).imag() * unitSI);
+                                    // sin(m*theta) part of the mode
+                                    laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
+                                        std::sin(im*theta) * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ir, k_cell+it, 2*im).real() * unitSI);
+                                    laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
+                                        std::sin(im*theta) * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ir, k_cell+it, 2*im).imag() * unitSI);
                                 }
                             }
                         }
-//                    }
+                    }
                 }
             }
         }
