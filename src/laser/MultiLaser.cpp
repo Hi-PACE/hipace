@@ -251,7 +251,13 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     auto laser_comp = laser[openPMD::RecordComponent::SCALAR];
 
     const std::vector<std::string> axis_labels = laser.axisLabels();
-    AMREX_ALWAYS_ASSERT(axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x");
+    if (axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
+        m_file_geometry = "xyt";
+    } else if (axis_labels[0] == "t" && axis_labels[1] == "r") {
+        m_file_geometry = "rt";
+    } else {
+        amrex::Abort("Incorrect axis labels in laser file, must be either t, y, x or t, r");
+    }
 
     const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
     auto extent = laser_comp.getExtent();
@@ -262,67 +268,143 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     std::vector<double> position = laser_comp.position<double>();
     std::vector<double> spacing = laser.gridSpacing<double>();
 
-    // Calculate the min and max of the grid from laser file
-    amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
-    amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-    amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
-    AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
+    amrex::AllPrint()<<"offset   "<<offset[0]<<' '<<offset[1]<<' '<<offset[2]<<'\n';
+    amrex::AllPrint()<<"position "<<position[0]<<' '<<position[1]<<' '<<position[2]<<'\n';
+    amrex::AllPrint()<<"spacing  "<<spacing[0]<<' '<<spacing[1]<<' '<<spacing[2]<<'\n';
 
-    //lasy: tyx in C order
-    amrex::Dim3 arr_begin = {0, 0, 0};
-    amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]), static_cast<int>(extent[0])};
-    amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
+    if (m_file_geometry == "xyt") {
+        // Calculate the min and max of the grid from laser file
+        amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
+        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
+        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+        AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
 
-    //hipace: xyt in Fortran order
-    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
+        //lasy: tyx in C order
+        amrex::Dim3 arr_begin = {0, 0, 0};
+        amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
+                               static_cast<int>(extent[0])};
+        amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
 
-    series.flush();
+        //hipace: xyt in Fortran order
+        amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
-    constexpr int interp_order_xy = 1;
-    const amrex::Real dx = gm.CellSize(Direction::x);
-    const amrex::Real dy = gm.CellSize(Direction::y);
-    const amrex::Real dz = gm.CellSize(Direction::z);
-    const amrex::Real xmin = gm.ProbLo(Direction::x)+dx/2;
-    const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
-    const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
-    const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
+        series.flush();
 
-    for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
-        for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
-            for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
+        constexpr int interp_order_xy = 1;
+        const amrex::Real dx = gm.CellSize(Direction::x);
+        const amrex::Real dy = gm.CellSize(Direction::y);
+        const amrex::Real dz = gm.CellSize(Direction::z);
+        const amrex::Real xmin = gm.ProbLo(Direction::x)+dx/2;
+        const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
+        const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
+        const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
 
-                const amrex::Real x = i*dx + xmin;
-                const amrex::Real xmid = (x - xmin_laser)/spacing[2];
-                amrex::Real sx_cell[interp_order_xy+1];
-                const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
+        for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
+            for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
+                for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
 
-                const amrex::Real y = j*dy + ymin;
-                const amrex::Real ymid = (y - ymin_laser)/spacing[1];
-                amrex::Real sy_cell[interp_order_xy+1];
-                const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
+                    const amrex::Real x = i*dx + xmin;
+                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
+                    amrex::Real sx_cell[interp_order_xy+1];
+                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
 
-                const amrex::Real z = k*dz + zmin;
-                const amrex::Real t = tmin_laser + (zmax-z)/clight;
-                const amrex::Real tmid = (t - tmin_laser)/spacing[0];
-                amrex::Real st_cell[interp_order_xy+1];
-                const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
+                    const amrex::Real y = j*dy + ymin;
+                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
+                    amrex::Real sy_cell[interp_order_xy+1];
+                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
-                laser_arr(i, j, k, 0) = 0._rt;
-                laser_arr(i, j, k, 1) = 0._rt;
-                for (int it=0; it<=interp_order_xy; it++){
-                    for (int iy=0; iy<=interp_order_xy; iy++){
-                        for (int ix=0; ix<=interp_order_xy; ix++){
-                            if (i_cell+ix >= 0 && i_cell+ix < extent[2] &&
-                                j_cell+iy >= 0 && j_cell+iy < extent[1] &&
+                    const amrex::Real z = k*dz + zmin;
+                    const amrex::Real t = tmin_laser + (zmax-z)/clight;
+                    const amrex::Real tmid = (t - tmin_laser)/spacing[0];
+                    amrex::Real st_cell[interp_order_xy+1];
+                    const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
+
+                    laser_arr(i, j, k, 0) = 0._rt;
+                    laser_arr(i, j, k, 1) = 0._rt;
+                    for (int it=0; it<=interp_order_xy; it++){
+                        for (int iy=0; iy<=interp_order_xy; iy++){
+                            for (int ix=0; ix<=interp_order_xy; ix++){
+                                if (i_cell+ix >= 0 && i_cell+ix < extent[2] &&
+                                    j_cell+iy >= 0 && j_cell+iy < extent[1] &&
+                                    k_cell+it >= 0 && k_cell+it < extent[0]) {
+                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy]
+                                        * st_cell[it] * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() *
+                                        unitSI);
+                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] *
+                                        st_cell[it] * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() *
+                                        unitSI);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else if (m_file_geometry == "rt") {
+        // Calculate the min and max of the grid from laser file
+        amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
+        amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
+        AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
+        amrex::AllPrint()<<"rmin_laser "<<rmin_laser<<'\n';
+
+        //lasy: tr in C order
+        amrex::Dim3 arr_begin = {0, 0, 0};
+        amrex::Dim3 arr_end = {static_cast<int>(extent[1]), static_cast<int>(extent[0]), 0};
+        amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
+
+        //hipace: xyt in Fortran order
+        amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
+
+        series.flush();
+
+        constexpr int interp_order_xy = 1;
+        const amrex::Real dx = gm.CellSize(Direction::x);
+        const amrex::Real dy = gm.CellSize(Direction::y);
+        const amrex::Real dz = gm.CellSize(Direction::z);
+        const amrex::Real xmin = gm.ProbLo(Direction::x)+dx/2;
+        const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
+        const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
+        const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
+
+        for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
+            for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
+                for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
+
+                    const amrex::Real x = i*dx + xmin;
+                    const amrex::Real y = j*dy + ymin;
+                    const amrex::Real r = sqrt(x*x + y*y);
+                    const amrex::Real rmid = (r - rmin_laser)/spacing[1];
+                    amrex::Real sr_cell[interp_order_xy+1];
+                    const int i_cell = compute_shape_factor<interp_order_xy>(sr_cell, rmid);
+
+                    const amrex::Real z = k*dz + zmin;
+                    const amrex::Real t = tmin_laser + (zmax-z)/clight;
+                    const amrex::Real tmid = (t - tmin_laser)/spacing[0];
+                    amrex::Real st_cell[interp_order_xy+1];
+                    const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
+
+                    amrex::AllPrint()<<"i_cell "<<i_cell<<" k_cell "<<k_cell<<'\n';
+
+/*
+                    laser_arr(i, j, k, 0) = static_cast<amrex::Real>(
+                                    input_file_arr(i_cell, k_cell, 0).real() * unitSI);
+                    laser_arr(i, j, k, 1) = static_cast<amrex::Real>(
+                                    input_file_arr(i_cell, k_cell, 0).imag() * unitSI);
+*/
+                    laser_arr(i, j, k, 0) = 0._rt;
+                    laser_arr(i, j, k, 1) = 0._rt;
+                    for (int it=0; it<=interp_order_xy; it++){
+                        for (int ir=0; ir<=interp_order_xy; ir++){
+                            if (i_cell+ir >= 0 && i_cell+ir < extent[1] &&
                                 k_cell+it >= 0 && k_cell+it < extent[0]) {
-                                laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
-                                    static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() * unitSI
-                                );
-                                laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
-                                    static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() * unitSI
-                                );
+                                laser_arr(i, j, k, 0) += sr_cell[ir]
+                                    * st_cell[it] * static_cast<amrex::Real>(
+                                    input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
+                                laser_arr(i, j, k, 1) += sr_cell[ir]
+                                    * st_cell[it] * static_cast<amrex::Real>(
+                                    input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
                             }
                         }
                     }
