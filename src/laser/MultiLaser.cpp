@@ -268,9 +268,11 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     std::vector<double> position = laser_comp.position<double>();
     std::vector<double> spacing = laser.gridSpacing<double>();
 
-    amrex::AllPrint()<<"offset   "<<offset[0]<<' '<<offset[1]<<' '<<offset[2]<<'\n';
-    amrex::AllPrint()<<"position "<<position[0]<<' '<<position[1]<<' '<<position[2]<<'\n';
-    amrex::AllPrint()<<"spacing  "<<spacing[0]<<' '<<spacing[1]<<' '<<spacing[2]<<'\n';
+    //lasy: tyx in C order, tr in C order
+    amrex::Dim3 arr_begin = {0, 0, 0};
+    amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
+                            static_cast<int>(extent[0])};
+    amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
 
     if (m_file_geometry == "xyt") {
         // Calculate the min and max of the grid from laser file
@@ -278,12 +280,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
         amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
-
-        //lasy: tyx in C order
-        amrex::Dim3 arr_begin = {0, 0, 0};
-        amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
-                               static_cast<int>(extent[0])};
-        amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
 
         //hipace: xyt in Fortran order
         amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
@@ -343,16 +339,15 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
             }
         }
     } else if (m_file_geometry == "rt") {
+
+        // nmodes = extent[0]
+        // nt = extent[1]
+        // nz = extent[2]
+
         // Calculate the min and max of the grid from laser file
         amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
         amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
-        amrex::AllPrint()<<"rmin_laser "<<rmin_laser<<'\n';
-
-        //lasy: tr in C order
-        amrex::Dim3 arr_begin = {0, 0, 0};
-        amrex::Dim3 arr_end = {static_cast<int>(extent[1]), static_cast<int>(extent[0]), 0};
-        amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
 
         //hipace: xyt in Fortran order
         amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
@@ -385,29 +380,23 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                     amrex::Real st_cell[interp_order_xy+1];
                     const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
-                    amrex::AllPrint()<<"i_cell "<<i_cell<<" k_cell "<<k_cell<<'\n';
-
-/*
-                    laser_arr(i, j, k, 0) = static_cast<amrex::Real>(
-                                    input_file_arr(i_cell, k_cell, 0).real() * unitSI);
-                    laser_arr(i, j, k, 1) = static_cast<amrex::Real>(
-                                    input_file_arr(i_cell, k_cell, 0).imag() * unitSI);
-*/
                     laser_arr(i, j, k, 0) = 0._rt;
                     laser_arr(i, j, k, 1) = 0._rt;
-                    for (int it=0; it<=interp_order_xy; it++){
-                        for (int ir=0; ir<=interp_order_xy; ir++){
-                            if (i_cell+ir >= 0 && i_cell+ir < extent[1] &&
-                                k_cell+it >= 0 && k_cell+it < extent[0]) {
-                                laser_arr(i, j, k, 0) += sr_cell[ir]
-                                    * st_cell[it] * static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
-                                laser_arr(i, j, k, 1) += sr_cell[ir]
-                                    * st_cell[it] * static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
+//                    for (int im=0; im<extent[0]/2+1; im++) {
+                        for (int it=0; it<=interp_order_xy; it++){
+                            for (int ir=0; ir<=interp_order_xy; ir++){
+                                if (i_cell+ir >= 0 && i_cell+ir < extent[2] &&
+                                    k_cell+it >= 0 && k_cell+it < extent[1]) {
+                                    laser_arr(i, j, k, 0) += sr_cell[ir]
+                                        * st_cell[it] * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
+                                    laser_arr(i, j, k, 1) += sr_cell[ir]
+                                        * st_cell[it] * static_cast<amrex::Real>(
+                                        input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
+                                }
                             }
                         }
-                    }
+//                    }
                 }
             }
         }
