@@ -121,7 +121,7 @@ void UpdateMomentumPerezElastic (
     if ( L > T_R(0.0) ) { lnLmd = L; }
     else
     {
-        // Compute b0 according to eq (22) from Pérez et al., Phys.Plasmas.19.083104 (2012)
+        // Compute b0 according to eq (22) from Perez et al., Phys.Plasmas.19.083104 (2012)
         T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2_SI /
                (T_R(4.0)*MathConst::pi*PhysConstSI::ep0) * gc/mass_g *
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) ) *
@@ -130,12 +130,12 @@ void UpdateMomentumPerezElastic (
         // Compute the minimal impact parameter
         T_R bmin = amrex::max(PhysConstSI::hbar*MathConst::pi/p1sm,b0);
 
-        // Compute the Coulomb log lnLmd according to eq (23) from Pérez et al., Phys.Plasmas.19.083104 (2012)
+        // Compute the Coulomb log lnLmd according to eq (23) from Perez et al., Phys.Plasmas.19.083104 (2012)
         lnLmd = amrex::max( T_R(2.0),
                 T_R(0.5)*std::log(T_R(1.0)+lmdD*lmdD/(bmin*bmin)) );
     }
 
-    // Compute s according to eq (17) from Pérez et al., Phys.Plasmas.19.083104 (2012)
+    // Compute s according to eq (17) from Perez et al., Phys.Plasmas.19.083104 (2012)
     const auto tts = m1*g1s*m2*g2s/(inv_c2_SI*p1sm*p1sm) + T_R(1.0);
     const auto tts2 = tts*tts;
     const amrex::Real charge_fac = normalized_units ? PhysConstSI::q_e*PhysConstSI::q_e*
@@ -159,7 +159,7 @@ void UpdateMomentumPerezElastic (
     // Get random numbers
     T_R r = amrex::Random(engine);
 
-    // Compute scattering angle according to eq (10) and following from Pérez et al., Phys.Plasmas.19.083104 (2012)
+    // Compute scattering angle according to eq (10) and following from Perez et al., Phys.Plasmas.19.083104 (2012)
     T_R cosXs;
     T_R sinXs;
     if ( s <= T_R(0.1) )
@@ -269,7 +269,7 @@ void UpdateMomentumPerezElastic (
         p2fz = p2fsz;
     }
 
-    // Rejection method according to eq (14) and following from Pérez et al., Phys.Plasmas.19.083104 (2012)
+    // Rejection method according to eq (14) and following from Perez et al., Phys.Plasmas.19.083104 (2012)
     r = amrex::Random(engine);
     if ( w2 > r*amrex::max(w1, w2) )
     {

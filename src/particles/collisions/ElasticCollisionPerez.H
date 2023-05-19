@@ -85,7 +85,7 @@ void ElasticCollisionPerez (
     for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) { n1 += w1[ I1[i1] ]; }
     for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) { n2 += w2[ I2[i2] ]; }
 
-    // compute n12 according to eq. 16 in Pérez et al., Phys. Plasmas 19 (8) (2012) 083104
+    // compute n12 according to eq. 16 in Perez et al., Phys. Plasmas 19 (8) (2012) 083104
     {
       int i1 = I1s; int i2 = I2s;
       for (int k = 0; k < amrex::max(NI1,NI2); ++k)
@@ -119,7 +119,7 @@ void ElasticCollisionPerez (
         lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*PhysConstSI::ep0) +
                                    n2*q2*q2/(T2t*PhysConstSI::ep0) );
     }
-    // minimum mean interatomic distance rmin (see Pérez et al., Phys. Plasmas 19 (8) (2012) 083104)
+    // minimum mean interatomic distance rmin (see Perez et al., Phys. Plasmas 19 (8) (2012) 083104)
     T_R rmin = std::pow( T_R(4.0) * MathConst::pi / T_R(3.0) *
                amrex::max(n1,n2), T_R(-1.0/3.0) );
     lmdD = amrex::max(lmdD, rmin);
