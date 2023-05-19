@@ -95,6 +95,9 @@ void ElasticCollisionPerez (
 
     }
 
+    // in normalized units, the weights already represent a density, so it must only be rescaled
+    // to SI units. In SI units, the weights represent the amount of particles, so it must be
+    // divided by the volume
     if (normalized_units) {
         n1 = n1 * background_density_SI;
         n2 = n2 * background_density_SI;

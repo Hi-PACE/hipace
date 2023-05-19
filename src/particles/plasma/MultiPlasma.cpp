@@ -34,6 +34,11 @@ MultiPlasma::MultiPlasma ()
      for (int i = 0; i < m_ncollisions; ++i) {
          m_all_collisions.emplace_back(CoulombCollision(m_names, m_collision_names[i]));
      }
+     if (Hipace::GetInstance().m_normalized_units && m_ncollisions > 0) {
+         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
+             "For collisions with normalized units, a background plasma density must "
+             "be specified via 'plasmas.background_density_SI'");
+     }
 }
 
 void
