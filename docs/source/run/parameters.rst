@@ -398,13 +398,13 @@ When both are specified, the per-species value is used.
 Binary collisions for plasma species
 ------------------------------------
 
-WARNING: this module is in development. Currently only support electron-electron collisions.
+WARNING: this module is in development. Currently only supports electron-electron collisions.
 
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
 
 * ``plasmas.background_density_SI`` (`float`) optional
     Background plasma density in SI units. Only used for collisions in normalized units. Since the collision rate depends on the plasma density itself, it cannot be determined in normalized units without knowing the actual plasma background density.
-    Hence, it must be provided using this input parameter. 
+    Hence, it must be provided using this input parameter.
 
 * ``plasmas.collisions`` (list of `strings`) optional
     List of names of types binary Coulomb collisions.

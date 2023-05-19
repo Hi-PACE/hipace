@@ -61,7 +61,7 @@ void UpdateMomentumPerezElastic (
         return;
     }
 
-    // FROM HERE ON EVERYTHING IN SI
+    // Transform to SI units (u is the proper velocity here)
     if (normalized_units) {
         m1 *= PhysConstSI::m_e;
         m2 *= PhysConstSI::m_e;
@@ -73,14 +73,12 @@ void UpdateMomentumPerezElastic (
         u2z *= PhysConstSI::c;
     }
     // Compute momenta
-
     T_R const p1x = u1x * m1;
     T_R const p1y = u1y * m1;
     T_R const p1z = u1z * m1;
     T_R const p2x = u2x * m2;
     T_R const p2y = u2y * m2;
     T_R const p2z = u2z * m2;
-
 
     // Compute center-of-mass (COM) velocity and gamma
     T_R const mass_g = m1 * g1 + m2 * g2;
@@ -130,7 +128,7 @@ void UpdateMomentumPerezElastic (
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) );
 
         // Compute the minimal impact parameter
-        T_R bmin = amrex::max(cst.hbar*MathConst::pi/p1sm,b0);
+        T_R bmin = amrex::max(PhysConstSI::hbar*MathConst::pi/p1sm,b0);
 
         // Compute the Coulomb log lnLmd according to eq (23) from Pérez et al., Phys.Plasmas.19.083104 (2012)
         lnLmd = amrex::max( T_R(2.0),

@@ -39,6 +39,8 @@
  * @param[in] L Coulomb log. If <0, measured per cell.
  * @param[in] dV Volume of the corresponding cell.
  * @param[in] cst physical constants
+ * @param[in] normalized_units whether normalized units are used
+ * @param[in] background_density_SI background plasma density (only needed for normalized units)
  * @param[in] engine AMReX engine for the random number generator.
 */
 
@@ -140,7 +142,6 @@ void ElasticCollisionPerez (
             // In the longitudinal push of plasma particles, the dt is different for each particle.
             // The dt applied for collision probability is the average (in the lab frame) of these
             // dts. This is NOT clean. TODO FIXME.
-            if (i1 != 100) continue;
             const amrex::Real dt_fac = 0.5_rt * (g1/psi1[I1[i1]] + g2/psi2[I2[i2]]);
             UpdateMomentumPerezElastic(
                 u1x[ I1[i1] ], u1y[ I1[i1] ], psi1[ I1[i1] ],

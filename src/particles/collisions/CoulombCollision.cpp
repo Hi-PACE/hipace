@@ -71,8 +71,11 @@ CoulombCollision::doCoulombCollision (
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real wp = std::sqrt(background_density_SI * PhysConstSI::q_e*PhysConstSI::q_e / (PhysConstSI::ep0 * PhysConstSI::m_e) );
-            const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/PhysConstSI::c;
+            const amrex::Real wp = std::sqrt(background_density_SI *
+                                             PhysConstSI::q_e*PhysConstSI::q_e /
+                                             (PhysConstSI::ep0 * PhysConstSI::m_e) );
+            const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
+                                                    : geom.CellSize(2)/PhysConstSI::c;
 
             amrex::ParallelForRNG(
                 n_cells,
@@ -140,10 +143,13 @@ CoulombCollision::doCoulombCollision (
             amrex::Real q2 = species2.GetCharge();
             amrex::Real m2 = species2.GetMass();
 
+            // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real wp = std::sqrt(background_density_SI * PhysConstSI::q_e*PhysConstSI::q_e / (PhysConstSI::ep0 * PhysConstSI::m_e) );
-            const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/PhysConstSI::c;
-
+            const amrex::Real wp = std::sqrt(background_density_SI *
+                                             PhysConstSI::q_e*PhysConstSI::q_e /
+                                             (PhysConstSI::ep0 * PhysConstSI::m_e) );
+            const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
+                                                    : geom.CellSize(2)/PhysConstSI::c;
             // Extract particles in the tile that `mfi` points to
             // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
             // ParticleTileType& ptile_2 = species_2->ParticlesAt(lev, mfi);
