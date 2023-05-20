@@ -133,7 +133,6 @@ void compute_residual (Box const& box, Array4<Real> const& res,
                        Array4<Real const> const& acf, Real dx, Real dy,
                        int system_type)
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::compute_residual()");
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
@@ -227,7 +226,6 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
            Array4<Real const> const& rhs, Array4<Real const> const& acf,
            Real dx, Real dy, int system_type)
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::gsrb()");
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
@@ -257,7 +255,6 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 
 void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine)
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::restriction()");
     if (box.cellCentered()) {
         hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
         {
@@ -274,7 +271,6 @@ void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> c
 
 void interpolation (Box const& box, Array4<Real> const& fine, Array4<Real const> const& crse)
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::interpolation()");
     if (box.cellCentered()) {
         hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
         {
@@ -556,14 +552,11 @@ MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_
 
     auto const& array_m_acf = m_acf[0].array();
     auto const& array_a_acf = afab.const_array();
-    {
-        //HIPACE_PROFILE("hpmg::MultiGrid::init()");
     hpmg::ParallelFor(m_acf[0].box(),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
             array_m_acf(i,j,0) = array_a_acf(i,j,0);
         });
-    }
 
     average_down_acoef();
 
@@ -675,7 +668,6 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
                        Real const tol_rel, Real const tol_abs, int const nummaxiter,
                        int const verbose)
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::solve_doit()");
     AMREX_ALWAYS_ASSERT(a_sol.nComp() >= 2 && a_rhs.nComp() >= 2);
 
     m_sol = FArrayBox(center_box(a_sol.box(), m_domain.front()), 2, a_sol.dataPtr());
@@ -687,7 +679,6 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
 
     Real resnorm0, rhsnorm0;
     {
-        //HIPACE_PROFILE("hpmg::MultiGrid::reduce()");
         ReduceOps<ReduceOpMax,ReduceOpMax> reduce_op;
         ReduceData<Real,Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -780,7 +771,6 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
 void
 MultiGrid::vcycle ()
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::vcycle()");
 #if defined(AMREX_USE_CUDA)
     const int igraph = m_system_type-1;
     bool& graph_created = m_cuda_graph_vcycle_created[igraph];
@@ -849,7 +839,6 @@ MultiGrid::vcycle ()
 void
 MultiGrid::bottomsolve ()
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::bottomsolve()");
     constexpr int nsweeps = 16;
     Real fac = static_cast<Real>(1 << m_single_block_level_begin);
     Real dx0 = m_dx * fac;
@@ -956,7 +945,6 @@ namespace {
 void
 MultiGrid::average_down_acoef ()
 {
-    //HIPACE_PROFILE("hpmg::MultiGrid::average_down_acoef()");
     const int ncomp = (m_system_type == 1) ? 1 : 2;
 #if defined(AMREX_USE_CUDA)
     const int igraph = m_system_type-1;

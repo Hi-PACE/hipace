@@ -263,13 +263,6 @@ void ParallelFor (amrex::Box const& box, F&& f) noexcept
         for (int i = it; i < it+tilesize && i<=hi.x; ++i) {
             f(i,j,k);
         }}}}}
-
-/*#pragma omp parallel for collapse(3)
-        for (int k = lo.z; k <= hi.z; ++k) {
-        for (int j = lo.y; j <= hi.y; ++j) {
-        for (int i = lo.x; i <= hi.x; ++i) {
-            f(i,j,k);
-        }}}*/
     }
 }
 
@@ -302,16 +295,6 @@ void ParallelFor (amrex::Box const& box, int ncomp, F&& f) noexcept
                 f(i,j,k,n);
             }}}}}
         }
-
-/*#pragma omp parallel for collapse(3)
-        for (int n = 0; n < ncomp; ++n) {
-            for (int k = lo.z; k <= hi.z; ++k) {
-            for (int j = lo.y; j <= hi.y; ++j) {
-#pragma omp simd
-            for (int i = lo.x; i <= hi.x; ++i) {
-                f(i,j,k,n);
-            }}}
-        }*/
     }
 }
 

@@ -78,15 +78,15 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
 #endif
         {
 
-        int const num_particles = pti.numParticles();
+        amrex::Long const num_particles = pti.numParticles();
 #ifdef AMREX_USE_OMP
-        int const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
-        int const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
+        amrex::Long const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
+        amrex::Long const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
         const bool do_omp_atomic = omp_get_num_threads() > 1;
         using omp_cto = amrex::CompileTimeOptions<false, true>;
 #else
-        int constexpr idx_begin = 0;
-        int const idx_end = num_particles;
+        amrex::Long constexpr idx_begin = 0;
+        amrex::Long const idx_end = num_particles;
         constexpr bool do_omp_atomic = false;
         using omp_cto = amrex::CompileTimeOptions<false>;
 #endif
@@ -106,8 +106,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 do_omp_atomic
             },
             idx_end - idx_begin,
-            [=] AMREX_GPU_DEVICE (int ip, auto a_depos_order, auto a_derivative_type,
-                                          auto can_ionize, auto use_laser, auto ompa) noexcept {
+            [=] AMREX_GPU_DEVICE (amrex::Long ip, auto a_depos_order, auto a_derivative_type,
+                                  auto can_ionize, auto use_laser, auto ompa) noexcept {
                 constexpr int depos_order = a_depos_order.value;
                 constexpr int derivative_type = a_derivative_type.value;
 

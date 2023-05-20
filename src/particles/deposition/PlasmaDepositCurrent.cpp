@@ -298,11 +298,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 // Now, we atomic add from these temporary arrays to the main arrays
                 amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, pti.tilebox().smallEnd(2)},
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
+                dstbx.grow(Fields::m_slices_nguards);
                 dstbx &= isl_fab.box();
                 amrex::Box srcbx = dstbx;
-                srcbx -= amrex::IntVect(srcbx.smallEnd());
-                srcbx.grow(Fields::m_slices_nguards);
-                dstbx.grow(Fields::m_slices_nguards);
+                srcbx -= amrex::IntVect(a_itilex_bs, a_itiley_bs, srcbx.smallEnd(2));
                 if (jx_cmp != -1) {
                     isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 0, jx_cmp, 1);
                     isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 1, jy_cmp, 1);

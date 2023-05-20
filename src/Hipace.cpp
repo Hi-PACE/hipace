@@ -714,6 +714,9 @@ Hipace::InitializeSxSyWithBeam (const int lev)
     const amrex::Real dy = m_3D_geom[lev].CellSize(Direction::y);
     const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
         amrex::Box const& bx = mfi.tilebox();
