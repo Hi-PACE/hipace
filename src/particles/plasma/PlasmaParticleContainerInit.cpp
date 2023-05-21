@@ -30,6 +30,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const auto plo = ParticleGeom(lev).ProbLoArray();
     const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
 
+    const int reproducible_temperature = m_reproducible_temperature;
     const int depos_order_1 = Hipace::m_depos_order_xy + 1;
     const bool outer_depos_loop = Hipace::m_outer_depos_loop;
 
@@ -99,8 +100,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
-        } else if (m_reproducible_temperature) {
-            total_num_particles *= 2*m_reproducible_temperature;
+        } else if (reproducible_temperature) {
+            amrex::Print()<<"total_num_particles "<<total_num_particles<<'\n';
+            total_num_particles *= 2*reproducible_temperature;
+            amrex::Print()<<"total_num_particles "<<total_num_particles<<'\n';
         }
 
         auto& particles = GetParticles(lev);
@@ -309,35 +312,47 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         } else if (m_reproducible_temperature) {
             const amrex::Long mirror_offset = total_num_particles/(2*m_reproducible_temperature);
             const amrex::IntVect reproducible_temperature_dim = m_reproducible_temperature_dim;
+            amrex::AllPrint()<<"a_u_std "<<a_u_std<<'\n';
+
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
                 ParticleType& p = pstruct[pidx];
-                // const amrex::Real x = p.pos(0);
-                // const amrex::Real y = p.pos(1);
+
                 int icount = 0;
                 for (int idim=0; idim<3; idim++) {
-                    if (reproducible_temperature_dim[idim]) continue;
+                    if (!reproducible_temperature_dim[idim]) continue;
                     for (int dir=-1; dir<=1; dir+=2){
-                        const amrex::Long midx = icount*mirror_offset +pidx;
+                        const amrex::Long midx = icount*mirror_offset + pidx;
+                        if (icount == 0) {
+                            icount++;
+                            continue;
+                        }
+                        amrex::Print()<<"midx icount "<<midx<<' '<<icount<<'\n';
                         pstruct[midx] = p;
                         pstruct[midx].id() = pid + int(midx);
                         pstruct[midx].pos(0) = p.pos(0);
                         pstruct[midx].pos(1) = p.pos(1);
                         arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
 
-                        arrdata[PlasmaIdx::ux][midx] = reproducible_temperature_dim[0] ?
-                            a_u_std[0]*sqrt(2._rt)*dir*dir : 0._rt;
-                        arrdata[PlasmaIdx::uy][midx] = reproducible_temperature_dim[1] ?
-                            a_u_std[1]*sqrt(2._rt)*dir*dir : 0._rt;
-                        arrdata[PlasmaIdx::psi][midx] = reproducible_temperature_dim[2] ?
-                            std::sqrt(1._rt+2._rt*(a_u_std[0]*a_u_std[0]+a_u_std[1]*a_u_std[1]+
-                            a_u_std[2]*a_u_std[2]))-a_u_std[2]*sqrt(2._rt)*dir*dir : 0._rt;
-                        arrdata[PlasmaIdx::x_prev][midx] = arrdata[PlasmaIdx::x_prev][pidx];
-                        arrdata[PlasmaIdx::y_prev][midx] = arrdata[PlasmaIdx::y_prev][pidx];
-                        arrdata[PlasmaIdx::ux_half_step][midx] = arrdata[PlasmaIdx::ux][midx];
-                        arrdata[PlasmaIdx::uy_half_step][midx] = arrdata[PlasmaIdx::uy][midx];
-                        arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi][midx];
+                        const amrex::Real ux = 0.;
+                        const amrex::Real uy = 0.;
+                        const amrex::Real uz = 0.;
+                        // const amrex::Real ux = reproducible_temperature_dim[0] ?
+                        //     a_u_std[0]*sqrt(2._rt)*dir : 0._rt;
+                        // const amrex::Real uy = reproducible_temperature_dim[1] ?
+                        //     a_u_std[1]*sqrt(2._rt)*dir : 0._rt;
+                        // const amrex::Real uz = reproducible_temperature_dim[2] ?
+                        //     a_u_std[2]*sqrt(2._rt)*dir : 0._rt;
+                        arrdata[PlasmaIdx::ux][midx] = ux * c_light;
+                        arrdata[PlasmaIdx::uy][midx] = uy * c_light;
+                        arrdata[PlasmaIdx::psi][midx] =
+                            std::sqrt(1._rt + ux*ux + uy*uy + uz*uz) - uz*dir;
+                        arrdata[PlasmaIdx::x_prev][midx] = p.pos(0);
+                        arrdata[PlasmaIdx::y_prev][midx] = p.pos(1);
+                        arrdata[PlasmaIdx::ux_half_step][midx] = ux;
+                        arrdata[PlasmaIdx::uy_half_step][midx] = uz;
+                        arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi_half_step][pidx];
     #ifdef HIPACE_USE_AB5_PUSH
                         for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                             arrdata[iforce][midx] = 0._rt;
@@ -348,6 +363,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         icount++;
                     }
                 }
+                amrex::Print()<<"icount = "<<icount<<'\n';
             });
         }
     }

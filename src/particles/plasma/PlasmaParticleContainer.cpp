@@ -152,10 +152,11 @@ PlasmaParticleContainer::ReadParameters ()
         const PhysConst phys_const_SI = make_constants_SI();
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             if (m_reproducible_temperature) {
-                m_u_std[idim] = std::sqrt( 3. / m_reproducible_temperature *
-                            (m_temperature_in_ev * phys_const_SI.q_e)
-                            /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
-                            phys_const_SI.c * phys_const_SI.c ) );
+                m_u_std[idim] = m_reproducible_temperature_dim[idim] ?
+                    std::sqrt( 3. / m_reproducible_temperature *
+                    (m_temperature_in_ev * phys_const_SI.q_e)
+                    /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
+                    phys_const_SI.c * phys_const_SI.c ) ) : 0.;
             } else {
                 m_u_std[idim] = std::sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
                                         /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
