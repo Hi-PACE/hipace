@@ -37,8 +37,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
                                       *a_num_particles_per_cell[1],
                                       *a_num_particles_per_cell[2]);
-    const amrex::Real scale_fac = Hipace::m_normalized_units?
-                                  1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
+    amrex::Real scale_fac = Hipace::m_normalized_units ?
+        1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
 
     amrex::IntVect box_nodal{amrex::IndexType::CELL,amrex::IndexType::CELL,amrex::IndexType::CELL};
@@ -100,10 +100,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
+            scale_fac /= Hipace::m_normalized_units ? 1. : 4.;
         } else if (reproducible_temperature) {
-            amrex::Print()<<"total_num_particles "<<total_num_particles<<'\n';
             total_num_particles *= 2*reproducible_temperature;
-            amrex::Print()<<"total_num_particles "<<total_num_particles<<'\n';
+            scale_fac /= Hipace::m_normalized_units ? 1. :
+                2.*reproducible_temperature;
         }
 
         auto& particles = GetParticles(lev);
@@ -312,7 +313,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         } else if (m_reproducible_temperature) {
             const amrex::Long mirror_offset = total_num_particles/(2*m_reproducible_temperature);
             const amrex::IntVect reproducible_temperature_dim = m_reproducible_temperature_dim;
-            amrex::AllPrint()<<"a_u_std "<<a_u_std<<'\n';
 
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
@@ -324,26 +324,18 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     if (!reproducible_temperature_dim[idim]) continue;
                     for (int dir=-1; dir<=1; dir+=2){
                         const amrex::Long midx = icount*mirror_offset + pidx;
-                        if (icount == 0) {
-                            icount++;
-                            continue;
-                        }
-                        amrex::Print()<<"midx icount "<<midx<<' '<<icount<<'\n';
                         pstruct[midx] = p;
                         pstruct[midx].id() = pid + int(midx);
                         pstruct[midx].pos(0) = p.pos(0);
                         pstruct[midx].pos(1) = p.pos(1);
                         arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
 
-                        const amrex::Real ux = 0.;
-                        const amrex::Real uy = 0.;
-                        const amrex::Real uz = 0.;
-                        // const amrex::Real ux = reproducible_temperature_dim[0] ?
-                        //     a_u_std[0]*sqrt(2._rt)*dir : 0._rt;
-                        // const amrex::Real uy = reproducible_temperature_dim[1] ?
-                        //     a_u_std[1]*sqrt(2._rt)*dir : 0._rt;
-                        // const amrex::Real uz = reproducible_temperature_dim[2] ?
-                        //     a_u_std[2]*sqrt(2._rt)*dir : 0._rt;
+                        const amrex::Real ux = reproducible_temperature_dim[0] ?
+                            a_u_std[0]*sqrt(2._rt)*dir : 0._rt;
+                        const amrex::Real uy = reproducible_temperature_dim[1] ?
+                            a_u_std[1]*sqrt(2._rt)*dir : 0._rt;
+                        const amrex::Real uz = reproducible_temperature_dim[2] ?
+                            a_u_std[2]*sqrt(2._rt)*dir : 0._rt;
                         arrdata[PlasmaIdx::ux][midx] = ux * c_light;
                         arrdata[PlasmaIdx::uy][midx] = uy * c_light;
                         arrdata[PlasmaIdx::psi][midx] =
@@ -363,7 +355,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         icount++;
                     }
                 }
-                amrex::Print()<<"icount = "<<icount<<'\n';
             });
         }
     }
