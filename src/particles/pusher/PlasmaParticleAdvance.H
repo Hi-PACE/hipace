@@ -20,12 +20,11 @@
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
  * \param[in] lev MR level
- * \param[in] bins objects containing indices of plasma particles in each tile
  * \param[in] multi_laser Laser pulses, which affects the plasma via the ponderomotive force
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
-                        PlasmaBins& bins, const MultiLaser& multi_laser);
+                        const MultiLaser& multi_laser);
 
 #endif //  PLASMAPARTICLEADVANCE_H_
