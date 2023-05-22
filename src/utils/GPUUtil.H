@@ -190,7 +190,7 @@ amrex::Real abssq(amrex::Real r, amrex::Real i)
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void AtomicAdd(amrex::Real* ptr, amrex::Real val, bool do_omp_atomic=true) {
+void AtomicAdd(amrex::Real* ptr, amrex::Real val, [[maybe_unused]] bool do_omp_atomic=true) {
 #ifdef AMREX_USE_GPU
     amrex::Gpu::Atomic::Add(ptr, val);
 #elif defined(AMREX_USE_OMP)
