@@ -385,6 +385,11 @@ When both are specified, the per-species value is used.
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`).
     The total number of plasma particles is multiplied by 4. This option is helpful to prevent a numerical seeding of the hosing instability for a plasma with a temperature.
 
+* ``<plasma name> or plasmas.reproducible_temperature_dim`` (three `bool`) optional (default `0 0 0`)
+    If any of the 3 values is 1, the temperature is created with uniformly-spaced particles in momentum space along the specified direction(s) rather than using a random number generator.
+    In that case, 2 particles are created per dimension, with momentum ``u_x/y/z = std_x/y/z * sqrt(2.)`` where ``std_x/y/z`` is the standard deviation of the momentum in direction ``x/y/z``.
+    The total number is multiplied by `2*N` where `N` is the number of dimensions in ``reproducible_temperature_dim`` for which the value is 1.
+
 * ``<plasma name> or plasmas.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
     A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
