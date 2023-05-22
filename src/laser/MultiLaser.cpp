@@ -187,8 +187,9 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
 void
 MultiLaser::GetEnvelopeFromFileHelper (const amrex::Geometry& gm) {
+
     HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
-    const amrex::Box& domain = gm.Domain();
+
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     {
         // Check what kind of Datatype is used in the Laser file
@@ -265,7 +266,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     std::vector<double> spacing = laser.gridSpacing<double>();
 
     // Calculate the min and max of the grid from laser file
-    amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
     amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
     amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
     AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
