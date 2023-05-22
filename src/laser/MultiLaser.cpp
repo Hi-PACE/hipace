@@ -307,8 +307,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                 const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
                 const amrex::Real z = (k-kmin)*dz + zmin;
-                const amrex::Real t = tmin_laser + (zmax-z)/clight;
-                const amrex::Real tmid = (t - tmin_laser)/spacing[0];
+                const amrex::Real tmid = (zmax-z)/clight/spacing[0];
                 amrex::Real st_cell[interp_order_xy+1];
                 const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
