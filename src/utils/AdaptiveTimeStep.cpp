@@ -7,6 +7,7 @@
  */
 #include "AdaptiveTimeStep.H"
 #include "utils/DeprecatedInput.H"
+#include "particles/pusher/GetAndSetPosition.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
@@ -68,10 +69,11 @@ AdaptiveTimeStep::Calculate (
     const int it,
     const bool initial)
 {
-    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
+
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real c = phys_const.c;
@@ -124,15 +126,6 @@ AdaptiveTimeStep::Calculate (
         amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real>
                         reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
-
-        // Data required to gather the Ez field
-        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
-        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-        const int ez_comp = Comps[WhichSlice::This]["Ez"];
-        const amrex::Real dx_inv = geom.InvCellSize(0);
-        const amrex::Real dy_inv = geom.InvCellSize(1);
-        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
@@ -233,13 +226,14 @@ AdaptiveTimeStep::Calculate (
 }
 
 void
-AdaptiveTimeStep::GatherMinAcc (MultiBeam& beams, const amrex::Geometry& geom,
-                                const Fields& fields, const int it)
+AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& geom,
+                                     const Fields& fields, const int islice)
 {
-    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
+
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clightinv = 1._rt/phys_const.c;
@@ -255,12 +249,12 @@ AdaptiveTimeStep::GatherMinAcc (MultiBeam& beams, const amrex::Geometry& geom,
         const auto& beam = beams.getBeam(ibeam);
         const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
-        const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-        const uint64_t numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
-
-        // Extract particle properties
-        const auto& aos = beam.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin() + box_offset;
+        BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
+        BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
+        BeamBins::index_type const cell_start = offsets[islice];
+        BeamBins::index_type const cell_stop  = offsets[islice+1];
+        amrex::Long const num_particles = cell_stop-cell_start;
+        amrex::Long const offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
 
         amrex::ReduceOps<amrex::ReduceOpMin> reduce_op;
         amrex::ReduceData<amrex::Real> reduce_data(reduce_op);
@@ -275,12 +269,20 @@ AdaptiveTimeStep::GatherMinAcc (MultiBeam& beams, const amrex::Geometry& geom,
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
-        reduce_op.eval(numParticleOnTile, reduce_data,
-            [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
+        const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
+
+        reduce_op.eval(num_particles, reduce_data,
+            [=] AMREX_GPU_DEVICE (long idx) noexcept -> ReduceTuple
             {
-                if (pos_structs[ip].id() < 0) return { 0._rt };
+                const amrex::Long ip = indices[cell_start+idx];
+                amrex::ParticleReal xp, yp, zp;
+                int pid;
+
+                getPosition(ip, xp, yp, zp, pid);
+                if (pid < 0) return { 0._rt };
+
                 amrex::Real Ezp = 0._rt;
-                doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
+                doGatherEz(xp, yp, Ezp, slice_arr, ez_comp,
                            dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 return {
                     charge_mass_ratio * Ezp * clightinv
@@ -296,12 +298,13 @@ AdaptiveTimeStep::GatherMinAcc (MultiBeam& beams, const amrex::Geometry& geom,
 void
 AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPlasma& plasmas)
 {
-    HIPACE_PROFILE("AdaptiveTimeStep::CalculateFromDensity()");
 
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
     if (m_adaptive_control_phase_advance == 0) return;
+
+    HIPACE_PROFILE("AdaptiveTimeStep::CalculateFromDensity()");
 
     const PhysConst pc = get_phys_const();
 
