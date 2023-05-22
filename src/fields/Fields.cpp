@@ -161,9 +161,7 @@ Fields::AllocData (
     }
     int num_threads = 1;
 #ifdef AMREX_USE_OMP
-    {
-        num_threads = omp_get_max_threads();
-    }
+    num_threads = omp_get_max_threads();
 #endif
     if (Hipace::m_do_tiling) {
 
