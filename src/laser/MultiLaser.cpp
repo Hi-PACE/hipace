@@ -367,7 +367,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
 
                     const amrex::Real x = i*dx + xmin;
                     const amrex::Real y = j*dy + ymin;
-                    const amrex::Real r = sqrt(x*x + y*y);
+                    const amrex::Real r = std::sqrt(x*x + y*y);
                     const amrex::Real theta = std::atan2(y, x);
                     const amrex::Real rmid = (r - rmin_laser)/spacing[1];
                     amrex::Real sr_cell[interp_order_xy+1];
