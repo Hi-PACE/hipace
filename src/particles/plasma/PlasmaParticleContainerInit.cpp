@@ -100,11 +100,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
-            scale_fac /= Hipace::m_normalized_units ? 1. : 4.;
+            scale_fac /= 4.;
         } else if (reproducible_temperature) {
             total_num_particles *= 2*reproducible_temperature;
-            scale_fac /= Hipace::m_normalized_units ? 1. :
-                2.*reproducible_temperature;
+            scale_fac /= 2.*reproducible_temperature;
         }
 
         auto& particles = GetParticles(lev);
