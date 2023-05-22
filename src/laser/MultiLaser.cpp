@@ -187,7 +187,7 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
 void
 MultiLaser::GetEnvelopeFromFileHelper (const amrex::Geometry& gm) {
-    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper");
+    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
     const amrex::Box& domain = gm.Domain();
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     {
@@ -241,7 +241,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
 
     using namespace amrex::literals;
 
-    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile");
+    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
 
     const PhysConst phc = get_phys_const();
     const amrex::Real clight = phc.c;
