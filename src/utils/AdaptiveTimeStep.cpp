@@ -85,8 +85,6 @@ AdaptiveTimeStep::Calculate (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density > 0.,
         "A >0 plasma density must be specified to use an adaptive time step.");
 
-    constexpr int lev = 0;
-
     // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
     const int numprocs_z = Hipace::GetInstance().m_numprocs_z;
@@ -99,7 +97,6 @@ AdaptiveTimeStep::Calculate (
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         if (!Hipace::HeadRank() && initial) break;
         const auto& beam = beams.getBeam(ibeam);
-        const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
         // first box resets time step data
         if (it == amrex::ParallelDescriptor::NProcs()-1) {
@@ -242,10 +239,8 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
 
     // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
-    const int numprocs_z = Hipace::GetInstance().m_numprocs_z;
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
-        if (!Hipace::HeadRank()) break;
         const auto& beam = beams.getBeam(ibeam);
         const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
