@@ -131,7 +131,7 @@ namespace Parser
      * \param[in,out] parser Parser that has been defined
      * \param[in] varnames names of input variables if a function is Parsed
      */
-    static void
+    inline void
     initParser (amrex::Parser& parser, amrex::Vector<std::string> const& varnames) {
         // Since queryWithParser recursively calls this routine, keep track of symbols
         // in case an infinite recursion is found (a symbol's value depending on itself).

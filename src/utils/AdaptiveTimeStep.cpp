@@ -130,9 +130,8 @@ AdaptiveTimeStep::Calculate (
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
         const int ez_comp = Comps[WhichSlice::This]["Ez"];
-        amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+        const amrex::Real dx_inv = geom.InvCellSize(0);
+        const amrex::Real dy_inv = geom.InvCellSize(1);
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 

@@ -39,42 +39,6 @@ namespace {
 }
 #endif
 
-int Hipace_early_init::m_depos_order_xy = 2;
-int Hipace_early_init::m_depos_order_z = 0;
-int Hipace_early_init::m_depos_derivative_type = 2;
-bool Hipace_early_init::m_outer_depos_loop = false;
-
-Hipace* Hipace::m_instance = nullptr;
-
-bool Hipace::m_normalized_units = false;
-int Hipace::m_max_step = 0;
-amrex::Real Hipace::m_dt = 0.0;
-amrex::Real Hipace::m_max_time = std::numeric_limits<amrex::Real>::infinity();
-amrex::Real Hipace::m_physical_time = 0.0;
-amrex::Real Hipace::m_initial_time = 0.0;
-int Hipace::m_verbose = 0;
-amrex::Real Hipace::m_predcorr_B_error_tolerance = 4e-2;
-int Hipace::m_predcorr_max_iterations = 30;
-amrex::Real Hipace::m_predcorr_B_mixing_factor = 0.05;
-bool Hipace::m_do_beam_jx_jy_deposition = true;
-bool Hipace::m_do_beam_jz_minus_rho = false;
-bool Hipace::m_deposit_rho = false;
-int Hipace::m_beam_injection_cr = 1;
-amrex::Real Hipace::m_external_ExmBy_slope = 0.;
-amrex::Real Hipace::m_external_Ez_slope = 0.;
-amrex::Real Hipace::m_external_Ez_uniform = 0.;
-amrex::Real Hipace::m_MG_tolerance_rel = 1.e-4;
-amrex::Real Hipace::m_MG_tolerance_abs = 0.;
-int Hipace::m_MG_verbose = 0;
-bool Hipace::m_use_amrex_mlmg = false;
-bool Hipace::m_use_laser = false;
-
-#ifdef AMREX_USE_GPU
-bool Hipace::m_do_tiling = false;
-#else
-bool Hipace::m_do_tiling = true;
-#endif
-
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
     Hipace::m_instance = instance;
@@ -315,11 +279,11 @@ Hipace::MakeGeometry ()
 
         const amrex::Real pos_offset_z = GetPosOffset(2, m_3D_geom[0], m_3D_geom[0].Domain());
 
-        const int zeta_lo = std::max( m_3D_geom[0].Domain().smallEnd(2),
+        const int zeta_lo = std::max( m_3D_geom[lev-1].Domain().smallEnd(2),
             int(amrex::Math::round((patch_lo_lev[2] - pos_offset_z) * m_3D_geom[0].InvCellSize(2)))
         );
 
-        const int zeta_hi = std::min( m_3D_geom[0].Domain().bigEnd(2),
+        const int zeta_hi = std::min( m_3D_geom[lev-1].Domain().bigEnd(2),
             int(amrex::Math::round((patch_hi_lev[2] - pos_offset_z) * m_3D_geom[0].InvCellSize(2)))
         );
 
@@ -332,6 +296,19 @@ Hipace::MakeGeometry ()
         // non-periodic because it is internal
         m_3D_geom[lev].define(domain_3D_lev, amrex::RealBox(patch_lo_lev, patch_hi_lev),
                               amrex::CoordSys::cartesian, {0, 0, 0});
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            m_3D_geom[lev].ProbLo(0)-2*m_3D_geom[lev].CellSize(0)-2*m_3D_geom[lev-1].CellSize(0)
+            >  m_3D_geom[lev-1].ProbLo(0) &&
+            m_3D_geom[lev].ProbHi(0)+2*m_3D_geom[lev].CellSize(0)+2*m_3D_geom[lev-1].CellSize(0)
+            <  m_3D_geom[lev-1].ProbHi(0) &&
+            m_3D_geom[lev].ProbLo(1)-2*m_3D_geom[lev].CellSize(1)-2*m_3D_geom[lev-1].CellSize(1)
+            >  m_3D_geom[lev-1].ProbLo(1) &&
+            m_3D_geom[lev].ProbHi(1)+2*m_3D_geom[lev].CellSize(1)+2*m_3D_geom[lev-1].CellSize(1)
+            <  m_3D_geom[lev-1].ProbHi(1),
+            "Fine MR level must be fully nested inside the next coarsest level "
+            "(with a few cells to spare)"
+        );
 
         amrex::BoxList bl_lev{};
         amrex::Vector<int> procmap_lev{};
@@ -401,17 +378,16 @@ Hipace::Evolve ()
                 // Only reset plasma after receiving time step, to use proper density
                 m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
 
-                // Even if level 1 doesn't start on the first slice,
-                // we need to deposit a neutralizing background now
-                // Use to slice -1 to tag to the finest level of any slice
-                // to deposit the neutralizing background
-                m_multi_plasma.TagByLevel(m_N_level, m_3D_geom, -1);
+                // deposit neutralizing background on every MR level
+                if (m_N_level > 1) {
+                     m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
+                }
 
-                /* Store charge density of (immobile) ions into WhichSlice::RhomJzIons */
                 for (int lev=0; lev<m_N_level; ++lev) {
                     if (m_do_tiling) {
                         m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
                     }
+                    // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
                     m_multi_plasma.DepositNeutralizingBackground(
                         m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
                 }
@@ -516,31 +492,36 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     // Get this laser slice from the 3D array
     m_multi_laser.Copy(islice, false);
 
-    m_multi_beam.TagByLevel(m_N_level, m_3D_geom, WhichSlice::This, islice, islice_local);
-    m_multi_beam.TagByLevel(m_N_level, m_3D_geom, WhichSlice::Next, islice, islice_local);
-    m_multi_plasma.TagByLevel(m_N_level, m_3D_geom, islice);
+    int current_N_level = 1;
 
-    for (int lev=0; lev<m_N_level; ++lev) {
-
-        if (lev != 0) {
-            // skip all slices which are not existing on level 1
-            if (islice < m_3D_geom[lev].Domain().smallEnd(Direction::z) ||
-                islice > m_3D_geom[lev].Domain().bigEnd(Direction::z)) {
-                continue;
-            } else if (islice == m_3D_geom[lev].Domain().bigEnd(Direction::z)) {
-                // first slice of level 1 (islice goes backwards)
-                // iterpolate jx_beam and jy_beam from level 0 to level 1
-                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::Previous1, "jx_beam");
-                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::Previous1, "jy_beam");
-                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::This, "jx_beam");
-                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::This, "jy_beam");
-                m_fields.duplicate(lev, WhichSlice::This, {"jx"     , "jy"     },
-                                        WhichSlice::This, {"jx_beam", "jy_beam"});
-            }
+    for (int lev=1; lev<m_N_level; ++lev) {
+        if (m_3D_geom[lev].Domain().smallEnd(Direction::z) <= islice &&
+            m_3D_geom[lev].Domain().bigEnd(Direction::z) >= islice) {
+            current_N_level = lev + 1;
         }
+    }
 
-        // reorder plasma before TileSort
-        m_multi_plasma.ReorderParticles(islice);
+    if (m_N_level > 1) {
+        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This, islice_local);
+        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::Next, islice_local);
+        m_multi_plasma.TagByLevel(current_N_level, m_3D_geom);
+    }
+
+    // reorder plasma before TileSort
+    m_multi_plasma.ReorderParticles(islice);
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+
+        if (lev != 0 && islice == m_3D_geom[lev].Domain().bigEnd(Direction::z)) {
+            // first slice of lev (islice goes backwards)
+            // iterpolate jx_beam and jy_beam from lev-1 to lev
+            m_fields.LevelUp(m_3D_geom, lev, WhichSlice::Previous1, "jx_beam");
+            m_fields.LevelUp(m_3D_geom, lev, WhichSlice::Previous1, "jy_beam");
+            m_fields.LevelUp(m_3D_geom, lev, WhichSlice::This, "jx_beam");
+            m_fields.LevelUp(m_3D_geom, lev, WhichSlice::This, "jy_beam");
+            m_fields.duplicate(lev, WhichSlice::This, {"jx"     , "jy"     },
+                                    WhichSlice::This, {"jx_beam", "jy_beam"});
+        }
 
         if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
 
@@ -554,17 +535,13 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 
         m_multi_plasma.DoFieldIonization(lev, m_3D_geom[lev], m_fields);
 
-        if (m_multi_plasma.IonizationOn() && m_do_tiling) {
-            m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
-        }
-
         // Push plasma particles
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, false, lev);
 
-        // Push beam particles
-        m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom[lev], lev, islice_local);
+    } // end for (int lev=0; lev<current_N_level; ++lev)
 
-    } // end for (int lev=0; lev<m_N_level; ++lev)
+    // Push beam particles
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level, islice_local);
 
     // collisions for all particles calculated on level 0
     m_multi_plasma.doCoulombCollision(0, m_slice_geom[0].Domain(), m_slice_geom[0]);
@@ -575,15 +552,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     m_multi_laser.Copy(islice, true);
 
     // shift all levels
-    for (int lev=0; lev<m_N_level; ++lev) {
-        if (lev != 0) {
-            // skip all slices which are not existing on level 1
-            if (islice < m_3D_geom[lev].Domain().smallEnd(Direction::z) ||
-                islice > m_3D_geom[lev].Domain().bigEnd(Direction::z)) {
-                continue;
-            }
-        }
-
+    for (int lev=0; lev<current_N_level; ++lev) {
         m_fields.ShiftSlices(lev);
     }
 
@@ -625,11 +594,11 @@ Hipace::ExplicitSolveOneSubSlice (const int lev, const int step,
 
     FillBoundaryChargeCurrents(lev);
 
-    // interpolate jx and jy to level 1 in the domain edges and
+    // interpolate jx and jy to lev from lev-1 in the domain edges and
     // also inside ghost cells to account for x and y derivative
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jx",
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "jx",
         m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "jy",
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "jy",
         m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
 
     m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
@@ -803,13 +772,13 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
-    // interpolate Sx, Sy and chi to level 1 in the domain edges.
+    // interpolate Sx, Sy and chi to lev from lev-1 in the domain edges.
     // This also accounts for jx_beam, jy_beam
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sy",
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "Sy",
         m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Sx",
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "Sx",
         m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "chi",
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "chi",
         m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
 
     if (lev!=0 && (slicemf.box(0).length(0) % 2 == 0)) {
@@ -821,10 +790,10 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
                                       m_fields.getField(lev, which_slice, "Sx"));
     }
 
-    // interpolate Bx and By to level 1 in the ghost cells
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "Bx",
+    // interpolate Bx and By to lev from lev-1 in the ghost cells
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "Bx",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
-    m_fields.InterpolateFromLev0toLev1(m_3D_geom, lev, "By",
+    m_fields.LevelUpBoundary(m_3D_geom, lev, "By",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
