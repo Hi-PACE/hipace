@@ -37,9 +37,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
     " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhomJzIons)"
     " or for the Salame slice (WhichSlice::Salame)");
 
-    // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
-
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
@@ -76,13 +73,14 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                                     : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
-        // in normalized units this is rescaling dx and dy for level 1,
+        const amrex::Real dx_inv = gm[lev].InvCellSize(0);
+        const amrex::Real dy_inv = gm[lev].InvCellSize(1);
+        const amrex::Real dz_inv = gm[lev].InvCellSize(2);
+        // in normalized units this is rescaling dx and dy for MR,
         // while in SI units it's the factor for charge to charge density
         const amrex::Real invvol = Hipace::m_normalized_units ?
-            gm[0].CellSize(0)*gm[0].CellSize(1) / (gm[lev].CellSize(0)*gm[lev].CellSize(1))
-            : 1._rt/(dx[0]*dx[1]*dx[2]);
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+            gm[0].CellSize(0)*gm[0].CellSize(1)*dx_inv*dy_inv
+            : dx_inv*dy_inv*dz_inv;
 
         const PhysConst pc = get_phys_const();
         const amrex::Real clight = pc.c;
@@ -118,11 +116,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         int ntiley = 0;
         if (do_tiling) {
             const int ng = Fields::m_slices_nguards[0];
-            const int ncellx = isl_fab.box().bigEnd(0)-isl_fab.box().smallEnd(0)+1-2*ng;
-            const int ncelly = isl_fab.box().bigEnd(1)-isl_fab.box().smallEnd(1)+1-2*ng;
-            AMREX_ALWAYS_ASSERT(ncellx % bin_size == 0);
-            AMREX_ALWAYS_ASSERT(ncelly % bin_size == 0);
-            ntiley = ncelly / bin_size;
+            const int ncelly = isl_fab.box().length(1)-2*ng;
+            ntiley = (ncelly + bin_size -1) / bin_size;
         }
 
         const int ntiles = do_tiling ? bins.numBins() : 1;
@@ -290,11 +285,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
             if (do_tiling) {
                 // If tiling is on, the current was deposited (see above) in temporary tile arrays.
                 // Now, we atomic add from these temporary arrays to the main arrays
-                amrex::Box srcbx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
                 amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, pti.tilebox().smallEnd(2)},
                                     {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
-                srcbx.grow(Fields::m_slices_nguards);
                 dstbx.grow(Fields::m_slices_nguards);
+                dstbx &= isl_fab.box();
+                amrex::Box srcbx = dstbx;
+                srcbx -= amrex::IntVect(a_itilex_bs, a_itiley_bs, srcbx.smallEnd(2));
                 if (jx_cmp != -1) {
                     isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 0, jx_cmp, 1);
                     isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 1, jy_cmp, 1);

@@ -198,21 +198,21 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Box& domain) {
 
         auto iteration = series.iterations[m_file_num_iteration];
 
-        if (!iteration.containsAttribute("angularFrequency")) {
-            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
-                + std::to_string(m_file_num_iteration) + " in file "
-                + m_input_file_path + "\n");
-        }
-
-        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
-            / iteration.getAttribute("angularFrequency").get<double>();
-
         if(!iteration.meshes.contains(m_file_envelope_name)) {
             amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
                 + m_input_file_path + "\n");
         }
 
         auto mesh = iteration.meshes[m_file_envelope_name];
+
+        if (!mesh.containsAttribute("angularFrequency")) {
+            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
+                + std::to_string(m_file_num_iteration) + " in file "
+                + m_input_file_path + "\n");
+        }
+
+        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+            / mesh.getAttribute("angularFrequency").get<double>();
 
         if(!mesh.contains(openPMD::RecordComponent::SCALAR)) {
             amrex::Abort("Could not find component '" +

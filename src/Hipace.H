@@ -49,16 +49,16 @@ struct Hipace_early_init
 
     /** Order of the field gather and current deposition shape factor in the transverse directions
      */
-    static int m_depos_order_xy;
+    inline static int m_depos_order_xy = 2;
     /** Order of the field gather and current deposition shape factor in the longitudinal direction
      */
-    static int m_depos_order_z;
+    inline static int m_depos_order_z = 0;
     /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
      */
-    static int m_depos_derivative_type;
+    inline static int m_depos_derivative_type = 2;
     /* if the loop over depos_order is included in the loop over particles
      */
-    static bool m_outer_depos_loop;
+    inline static bool m_outer_depos_loop = false;
 
     /* Number of mesh refinement levels */
     int m_N_level = 1;
@@ -258,9 +258,9 @@ public:
     /** xy slice BoxArray, vector over MR levels. Contains only one box */
     amrex::Vector<amrex::BoxArray> m_slice_ba;
     /** Pointer to current (and only) instance of class Hipace */
-    static Hipace* m_instance;
+    inline static Hipace* m_instance = nullptr;
     /** Whether to use normalized units */
-    static bool m_normalized_units;
+    inline static bool m_normalized_units = false;
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Contains all beam species */
@@ -268,24 +268,24 @@ public:
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
     /** Number of time iterations */
-    static int m_max_step;
+    inline static int m_max_step = 0;
     /** Maximum simulation time */
-    static amrex::Real m_max_time;
+    inline static amrex::Real m_max_time = std::numeric_limits<amrex::Real>::infinity();
     /** Time step for the beam evolution */
-    static amrex::Real m_dt;
+    inline static amrex::Real m_dt = 0.0;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
-    static amrex::Real m_physical_time;
+    inline static amrex::Real m_physical_time = 0.0;
     /** Physical time at the beginning of the simulation */
-    static amrex::Real m_initial_time;
+    inline static amrex::Real m_initial_time = 0.0;
     /** Level of verbosity */
-    static int m_verbose;
+    inline static int m_verbose = 0;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
-    static amrex::Real m_predcorr_B_error_tolerance;
+    inline static amrex::Real m_predcorr_B_error_tolerance = 4e-2;
     /** Maximum number of iterations in the predictor corrector loop
      */
-    static int m_predcorr_max_iterations;
+    inline static int m_predcorr_max_iterations = 30;
     /** Average number of iterations in the predictor corrector loop
      */
     amrex::Real m_predcorr_avg_iterations = 0.;
@@ -294,36 +294,40 @@ public:
     amrex::Real m_predcorr_avg_B_error = 0.;
     /** Mixing factor between the transverse B field iterations in the predictor corrector loop
      */
-    static amrex::Real m_predcorr_B_mixing_factor;
+    inline static amrex::Real m_predcorr_B_mixing_factor = 0.05;
     /** Whether the beams deposit Jx and Jy */
-    static bool m_do_beam_jx_jy_deposition;
+    inline static bool m_do_beam_jx_jy_deposition = true;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
-    static bool m_do_beam_jz_minus_rho;
+    inline static bool m_do_beam_jz_minus_rho = false;
     /** Whether to deposit  rho (plasma) for diagnostics */
-    static bool m_deposit_rho;
+    inline static bool m_deposit_rho = false;
     /** Whether to use tiling for particle operations */
-    static bool m_do_tiling;
+#ifdef AMREX_USE_GPU
+    inline static bool m_do_tiling = false;
+#else
+    inline static bool m_do_tiling = true;
+#endif
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
-    static int m_beam_injection_cr;
+    inline static int m_beam_injection_cr = 1;
     /** Slope of external focusing fields applied to beam particles.
      * The fields applied are ExmBy = m_external_ExmBy_slope*x, and same in y. */
-    static amrex::Real m_external_ExmBy_slope;
+    inline static amrex::Real m_external_ExmBy_slope = 0.;
     /** Slope of external accelerating fields applied to beam particles.
      * The fields applied are Ez = m_external_Ez_slope*z. */
-    static amrex::Real m_external_Ez_slope;
+    inline static amrex::Real m_external_Ez_slope = 0.;
     /** Uniform accelerating fields applied to beam particles. */
-    static amrex::Real m_external_Ez_uniform;
+    inline static amrex::Real m_external_Ez_uniform = 0.;
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
-    static amrex::Real m_MG_tolerance_rel;
+    inline static amrex::Real m_MG_tolerance_rel = 1.e-4;
     /** Absolute tolerance for the multigrid solver, when using the explicit solver */
-    static amrex::Real m_MG_tolerance_abs;
+    inline static amrex::Real m_MG_tolerance_abs = 0.;
     /** Level of verbosity for the MG solver */
-    static int m_MG_verbose;
+    inline static int m_MG_verbose = 0;
     /** Whether to use amrex MLMG solver */
-    static bool m_use_amrex_mlmg;
+    inline static bool m_use_amrex_mlmg = false;
     /** Whether the simulation uses a laser pulse */
-    static bool m_use_laser;
+    inline static bool m_use_laser = false;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */

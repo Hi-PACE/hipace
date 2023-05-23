@@ -111,11 +111,10 @@ public:
     void UpdateDensityFunction ();
 
     /** \brief Store the finest level of every plasma particle in the cpu() attribute.
-     * \param[in] nlev number of MR levels
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] geom3D Geometry object for the whole domain
-     * \param[in] islice current slice
      */
-    void TagByLevel (const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int islice);
+    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D);
 
     /** returns u_mean of the plasma distribution */
     amrex::RealVect GetUMean () const {return m_u_mean;}

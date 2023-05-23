@@ -34,7 +34,11 @@ Diagnostic::Diagnostic (int nlev)
 
         amrex::ParmParse pp(fd.m_diag_name);
 
-        if (fd.m_diag_name == "lev1") fd.m_level = 1;
+        for(int ilev = 0; ilev<nlev; ++ilev) {
+            if (fd.m_diag_name == "lev"+std::to_string(ilev)) {
+                fd.m_level = ilev;
+            }
+        }
         queryWithParserAlt(pp, "level", fd.m_level, ppd);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( 0 <= fd.m_level && fd.m_level < nlev,
             "Invalid diagnostic refinement level");

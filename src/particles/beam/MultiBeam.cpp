@@ -76,21 +76,22 @@ MultiBeam::sortParticlesByBox (const amrex::BoxArray a_ba, const amrex::Geometry
 
 void
 MultiBeam::AdvanceBeamParticlesSlice (
-    const Fields& fields, amrex::Geometry const& gm, int const lev, const int islice)
+    const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
+    const int islice)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, lev, islice);
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level, islice);
     }
 }
 
 void
 MultiBeam::TagByLevel (
-    const int nlev, amrex::Vector<amrex::Geometry> geom3D, const int which_slice,
-    const int islice, const int islice_local)
+    const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
+    const int islice_local)
 {
     for (int i=0; i<m_nbeams; i++) {
         const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
-        m_all_beams[i].TagByLevel(nlev, geom3D, which_slice, islice, islice_local, nghost);
+        m_all_beams[i].TagByLevel(current_N_level, geom3D, which_slice, islice_local, nghost);
     }
 }
 

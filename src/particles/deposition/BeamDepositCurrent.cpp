@@ -29,9 +29,6 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     using namespace amrex::literals;
 
-    // Extract properties associated with physical size of the box
-    amrex::Real const * AMREX_RESTRICT dx = gm[lev].CellSize();
-
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
     which_slice == WhichSlice::This || which_slice == WhichSlice::Next
     || which_slice == WhichSlice::Salame,
@@ -77,19 +74,18 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     const auto ptd = beam.getParticleTileData();
 
     // Extract box properties
-    const amrex::Real dxi = 1.0/dx[0];
-    const amrex::Real dyi = 1.0/dx[1];
-    const amrex::Real dzi = 1.0/dx[2];
+    const amrex::Real dxi = gm[lev].InvCellSize(0);
+    const amrex::Real dyi = gm[lev].InvCellSize(1);
+    const amrex::Real dzi = gm[lev].InvCellSize(2);
     amrex::Real invvol = dxi * dyi * dzi;
 
     if (Hipace::m_normalized_units) {
         if (lev == 0) {
             invvol = 1._rt;
         } else {
-            // re-scaling the weight in normalized units to get the same charge density on lev 1
+            // re-scaling the weight in normalized units to get the same charge density as on lev 0
             // Not necessary in SI units, there the weight is the actual charge and not the density
-            amrex::Real const * AMREX_RESTRICT dx_lev0 = gm[0].CellSize();
-            invvol = dx_lev0[0] * dx_lev0[1] * dxi * dyi;
+            invvol = gm[0].CellSize(0) * gm[0].CellSize(1) * dxi * dyi;
         }
     }
 
