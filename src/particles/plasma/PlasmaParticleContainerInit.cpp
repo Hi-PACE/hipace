@@ -328,11 +328,11 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
 
                         const amrex::Real ux = reproducible_temperature_dim[0] ?
-                            a_u_std[0]*sqrt(2._rt)*dir : 0._rt;
+                            a_u_std[0]*dir : 0._rt;
                         const amrex::Real uy = reproducible_temperature_dim[1] ?
-                            a_u_std[1]*sqrt(2._rt)*dir : 0._rt;
+                            a_u_std[1]*dir : 0._rt;
                         const amrex::Real uz = reproducible_temperature_dim[2] ?
-                            a_u_std[2]*sqrt(2._rt)*dir : 0._rt;
+                            a_u_std[2]*dir : 0._rt;
                         arrdata[PlasmaIdx::ux][midx] = ux * c_light;
                         arrdata[PlasmaIdx::uy][midx] = uy * c_light;
                         arrdata[PlasmaIdx::psi][midx] =
