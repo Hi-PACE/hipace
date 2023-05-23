@@ -97,7 +97,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
-            scale_fact /= 4.;
+            scale_fac /= 4.;
         }
 
         auto& particles = GetParticles(lev);
