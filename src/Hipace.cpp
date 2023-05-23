@@ -535,10 +535,6 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 
         m_multi_plasma.DoFieldIonization(lev, m_3D_geom[lev], m_fields);
 
-        if (m_multi_plasma.IonizationOn() && m_do_tiling) {
-            m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
-        }
-
         // Push plasma particles
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, false, lev);
 
@@ -718,6 +714,9 @@ Hipace::InitializeSxSyWithBeam (const int lev)
     const amrex::Real dy = m_3D_geom[lev].CellSize(Direction::y);
     const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
         amrex::Box const& bx = mfi.tilebox();

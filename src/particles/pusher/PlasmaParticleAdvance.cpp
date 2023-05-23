@@ -28,12 +28,10 @@ template struct PlasmaMomentumDerivative<DualNumber>;
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
-                        PlasmaBins& bins, const MultiLaser& multi_laser)
+                        const MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("AdvancePlasmaParticles()");
     using namespace amrex::literals;
-
-    const bool do_tiling = Hipace::m_do_tiling;
 
     const PhysConst phys_const = get_phys_const();
 
@@ -90,25 +88,25 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real clight = phys_const.c;
         const amrex::Real clight_inv = 1._rt/phys_const.c;
         const amrex::Real charge_mass_clight_ratio = plasma.m_charge/(plasma.m_mass * phys_const.c);
-
-        const int ntiles = do_tiling ? bins.numBins() : 1;
-
 #ifdef AMREX_USE_OMP
-#pragma omp parallel for if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-        for (int itile=0; itile<ntiles; itile++){
-            BeamBins::index_type const * const indices =
-                do_tiling ? bins.permutationPtr() : nullptr;
-            BeamBins::index_type const * const offsets =
-                do_tiling ? bins.offsetsPtr() : nullptr;
-            int const num_particles =
-                do_tiling ? offsets[itile+1]-offsets[itile] : pti.numParticles();
+        {
+            amrex::Long const num_particles = pti.numParticles();
+#ifdef AMREX_USE_OMP
+            amrex::Long const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
+            amrex::Long const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
+#else
+            amrex::Long constexpr idx_begin = 0;
+            amrex::Long const idx_end = num_particles;
+#endif
+
             amrex::ParallelFor(
                 amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
                 {Hipace::m_depos_order_xy},
-                num_particles,
-                [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
-                    const int ip = do_tiling ? indices[offsets[itile]+idx] : idx;
+                idx_end - idx_begin,
+                [=] AMREX_GPU_DEVICE (amrex::Long idx, auto depos_order) {
+                    const int ip = idx + idx_begin;
                     // only push plasma particles on their according MR level
                     if (setPositionEnforceBC.m_structs[ip].id() < 0 ||
                         setPositionEnforceBC.m_structs[ip].cpu() != lev) return;
