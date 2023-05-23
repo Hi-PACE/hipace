@@ -284,8 +284,8 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
             // Ghost particles are simply contiguous in memory.
             const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
 
-            const amrex::Real xp = pos_structs[ip].pos(0);
-            const amrex::Real yp = pos_structs[ip].pos(1);
+            const amrex::Real xp = pos_x[ip];
+            const amrex::Real yp = pos_y[ip];
 
             if (current_N_level > 2 &&
                 lo_x_lev2 < xp && xp < hi_x_lev2 &&

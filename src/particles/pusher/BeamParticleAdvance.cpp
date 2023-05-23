@@ -83,7 +83,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const int offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
     const auto ptd = beam.getParticleTileData();
 
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(gm);
+    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(gm[0]);
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
     BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
@@ -109,8 +109,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
         [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
             const int ip = indices[cell_start+idx] + offset;
 
-            // only finest MR level pushes the beam
-            if (ptd.id(ip) < 0 || ptd.cpu(ip) != lev) return;
+            if (ptd.id(ip) < 0) return;
 
             amrex::Real xp = ptd.pos(0, ip);
             amrex::Real yp = ptd.pos(1, ip);

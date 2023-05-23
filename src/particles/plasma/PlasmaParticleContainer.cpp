@@ -215,8 +215,8 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
-                const amrex::Real xp = pos_structs[ip].pos(0);
-                const amrex::Real yp = pos_structs[ip].pos(1);
+                const amrex::Real xp = pos_x[ip];
+                const amrex::Real yp = pos_y[ip];
 
                 if (current_N_level > 2 &&
                     lo_x_lev2 < xp && xp < hi_x_lev2 &&

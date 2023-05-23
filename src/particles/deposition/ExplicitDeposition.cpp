@@ -102,7 +102,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 constexpr int derivative_type = a_derivative_type.value;
 
                 ip += idx_begin;
-  
+
                 if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);

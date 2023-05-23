@@ -65,7 +65,6 @@ AdaptiveTimeStep::BroadcastTimeStep (amrex::Real& dt, MPI_Comm a_comm_z, int a_n
 void
 AdaptiveTimeStep::Calculate (
     amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
-    const amrex::Geometry& geom, const Fields& fields,
     const int it,
     const bool initial)
 {
