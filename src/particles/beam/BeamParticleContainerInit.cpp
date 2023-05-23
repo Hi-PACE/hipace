@@ -75,7 +75,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                   const amrex::Real a_min_density,
                   const amrex::Vector<int>& random_ppc)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles()");
 
     if (!Hipace::HeadRank()) { return; }
 
@@ -267,7 +267,7 @@ InitBeamFixedWeight (int num_to_add,
                      const bool do_symmetrize,
                      const bool can, const amrex::Real zmin, const amrex::Real zmax)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles()");
     using namespace amrex::literals;
 
     if (num_to_add == 0) return;
@@ -356,7 +356,7 @@ InitBeamFromFileHelper (const std::string input_file,
                         const std::string species_name,
                         const bool species_specified)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles()");
 
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     bool species_known;
@@ -424,7 +424,7 @@ InitBeamFromFile (const std::string input_file,
                   const std::string species_name,
                   const bool species_specified)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles");
+    HIPACE_PROFILE("BeamParticleContainer::InitParticles()");
 
     amrex::Real physical_time {0.};
 
