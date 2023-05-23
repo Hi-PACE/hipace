@@ -92,20 +92,20 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
         {
-            int const num_particles = pti.numParticles();
+            amrex::Long const num_particles = pti.numParticles();
 #ifdef AMREX_USE_OMP
-            int const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
-            int const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
+            amrex::Long const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
+            amrex::Long const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
 #else
-            int constexpr idx_begin = 0;
-            int const idx_end = num_particles;
+            amrex::Long constexpr idx_begin = 0;
+            amrex::Long const idx_end = num_particles;
 #endif
 
             amrex::ParallelFor(
                 amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
                 {Hipace::m_depos_order_xy},
                 idx_end - idx_begin,
-                [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
+                [=] AMREX_GPU_DEVICE (amrex::Long idx, auto depos_order) {
                     const int ip = idx + idx_begin;
                     // only push plasma particles on their according MR level
                     if (setPositionEnforceBC.m_structs[ip].id() < 0 ||

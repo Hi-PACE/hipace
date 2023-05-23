@@ -43,13 +43,13 @@ namespace AnyDST
         // Swap dimensions: AMReX FAB are Fortran-order but FFTW is C-order
         dst_plan.m_plan = VendorCreatePlanR2R2D(
             ny, nx, position_array->dataPtr(), fourier_array->dataPtr(),
-            FFTW_RODFT00, FFTW_RODFT00, FFTW_ESTIMATE);
+            FFTW_RODFT00, FFTW_RODFT00, FFTW_MEASURE);
 
         // Initialize fft_plan.m_plan_b with the vendor fft plan.
         // Swap arrays: now for backward direction.
         dst_plan.m_plan_b = VendorCreatePlanR2R2D(
             ny, nx, fourier_array->dataPtr(), position_array->dataPtr(),
-            FFTW_RODFT00, FFTW_RODFT00, FFTW_ESTIMATE);
+            FFTW_RODFT00, FFTW_RODFT00, FFTW_MEASURE);
 
         amrex::Print() << "using R2R FFTW of size " << nx << " * " << ny << "\n";
 

@@ -120,30 +120,40 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverPeriodic::SolvePoissonEquation()");
 
-    // Loop over boxes
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-
         // Perform Fourier transform from the staging area to `tmpSpectralField`
         AnyFFT::Execute(m_forward_plan[mfi]);
+    }
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by inv_k2
         Array2<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         Array2<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
-        amrex::ParallelFor( m_spectralspace_ba[mfi],
+        amrex::ParallelFor( mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 tmp_cmplx_arr(i,j) *= -inv_k2_arr(i,j);
             });
+    }
 
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
         // Perform Fourier transform from `tmpSpectralField` to the staging area
         AnyFFT::Execute(m_backward_plan[mfi]);
+    }
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Copy from the staging area to output array (and normalize)
         Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         const amrex::Box fft_box = m_stagingArea[mfi].box();
         const amrex::Real inv_N = 1./fft_box.numPts();
-        amrex::ParallelFor( fft_box,
+        amrex::ParallelFor( mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 // Copy and normalize field
                 lhs_arr(i,j) = inv_N*tmp_real_arr(i,j);
