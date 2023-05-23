@@ -7,6 +7,7 @@
  */
 #include "AdaptiveTimeStep.H"
 #include "utils/DeprecatedInput.H"
+#include "particles/pusher/GetAndSetPosition.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
@@ -68,10 +69,11 @@ AdaptiveTimeStep::Calculate (
     const int it,
     const bool initial)
 {
-    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
+
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real c = phys_const.c;
@@ -82,8 +84,6 @@ AdaptiveTimeStep::Calculate (
     amrex::Real plasma_density = plasmas.maxDensity(c * t);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density > 0.,
         "A >0 plasma density must be specified to use an adaptive time step.");
-
-    constexpr int lev = 0;
 
     // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
@@ -97,7 +97,6 @@ AdaptiveTimeStep::Calculate (
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         if (!Hipace::HeadRank() && initial) break;
         const auto& beam = beams.getBeam(ibeam);
-        const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
         // first box resets time step data
         if (it == amrex::ParallelDescriptor::NProcs()-1) {
@@ -107,9 +106,9 @@ AdaptiveTimeStep::Calculate (
             m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30;
         }
 
-        const uint64_t box_offset = initial ? 0 : beam.m_box_sorter.boxOffsetsPtr()[it];
+        const uint64_t box_offset = initial ? 0 : beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
         const uint64_t numParticleOnTile = initial ? beam.numParticles()
-                                                   : beam.m_box_sorter.boxCountsPtr()[it];
+                                                   : beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
 
 
         // Extract particle properties
@@ -120,36 +119,22 @@ AdaptiveTimeStep::Calculate (
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
-                         amrex::ReduceOpSum, amrex::ReduceOpMin,
-                         amrex::ReduceOpMin> reduce_op;
-        amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real,
-                          amrex::Real, amrex::Real> reduce_data(reduce_op);
+                         amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
+        amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real>
+                        reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
-
-        // Data required to gather the Ez field
-        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
-        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-        const int ez_comp = Comps[WhichSlice::This]["Ez"];
-        const amrex::Real dx_inv = geom.InvCellSize(0);
-        const amrex::Real dy_inv = geom.InvCellSize(1);
-        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
                 if (pos_structs[ip].id() < 0) return {
-                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity(), 0._rt
+                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
                 };
-                amrex::Real Ezp = 0._rt;
-                doGatherEz(pos_structs[ip].pos(0), pos_structs[ip].pos(1), Ezp, slice_arr, ez_comp,
-                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 return {
                     wp[ip],
                     wp[ip] * uzp[ip] * clightinv,
                     wp[ip] * uzp[ip] * uzp[ip] * clightinv * clightinv,
-                    uzp[ip] * clightinv,
-                    charge_mass_ratio * Ezp * clightinv
+                    uzp[ip] * clightinv
                 };
             });
 
@@ -159,8 +144,6 @@ AdaptiveTimeStep::Calculate (
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] += amrex::get<2>(res);
         m_timestep_data[ibeam][WhichDouble::MinUz] =
             std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
-        m_timestep_data[ibeam][WhichDouble::MinAcc] =
-            std::min(m_timestep_data[ibeam][WhichDouble::MinAcc], amrex::get<4>(res));
     }
 
     // only the last box or at initialization the adaptive time step is calculated
@@ -240,14 +223,83 @@ AdaptiveTimeStep::Calculate (
 }
 
 void
+AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& geom,
+                                     const Fields& fields, const int islice)
+{
+    using namespace amrex::literals;
+
+    if (m_do_adaptive_time_step == 0) return;
+
+    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
+
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real clightinv = 1._rt/phys_const.c;
+
+    constexpr int lev = 0;
+
+    // Extract properties associated with physical size of the box
+    const int nbeams = beams.get_nbeams();
+
+    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+        const auto& beam = beams.getBeam(ibeam);
+        const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
+
+        BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
+        BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
+        BeamBins::index_type const cell_start = offsets[islice];
+        BeamBins::index_type const cell_stop  = offsets[islice+1];
+        amrex::Long const num_particles = cell_stop-cell_start;
+        amrex::Long const offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
+
+        amrex::ReduceOps<amrex::ReduceOpMin> reduce_op;
+        amrex::ReduceData<amrex::Real> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        // Data required to gather the Ez field
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+        const amrex::Real dx_inv = geom.InvCellSize(0);
+        const amrex::Real dy_inv = geom.InvCellSize(1);
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
+
+        const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
+
+        reduce_op.eval(num_particles, reduce_data,
+            [=] AMREX_GPU_DEVICE (long idx) noexcept -> ReduceTuple
+            {
+                const amrex::Long ip = indices[cell_start+idx];
+                amrex::ParticleReal xp, yp, zp;
+                int pid;
+
+                getPosition(ip, xp, yp, zp, pid);
+                if (pid < 0) return { 0._rt };
+
+                amrex::Real Ezp = 0._rt;
+                doGatherEz(xp, yp, Ezp, slice_arr, ez_comp,
+                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                return {
+                    charge_mass_ratio * Ezp * clightinv
+                };
+            });
+
+        auto res = reduce_data.value(reduce_op);
+        m_timestep_data[ibeam][WhichDouble::MinAcc] =
+            std::min(m_timestep_data[ibeam][WhichDouble::MinAcc], amrex::get<0>(res));
+    }
+}
+
+void
 AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPlasma& plasmas)
 {
-    HIPACE_PROFILE("AdaptiveTimeStep::CalculateFromDensity()");
 
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
     if (m_adaptive_control_phase_advance == 0) return;
+
+    HIPACE_PROFILE("AdaptiveTimeStep::CalculateFromDensity()");
 
     const PhysConst pc = get_phys_const();
 

@@ -540,6 +540,10 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 
     } // end for (int lev=0; lev<current_N_level; ++lev)
 
+    m_adaptive_time_step.GatherMinAccSlice(
+        m_multi_beam,
+        m_3D_geom[0], m_fields, islice_local);
+
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level, islice_local);
 
