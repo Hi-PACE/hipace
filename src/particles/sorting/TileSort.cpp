@@ -29,12 +29,12 @@ findParticlesInEachTile (
         count += 1;
 
         // Extract box properties
-        [[maybe_unused]] const auto lo = lbound(cbx);
-        [[maybe_unused]] const auto dxi = amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>({
+        const auto lo = lbound(cbx);
+        const auto dxi = amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>({
                 geom.InvCellSizeArray()[0]/bin_size,
                 geom.InvCellSizeArray()[1]/bin_size,
                 1.});
-        [[maybe_unused]] const auto plo = geom.ProbLoArray();
+        const auto plo = geom.ProbLoArray();
 
         // Find the particles that are in each tile and return collections of indices per tile.
         bins.build(

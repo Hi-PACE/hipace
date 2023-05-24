@@ -13,7 +13,7 @@
 
 void
 findParticlesInEachSlice (
-    [[maybe_unused]] int ibox, [[maybe_unused]] amrex::Box bx, [[maybe_unused]] BeamParticleContainer& beam, [[maybe_unused]] amrex::Geometry const& geom)
+    int ibox, amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom)
 {
     HIPACE_PROFILE("findParticlesInEachSlice()");
 

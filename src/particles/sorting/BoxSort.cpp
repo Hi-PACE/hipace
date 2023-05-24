@@ -20,7 +20,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     auto assign_grid = m_particle_locator.getGridAssignor();
 
     int const np = a_beam.numParticles();
-    BeamParticleContainer::ParticleTileDataType pdt = a_beam.getParticleTileData();
+    BeamParticleContainer::ParticleTileDataType ptd = a_beam.getParticleTileData();
 
     int num_boxes = a_ba.size();
     m_box_counts.resize(num_boxes+1);
@@ -36,13 +36,12 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     auto p_dst_indices = dst_indices.dataPtr();
     AMREX_FOR_1D ( np, i,
     {
-        BeamParticleContainer::ParticleType p(pdt, i);
-        int dst_box = assign_grid(p);
-        if (p.id() < 0) dst_box = num_boxes; // if pid is invalid, remove particle
+        int dst_box = assign_grid(ptd[i]);
+        if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
         if (dst_box < 0) {
             // particle has left domain transversely, stick it at the end and invalidate
             dst_box = num_boxes;
-            p.id() = -std::abs(p.id());
+            ptd.id(i) = -std::abs(ptd.id(i));
         }
         unsigned int index = amrex::Gpu::Atomic::Add(
             &p_box_counts[dst_box], 1u);
@@ -57,9 +56,8 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam,
     auto p_box_offsets = m_box_offsets.dataPtr();
     AMREX_FOR_1D ( np, i,
     {
-        BeamParticleContainer::ParticleType p(pdt, i);
-        int dst_box = assign_grid(p);
-        if (p.id() < 0) dst_box = num_boxes; // if pid is invalid, remove particle
+        int dst_box = assign_grid(ptd[i]);
+        if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
         if (dst_box < 0) dst_box = num_boxes;
         p_dst_indices[i] += p_box_offsets[dst_box];
     });
