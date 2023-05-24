@@ -144,6 +144,7 @@ AdaptiveTimeStep::Calculate (
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] += amrex::get<2>(res);
         m_timestep_data[ibeam][WhichDouble::MinUz] =
             std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
+        m_timestep_data[ibeam][WhichDouble::MinAcc] = m_timestep_data[ibeam][WhichDouble::MinUz] = 0.;
     }
 
     // only the last box or at initialization the adaptive time step is calculated
@@ -293,7 +294,6 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
 void
 AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPlasma& plasmas)
 {
-
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
