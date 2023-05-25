@@ -12,7 +12,7 @@ HiPACE++:
 
    module purge
    module load maxwell gcc/9.3 openmpi/4
-   module load maxwell cuda/11.3
+   module load maxwell cuda/11.8
    module load hdf5/1.10.6
    # pick correct GPU setting (this may differ for V100 nodes)
    export GPUS_PER_SOCKET=2
@@ -33,7 +33,8 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started`
 section, to prepare an input file that suits your needs. You can then create your directory on
-BEEGFS ``$SCRATCH_<project id>``, where you can put your input file and adapt the following
+BEEGFS ``/beegfs/desy/group/<your group>`` or ``/beegfs/desy/user/<your username>``,
+where you can put your input file and adapt the following
 submission script:
 
 .. code-block:: bash
@@ -42,14 +43,16 @@ submission script:
    #SBATCH --partition=<partition> # mpa # maxgpu # allgpu
    #SBATCH --time=01:00:00
    #SBATCH --nodes=1
-   #SBATCH --constraint=A100 # V100 # V100&GPUx2 # V100&GPUx4
+   #SBATCH --constraint=A100&GPUx4 # A100&GPUx1
    #SBATCH --job-name=HiPACE
    #SBATCH --output=hipace-%j-%N.out
    #SBATCH --error=hipace-%j-%N.err
 
    export OMP_NUM_THREADS=1
-   module load maxwell gcc/9.3 openmpi/4 cuda/11.1
+   module load maxwell gcc/9.3 openmpi/4 cuda/11.8
 
    mpiexec -n 4 -npernode 4 $HOME/src/hipace/build/bin/hipace inputs
 
 The ``-npernode`` must be set to ``GPUS_PER_NODE``, otherwise not all GPUs are used correctly.
+There are nodes with 4 GPUs and 1 GPU (see the `Maxwell documentation on compute infrastructure <https://confluence.desy.de/display/MXW/Compute+Infrastructure>`__.
+for more details and the required constraints). Please set the value accordingly.
