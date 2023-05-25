@@ -1043,7 +1043,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     {
         const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.begin()+nbeams, 0);
         if (np_total == 0 && !m_multi_laser.m_use_laser) return;
-        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long psize = sizeof(amrex::ParticleReal)*BeamParticleContainer::NAR
+                                  + sizeof(int)*BeamParticleContainer::NAI;
         const amrex::Long buffer_size = psize*np_total;
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
@@ -1236,7 +1237,8 @@ Hipace::Notify (const int step, const int it, bool only_ghost)
     {
         const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.begin()+nbeams, 0);
         if (np_total == 0 && !m_multi_laser.m_use_laser) return;
-        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long psize = sizeof(amrex::ParticleReal)*BeamParticleContainer::NAR
+                                  + sizeof(int)*BeamParticleContainer::NAI;
         const amrex::Long buffer_size = psize*np_total;
         char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
         psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
