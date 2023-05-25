@@ -210,8 +210,7 @@ Hipace::InitData ()
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
     if (Hipace::HeadRank()) {
-        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
-                                       m_multi_plasma, m_3D_geom[0], m_fields);
+        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
 #ifdef AMREX_USE_MPI
@@ -222,8 +221,7 @@ Hipace::InitData ()
     m_physical_time += m_dt * (m_numprocs_z-1-amrex::ParallelDescriptor::MyProc());
 #endif
     if (!Hipace::HeadRank()) {
-        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
-                                       m_multi_plasma, m_3D_geom[0], m_fields);
+        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
     m_fields.checkInit();
@@ -446,8 +444,7 @@ Hipace::Evolve ()
 
             if (m_physical_time < m_max_time) {
                 m_adaptive_time_step.Calculate(
-                    m_physical_time, m_dt, m_multi_beam, m_multi_plasma,
-                    m_3D_geom[0], m_fields, it, false);
+                    m_physical_time, m_dt, m_multi_beam, m_multi_plasma, it, false);
             } else {
                 m_dt = 2.*m_max_time;
             }
