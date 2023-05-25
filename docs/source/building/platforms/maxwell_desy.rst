@@ -43,7 +43,7 @@ submission script:
    #SBATCH --partition=<partition> # mpa # maxgpu # allgpu
    #SBATCH --time=01:00:00
    #SBATCH --nodes=1
-   #SBATCH --constraint=A100&GPUx4 # A100 # V100 # V100&GPUx2 # V100&GPUx4
+   #SBATCH --constraint=A100&GPUx4 # A100&GPUx1
    #SBATCH --job-name=HiPACE
    #SBATCH --output=hipace-%j-%N.out
    #SBATCH --error=hipace-%j-%N.err
