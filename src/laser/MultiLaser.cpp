@@ -387,7 +387,9 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                     laser_arr(i, j, k, 1) = 0._rt;
                     for (int it=0; it<=interp_order_xy; it++){
                         for (int ir=0; ir<=interp_order_xy; ir++){
-                            if (i_cell+ir >= 0 && i_cell+ir < extent[2] &&
+                            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(i_cell+ir >= 0,
+                                "Touching a r<0 cell in laser file reader. Is staggering correct?");
+                            if (i_cell+ir < extent[2] &&
                                 k_cell+it >= 0 && k_cell+it < extent[1]) {
                                 // mode 0
                                 laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
