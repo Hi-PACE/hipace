@@ -339,10 +339,10 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                                 }
                             }
                         }
-                    }
+                    } // End of 3 loops (1 per dimension) over laser array from file
                 }
             }
-        }
+        } // End of 3 loops (1 per dimension) over laser array from simulation
     } else if (m_file_geometry == "rt") {
 
         // extent = {nmodes, nt, nr}
@@ -413,14 +413,14 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                                     laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
                                         std::sin(im*theta) * static_cast<amrex::Real>(
                                         input_file_arr(i_cell+ir, k_cell+it, 2*im).imag() * unitSI);
-                                }
+                                } // End of loop over modes of laser array from file
                             }
                         }
-                    }
+                    } // End of 2 loops (1 per RT dimension) over laser array from file
                 }
             }
-        }
-    }
+        } // End of 3 loops (1 per dimension) over laser array from simulation
+    } // End if statement over file laser geometry (rt or xyt)
 }
 
 
