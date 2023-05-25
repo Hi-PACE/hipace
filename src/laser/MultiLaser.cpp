@@ -187,8 +187,9 @@ MultiLaser::Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm)
 
 void
 MultiLaser::GetEnvelopeFromFileHelper (const amrex::Geometry& gm) {
-    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
-    const amrex::Box& domain = gm.Domain();
+
+    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
+
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     {
         // Check what kind of Datatype is used in the Laser file
@@ -201,21 +202,21 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Geometry& gm) {
 
         auto iteration = series.iterations[m_file_num_iteration];
 
-        if (!iteration.containsAttribute("angularFrequency")) {
-            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
-                + std::to_string(m_file_num_iteration) + " in file "
-                + m_input_file_path + "\n");
-        }
-
-        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
-            / iteration.getAttribute("angularFrequency").get<double>();
-
         if(!iteration.meshes.contains(m_file_envelope_name)) {
             amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
                 + m_input_file_path + "\n");
         }
 
         auto mesh = iteration.meshes[m_file_envelope_name];
+
+        if (!mesh.containsAttribute("angularFrequency")) {
+            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
+                + std::to_string(m_file_num_iteration) + " in file "
+                + m_input_file_path + "\n");
+        }
+
+        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+            / mesh.getAttribute("angularFrequency").get<double>();
 
         if(!mesh.contains(openPMD::RecordComponent::SCALAR)) {
             amrex::Abort("Could not find component '" +
@@ -240,6 +241,8 @@ void
 MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
 
     using namespace amrex::literals;
+
+    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
 
     const PhysConst phc = get_phys_const();
     const amrex::Real clight = phc.c;
@@ -273,6 +276,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
                             static_cast<int>(extent[0])};
     amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
+    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
     if (m_file_geometry == "xyt") {
         // Calculate the min and max of the grid from laser file
@@ -282,7 +286,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
 
         //hipace: xyt in Fortran order
-        amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
         series.flush();
 
@@ -294,24 +297,26 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
         const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
         const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
+        const int imin = domain.smallEnd(0);
+        const int jmin = domain.smallEnd(1);
+        const int kmin = domain.smallEnd(2);
 
-        for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
-            for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
-                for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
+        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
+            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
+                for (int i = imin; i <= domain.bigEnd(0); ++i) {
 
-                    const amrex::Real x = i*dx + xmin;
+                    const amrex::Real x = (i-imin)*dx + xmin;
                     const amrex::Real xmid = (x - xmin_laser)/spacing[2];
                     amrex::Real sx_cell[interp_order_xy+1];
                     const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
 
-                    const amrex::Real y = j*dy + ymin;
+                    const amrex::Real y = (j-jmin)*dy + ymin;
                     const amrex::Real ymid = (y - ymin_laser)/spacing[1];
                     amrex::Real sy_cell[interp_order_xy+1];
                     const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
-                    const amrex::Real z = k*dz + zmin;
-                    const amrex::Real t = tmin_laser + (zmax-z)/clight;
-                    const amrex::Real tmid = (t - tmin_laser)/spacing[0];
+                    const amrex::Real z = (k-kmin)*dz + zmin;
+                    const amrex::Real tmid = (zmax-z)/clight/spacing[0];
                     amrex::Real st_cell[interp_order_xy+1];
                     const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
@@ -323,14 +328,14 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                                 if (i_cell+ix >= 0 && i_cell+ix < extent[2] &&
                                     j_cell+iy >= 0 && j_cell+iy < extent[1] &&
                                     k_cell+it >= 0 && k_cell+it < extent[0]) {
-                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy]
-                                        * st_cell[it] * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() *
-                                        unitSI);
-                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] *
-                                        st_cell[it] * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() *
-                                        unitSI);
+                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
+                                        static_cast<amrex::Real>(
+                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() * unitSI
+                                        );
+                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
+                                        static_cast<amrex::Real>(
+                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() * unitSI
+                                        );
                                 }
                             }
                         }
@@ -348,7 +353,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
 
         //hipace: xyt in Fortran order
-        amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
         series.flush();
 

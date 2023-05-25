@@ -38,12 +38,17 @@ private:
     /** Phase shift tolerance. Relevant when density gradients are present.
      * Lower is more accurate. */
     amrex::Real m_adaptive_phase_tolerance = 4.e-4;
-    /** Number of substeps on which the phase advance is monitored. */
+    /** Number of substeps on which the phase advance is monitored */
     int m_adaptive_phase_substeps = 2000;
+    /** Number of beam species for which adaptive time step is computed */
+    int m_nbeams = 0;
 
 public:
     /** Whether to use an adaptive time step */
     bool m_do_adaptive_time_step = false;
+    /** Whether to Gather Ez to take into account the deceleration of a particle
+        when calculating the time step for parallel jobs. */
+    bool m_adaptive_gather_ez = false;
     /** Constructor */
     explicit AdaptiveTimeStep (const int nbeams);
 
@@ -70,6 +75,16 @@ public:
     Calculate (amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
                const amrex::Geometry& geom, const Fields& fields, const int it=0,
                const bool initial=true);
+
+    /** calculate the adaptive time step based on the beam energy
+     * \param[in] beams multibeam containing all beams
+     * \param[in] geom geometry object
+     * \param[in] fields field object
+     * \param[in] islice current slice number
+     */
+    void
+    GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& geom,
+                       const Fields& fields, const int islice);
 
     /** Right before starting a time step, correct its dt to account for local plasma density
      * and resolve density gradients.

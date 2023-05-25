@@ -312,7 +312,7 @@ BeamParticleContainer::doInSitu (int step)
 void
 BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags");
+    HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags()");
 
     using namespace amrex::literals;
 
@@ -417,7 +417,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
 void
 BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
 {
-    HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile");
+    HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD
     // create subdirectory

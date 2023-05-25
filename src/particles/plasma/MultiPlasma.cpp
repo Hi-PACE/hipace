@@ -105,7 +105,7 @@ MultiPlasma::AdvanceParticles (
 {
     for (int i=0; i<m_nplasmas; i++) {
         AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
-                               lev, m_all_bins[i], multi_laser);
+                               lev, multi_laser);
     }
 }
 
@@ -165,7 +165,7 @@ MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
 void
 MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
 {
-    HIPACE_PROFILE("MultiPlasma::doCoulombCollision");
+    HIPACE_PROFILE("MultiPlasma::doCoulombCollision()");
     for (int i = 0; i < m_ncollisions; ++i)
     {
         AMREX_ALWAYS_ASSERT(lev == 0);

@@ -115,6 +115,7 @@ void UpdateMomentumPerezElastic (
         // Compute b0
         T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2 /
                (T_R(4.0)*MathConst::pi*PhysConstSI::ep0) * gc/mass_g *
+               ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2) + T_R(1.0) ) *
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2) + T_R(1.0) );
 
         // Compute the minimal impact parameter

@@ -233,11 +233,12 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
     if (system_type == 1) {
-        hpmg::ParallelFor(valid_domain_box(box), 2,
-        [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        hpmg::ParallelFor(valid_domain_box(box),
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
             if ((i+j+icolor)%2 == 0) {
-                gs1(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,n), acf(i,j,0), facx, facy);
+                gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), acf(i,j,0), facx, facy);
+                gs1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), acf(i,j,0), facx, facy);
             }
         });
     } else {
