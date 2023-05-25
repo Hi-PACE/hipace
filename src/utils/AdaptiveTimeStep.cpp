@@ -32,8 +32,13 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
         queryWithParser(ppa, "adaptive_predict_step", m_adaptive_predict_step);
         queryWithParser(ppa, "adaptive_control_phase_advance", m_adaptive_control_phase_advance);
         queryWithParser(ppa, "adaptive_phase_substeps", m_adaptive_phase_substeps);
+        queryWithParser(ppa, "adaptive_gather_ez", m_adaptive_gather_ez);
     }
     DeprecatedInput("hipace", "do_adaptive_time_step", "dt = adaptive");
+
+    if (m_adaptive_gather_ez) {
+        amrex::Print()<<"WARNING: hipace.adaptive_gather_ez = 1 is buggy and NOT recommended";
+    }
 
     // create time step data container per beam
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
@@ -43,6 +48,7 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
         m_timestep_data.emplace_back(ts_data);
     }
 
+    m_nbeams = nbeams;
 }
 
 #ifdef AMREX_USE_MPI
@@ -144,7 +150,6 @@ AdaptiveTimeStep::Calculate (
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] += amrex::get<2>(res);
         m_timestep_data[ibeam][WhichDouble::MinUz] =
             std::min(m_timestep_data[ibeam][WhichDouble::MinUz], amrex::get<3>(res));
-        m_timestep_data[ibeam][WhichDouble::MinAcc] = m_timestep_data[ibeam][WhichDouble::MinUz] = 0.;
     }
 
     // only the last box or at initialization the adaptive time step is calculated
@@ -230,6 +235,7 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
     using namespace amrex::literals;
 
     if (m_do_adaptive_time_step == 0) return;
+    if (m_adaptive_gather_ez == 0) return;
 
     HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
 
@@ -329,5 +335,9 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
             dt = i*dt_sub;
             return;
         }
+    }
+
+    for (int ibeam = 0; ibeam < m_nbeams; ibeam++) {
+        m_timestep_data[ibeam][WhichDouble::MinAcc] = 0.;
     }
 }
