@@ -38,12 +38,17 @@ private:
     /** Phase shift tolerance. Relevant when density gradients are present.
      * Lower is more accurate. */
     amrex::Real m_adaptive_phase_tolerance = 4.e-4;
-    /** Number of substeps on which the phase advance is monitored. */
+    /** Number of substeps on which the phase advance is monitored */
     int m_adaptive_phase_substeps = 2000;
+    /** Number of beam species for which adaptive time step is computed */
+    int m_nbeams = 0;
 
 public:
     /** Whether to use an adaptive time step */
     bool m_do_adaptive_time_step = false;
+    /** Whether to Gather Ez to take into account the deceleration of a particle
+        when calculating the time step for parallel jobs. */
+    bool m_adaptive_gather_ez = false;
     /** Constructor */
     explicit AdaptiveTimeStep (const int nbeams);
 
