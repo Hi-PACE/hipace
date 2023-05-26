@@ -85,19 +85,22 @@ public:
      *
      * \param[in] geom Geometry of the simulation, to get the cell size
      * \param[in] product_pc The electron plasma PC that this Ion Plasma ionizes to
+     * \param[in] background_density_SI background plasma density (only needed for normalized units)
      */
-    void InitIonizationModule (const amrex::Geometry& geom,
-                               PlasmaParticleContainer* product_pc);
+    void InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
+                               const amrex::Real background_density_SI);
 
     /** Calculates Ionization Probability and generates new Plasma Particles
      *
      * \param[in] lev MR level
      * \param[in] geom Geometry of the simulation, to get the cell size
      * \param[in] fields the general field class
+     * \param[in] background_density_SI background plasma density (only needed for normalized units)
      */
     void IonizationModule (const int lev,
                            const amrex::Geometry& geom,
-                           const Fields& fields);
+                           const Fields& fields,
+                           const amrex::Real background_density_SI);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
