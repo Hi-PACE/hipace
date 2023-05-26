@@ -278,6 +278,22 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
     amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
+    //hipace: xyt in Fortran order
+
+    series.flush();
+
+    constexpr int interp_order_xy = 1;
+    const amrex::Real dx = gm.CellSize(Direction::x);
+    const amrex::Real dy = gm.CellSize(Direction::y);
+    const amrex::Real dz = gm.CellSize(Direction::z);
+    const amrex::Real xmin = gm.ProbLo(Direction::x)+dx/2;
+    const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
+    const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
+    const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
+    const int imin = domain.smallEnd(0);
+    const int jmin = domain.smallEnd(1);
+    const int kmin = domain.smallEnd(2);
+
     if (m_file_geometry == "xyt") {
         // Calculate the min and max of the grid from laser file
         amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
@@ -285,21 +301,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
 
-        //hipace: xyt in Fortran order
-
-        series.flush();
-
-        constexpr int interp_order_xy = 1;
-        const amrex::Real dx = gm.CellSize(Direction::x);
-        const amrex::Real dy = gm.CellSize(Direction::y);
-        const amrex::Real dz = gm.CellSize(Direction::z);
-        const amrex::Real xmin = gm.ProbLo(Direction::x)+dx/2;
-        const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
-        const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
-        const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
-        const int imin = domain.smallEnd(0);
-        const int jmin = domain.smallEnd(1);
-        const int kmin = domain.smallEnd(2);
 
         for (int k = kmin; k <= domain.bigEnd(2); ++k) {
             for (int j = jmin; j <= domain.bigEnd(1); ++j) {
@@ -352,34 +353,20 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
 
-        //hipace: xyt in Fortran order
+        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
+            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
+                for (int i = imin; i <= domain.bigEnd(0); ++i) {
 
-        series.flush();
-
-        constexpr int interp_order_xy = 1;
-        const amrex::Real dx = gm.CellSize(Direction::x);
-        const amrex::Real dy = gm.CellSize(Direction::y);
-        const amrex::Real dz = gm.CellSize(Direction::z);
-        const amrex::Real xmin = gm.ProbLo(Direction::x)+dx/2;
-        const amrex::Real ymin = gm.ProbLo(Direction::y)+dy/2;
-        const amrex::Real zmin = gm.ProbLo(Direction::z)+dz/2;
-        const amrex::Real zmax = gm.ProbHi(Direction::z)-dz/2;
-
-        for (int k = domain.smallEnd(2); k <= domain.bigEnd(2); ++k) {
-            for (int j = domain.smallEnd(1); j <= domain.bigEnd(1); ++j) {
-                for (int i = domain.smallEnd(0); i <= domain.bigEnd(0); ++i) {
-
-                    const amrex::Real x = i*dx + xmin;
-                    const amrex::Real y = j*dy + ymin;
+                    const amrex::Real x = (i-imin)*dx + xmin;
+                    const amrex::Real y = (j-jmin)*dy + ymin;
                     const amrex::Real r = std::sqrt(x*x + y*y);
                     const amrex::Real theta = std::atan2(y, x);
                     const amrex::Real rmid = (r - rmin_laser)/spacing[1];
                     amrex::Real sr_cell[interp_order_xy+1];
                     const int i_cell = compute_shape_factor<interp_order_xy>(sr_cell, rmid);
 
-                    const amrex::Real z = k*dz + zmin;
-                    const amrex::Real t = tmin_laser + (zmax-z)/clight;
-                    const amrex::Real tmid = (t - tmin_laser)/spacing[0];
+                    const amrex::Real z = (k-kmin)*dz + zmin;
+                    const amrex::Real tmid = (zmax-z)/clight/spacing[0];
                     amrex::Real st_cell[interp_order_xy+1];
                     const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
