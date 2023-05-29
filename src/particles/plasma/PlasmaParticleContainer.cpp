@@ -58,9 +58,6 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "can_ionize", m_can_ionize);
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
-        // TODO: FIXME
-        // AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!Hipace::GetInstance().m_normalized_units,
-        //     "Cannot use Ionization Module in normalized units");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial ion level must be specified");
     }

@@ -47,7 +47,7 @@ CoulombCollision::doCoulombCollision (
     AMREX_ALWAYS_ASSERT(lev == 0);
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
-    bool normalized_units = Hipace::GetInstance().m_normalized_units;
+    const bool normalized_units = Hipace::GetInstance().m_normalized_units;
     if ( is_same_species ) // species_1 == species_2
     {
         // Logically particles per-cell, and return indices of particles in each cell

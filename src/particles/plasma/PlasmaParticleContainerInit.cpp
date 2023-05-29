@@ -319,6 +319,14 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
     using namespace amrex::literals;
 
     if (!m_can_ionize) return;
+
+    const bool normalized_units = Hipace::GetInstance().m_normalized_units;
+    if (normalized_units) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
+            "For ionization with normalized units, a background plasma density != 0 must "
+            "be specified via 'plasmas.background_density_SI'");
+    }
+
     m_product_pc = product_pc;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
@@ -354,9 +362,8 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
     const amrex::Real wp = std::sqrt(background_density_SI *
                                      PhysConstSI::q_e*PhysConstSI::q_e /
                                      (PhysConstSI::ep0 * PhysConstSI::m_e) );
-    const amrex::Real dt = Hipace::GetInstance().m_normalized_units ? geom.CellSize(2)/wp
-                                                                    : geom.CellSize(2)/phys_const.c;
-    amrex::Print() << "dt " << dt << "\n";
+    const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;
+
     m_adk_power.resize(ion_atomic_number);
     m_adk_prefactor.resize(ion_atomic_number);
     m_adk_exp_prefactor.resize(ion_atomic_number);
