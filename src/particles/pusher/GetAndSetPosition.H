@@ -190,15 +190,13 @@ struct EnforceBCandSetPos
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
         const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
-        if (shifted) {
-            x = p.pos(0);
-            y = p.pos(1);
-        }
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
             ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
             p.id() = -std::abs(p.id());
         }
+        x = p.pos(0);
+        y = p.pos(1);
         return invalid;
     }
 
@@ -223,16 +221,14 @@ struct EnforceBCandSetPos
         // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
         // however there is no Geometry object to get this.
         const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
-        if (shifted) {
-            x = p.pos(0);
-            y = p.pos(1);
-            z = p.pos(2);
-        }
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
             ptd.rdata(BeamIdx::w)[ip] = 0.0_rt;
             p.id() = -std::abs(p.id());
         }
+        x = p.pos(0);
+        y = p.pos(1);
+        z = p.pos(2);
         return invalid;
     }
 };

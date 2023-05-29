@@ -48,11 +48,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
         // extract the laser Fields
-        const bool use_laser = multi_laser.m_use_laser;
         const amrex::MultiFab& a_mf = multi_laser.getSlices();
 
         // Extract field array from MultiFab
-        Array3<const amrex::Real> const& a_arr = use_laser ?
+        Array3<const amrex::Real> const& a_arr = multi_laser.m_use_laser ?
             a_mf[pti].const_array(WhichLaserSlice::n00j00_r) : amrex::Array4<const amrex::Real>();
 
         // Extract properties associated with physical size of the box
@@ -90,10 +89,15 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 #endif
 
             amrex::ParallelFor(
-                amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
-                {Hipace::m_depos_order_xy},
-                idx_end - idx_begin,
-                [=] AMREX_GPU_DEVICE (amrex::Long idx, auto depos_order) {
+                amrex::TypeList<
+                    amrex::CompileTimeOptions<0, 1, 2, 3>,
+                    amrex::CompileTimeOptions<false, true>
+                >{}, {
+                    Hipace::m_depos_order_xy,
+                    multi_laser.m_use_laser
+                },
+                int(idx_end - idx_begin), // int ParallelFor is 3-5% faster than amrex::Long version
+                [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto use_laser) {
                     const int ip = idx + idx_begin;
                     // only push plasma particles on their according MR level
                     if (ptd.id(ip) < 0 || ptd.cpu(ip) != lev) return;
@@ -110,7 +114,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                    if (use_laser) {
+                    if (use_laser.value) {
                         doLaserGatherShapeN<depos_order.value>(xp, yp, Aabssqp, AabssqDxp,
                             AabssqDyp, a_arr, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                     }

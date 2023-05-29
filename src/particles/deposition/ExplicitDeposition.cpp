@@ -95,8 +95,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 multi_laser.m_use_laser,
                 do_omp_atomic
             },
-            idx_end - idx_begin,
-            [=] AMREX_GPU_DEVICE (amrex::Long ip, auto a_depos_order, auto a_derivative_type,
+            int(idx_end - idx_begin), // int ParallelFor is 3-5% faster than amrex::Long version
+            [=] AMREX_GPU_DEVICE (int ip, auto a_depos_order, auto a_derivative_type,
                                   auto can_ionize, auto use_laser, auto ompa) noexcept {
                 constexpr int depos_order = a_depos_order.value;
                 constexpr int derivative_type = a_derivative_type.value;
