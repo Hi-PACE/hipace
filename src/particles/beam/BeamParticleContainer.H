@@ -24,7 +24,7 @@ struct BeamIdx
         x=0, y, z,  // position
         w,          // weight
         ux, uy, uz, // momentum
-        nattribs
+        real_nattribs
     };
     enum {
         id=0, cpu,
@@ -34,10 +34,10 @@ struct BeamIdx
 
 using BeamTile = amrex::ParticleTile<
         amrex::SoAParticle<
-            BeamIdx::nattribs,
+            BeamIdx::real_nattribs,
             BeamIdx::int_nattribs
         >,
-        BeamIdx::nattribs,
+        BeamIdx::real_nattribs,
         BeamIdx::int_nattribs
     >;
 

@@ -37,7 +37,7 @@ struct PlasmaIdx
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
         Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
 #endif
-        nattribs
+        real_nattribs
     };
     enum {
         id=0, cpu,          // cpu used for MR level
@@ -48,12 +48,12 @@ struct PlasmaIdx
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainerPureSoA<PlasmaIdx::nattribs, PlasmaIdx::int_nattribs>
+    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
-        amrex::ParticleContainerPureSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(),
+        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
         m_name(name)
     {
         ReadParameters();
@@ -174,12 +174,12 @@ private:
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>
+class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>
 {
 public:
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc)
-        : amrex::ParIterSoA<PlasmaIdx::nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
+        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
 };
 
 #endif

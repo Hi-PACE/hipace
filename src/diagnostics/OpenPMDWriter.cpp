@@ -17,8 +17,8 @@
 
 OpenPMDWriter::OpenPMDWriter ()
 {
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
-        "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::real_nattribs,
+        "List of real names in openPMD Writer class do not match BeamIdx::real_nattribs");
     amrex::ParmParse pp("hipace");
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
     // pick first available backend if default is chosen

@@ -40,22 +40,22 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> rarrdata,
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata,
         amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
         const amrex::Real& uz, const amrex::Real& weight, const int& pid,
         const int& ip, const amrex::Real& speed_of_light) noexcept
     {
-        rarrdata[BeamIdx::x   ][ip] = x;
-        rarrdata[BeamIdx::y   ][ip] = y;
-        rarrdata[BeamIdx::z   ][ip] = z;
-        rarrdata[BeamIdx::ux  ][ip] = ux * speed_of_light;
-        rarrdata[BeamIdx::uy  ][ip] = uy * speed_of_light;
-        rarrdata[BeamIdx::uz  ][ip] = uz * speed_of_light;
-        rarrdata[BeamIdx::w   ][ip] = std::abs(weight);
+        rarrdata[BeamIdx::x  ][ip] = x;
+        rarrdata[BeamIdx::y  ][ip] = y;
+        rarrdata[BeamIdx::z  ][ip] = z;
+        rarrdata[BeamIdx::ux ][ip] = ux * speed_of_light;
+        rarrdata[BeamIdx::uy ][ip] = uy * speed_of_light;
+        rarrdata[BeamIdx::uz ][ip] = uz * speed_of_light;
+        rarrdata[BeamIdx::w  ][ip] = std::abs(weight);
 
-        iarrdata[BeamIdx::id  ][ip] = pid > 0 ? pid + ip : pid;
-        iarrdata[BeamIdx::cpu ][ip] = 0; // level 0
+        iarrdata[BeamIdx::id ][ip] = pid > 0 ? pid + ip : pid;
+        iarrdata[BeamIdx::cpu][ip] = 0; // level 0
     }
 }
 
@@ -180,7 +180,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
         if (num_to_add == 0) return;
 
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> rarrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
 
         amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
@@ -279,7 +279,7 @@ InitBeamFixedWeight (int num_to_add,
         particle_tile.resize(new_size);
 
         // Access particles' SoA
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> rarrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
         amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
             particle_tile.GetStructOfArrays().intarray();
@@ -684,7 +684,7 @@ InitBeamFromFile (const std::string input_file,
         auto old_size = particle_tile.size();
         auto new_size = old_size + num_to_add;
         particle_tile.resize(new_size);
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> rarrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
         amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
             particle_tile.GetStructOfArrays().intarray();
