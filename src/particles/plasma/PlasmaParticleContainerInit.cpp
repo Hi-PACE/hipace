@@ -322,7 +322,7 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
 
     const bool normalized_units = Hipace::GetInstance().m_normalized_units;
     if (normalized_units) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
             "For ionization with normalized units, a background plasma density != 0 must "
             "be specified via 'plasmas.background_density_SI'");
     }
