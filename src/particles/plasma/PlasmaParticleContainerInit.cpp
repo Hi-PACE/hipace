@@ -55,6 +55,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         y_offset = -0.5_rt;
     }
 
+    // Reset first ID to 1 as we create a fresh plasma each time we call this function
+    ParticleType::NextID(1);
+
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tile_box  = mfi.tilebox(box_nodal, box_grow);
