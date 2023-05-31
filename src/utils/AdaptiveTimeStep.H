@@ -66,15 +66,12 @@ public:
      * \param[in,out] dt the time step
      * \param[in] beams multibeam containing all beams
      * \param[in] plasmas multiplasma to get density profile info
-     * \param[in] geom geometry object
-     * \param[in] fields field object
      * \param[in] it current box number
      * \param[in] initial whether to calculate the initial dt
      */
     void
     Calculate (amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
-               const amrex::Geometry& geom, const Fields& fields, const int it=0,
-               const bool initial=true);
+               const int it=0, const bool initial=true);
 
     /** calculate the adaptive time step based on the beam energy
      * \param[in] beams multibeam containing all beams
