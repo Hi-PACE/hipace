@@ -220,20 +220,20 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
-                int_arrdata[PlasmaIdx::id       ][pidx] = pid + int(pidx);
-                int_arrdata[PlasmaIdx::cpu      ][pidx] = 0; // level 0
-                arrdata[PlasmaIdx::x        ][pidx] = x;
-                arrdata[PlasmaIdx::y        ][pidx] = y;
-                arrdata[PlasmaIdx::z        ][pidx] = z;
+                int_arrdata[PlasmaIdx::id ][pidx] = pid + int(pidx);
+                int_arrdata[PlasmaIdx::cpu][pidx] = 0; // level 0
+                arrdata[PlasmaIdx::x      ][pidx] = x;
+                arrdata[PlasmaIdx::y      ][pidx] = y;
+                arrdata[PlasmaIdx::z      ][pidx] = z;
 
-                arrdata[PlasmaIdx::w        ][pidx] = scale_fac * density_func(x, y, c_t);
-                arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
-                arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
+                arrdata[PlasmaIdx::w      ][pidx] = scale_fac * density_func(x, y, c_t);
+                arrdata[PlasmaIdx::ux     ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy     ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
-                arrdata[PlasmaIdx::x_prev   ][pidx] = x;
-                arrdata[PlasmaIdx::y_prev   ][pidx] = y;
-                arrdata[PlasmaIdx::ux_half_step][pidx] = u[0] * c_light;
-                arrdata[PlasmaIdx::uy_half_step][pidx] = u[1] * c_light;
+                arrdata[PlasmaIdx::x_prev ][pidx] = x;
+                arrdata[PlasmaIdx::y_prev ][pidx] = y;
+                arrdata[PlasmaIdx::ux_half_step ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy_half_step ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi_half_step][pidx] = arrdata[PlasmaIdx::psi][pidx];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU

@@ -280,8 +280,6 @@ IonizationModule (const int lev,
         auto& ptile_ion = plevel_ion.at(index);
 
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
-        using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto getPosition = GetParticlePosition<PTileType>(ptile_ion);
 
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
 
@@ -291,6 +289,7 @@ IonizationModule (const int lev,
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
         const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
+        const int * const idp = soa_ion.GetIntData(PlasmaIdx::id).data();
         const int * const cpup = soa_ion.GetIntData(PlasmaIdx::cpu).data();
 
         // Make Ion Mask and load ADK prefactors
@@ -308,14 +307,11 @@ IonizationModule (const int lev,
         amrex::ParallelForRNG(num_ions,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
 
-            amrex::ParticleReal xp, yp, zp;
-            int pid;
-            getPosition(ip, xp, yp, zp, pid);
-            // avoid temp slice
-            xp = x_prev[ip];
-            yp = y_prev[ip];
+            if (idp[ip] < 0 || cpup[ip] != lev) return;
 
-            if (pid < 0 || cpup[ip] != lev) return;
+            // avoid temp slice
+            const amrex::Real xp = x_prev[ip];
+            const amrex::Real yp = y_prev[ip];
 
             // define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
@@ -388,19 +384,19 @@ IonizationModule (const int lev,
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 
-                int_arrdata_elec[PlasmaIdx::id      ][pidx] = pid_start + pid;
-                int_arrdata_elec[PlasmaIdx::cpu     ][pidx] = lev; // current level
-                arrdata_elec[PlasmaIdx::x       ][pidx] = xp;
-                arrdata_elec[PlasmaIdx::y       ][pidx] = yp;
-                arrdata_elec[PlasmaIdx::z       ][pidx] = zp;
+                int_arrdata_elec[PlasmaIdx::id ][pidx] = pid_start + pid;
+                int_arrdata_elec[PlasmaIdx::cpu][pidx] = lev; // current level
+                arrdata_elec[PlasmaIdx::x      ][pidx] = xp;
+                arrdata_elec[PlasmaIdx::y      ][pidx] = yp;
+                arrdata_elec[PlasmaIdx::z      ][pidx] = zp;
 
-                arrdata_elec[PlasmaIdx::w       ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
-                arrdata_elec[PlasmaIdx::ux      ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::uy      ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
+                arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::uy     ][pidx] = 0._rt;
                 // later we could consider adding a finite temperature to the ionized electrons
-                arrdata_elec[PlasmaIdx::psi     ][pidx] = 1._rt;
-                arrdata_elec[PlasmaIdx::x_prev  ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
-                arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = 1._rt;
+                arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
+                arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::psi_half_step][pidx] = 1._rt;
