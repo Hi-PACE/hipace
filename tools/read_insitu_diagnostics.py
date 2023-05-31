@@ -61,32 +61,32 @@ def emittance_y(all_data):
 def gamma_mean(all_data):
     return all_data["[ga]"]
 
-def per_slice_energy_mean_eV(all_data):
-    if all_data["is_normalized_units"][0]:
-        return (constants.m_e * constants.c**2 / constants.e) * gamma_mean(all_data) * np.atleast_2d(all_data["mass"]).T
+def energy_mean_eV(all_data, per_slice=False):
+    if per_slice:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * gamma_mean(all_data) * np.atleast_2d(all_data["mass"]).T
+        else:
+            return (constants.c**2 / constants.e) * gamma_mean(all_data) * np.atleast_2d(all_data["mass"]).T
     else:
-        return (constants.c**2 / constants.e) * gamma_mean(all_data) * np.atleast_2d(all_data["mass"]).T
-
-def total_energy_mean_eV(all_data):
-    if all_data["is_normalized_units"][0]:
-        return (constants.m_e * constants.c**2 / constants.e) * gamma_mean(all_data["average"]) * all_data["mass"]
-    else:
-        return (constants.c**2 / constants.e) * gamma_mean(all_data["average"]) * all_data["mass"]
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * gamma_mean(all_data["average"]) * all_data["mass"]
+        else:
+            return (constants.c**2 / constants.e) * gamma_mean(all_data["average"]) * all_data["mass"]
 
 def gamma_spread(all_data):
     return np.sqrt(np.maximum(all_data["[ga^2]"] - all_data["[ga]"]**2,0))
 
-def per_slice_energy_spread_eV(all_data):
-    if all_data["is_normalized_units"][0]:
-        return (constants.m_e * constants.c**2 / constants.e) * gamma_spread(all_data) * np.atleast_2d(all_data["mass"]).T
+def energy_spread_eV(all_data, per_slice=False):
+    if per_slice:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * gamma_spread(all_data) * np.atleast_2d(all_data["mass"]).T
+        else:
+            return (constants.c**2 / constants.e) * gamma_spread(all_data) * np.atleast_2d(all_data["mass"]).T
     else:
-        return (constants.c**2 / constants.e) * gamma_spread(all_data) * np.atleast_2d(all_data["mass"]).T
-
-def total_energy_spread_eV(all_data):
-    if all_data["is_normalized_units"][0]:
-        return (constants.m_e * constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
-    else:
-        return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
+        else:
+            return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
 
 def position_mean_x(all_data):
     return all_data["[x]"]
