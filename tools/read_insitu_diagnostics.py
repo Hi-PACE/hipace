@@ -60,11 +60,17 @@ def emittance_y(all_data):
 def energy_spread(all_data):
     return np.sqrt(np.maximum(all_data["[ga^2]"]-all_data["[ga]"]**2,0))
 
+def momentum_spread(all_data):
+    return np.sqrt(np.maximum(all_data["[uz^2]"]-all_data["[uz]"]**2,0))
+
 def position_mean_x(all_data):
     return all_data["[x]"]
 
 def position_mean_y(all_data):
     return all_data["[y]"]
+
+def position_mean_z(all_data):
+    return all_data["[z]"]
 
 def position_std_x(all_data):
     return np.sqrt(np.maximum(all_data["[x^2]"] - all_data["[x]"]**2,0))
@@ -72,8 +78,11 @@ def position_std_x(all_data):
 def position_std_y(all_data):
     return np.sqrt(np.maximum(all_data["[y^2]"] - all_data["[y]"]**2,0))
 
+def position_std_z(all_data):
+    return np.sqrt(np.maximum(all_data["[z^2]"] - all_data["[z]"]**2,0))
+
 def per_slice_charge(all_data):
-    return all_data["charge"] * all_data["sum(w)"] * all_data["normalized_density_factor"]
+    return np.atleast_2d(all_data["charge"]).T * all_data["sum(w)"] * np.atleast_2d(all_data["normalized_density_factor"]).T
 
 def total_charge(all_data):
     return all_data["charge"] * all_data["total"]["sum(w)"] * all_data["normalized_density_factor"]
