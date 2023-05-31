@@ -381,14 +381,11 @@ IonizationModule (const int lev,
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                amrex::ParticleReal xp, yp, zp;
-                getPosition(ip, xp, yp, zp);
-
                 int_arrdata_elec[PlasmaIdx::id ][pidx] = pid_start + pid;
                 int_arrdata_elec[PlasmaIdx::cpu][pidx] = lev; // current level
-                arrdata_elec[PlasmaIdx::x      ][pidx] = xp;
-                arrdata_elec[PlasmaIdx::y      ][pidx] = yp;
-                arrdata_elec[PlasmaIdx::z      ][pidx] = zp;
+                arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
+                arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
+                arrdata_elec[PlasmaIdx::z      ][pidx] = arrdata_ion[PlasmaIdx::z     ][ip];
 
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;
