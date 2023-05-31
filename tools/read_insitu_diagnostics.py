@@ -9,6 +9,7 @@ import numpy as np
 from numpy.lib import recfunctions as rfn
 import glob
 import json
+from scipy import constants
 
 def get_buffer(file):
     with open(file, "rb") as f:
@@ -57,11 +58,35 @@ def emittance_y(all_data):
                   * (all_data["[uy^2]"] - all_data["[uy]"]**2) \
                   - (all_data["[y*uy]"] - all_data["[y]"]*all_data["[uy]"])**2))
 
-def energy_spread(all_data):
-    return np.sqrt(np.maximum(all_data["[ga^2]"]-all_data["[ga]"]**2,0))
+def gamma_mean(all_data):
+    return all_data["[ga]"]
 
-def momentum_spread(all_data):
-    return np.sqrt(np.maximum(all_data["[uz^2]"]-all_data["[uz]"]**2,0))
+def per_slice_energy_mean_eV(all_data):
+    if all_data["is_normalized_units"][0]:
+        return (constants.m_e * constants.c**2 / constants.e) * gamma_mean(all_data) * np.atleast_2d(all_data["mass"]).T
+    else:
+        return (constants.c**2 / constants.e) * gamma_mean(all_data) * np.atleast_2d(all_data["mass"]).T
+
+def total_energy_mean_eV(all_data):
+    if all_data["is_normalized_units"][0]:
+        return (constants.m_e * constants.c**2 / constants.e) * gamma_mean(all_data["average"]) * all_data["mass"]
+    else:
+        return (constants.c**2 / constants.e) * gamma_mean(all_data["average"]) * all_data["mass"]
+
+def gamma_spread(all_data):
+    return np.sqrt(np.maximum(all_data["[ga^2]"] - all_data["[ga]"]**2,0))
+
+def per_slice_energy_spread_eV(all_data):
+    if all_data["is_normalized_units"][0]:
+        return (constants.m_e * constants.c**2 / constants.e) * gamma_spread(all_data) * np.atleast_2d(all_data["mass"]).T
+    else:
+        return (constants.c**2 / constants.e) * gamma_spread(all_data) * np.atleast_2d(all_data["mass"]).T
+
+def total_energy_spread_eV(all_data):
+    if all_data["is_normalized_units"][0]:
+        return (constants.m_e * constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
+    else:
+        return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
 
 def position_mean_x(all_data):
     return all_data["[x]"]
@@ -80,6 +105,24 @@ def position_std_y(all_data):
 
 def position_std_z(all_data):
     return np.sqrt(np.maximum(all_data["[z^2]"] - all_data["[z]"]**2,0))
+
+def normalized_momentum_mean_x(all_data):
+    return all_data["[ux]"]
+
+def normalized_momentum_mean_y(all_data):
+    return all_data["[uy]"]
+
+def normalized_momentum_mean_z(all_data):
+    return all_data["[uz]"]
+
+def normalized_momentum_std_x(all_data):
+    return np.sqrt(np.maximum(all_data["[ux^2]"] - all_data["[ux]"]**2,0))
+
+def normalized_momentum_std_y(all_data):
+    return np.sqrt(np.maximum(all_data["[uy^2]"] - all_data["[uy]"]**2,0))
+
+def normalized_momentum_std_z(all_data):
+    return np.sqrt(np.maximum(all_data["[uz^2]"] - all_data["[uz]"]**2,0))
 
 def per_slice_charge(all_data):
     return np.atleast_2d(all_data["charge"]).T * all_data["sum(w)"] * np.atleast_2d(all_data["normalized_density_factor"]).T
