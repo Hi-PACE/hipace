@@ -235,6 +235,8 @@ private:
     std::string m_file_envelope_name = "laserEnvelope";
     /** index of the iteration in the openPMD file */
     int m_file_num_iteration = 0;
+    /** Geometry of the laser file, 'rt' or 'xyt' */
+    std::string m_file_geometry = "";
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};
