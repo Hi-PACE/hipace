@@ -18,9 +18,10 @@
  * \param[in,out] ExmByp Ex-By Field on particle
  * \param[in,out] EypBxp Ey+Bx Field on particle
  * \param[in,out] Ezp Ez Field on particle
- * \param[in] ext_ExmBy_slope strength of the external linear field: Ex += ext_ExmBy_slope * x
- * \param[in] ext_Ez_slope strength of the external linear field: Ez += ext_Ez_slope * z
- * \param[in] ext_Ez_uniform strength of the external uniform field: Ez += ext_Ez_uniform
+ * \param[in] ext_E_uniform Uniform electric field Ex-c*By, Ey+c*Bx, Ez to be applied
+ * \param[in] ext_B_uniform Uniform magnetic field Bx, B, Bz to be applied
+ * \param[in] ext_E_slope strength of external electric field d(Ex-c*By)/dx, d(Ey+c*Bx)/dy, d(Ez)/dz
+ * \param[in] ext_B_slope strength of external magnetic field d(Bx)/dx, d(By)/dy, d(Bz)/dz
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void ApplyExternalField(
