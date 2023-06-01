@@ -18,11 +18,11 @@
 
 void
 ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
-                    amrex::Geometry const& gm, const int lev) {
+                    amrex::Vector<amrex::Geometry> const& gm, const int lev) {
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
 
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti) {
 
         amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
         const Array3<amrex::Real> arr = isl_fab.array();
@@ -36,30 +36,24 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const int Bz = Comps[WhichSlice::This]["Bz"];
 
         // Extract particle properties
-        const auto& aos = pti.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin();
-        const auto& soa = pti.GetStructOfArrays(); // For momenta and weights
-
-        const amrex::Real * const AMREX_RESTRICT wp = soa.GetRealData(PlasmaIdx::w).data();
-        const amrex::Real * const AMREX_RESTRICT uxp = soa.GetRealData(PlasmaIdx::ux).data();
-        const amrex::Real * const AMREX_RESTRICT uyp = soa.GetRealData(PlasmaIdx::uy).data();
-        const amrex::Real * const AMREX_RESTRICT psip = soa.GetRealData(PlasmaIdx::psi).data();
-
-        int const * const AMREX_RESTRICT a_ion_lev =
-            plasma.m_can_ionize ? soa.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         // Construct empty Array4 if there is no laser
         const Array3<const amrex::Real> a_laser_arr = multi_laser.m_use_laser ?
-            multi_laser.getSlices(WhichLaserSlice::n00j00).const_array(pti) :
+            multi_laser.getSlices().const_array(pti, WhichLaserSlice::n00j00_r) :
             amrex::Array4<const amrex::Real>();
 
-        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
+        const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
 
-        const amrex::Real * AMREX_RESTRICT dx = gm.CellSize();
-        const amrex::Real invvol = Hipace::m_normalized_units ? 1._rt : 1._rt/(dx[0]*dx[1]*dx[2]);
-        const amrex::Real dx_inv = 1._rt/dx[0];
-        const amrex::Real dy_inv = 1._rt/dx[1];
+        const amrex::Real dx_inv = gm[lev].InvCellSize(0);
+        const amrex::Real dy_inv = gm[lev].InvCellSize(1);
+        const amrex::Real dz_inv = gm[lev].InvCellSize(2);
+        // in normalized units this is rescaling dx and dy for MR,
+        // while in SI units it's the factor for charge to charge density
+        const amrex::Real invvol = Hipace::m_normalized_units ?
+            gm[0].CellSize(0)*gm[0].CellSize(1)*dx_inv*dy_inv
+            : dx_inv*dy_inv*dz_inv;
 
         const PhysConst pc = get_phys_const();
         const amrex::Real a_clight = pc.c;
@@ -69,43 +63,62 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        {
+
+        amrex::Long const num_particles = pti.numParticles();
+#ifdef AMREX_USE_OMP
+        amrex::Long const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
+        amrex::Long const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
+        const bool do_omp_atomic = omp_get_num_threads() > 1;
+        using omp_cto = amrex::CompileTimeOptions<false, true>;
+#else
+        amrex::Long constexpr idx_begin = 0;
+        amrex::Long const idx_end = num_particles;
+        constexpr bool do_omp_atomic = false;
+        using omp_cto = amrex::CompileTimeOptions<false>;
+#endif
+
         amrex::ParallelFor(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
                 amrex::CompileTimeOptions<0, 1, 2>,     // derivative_type
                 amrex::CompileTimeOptions<false, true>, // can_ionize
-                amrex::CompileTimeOptions<false, true>  // use_laser
+                amrex::CompileTimeOptions<false, true>, // use_laser
+                omp_cto                                 // do_omp_atomic
             >{}, {
                 Hipace::m_depos_order_xy,
                 Hipace::m_depos_derivative_type,
                 plasma.m_can_ionize,
-                multi_laser.m_use_laser
+                multi_laser.m_use_laser,
+                do_omp_atomic
             },
-            pti.numParticles(),
+            int(idx_end - idx_begin), // int ParallelFor is 3-5% faster than amrex::Long version
             [=] AMREX_GPU_DEVICE (int ip, auto a_depos_order, auto a_derivative_type,
-                                          auto can_ionize, auto use_laser) noexcept {
+                                  auto can_ionize, auto use_laser, auto ompa) noexcept {
                 constexpr int depos_order = a_depos_order.value;
                 constexpr int derivative_type = a_derivative_type.value;
 
-                const auto positions = pos_structs[ip];
-                if (positions.id() < 0) return;
-                const amrex::Real psi_inv = 1._rt/psip[ip];
-                const amrex::Real xp = positions.pos(0);
-                const amrex::Real yp = positions.pos(1);
-                const amrex::Real vx = uxp[ip] * psi_inv * clight_inv;
-                const amrex::Real vy = uyp[ip] * psi_inv * clight_inv;
+                ip += idx_begin;
 
-                amrex::Real q_invvol_mu0 = charge_invvol_mu0;
-                amrex::Real q_mass_ratio = charge_mass_ratio;
+                if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
+                const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real xp = ptd.pos(0, ip);
+                const amrex::Real yp = ptd.pos(1, ip);
+                const amrex::Real vx = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv * clight_inv;
+                const amrex::Real vy = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv * clight_inv;
 
                 // Rename variable for NVCC lambda capture to work
-                [[maybe_unused]] auto ion_lev = a_ion_lev;
+                amrex::Real q_invvol_mu0 = charge_invvol_mu0;
+                amrex::Real q_mass_ratio = charge_mass_ratio;
                 if constexpr (can_ionize.value) {
-                    q_invvol_mu0 *= ion_lev[ip];
-                    q_mass_ratio *= ion_lev[ip];
+                    q_invvol_mu0 *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    q_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
                 }
 
-                const amrex::Real charge_density_mu0 = q_invvol_mu0 * wp[ip];
+                const amrex::Real charge_density_mu0 = q_invvol_mu0 * ptd.rdata(PlasmaIdx::w)[ip];
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
@@ -180,7 +193,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             }
                         }
 
-                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sy), charge_density_mu0 * (
+                        AtomicAdd(arr.ptr(i, j, Sy), charge_density_mu0 * (
                             - shape_x * shape_y * (
                                 - Bz_v * vx
                                 + ( Ez_v * vy
@@ -194,9 +207,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             - shape_x * shape_dy * dy_inv * (
                                 gamma_psi - vy * vy - 1._rt
                             )) * a_clight
-                        ));
+                        ), ompa.value);
 
-                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, Sx), charge_density_mu0 * (
+                        AtomicAdd(arr.ptr(i, j, Sx), charge_density_mu0 * (
                             + shape_x * shape_y * (
                                 + Bz_v * vy
                                 + ( Ez_v * vx
@@ -210,9 +223,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                             + shape_x * shape_dy * dy_inv * (
                                 - vx * vy
                             )) * a_clight
-                        ));
+                        ), ompa.value);
                     }
                 }
             });
+        }
     }
 }

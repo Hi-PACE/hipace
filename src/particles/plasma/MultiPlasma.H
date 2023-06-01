@@ -20,9 +20,8 @@ class MultiPlasma
 public:
 
     /** Constructor
-     * \param[in] amr_core AmrCore object
      */
-    MultiPlasma (amrex::AmrCore* amr_core);
+    MultiPlasma ();
 
     /** Destructor */
     ~MultiPlasma () {}
@@ -48,13 +47,14 @@ public:
      * \param[in] deposit_jz if true, deposit to jz
      * \param[in] deposit_rho if true, deposit to rho
      * \param[in] deposit_chi if true, deposit chi
+     * \param[in] deposit_rhomjz if true, deposit rhomjz
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
     void DepositCurrent (
         Fields & fields, const MultiLaser & multi_laser, int which_slice, bool deposit_jx_jy,
-        bool deposit_jz, bool deposit_rho, bool deposit_chi, amrex::Geometry const& gm,
-        int const lev);
+        bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
+        amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields
      *
@@ -64,14 +64,14 @@ public:
      * \param[in] lev MR level
      */
     void ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
-                             amrex::Geometry const& gm, int const lev);
+                             amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *
      * the max is taken across species AND include m_adaptive_density, giving a way to
      * specify a density to the adaptive time step calculator even with no plasma species.
      */
-    amrex::Real maxDensity () const;
+    amrex::Real maxDensity (amrex::Real z) const;
 
     /** \brief Gather field values and push particles
      *
@@ -82,14 +82,8 @@ public:
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        const Fields & fields, const MultiLaser & multi_laser, amrex::Geometry const& gm,
+        const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
         bool temp_slice, int lev);
-
-    /** \brief Resets the particle position x, y, to x_prev, y_prev
-     *
-     * \param[in] lev MR level
-     */
-    void ResetParticles (int lev);
 
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
@@ -97,11 +91,11 @@ public:
      * \param[in] multi_laser that affects the plasma during the deposition
      * \param[in] which_slice slice in which the densities are deposited
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
-     * \param[in] nlev number of MR levels
+     * \param[in] lev MR level
      */
     void DepositNeutralizingBackground (
-        Fields & fields, const MultiLaser & multi_laser, int which_slice, amrex::Geometry const& gm,
-        int const nlev);
+        Fields & fields, const MultiLaser & multi_laser, int which_slice,
+        amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles
      *
@@ -138,6 +132,17 @@ public:
      */
     void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
 
+    /** Reorder particles to speed-up current deposition
+     * \param[in] islice zeta slice index
+     */
+    void ReorderParticles (const int islice);
+
+    /** \brief Store the finest level of every plasma particle in the cpu() attribute.
+     * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] geom3D Geometry object for the whole domain
+     */
+    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
     /** Number of binary collisions */
@@ -156,6 +161,8 @@ private:
     std::vector<std::string> m_collision_names;
     /** Vector of binary collisions */
     amrex::Vector< CoulombCollision > m_all_collisions;
+    /** Background density in SI, used to compute collisions in normalized units */
+    amrex::Real m_background_density_SI = 0.;
 };
 
 #endif // MULTIPLASMA_H_

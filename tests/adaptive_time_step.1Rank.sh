@@ -22,6 +22,9 @@ HIPACE_SOURCE_DIR=$2
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/beam_in_vacuum
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
+# Relative tolerance for checksum tests depends on the platform
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-5
+
 rm -rf negative_gradient_data
 rm -rf positive_gradient_data
 
@@ -33,7 +36,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_lo = -2. -2. -2. \
         geometry.prob_hi =  2.  2.  2. \
         hipace.dt = 0. \
-        hipace.output_period = 20 \
+        diagnostic.output_period = 20 \
         beam.density = 1 \
         beam.radius = 1. \
         beam.n_subcycles = 4 \
@@ -52,7 +55,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         geometry.prob_lo = -2. -2. -2. \
         geometry.prob_hi =  2.  2.  2. \
         hipace.dt = 0. \
-        hipace.output_period = 20 \
+        diagnostic.output_period = 20 \
         beam.density = 1 \
         beam.radius = 1. \
         beam.n_subcycles = 4 \
@@ -70,5 +73,6 @@ $HIPACE_EXAMPLE_DIR/analysis_adaptive_ts.py
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
+    --rtol $RTOL \
     --file_name diags/hdf5 \
     --test-name adaptive_time_step.1Rank

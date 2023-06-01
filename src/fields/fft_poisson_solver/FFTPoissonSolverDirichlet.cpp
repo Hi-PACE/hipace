@@ -103,31 +103,41 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichlet::SolvePoissonEquation()");
 
-    // Loop over boxes
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-
         // Perform Fourier transform from the staging area to `tmpSpectralField`
         AnyDST::Execute<AnyDST::direction::forward>(m_plan[mfi]);
+    }
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by eigenvalue_matrix
         Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
 
-        amrex::ParallelFor( m_tmpSpectralField[mfi].box(),
+        amrex::ParallelFor( mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 tmp_cmplx_arr(i,j) *= eigenvalue_matrix(i,j);
             });
+    }
 
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
         // Perform Fourier transform from `tmpSpectralField` to the staging area
         AnyDST::Execute<AnyDST::direction::backward>(m_plan[mfi]);
+    }
 
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Copy from the staging area to output array (and normalize)
         Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
-        amrex::ParallelFor( lhs_mf[mfi].box() & m_stagingArea[mfi].box(),
+        amrex::ParallelFor( lhs_mf[mfi].box() & mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                 // Copy field
                 lhs_arr(i,j) = tmp_real_arr(i,j);

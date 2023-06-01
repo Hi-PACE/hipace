@@ -20,19 +20,11 @@
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
  * \param[in] lev MR level
- * \param[in] bins objects containing indices of plasma particles in each tile
  * \param[in] multi_laser Laser pulses, which affects the plasma via the ponderomotive force
  */
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
-                        amrex::Geometry const& gm, const bool temp_slice, int const lev,
-                        PlasmaBins& bins, const MultiLaser& multi_laser);
-
-/** \brief Resets the particle position x, y, to x_prev, y_prev
- * \param[in,out] plasma plasma species to reset
- * \param[in] lev MR level
- */
-void
-ResetPlasmaParticles (PlasmaParticleContainer& plasma, int const lev);
+                        amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice, int const lev,
+                        const MultiLaser& multi_laser);
 
 #endif //  PLASMAPARTICLEADVANCE_H_

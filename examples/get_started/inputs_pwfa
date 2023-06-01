@@ -1,13 +1,10 @@
 max_step = 300
 amr.n_cell = 1024 1024 1024
 
-hipace.bxby_solver = explicit
-
-amr.blocking_factor = 2
 amr.max_level = 0
 
 hipace.max_time = 0.3/clight
-hipace.output_period = 1
+diagnostic.output_period = 1
 hipace.verbose = 1
 
 hipace.numprocs_x = 1
@@ -17,7 +14,6 @@ hipace.depos_order_xy = 2
 hipace.dt = adaptive
 hipace.nt_per_betatron = 30
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
 geometry.prob_lo     = -250.e-6 -250.e-6 -250.e-6  # physical domain
 geometry.prob_hi     =  250.e-6  250.e-6  110.e-6

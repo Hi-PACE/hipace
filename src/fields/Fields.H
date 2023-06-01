@@ -25,7 +25,7 @@ class MultiLaser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous1, Previous2, RhoIons, Salame, N };
+    enum slice { Next=0, This, Previous1, Previous2, RhomJzIons, Salame, N };
 };
 
 struct assert_map : std::map<std::string, int> {
@@ -85,7 +85,7 @@ class Fields
 {
 public:
     /** Constructor */
-    explicit Fields (Hipace const* a_hipace);
+    explicit Fields (const int nlev);
 
     /** Allocate MultiFabs for the 3D array and the 2D slices
      * and define the BoxArrays and DistributionMappings.
@@ -96,7 +96,7 @@ public:
      * \param[in] bin_size size of plasma tiles, for tmp arrays
      */
     void AllocData (
-        int lev, amrex::Vector<amrex::Geometry> const& geom, const amrex::BoxArray& slice_ba,
+        int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm, int bin_size);
 
     /** Class to handle transverse FFT Poisson solver on 1 slice */
@@ -146,12 +146,13 @@ public:
      * \param[in] calc_geom main geometry
      * \param[in] diag_comps_vect the field components to copy
      * \param[in] ncomp number of components to copy
+     * \param[in] do_laser if to copy the laser
      * \param[in] multi_laser MultiLaser object
      */
      void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
                 amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
                 const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-                MultiLaser& multi_laser);
+                bool do_laser, MultiLaser& multi_laser);
 
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
@@ -160,90 +161,85 @@ public:
      * Hence, after one slice is computed, slices must be shifted by 1 element.
      *
      * \param[in] lev the MR level
-     * \param[in] islice current slice to be shifted
-     * \param[in] geom geometry
-     * \param[in] patch_lo lower longitudinal end of refined level
-     * \param[in] patch_hi upper longitudinal end of refined level
      */
-    void ShiftSlices (int lev, int islice, const amrex::Geometry geom, const amrex::Real patch_lo,
-                      const amrex::Real patch_hi);
+    void ShiftSlices (int lev);
 
     /** add rho of the ions to rho (this slice) */
     void AddRhoIons (const int lev);
 
     /** \brief Set up boundary conditions before poisson solve
-     * lev==0: leave at zero
-     * lev!=0: interpolate boundaries from lev-1
+     * lev==0: leave at zero or add open boundaries
+     * lev>0: interpolate boundaries from lev-1
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
      * \param[in] component which can be Psi, Ez, By, Bx ...
-     * \param[in] islice longitudinal slice
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               std::string component, const int islice,
-                               amrex::MultiFab&& staging_area);
+                               std::string component, amrex::MultiFab&& staging_area);
 
-    /** \brief Interpolate values from coarse grid to the fine grid
+    /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
+     * This may include ghost cells.
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] component which can be Psi or rho
-     * \param[in] islice longitudinal slice
+     * \param[in] component which can be Psi or rho etc.
      * \param[in] outer_edge start writing interpolated values at domain + outer_edge
      * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
-    void InterpolateFromLev0toLev1 (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                                    std::string component, const int islice,
-                                    const amrex::IntVect outer_edge,
-                                    const amrex::IntVect inner_edge);
+    void LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                          std::string component, const amrex::IntVect outer_edge,
+                          const amrex::IntVect inner_edge);
+
+    /** \brief Interpolate the full field from the coarse grid (lev-1) to the fine grid (lev).
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] component which can be jx_beam or jy_beam etc.
+     * \param[in] which_slice slice of the field to interpolate
+     */
+    void LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                  const int which_slice, const std::string component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
      * \param[in] geom Geometry
-     * \param[in] m_comm_xy transverse communicator on the slice
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
     void SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                    const MPI_Comm& m_comm_xy, const int lev, const int islice);
+                                    const int lev);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      * \param[in] which_slice defines if this or the salame slice is handled
      */
     void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int islice, const int which_slice = WhichSlice::This);
+                         const int which_slice = WhichSlice::This);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
     void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev, const int islice);
+                         const int lev);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
      * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
     void SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev, const int islice);
+                         const int lev);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] islice longitudinal slice
      */
-    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int islice);
+    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
@@ -307,7 +303,10 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -333,7 +332,10 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -360,7 +362,10 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -394,7 +399,10 @@ public:
         }
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -428,7 +436,10 @@ public:
         }
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -473,9 +484,9 @@ public:
     }
 
     /** Number of guard cells for slices MultiFab */
-    static amrex::IntVect m_slices_nguards;
+    inline static amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Number of guard cells for poisson solver MultiFab */
-    static amrex::IntVect m_poisson_nguards;
+    inline static amrex::IntVect m_poisson_nguards {-1, -1, -1};
     /** If the poisson solver should include the guard cells */
     bool m_extended_solve = false;
 

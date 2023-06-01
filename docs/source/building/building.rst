@@ -32,12 +32,16 @@ Please see installation instructions below in the Developers section.
 - a mature `C++17 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 7, Clang 7, NVCC 11.0, MSVC 19.15 or newer
 - `CMake 3.18.0+ <https://cmake.org/>`__
 - `AMReX development <https://amrex-codes.github.io>`__: we automatically download and compile a copy of AMReX
-- `openPMD-api 0.14.5+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
+- `openPMD-api 0.15.1+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
   - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
-- Nvidia GPU support: `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__ (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
-- CPU-only: `FFTW3 <http://www.fftw.org/>`__ (only used serially; *not* needed for Nvidia GPUs)
+
+Platform-dependent, at least one of the following:
+
+- `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__: for NVIDIA GPU support (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
+- `ROCm 5.2+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
+- `FFTW3 <http://www.fftw.org/>`__: for CPUs (only used serially, but multi-threading supported; *not* needed for GPUs)
 
 Optional dependencies include:
 
@@ -75,6 +79,11 @@ The dependencies can be installed via the package manager
    spack install
 
 (in new terminals, re-activate the environment with ``spack env activate hipace-dev`` again)
+
+.. note::
+   On Ubuntu distributions, the InstallError ``"OpenMPI requires both C and Fortran compilers"`` can occur because the Fortran compilers are sometimes not set automatically in Spack.
+   To fix this, the Fortran compilers must be set manually using ``spack config edit compilers`` (more information can be found `here <https://spack.readthedocs.io/en/latest/getting_started.html#compiler-configuration>`__).
+   For GCC, the flags ``f77 : null`` and ``fc : null`` must be set to ``f77 : gfortran`` and ``fc : gfortran``.
 
 .. _install-brew:
 
@@ -125,6 +134,12 @@ If you also want to select a CUDA compiler:
 Build & Test
 ------------
 
+If you have not downloaded HiPACE++ yet, please clone it from GitHub via
+
+.. code-block:: bash
+
+   git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # or choose your preferred path
+
 From the base of the HiPACE++ source directory, execute:
 
 .. code-block:: bash
@@ -161,11 +176,8 @@ or by providing arguments to the CMake call
  ``HiPACE_COMPUTE``            NOACC/CUDA/SYCL/HIP/**OMP**               On-node, accelerated computing backend
  ``HiPACE_MPI``                **ON**/OFF                                Multi-node support (message-passing)
  ``HiPACE_PRECISION``          SINGLE/**DOUBLE**                         Floating point precision (single/double)
- ``HiPACE_amrex_repo``         https://github.com/AMReX-Codes/amrex.git  Repository URI to pull and build AMReX from
- ``HiPACE_amrex_branch``       ``development``                           Repository branch for ``HiPACE_amrex_repo``
- ``HiPACE_amrex_internal``     **ON**/OFF                                Needs a pre-installed AMReX library if set to ``OFF``
  ``HiPACE_OPENPMD``            **ON**/OFF                                openPMD I/O (HDF5, ADIOS2)
- ``HiPACE_PUSHER``             **AB5**/LEAPFROG                          Use fifth-order Adams-Bashforth or leapfrog Plasma Pusher
+ ``HiPACE_PUSHER``             **LEAPFROG**/AB5                          Use leapfrog or fifth-order Adams-Bashforth plasma pusher
 =============================  ========================================  =========================================================
 
 HiPACE++ can be configured in further detail with options from AMReX, which are documented in the `AMReX manual <https://amrex-codes.github.io/amrex/docs_html/BuildingAMReX.html#customization-options>`__.
@@ -173,19 +185,20 @@ HiPACE++ can be configured in further detail with options from AMReX, which are 
 **Developers** might be interested in additional options that control dependencies of HiPACE++.
 By default, the most important dependencies of HiPACE++ are automatically downloaded for convenience:
 
-===========================  ==============================================  ============================================================
-CMake Option                 Default & Values                                Description
----------------------------  ----------------------------------------------  ------------------------------------------------------------
-``HiPACE_amrex_src``         *None*                                          Path to AMReX source directory (preferred if set)
-``HiPACE_amrex_repo``        ``https://github.com/AMReX-Codes/amrex.git``    Repository URI to pull and build AMReX from
-``HiPACE_amrex_branch``      ``development``                                 Repository branch for ``HiPACE_amrex_repo``
-``HiPACE_amrex_internal``    **ON**/OFF                                      Needs a pre-installed AMReX library if set to ``OFF``
-``HiPACE_openpmd_src``       *None*                                          Path to openPMD-api source directory (preferred if set)
-``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``  Repository URI to pull and build openPMD-api from
-``HiPACE_openpmd_branch``    ``0.14.5``                                      Repository branch for ``HiPACE_openpmd_repo``
-``HiPACE_openpmd_internal``  **ON**/OFF                                      Needs a pre-installed openPMD-api library if set to ``OFF``
-``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                      Compile AMReX multigrid solver. Required for explicit solver
-===========================  ==============================================  ============================================================
+===========================  ==================================================  =============================================================
+CMake Option                 Default & Values                                    Description
+---------------------------  --------------------------------------------------  -------------------------------------------------------------
+``HiPACE_amrex_src``         *None*                                              Path to AMReX source directory (preferred if set)
+``HiPACE_amrex_repo``        ``https://github.com/AMReX-Codes/amrex.git``        Repository URI to pull and build AMReX from
+``HiPACE_amrex_branch``      ``development``                                     Repository branch for ``HiPACE_amrex_repo``
+``HiPACE_amrex_internal``    **ON**/OFF                                          Needs a pre-installed AMReX library if set to ``OFF``
+``HiPACE_openpmd_mpi``       ON/OFF (default is set to value of ``HiPACE_MPI``)  Build openPMD with MPI support, although I/O is always serial
+``HiPACE_openpmd_src``       *None*                                              Path to openPMD-api source directory (preferred if set)
+``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``      Repository URI to pull and build openPMD-api from
+``HiPACE_openpmd_branch``    ``0.15.1``                                          Repository branch for ``HiPACE_openpmd_repo``
+``HiPACE_openpmd_internal``  **ON**/OFF                                          Needs a pre-installed openPMD-api library if set to ``OFF``
+``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver.
+===========================  ==================================================  =============================================================
 
 For example, one can also build against a local AMReX copy.
 Assuming AMReX' source is located in ``$HOME/src/amrex``, add the ``cmake`` argument ``-DHiPACE_amrex_src=$HOME/src/amrex``.
@@ -221,5 +234,6 @@ HPC platforms
 
    platforms/booster_jsc.rst
    platforms/maxwell_desy.rst
+   platforms/lumi_csc.rst
    platforms/perlmutter_nersc.rst
    platforms/spock_olcf.rst

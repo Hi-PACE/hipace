@@ -1,6 +1,10 @@
 Get started
 ===========
 
+If you want to reach out to contributors and users, please consider joining the chat, see :doc:`./chat`.
+
+See the :doc:`../building/building` section to install the code locally or on your favorite platform.
+
 A full HiPACE++ input file can be found below, with a detailed description of the main parameters.
 All the input parameters available in the simulation are available in the :doc:`parameters` section.
 
@@ -8,7 +12,6 @@ All the input parameters available in the simulation are available in the :doc:`
 
 This input file is ``inputs_normalized`` in ``examples/get_started/``, which is the recommended place to start running a first simulation.
 
-See the :doc:`../building/building` section to install the code locally or on your favorite platform.
 After compiling HiPACE++ from the HiPACE++ root directory, execute
 
 .. code-block:: bash

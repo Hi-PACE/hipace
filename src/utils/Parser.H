@@ -88,12 +88,7 @@ namespace Parser
      */
     inline void
     replaceAmrexParamsWithParser () {
-        amrex::ParmParse pp_amr("amr");
-        replaceArrWithParser<int>(pp_amr, "n_cell");
-        replaceWithParser<int>(pp_amr, "blocking_factor");
-        replaceWithParser<int>(pp_amr, "max_level");
         amrex::ParmParse pp_geom("geometry");
-        replaceWithParser<int>(pp_geom, "coord_sys");
         replaceArrWithParser<int>(pp_geom, "is_periodic");
         replaceArrWithParser<double>(pp_geom, "prob_lo");
         replaceArrWithParser<double>(pp_geom, "prob_hi");
@@ -136,7 +131,7 @@ namespace Parser
      * \param[in,out] parser Parser that has been defined
      * \param[in] varnames names of input variables if a function is Parsed
      */
-    static void
+    inline void
     initParser (amrex::Parser& parser, amrex::Vector<std::string> const& varnames) {
         // Since queryWithParser recursively calls this routine, keep track of symbols
         // in case an infinite recursion is found (a symbol's value depending on itself).

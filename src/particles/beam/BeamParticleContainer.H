@@ -12,6 +12,7 @@
 #include "particles/profiles/GetInitialDensity.H"
 #include "particles/profiles/GetInitialMomentum.H"
 #include "utils/Parser.H"
+#include "particles/sorting/BoxSort.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
@@ -20,19 +21,34 @@
 struct BeamIdx
 {
     enum {
-        w = 0,      // weight
+        x=0, y, z,  // position
+        w,          // weight
         ux, uy, uz, // momentum
-        nattribs
+        real_nattribs
+    };
+    enum {
+        id=0, cpu,
+        int_nattribs
     };
 };
 
-struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType> {
+using BeamTile = amrex::ParticleTile<
+        amrex::SoAParticle<
+            BeamIdx::real_nattribs,
+            BeamIdx::int_nattribs
+        >,
+        BeamIdx::real_nattribs,
+        BeamIdx::int_nattribs
+    >;
+
+struct BeamBins : amrex::DenseBins<
+        BeamTile::ParticleTileDataType> {
 
     template<class...Args>
     void build (Args&&...args) {
         // call build function of the underlying DenseBins object
         // with all of the arguments forwarded
-        amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
+        amrex::DenseBins<BeamTile::ParticleTileDataType>::build(args...);
 
         // after every build call copy offsets array form GPU to CPU
         const auto offset_size = numBins() + 1;
@@ -55,13 +71,12 @@ struct BeamBins : amrex::DenseBins<amrex::ParticleTile<0, 0, BeamIdx::nattribs, 
 };
 
 /** \brief Container for particles of 1 beam species. */
-class BeamParticleContainer
-    : public amrex::ParticleTile<0, 0, BeamIdx::nattribs, 0>
+class BeamParticleContainer : public BeamTile
 {
 public:
     /** Constructor */
     explicit BeamParticleContainer (std::string name) :
-        amrex::ParticleTile<0,0,BeamIdx::nattribs,0>(),
+        BeamTile(),
         m_name(name)
     {
         ReadParameters();
@@ -130,11 +145,9 @@ public:
 
     /** Compute reduced beam diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] bins Binning object to get particles on current slice
-     * \param[in] islice0 index of the leftmost slice of this box, to select the correct bin
-     * \param[in] box_offset Index of first particle of the current box.
+     * \param[in] islice_local local index of the slice
      */
-    void InSituComputeDiags (int islice, const BeamBins& bins, int islice0, const int box_offset);
+    void InSituComputeDiags (int islice, int islice_local);
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
@@ -145,15 +158,30 @@ public:
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
-    int m_n_subcycles {1}; /**< Number of sub-cycles in the beam pusher */
-    int m_finest_level {0}; /**< finest level of mesh refinement that the beam interacts with */
+    int m_n_subcycles {10}; /**< Number of sub-cycles in the beam pusher */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
     int m_num_particles_on_upstream_ranks {0};
+    /** Used to sort and reorder the beam particles into boxes for pipelining */
+    BoxSorter m_box_sorter;
+    /** the index of the currently active box (level 0) */
+    int m_ibox {-1};
+    /** Used to bin beam particles to a slice within a box */
+    BeamBins m_slice_bins;
 
     unsigned long long m_total_num_particles {0};
 
     unsigned long long get_total_num_particles () const {return m_total_num_particles;}
+
+    /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
+     * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] which_slice slice to mark
+     * \param[in] islice_local local index of the slice
+     * \param[in] nghost number of ghost particles
+     */
+    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
+                     const int which_slice, const int islice_local, const int nghost);
 
     amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
 
@@ -169,6 +197,8 @@ private:
     amrex::Parser m_pos_mean_x_parser;
     /** Average y position of the fixed-weight beam depending on z */
     amrex::Parser m_pos_mean_y_parser;
+    /** Density parser for fixed-ppc beam. Owns data for m_density_func */
+    amrex::Parser m_density_parser;
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
     /** Distance at which the beam is focused, starting from its initial position */

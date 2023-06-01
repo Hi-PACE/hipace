@@ -9,16 +9,13 @@ my_constants.Rm = 3*kp_inv
 my_constants.Lramp = 6.e-3
 
 hipace.verbose = 1
-hipace.bxby_solver = explicit
 hipace.dt = 10.*kp_inv/clight
-hipace.output_period = 10
+diagnostic.output_period = 10
 hipace.numprocs_x = 1
 hipace.numprocs_y = 1
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
 geometry.prob_lo     = -18*kp_inv   -18*kp_inv   -7.5*kp_inv
 geometry.prob_hi     =  18*kp_inv    18*kp_inv    1.5*kp_inv

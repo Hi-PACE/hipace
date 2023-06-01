@@ -14,7 +14,7 @@
 
 inline void
 DeprecatedInput (std::string const& pp_name, char const * const str,
-                std::string const& replacement, std::string const& msg="")
+                std::string const& replacement, std::string const& msg="", bool new_prefix=false)
 {
     amrex::ParmParse pp(pp_name);
     std::string tmp_str = "";
@@ -22,9 +22,8 @@ DeprecatedInput (std::string const& pp_name, char const * const str,
         amrex::Abort(
             "DEPRECATED INPUT ERROR:\n"
             "Input parameter " + pp_name + "." + str + " no longer supported.\n"
-            "See " + pp_name + "." + replacement + " instead (more info in the documentation). "
-            + msg
-            );
+            "See " + (new_prefix ? "" : pp_name + ".") + replacement +
+            " instead (more info in the documentation). " + msg);
     }
 }
 

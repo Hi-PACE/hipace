@@ -24,6 +24,7 @@
  * \param[in] deposit_jz if true, deposit to jz
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] deposit_chi if true, deposit chi
+ * \param[in] deposit_rhomjz if true, deposit rhomjz
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  * \param[in] bins objects containing indices of plasma particles in each tile
@@ -33,7 +34,8 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLaser& multi_laser,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                bool deposit_chi, amrex::Geometry const& gm, int const lev,
+                const bool deposit_chi, const bool deposit_rhomjz,
+                amrex::Vector<amrex::Geometry> const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size);
 
 

@@ -20,11 +20,9 @@
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  * \param[in] islice index of the slice on which the beam particles are pushed
- * \param[in] offset offset to the particles on the current box
- * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] do_beam_jz_deposition whether the beams deposit Jz
- * \param[in] do_beam_rho_deposition whether the beams deposit rho
+ * \param[in] do_beam_rhomjz_deposition whether the beams deposit rhomjz
  * \param[in] which_slice defines if this or the next slice is handled
  * \param[in] nghost number of ghost particles, all at the end of the particle array.
  *            Use for depositing transverse currents in the Next slice when processing
@@ -33,10 +31,9 @@
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      amrex::Vector<amrex::Geometry> const& gm, int const lev, const int islice,
-                     int const offset, const BeamBins& bins,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
-                     const bool do_beam_rho_deposition,
+                     const bool do_beam_rhomjz_deposition,
                      const int which_slice, int nghost);
 
 

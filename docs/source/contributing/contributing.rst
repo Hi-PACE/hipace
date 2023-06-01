@@ -46,8 +46,10 @@ Make a new release
 - Find the release tag in all files with something like ``git grep '22\.01'`` and modify where relevant (be careful with automated search & replace operations, they may cause unwanted changes).
 - On the main repo page, go to Releases > Draft new release, and
     * Update the AMReX and openPMD-api versions
+    * Temporarily change the `AMReX build version in CMake <https://github.com/Hi-PACE/hipace/blob/7d7edd992b1e660c6b3ec055a8837f613d118ad6/cmake/dependencies/AMReX.cmake#L157>`__, similar to the change in file `AMReX.cmake` in `PR 880 <https://github.com/Hi-PACE/hipace/pull/880>`__, so that the HiPACE++ release builds on the corresponding AMReX release.
     * Click button "Auto-generate release notes" to get a well-formatted list of PRs
     * Update the commands that you used
     * Add any additional comments
     * confirm the release
+    * Revert change in point 2 above so we keep building on AMReX development in-between releases, similar to `PR 882 <https://github.com/Hi-PACE/hipace/pull/882>`__.
 - Once the release is done, Zenodo will generate a DOI. Go to zenodo.org > My Account > Github > HiPACE++, and get the DOI of the last release and copy-paste to the release description

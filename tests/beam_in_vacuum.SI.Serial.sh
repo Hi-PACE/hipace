@@ -29,6 +29,7 @@ TEST_NAME="${FILE_NAME%.*}"
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
                    plasmas.sort_bin_size = 8 \
                    hipace.depos_order_xy=0 \
+                   diagnostic.field_data = all rho \
                    hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory

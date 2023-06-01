@@ -11,9 +11,10 @@
 #include <AMReX.H>
 #include <AMReX_REAL.H>
 #include <AMReX_RealVect.H>
+#include "utils/Parser.H"
 
-/** \brief Beam profile type, currently only Gaussian or Flattop */
-enum struct BeamProfileType { Gaussian, Flattop };
+/** \brief Beam profile type, currently only Gaussian or Flattop or Parsed */
+enum struct BeamProfileType { Gaussian, Flattop, Parsed };
 
 /** \brief Functor gets the initial density for beam particles for a given position
  */
@@ -21,7 +22,7 @@ struct GetInitialDensity
 {
     /** Constructor.
      */
-    GetInitialDensity (const std::string& name);
+    GetInitialDensity (const std::string& name, amrex::Parser& parser);
 
     /** \brief returns the density for a beam particle at a given position
      * \param[in] x position in x
@@ -42,6 +43,8 @@ struct GetInitialDensity
                                 * exp( -0.5_rt*delta_z*delta_z );
         } else if (m_profile == BeamProfileType::Flattop) {
             density = m_density;
+        } else if (m_profile == BeamProfileType::Parsed) {
+            density = m_density_func(x, y, z);
         }
         return density;
     }
@@ -49,6 +52,7 @@ struct GetInitialDensity
     amrex::RealVect  m_position_std {0.,0.,0.};  /* rms standard deviation in case of a Gaussian density distribution */
     BeamProfileType m_profile; /* beam profile type, e.g. BeamProfileType::Flattop or BeamProfileType::Gaussian*/
     amrex::Real m_density; /**< Peak density of the beam */
+    amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
 };
 
 #endif // GETINTIALDENSITY_H_

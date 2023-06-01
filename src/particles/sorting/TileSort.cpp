@@ -12,7 +12,7 @@
 
 PlasmaBins
 findParticlesInEachTile (
-    int lev, amrex::Box bx, int bin_size,
+    amrex::Box bx, int bin_size,
     PlasmaParticleContainer& plasma, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("findParticlesInEachTile()");
@@ -25,7 +25,7 @@ findParticlesInEachTile (
 
     // Extract particle structures for this tile
     int count = 0; // number of boxes
-    for (PlasmaParticleIterator pti(plasma, lev); pti.isValid(); ++pti) {
+    for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti) {
         count += 1;
 
         // Extract box properties
@@ -38,7 +38,7 @@ findParticlesInEachTile (
 
         // Find the particles that are in each tile and return collections of indices per tile.
         bins.build(
-            pti.numParticles(), pti.GetArrayOfStructs().begin(), cbx,
+            pti.numParticles(), pti.GetParticleTile().getParticleTileData(), cbx,
             // Pass lambda function that returns the tile index
             [=] AMREX_GPU_DEVICE (const PlasmaParticleContainer::ParticleType& p)
             noexcept -> amrex::IntVect

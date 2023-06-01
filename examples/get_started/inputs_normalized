@@ -1,19 +1,17 @@
 ### AMReX parameters
 ################################
 amr.n_cell = 64 64 100                  # number of grid points in x, y, z
-amr.blocking_factor = 1                 # blocking factor. n_cell must be divisible by it
 amr.max_level = 0                       # level of mesh refinement. Currently, only 0 available
 
 #### General simulation settings
 ################################
 max_step = 20                           # max time step. 0 computes the fields of the initial beam
-hipace.output_period = 1                # output period. Last step is always written
+diagnostic.output_period = 1                # output period. Last step is always written
 hipace.normalized_units = 1             # unit system: SI units: 0, normalized units: 1
 hipace.dt = 4.4                         # Time step
 
 ### Simulation domain
 ################################
-geometry.coord_sys   =  0               # 0: Cartesian
 geometry.is_periodic =  1     1     0   # Is periodic?
 geometry.prob_lo     = -8.   -8.   -6   # physical domain: dimension must be provided
 geometry.prob_hi     =  8.    8.    6   # in the respective unit system

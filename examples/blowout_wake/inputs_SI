@@ -1,23 +1,17 @@
 amr.n_cell = 64 64 100
 
-hipace.predcorr_max_iterations = 1
-hipace.predcorr_B_mixing_factor = 0.12
-hipace.predcorr_B_error_tolerance = -1
-
 my_constants.kp_inv = 10.e-6
 my_constants.kp = 1. / kp_inv
 my_constants.wp = clight * kp
 my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 0
-hipace.output_period = 1
+diagnostic.output_period = 1
 
 hipace.depos_order_xy = 2
 
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = true  true  false  # Is periodic?
 geometry.prob_lo     = -8.*kp_inv -8.*kp_inv -6.*kp_inv  # physical domain
 geometry.prob_hi     =  8.*kp_inv  8.*kp_inv  6.*kp_inv

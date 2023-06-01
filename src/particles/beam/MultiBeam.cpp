@@ -12,9 +12,8 @@
 #include "utils/DeprecatedInput.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-MultiBeam::MultiBeam (amrex::AmrCore* /*amr_core*/)
+MultiBeam::MultiBeam ()
 {
-
     amrex::ParmParse pp("beams");
     queryWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
@@ -41,10 +40,8 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
-    int islice, const amrex::Vector<BeamBins>& bins,
-    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox,
-    const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
-    const bool do_beam_rho_deposition, const int which_slice)
+    int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+    const bool do_beam_rhomjz_deposition, const int which_slice)
 
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -52,54 +49,52 @@ MultiBeam::DepositCurrentSlice (
         if ( is_salame || (which_slice != WhichSlice::Salame) ) {
             const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
             ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev, islice,
-                                  a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i],
                                   do_beam_jx_jy_deposition && !is_salame,
                                   do_beam_jz_deposition,
-                                  do_beam_rho_deposition && !is_salame,
+                                  do_beam_rhomjz_deposition && !is_salame,
                                   which_slice, nghost);
         }
     }
 }
 
-amrex::Vector<amrex::Vector<BeamBins>>
-MultiBeam::findParticlesInEachSlice (int nlev, int ibox, amrex::Box bx,
-                                     amrex::Vector<amrex::Geometry> const& geom,
-                                     const amrex::Vector<BoxSorter>& a_box_sorter_vec)
+void
+MultiBeam::findParticlesInEachSlice (int ibox, amrex::Box bx, amrex::Geometry const& geom)
 {
-    amrex::Vector<amrex::Vector<BeamBins>> bins(nlev);
-    for (int lev = 0; lev < nlev; ++lev) {
-        bins[lev].resize(m_nbeams);
-        for (int i=0; i<m_nbeams; i++) {
-            bins[lev][i] = ::findParticlesInEachSlice(lev, ibox, bx, m_all_beams[i],
-                                                      geom, a_box_sorter_vec[i]);
-        }
+    for (int i=0; i<m_nbeams; i++) {
+        ::findParticlesInEachSlice(ibox, bx, m_all_beams[i], geom);
     }
     amrex::Gpu::streamSynchronize();
-    return bins;
 }
 
 void
-MultiBeam::sortParticlesByBox (
-            amrex::Vector<BoxSorter>& a_box_sorter_vec,
-            const amrex::BoxArray a_ba, const amrex::Geometry& a_geom)
+MultiBeam::sortParticlesByBox (const amrex::BoxArray a_ba, const amrex::Geometry& a_geom)
 {
-    a_box_sorter_vec.resize(m_nbeams);
     for (int i=0; i<m_nbeams; i++) {
-        a_box_sorter_vec[i].sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
+        m_all_beams[i].m_box_sorter.sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
     }
 }
 
 void
 MultiBeam::AdvanceBeamParticlesSlice (
-    const Fields& fields, amrex::Geometry const& gm, int const lev, const int islice,
-    const amrex::Box bx, const amrex::Vector<BeamBins>& bins,
-    const amrex::Vector<BoxSorter>& a_box_sorter_vec, const int ibox)
+    const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
+    const int islice)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, lev, islice, bx,
-                                    a_box_sorter_vec[i].boxOffsetsPtr()[ibox], bins[i]);
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level, islice);
     }
 }
+
+void
+MultiBeam::TagByLevel (
+    const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
+    const int islice_local)
+{
+    for (int i=0; i<m_nbeams; i++) {
+        const int nghost = m_all_beams[i].numParticles() - m_n_real_particles[i];
+        m_all_beams[i].TagByLevel(current_N_level, geom3D, which_slice, islice_local, nghost);
+    }
+}
+
 
 int
 MultiBeam::NumRealComps ()
@@ -136,10 +131,10 @@ MultiBeam::StoreNRealParticles ()
 }
 
 int
-MultiBeam::NGhostParticles (int ibeam, const amrex::Vector<BeamBins>& bins, amrex::Box bx)
+MultiBeam::NGhostParticles (int ibeam, amrex::Box bx)
 {
     BeamBins::index_type const * offsets = 0;
-    offsets = bins[ibeam].offsetsPtrCpu();
+    offsets = m_all_beams[ibeam].m_slice_bins.offsetsPtrCpu();
     return offsets[bx.bigEnd(Direction::z)+1-bx.smallEnd(Direction::z)]
         - offsets[bx.bigEnd(Direction::z)-bx.smallEnd(Direction::z)];
 }
@@ -153,13 +148,21 @@ MultiBeam::RemoveGhosts ()
 }
 
 void
-MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_sorters)
+MultiBeam::SetIbox (const int ibox)
+{
+    for (int i=0; i<m_nbeams; i++){
+        m_all_beams[i].m_ibox = ibox;
+    }
+}
+
+void
+MultiBeam::PackLocalGhostParticles (int it)
 {
     HIPACE_PROFILE("MultiBeam::PackLocalGhostParticles()");
     for (int ibeam=0; ibeam<m_nbeams; ibeam++){
 
-        const int offset_box_left = box_sorters[ibeam].boxOffsetsPtr()[it];
-        const int offset_box_curr = box_sorters[ibeam].boxOffsetsPtr()[it+1];
+        const int offset_box_left = m_all_beams[ibeam].m_box_sorter.boxOffsetsPtr()[it];
+        const int offset_box_curr = m_all_beams[ibeam].m_box_sorter.boxOffsetsPtr()[it+1];
         const int nghost = offset_box_curr - offset_box_left;
 
         // Resize particle array
@@ -169,28 +172,37 @@ MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_
         ptile.resize(new_size);
 
         // Copy particles in box it to ghost particles
-        // Access AoS particle data
-        auto& aos = ptile.GetArrayOfStructs();
-        const auto& pos_structs_src = aos.begin() + offset_box_left;
-        const auto& pos_structs_dst = aos.begin() + old_size;
         // Access SoA particle data
         auto& soa = ptile.GetStructOfArrays(); // For momenta and weights
+
+        const auto pos_x_src = soa.GetRealData(BeamIdx::x).data() + offset_box_left;
+        const auto pos_y_src = soa.GetRealData(BeamIdx::y).data() + offset_box_left;
+        const auto pos_z_src = soa.GetRealData(BeamIdx::z).data() + offset_box_left;
         const auto  wp_src = soa.GetRealData(BeamIdx::w).data()  + offset_box_left;
         const auto uxp_src = soa.GetRealData(BeamIdx::ux).data() + offset_box_left;
         const auto uyp_src = soa.GetRealData(BeamIdx::uy).data() + offset_box_left;
         const auto uzp_src = soa.GetRealData(BeamIdx::uz).data() + offset_box_left;
+        const auto idp_src = soa.GetIntData(BeamIdx::id).data() + offset_box_left;
+        const auto cpup_src = soa.GetIntData(BeamIdx::cpu).data() + offset_box_left;
+
+        const auto pos_x_dst = soa.GetRealData(BeamIdx::x).data() + old_size;
+        const auto pos_y_dst = soa.GetRealData(BeamIdx::y).data() + old_size;
+        const auto pos_z_dst = soa.GetRealData(BeamIdx::z).data() + old_size;
         const auto  wp_dst = soa.GetRealData(BeamIdx::w).data()  + old_size;
         const auto uxp_dst = soa.GetRealData(BeamIdx::ux).data() + old_size;
         const auto uyp_dst = soa.GetRealData(BeamIdx::uy).data() + old_size;
         const auto uzp_dst = soa.GetRealData(BeamIdx::uz).data() + old_size;
+        const auto idp_dst = soa.GetIntData(BeamIdx::id).data() + old_size;
+        const auto cpup_dst = soa.GetIntData(BeamIdx::cpu).data() + old_size;
 
         amrex::ParallelFor(
             nghost,
             [=] AMREX_GPU_DEVICE (long idx) {
-                pos_structs_dst[idx].id() = pos_structs_src[idx].id();
-                pos_structs_dst[idx].pos(0) = pos_structs_src[idx].pos(0);
-                pos_structs_dst[idx].pos(1) = pos_structs_src[idx].pos(1);
-                pos_structs_dst[idx].pos(2) = pos_structs_src[idx].pos(2);
+                idp_dst[idx] = idp_src[idx];
+                cpup_dst[idx] = cpup_src[idx];
+                pos_x_dst[idx] = pos_x_src[idx];
+                pos_y_dst[idx] = pos_y_src[idx];
+                pos_z_dst[idx] = pos_z_src[idx];
                 wp_dst[idx] = wp_src[idx];
                 uxp_dst[idx] = uxp_src[idx];
                 uyp_dst[idx] = uyp_src[idx];
@@ -201,14 +213,11 @@ MultiBeam::PackLocalGhostParticles (int it, const amrex::Vector<BoxSorter>& box_
 }
 
 void
-MultiBeam::InSituComputeDiags (int step, int islice, const amrex::Vector<BeamBins>& bins,
-                               int islice0, const amrex::Vector<BoxSorter>& a_box_sorter_vec,
-                               const int ibox)
+MultiBeam::InSituComputeDiags (int step, int islice, int islice_local)
 {
     for (int i = 0; i < m_nbeams; ++i) {
         if (m_all_beams[i].doInSitu(step)) {
-            m_all_beams[i].InSituComputeDiags(islice, bins[i], islice0,
-                                              a_box_sorter_vec[i].boxOffsetsPtr()[ibox]);
+            m_all_beams[i].InSituComputeDiags(islice, islice_local);
         }
     }
 }
@@ -232,13 +241,13 @@ bool MultiBeam::AnySpeciesSalame () {
     return false;
 }
 
-bool MultiBeam::isSalameNow (const int step, const int islice, const amrex::Vector<BeamBins>& bins)
+bool MultiBeam::isSalameNow (const int step, const int islice)
 {
     if (step != 0) return false;
 
     for (int i = 0; i < m_nbeams; ++i) {
         if (m_all_beams[i].m_do_salame) {
-            BeamBins::index_type const * const offsets = bins[i].offsetsPtrCpu();
+            BeamBins::index_type const * const offsets =m_all_beams[i].m_slice_bins.offsetsPtrCpu();
             if ((offsets[islice + 1] - offsets[islice]) > 0) {
                 return true;
             }

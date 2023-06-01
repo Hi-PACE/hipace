@@ -1,14 +1,10 @@
 amr.n_cell = 512 768 4
 
-amr.blocking_factor = 2
 amr.max_level = 0
 
 max_step = 0
-hipace.output_period = 1
+diagnostic.output_period = 1
 
-hipace.predcorr_B_mixing_factor = 0.95
-hipace.predcorr_max_iterations = 5
-geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 1     1     1      # Is periodic?
 geometry.prob_lo     = -2000.e-6   -2000.e-6   -20.e-6    # physical domain
 geometry.prob_hi     =  2000.e-6    2000.e-6    20.e-6

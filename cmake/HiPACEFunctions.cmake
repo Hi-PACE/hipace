@@ -194,6 +194,12 @@ function(set_hipace_binary_name)
         set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".DEBUG")
     endif()
 
+    if(HiPACE_PUSHER STREQUAL "AB5")
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".AB5")
+    else()
+        set_property(TARGET HiPACE APPEND_STRING PROPERTY OUTPUT_NAME ".LF")
+    endif()
+
     # alias to the latest build, because using the full name is often confusing
     add_custom_command(TARGET HiPACE POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -268,5 +274,6 @@ function(hipace_print_summary)
     message("    MPI: ${HiPACE_MPI}")
     message("    OPENPMD: ${HiPACE_OPENPMD}")
     message("    PRECISION: ${HiPACE_PRECISION}")
+    message("    PUSHER: ${HiPACE_PUSHER}")
     message("")
 endfunction()

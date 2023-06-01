@@ -20,6 +20,6 @@
  */
 void
 ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
-                    amrex::Geometry const& gm, const int lev);
+                    amrex::Vector<amrex::Geometry> const& gm, const int lev);
 
 #endif //  EXPLICITDEPOSITION_H_

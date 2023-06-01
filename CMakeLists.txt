@@ -9,7 +9,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.18.0)
-project(HiPACE VERSION 23.02)
+project(HiPACE VERSION 23.05)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -66,11 +66,12 @@ set_default_install_dirs()
 
 # Options and Variants ########################################################
 #
-option(HiPACE_MPI            "Multi-node support (message-passing)"       ON)
-option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"                  ON)
+option(HiPACE_MPI            "Multi-node support (message-passing)"    ON)
+option(HiPACE_OPENPMD        "openPMD I/O (HDF5, ADIOS)"               ON)
+option(HiPACE_openpmd_mpi    "parallel version of openPMD I/O"         ${HiPACE_MPI})
 
 set(HiPACE_PUSHER_VALUES LEAPFROG AB5)
-set(HiPACE_PUSHER AB5 CACHE STRING "Plasma pusher (AB5/LEAPFROG)")
+set(HiPACE_PUSHER LEAPFROG CACHE STRING "Plasma pusher (LEAPFROG/AB5)")
 set_property(CACHE HiPACE_PUSHER PROPERTY STRINGS ${HiPACE_PUSHER_VALUES})
 if(NOT HiPACE_PUSHER IN_LIST HiPACE_PUSHER_VALUES)
     message(FATAL_ERROR "HiPACE_PUSHER (${HiPACE_PUSHER}) must be one of ${HiPACE_PUSHER_VALUES}")
@@ -236,179 +237,180 @@ if(BUILD_TESTING)
 
     else()
 
+        # These tests run on CPU and on GPU
+
         add_test(NAME blowout_wake.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME collisions.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/collisions.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        #add_test(NAME hosing.2Rank
-        #         COMMAND bash ${HiPACE_SOURCE_DIR}/tests/hosing.2Rank.sh
-        #                 $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-        #         WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        #)
-
-        add_test(NAME ion_motion.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/ion_motion.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME ionization.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/ionization.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME from_file.normalized.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/from_file.normalized.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME from_file.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/from_file.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME restart.normalized.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/restart.normalized.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME blowout_wake_explicit.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/blowout_wake_explicit.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME laser_blowout_wake_explicit.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME laser_blowout_wake_explicit.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/blowout_wake.2Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME beam_evolution.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_evolution.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_evolution.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME adaptive_time_step.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/adaptive_time_step.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/adaptive_time_step.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME grid_current.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/grid_current.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/grid_current.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME linear_wake.normalized.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/linear_wake.normalized.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/linear_wake.normalized.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME linear_wake.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/linear_wake.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/linear_wake.SI.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME gaussian_linear_wake.normalized.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/gaussian_linear_wake.normalized.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/gaussian_linear_wake.normalized.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME gaussian_linear_wake.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/gaussian_linear_wake.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/gaussian_linear_wake.SI.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME reset.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/reset.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/reset.2Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME beam_in_vacuum.SI.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.SI.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.SI.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME beam_in_vacuum.normalized.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME next_deposition_beam.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/next_deposition_beam.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME slice_IO.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/slice_IO.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/slice_IO.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME output_coarsening.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/output_coarsening.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME gaussian_weight.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/gaussian_weight.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
-
-        add_test(NAME beam_in_vacuum.normalized.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/output_coarsening.2Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME beam_in_vacuum_open_boundary.normalized.1Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum_open_boundary.normalized.1Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum_open_boundary.normalized.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
         add_test(NAME laser_evolution.SI.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_evolution.SI.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_evolution.SI.2Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        add_test(NAME production.SI.2Rank
-                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/production.SI.2Rank.sh
-                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        )
+        if (NOT HiPACE_COMPUTE STREQUAL CUDA)
+
+            # These tests only run on CPU
+
+            add_test(NAME collisions.SI.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/collisions.SI.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME ion_motion.SI.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/ion_motion.SI.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME ionization.2Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/ionization.2Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME from_file.normalized.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/from_file.normalized.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME from_file.SI.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/from_file.SI.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME restart.normalized.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/restart.normalized.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME blowout_wake_explicit.2Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/blowout_wake_explicit.2Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME laser_blowout_wake_explicit.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME laser_blowout_wake_explicit.SI.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_blowout_wake_explicit.SI.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME next_deposition_beam.2Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/next_deposition_beam.2Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME gaussian_weight.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/gaussian_weight.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME beam_in_vacuum.normalized.2Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/beam_in_vacuum.normalized.2Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME production.SI.2Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/production.SI.2Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+        endif()
     endif()
 endif()
 

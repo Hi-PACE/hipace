@@ -38,26 +38,48 @@ General parameters
 
 * ``amr.n_cell`` (3 `integer`)
     Number of cells in x, y and z.
+    With the explicit solver (default), the number of cells in the x and y directions must be either :math:`2^n-1` (common values are 511, 1023, 2047, best configuration for performance) or :math:`2^n` where :math:`n` is an integer. Some other values might work, like :math:`3 \times 2^n-1`, but use at your own risk.
 
-* ``amr.max_level`` (`integer`)
-    Maximum level of mesh refinement. Currently, mesh refinement is only supported up to level
-    `1`. Note, that the current mesh refinement algorithm is not generally applicable and valid
-    only in certain scenarios.
+* ``amr.max_level`` (`integer`) optional (default `0`)
+    Maximum level of mesh refinement. Currently, mesh refinement is supported up to level
+    `2`. Note, that the mesh refinement algorithm is still in active development and should be used with care.
 
-    level `0` is supported.
+* ``geometry.patch_lo`` (3 `float`)
+    Lower end of the simulation box in x, y and z.
 
-* ``hipace.patch_lo`` (3 `float`)
+* ``geometry.patch_hi`` (3 `float`)
+    Higher end of the simulation box in x, y and z.
+
+* ``geometry.is_periodic`` (3 `bool`)
+    Whether the boundary conditions for particles in x, y and z is periodic. Note that particles in z are always removed. This setting will most likely be changed in the near future.
+
+* ``mr_lev1.n_cell`` (2 `integer`)
+    Number of cells in x and y for level 1.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
+
+* ``mr_lev1.patch_lo`` (3 `float`)
     Lower end of the refined grid in x, y and z.
 
-* ``hipace.patch_hi`` (3 `float`)
+* ``mr_lev1.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
-* ``amr.ref_ratio_vect`` (3 `int`)
-    Refinement ratio. Last one must be 1.
+* ``mr_lev2.n_cell`` (2 `integer`)
+    Number of cells in x and y for level 2.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
+
+* ``mr_lev2.patch_lo`` (3 `float`)
+    Lower end of the refined grid in x, y and z.
+
+* ``mr_lev2.patch_hi`` (3 `float`)
+    Upper end of the refined grid in x, y and z.
 
 * ``max_step`` (`integer`) optional (default `0`)
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
+
+* ``random_seed`` (`integer`) optional (default `1`)
+    Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
+    Note that on GPU, since the order of operations is not ensured, the providing of a seed does not guarantee reproducibility to the level of machine precision.
 
 * ``hipace.max_time`` (`float`) optional (default `infinity`)
     Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
@@ -69,13 +91,38 @@ General parameters
     Only used if ``hipace.dt = adaptive``. Upper bound of the adaptive time step: if the computed adaptive time step is is larger than ``dt_max``, then ``dt_max`` is used instead.
     Useful when the plasma profile starts with a very low density (e.g. in the presence of a realistic density ramp), to avoid unreasonably large time steps.
 
-* ``hipace.nt_per_betatron`` (`Real`) optional (default `40.`)
+* ``hipace.nt_per_betatron`` (`Real`) optional (default `20.`)
     Only used when using adaptive time step (see ``hipace.dt`` above).
     Number of time steps per betatron period (of the full blowout regime).
     The time step is given by :math:`\omega_{\beta}\Delta t = 2 \pi/N`
     (:math:`N` is ``nt_per_betatron``) where :math:`\omega_{\beta}=\omega_p/\sqrt{2\gamma}` with
     :math:`\omega_p` the plasma angular frequency and :math:`\gamma` is an average of Lorentz
     factors of the slowest particles in all beams.
+
+* ``hipace.adaptive_predict_step`` (`bool`) optional (default `1`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    If true, the current Lorentz factor and accelerating field on the beams are used to predict the (adaptive) ``dt`` of the next time steps.
+    This prediction is used to better estimate the betatron frequency at the beginning of the next step performed by the current rank.
+    It improves accuracy for parallel simulations (with significant deceleration and/or z-dependent plasma profile).
+    Note: should be on by default once good defaults are determined.
+
+* ``hipace.adaptive_control_phase_advance`` (`bool`) optional (default `1`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    If true, a test on the phase advance sets the time step so it matches the phase advance expected for a uniform plasma (to a certain tolerance).
+    This should improve the accuracy in the presence of density gradients.
+    Note: should be on by default once good defaults are determined.
+
+* ``hipace.adaptive_phase_tolerance`` (`Real`) optional (default `4.e-4`)
+    Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
+    Tolerance for the controlled phase advance described above (lower is more accurate, but should result in more time steps).
+
+* ``hipace.adaptive_phase_substeps`` (`int`) optional (default `2000`)
+    Only used when using adaptive time step (see ``hipace.dt`` above) and ``adaptive_control_phase_advance``.
+    Number of sub-steps in the controlled phase advance described above (higher is more accurate, but should be slower).
+
+* ``hipace.adaptive_threshold_uz`` (`Real`) optional (default `2.`)
+    Only used when using adaptive time step (see ``hipace.dt`` above).
+    Threshold beam momentum, below which the time step is not decreased (to avoid arbitrarily small time steps).
 
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
     Using normalized units in the simulation.
@@ -116,10 +163,6 @@ General parameters
 * ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
     If the loop over depos_order is included in the loop over particles.
 
-* ``hipace.output_period`` (`integer`) optional (default `-1`)
-    Output period. No output is given for ``hipace.output_period = -1``.
-    **Warning:** ``hipace.output_period = 0`` will make the simulation crash.
-
 * ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
     Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
     For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
@@ -154,6 +197,11 @@ General parameters
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
 
+* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
+    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
 * ``hipace.salame_n_iter`` (`int`) optional (default `3`)
     Number of iterations the SALAME algorithm should do when it is used.
 
@@ -174,15 +222,15 @@ Field solver parameters
 -----------------------
 
 Two different field solvers are available to calculate the transverse magnetic fields `Bx`
-and `By`. An FFT-based predictor-corrector loop and an analytic integration. In the analytic
-integration the longitudinal derivative of the transverse currents is calculated explicitly, which
-results in a Helmholtz equation, which is solved with the AMReX multigrid solver.
-Currently, the default is to use the predictor-corrector loop.
-Modeling ion motion is not yet supported by the explicit solver
+and `By`: an explicit solver (based on analytic integration) and a predictor-corrector loop (based on an FFT solver).
+In the explicit solver, the longitudinal derivative of the transverse currents is calculated explicitly, which
+results in a shielded Poisson equation, solved with either the internal HiPACE++ multigrid solver or the AMReX multigrid solver.
+The default is to use the explicit solver. **We strongly recommend to use the explicit solver**, because we found it to be more robust, faster to converge, and easier to use.
 
-* ``hipace.bxby_solver`` (`string`) optional (default `predictor-corrector`)
+
+* ``hipace.bxby_solver`` (`string`) optional (default `explicit`)
     Which solver to use.
-    Possible values: ``predictor-corrector`` and ``explicit``.
+    Possible values: ``explicit`` and ``predictor-corrector``.
 
 * ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
     Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
@@ -197,8 +245,22 @@ Modeling ion motion is not yet supported by the explicit solver
     Uses a Taylor approximation of the Greens function to solve the Poisson equations with
     open boundary conditions. It's recommended to use this together with
     ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
-    Not implemented for the explicit Helmholtz solver.
+    Only available with the predictor-corrector solver.
 
+Explicit solver parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``hipace.use_amrex_mlmg`` (`bool`) optional (default `0`)
+    Whether to use the AMReX multigrid solver. Note that this requires the compile-time option ``AMReX_LINEAR_SOLVERS`` to be true. Generally not recommended since it is significantly slower than the default HiPACE++ multigrid solver.
+
+* ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
+    Relative error tolerance of the multigrid solvers.
+
+* ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
+    Absolute error tolerance of the multigrid solvers.
+
+* ``hipace.MG_verbose`` (`int`) optional (default `0`)
+    Level of verbosity of the the multigrid solvers.
 
 Predictor-corrector loop parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -231,17 +293,6 @@ Predictor-corrector loop parameters
    ``hipace.predcorr_B_error_tolerance = -1.``, ``hipace.predcorr_max_iterations = 1``,
    ``hipace.predcorr_B_mixing_factor = 0.15``. The B-field error tolerance must be negative.
 
-Explicit solver parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-* ``hipace.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
-    Relative error tolerance of the AMReX multigrid solver.
-
-* ``hipace.MG_tolerance_abs`` (`float`) optional (default `0.`)
-    Absolute error tolerance of the AMReX multigrid solver.
-
-* ``hipace.MG_verbose`` (`int`) optional (default `0`)
-    Level of verbosity of the AMReX multigrid solver.
 
 Plasma parameters
 -----------------
@@ -262,7 +313,7 @@ When both are specified, the per-species value is used.
     ``"<plasma name>.density(x,y,z)" = "1."``.
 
 * ``<plasma name> or plasmas.min_density`` (`float`) optional (default `0`)
-    Minimal density below which particles are not injected.
+    Particles with a density less than or equal to the minimal density won't be injected.
     Useful for parsed functions to avoid redundant plasma particles with close to 0 weight.
 
 * ``<plasma name>.density_table_file`` (`string`) optional (default "")
@@ -277,9 +328,6 @@ When both are specified, the per-species value is used.
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
-
-* ``<plasma name>.level`` (`integer`) optional (default `0`)
-    Level of mesh refinement to which the plasma is assigned.
 
 * ``<plasma name> or plasmas.radius`` (`float`) optional (default `infinity`)
     Radius of the plasma. Set a value to run simulations in a plasma column.
@@ -305,16 +353,16 @@ When both are specified, the per-species value is used.
     The charge gets multiplied by the current ionization level.
 
 * ``<plasma name>.element`` (`string`) optional (default "")
-    The Physical Element of the plasma. Sets charge, mass and, if available,
-    the specific Ionization Energy of each state.
+    The physical element of the plasma. Sets charge, mass and, if available,
+    the specific ionization energy of each state.
     Options are: ``electron``, ``positron``, ``H``, ``D``, ``T``, ``He``, ``Li``, ``Be``, ``B``, ….
 
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
-    The initial Ionization state of the plasma. `0` for neutral gasses.
-    If set, the Plasma charge gets multiplied by this number.
+    The initial ionization state of the plasma. `0` for neutral gasses.
+    If set, the plasma charge gets multiplied by this number.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced
@@ -329,12 +377,45 @@ When both are specified, the per-species value is used.
     arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
     arrays.
 
+* ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
+    | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.
+    | Note: Using a temperature can affect the performance since the plasma particles loose their order and thus their favorable memory access pattern. The performance can be mostly recovered by reordering the plasma particles (see ``<plasma name> or plasmas.reorder_period``).
+      Furthermore, the noise of the temperature can seed the hosing instability. The amplitude of the seeding is unphysical, because the number of macro-particles is typically orders of magnitude below the number of actual plasma electrons.
+      Since it is often unfeasible to use a sufficient amount of plasma macro-particles per cell to suppress this numerical seed, the plasma can be symmetrized to prevent the onset of the hosing instability (see ``<plasma name> or plasmas.do_symmetrize``).
+
+* ``<plasma name> or plasmas.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the plasma in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three additional particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`).
+    The total number of plasma particles is multiplied by 4. This option is helpful to prevent a numerical seeding of the hosing instability for a plasma with a temperature.
+
+* ``<plasma name> or plasmas.reorder_period`` (`int`) optional (default `0`)
+    Reorder particles periodically to speed-up current deposition on GPU for a high-temperature plasma.
+    A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
+    To disable reordering set this to 0.
+
+* ``<plasma name> or plasmas.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if plasma particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+    The ideal index type depends on the particle shape factor used for deposition.
+    For shape factors 1 and 3, 2^2 and 4^2 cells are deposited per particle respectively,
+    resulting in node centered reordering giving better performance.
+    For shape factors 0 and 2, 1^2 and 3^2 cells are deposited such that cell centered reordering is better.
+    The default is chosen accordingly.
+    If ``hipace.depos_derivative_type = 1``, the explicit deposition deposits an additional cell in each direction,
+    making the opposite index type ideal. Since the normal deposition still requires the original index type,
+    the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
+
 Binary collisions for plasma species
 ------------------------------------
 
-WARNING: this module is in development. Currently only support electron-electron collisions in SI units.
+WARNING: this module is in development. Currently only supports electron-electron collisions.
 
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
+
+* ``plasmas.background_density_SI`` (`float`) optional
+    Background plasma density in SI units. Only used for collisions in normalized units. Since the collision rate depends on the plasma density itself, it cannot be determined in normalized units without knowing the actual plasma background density.
+    Hence, it must be provided using this input parameter.
 
 * ``plasmas.collisions`` (list of `strings`) optional
     List of names of types binary Coulomb collisions.
@@ -396,26 +477,19 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
     The charge of a beam particle. Can also be set with ``<beam name>.element``.
 
-* ``<beam name>.density`` (`float`)
-    Peak density of the beam. Note: When ``<beam name>.injection_type == fixed_weight``
-    either ``total_charge`` or ``density`` must be specified.
-    The absolute value of this parameter is used when initializing the beam.
-
 * ``<beam name>.profile`` (`string`)
     Beam profile.
     When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
-    (flat-top radially and longitudinally) or ``gaussian`` (Gaussian in all directions).
+    (flat-top radially and longitudinally), ``gaussian`` (Gaussian in all directions),
+    or ``parsed`` (arbitrary analytic function provided by the user).
+    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
     When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
     (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
-* ``<beam name>.n_subcycles`` (`int`) optional (default `1`)
+* ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
-
-* ``<beam name>.finest_level`` (`int`) optional (default `0`)
-    Finest level of mesh refinement that the beam interacts with. The beam deposits its current only
-    up to its finest level. The beam will be pushed by the fields of the finest level.
 
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``-1``)
     Period of in-situ diagnostics, for computing the main per-slice beam quantities for the main
@@ -469,6 +543,10 @@ Option: ``fixed_weight``
     The absolute value of this parameter is used when initializing the beam.
     Note that ``<beam name>.zmin`` and ``<beam name>.zmax`` can reduce the total charge.
 
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
+    The absolute value of this parameter is used when initializing the beam.
+
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
     Thereby, `duz_per_uz0_dzeta *` :math:`\zeta` `* uz_mean` is added to `uz` of the each particle.
@@ -499,6 +577,15 @@ Option: ``fixed_ppc``
 * ``<beam name>.radius`` (`float`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
     injected.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam.
+    The absolute value of this parameter is used when initializing the beam.
+
+* ``<beam name>.density(x,y,z)`` (`float`)
+    The density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
+    This function uses the parser, see above.
+    Only used when ``<beam name>.profile == parsed``.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
@@ -565,8 +652,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
 
 * ``lasers.input_file`` (`string`) optional (default `""`)
-    Path to an openPMD file containing a laser envelope. If this parameter is set then the file will
-    be used to initialize all lasers instead of using a gaussian profile.
+    Path to an openPMD file containing a laser envelope.
+    The file should comply with the `LaserEnvelope extension of the openPMD-standard <https://github.com/openPMD/openPMD-standard/blob/upcoming-2.0.0/EXT_LaserEnvelope.md>`__, as generated by `LASY <https://github.com/LASY-org/LASY>`__.
+    Currently supported geometries: 3D or cylindrical profiles with azimuthal decomposition.
+    The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
+    If this parameter is set, then the file will be used to initialize all lasers instead of using a gaussian profile.
 
 * ``lasers.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
     Name of the laser envelope field inside the openPMD file to be read in.
@@ -596,37 +686,66 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 Diagnostic parameters
 ---------------------
 
+* ``diagnostic.output_period`` (`integer`) optional (default `0`)
+    Output period for all diagnostics. Field or beam specific diagnostics can overwrite this parameter.
+    No output is given for ``diagnostic.output_period = 0``.
 
-* ``diagnostic.diag_type`` (`string`)
-    Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
-    output. Note that this can cause memory problems in particular on GPUs as the full 3D arrays
-    need to be allocated. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
-    x-axis, respectively. In case of an even number of grid points, the value will be averaged
-    between the two inner grid points.
+Beam diagnostics
+^^^^^^^^^^^^^^^^
 
-* ``diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
-    Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
-    obtained through first order interpolation.
-
-* ``diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
-    Whether the field diagnostics should include ghost cells.
-
-* ``diagnostic.field_data`` (`string`) optional (default `all`)
-    Names of the fields written to file, separated by a space. The field names need to be ``all``,
-    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
-    additionally ``jx jy jz rho`` are available, which are the current and charge densities of the
-    plasma and the beam. For the explicit solver, the current and charge densities of the beam and
-    for each plasma are separated: ``jx_beam jy_beam jz_beam rho_beam`` and
-    ``jx_<plasma name> jy_<plasma name> jz_<plasma name>`` ``jxx_<plasma name> jxy_<plasma name>
-    jyy_<plasma name> rho_<plasma name>`` are available. Note, that the neutralizing background will
-    always be added to the first plasma species in case multiple plasma species are available.
-    **Note:** The option ``none`` only suppressed the output of the field data. To suppress any
-    output, please use ``hipace.output_period = -1``.
-    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
-    The plasma proper density (n/gamma) is then also accessible via ``chi``.
+* ``diagnostic.beam_output_period`` (`integer`) optional (default `0`)
+    Output period for the beam. No output is given for ``diagnostic.beam_output_period = 0``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
 
 * ``diagnostic.beam_data`` (`string`) optional (default `all`)
     Names of the beams written to file, separated by a space. The beam names need to be ``all``,
     ``none`` or a subset of ``beams.names``.
-    **Note:** The option ``none`` only suppressed the output of the beam data. To suppress any
-    output, please use ``hipace.output_period = -1``.
+
+Field diagnostics
+^^^^^^^^^^^^^^^^^
+
+* ``diagnostic.names`` (`string`) optional (default `lev0`)
+    The names of all field diagnostics, separated by a space.
+    Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
+    To run without field diagnostics, choose the name ``no_field_diag``.
+    If mesh refinement is used, the default becomes ``lev0 lev1`` or ``lev0 lev1 lev2``.
+
+* ``<diag name> or diagnostic.level`` (`integer`) optional (default `0`)
+    From which mesh refinement level the diagnostics should be collected.
+    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1 etc.
+
+* ``<diag name>.output_period`` (`integer`) optional (default `0`)
+    Output period for fields. No output is given for ``<diag name>.output_period = 0``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+
+* ``<diag name> or diagnostic.diag_type`` (`string`)
+    Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
+    output. Use 3D output with parsimony, it may increase disk Space usage and simulation time
+    significantly. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
+    x-axis, respectively. In case of an even number of grid points, the value will be averaged
+    between the two inner grid points.
+
+* ``<diag name> or diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
+    Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
+    obtained through first order interpolation.
+
+* ``<diag name> or diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
+    Whether the field diagnostics should include ghost cells.
+
+* ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)
+    Names of the fields written to file, separated by a space. The field names need to be ``all``,
+    ``none`` or a subset of ``ExmBy EypBx Ez Bx By Bz Psi``. For the predictor-corrector solver,
+    additionally ``jx jy jz rhomjz`` are available, which are the current and charge densities of the
+    plasma and the beam, with ``rhomjz`` equal to :math:`\rho-j_z/c`.
+    For the explicit solver, the current and charge densities of the beam and
+    for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
+    If ``rho`` is explicitly mentioned as ``field_data``, it will be deposited by the plasma
+    to be available as a diagnostic.
+    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    The plasma proper density (n/gamma) is then also accessible via ``chi``.
+
+* ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
+    Lower limit for the diagnostic grid.
+
+* ``<diag name> or diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
+    Upper limit for the diagnostic grid.

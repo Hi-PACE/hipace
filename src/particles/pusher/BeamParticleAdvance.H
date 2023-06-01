@@ -16,15 +16,12 @@
  * \param[in,out] beam species of which the current is deposited
  * \param[in] fields the general field class, modified by this function
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
- * \param[in] lev MR level
+ * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] islice_local local index of the slice on which the beam particles are pushed
- * \param[in] box current box to calculate in loop over longutidinal boxes
- * \param[in] offset offset to the current box
- * \param[in] bins beam particle container bins, to push only the beam particles on slice islice
  */
 void
 AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
-                           amrex::Geometry const& gm, int const lev, const int islice_local,
-                           const amrex::Box box, const int offset, const BeamBins& bins);
+                           amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
+                           const int islice_local);
 
 #endif //  BEAMPARTICLEADVANCE_H_

@@ -8,6 +8,9 @@
 name: linux
 
 on:
+  push:
+    branches:
+      - development
   pull_request:
     branches:
       - development
@@ -29,7 +32,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-linux-gccompompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-linux-gccompompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.pushed_at }}
         restore-keys: |
           ccache-linux-gccompompi-${{ hashFiles('.github/workflows/linux.yml') }}-
           ccache-linux-gccompompi-
@@ -60,7 +63,7 @@ jobs:
         path: |
           ~/.ccache
           ~/.cache/ccache
-        key: ccache-linux-gccnompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}
+        key: ccache-linux-gccnompi-${{ hashFiles('.github/workflows/linux.yml') }}-${{ hashFiles('cmake/dependencies/AMReX.cmake') }}-${{ github.event.repository.pushed_at }}
         restore-keys: |
           ccache-linux-gccnompi-${{ hashFiles('.github/workflows/linux.yml') }}-
           ccache-linux-gccnompi-
@@ -68,7 +71,8 @@ jobs:
       run: |
         cmake -S . -B build             \
             -DHiPACE_MPI=OFF            \
-            -DCMAKE_VERBOSE_MAKEFILE=ON
+            -DCMAKE_VERBOSE_MAKEFILE=ON \
+            -DHiPACE_PUSHER=AB5
         cmake --build build -j 2
     - name: Run Tests
       run: ctest --test-dir build --output-on-failure
