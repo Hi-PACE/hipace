@@ -301,7 +301,7 @@ void UpdateMomentumPerezElastic (
             u2z *= inv_c_SI;
         }
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
-        psi2 = ga - u2z*inv_c_SI;
+        psi2 = ga - u2z*inv_c;
         AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
