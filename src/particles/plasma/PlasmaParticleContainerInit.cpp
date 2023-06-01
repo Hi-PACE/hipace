@@ -361,7 +361,7 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
     const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
 
     // plasma frequency in SI units to denormalize ionization
-    const amrex::Real wp = std::sqrt(background_density_SI *
+    const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                      PhysConstSI::q_e*PhysConstSI::q_e /
                                      (PhysConstSI::ep0 * PhysConstSI::m_e) );
     const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;

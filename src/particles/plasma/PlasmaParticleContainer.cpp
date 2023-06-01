@@ -282,7 +282,7 @@ IonizationModule (const int lev,
 
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
         // calcuation of E0 in SI units for denormalization
-        const amrex::Real wp = std::sqrt(background_density_SI *
+        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
                                          (PhysConstSI::ep0 * PhysConstSI::m_e) );
         const amrex::Real E0 = Hipace::GetInstance().m_normalized_units ?
