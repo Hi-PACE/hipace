@@ -41,7 +41,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.radius = 1. \
         beam.n_subcycles = 4 \
         beam.ppc = 4 4 1 \
-        hipace.external_Ez_slope = -.5 \
+        hipace.external_E_slope = 0. 0. -.5 \
         hipace.verbose=1\
         hipace.dt=adaptive\
         plasmas.adaptive_density=1 \
@@ -60,7 +60,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         beam.radius = 1. \
         beam.n_subcycles = 4 \
         beam.ppc = 4 4 1 \
-        hipace.external_Ez_slope = .5 \
+        hipace.external_E_slope = 0. 0. .5 \
         hipace.verbose=1\
         hipace.dt = adaptive\
         plasmas.adaptive_density=1 \

@@ -30,15 +30,21 @@ void ApplyExternalField(
     amrex::ParticleReal& ExmByp,
     amrex::ParticleReal& EypBxp,
     amrex::ParticleReal& Ezp,
-    const amrex::Real ext_ExmBy_slope,
-    const amrex::Real ext_Ez_slope,
-    const amrex::Real ext_Ez_uniform)
+    amrex::ParticleReal& Bxp,
+    amrex::ParticleReal& Byp,
+    amrex::ParticleReal& Bzp,
+    const amrex::RealVect& ext_E_uniform,
+    const amrex::RealVect& ext_B_uniform,
+    const amrex::RealVect& ext_E_slope,
+    const amrex::RealVect& ext_B_slope)
 {
-    if ((ext_ExmBy_slope == 0.) && (ext_Ez_slope == 0.) && (ext_Ez_uniform == 0.)) return;
 
-    ExmByp += ext_ExmBy_slope * xp;
-    EypBxp += ext_ExmBy_slope * yp;
-    Ezp += ext_Ez_uniform + ext_Ez_slope * zp;
+    ExmByp += ext_E_uniform[0] + ext_E_slope[0] * xp;
+    EypBxp += ext_E_uniform[1] + ext_E_slope[1] * yp;
+    Ezp    += ext_E_uniform[2] + ext_E_slope[2] * zp;
+    Bxp    += ext_B_uniform[0] + ext_B_slope[0] * xp;
+    Byp    += ext_B_uniform[1] + ext_B_slope[1] * yp;
+    Bzp    += ext_B_uniform[2] + ext_B_slope[2] * zp;
 
     return;
 }

@@ -310,14 +310,20 @@ public:
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     inline static int m_beam_injection_cr = 1;
-    /** Slope of external focusing fields applied to beam particles.
-     * The fields applied are ExmBy = m_external_ExmBy_slope*x, and same in y. */
-    inline static amrex::Real m_external_ExmBy_slope = 0.;
-    /** Slope of external accelerating fields applied to beam particles.
-     * The fields applied are Ez = m_external_Ez_slope*z. */
-    inline static amrex::Real m_external_Ez_slope = 0.;
-    /** Uniform accelerating fields applied to beam particles. */
-    inline static amrex::Real m_external_Ez_uniform = 0.;
+    /** Uniform external electric field applied to beam particles.
+        The components represent Ex-By, Ey+Bx and Ez respectively. */
+    inline static amrex::RealVect m_external_E_uniform {0., 0., 0.};
+    /** Uniform external electric field applied to beam particles.
+        The components represent Bx, By and Bz, respectively. */
+    inline static amrex::RealVect m_external_B_uniform {0., 0., 0.};
+    /** Slope of a linear external electric field applied to beam particles.
+        The components represent d(Ex-c*By)/dx, d(Ey+c*Bx)/dy and d(Ez)/dz respectively.
+        For the last component, z represents the zeta coordinate zeta = z - c*t */
+    inline static amrex::RealVect m_external_E_slope {0., 0., 0.};
+    /** Slope of a linear external magnetic field applied to beam particles.
+        The components represent d(Bx)/dx, d(By)/dy and d(Bz)/dz respectively.
+        For the last component, z represents the zeta coordinate zeta = z - c*t */
+    inline static amrex::RealVect m_external_B_slope {0., 0., 0.};
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
     inline static amrex::Real m_MG_tolerance_rel = 1.e-4;
     /** Absolute tolerance for the multigrid solver, when using the explicit solver */

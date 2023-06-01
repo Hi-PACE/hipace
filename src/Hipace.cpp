@@ -121,9 +121,17 @@ Hipace::Hipace () :
     if (amrex::TilingIfNotGPU()) {
         DfltMfiTlng.EnableTiling();
     }
-    queryWithParser(pph, "external_ExmBy_slope", m_external_ExmBy_slope);
-    queryWithParser(pph, "external_Ez_slope", m_external_Ez_slope);
-    queryWithParser(pph, "external_Ez_uniform", m_external_Ez_uniform);
+
+    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+    queryWithParser(pph, "external_E_uniform", loc_array);
+    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_E_uniform[idim] = loc_array[idim];
+    queryWithParser(pph, "external_B_uniform", loc_array);
+    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_B_uniform[idim] = loc_array[idim];
+    queryWithParser(pph, "external_E_slope", loc_array);
+    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_E_slope[idim] = loc_array[idim];
+    queryWithParser(pph, "external_B_slope", loc_array);
+    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_B_slope[idim] = loc_array[idim];
+
     queryWithParser(pph, "salame_n_iter", m_salame_n_iter);
     queryWithParser(pph, "salame_do_advance", m_salame_do_advance);
     std::string salame_target_str = "Ez_initial";
