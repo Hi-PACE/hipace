@@ -50,7 +50,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
-        plasma.InitData();
+        plasma.InitData(gm[0]);
 
         if(plasma.m_can_ionize) {
             PlasmaParticleContainer* plasma_product = nullptr;
@@ -194,5 +194,25 @@ MultiPlasma::TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometr
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.TagByLevel(current_N_level, geom3D);
+    }
+}
+
+void
+MultiPlasma::InSituComputeDiags (int step, int islice)
+{
+    for (auto& plasma : m_all_plasmas) {
+        if (plasma.doInSitu(step)) {
+            plasma.InSituComputeDiags(islice);
+        }
+    }
+}
+
+void
+MultiPlasma::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
+{
+    for (auto& plasma : m_all_plasmas) {
+        if (plasma.doInSitu(step)) {
+            plasma.InSituWriteToFile(step, time, geom);
+        }
     }
 }

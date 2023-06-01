@@ -143,6 +143,14 @@ public:
      */
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D);
 
+    /** Compute reduced plasma diagnostics of current slice, store in member variable.
+     * \param[in] step time step of simulation
+     * \param[in] islice current slice, on which diags are computed.
+     * \param[in] islice_local local index of the slice
+     */
+    void InSituComputeDiags (int step, int islice);
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
+
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
     /** Number of binary collisions */

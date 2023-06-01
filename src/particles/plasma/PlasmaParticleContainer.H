@@ -64,8 +64,9 @@ public:
     void ReadParameters ();
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile
+    * \param[in] geom Geometry object for the whole domain
      */
-    void InitData ();
+    void InitData (const amrex::Geometry& geom);
 
     /** Initialize 1 xy slice of particles, with fixed number of particles per cell
      *
@@ -134,6 +135,18 @@ public:
     /** Returns name of the plasma */
     const std::string& GetName () const {return m_name;}
 
+    /** Compute reduced plasma diagnostics of current slice, store in member variable
+     * \param[in] islice current slice, on which diags are computed.
+     */
+    void InSituComputeDiags (int islice);
+    /** Dump in-situ reduced diagnostics to file.
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] geom Geometry object for the whole domain
+     */
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
+    bool doInSitu (int step);
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
@@ -171,6 +184,35 @@ public:
 
 private:
     std::string m_name; /**< name of the species */
+    int m_nslices; /**< number of z slices of the domain */
+    /** Number of real plasma properties for in-situ per-slice reduced diagnostics. */
+    int m_insitu_nrp {13};
+    /** Number of int plasma properties for in-situ per-slice reduced diagnostics. */
+    int m_insitu_nip {1};
+    /** Per-slice real plasma properties:
+     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
+     * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
+     * where [] means average over all particles within slice.
+     * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
+     * Projected emittance: Same as above AFTER averaging all these quantities over slices.
+     * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
+     * Np: number of particles in this slice
+     */
+    amrex::Vector<amrex::Real> m_insitu_rdata;
+    /** Per-slice int plasma properties:
+     *  0
+     * Np
+     * Np: number of particles in this slice
+     */
+    amrex::Vector<int> m_insitu_idata;
+    /** Sum of all per-slice real plasma properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_rdata;
+    /** Sum of all per-slice int plasma properties */
+    amrex::Vector<int> m_insitu_sum_idata;
+    /** Prefix/path for the output files */
+    std::string m_insitu_file_prefix = "diags/plasma_insitu";
+    /** How often the insitu plasma diagnostics should be computed and written */
+    int m_insitu_period {-1};
 };
 
 /** \brief Iterator over boxes in a particle container */
