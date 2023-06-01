@@ -1,6 +1,6 @@
 /* Copyright 2019-2020 Andrew Myers, Yinjian Zhao, Maxence Thevenet, Severin Diederichs
  *
- * This file is part of HiPACE++.
+ * This file is part of HiPACE++ and WarpX.
  *
  * License: BSD-3-Clause-LBNL
  */
