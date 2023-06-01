@@ -321,7 +321,8 @@ public:
         For the last component, z represents the zeta coordinate zeta = z - c*t */
     inline static amrex::RealVect m_external_E_slope {0., 0., 0.};
     /** Slope of a linear external magnetic field applied to beam particles.
-        The components represent d(Bx)/dx, d(By)/dy and d(Bz)/dz respectively.
+        The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
+        Note the order of derivatives for the transverse components!
         For the last component, z represents the zeta coordinate zeta = z - c*t */
     inline static amrex::RealVect m_external_B_slope {0., 0., 0.};
     /** Relative tolerance for the multigrid solver, when using the explicit solver */

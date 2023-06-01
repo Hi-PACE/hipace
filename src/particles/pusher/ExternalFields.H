@@ -21,7 +21,7 @@
  * \param[in] ext_E_uniform Uniform electric field Ex-c*By, Ey+c*Bx, Ez to be applied
  * \param[in] ext_B_uniform Uniform magnetic field Bx, B, Bz to be applied
  * \param[in] ext_E_slope strength of external electric field d(Ex-c*By)/dx, d(Ey+c*Bx)/dy, d(Ez)/dz
- * \param[in] ext_B_slope strength of external magnetic field d(Bx)/dx, d(By)/dy, d(Bz)/dz
+ * \param[in] ext_B_slope strength of external magnetic field d(Bx)/dy, d(By)/dx, d(Bz)/dz
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void ApplyExternalField(
@@ -43,8 +43,8 @@ void ApplyExternalField(
     ExmByp += ext_E_uniform[0] + ext_E_slope[0] * xp;
     EypBxp += ext_E_uniform[1] + ext_E_slope[1] * yp;
     Ezp    += ext_E_uniform[2] + ext_E_slope[2] * zp;
-    Bxp    += ext_B_uniform[0] + ext_B_slope[0] * xp;
-    Byp    += ext_B_uniform[1] + ext_B_slope[1] * yp;
+    Bxp    += ext_B_uniform[0] + ext_B_slope[0] * yp;
+    Byp    += ext_B_uniform[1] + ext_B_slope[1] * xp;
     Bzp    += ext_B_uniform[2] + ext_B_slope[2] * zp;
 
     return;
