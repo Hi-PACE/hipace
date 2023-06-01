@@ -12,7 +12,7 @@
 
 #include <AMReX_MultiFab.H>
 
-using PlasmaBins = amrex::DenseBins<PlasmaParticleContainer::ParticleType>;
+using PlasmaBins = amrex::DenseBins<PlasmaParticleContainer::ParticleTileType::ParticleTileDataType>;
 
 /** \brief Find plasma particles in each bin, and return collections of indices per bin (tile).
  *

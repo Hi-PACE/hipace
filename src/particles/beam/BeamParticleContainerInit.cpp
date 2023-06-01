@@ -25,8 +25,8 @@ namespace
 {
     /** \brief Adds a single beam particle
      *
-     * \param[in,out] pstruct array with AoS beam data
-     * \param[in,out] arrdata array with SoA beam data
+     * \param[in,out] rarrdata real array with SoA beam data
+     * \param[in,out] iarrdata int array with SoA beam data
      * \param[in] x position in x
      * \param[in] y position in y
      * \param[in] z position in z
@@ -40,25 +40,22 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
-        BeamParticleContainer::ParticleType* pstruct,
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata, const amrex::Real& x,
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata,
+        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
         const amrex::Real& uz, const amrex::Real& weight, const int& pid,
         const int& ip, const amrex::Real& speed_of_light) noexcept
     {
-        BeamParticleContainer::ParticleType& p = pstruct[ip];
-        // Set particle AoS
-        p.id()   = pid > 0 ? pid + ip : pid;
-        p.cpu()  = 0; // level 0
-        p.pos(0) = x;
-        p.pos(1) = y;
-        p.pos(2) = z;
+        rarrdata[BeamIdx::x  ][ip] = x;
+        rarrdata[BeamIdx::y  ][ip] = y;
+        rarrdata[BeamIdx::z  ][ip] = z;
+        rarrdata[BeamIdx::ux ][ip] = ux * speed_of_light;
+        rarrdata[BeamIdx::uy ][ip] = uy * speed_of_light;
+        rarrdata[BeamIdx::uz ][ip] = uz * speed_of_light;
+        rarrdata[BeamIdx::w  ][ip] = std::abs(weight);
 
-        // Set particle SoA
-        arrdata[BeamIdx::ux  ][ip] = ux * speed_of_light;
-        arrdata[BeamIdx::uy  ][ip] = uy * speed_of_light;
-        arrdata[BeamIdx::uz  ][ip] = uz * speed_of_light;
-        arrdata[BeamIdx::w][ip] = std::abs(weight);
+        iarrdata[BeamIdx::id ][ip] = pid > 0 ? pid + ip : pid;
+        iarrdata[BeamIdx::cpu][ip] = 0; // level 0
     }
 }
 
@@ -177,17 +174,17 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
         // Second: allocate the memory for these particles
         auto& particle_tile = *this;
 
-        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto old_size = particle_tile.size();
         auto new_size = old_size + num_to_add;
         particle_tile.resize(new_size);
 
         if (num_to_add == 0) return;
 
-        // Third: Actually initialize the particles at the right locations
-        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
+
+        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+            particle_tile.GetStructOfArrays().intarray();
 
         int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
@@ -246,9 +243,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                 get_momentum(u[0],u[1],u[2], engine);
 
                 const amrex::Real weight = density * scale_fac;
-                AddOneBeamParticle(pstruct, arrdata, x, y, z, u[0], u[1], u[2], weight,
+                AddOneBeamParticle(rarrdata, iarrdata, x, y, z, u[0], u[1], u[2], weight,
                                    pid, pidx, phys_const.c);
-
                 ++pidx;
             }
         });
@@ -278,14 +274,15 @@ InitBeamFixedWeight (int num_to_add,
     if (Hipace::HeadRank()) {
 
         auto& particle_tile = *this;
-        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto old_size = particle_tile.size();
         auto new_size = do_symmetrize? old_size + 4*num_to_add : old_size + num_to_add;
         particle_tile.resize(new_size);
 
-        // Access particles' AoS and SoA
-        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+        // Access particles' SoA
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
+        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+            particle_tile.GetStructOfArrays().intarray();
 
         const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
@@ -320,21 +317,21 @@ InitBeamFixedWeight (int num_to_add,
                 amrex::Real weight = total_charge / (num_to_add * single_charge);
                 if (!do_symmetrize)
                 {
-                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                    AddOneBeamParticle(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
                                        z_central, u[0], u[1], u[2], weight,
                                        valid_id, i, phys_const.c);
                 } else {
                     weight /= 4;
-                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos+y,
+                    AddOneBeamParticle(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
                                        z_central, u[0], u[1], u[2], weight,
                                        valid_id, 4*i, phys_const.c);
-                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos+y,
+                    AddOneBeamParticle(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
                                        z_central, -u[0], u[1], u[2], weight,
                                        valid_id, 4*i+1, phys_const.c);
-                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos+x, cental_y_pos-y,
+                    AddOneBeamParticle(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
                                        z_central, u[0], -u[1], u[2], weight,
                                        valid_id, 4*i+2, phys_const.c);
-                    AddOneBeamParticle(pstruct, arrdata, cental_x_pos-x, cental_y_pos-y,
+                    AddOneBeamParticle(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
                                        z_central, -u[0], -u[1], u[2], weight,
                                        valid_id, 4*i+3, phys_const.c);
                 }
@@ -684,18 +681,19 @@ InitBeamFromFile (const std::string input_file,
     if (Hipace::HeadRank()) {
 
         auto& particle_tile = *this;
-        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto old_size = particle_tile.size();
         auto new_size = old_size + num_to_add;
         particle_tile.resize(new_size);
-        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::nattribs> arrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
+        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+            particle_tile.GetStructOfArrays().intarray();
         const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + num_to_add);
 
         for( int i=0; i < num_to_add; ++i)
         {
-            AddOneBeamParticle(pstruct, arrdata,
+            AddOneBeamParticle(rarrdata, iarrdata,
                                (amrex::Real)(r_x_data.get()[i] * unit_rx),
                                (amrex::Real)(r_y_data.get()[i] * unit_ry),
                                (amrex::Real)(r_z_data.get()[i] * unit_rz),

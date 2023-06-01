@@ -71,13 +71,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     PhysConst const phys_const = get_phys_const();
 
     // Extract particle properties
-    const auto& aos = beam.GetArrayOfStructs(); // For positions
-    const auto& pos_structs = aos.begin() + box_offset;
-    const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
-    const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
-    const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
-    const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
-    const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
+    const auto ptd = beam.getParticleTileData();
 
     // Extract box properties
     const amrex::Real dxi = gm[lev].InvCellSize(0);
@@ -132,20 +126,25 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
             // Particles in the same slice must be accessed through the bin sorter.
             // Ghost particles are simply contiguous in memory.
-            const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
+            const int ip = (deposit_ghost ? cell_start+idx : indices[cell_start+idx]) + box_offset;
 
             // Skip invalid particles and ghost particles not in the last slice
             // beam deposits only up to its finest level
-            if (pos_structs[ip].id() < 0 || pos_structs[ip].cpu() < lev) return;
-            // --- Get particle quantities
-            const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq
-                                                         + uyp[ip]*uyp[ip]*clightsq
-                                                         + uzp[ip]*uzp[ip]*clightsq);
-            const amrex::Real wq = q*wp[ip]*invvol;
+            if (ptd.id(ip) < 0 || (ptd.cpu(ip) < lev)) return;
 
-            const amrex::Real vx  = uxp[ip]*gaminv;
-            const amrex::Real vy  = uyp[ip]*gaminv;
-            const amrex::Real vz  = uzp[ip]*gaminv;
+            // --- Get particle quantities
+            const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];
+            const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
+            const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
+
+            const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + ux*ux*clightsq
+                                                         + uy*uy*clightsq
+                                                         + uz*uz*clightsq);
+            const amrex::Real wq = q*ptd.rdata(BeamIdx::w)[ip]*invvol;
+
+            const amrex::Real vx = ux*gaminv;
+            const amrex::Real vy = uy*gaminv;
+            const amrex::Real vz = uz*gaminv;
             // wqx, wqy wqz are particle current in each direction
             const amrex::Real wqx = wq*vx;
             const amrex::Real wqy = wq*vy;
@@ -154,13 +153,13 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
             // --- Compute shape factors
             // x direction
-            const amrex::Real xmid = (pos_structs[ip].pos(0) - x_pos_offset)*dxi;
+            const amrex::Real xmid = (ptd.pos(0, ip) - x_pos_offset)*dxi;
             // i_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
             amrex::Real sx_cell[depos_order_xy + 1];
             const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, xmid);
 
             // y direction
-            const amrex::Real ymid = (pos_structs[ip].pos(1) - y_pos_offset)*dyi;
+            const amrex::Real ymid = (ptd.pos(1, ip) - y_pos_offset)*dyi;
             amrex::Real sy_cell[depos_order_xy + 1];
             const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, ymid);
 

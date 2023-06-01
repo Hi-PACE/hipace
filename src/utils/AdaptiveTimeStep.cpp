@@ -116,11 +116,10 @@ AdaptiveTimeStep::Calculate (
 
 
         // Extract particle properties
-        const auto& aos = beam.GetArrayOfStructs(); // For positions
-        const auto& pos_structs = aos.begin() + box_offset;
         const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
         const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
         const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+        const auto idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
@@ -131,7 +130,7 @@ AdaptiveTimeStep::Calculate (
         reduce_op.eval(numParticleOnTile, reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
-                if (pos_structs[ip].id() < 0) return {
+                if (idp[ip] < 0) return {
                     0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
                 };
                 return {
@@ -269,17 +268,18 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
-        const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
+        auto const& soa = beam.GetStructOfArrays();
+        const auto pos_x = soa.GetRealData(BeamIdx::x).data() + offset;
+        const auto pos_y = soa.GetRealData(BeamIdx::y).data() + offset;
+        const auto idp = soa.GetIntData(BeamIdx::id).data() + offset;
 
         reduce_op.eval(num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (long idx) noexcept -> ReduceTuple
             {
                 const amrex::Long ip = indices[cell_start+idx];
-                amrex::ParticleReal xp, yp, zp;
-                int pid;
-
-                getPosition(ip, xp, yp, zp, pid);
-                if (pid < 0) return { 0._rt };
+                if (idp[ip] < 0) return { 0._rt };
+                const amrex::Real xp = pos_x[ip];
+                const amrex::Real yp = pos_y[ip];
 
                 amrex::Real Ezp = 0._rt;
                 doGatherEz(xp, yp, Ezp, slice_arr, ez_comp,
