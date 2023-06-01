@@ -40,6 +40,11 @@ void ApplyExternalField(
     const amrex::RealVect& ext_B_slope)
 {
 
+    if ((ext_E_uniform == amrex::RealVect(0.,0.,0.)) &&
+        (ext_B_uniform == amrex::RealVect(0.,0.,0.)) &&
+        (ext_E_slope == amrex::RealVect(0.,0.,0.)) &&
+        (ext_B_slope == amrex::RealVect(0.,0.,0.)) ) return;
+
     ExmByp += ext_E_uniform[0] + ext_E_slope[0] * xp;
     EypBxp += ext_E_uniform[1] + ext_E_slope[1] * yp;
     Ezp    += ext_E_uniform[2] + ext_E_slope[2] * zp;

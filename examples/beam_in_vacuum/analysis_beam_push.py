@@ -48,6 +48,7 @@ if do_plot:
     plt.ylabel('y')
     plt.savefig('image.pdf', bbox_inches='tight')
 
+print("initial beam width     : " + str(x_std_initial))
 print("beam width theory      : " + str(std_theory))
 print("beam width simulation x: " + str(std_sim_x))
 print("beam width simulation y: " + str(std_sim_y))
