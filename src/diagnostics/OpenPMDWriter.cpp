@@ -17,8 +17,8 @@
 
 OpenPMDWriter::OpenPMDWriter ()
 {
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::nattribs,
-        "List of real names in openPMD Writer class do not match BeamIdx::nattribs");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::real_nattribs,
+        "List of real names in openPMD Writer class do not match BeamIdx::real_nattribs");
     amrex::ParmParse pp("hipace");
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
     // pick first available backend if default is chosen
@@ -207,35 +207,13 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             continue;
         }
 
-        // get position and particle ID from aos
-        // note: this implementation iterates the AoS 4x...
-        // if we flush late as we do now, we can also copy out the data in one go
-        const auto& aos = beam.GetArrayOfStructs();  // size =  numParticlesOnTile
-        const auto& pos_structs = aos.begin() + box_offset;
         {
-            // Save positions
-            std::vector< std::string > const positionComponents{"x", "y", "z"};
-
-            for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
-            {
-                std::shared_ptr< amrex::ParticleReal > curr(
-                    new amrex::ParticleReal[numParticleOnTile],
-                    [](amrex::ParticleReal const *p){ delete[] p; } );
-
-                for (uint64_t i=0; i<numParticleOnTile; i++) {
-                    curr.get()[i] = pos_structs[i].pos(currDim);
-                }
-                std::string const positionComponent = positionComponents[currDim];
-                beam_species["position"][positionComponent].storeChunk(curr, {m_offset[ibeam]},
-                                                                       {numParticleOnTile64});
-            }
-
             // save particle ID
             std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
                                              [](uint64_t const *p){ delete[] p; } );
 
             for (uint64_t i=0; i<numParticleOnTile; i++) {
-                ids.get()[i] = pos_structs[i].id();
+                ids.get()[i] = beam.id(i);
             }
             auto const scalar = openPMD::RecordComponent::SCALAR;
             beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});

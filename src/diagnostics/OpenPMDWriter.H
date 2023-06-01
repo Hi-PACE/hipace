@@ -96,7 +96,11 @@ private:
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
-    amrex::Vector<std::string> m_real_names {"weighting", "momentum_x", "momentum_y", "momentum_z"};
+    amrex::Vector<std::string> m_real_names {
+        "position_x", "position_y", "position_z",
+        "weighting",
+        "momentum_x", "momentum_y", "momentum_z"
+    };
 
     /** vector over levels of openPMD-api Series object for output */
     std::unique_ptr< openPMD::Series > m_outputSeries;

@@ -39,8 +39,8 @@ public:
      **/
     static void doCoulombCollision (
         int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
-        PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog,
-        const amrex::Real background_density_SI);
+        PlasmaParticleContainer& species2, bool is_same_species, amrex::Real CoulombLog,
+        amrex::Real background_density_SI);
 
 };
 

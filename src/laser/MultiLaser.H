@@ -151,16 +151,16 @@ public:
 
     /** \brief Read in a laser from an openPMD file
      *
-     * \param[in] domain size of the level 0 domain
+     * \param[in] gm Geometry for level 0
      */
-    void GetEnvelopeFromFileHelper (const amrex::Box& domain);
+    void GetEnvelopeFromFileHelper (const amrex::Geometry& gm);
 
     /** \brief Read in a laser from an openPMD file
      *
-     * \param[in] domain size of the level 0 domain
+     * \param[in] gm Geometry for level 0
      */
     template<typename input_type>
-    void GetEnvelopeFromFile (const amrex::Box& domain);
+    void GetEnvelopeFromFile (const amrex::Geometry& gm);
 
     /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
      *
@@ -235,6 +235,8 @@ private:
     std::string m_file_envelope_name = "laserEnvelope";
     /** index of the iteration in the openPMD file */
     int m_file_num_iteration = 0;
+    /** Geometry of the laser file, 'rt' or 'xyt' */
+    std::string m_file_geometry = "";
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};

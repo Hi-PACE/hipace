@@ -40,14 +40,14 @@ CoulombCollision::CoulombCollision(
 void
 CoulombCollision::doCoulombCollision (
     int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
-    PlasmaParticleContainer& species2, const bool is_same_species, const amrex::Real CoulombLog,
-    const amrex::Real background_density_SI)
+    PlasmaParticleContainer& species2, bool is_same_species, amrex::Real CoulombLog,
+    amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
-    const bool normalized_units = Hipace::GetInstance().m_normalized_units;
+    bool normalized_units = Hipace::GetInstance().m_normalized_units;
     if ( is_same_species ) // species_1 == species_2
     {
         // Logically particles per-cell, and return indices of particles in each cell
@@ -58,7 +58,7 @@ CoulombCollision::doCoulombCollision (
         int count = 0;
         for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
-            // Get particles SoA and AoS data
+            // Get particles SoA data
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
@@ -71,9 +71,10 @@ CoulombCollision::doCoulombCollision (
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real wp = std::sqrt(background_density_SI *
+            // static_cast<double> to avoid precision problems in FP32
+            const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                              PhysConstSI::q_e*PhysConstSI::q_e /
-                                             (PhysConstSI::ep0 * PhysConstSI::m_e) );
+                                             (PhysConstSI::ep0*PhysConstSI::m_e));
             const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
 
@@ -120,7 +121,7 @@ CoulombCollision::doCoulombCollision (
         int count = 0;
         for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
-            // Get particles SoA and AoS data for species 1
+            // Get particles SoA data for species 1
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
@@ -131,7 +132,7 @@ CoulombCollision::doCoulombCollision (
             amrex::Real q1 = species1.GetCharge();
             amrex::Real m1 = species1.GetMass();
 
-            // Get particles SoA and AoS data for species 2
+            // Get particles SoA data for species 2
             auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
             auto& soa2 = ptile2.GetStructOfArrays();
             amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux_half_step).data();
@@ -145,9 +146,10 @@ CoulombCollision::doCoulombCollision (
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real wp = std::sqrt(background_density_SI *
+            // static_cast<double> to avoid precision problems in FP32
+            const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                              PhysConstSI::q_e*PhysConstSI::q_e /
-                                             (PhysConstSI::ep0 * PhysConstSI::m_e) );
+                                             (PhysConstSI::ep0*PhysConstSI::m_e));
             const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
             // Extract particles in the tile that `mfi` points to

@@ -172,28 +172,37 @@ MultiBeam::PackLocalGhostParticles (int it)
         ptile.resize(new_size);
 
         // Copy particles in box it to ghost particles
-        // Access AoS particle data
-        auto& aos = ptile.GetArrayOfStructs();
-        const auto& pos_structs_src = aos.begin() + offset_box_left;
-        const auto& pos_structs_dst = aos.begin() + old_size;
         // Access SoA particle data
         auto& soa = ptile.GetStructOfArrays(); // For momenta and weights
+
+        const auto pos_x_src = soa.GetRealData(BeamIdx::x).data() + offset_box_left;
+        const auto pos_y_src = soa.GetRealData(BeamIdx::y).data() + offset_box_left;
+        const auto pos_z_src = soa.GetRealData(BeamIdx::z).data() + offset_box_left;
         const auto  wp_src = soa.GetRealData(BeamIdx::w).data()  + offset_box_left;
         const auto uxp_src = soa.GetRealData(BeamIdx::ux).data() + offset_box_left;
         const auto uyp_src = soa.GetRealData(BeamIdx::uy).data() + offset_box_left;
         const auto uzp_src = soa.GetRealData(BeamIdx::uz).data() + offset_box_left;
+        const auto idp_src = soa.GetIntData(BeamIdx::id).data() + offset_box_left;
+        const auto cpup_src = soa.GetIntData(BeamIdx::cpu).data() + offset_box_left;
+
+        const auto pos_x_dst = soa.GetRealData(BeamIdx::x).data() + old_size;
+        const auto pos_y_dst = soa.GetRealData(BeamIdx::y).data() + old_size;
+        const auto pos_z_dst = soa.GetRealData(BeamIdx::z).data() + old_size;
         const auto  wp_dst = soa.GetRealData(BeamIdx::w).data()  + old_size;
         const auto uxp_dst = soa.GetRealData(BeamIdx::ux).data() + old_size;
         const auto uyp_dst = soa.GetRealData(BeamIdx::uy).data() + old_size;
         const auto uzp_dst = soa.GetRealData(BeamIdx::uz).data() + old_size;
+        const auto idp_dst = soa.GetIntData(BeamIdx::id).data() + old_size;
+        const auto cpup_dst = soa.GetIntData(BeamIdx::cpu).data() + old_size;
 
         amrex::ParallelFor(
             nghost,
             [=] AMREX_GPU_DEVICE (long idx) {
-                pos_structs_dst[idx].id() = pos_structs_src[idx].id();
-                pos_structs_dst[idx].pos(0) = pos_structs_src[idx].pos(0);
-                pos_structs_dst[idx].pos(1) = pos_structs_src[idx].pos(1);
-                pos_structs_dst[idx].pos(2) = pos_structs_src[idx].pos(2);
+                idp_dst[idx] = idp_src[idx];
+                cpup_dst[idx] = cpup_src[idx];
+                pos_x_dst[idx] = pos_x_src[idx];
+                pos_y_dst[idx] = pos_y_src[idx];
+                pos_z_dst[idx] = pos_z_src[idx];
                 wp_dst[idx] = wp_src[idx];
                 uxp_dst[idx] = uxp_src[idx];
                 uyp_dst[idx] = uyp_src[idx];

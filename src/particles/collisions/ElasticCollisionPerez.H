@@ -69,12 +69,12 @@ void ElasticCollisionPerez (
     T_R T1t; T_R T2t;
     if ( T1 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1, cst);
+        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1,cst);
     }
     else { T1t = T1; }
     if ( T2 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2, cst);
+        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2,cst);
     }
     else { T2t = T2; }
 
@@ -101,13 +101,13 @@ void ElasticCollisionPerez (
     // to SI units. In SI units, the weights represent the amount of particles, so it must be
     // divided by the volume
     if (normalized_units) {
-        n1 = n1 * background_density_SI;
-        n2 = n2 * background_density_SI;
-        n12 = n12 * background_density_SI;
+        n1 *= background_density_SI;
+        n2 *= background_density_SI;
+        n12 *= background_density_SI;
     } else {
-        n1 = n1 / dV;
-        n2 = n2 / dV;
-        n12 = n12 / dV;
+        n1 /= dV;
+        n2 /= dV;
+        n12 /= dV;
     }
 
     // compute Debye length lmdD

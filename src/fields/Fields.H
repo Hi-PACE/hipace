@@ -303,7 +303,10 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -329,7 +332,10 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -356,7 +362,10 @@ public:
         const amrex::GpuArray<int, ncomps> c_idx_dst = {Comps[islice_dst][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -390,7 +399,10 @@ public:
         }
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),
@@ -424,7 +436,10 @@ public:
         }
         amrex::MultiFab& mfab = getSlices(lev);
 
-        for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
             amrex::ParallelFor(mfi.growntilebox(),

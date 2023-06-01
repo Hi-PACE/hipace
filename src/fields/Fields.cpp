@@ -161,15 +161,9 @@ Fields::AllocData (
     }
     int num_threads = 1;
 #ifdef AMREX_USE_OMP
-#pragma omp parallel
-    {
-        num_threads = omp_get_num_threads();
-    }
+    num_threads = omp_get_max_threads();
 #endif
     if (Hipace::m_do_tiling) {
-        const amrex::Box dom_box = slice_ba[0];
-        const amrex::IntVect ncell = dom_box.bigEnd() - dom_box.smallEnd() + 1;
-        AMREX_ALWAYS_ASSERT(ncell[0] % bin_size == 0 && ncell[1] % bin_size == 0);
 
         m_tmp_densities.resize(num_threads);
         for (int i=0; i<num_threads; i++){

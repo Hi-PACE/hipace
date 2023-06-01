@@ -347,10 +347,9 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice)
 
         const int box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
 
-        auto& aos = beam.GetArrayOfStructs(); // For id
-        auto pos_structs = aos.begin() + box_offset;
-        auto& soa = beam.GetStructOfArrays(); // For momenta and weights
+        auto& soa = beam.GetStructOfArrays(); // For id, momenta and weights
         amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
+        int * const idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
 
         BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
         BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
@@ -366,11 +365,11 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice)
                 // Particles in the same slice must be accessed through the bin sorter
                 const int ip = indices[cell_start+idx];
                 // Skip invalid particles and ghost particles not in the last slice
-                if (pos_structs[ip].id() < 0) return;
+                if (idp[ip] < 0) return;
 
                 // invalidate particles with a weight of zero
                 if (W == 0) {
-                    pos_structs[ip].id() = -pos_structs[ip].id();
+                    idp[ip] = -idp[ip];
                     return;
                 }
 
