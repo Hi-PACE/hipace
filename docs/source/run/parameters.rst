@@ -77,6 +77,10 @@ General parameters
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
 
+* ``random_seed`` (`integer`) optional (default `1`)
+    Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
+    Note that on GPU, since the order of operations is not ensured, the providing of a seed does not guarantee reproducibility to the level of machine precision.
+
 * ``hipace.max_time`` (`float`) optional (default `infinity`)
     Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
 
@@ -405,9 +409,13 @@ When both are specified, the per-species value is used.
 Binary collisions for plasma species
 ------------------------------------
 
-WARNING: this module is in development. Currently only support electron-electron collisions in SI units.
+WARNING: this module is in development. Currently only supports electron-electron collisions.
 
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
+
+* ``plasmas.background_density_SI`` (`float`) optional
+    Background plasma density in SI units. Only used for collisions in normalized units. Since the collision rate depends on the plasma density itself, it cannot be determined in normalized units without knowing the actual plasma background density.
+    Hence, it must be provided using this input parameter.
 
 * ``plasmas.collisions`` (list of `strings`) optional
     List of names of types binary Coulomb collisions.

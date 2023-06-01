@@ -1,6 +1,6 @@
-/* Copyright 2019-2020 Andrew Myers, Yinjian Zhao
+/* Copyright 2019-2020 Andrew Myers, Yinjian Zhao, Maxence Thevenet, Severin Diederichs
  *
- * This file is part of WarpX.
+ * This file is part of HiPACE++ and WarpX.
  *
  * License: BSD-3-Clause-LBNL
  */
@@ -13,10 +13,10 @@ AMREX_GPU_HOST_DEVICE
 T_R ComputeTemperature (
     T_index const Is, T_index const Ie, T_index const * AMREX_RESTRICT I,
     T_R const * AMREX_RESTRICT ux, T_R const * AMREX_RESTRICT uy, T_R const * AMREX_RESTRICT psi,
-    T_R const m )
+    T_R const m, const PhysConst& cst )
 {
     using namespace amrex::literals;
-    T_R constexpr c2i = 1._rt/(PhysConstSI::c * PhysConstSI::c);
+    T_R const c2i = 1._rt/(cst.c * cst.c);
 
     const int N = Ie - Is;
     if ( N == 0 ) { return T_R(0.0); }
@@ -30,7 +30,7 @@ T_R ComputeTemperature (
         // particle's Lorentz factor
         gm = (1.0_rt + ux[I[i]]*ux[I[i]]*c2i + uy[I[i]]*uy[I[i]]*c2i
               + psi[I[i]]*psi[I[i]]) / (2.0_rt * psi[I[i]] );
-        const amrex::Real uz = PhysConstSI::c * (gm - psi[I[i]]);
+        const amrex::Real uz = cst.c * (gm - psi[I[i]]);
         us = ( ux[ I[i] ] * ux[ I[i] ] +
                uy[ I[i] ] * uy[ I[i] ] +
                uz         * uz);
