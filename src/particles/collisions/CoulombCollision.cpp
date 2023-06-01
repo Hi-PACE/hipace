@@ -58,7 +58,7 @@ CoulombCollision::doCoulombCollision (
         int count = 0;
         for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
-            // Get particles SoA and AoS data
+            // Get particles SoA data
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
@@ -120,7 +120,7 @@ CoulombCollision::doCoulombCollision (
         int count = 0;
         for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
-            // Get particles SoA and AoS data for species 1
+            // Get particles SoA data for species 1
             auto& soa1 = pti.GetStructOfArrays();
             amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
@@ -131,7 +131,7 @@ CoulombCollision::doCoulombCollision (
             amrex::Real q1 = species1.GetCharge();
             amrex::Real m1 = species1.GetMass();
 
-            // Get particles SoA and AoS data for species 2
+            // Get particles SoA data for species 2
             auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
             auto& soa2 = ptile2.GetStructOfArrays();
             amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux_half_step).data();

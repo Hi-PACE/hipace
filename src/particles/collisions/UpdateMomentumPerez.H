@@ -122,9 +122,10 @@ void UpdateMomentumPerezElastic (
     else
     {
         // Compute b0 according to eq (22) from Perez et al., Phys.Plasmas.19.083104 (2012)
+        // Note: there is a typo in the equation, the last square is incorrect!
+        // See the SMILEI documentation: https://smileipic.github.io/Smilei/Understand/collisions.html
         T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2_SI /
                (T_R(4.0)*MathConst::pi*PhysConstSI::ep0) * gc/mass_g *
-               ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) ) *
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) );
 
         // Compute the minimal impact parameter
