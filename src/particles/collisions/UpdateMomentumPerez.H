@@ -112,47 +112,47 @@ void UpdateMomentumPerezElastic (
         p1sy = p1y;
         p1sz = p1z;
     }
-    T_R const p1sm = std::sqrt( p1sx*p1sx + p1sy*p1sy + p1sz*p1sz );
+    const double p1sm = std::sqrt( static_cast<double>(p1sx)*p1sx + p1sy*p1sy + p1sz*p1sz );
 
     // Compute gamma star
     T_R const g1s = ( T_R(1.0) - vcDv1*inv_c2_SI )*gc*g1;
     T_R const g2s = ( T_R(1.0) - vcDv2*inv_c2_SI )*gc*g2;
 
     // Compute the Coulomb log lnLmd
-    T_R lnLmd;
+    double lnLmd;
     if ( L > T_R(0.0) ) { lnLmd = L; }
     else
     {
         // Compute b0 according to eq (22) from Perez et al., Phys.Plasmas.19.083104 (2012)
         // Note: there is a typo in the equation, the last square is incorrect!
         // See the SMILEI documentation: https://smileipic.github.io/Smilei/Understand/collisions.html
-        T_R const b0 = amrex::Math::abs(q1*q2) * inv_c2_SI /
+        const double b0 = amrex::Math::abs(q1*q2) * inv_c2_SI /
                (T_R(4.0)*MathConst::pi*PhysConstSI::ep0) * gc/mass_g *
                ( m1*g1s*m2*g2s/(p1sm*p1sm*inv_c2_SI) + T_R(1.0) );
 
         // Compute the minimal impact parameter
-        T_R bmin = amrex::max(PhysConstSI::hbar*MathConst::pi/p1sm,b0);
+        double bmin = amrex::max(PhysConstSI::hbar*MathConst::pi/p1sm,b0);
 
         // Compute the Coulomb log lnLmd according to eq (23) from Perez et al., Phys.Plasmas.19.083104 (2012)
-        lnLmd = amrex::max( T_R(2.0),
+        lnLmd = amrex::max( static_cast<double>(2.0),
                 T_R(0.5)*std::log(T_R(1.0)+lmdD*lmdD/(bmin*bmin)) );
     }
 
     // Compute s according to eq (17) from Perez et al., Phys.Plasmas.19.083104 (2012)
-    const auto tts = m1*g1s*m2*g2s/(inv_c2_SI*p1sm*p1sm) + T_R(1.0);
-    const auto tts2 = tts*tts;
-    const amrex::Real charge_fac = normalized_units ? PhysConstSI::q_e*PhysConstSI::q_e*
-                                                      PhysConstSI::q_e*PhysConstSI::q_e : 1;
-    T_R s = n1*n2/n12 * dt*lnLmd*q1*q1*q2*q2*charge_fac * inv_c2_SI*inv_c2_SI /
-          ( T_R(4.0) * MathConst::pi * PhysConstSI::ep0 * PhysConstSI::ep0 *
+    const double tts = static_cast<double>(m1)*g1s*m2*g2s/(inv_c2_SI*p1sm*p1sm) + T_R(1.0);
+    const double tts2 = tts*tts;
+    const double charge_fac = normalized_units ? static_cast<double>(PhysConstSI::q_e)*PhysConstSI::q_e*
+                                                    PhysConstSI::q_e*PhysConstSI::q_e : 1;
+    T_R s = static_cast<double>(n1)*n2/n12 * dt*lnLmd*q1*q1*q2*q2*charge_fac * inv_c2_SI*inv_c2_SI /
+          ( static_cast<double>(4.0) * MathConst::pi * PhysConstSI::ep0 * PhysConstSI::ep0 *
             m1*g1*m2*g2 ) * gc*p1sm/mass_g * tts2;
 
     const auto cbrt_n1 = std::cbrt(n1);
     const auto cbrt_n2 = std::cbrt(n2);
     const auto coeff = static_cast<T_R>(
         std::pow(4.0*MathConst::pi/3.0,1.0/3.0));
-    T_R const vrel = mass_g*p1sm/(m1*g1s*m2*g2s*gc);
-    T_R const sp = coeff * n1*n2/n12 * dt * vrel * (m1+m2) /
+    T_R const vrel = static_cast<double>(mass_g)*p1sm/(m1*g1s*m2*g2s*gc);
+    T_R const sp = static_cast<double>(coeff) * n1*n2/n12 * dt * vrel * (m1+m2) /
           amrex::max( m1*cbrt_n1*cbrt_n1,
                       m2*cbrt_n2*cbrt_n2);
 
@@ -205,7 +205,7 @@ void UpdateMomentumPerezElastic (
     T_R p1fsy;
     T_R p1fsz;
     // p1sp is the p1s perpendicular
-    T_R p1sp = std::sqrt( p1sx*p1sx + p1sy*p1sy );
+    double p1sp = std::sqrt( static_cast<double>(p1sx)*p1sx + p1sy*p1sy );
     // Make sure p1sp is not almost zero
     if ( p1sp > std::numeric_limits<T_R>::min() )
     {
@@ -227,7 +227,7 @@ void UpdateMomentumPerezElastic (
         // If the previous p1sp is almost zero
         // x->y  y->z  z->x
         // This set is equivalent to the one in Nanbu's paper
-        p1sp = std::sqrt( p1sy*p1sy + p1sz*p1sz );
+        p1sp = std::sqrt( static_cast<double>(p1sy)*p1sy + p1sz*p1sz );
         p1fsy = ( p1sy*p1sx/p1sp ) * sinXs*cosphis +
                 ( p1sz*p1sm/p1sp ) * sinXs*sinphis +
                 ( p1sy           ) * cosXs;
