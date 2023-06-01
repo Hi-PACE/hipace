@@ -85,7 +85,7 @@ Hipace::Hipace () :
     queryWithParser(pp, "max_step", m_max_step);
 
     int seed;
-    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed);
+    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
     amrex::ParmParse pph("hipace");
 
