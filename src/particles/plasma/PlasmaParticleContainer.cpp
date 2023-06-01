@@ -63,7 +63,7 @@ PlasmaParticleContainer::ReadParameters ()
     }
     queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
-        "Cannot use neutralize_background for ion plasma");
+        "Cannot use neutralize_background when ionization is turned on");
 
     if(!queryWithParser(pp, "charge", m_charge)) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge != 0,
