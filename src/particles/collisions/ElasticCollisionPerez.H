@@ -103,7 +103,7 @@ void ElasticCollisionPerez (
     if (normalized_units) {
         n1 *= background_density_SI;
         n2 *= background_density_SI;
-        n12* = background_density_SI;
+        n12 *= background_density_SI;
     } else {
         n1 /= dV;
         n2 /= dV;
