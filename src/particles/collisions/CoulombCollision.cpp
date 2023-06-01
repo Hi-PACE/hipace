@@ -71,9 +71,10 @@ CoulombCollision::doCoulombCollision (
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real wp = std::sqrt(background_density_SI *
-                                             PhysConstSI::q_e*PhysConstSI::q_e /
-                                             (PhysConstSI::ep0 * PhysConstSI::m_e) );
+            // static_cast<double> to avoid precision problems in FP32
+            const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                     static_cast<double>(PhysConstSI::q_e)*static_cast<double>(PhysConstSI::q_e) /
+                    (static_cast<double>(PhysConstSI::ep0)*static_cast<double>(PhysConstSI::m_e)));
             const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
 
@@ -145,9 +146,10 @@ CoulombCollision::doCoulombCollision (
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
-            const amrex::Real wp = std::sqrt(background_density_SI *
-                                             PhysConstSI::q_e*PhysConstSI::q_e /
-                                             (PhysConstSI::ep0 * PhysConstSI::m_e) );
+            // static_cast<double> to avoid precision problems in FP32
+            const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                     static_cast<double>(PhysConstSI::q_e)*static_cast<double>(PhysConstSI::q_e) /
+                    (static_cast<double>(PhysConstSI::ep0)*static_cast<double>(PhysConstSI::m_e)));
             const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
             // Extract particles in the tile that `mfi` points to
