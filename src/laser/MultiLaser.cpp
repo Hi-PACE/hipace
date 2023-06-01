@@ -276,9 +276,9 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
                             static_cast<int>(extent[0])};
     amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
-    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
     //hipace: xyt in Fortran order
+    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
     series.flush();
 
@@ -296,7 +296,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
 
     if (m_file_geometry == "xyt") {
         // Calculate the min and max of the grid from laser file
-        amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
         amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
         amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
@@ -349,7 +348,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         // extent = {nmodes, nt, nr}
 
         // Calculate the min and max of the grid from laser file
-        amrex::Real tmin_laser = offset[0] + position[0]*spacing[0];
         amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
 
