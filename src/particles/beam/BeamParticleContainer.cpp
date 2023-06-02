@@ -417,7 +417,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     m_insitu_rdata[islice+15*m_nslices] = amrex::get<15>(a)*sum_w_inv;
     m_insitu_rdata[islice+16*m_nslices] = amrex::get<16>(a)*sum_w_inv;
     m_insitu_rdata[islice+17*m_nslices] = amrex::get<17>(a)*sum_w_inv;
-    m_insitu_idata[islice             ] = amrex::get<17>(a);
+    m_insitu_idata[islice             ] = amrex::get<18>(a);
 
     m_insitu_sum_rdata[ 0] += sum_w0;
     m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
@@ -437,7 +437,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     m_insitu_sum_rdata[15] += amrex::get<15>(a);
     m_insitu_sum_rdata[16] += amrex::get<16>(a);
     m_insitu_sum_rdata[17] += amrex::get<17>(a);
-    m_insitu_sum_idata[ 0] += amrex::get<17>(a);
+    m_insitu_sum_idata[ 0] += amrex::get<18>(a);
 }
 
 void
