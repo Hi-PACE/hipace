@@ -102,7 +102,7 @@ CoulombCollision::doCoulombCollision (
                         indices1, indices1,
                         ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
                         q1, q1, m1, m1, -1.0_rt, -1.0_rt,
-                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, engine );
+                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, is_same_species, engine );
                 }
                 );
             count++;
@@ -188,7 +188,7 @@ CoulombCollision::doCoulombCollision (
                         indices1, indices2,
                         ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
                         q1, q2, m1, m2, -1.0_rt, -1.0_rt,
-                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, engine );
+                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, is_same_species, engine );
                 }
                 );
             count++;
