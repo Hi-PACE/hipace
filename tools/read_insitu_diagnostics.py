@@ -58,6 +58,15 @@ def emittance_y(all_data):
                   * (all_data["[uy^2]"] - all_data["[uy]"]**2) \
                   - (all_data["[y*uy]"] - all_data["[y]"]*all_data["[uy]"])**2))
 
+def emittance_z(all_data):
+    """
+    Per-slice emittance: emittance_z(all_data)
+    Projected emittance: emittance_z(all_data["average"])
+    """
+    return np.sqrt(np.abs((all_data["[z^2]"] - all_data["[z]"]**2) \
+                  * (all_data["[uz^2]"] - all_data["[uz]"]**2) \
+                  - (all_data["[z*uz]"] - all_data["[z]"]*all_data["[uz]"])**2))
+
 def gamma_mean(all_data):
     return all_data["[ga]"]
 
@@ -88,15 +97,6 @@ def energy_spread_eV(all_data, per_slice=False):
         else:
             return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
 
-def position_mean_x(all_data):
-    return all_data["[x]"]
-
-def position_mean_y(all_data):
-    return all_data["[y]"]
-
-def position_mean_z(all_data):
-    return all_data["[z]"]
-
 def position_std_x(all_data):
     return np.sqrt(np.maximum(all_data["[x^2]"] - all_data["[x]"]**2,0))
 
@@ -105,15 +105,6 @@ def position_std_y(all_data):
 
 def position_std_z(all_data):
     return np.sqrt(np.maximum(all_data["[z^2]"] - all_data["[z]"]**2,0))
-
-def normalized_momentum_mean_x(all_data):
-    return all_data["[ux]"]
-
-def normalized_momentum_mean_y(all_data):
-    return all_data["[uy]"]
-
-def normalized_momentum_mean_z(all_data):
-    return all_data["[uz]"]
 
 def normalized_momentum_std_x(all_data):
     return np.sqrt(np.maximum(all_data["[ux^2]"] - all_data["[ux]"]**2,0))
@@ -136,12 +127,23 @@ def z_axis(all_data):
 
 
 if __name__ == '__main__':
+    # To import this file from another script use (change the path):
+    #
+    # import sys
+    # sys.path.append("../hipace/tools/")
+    # import read_insitu_diagnostics as diag
+    #
+    # all_data = diag.read_file("diags/insitu/reduced_beam.*.txt")
+
     import matplotlib.pyplot as plt
 
     all_data = read_file("diags/insitu/reduced_beam.*.txt")
 
+    print("Available diagnostics:", all_data.dtype.names)
+    print("For instance, all_data['[x]'] returns the per-slice average transverse beam position")
+
     plt.figure(figsize=(7,7), dpi=150)
-    plt.imshow(energy_spread(all_data), aspect="auto")
+    plt.pcolormesh(z_axis(all_data), all_data["time"], energy_spread_eV(all_data, per_slice=True))
 
     plt.figure(figsize=(7,7), dpi=150)
     plt.plot(all_data["time"], emittance_x(all_data["average"]))
