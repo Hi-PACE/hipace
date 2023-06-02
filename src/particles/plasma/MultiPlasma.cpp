@@ -60,8 +60,8 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                 }
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
-                "Must specify a valid product plasma for Ionization using ionization_product");
-            plasma.InitIonizationModule(gm[0], plasma_product); // geometry only for dz
+                "Must specify a valid product plasma for ionization using ionization_product");
+            plasma.InitIonizationModule(gm[0], plasma_product, m_background_density_SI); // geometry only for dz
         }
     }
     if (m_nplasmas > 0) m_all_bins.resize(m_nplasmas);
@@ -129,7 +129,7 @@ MultiPlasma::DoFieldIonization (
     const int lev, const amrex::Geometry& geom, const Fields& fields)
 {
     for (auto& plasma : m_all_plasmas) {
-        plasma.IonizationModule(lev, geom, fields);
+        plasma.IonizationModule(lev, geom, fields, m_background_density_SI);
     }
 }
 

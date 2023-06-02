@@ -313,14 +313,22 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
 void
 PlasmaParticleContainer::
-InitIonizationModule (const amrex::Geometry& geom,
-                      PlasmaParticleContainer* product_pc)
+InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
+                      const amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitIonizationModule()");
 
     using namespace amrex::literals;
 
     if (!m_can_ionize) return;
+
+    const bool normalized_units = Hipace::GetInstance().m_normalized_units;
+    if (normalized_units) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
+            "For ionization with normalized units, a background plasma density != 0 must "
+            "be specified via 'plasmas.background_density_SI'");
+    }
+
     m_product_pc = product_pc;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
@@ -351,9 +359,12 @@ InitIonizationModule (const amrex::Geometry& geom,
     const amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
     const amrex::Real UH = table_ionization_energies[0];
     const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
-    // partial dx calculation for QSA
-    auto dx = geom.CellSizeArray();
-    const amrex::Real dt = dx[2] / phys_const.c;
+
+    // plasma frequency in SI units to denormalize ionization
+    const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                                     PhysConstSI::q_e*PhysConstSI::q_e /
+                                     (PhysConstSI::ep0 * PhysConstSI::m_e) );
+    const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;
 
     m_adk_power.resize(ion_atomic_number);
     m_adk_prefactor.resize(ion_atomic_number);
