@@ -357,6 +357,40 @@ When both are specified, the per-species value is used.
     the specific ionization energy of each state.
     Options are: ``electron``, ``positron``, ``H``, ``D``, ``T``, ``He``, ``Li``, ``Be``, ``B``, ….
 
+* ``<plasma name> or plasmas.insitu_period`` (`int`) optional (default ``-1``)
+    Period of in-situ diagnostics, for computing the main per-slice plasma quantities
+    (energy, temperature, etc.). This works in the same way as the beam insitu diagnostics.
+    For this the following quantities are calculated per slice and stored:
+    ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [ga], [ga^2], np``
+    where "[]" stands for averaging over all particles in the current slice,
+    "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
+    Averages and totals over all slices are also provided for convenience under the
+    respective ``average`` and ``total`` subcategories.
+
+    Additionally, some metadata is also available:
+    ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
+    ``time`` and ``step`` refers to the physical time of the simulation and step number of the
+    current time step.
+    ``n_slices`` equal to the number of slices in the zeta direction.
+    ``charge`` and ``mass`` relate to a single plasma particle and are for example equal to the
+    electron charge and mass.
+    ``z_lo`` and ``z_hi`` are the lower and upper bounds of the z-axis of the simulation domain
+    specified in the input file and can be used to generate a z/zeta-axis for plotting.
+    ``normalized_density_factor`` is equal to ``dx * dy * dz`` in normalized units and 1 in
+    SI units. It can be used to convert ``sum(w)``, which specifies the beam density in normalized
+    units and beam weight an SI units, to the beam weight in both unit systems.
+
+    The data is written to a file at ``<insitu_file_prefix>/reduced_<beam name>.<MPI rank number>.txt``.
+    The in-situ diagnostics file format consists of a header part in ASCII containing a JSON object.
+    When this is parsed into Python it can be converted to a NumPy structured datatype.
+    The rest of the file, following immediately after the closing }, is in binary format and
+    contains all of the in-situ diagnostic along with some meta data. This part can be read using the
+    structured datatype of the first section.
+    Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+
+* ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"plasma_diags/insitu"``)
+    Path of the plasma in-situ output.
+
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
