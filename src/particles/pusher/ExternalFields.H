@@ -18,9 +18,9 @@
  * \param[in,out] ExmByp Ex-By Field on particle
  * \param[in,out] EypBxp Ey+Bx Field on particle
  * \param[in,out] Ezp Electric field on particle, z component
- * \param[in,out] Bx Magnetic field on particle, x component
- * \param[in,out] By Magnetic field on particle, y component
- * \param[in,out] Bz Magnetic field on particle, z component
+ * \param[in,out] Bxp Magnetic field on particle, x component
+ * \param[in,out] Byp Magnetic field on particle, y component
+ * \param[in,out] Bzp Magnetic field on particle, z component
  * \param[in] ext_E_uniform Uniform electric field Ex-c*By, Ey+c*Bx, Ez to be applied
  * \param[in] ext_B_uniform Uniform magnetic field Bx, B, Bz to be applied
  * \param[in] ext_E_slope strength of external electric field d(Ex-c*By)/dx, d(Ey+c*Bx)/dy, d(Ez)/dz
@@ -68,7 +68,7 @@ void ApplyExternalField(
     if (ext_B_slope[0]   != 0.) Bx     += ext_B_slope[0] * yp;
     if (ext_B_slope[1]   != 0.) By     += ext_B_slope[1] * xp;
     if (ext_B_slope[2]   != 0.) Bz     += ext_B_slope[2] * zp;
-    
+
     return;
 }
 
