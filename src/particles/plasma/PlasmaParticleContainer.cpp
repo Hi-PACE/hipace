@@ -403,7 +403,7 @@ IonizationModule (const int lev,
 
             if(p_ion_mask[ip] != 0) {
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
-                const long pidx = pid + old_size;
+                const long pidx = pid + old_size;beam
 
                 // Copy ion data to new electron
                 int_arrdata_elec[PlasmaIdx::id ][pidx] = pid_start + pid;
