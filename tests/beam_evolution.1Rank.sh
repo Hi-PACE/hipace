@@ -39,7 +39,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         diagnostic.output_period = 20 \
         beam.density = 1.e-8 \
         beam.radius = 1. \
-        beam.ppc = 4 4 1 \
+        beam.ppc = 4 4 2 \
         hipace.external_E_slope = .5 .5 0. \
         hipace.file_prefix = $TEST_NAME
 
