@@ -43,7 +43,8 @@ void ApplyExternalField(
     const amrex::RealVect& ext_B_slope)
 {
 
-    if ((ext_E_uniform == amrex::RealVect(0.,0.,0.)) &&
+/*
+  if ((ext_E_uniform == amrex::RealVect(0.,0.,0.)) &&
         (ext_B_uniform == amrex::RealVect(0.,0.,0.)) &&
         (ext_E_slope == amrex::RealVect(0.,0.,0.)) &&
         (ext_B_slope == amrex::RealVect(0.,0.,0.)) ) return;
@@ -54,7 +55,20 @@ void ApplyExternalField(
     Bxp    += ext_B_uniform[0] + ext_B_slope[0] * yp;
     Byp    += ext_B_uniform[1] + ext_B_slope[1] * xp;
     Bzp    += ext_B_uniform[2] + ext_B_slope[2] * zp;
-
+*/
+    if (ext_E_uniform[0] != 0.) ExmByp += ext_E_uniform[0];
+    if (ext_E_uniform[1] != 0.) EypBxp += ext_E_uniform[1];
+    if (ext_E_uniform[2] != 0.) Ez     += ext_E_uniform[2];
+    if (ext_E_slope[0]   != 0.) ExmByp += ext_E_slope[0] * xp;
+    if (ext_E_slope[1]   != 0.) EypBxp += ext_E_slope[1] * yp;
+    if (ext_E_slope[2]   != 0.) Ez     += ext_E_slope[2] * zp;
+    if (ext_B_uniform[0] != 0.) Bx     += ext_B_uniform[0];
+    if (ext_B_uniform[1] != 0.) By     += ext_B_uniform[1];
+    if (ext_B_uniform[2] != 0.) Bz     += ext_B_uniform[2];
+    if (ext_B_slope[0]   != 0.) Bx     += ext_B_slope[0] * yp;
+    if (ext_B_slope[1]   != 0.) By     += ext_B_slope[1] * xp;
+    if (ext_B_slope[2]   != 0.) Bz     += ext_B_slope[2] * zp;
+    
     return;
 }
 
