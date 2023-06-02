@@ -170,12 +170,11 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     InitParticles(m_ppc, m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
 
     if (m_insitu_period > 0) {
-        // TODO FIXME
-// #ifdef HIPACE_USE_OPENPMD
-//         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
-//             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
-//             "Must choose a different insitu file prefix compared to the full diagnostics");
-// #endif
+#ifdef HIPACE_USE_OPENPMD
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
+            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            "Must choose a different plasma insitu file prefix compared to the full diagnostics");
+#endif
         // Allocate memory for in-situ diagnostics
         m_nslices = geom.Domain().length(2);
         m_insitu_rdata.resize(m_nslices*m_insitu_nrp, 0.);
@@ -404,7 +403,7 @@ IonizationModule (const int lev,
 
             if(p_ion_mask[ip] != 0) {
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
-                const long pidx = pid + old_size;
+                const long pidx = pid + old_size;beam
 
                 // Copy ion data to new electron
                 int_arrdata_elec[PlasmaIdx::id ][pidx] = pid_start + pid;
@@ -588,6 +587,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
     const std::size_t nslices = static_cast<std::size_t>(m_nslices);
     const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
+    const int is_normalized_units = Hipace::m_normalized_units;
 
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
@@ -600,6 +600,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         {"z_lo"    , &geom.ProbLo()[2]},
         {"z_hi"    , &geom.ProbHi()[2]},
         {"normalized_density_factor", &normalized_density_factor},
+        {"is_normalized_units", &is_normalized_units},
         {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
         {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
         {"[y]"     , &m_insitu_rdata[3*nslices], nslices},

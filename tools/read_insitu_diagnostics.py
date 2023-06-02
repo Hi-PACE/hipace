@@ -97,6 +97,42 @@ def energy_spread_eV(all_data, per_slice=False):
         else:
             return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
 
+def temperature_in_ev_x(all_data, per_slice=True):
+    if per_slice:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std_x(all_data)**2 * np.atleast_2d(all_data["mass"]).T
+        else:
+            return (constants.c**2 / constants.e) * normalized_momentum_std_x(all_data)**2 * np.atleast_2d(all_data["mass"]).T
+    else:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std_x(all_data["average"])**2 * all_data["mass"]
+        else:
+            return (constants.c**2 / constants.e) * normalized_momentum_std_x(all_data["average"])**2 * all_data["mass"]
+
+def temperature_in_ev_y(all_data, per_slice=True):
+    if per_slice:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std_y(all_data)**2 * np.atleast_2d(all_data["mass"]).T
+        else:
+            return (constants.c**2 / constants.e) * normalized_momentum_std_y(all_data)**2 * np.atleast_2d(all_data["mass"]).T
+    else:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std_y(all_data["average"])**2 * all_data["mass"]
+        else:
+            return (constants.c**2 / constants.e) * normalized_momentum_std_y(all_data["average"])**2 * all_data["mass"]
+
+def temperature_in_ev_z(all_data, per_slice=True):
+    if per_slice:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std_z(all_data)**2 * np.atleast_2d(all_data["mass"]).T
+        else:
+            return (constants.c**2 / constants.e) * normalized_momentum_std_z(all_data)**2 * np.atleast_2d(all_data["mass"]).T
+    else:
+        if all_data["is_normalized_units"][0]:
+            return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std_z(all_data["average"])**2 * all_data["mass"]
+        else:
+            return (constants.c**2 / constants.e) * normalized_momentum_std_z(all_data["average"])**2 * all_data["mass"]
+
 def position_std_x(all_data):
     return np.sqrt(np.maximum(all_data["[x^2]"] - all_data["[x]"]**2,0))
 
