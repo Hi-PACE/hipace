@@ -62,14 +62,12 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "can_ionize", m_can_ionize);
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!Hipace::GetInstance().m_normalized_units,
-            "Cannot use Ionization Module in normalized units");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
-            "The initial Ion level must be specified");
+            "The initial ion level must be specified");
     }
     queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
-        "Cannot use neutralize_background for Ion plasma");
+        "Cannot use neutralize_background when ionization is turned on");
 
     if(!queryWithParser(pp, "charge", m_charge)) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge != 0,
@@ -262,14 +260,15 @@ void
 PlasmaParticleContainer::
 IonizationModule (const int lev,
                   const amrex::Geometry& geom,
-                  const Fields& fields)
+                  const Fields& fields,
+                  const amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 
     using namespace amrex::literals;
 
     if (!m_can_ionize) return;
-    const PhysConst phys_const = make_constants_SI();
+    const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
     for (amrex::MFIter mfi_ion = MakeMFIter(0, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
@@ -303,6 +302,12 @@ IonizationModule (const int lev,
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
 
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
+        // calcuation of E0 in SI units for denormalization
+        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                                         PhysConstSI::q_e*PhysConstSI::q_e /
+                                         (PhysConstSI::ep0 * PhysConstSI::m_e) );
+        const amrex::Real E0 = Hipace::GetInstance().m_normalized_units ?
+                               wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
         const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
@@ -345,7 +350,7 @@ IonizationModule (const int lev,
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
-            const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
+            const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp )*E0;
 
             // Compute probability of ionization p
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq

@@ -529,7 +529,7 @@ which are valid only for certain beam types, are introduced further below under
     Period of in-situ diagnostics, for computing the main per-slice beam quantities for the main
     beam parameters (width, energy spread, emittance, etc.).
     For this the following quantities are calculated per slice and stored:
-    ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2], np``
+    ``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [ga], [ga^2], np``
     where "[]" stands for averaging over all particles in the current slice,
     "w" stands for weight, "ux" is the momentum in the x direction, "ga" is the Lorentz factor.
     Averages and totals over all slices are also provided for convenience under the
