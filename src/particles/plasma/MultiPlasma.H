@@ -146,7 +146,6 @@ public:
     /** Compute reduced plasma diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] islice_local local index of the slice
      */
     void InSituComputeDiags (int step, int islice);
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
