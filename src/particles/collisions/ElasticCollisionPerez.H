@@ -41,6 +41,7 @@
  * @param[in] cst physical constants
  * @param[in] normalized_units whether normalized units are used
  * @param[in] background_density_SI background plasma density (only needed for normalized units)
+ * @param[in] is_same_species whether the collisions happen within the same species
  * @param[in] engine AMReX engine for the random number generator.
 */
 
@@ -57,7 +58,7 @@ void ElasticCollisionPerez (
     T_R const  m1, T_R const  m2,
     T_R const  T1, T_R const  T2,
     T_R const  dt, T_R const   L, T_R const dV, const PhysConst& cst, const bool normalized_units,
-    const amrex::Real background_density_SI,
+    const amrex::Real background_density_SI, const bool is_same_species,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
@@ -84,7 +85,10 @@ void ElasticCollisionPerez (
     T_R n12 = T_R(0.0);
     for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) { n1 += w1[ I1[i1] ]; }
     for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) { n2 += w2[ I2[i2] ]; }
-
+    if (is_same_species) {
+        n1 = n1 + n2;
+        n2 = n1;
+    }
     // compute n12 according to eq. 16 in Perez et al., Phys. Plasmas 19 (8) (2012) 083104
     {
       int i1 = I1s; int i2 = I2s;
@@ -94,7 +98,7 @@ void ElasticCollisionPerez (
         ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
         ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
       }
-
+      if (is_same_species) n12*= T_R(2.0);
     }
 
     // in normalized units, the weights already represent a density, so it must only be rescaled
