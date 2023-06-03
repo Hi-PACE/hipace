@@ -518,36 +518,35 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         const amrex::Real sum_w0 = amrex::get< 0>(a);
         const amrex::Real sum_w_inv = sum_w0 <= 0._rt ? 0._rt : 1._rt/sum_w0;
 
-            m_insitu_rdata[islice             ] = sum_w0;
-            m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
-            m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
-            m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
-            m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
-            m_insitu_idata[islice             ] = amrex::get<13>(a);
+        m_insitu_rdata[islice             ] = sum_w0;
+        m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
+        m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
+        m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
+        m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
+        m_insitu_idata[islice             ] = amrex::get<13>(a);
 
-            m_insitu_sum_rdata[ 0] += sum_w0;
-            m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
-            m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
-            m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
-            m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
-            m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
-            m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
-            m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
-            m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
-            m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
-            m_insitu_sum_rdata[10] += amrex::get<10>(a);
-            m_insitu_sum_rdata[11] += amrex::get<11>(a);
-            m_insitu_sum_rdata[12] += amrex::get<12>(a);
-            m_insitu_sum_idata[ 0] += amrex::get<13>(a);
-        }
+        m_insitu_sum_rdata[ 0] += sum_w0;
+        m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
+        m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
+        m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
+        m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
+        m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
+        m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
+        m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
+        m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
+        m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
+        m_insitu_sum_rdata[10] += amrex::get<10>(a);
+        m_insitu_sum_rdata[11] += amrex::get<11>(a);
+        m_insitu_sum_rdata[12] += amrex::get<12>(a);
+        m_insitu_sum_idata[ 0] += amrex::get<13>(a);
     }
 }
 
