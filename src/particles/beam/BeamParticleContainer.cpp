@@ -135,7 +135,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         bool peak_density_is_specified = queryWithParser(pp, "density", m_density);
         if (charge_is_specified) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( Hipace::m_normalized_units == 0,
             "The option 'beam.total_charge' is only valid in SI units."
-            "Please set 'hipace.normalized_units = 0'");
+            "Please either specify the peak density with '<beam name>.density', "
+            "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
             "Please specify exlusively either total_charge or density of the beam");
         queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
