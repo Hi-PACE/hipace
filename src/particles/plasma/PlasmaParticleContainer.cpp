@@ -463,18 +463,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         // loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
 
-#ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
-#endif
-        {
-            amrex::Long const num_particles = pti.numParticles();
-#ifdef AMREX_USE_OMP
-            amrex::Long const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
-            amrex::Long const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
-#else
-            amrex::Long constexpr idx_begin = 0;
-            amrex::Long const idx_end = num_particles;
-#endif
+        amrex::Long const num_particles = pti.numParticles();
+
         // Tuple contains:
         //      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,    11,    12,   13
         // sum(w), <x>, <x^2>, <y>, <y^2>, <ux>,   <ux^2>, <uy>, <uy^2>,  <uz>,  <uz^2>, <ga>, <ga^2>, np
@@ -489,11 +479,9 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                           amrex::Real, int> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(
-            idx_end-idx_begin, reduce_data,
-            [=] AMREX_GPU_DEVICE (int idx) -> ReduceTuple
+            num_particles, reduce_data,
+            [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
-                const int ip = idx + idx_begin;
-
                 const amrex::Real xp   = ptd.pos(0, ip);
                 const amrex::Real yp   = ptd.pos(1, ip);
                 const amrex::Real uxp  = ptd.rdata(PlasmaIdx::ux )[ip] * clight_inv; // proper velocity to u
@@ -527,41 +515,39 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                         1};
             });
 
-            ReduceTuple a = reduce_data.value();
-            const amrex::Real sum_w0 = amrex::get< 0>(a);
-            const amrex::Real sum_w_inv = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 0._rt
-                                                                                     : 1._rt/sum_w0;
+        ReduceTuple a = reduce_data.value();
+        const amrex::Real sum_w0 = amrex::get< 0>(a);
+        const amrex::Real sum_w_inv = sum_w0 <= 0._rt ? 0._rt : 1._rt/sum_w0;
 
-            m_insitu_rdata[islice             ] = sum_w0;
-            m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
-            m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
-            m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
-            m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
-            m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
-            m_insitu_idata[islice             ] = amrex::get<13>(a);
+        m_insitu_rdata[islice             ] = sum_w0;
+        m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
+        m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
+        m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
+        m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
+        m_insitu_idata[islice             ] = amrex::get<13>(a);
 
-            m_insitu_sum_rdata[ 0] += sum_w0;
-            m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
-            m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
-            m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
-            m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
-            m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
-            m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
-            m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
-            m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
-            m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
-            m_insitu_sum_rdata[10] += amrex::get<10>(a);
-            m_insitu_sum_rdata[11] += amrex::get<11>(a);
-            m_insitu_sum_rdata[12] += amrex::get<12>(a);
-            m_insitu_sum_idata[ 0] += amrex::get<13>(a);
-        }
+        m_insitu_sum_rdata[ 0] += sum_w0;
+        m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
+        m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
+        m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
+        m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
+        m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
+        m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
+        m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
+        m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
+        m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
+        m_insitu_sum_rdata[10] += amrex::get<10>(a);
+        m_insitu_sum_rdata[11] += amrex::get<11>(a);
+        m_insitu_sum_rdata[12] += amrex::get<12>(a);
+        m_insitu_sum_idata[ 0] += amrex::get<13>(a);
     }
 }
 
