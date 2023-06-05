@@ -325,9 +325,9 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                     for (int it=0; it<=interp_order_xy; it++){
                         for (int iy=0; iy<=interp_order_xy; iy++){
                             for (int ix=0; ix<=interp_order_xy; ix++){
-                                if (i_cell+ix >= 0 && i_cell+ix < extent[2] &&
-                                    j_cell+iy >= 0 && j_cell+iy < extent[1] &&
-                                    k_cell+it >= 0 && k_cell+it < extent[0]) {
+                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
+                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
+                                    k_cell+it >= 0 && k_cell+it < static_cast<int>(extent[0])) {
                                     laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
                                         static_cast<amrex::Real>(
                                             input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() * unitSI
@@ -374,8 +374,8 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                         for (int ir=0; ir<=interp_order_xy; ir++){
                             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(i_cell+ir >= 0,
                                 "Touching a r<0 cell in laser file reader. Is staggering correct?");
-                            if (i_cell+ir < extent[2] &&
-                                k_cell+it >= 0 && k_cell+it < extent[1]) {
+                            if (i_cell+ir < static_cast<int>(extent[2]) &&
+                                k_cell+it >= 0 && k_cell+it < static_cast<int>(extent[1])) {
                                 // mode 0
                                 laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
                                     static_cast<amrex::Real>(
@@ -383,7 +383,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                                 laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
                                     static_cast<amrex::Real>(
                                     input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
-                                for (int im=1; im<=extent[0]/2; im++) {
+                                for (int im=1; im<=static_cast<int>(extent[0])/2; im++) {
                                     // cos(m*theta) part of the mode
                                     laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
                                         std::cos(im*theta) * static_cast<amrex::Real>(
