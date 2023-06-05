@@ -17,14 +17,14 @@
  * \param[in] do_advance if the SALAME-only field should be computed exactly with plasma particles
  * \param[in,out] last_islice the slice index of the previous slice with SALAME
  * \param[in,out] overloaded if the SALAME beam was overloaded in the last slice
- * \param[in] lev MR level
+ * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
  * \param[in] islice_local slice index of the local box
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int lev, const int step, const int islice,
+              bool& overloaded, const int current_N_level, const int step, const int islice,
               const int islice_local);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
@@ -51,12 +51,12 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev);
 /** Calculate the new weighting factor of the SALAME beam using the difference in E fields.
  * The average is weighted using the SALAME beam current.
  * \param[in] hipace pointer to Hipace instance
- * \param[in] lev MR level
+ * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] islice slice index of the whole domain
  * \return new beam weighting factor and new total SALAME beam current on this slice
  */
 std::pair<amrex::Real, amrex::Real>
-SalameGetW (Hipace* hipace, const int lev, const int islice);
+SalameGetW (Hipace* hipace, const int current_N_level, const int islice);
 
 /** Multiply SALAME beam weight on this slice with W
  * \param[in] W weight multiplier

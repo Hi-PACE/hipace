@@ -25,7 +25,7 @@ class MultiLaser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous1, Previous2, RhomJzIons, Salame, N };
+    enum slice { Next=0, This, Previous, RhomJzIons, Salame, PCIter, PCPrevIter, N };
 };
 
 struct assert_map : std::map<std::string, int> {
@@ -154,6 +154,14 @@ public:
                 const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
                 bool do_laser, MultiLaser& multi_laser);
 
+     /** \brief Initialize all required fields to zero and interpolate from lev-1 to lev if needed
+     *
+     * \param[in] lev the MR level
+     * \param[in] islice current slice index
+     * \param[in] geom 3D Geometry
+     */
+    void InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geometry>& geom);
+
     /** \brief Shift slices by 1 element: slices (1,2) are then stored in (2,3).
      *
      * When looping over slices from head to tail, the same slice MultiFabs are used
@@ -173,34 +181,37 @@ public:
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] which_slice slice of the field
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               std::string component, amrex::MultiFab&& staging_area);
+                               const int which_slice, std::string component,
+                               amrex::MultiFab&& staging_area);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
      * This may include ghost cells.
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] which_slice slice of the field to interpolate
      * \param[in] component which can be Psi or rho etc.
      * \param[in] outer_edge start writing interpolated values at domain + outer_edge
      * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
      */
     void LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                          std::string component, const amrex::IntVect outer_edge,
-                          const amrex::IntVect inner_edge);
+                          const int which_slice, const std::string& component,
+                          const amrex::IntVect outer_edge, const amrex::IntVect inner_edge);
 
     /** \brief Interpolate the full field from the coarse grid (lev-1) to the fine grid (lev).
      *
      * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] component which can be jx_beam or jy_beam etc.
      * \param[in] which_slice slice of the field to interpolate
+     * \param[in] component which can be jx_beam or jy_beam etc.
      */
     void LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                  const int which_slice, const std::string component);
+                  const int which_slice, const std::string& component);
 
     /** \brief Compute ExmBy and EypBx on the slice container from J by solving a Poisson equation
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
@@ -220,20 +231,20 @@ public:
                          const int which_slice = WhichSlice::This);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
-     * \param[in,out] Bx_iter Bx field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] which_slice slice to put the result into
      */
-    void SolvePoissonBx (amrex::MultiFab& Bx_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev);
+    void SolvePoissonBx (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                         const int which_slice);
     /** \brief Compute By on the slice container from J by solving a Poisson equation
      *
-     * \param[in,out] By_iter By field during current iteration of the predictor-corrector loop
      * \param[in] geom Geometry
      * \param[in] lev current level
+     * \param[in] which_slice slice to put the result into
      */
-    void SolvePoissonBy (amrex::MultiFab& By_iter, amrex::Vector<amrex::Geometry> const& geom,
-                         const int lev);
+    void SolvePoissonBy (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                          const int which_slice);
     /** \brief Compute Bz on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
@@ -254,41 +265,25 @@ public:
      * of it and shifts the current to the previous iteration afterwards.
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
      *
-     * \param[in] B_iter B field during current iteration of the predictor-corrector loop
-     * \param[in,out] B_prev_iter B field during previous iteration of the pred.-cor. loop
-     * \param[in] field_comp field component to be mixed (usually Bx or By)
      * \param[in] relative_Bfield_error relative B field error used to determine the mixing factor
      * \param[in] relative_Bfield_error_prev_iter relative B field error of the previous iteration
      * \param[in] predcorr_B_mixing_factor mixing factor for B fields in predcorr loop
      * \param[in] lev current level
      */
-    void MixAndShiftBfields (const amrex::MultiFab& B_iter, amrex::MultiFab& B_prev_iter,
-                             const int field_comp, const amrex::Real relative_Bfield_error,
+    void MixAndShiftBfields (const amrex::Real relative_Bfield_error,
                              const amrex::Real relative_Bfield_error_prev_iter,
                              const amrex::Real predcorr_B_mixing_factor, const int lev);
 
     /** \brief Function to calculate the relative B field error
      * used in the predictor corrector loop
      *
-     * \param[in] Bx Bx field (input as MutliFab)
-     * \param[in] By By field (input as MutliFab)
-     * \param[in] Bx_iter Bx field from the previous iteration (input as MutliFab)
-     * \param[in] By_iter By field from the previous iteration (input as MutliFab)
-     * \param[in] Bx_comp component of the Bx field in the MultiFab
-     *            (usually either Bx or 0)
-     * \param[in] By_comp component of the By field in the MultiFab
-     *            (usually either By or 0)
-     * \param[in] Bx_iter_comp component of the Bx field of the previous iteration in the MultiFab
-     *            (usually either Bx or 0)
-     * \param[in] By_iter_comp component of the By field of the previous iteration in the MultiFab
-     *            (usually either By or 0)
+     * \param[in] which_slice slice of Bx and By field
+     * \param[in] which_slice_iter slice of Bx and By field from the previous iteration
      * \param[in] geom Geometry of the problem
+     * \param[in] current_N_level number of MR levels active on the current slice
      */
-    amrex::Real ComputeRelBFieldError (const amrex::MultiFab& Bx, const amrex::MultiFab& By,
-                                       const amrex::MultiFab& Bx_iter,
-                                       const amrex::MultiFab& By_iter, const int Bx_comp,
-                                       const int By_comp, const int Bx_iter_comp,
-                                       const int By_iter_comp, const amrex::Geometry& geom);
+    amrex::Real ComputeRelBFieldError (const int which_slice, const int which_slice_iter,
+        const amrex::Vector<amrex::Geometry>& geom, const int current_N_level);
 
     /** \brief set all selected fields to a value
      *

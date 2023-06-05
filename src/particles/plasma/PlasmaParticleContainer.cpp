@@ -185,15 +185,18 @@ PlasmaParticleContainer::UpdateDensityFunction ()
 
 void
 PlasmaParticleContainer::TagByLevel (const int current_N_level,
-                                     amrex::Vector<amrex::Geometry> const& geom3D)
+                                     amrex::Vector<amrex::Geometry> const& geom3D,
+                                     const bool to_prev)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::TagByLevel()");
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
         auto& soa = pti.GetStructOfArrays();
-        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
-        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
+        const amrex::Real * const AMREX_RESTRICT pos_x = to_prev ?
+            soa.GetRealData(PlasmaIdx::x_prev).data() : soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
+            soa.GetRealData(PlasmaIdx::y_prev).data() : soa.GetRealData(PlasmaIdx::y).data();
         int * const AMREX_RESTRICT cpup = soa.GetIntData(PlasmaIdx::cpu).data();
 
         const int lev1_idx = std::min(1, current_N_level-1);

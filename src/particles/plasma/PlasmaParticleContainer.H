@@ -116,8 +116,10 @@ public:
     /** \brief Store the finest level of every plasma particle in the cpu() attribute.
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] to_prev if particles should be tagged to x_prev and y_prev
      */
-    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D);
+    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
+                     const bool to_prev=false);
 
     /** returns u_mean of the plasma distribution */
     amrex::RealVect GetUMean () const {return m_u_mean;}

@@ -190,9 +190,10 @@ MultiPlasma::ReorderParticles (const int islice)
 }
 
 void
-MultiPlasma::TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D)
+MultiPlasma::TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
+                         const bool to_prev)
 {
     for (auto& plasma : m_all_plasmas) {
-        plasma.TagByLevel(current_N_level, geom3D);
+        plasma.TagByLevel(current_N_level, geom3D, to_prev);
     }
 }
