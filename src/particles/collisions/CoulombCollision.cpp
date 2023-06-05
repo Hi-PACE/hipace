@@ -45,6 +45,9 @@ CoulombCollision::doCoulombCollision (
 {
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
+
+    if (species1.TotalNumberOfParticles() == 0 || species2.TotalNumberOfParticles() == 0) return;
+
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
     bool normalized_units = Hipace::GetInstance().m_normalized_units;
@@ -64,10 +67,12 @@ CoulombCollision::doCoulombCollision (
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
             amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi_half_step).data();
             const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
+            const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
             amrex::Real m1 = species1.GetMass();
+            const bool can_ionize1 = species1.m_can_ionize;
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
@@ -100,8 +105,8 @@ CoulombCollision::doCoulombCollision (
                         cell_start1, cell_half1,
                         cell_half1, cell_stop1,
                         indices1, indices1,
-                        ux1, uy1, psi1, ux1, uy1, psi1, w1, w1,
-                        q1, q1, m1, m1, -1.0_rt, -1.0_rt,
+                        ux1, uy1, psi1, ux1, uy1, psi1, w1, w1, ion_lev1, ion_lev1,
+                        q1, q1, m1, m1, -1.0_rt, -1.0_rt, can_ionize1, can_ionize1,
                         dt, CoulombLog, dV, cst, normalized_units, background_density_SI, is_same_species, engine );
                 }
                 );
@@ -127,10 +132,12 @@ CoulombCollision::doCoulombCollision (
             amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
             amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi_half_step).data();
             const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
+            const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
             amrex::Real m1 = species1.GetMass();
+            const bool can_ionize1 = species1.m_can_ionize;
 
             // Get particles SoA data for species 2
             auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
@@ -139,10 +146,12 @@ CoulombCollision::doCoulombCollision (
             amrex::Real* const uy2 = soa2.GetRealData(PlasmaIdx::uy_half_step).data();
             amrex::Real* const psi2= soa2.GetRealData(PlasmaIdx::psi_half_step).data();
             const amrex::Real* const w2 = soa2.GetRealData(PlasmaIdx::w).data();
+            const int* const ion_lev2 = soa2.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
             PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
             amrex::Real q2 = species2.GetCharge();
             amrex::Real m2 = species2.GetMass();
+            const bool can_ionize2 = species2.m_can_ionize;
 
             // volume is used to calculate density, but weights already represent density in normalized units
             const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
@@ -186,8 +195,8 @@ CoulombCollision::doCoulombCollision (
                     ElasticCollisionPerez(
                         cell_start1, cell_stop1, cell_start2, cell_stop2,
                         indices1, indices2,
-                        ux1, uy1, psi1, ux2, uy2, psi2, w1, w2,
-                        q1, q2, m1, m2, -1.0_rt, -1.0_rt,
+                        ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev1, ion_lev2,
+                        q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
                         dt, CoulombLog, dV, cst, normalized_units, background_density_SI, is_same_species, engine );
                 }
                 );

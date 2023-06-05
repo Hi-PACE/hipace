@@ -88,6 +88,8 @@ void UpdateMomentumPerezElastic (
     T_R const vcy    = (p1y+p2y) / mass_g;
     T_R const vcz    = (p1z+p2z) / mass_g;
     T_R const vcms   = vcx*vcx + vcy*vcy + vcz*vcz;
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(vcms*inv_c2_SI < 1,
+                "Particles with velocities > c in collisional module detected");
     T_R const gc     = T_R(1.0) / std::sqrt( T_R(1.0) - vcms*inv_c2_SI );
 
     // Compute vc dot v1 and v2
