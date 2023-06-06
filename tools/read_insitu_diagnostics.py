@@ -119,7 +119,7 @@ def temperature_in_ev(all_data, per_slice=True, direction='all'):
         return 1/3.*(temperature_in_ev(all_data, per_slice=per_slice, direction='x') +
                      temperature_in_ev(all_data, per_slice=per_slice, direction='y') +
                      temperature_in_ev(all_data, per_slice=per_slice, direction='z'))
-    elif (direction=='x' or direction=='y' or direction=='z':
+    elif (direction=='x' or direction=='y' or direction=='z'):
         if per_slice:
             if all_data["is_normalized_units"][0]:
                 return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std(all_data, direction=direction)**2 * np.atleast_2d(all_data["mass"]).T
