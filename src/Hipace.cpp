@@ -575,7 +575,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         }
     } else {
         // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
-        PredictorCorrectorLoopToSolveBxBy(islice, islice_local, 0, step);
+        PredictorCorrectorLoopToSolveBxBy(islice, islice_local, current_N_level, step);
     }
 
     if (m_multi_beam.isSalameNow(step, islice_local)) {
