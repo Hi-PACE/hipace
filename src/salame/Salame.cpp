@@ -337,6 +337,9 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
 
     for (int lev=0; lev<current_N_level; ++lev) {
 
+        hipace->m_fields.LevelUpBoundary(hipace->m_3D_geom, lev, WhichSlice::Salame, "jz_beam",
+            hipace->m_fields.m_slices_nguards, -hipace->m_fields.m_slices_nguards);
+
         amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
         for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){

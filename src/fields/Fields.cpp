@@ -738,7 +738,6 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
     }
 }
 
-
 void
 Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                          const int which_slice, const std::string& component,
@@ -784,7 +783,6 @@ Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int l
     }
 }
 
-
 void
 Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                  const int which_slice, const std::string& component)
@@ -817,7 +815,6 @@ Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
             });
     }
 }
-
 
 void
 Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geom,
@@ -922,7 +919,6 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         }
     }
 }
-
 
 void
 Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
