@@ -227,14 +227,13 @@ private:
      *      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
      * sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2],
      *
-     *     13,     14,     15,   16,     17, 18
-     * [x*ux], [y*uy], [z*uz], [ga], [ga^2], np
+     *     13,     14,     15,   16,     17
+     * [x*ux], [y*uy], [z*uz], [ga], [ga^2]
      * where [] means average over all particles within slice.
      * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
      * Projected emittance: Same as above AFTER averaging all these quantities over slices.
      * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
      * Momentum spread: sqrt([uz^2]-[uz]^2), and same as above.
-     * Np: number of particles in this slice
      */
     amrex::Vector<amrex::Real> m_insitu_rdata;
     /** Per-slice int beam properties:
@@ -249,8 +248,9 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
-    /** How often the insitu beam diagnostics should be computed and written */
-    int m_insitu_period {-1};
+    /** How often the insitu beam diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
 };
 
 #endif

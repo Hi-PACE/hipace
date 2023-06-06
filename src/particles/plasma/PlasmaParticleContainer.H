@@ -199,7 +199,6 @@ private:
      * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
      * Projected emittance: Same as above AFTER averaging all these quantities over slices.
      * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
-     * Np: number of particles in this slice
      */
     amrex::Vector<amrex::Real> m_insitu_rdata;
     /** Per-slice int plasma properties:
@@ -214,7 +213,8 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/plasma_insitu";
-    /** How often the insitu plasma diagnostics should be computed and written */
+    /** How often the insitu plasma diagnostics should be computed and written
+     * Default is 0, meaning no output */
     int m_insitu_period {0};
 };
 

@@ -439,8 +439,7 @@ IonizationModule (const int lev,
 bool
 PlasmaParticleContainer::doInSitu (int step)
 {
-    if (m_insitu_period <= 0) return false;
-    return step % m_insitu_period == 0;
+    return (m_insitu_period > 0 && step % m_insitu_period == 0);
 }
 
 void
@@ -453,7 +452,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
     AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
-    PhysConst const phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
