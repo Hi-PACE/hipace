@@ -217,40 +217,26 @@ public:
      * ExmBy and EypBx are solved in the same function because both rely on Psi.
      *
      * \param[in] geom Geometry
-     * \param[in] lev current level
+     * \param[in] current_N_level number of MR levels active on the current slice
      */
-    void SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom,
-                                    const int lev);
+    void SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geom,
+                                        const int current_N_level);
     /** \brief Compute Ez on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
-     * \param[in] lev current level
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] which_slice defines if this or the salame slice is handled
      */
-    void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+    void SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int current_N_level,
                          const int which_slice = WhichSlice::This);
     /** \brief Compute Bx on the slice container from J by solving a Poisson equation
      *
      * \param[in] geom Geometry
-     * \param[in] lev current level
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] which_slice slice to put the result into
      */
-    void SolvePoissonBx (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int which_slice);
-    /** \brief Compute By on the slice container from J by solving a Poisson equation
-     *
-     * \param[in] geom Geometry
-     * \param[in] lev current level
-     * \param[in] which_slice slice to put the result into
-     */
-    void SolvePoissonBy (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                          const int which_slice);
-    /** \brief Compute Bz on the slice container from J by solving a Poisson equation
-     *
-     * \param[in] geom Geometry
-     * \param[in] lev current level
-     */
-    void SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev);
+    void SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom, const int current_N_level,
+                           const int which_slice);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices

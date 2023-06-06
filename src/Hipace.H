@@ -163,13 +163,6 @@ public:
     void ResetLaser ();
 
     /**
-       \brief Calls FillBoundary on charges and currents on WhichSlice::This
-     *
-     * \param[in] lev MR level
-     */
-    void FillBoundaryChargeCurrents (int lev);
-
-    /**
        \brief Returns true on the head rank, otherwise false.
      */
     static bool HeadRank ()

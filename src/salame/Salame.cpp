@@ -65,18 +65,9 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             // use an initial guess of zero for Bx and By in MG solver to reduce relative error
             hipace->m_fields.setVal(0., lev, WhichSlice::Salame,
                 "Ez", "jz_beam", "Sy", "Sx", "Bx", "By");
-
-            // interpolate jx and jy to lev from lev-1 in the domain edges and
-            // also inside ghost cells to account for x and y derivative
-            hipace->m_fields.LevelUpBoundary(hipace->m_3D_geom, lev, WhichSlice::Salame, "jx",
-                hipace->m_fields.m_slices_nguards, -hipace->m_fields.m_slices_nguards);
-            hipace->m_fields.LevelUpBoundary(hipace->m_3D_geom, lev, WhichSlice::Salame, "jy",
-                hipace->m_fields.m_slices_nguards, -hipace->m_fields.m_slices_nguards);
         }
 
-        for (int lev=0; lev<current_N_level; ++lev) {
-            hipace->m_fields.SolvePoissonEz(hipace->m_3D_geom, lev, WhichSlice::Salame);
-        }
+        hipace->m_fields.SolvePoissonEz(hipace->m_3D_geom, current_N_level, WhichSlice::Salame);
 
         for (int lev=0; lev<current_N_level; ++lev) {
             hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Ez_no_salame"},
@@ -129,18 +120,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             }
         }
 
-        for (int lev=0; lev<current_N_level; ++lev) {
-            // interpolate jx and jy to lev from lev-1 in the domain edges and
-            // also inside ghost cells to account for x and y derivative
-            hipace->m_fields.LevelUpBoundary(hipace->m_3D_geom, lev, WhichSlice::Salame, "jx",
-                hipace->m_fields.m_slices_nguards, -hipace->m_fields.m_slices_nguards);
-            hipace->m_fields.LevelUpBoundary(hipace->m_3D_geom, lev, WhichSlice::Salame, "jy",
-                hipace->m_fields.m_slices_nguards, -hipace->m_fields.m_slices_nguards);
-        }
-
-        for (int lev=0; lev<current_N_level; ++lev) {
-            hipace->m_fields.SolvePoissonEz(hipace->m_3D_geom, lev, WhichSlice::Salame);
-        }
+        hipace->m_fields.SolvePoissonEz(hipace->m_3D_geom, current_N_level, WhichSlice::Salame);
 
         // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
         // and update the beam with it

@@ -820,177 +820,215 @@ Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
 
 
 void
-Fields::SolvePoissonExmByAndEypBx (amrex::Vector<amrex::Geometry> const& geom, const int lev)
+Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geom,
+                                       const int current_N_level)
 {
     /* Solves Laplacian(Psi) =  1/epsilon0 * -(rho-Jz/c) and
      * calculates Ex-c By, Ey + c Bx from  grad(-Psi)
+     * Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
+     * Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy))
      */
-    HIPACE_PROFILE("Fields::SolveExmByAndEypBx()");
+    HIPACE_PROFILE("Fields::SolvePoissonPsiExmByEypBxEzBz()");
 
     PhysConst phys_const = get_phys_const();
 
-    // Left-Hand Side for Poisson equation is Psi in the slice MF
-    amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Psi"], 1);
-
-    // calculating the right-hand side 1/episilon0 * -(rho-Jz/c)
-    Multiply(m_source_nguard, getStagingArea(lev),
-        -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
-
-    SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev));
-    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
-
-    if (!m_extended_solve && lev==0) {
-        /* ---------- Transverse FillBoundary Psi ---------- */
-        lhs.FillBoundary(geom[lev].periodicity());
+    for (int lev=0; lev<current_N_level; ++lev) {
+        if (!m_extended_solve && lev==0) {
+            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jx", "jy", "rhomjz");
+        }
+        // interpolate rhomjz to lev from lev-1 in the domain edges
+        LevelUpBoundary(geom, lev, WhichSlice::This, "rhomjz",
+            m_poisson_nguards, -m_slices_nguards);
+        // interpolate jx and jy to lev from lev-1 in the domain edges and
+        // also inside ghost cells to account for x and y derivative
+        LevelUpBoundary(geom, lev, WhichSlice::This, "jx",
+            m_slices_nguards, -m_slices_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::This, "jy",
+            m_slices_nguards, -m_slices_nguards);
     }
 
-    // interpolate psi to lev from lev-1 in the ghost cells
-    LevelUpBoundary(geom, lev, WhichSlice::This, "Psi", m_slices_nguards, m_poisson_nguards);
+    for (int lev=0; lev<current_N_level; ++lev) {
+        // Left-Hand Side for Poisson equation
+        amrex::MultiFab lhs_Psi = getField(lev, WhichSlice::This, "Psi");
+        amrex::MultiFab lhs_Ez  = getField(lev, WhichSlice::This, "Ez");
+        amrex::MultiFab lhs_Bz  = getField(lev, WhichSlice::This, "Bz");
 
-    // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
-    amrex::MultiFab f_ExmBy = getField(lev, WhichSlice::This, "ExmBy");
-    amrex::MultiFab f_EypBx = getField(lev, WhichSlice::This, "EypBx");
-    amrex::MultiFab f_Psi = getField(lev, WhichSlice::This, "Psi");
+        // Psi: right-hand side 1/episilon0 * -(rho-Jz/c)
+        Multiply(m_source_nguard, getStagingArea(lev),
+            -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
+
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev));
+
+        m_poisson_solver[lev]->SolvePoissonEquation(lhs_Psi);
+
+        // Ez: right-hand side 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
+        LinCombination(m_source_nguard, getStagingArea(lev),
+            1._rt/(phys_const.ep0*phys_const.c),
+            derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+            1._rt/(phys_const.ep0*phys_const.c),
+            derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev));
+
+        m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
+
+        // Bz: right-hand side mu_0*(d_y(jx) - d_x(jy))
+        LinCombination(m_source_nguard, getStagingArea(lev),
+            phys_const.mu0,
+            derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+            -phys_const.mu0,
+            derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev));
+
+        m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
+    }
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+        if (!m_extended_solve && lev==0) {
+            // transverse FillBoundary Psi for x and y derivative
+            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "Psi");
+        }
+        // interpolate fields to lev from lev-1 in the ghost cells
+        LevelUpBoundary(geom, lev, WhichSlice::This, "Psi", m_slices_nguards, m_poisson_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::This, "Ez", m_slices_nguards, m_poisson_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::This, "Bz", m_slices_nguards, m_poisson_nguards);
+    }
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+        // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
+        amrex::MultiFab& slicemf = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(f_ExmBy, DfltMfiTlng); mfi.isValid(); ++mfi ){
-        const Array2<amrex::Real> array_ExmBy = f_ExmBy.array(mfi);
-        const Array2<amrex::Real> array_EypBx = f_EypBx.array(mfi);
-        const Array2<amrex::Real const> array_Psi = f_Psi.const_array(mfi);
-        // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
-        const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
-        const amrex::Real dx_inv = 0.5_rt*geom[lev].InvCellSize(Direction::x);
-        const amrex::Real dy_inv = 0.5_rt*geom[lev].InvCellSize(Direction::y);
+        for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
+            const Array3<amrex::Real> arr = slicemf.array(mfi);
+            const int Psi   = Comps[WhichSlice::This]["Psi"];
+            const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
+            const int EypBx = Comps[WhichSlice::This]["EypBx"];
+            // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
+            const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
+            const amrex::Real dx_inv = 0.5_rt*geom[lev].InvCellSize(Direction::x);
+            const amrex::Real dy_inv = 0.5_rt*geom[lev].InvCellSize(Direction::y);
 
-        amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int)
-            {
-                // derivatives in x and y direction, no guards needed
-                array_ExmBy(i,j) = - (array_Psi(i+1,j) - array_Psi(i-1,j))*dx_inv;
-                array_EypBx(i,j) = - (array_Psi(i,j+1) - array_Psi(i,j-1))*dy_inv;
-            });
+            amrex::ParallelFor(bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int)
+                {
+                    // derivatives in x and y direction, no guards needed
+                    arr(i,j,ExmBy) = - (arr(i+1,j,Psi) - arr(i-1,j,Psi))*dx_inv;
+                    arr(i,j,EypBx) = - (arr(i,j+1,Psi) - arr(i,j-1,Psi))*dy_inv;
+                });
+        }
     }
 }
 
 
 void
-Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                        const int which_slice)
+Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
+                        const int current_N_level, const int which_slice)
 {
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
 
     PhysConst phys_const = get_phys_const();
-    // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[which_slice]["Ez"], 1);
 
-    // Right-Hand Side for Poisson equation: compute 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
-    // from the slice MF, and store in the staging area of poisson_solver
-    LinCombination(m_source_nguard, getStagingArea(lev),
-        1._rt/(phys_const.ep0*phys_const.c),
-        derivative<Direction::x>{getField(lev, which_slice, "jx"), geom[lev]},
-        1._rt/(phys_const.ep0*phys_const.c),
-        derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
+    for (int lev=0; lev<current_N_level; ++lev) {
+        if (!m_extended_solve && lev==0) {
+            FillBoundary(geom[lev].periodicity(), lev, which_slice, "jx", "jy");
+        }
+        // interpolate jx and jy to lev from lev-1 in the domain edges and
+        // also inside ghost cells to account for x and y derivative
+        LevelUpBoundary(geom, lev, which_slice, "jx", m_slices_nguards, -m_slices_nguards);
+        LevelUpBoundary(geom, lev, which_slice, "jy", m_slices_nguards, -m_slices_nguards);
+    }
 
-    SetBoundaryCondition(geom, lev, which_slice, "Ez", getStagingArea(lev));
-    // Solve Poisson equation.
-    // The RHS is in the staging area of poisson_solver.
-    // The LHS will be returned as lhs.
-    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+    for (int lev=0; lev<current_N_level; ++lev) {
+        // Left-Hand Side for Poisson equation
+        amrex::MultiFab lhs_Ez = getField(lev, which_slice, "Ez");
 
-    // interpolate Ez to lev from lev-1 in the ghost cells
-    LevelUpBoundary(geom, lev, which_slice, "Ez", m_slices_nguards, m_poisson_nguards);
+        // Ez: right-hand side 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
+        LinCombination(m_source_nguard, getStagingArea(lev),
+            1._rt/(phys_const.ep0*phys_const.c),
+            derivative<Direction::x>{getField(lev, which_slice, "jx"), geom[lev]},
+            1._rt/(phys_const.ep0*phys_const.c),
+            derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
+
+        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev));
+
+        m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
+    }
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+        // interpolate Ez to lev from lev-1 in the ghost cells
+        LevelUpBoundary(geom, lev, which_slice, "Ez", m_slices_nguards, m_poisson_nguards);
+    }
 }
 
 void
-Fields::SolvePoissonBx (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                        const int which_slice)
+Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
+                          const int current_N_level, const int which_slice)
 {
-    /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) ) */
-    HIPACE_PROFILE("Fields::SolvePoissonBx()");
+    /* Solves Laplacian(Bx) = mu_0*(- d_y(jz) + d_z(jy) )
+     * Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) )
+     * only used with predictor corrector solver
+     */
+    HIPACE_PROFILE("Fields::SolvePoissonBxBy()");
 
     PhysConst phys_const = get_phys_const();
-    // Left-Hand Side for Poisson equation is Bx in the slice MF
-    amrex::MultiFab lhs = getField(lev, which_slice, "Bx");
 
-    // Right-Hand Side for Poisson equation: compute -mu_0*d_y(jz) from the slice MF,
-    // and store in the staging area of poisson_solver
-    // only used with predictor corrector solver
-    LinCombination(m_source_nguard, getStagingArea(lev),
-                   -phys_const.mu0,
-                   derivative<Direction::y>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
-                   phys_const.mu0,
-                   derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jy"),
-                   getField(lev, WhichSlice::Next, "jy"), geom[lev]});
+    for (int lev=0; lev<current_N_level; ++lev) {
+        if (!m_extended_solve && lev==0) {
+            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::Next, "jx", "jy");
+            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jz");
+        }
+        // interpolate jx and jy to lev from lev-1 in the domain edges
+        LevelUpBoundary(geom, lev, WhichSlice::Next, "jx", m_poisson_nguards, -m_slices_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::Next, "jy", m_poisson_nguards, -m_slices_nguards);
+        // interpolate jz to lev from lev-1 in the domain edges and
+        // also inside ghost cells to account for x and y derivative
+        LevelUpBoundary(geom, lev, WhichSlice::This, "jz", m_slices_nguards, -m_slices_nguards);
+        // jx and jy on WhichSlice::Previous was already leveled up on previous slice
+    }
 
-    SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev));
-    // Solve Poisson equation.
-    // The RHS is in the staging area of poisson_solver.
-    // The LHS will be returned as lhs.
-    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+    for (int lev=0; lev<current_N_level; ++lev) {
+        // Left-Hand Side for Poisson equation
+        amrex::MultiFab lhs_Bx = getField(lev, which_slice, "Bx");
+        amrex::MultiFab lhs_By = getField(lev, which_slice, "By");
 
-    LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, m_poisson_nguards);
-}
+        // Bx: right-hand side mu_0*(- d_y(jz) + d_z(jy) )
+        LinCombination(m_source_nguard, getStagingArea(lev),
+                    -phys_const.mu0,
+                    derivative<Direction::y>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
+                    phys_const.mu0,
+                    derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jy"),
+                    getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-void
-Fields::SolvePoissonBy (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                        const int which_slice)
-{
-    /* Solves Laplacian(By) = mu_0*(d_x(jz) - d_z(jx) ) */
-    HIPACE_PROFILE("Fields::SolvePoissonBy()");
+        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev));
 
-    PhysConst phys_const = get_phys_const();
-    // Left-Hand Side for Poisson equation is Bx in the slice MF
-    amrex::MultiFab lhs = getField(lev, which_slice, "By");
+        m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bx);
 
-    // Right-Hand Side for Poisson equation: compute mu_0*d_x(jz) from the slice MF,
-    // and store in the staging area of poisson_solver
-    // only used with predictor corrector solver
-    LinCombination(m_source_nguard, getStagingArea(lev),
+        // By: right-hand side mu_0*(d_x(jz) - d_z(jx) )
+        LinCombination(m_source_nguard, getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    -phys_const.mu0,
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-    SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev));
-    // Solve Poisson equation.
-    // The RHS is in the staging area of poisson_solver.
-    // The LHS will be returned as lhs.
-    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
+        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev));
 
-    LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, m_poisson_nguards);
-}
+        m_poisson_solver[lev]->SolvePoissonEquation(lhs_By);
+    }
 
-void
-Fields::SolvePoissonBz (amrex::Vector<amrex::Geometry> const& geom, const int lev)
-{
-    /* Solves Laplacian(Bz) = mu_0*(d_y(jx) - d_x(jy)) */
-    HIPACE_PROFILE("Fields::SolvePoissonBz()");
-
-    PhysConst phys_const = get_phys_const();
-    // Left-Hand Side for Poisson equation is Bz in the slice MF
-    amrex::MultiFab lhs(getSlices(lev), amrex::make_alias, Comps[WhichSlice::This]["Bz"], 1);
-
-    // Right-Hand Side for Poisson equation: compute mu_0*(d_y(jx) - d_x(jy))
-    // from the slice MF, and store in the staging area of m_poisson_solver
-    LinCombination(m_source_nguard, getStagingArea(lev),
-        phys_const.mu0,
-        derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
-        -phys_const.mu0,
-        derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
-
-
-    SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev));
-    // Solve Poisson equation.
-    // The RHS is in the staging area of m_poisson_solver.
-    // The LHS will be returned as lhs.
-    m_poisson_solver[lev]->SolvePoissonEquation(lhs);
-
-    // interpolate Bz to lev from lev-1 in the ghost cells
-    LevelUpBoundary(geom, lev, WhichSlice::This, "Bz", m_slices_nguards, m_poisson_nguards);
+    for (int lev=0; lev<current_N_level; ++lev) {
+        if (!m_extended_solve && lev==0) {
+            FillBoundary(geom[lev].periodicity(), lev, which_slice, "Bx", "By");
+        }
+        // interpolate Bx and By to lev from lev-1 in the ghost cells
+        LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, m_poisson_nguards);
+        LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, m_poisson_nguards);
+    }
 }
 
 void

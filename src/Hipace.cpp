@@ -545,17 +545,8 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         m_grid_current.DepositCurrentSlice(m_fields, m_3D_geom[lev], lev, islice);
     }
 
-    // fill/interpolate boundary between levels
-    for (int lev=0; lev<current_N_level; ++lev) {
-        FillBoundaryChargeCurrents(lev);
-    }
-
     // Psi Ez Bz solve
-    for (int lev=0; lev<current_N_level; ++lev) {
-        m_fields.SolvePoissonExmByAndEypBx(m_3D_geom, lev);
-        m_fields.SolvePoissonEz(m_3D_geom, lev);
-        m_fields.SolvePoissonBz(m_3D_geom, lev);
-    }
+    m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
 
     // Bx By solve
     if (m_explicit) {
@@ -646,34 +637,19 @@ Hipace::ResetLaser ()
 }
 
 void
-Hipace::FillBoundaryChargeCurrents (int lev) {
-    if (!m_fields.m_extended_solve && lev==0) {
-        if (m_explicit) {
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(),lev, WhichSlice::Next,
-                "jx_beam", "jy_beam");
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "jz_beam", "jx", "jy", "rhomjz");
-        } else {
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "jx", "jy", "jz", "rhomjz");
-        }
-    }
-    // interpolate rhomjz to lev from lev-1 in the domain edges
-    m_fields.LevelUpBoundary(m_3D_geom, lev, WhichSlice::This, "rhomjz",
-        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
-    // interpolate jx and jy to lev from lev-1 in the domain edges and
-    // also inside ghost cells to account for x and y derivative
-    m_fields.LevelUpBoundary(m_3D_geom, lev, WhichSlice::This, "jx",
-        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
-    m_fields.LevelUpBoundary(m_3D_geom, lev, WhichSlice::This, "jy",
-        m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
-}
-
-void
 Hipace::InitializeSxSyWithBeam (const int lev)
 {
     HIPACE_PROFILE("Hipace::InitializeSxSyWithBeam()");
     using namespace amrex::literals;
+
+    if (!m_fields.m_extended_solve && lev==0) {
+        if (m_explicit) {
+            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::Next,
+                "jx_beam", "jy_beam");
+            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
+                "jz_beam");
+        }
+    }
 
     amrex::MultiFab& slicemf = m_fields.getSlices(lev);
 
@@ -854,14 +830,10 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
 
     for (int lev=0; lev<current_N_level; ++lev) {
         if (!m_fields.m_extended_solve && lev==0) {
-            // exchange ExmBy EypBx Ez Bx By Bz
+            // exchange ExmBy EypBx Ez Bz
             m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
+                "ExmBy", "EypBx", "Ez", "Bz");
         }
-
-        m_fields.LevelUpBoundary(m_3D_geom, lev, WhichSlice::This, "jz",
-            m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
-
         m_fields.setVal(0., lev, WhichSlice::PCIter, "Bx", "By");
         m_fields.duplicate(lev, WhichSlice::PCPrevIter, {"Bx", "By"},
                                 WhichSlice::This,       {"Bx", "By"});
@@ -898,22 +870,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
                 m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
         }
 
-        for (int lev=0; lev<current_N_level; ++lev) {
-            if (!m_fields.m_extended_solve && lev==0) {
-                // need to exchange jx jy jx_beam jy_beam
-                m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::Next, "jx", "jy");
-            }
-            m_fields.LevelUpBoundary(m_3D_geom, lev, WhichSlice::Next, "jx",
-                m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
-            m_fields.LevelUpBoundary(m_3D_geom, lev, WhichSlice::Next, "jy",
-                m_fields.m_slices_nguards, -m_fields.m_slices_nguards);
-        }
-
-        for (int lev=0; lev<current_N_level; ++lev) {
-            // Calculate Bx and By
-            m_fields.SolvePoissonBx(m_3D_geom, lev, WhichSlice::PCIter);
-            m_fields.SolvePoissonBy(m_3D_geom, lev, WhichSlice::PCIter);
-        }
+        // Calculate Bx and By
+        m_fields.SolvePoissonBxBy(m_3D_geom, current_N_level, WhichSlice::PCIter);
 
         relative_Bfield_error = m_fields.ComputeRelBFieldError(
             WhichSlice::This, WhichSlice::PCIter, m_3D_geom, current_N_level);
@@ -929,11 +887,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
         for (int lev=0; lev<current_N_level; ++lev) {
             // resetting current in the next slice to clean temporarily used current
             m_fields.setVal(0., lev, WhichSlice::Next, "jx", "jy");
-            if (!m_fields.m_extended_solve && lev==0) {
-                // exchange Bx By
-                m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                    "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
-            }
         }
 
         if (m_N_level > 1) {
