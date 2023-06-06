@@ -160,9 +160,6 @@ Hipace::Hipace () :
 
     MakeGeometry();
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_N_level == 1 || !m_multi_beam.AnySpeciesSalame(),
-        "Cannot use SALAME algorithm with mesh refinement");
-
     m_use_laser = m_multi_laser.m_use_laser;
 }
 
