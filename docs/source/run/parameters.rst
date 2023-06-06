@@ -409,7 +409,7 @@ When both are specified, the per-species value is used.
 Binary collisions for plasma species
 ------------------------------------
 
-WARNING: this module is in development. Currently only supports electron-electron collisions.
+WARNING: this module is in development.
 
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
 
