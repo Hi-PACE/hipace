@@ -138,7 +138,7 @@ public:
     /** Returns name of the plasma */
     const std::string& GetName () const {return m_name;}
 
-    /** Compute reduced plasma diagnostics of current slice, store in member variable
+    /** Compute in-situ plasma diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
      */
     void InSituComputeDiags (int islice);
@@ -215,7 +215,7 @@ private:
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/plasma_insitu";
     /** How often the insitu plasma diagnostics should be computed and written */
-    int m_insitu_period {-1};
+    int m_insitu_period {0};
 };
 
 /** \brief Iterator over boxes in a particle container */

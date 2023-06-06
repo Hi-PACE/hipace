@@ -596,7 +596,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         {"[ux^2]"  , &m_insitu_rdata[6*nslices], nslices},
         {"[uy]"    , &m_insitu_rdata[7*nslices], nslices},
         {"[uy^2]"  , &m_insitu_rdata[8*nslices], nslices},
-        {"[uz]"  , &m_insitu_rdata[9*nslices], nslices},
+        {"[uz]"    , &m_insitu_rdata[9*nslices], nslices},
         {"[uz^2]"  , &m_insitu_rdata[10*nslices], nslices},
         {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
         {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
@@ -611,7 +611,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
             {"[ux^2]", &(m_insitu_sum_rdata[ 6] /= sum_w0)},
             {"[uy]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
             {"[uy^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
-            {"[uz]", &(m_insitu_sum_rdata[ 9] /= sum_w0)},
+            {"[uz]"  , &(m_insitu_sum_rdata[ 9] /= sum_w0)},
             {"[uz^2]", &(m_insitu_sum_rdata[10] /= sum_w0)},
             {"[ga]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
             {"[ga^2]", &(m_insitu_sum_rdata[12] /= sum_w0)}
