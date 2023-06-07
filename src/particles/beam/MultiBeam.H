@@ -65,7 +65,7 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-        const int islice);
+        const int islice, const amrex::RealVect& extEu,const amrex::RealVect& extBu,const amrex::RealVect& extEs,const amrex::RealVect& extBs);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation

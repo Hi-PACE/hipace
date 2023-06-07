@@ -550,7 +550,9 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         m_3D_geom[0], m_fields, islice_local);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level, islice_local);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level, islice_local,
+                                           m_external_E_uniform, m_external_B_uniform,
+                                           m_external_E_slope, m_external_B_slope);
 
     // collisions for all particles calculated on level 0
     m_multi_plasma.doCoulombCollision(0, m_slice_geom[0].Domain(), m_slice_geom[0]);
