@@ -97,7 +97,7 @@ def energy_spread_eV(all_data, per_slice=False):
         else:
             return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
 
-def temperature_in_ev(all_data, per_slice=True, direction='all'):
+def temperature_in_eV(all_data, per_slice=True, direction='all'):
     """
     calculated temperature in eV for in-situ diagnostics
 
@@ -116,9 +116,9 @@ def temperature_in_ev(all_data, per_slice=True, direction='all'):
     NumPy structured array over timesteps with the tempature in eV.
     """
     if direction=='all':
-        return 1/3.*(temperature_in_ev(all_data, per_slice=per_slice, direction='x') +
-                     temperature_in_ev(all_data, per_slice=per_slice, direction='y') +
-                     temperature_in_ev(all_data, per_slice=per_slice, direction='z'))
+        return 1/3.*(temperature_in_eV(all_data, per_slice=per_slice, direction='x') +
+                     temperature_in_eV(all_data, per_slice=per_slice, direction='y') +
+                     temperature_in_eV(all_data, per_slice=per_slice, direction='z'))
     elif (direction=='x' or direction=='y' or direction=='z'):
         if per_slice:
             if all_data["is_normalized_units"][0]:
