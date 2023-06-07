@@ -27,6 +27,7 @@
  * \param[in] nghost number of ghost particles, all at the end of the particle array.
  *            Use for depositing transverse currents in the Next slice when processing
  *            islice = 0.
+ * \param[in] only_highest if the particles deposit only on their highest MR level
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
@@ -34,7 +35,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
                      const bool do_beam_rhomjz_deposition,
-                     const int which_slice, int nghost);
+                     const int which_slice, int nghost, const bool only_highest=false);
 
 
 #endif //  BEAMDEPOSITCURRENT_H_

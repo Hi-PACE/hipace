@@ -36,11 +36,12 @@ public:
      * \param[in] do_beam_jz_deposition whether the beam deposits Jz
      * \param[in] do_beam_rhomjz_deposition whether the beam deposits rhomjz
      * \param[in] which_slice defines if this or the next slice is handled
+     * \param[in] only_highest if the particles deposit only on their highest MR level
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
         int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
-        const bool do_beam_rhomjz_deposition, const int which_slice);
+        const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest=false);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
      * \param[in] ibox box index

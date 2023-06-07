@@ -41,7 +41,7 @@ void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
     int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
-    const bool do_beam_rhomjz_deposition, const int which_slice)
+    const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest)
 
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -52,7 +52,7 @@ MultiBeam::DepositCurrentSlice (
                                   do_beam_jx_jy_deposition && !is_salame,
                                   do_beam_jz_deposition,
                                   do_beam_rhomjz_deposition && !is_salame,
-                                  which_slice, nghost);
+                                  which_slice, nghost, only_highest);
         }
     }
 }

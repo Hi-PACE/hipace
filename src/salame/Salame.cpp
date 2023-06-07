@@ -125,6 +125,13 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         // STEP 3: find ideal weighting factor of the SALAME beam using the computed Ez fields,
         // and update the beam with it
 
+        for (int lev=0; lev<current_N_level; ++lev) {
+            hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "jz_beam");
+            // deposit SALAME beam jz only on the highest level for SalameGetW
+            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
+                islice_local, false, true, false, WhichSlice::Salame, true);
+        }
+
         // W = (Ez_target - Ez_no_salame) / Ez_only_salame + 1
         // + 1 because Ez_no_salame already includes the SALAME beam with a weight of 1
         // W_total = W * sum(jz)
@@ -333,12 +340,8 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
     amrex::Real sum_Ez_no_salame = 0._rt;
     amrex::Real sum_Ez_only_salame = 0._rt;
     amrex::Real sum_jz = 0._rt;
-    amrex::Real sum_jz_lev0 = 0._rt;
 
     for (int lev=0; lev<current_N_level; ++lev) {
-
-        hipace->m_fields.LevelUpBoundary(hipace->m_3D_geom, lev, WhichSlice::Salame, "jz_beam",
-            hipace->m_fields.m_slices_nguards, -hipace->m_fields.m_slices_nguards);
 
         amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
@@ -374,9 +377,7 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
             sum_Ez_no_salame += amrex::get<1>(res);
             sum_Ez_only_salame += amrex::get<2>(res);
             sum_jz += amrex::get<3>(res);
-            if (lev==0) sum_jz_lev0 += amrex::get<3>(res);
         }
-
     }
 
     sum_Ez_target /= sum_jz;
@@ -392,7 +393,7 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
 
     // + 1 because sum_Ez_no_salame already includes the SALAME beam with a weight of 1
     amrex::Real W = (sum_Ez_target - sum_Ez_no_salame)/sum_Ez_only_salame + 1._rt;
-    return {W,  W * sum_jz_lev0};
+    return {W,  W * sum_jz};
 }
 
 void
