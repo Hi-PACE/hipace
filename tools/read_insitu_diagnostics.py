@@ -97,23 +97,104 @@ def energy_spread_eV(all_data, per_slice=False):
         else:
             return (constants.c**2 / constants.e) * gamma_spread(all_data["average"]) * all_data["mass"]
 
-def position_std_x(all_data):
-    return np.sqrt(np.maximum(all_data["[x^2]"] - all_data["[x]"]**2,0))
+def temperature_in_eV(all_data, per_slice=True, direction='all'):
+    """
+    calculated temperature in eV for in-situ diagnostics
 
-def position_std_y(all_data):
-    return np.sqrt(np.maximum(all_data["[y^2]"] - all_data["[y]"]**2,0))
+    Parameters
+    ----------
 
-def position_std_z(all_data):
-    return np.sqrt(np.maximum(all_data["[z^2]"] - all_data["[z]"]**2,0))
+    all_data: NumPy structured array over timesteps.
+        To be obtained via read_file() (see above)
+    per_slice: boolean, whether the temperature should be returned per slice or averaged over all slices
+    direction: direction along which the temperature should be calculated. Available options:
+               'x', 'y', 'z', 'all'
 
-def normalized_momentum_std_x(all_data):
-    return np.sqrt(np.maximum(all_data["[ux^2]"] - all_data["[ux]"]**2,0))
+    Returns
+    -------
 
-def normalized_momentum_std_y(all_data):
-    return np.sqrt(np.maximum(all_data["[uy^2]"] - all_data["[uy]"]**2,0))
+    NumPy structured array over timesteps with the tempature in eV.
+    """
+    if direction=='all':
+        return 1/3.*(temperature_in_eV(all_data, per_slice=per_slice, direction='x') +
+                     temperature_in_eV(all_data, per_slice=per_slice, direction='y') +
+                     temperature_in_eV(all_data, per_slice=per_slice, direction='z'))
+    elif (direction=='x' or direction=='y' or direction=='z'):
+        if per_slice:
+            if all_data["is_normalized_units"][0]:
+                return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std(all_data, direction=direction)**2 * np.atleast_2d(all_data["mass"]).T
+            else:
+                return (constants.c**2 / constants.e) * normalized_momentum_std(all_data, direction=direction)**2 * np.atleast_2d(all_data["mass"]).T
+        else:
+            if all_data["is_normalized_units"][0]:
+                return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std(all_data["average"], direction=direction)**2 * all_data["mass"]
+            else:
+                return (constants.c**2 / constants.e) * normalized_momentum_std(all_data["average"], direction=direction)**2 * all_data["mass"]
+    else:
+        print("Error, unknown direction, use 'x', 'y', 'z', or 'all'")
+        return
 
-def normalized_momentum_std_z(all_data):
-    return np.sqrt(np.maximum(all_data["[uz^2]"] - all_data["[uz]"]**2,0))
+def position_std(all_data, direction='x'):
+    """
+    calculated standard deviation of the position in x,y, or z for in-situ diagnostics
+
+    Parameters
+    ----------
+
+    all_data: NumPy structured array over timesteps.
+        To be obtained via read_file() (see above)
+    direction: direction along which the temperature should be calculated. Available options:
+               'x', 'y', 'z'
+
+    Returns
+    -------
+
+    NumPy structured array over timesteps.
+    """
+    if direction=='x':
+        var = "[x]"
+        var_sq = "[x^2]"
+    elif direction=='y':
+        var = "[y]"
+        var_sq = "[y^2]"
+    elif direction=='z':
+        var = "[z]"
+        var_sq = "[z^2]"
+    else:
+        print("Error, unknown direction, use 'x', 'y', or 'z'")
+        return
+    return np.sqrt(np.maximum(all_data[var_sq] - all_data[var]**2,0))
+
+def normalized_momentum_std(all_data, direction='x'):
+    """
+    calculated standard deviation of the momentum in x,y, or z for in-situ diagnostics
+
+    Parameters
+    ----------
+
+    all_data: NumPy structured array over timesteps.
+        To be obtained via read_file() (see above)
+    direction: direction along which the temperature should be calculated. Available options:
+               'x', 'y', 'z'
+
+    Returns
+    -------
+
+    NumPy structured array over timesteps.
+    """
+    if direction=='x':
+        var = "[ux]"
+        var_sq = "[ux^2]"
+    elif direction=='y':
+        var = "[uy]"
+        var_sq = "[uy^2]"
+    elif direction=='z':
+        var = "[uz]"
+        var_sq = "[uz^2]"
+    else:
+        print("Error, unknown direction, use 'x', 'y', or 'z'")
+        return
+    return np.sqrt(np.maximum(all_data[var_sq] - all_data[var]**2,0))
 
 def per_slice_charge(all_data):
     return np.atleast_2d(all_data["charge"]).T * all_data["sum(w)"] * np.atleast_2d(all_data["normalized_density_factor"]).T
