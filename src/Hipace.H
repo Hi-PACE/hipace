@@ -260,7 +260,7 @@ public:
     /** Uniform external electric field applied to beam particles.
         The components represent Ex-By, Ey+Bx and Ez respectively. */
     amrex::RealVect m_external_E_uniform {0., 0., 0.};
-    /** Uniform external electric field applied to beam particles.
+    /** Uniform external magnetic field applied to beam particles.
         The components represent Bx, By and Bz, respectively. */
     amrex::RealVect m_external_B_uniform {0., 0., 0.};
     /** Slope of a linear external electric field applied to beam particles.
