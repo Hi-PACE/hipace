@@ -69,7 +69,7 @@ public:
      * \param[in] extEs Slope of a linear external electric field applied to beam particles.
                   The components represent d(Ex-c*By)/dx, d(Ey+c*Bx)/dy and d(Ez)/dz respectively.
                   For the last component, z represents the zeta coordinate zeta = z - c*t.
-     * \param[in] extBsSlope of a linear external magnetic field applied to beam particles.
+     * \param[in] extBs Slope of a linear external magnetic field applied to beam particles.
                   The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
                   Note the order of derivatives for the transverse components!
                   For the last component, z represents the zeta coordinate zeta = z - c*t
