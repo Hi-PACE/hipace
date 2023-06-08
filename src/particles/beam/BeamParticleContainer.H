@@ -159,6 +159,7 @@ public:
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     int m_n_subcycles {10}; /**< Number of sub-cycles in the beam pusher */
+    bool m_do_radiation_reaction {false}; /**< whether to calculate radiation losses */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
     int m_num_particles_on_upstream_ranks {0};

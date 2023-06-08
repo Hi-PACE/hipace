@@ -28,6 +28,7 @@ AdvanceBeamParticlesSlice (
 
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
+    const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real dt = Hipace::m_dt / n_subcycles;
 
     const int psi_comp = Comps[WhichSlice::This]["Psi"];
@@ -98,7 +99,8 @@ AdvanceBeamParticlesSlice (
     int const num_particles = cell_stop-cell_start;
 
     const amrex::Real clight = phys_const.c;
-    const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
+    const amrex::Real inv_clight = phys_const.c;
+    const amrex::Real inv_c2 = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
     const amrex::RealVect external_E_uniform = extEu;
     const amrex::RealVect external_B_uniform = extBu;
@@ -124,9 +126,9 @@ AdvanceBeamParticlesSlice (
             for (int i = 0; i < n_subcycles; i++) {
 
                 const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
-                    + ux*ux*clightsq
-                    + uy*uy*clightsq
-                    + uz*uz*clightsq );
+                    + ux*ux*inv_c2
+                    + uy*uy*inv_c2
+                    + uz*uz*inv_c2 );
 
                 // first we do half a step in x,y
                 // This is not required in z, which is pushed in one step later
@@ -186,19 +188,66 @@ AdvanceBeamParticlesSlice (
                     + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
                 const amrex::ParticleReal gamma_intermediate_inv = 1._rt / std::sqrt( 1._rt
-                    + ux_intermediate*ux_intermediate*clightsq
-                    + uy_intermediate*uy_intermediate*clightsq
-                    + uz_intermediate*uz_intermediate*clightsq );
+                    + ux_intermediate*ux_intermediate*inv_c2
+                    + uy_intermediate*uy_intermediate*inv_c2
+                    + uz_intermediate*uz_intermediate*inv_c2 );
 
-                const amrex::ParticleReal uz_next = uz + dt * charge_mass_ratio
+                amrex::ParticleReal uz_next = uz + dt * charge_mass_ratio
                     * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
                     * gamma_intermediate_inv );
 
+                if (radiation_reaction) {
+
+                    const amrex::ParticleReal Exp = ExmByp + clight*Byp;
+                    const amrex::ParticleReal Eyp = EypBxp + clight*Bxp;
+
+                    const amrex::ParticleReal gamma_intermediate = std::sqrt( 1._rt
+                        + ux_intermediate*ux_intermediate*inv_c2
+                        + uy_intermediate*uy_intermediate*inv_c2
+                        + uz_intermediate*uz_intermediate*inv_c2 );
+                    // Estimation of the velocity at intermediate time
+                    const amrex::ParticleReal vx_n = ux_intermediate*gamma_intermediate_inv;
+                    const amrex::ParticleReal vy_n = uy_intermediate*gamma_intermediate_inv;
+                    const amrex::ParticleReal vz_n = uz_intermediate*gamma_intermediate_inv;
+                    const amrex::ParticleReal bx_n = vx_n*inv_clight;
+                    const amrex::ParticleReal by_n = vy_n*inv_clight;
+                    const amrex::ParticleReal bz_n = vz_n*inv_clight;
+
+                    // Lorentz force over charge
+                    const amrex::ParticleReal flx_q = (Exp + vz_n*Byp + vy_n*Bzp);
+                    const amrex::ParticleReal fly_q = (Eyp + vz_n*Bxp - vx_n*Bzp);
+                    const amrex::ParticleReal flz_q = (Ezp + vx_n*Byp - vy_n*Bxp);
+                    const amrex::ParticleReal fl_q2 = flx_q*flx_q + fly_q*fly_q + flz_q*flz_q;
+
+                    // Calculation of auxiliary quantities
+                    const amrex::ParticleReal bdotE = (bx_n*Exp + by_n*Eyp + bz_n*Ezp);
+                    const amrex::ParticleReal bdotE2 = bdotE*bdotE;
+                    const amrex::ParticleReal coeff = gamma_intermediate*gamma_intermediate*(fl_q2-bdotE2);
+
+                    // Radiation reaction constant
+                    const amrex::ParticleReal q_over_mc = charge_mass_ratio*inv_clight;
+                    const amrex::ParticleReal RRcoeff = (2.0_rt/3.0_rt)*PhysConstSI::r_e*q_over_mc*q_over_mc;
+
+                    //Compute the components of the RR force
+                    const amrex::ParticleReal frx =
+                        RRcoeff*(PhysConstSI::c*(fly_q*Bzp - flz_q*Byp) + bdotE*Exp - coeff*bx_n);
+                    const amrex::ParticleReal fry =
+                        RRcoeff*(PhysConstSI::c*(flz_q*Bxp - flx_q*Bzp) + bdotE*Eyp - coeff*by_n);
+                    const amrex::ParticleReal frz =
+                        RRcoeff*(PhysConstSI::c*(flx_q*Byp - fly_q*Bxp) + bdotE*Ezp - coeff*bz_n);
+
+                    //Update momentum using the RR force
+                    ux_next += frx*dt;
+                    uy_next += fry*dt;
+                    uz_next += frz*dt;
+                }
+
+
                 /* computing next gamma value */
                 const amrex::ParticleReal gamma_next_inv = 1._rt / std::sqrt( 1._rt
-                    + ux_next*ux_next*clightsq
-                    + uy_next*uy_next*clightsq
-                    + uz_next*uz_next*clightsq );
+                    + ux_next*ux_next*inv_c2
+                    + uy_next*uy_next*inv_c2
+                    + uz_next*uz_next*inv_c2 );
 
                 /*
                  * computing positions and setting momenta for the next timestep
