@@ -20,6 +20,7 @@ MultiPlasma::MultiPlasma ()
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
     queryWithParser(pp, "collisions", m_collision_names);
+    queryWithParser(pp, "background_density_SI", m_background_density_SI);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
@@ -33,10 +34,10 @@ MultiPlasma::MultiPlasma ()
      for (int i = 0; i < m_ncollisions; ++i) {
          m_all_collisions.emplace_back(CoulombCollision(m_names, m_collision_names[i]));
      }
-     if (m_ncollisions > 0) {
-         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-             Hipace::m_normalized_units == false,
-             "Coulomb collisions only work with normalized units for now");
+     if (Hipace::GetInstance().m_normalized_units && m_ncollisions > 0) {
+         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
+             "For collisions with normalized units, a background plasma density must "
+             "be specified via 'plasmas.background_density_SI'");
      }
 }
 
@@ -49,7 +50,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
-        plasma.InitData();
+        plasma.InitData(gm[0]);
 
         if(plasma.m_can_ionize) {
             PlasmaParticleContainer* plasma_product = nullptr;
@@ -59,8 +60,8 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                 }
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
-                "Must specify a valid product plasma for Ionization using ionization_product");
-            plasma.InitIonizationModule(gm[0], plasma_product); // geometry only for dz
+                "Must specify a valid product plasma for ionization using ionization_product");
+            plasma.InitIonizationModule(gm[0], plasma_product, m_background_density_SI); // geometry only for dz
         }
     }
     if (m_nplasmas > 0) m_all_bins.resize(m_nplasmas);
@@ -128,7 +129,7 @@ MultiPlasma::DoFieldIonization (
     const int lev, const amrex::Geometry& geom, const Fields& fields)
 {
     for (auto& plasma : m_all_plasmas) {
-        plasma.IonizationModule(lev, geom, fields);
+        plasma.IonizationModule(lev, geom, fields, m_background_density_SI);
     }
 }
 
@@ -175,8 +176,8 @@ MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
         // TODO: enable tiling
 
         CoulombCollision::doCoulombCollision(
-            lev, bx, geom, species1, species2,
-            m_all_collisions[i].m_isSameSpecies, m_all_collisions[i].m_CoulombLog);
+            lev, bx, geom, species1, species2, m_all_collisions[i].m_isSameSpecies,
+            m_all_collisions[i].m_CoulombLog, m_background_density_SI);
     }
 }
 
@@ -193,5 +194,25 @@ MultiPlasma::TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometr
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.TagByLevel(current_N_level, geom3D);
+    }
+}
+
+void
+MultiPlasma::InSituComputeDiags (int step, int islice)
+{
+    for (auto& plasma : m_all_plasmas) {
+        if (plasma.doInSitu(step)) {
+            plasma.InSituComputeDiags(islice);
+        }
+    }
+}
+
+void
+MultiPlasma::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
+{
+    for (auto& plasma : m_all_plasmas) {
+        if (plasma.doInSitu(step)) {
+            plasma.InSituWriteToFile(step, time, geom);
+        }
     }
 }

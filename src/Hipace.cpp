@@ -85,7 +85,7 @@ Hipace::Hipace () :
     queryWithParser(pp, "max_step", m_max_step);
 
     int seed;
-    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed);
+    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
     amrex::ParmParse pph("hipace");
 
@@ -469,6 +469,7 @@ Hipace::Evolve ()
         }
 
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
+        m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2 && !m_explicit) amrex::AllPrint() << "Rank " << rank <<
@@ -495,6 +496,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     amrex::ParallelContext::push(m_comm_xy);
 
     m_multi_beam.InSituComputeDiags(step, islice, islice_local);
+    m_multi_plasma.InSituComputeDiags(step, islice);
 
     // Get this laser slice from the 3D array
     m_multi_laser.Copy(islice, false);

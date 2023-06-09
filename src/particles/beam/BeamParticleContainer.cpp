@@ -133,6 +133,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         getWithParser(pp, "num_particles", m_num_particles);
         bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
         bool peak_density_is_specified = queryWithParser(pp, "density", m_density);
+        if (charge_is_specified) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( Hipace::m_normalized_units == 0,
+            "The option 'beam.total_charge' is only valid in SI units."
+            "Please either specify the peak density with '<beam name>.density', "
+            "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
             "Please specify exlusively either total_charge or density of the beam");
         queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
@@ -185,7 +189,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
-            "Must choose a different insitu file prefix compared to the full diagnostics");
+            "Must choose a different beam insitu file prefix compared to the full diagnostics");
 #endif
         // Allocate memory for in-situ diagnostics
         m_nslices = geom.Domain().length(2);
@@ -308,8 +312,7 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
 bool
 BeamParticleContainer::doInSitu (int step)
 {
-    if (m_insitu_period <= 0) return false;
-    return step % m_insitu_period == 0;
+    return (m_insitu_period > 0 && step % m_insitu_period == 0);
 }
 
 void
@@ -322,7 +325,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
-    PhysConst const phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
@@ -330,6 +333,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     auto const& soa = this->GetStructOfArrays();
     const auto pos_x = soa.GetRealData(BeamIdx::x).data() + box_offset;
     const auto pos_y = soa.GetRealData(BeamIdx::y).data() + box_offset;
+    const auto pos_z = soa.GetRealData(BeamIdx::z).data() + box_offset;
     const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
     const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
     const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
@@ -343,17 +347,23 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     int const num_particles = cell_stop-cell_start;
 
     // Tuple contains:
-    //      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12, 13
-    // sum(w), <x>, <x^2>, <y>, <y^2>, <ux>, <ux^2>, <uy>, <uy^2>, <x*ux>, <y*uy>, <ga>, <ga^2>, np
+    //      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
+    // sum(w), <x>, <x^2>, <y>, <y^2>, <z>, <z^2>, <ux>, <ux^2>, <uy>, <uy^2>, <uz>, <uz^2>,
+    //
+    //     13,     14,     15,   16,     17, 18
+    // <x*ux>, <y*uy>, <z*uz>, <ga>, <ga^2>, np
     amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                     amrex::ReduceOpSum> reduce_op;
     amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real,
                       amrex::Real, amrex::Real, amrex::Real, amrex::Real,
                       amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, int> reduce_data(reduce_op);
+                      amrex::Real, amrex::Real, amrex::Real, amrex::Real,
+                      amrex::Real, amrex::Real, int> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
     reduce_op.eval(
         num_particles, reduce_data,
@@ -361,8 +371,8 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
         {
             const int ip = indices[cell_start+i];
             if (idp[ip] < 0) {
-                return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
-                    0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
+                return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
+                    0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
             }
             const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq_inv
                                                        + uyp[ip]*uyp[ip]*clightsq_inv
@@ -372,12 +382,17 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
                     wp[ip]*pos_x[ip]*pos_x[ip],
                     wp[ip]*pos_y[ip],
                     wp[ip]*pos_y[ip]*pos_y[ip],
+                    wp[ip]*pos_z[ip],
+                    wp[ip]*pos_z[ip]*pos_z[ip],
                     wp[ip]*uxp[ip]*clight_inv,
                     wp[ip]*uxp[ip]*uxp[ip]*clightsq_inv,
                     wp[ip]*uyp[ip]*clight_inv,
                     wp[ip]*uyp[ip]*uyp[ip]*clightsq_inv,
+                    wp[ip]*uzp[ip]*clight_inv,
+                    wp[ip]*uzp[ip]*uzp[ip]*clightsq_inv,
                     wp[ip]*pos_x[ip]*uxp[ip]*clight_inv,
                     wp[ip]*pos_y[ip]*uyp[ip]*clight_inv,
+                    wp[ip]*pos_z[ip]*uzp[ip]*clight_inv,
                     wp[ip]*gamma,
                     wp[ip]*gamma*gamma,
                     1};
@@ -385,7 +400,7 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
 
     ReduceTuple a = reduce_data.value();
     const amrex::Real sum_w0 = amrex::get< 0>(a);
-    const amrex::Real sum_w_inv = sum_w0<std::numeric_limits<amrex::Real>::epsilon() ? 0._rt : 1._rt/sum_w0;
+    const amrex::Real sum_w_inv = sum_w0<=0._rt ? 0._rt : 1._rt/sum_w0;
 
     m_insitu_rdata[islice             ] = sum_w0;
     m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
@@ -400,7 +415,12 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
     m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
     m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
-    m_insitu_idata[islice             ] = amrex::get<13>(a);
+    m_insitu_rdata[islice+13*m_nslices] = amrex::get<13>(a)*sum_w_inv;
+    m_insitu_rdata[islice+14*m_nslices] = amrex::get<14>(a)*sum_w_inv;
+    m_insitu_rdata[islice+15*m_nslices] = amrex::get<15>(a)*sum_w_inv;
+    m_insitu_rdata[islice+16*m_nslices] = amrex::get<16>(a)*sum_w_inv;
+    m_insitu_rdata[islice+17*m_nslices] = amrex::get<17>(a)*sum_w_inv;
+    m_insitu_idata[islice             ] = amrex::get<18>(a);
 
     m_insitu_sum_rdata[ 0] += sum_w0;
     m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
@@ -415,7 +435,12 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     m_insitu_sum_rdata[10] += amrex::get<10>(a);
     m_insitu_sum_rdata[11] += amrex::get<11>(a);
     m_insitu_sum_rdata[12] += amrex::get<12>(a);
-    m_insitu_sum_idata[ 0] += amrex::get<13>(a);
+    m_insitu_sum_rdata[13] += amrex::get<13>(a);
+    m_insitu_sum_rdata[14] += amrex::get<14>(a);
+    m_insitu_sum_rdata[15] += amrex::get<15>(a);
+    m_insitu_sum_rdata[16] += amrex::get<16>(a);
+    m_insitu_sum_rdata[17] += amrex::get<17>(a);
+    m_insitu_sum_idata[ 0] += amrex::get<18>(a);
 }
 
 void
@@ -441,6 +466,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     const std::size_t nslices = static_cast<std::size_t>(m_nslices);
     const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
+    const int is_normalized_units = Hipace::m_normalized_units;
 
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
@@ -453,18 +479,24 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         {"z_lo"    , &geom.ProbLo()[2]},
         {"z_hi"    , &geom.ProbHi()[2]},
         {"normalized_density_factor", &normalized_density_factor},
+        {"is_normalized_units", &is_normalized_units},
         {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
         {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
         {"[y]"     , &m_insitu_rdata[3*nslices], nslices},
         {"[y^2]"   , &m_insitu_rdata[4*nslices], nslices},
-        {"[ux]"    , &m_insitu_rdata[5*nslices], nslices},
-        {"[ux^2]"  , &m_insitu_rdata[6*nslices], nslices},
-        {"[uy]"    , &m_insitu_rdata[7*nslices], nslices},
-        {"[uy^2]"  , &m_insitu_rdata[8*nslices], nslices},
-        {"[x*ux]"  , &m_insitu_rdata[9*nslices], nslices},
-        {"[y*uy]"  , &m_insitu_rdata[10*nslices], nslices},
-        {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
-        {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
+        {"[z]"     , &m_insitu_rdata[5*nslices], nslices},
+        {"[z^2]"   , &m_insitu_rdata[6*nslices], nslices},
+        {"[ux]"    , &m_insitu_rdata[7*nslices], nslices},
+        {"[ux^2]"  , &m_insitu_rdata[8*nslices], nslices},
+        {"[uy]"    , &m_insitu_rdata[9*nslices], nslices},
+        {"[uy^2]"  , &m_insitu_rdata[10*nslices], nslices},
+        {"[uz]"    , &m_insitu_rdata[11*nslices], nslices},
+        {"[uz^2]"  , &m_insitu_rdata[12*nslices], nslices},
+        {"[x*ux]"  , &m_insitu_rdata[13*nslices], nslices},
+        {"[y*uy]"  , &m_insitu_rdata[14*nslices], nslices},
+        {"[z*uz]"  , &m_insitu_rdata[15*nslices], nslices},
+        {"[ga]"    , &m_insitu_rdata[16*nslices], nslices},
+        {"[ga^2]"  , &m_insitu_rdata[17*nslices], nslices},
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
@@ -472,14 +504,19 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
             {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
             {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
             {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
-            {"[ux]"  , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
-            {"[ux^2]", &(m_insitu_sum_rdata[ 6] /= sum_w0)},
-            {"[uy]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
-            {"[uy^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
-            {"[x*ux]", &(m_insitu_sum_rdata[ 9] /= sum_w0)},
-            {"[y*uy]", &(m_insitu_sum_rdata[10] /= sum_w0)},
-            {"[ga]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
-            {"[ga^2]", &(m_insitu_sum_rdata[12] /= sum_w0)}
+            {"[z]"   , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
+            {"[z^2]" , &(m_insitu_sum_rdata[ 6] /= sum_w0)},
+            {"[ux]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
+            {"[ux^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
+            {"[uy]"  , &(m_insitu_sum_rdata[ 9] /= sum_w0)},
+            {"[uy^2]", &(m_insitu_sum_rdata[10] /= sum_w0)},
+            {"[uz]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
+            {"[uz^2]", &(m_insitu_sum_rdata[12] /= sum_w0)},
+            {"[x*ux]", &(m_insitu_sum_rdata[13] /= sum_w0)},
+            {"[y*uy]", &(m_insitu_sum_rdata[14] /= sum_w0)},
+            {"[z*uz]", &(m_insitu_sum_rdata[15] /= sum_w0)},
+            {"[ga]"  , &(m_insitu_sum_rdata[16] /= sum_w0)},
+            {"[ga^2]", &(m_insitu_sum_rdata[17] /= sum_w0)}
         }},
         {"total"   , {
             {"sum(w)", &m_insitu_sum_rdata[0]},
