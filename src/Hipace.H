@@ -258,7 +258,7 @@ public:
     /** xy slice BoxArray, vector over MR levels. Contains only one box */
     amrex::Vector<amrex::BoxArray> m_slice_ba;
     /** Uniform external electric field applied to beam particles.
-        The components represent Ex-By, Ey+Bx and Ez respectively. */
+        The components represent Ex-c*By, Ey+c*Bx and Ez respectively. */
     amrex::RealVect m_external_E_uniform {0., 0., 0.};
     /** Uniform external magnetic field applied to beam particles.
         The components represent Bx, By and Bz, respectively. */

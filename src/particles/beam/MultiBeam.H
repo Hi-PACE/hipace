@@ -63,7 +63,7 @@ public:
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] islice slice index in which the current is stored
      * \param[in] extEu uniform external electric field applied to beam particles.
-                  The components represent Ex-By, Ey+Bx and Ez respectively.
+                  The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
      * \param[in] extBu Uniform external magnetic field applied to beam particles.
                   The components represent Bx, By and Bz, respectively.
      * \param[in] extEs Slope of a linear external electric field applied to beam particles.

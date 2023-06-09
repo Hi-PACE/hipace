@@ -19,7 +19,7 @@
  * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] islice_local local index of the slice on which the beam particles are pushed
  * \param[in] extEu uniform external electric field applied to beam particles.
-              The components represent Ex-By, Ey+Bx and Ez respectively.
+              The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
  * \param[in] extBu Uniform external magnetic field applied to beam particles.
               The components represent Bx, By and Bz, respectively.
  * \param[in] extEs Slope of a linear external electric field applied to beam particles.

@@ -526,7 +526,7 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``hipace.external_E_uniform`` (3 `float`) optional (default `0. 0. 0.`)
     Uniform external electric field applied to beam particles.
-    The components represent Ex-By, Ey+Bx and Ez respectively.
+    The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
 
 * ``hipace.external_B_uniform`` (3 `float`) optional (default `0. 0. 0.`)
     Uniform external magnetic field applied to beam particles.
