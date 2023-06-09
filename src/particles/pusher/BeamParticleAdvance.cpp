@@ -99,7 +99,7 @@ AdvanceBeamParticlesSlice (
     int const num_particles = cell_stop-cell_start;
 
     const amrex::Real clight = phys_const.c;
-    const amrex::Real inv_clight = phys_const.c;
+    const amrex::Real inv_clight = 1.0_rt/phys_const.c;
     const amrex::Real inv_c2 = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
     const amrex::RealVect external_E_uniform = extEu;
@@ -199,7 +199,7 @@ AdvanceBeamParticlesSlice (
                 if (radiation_reaction) {
 
                     const amrex::ParticleReal Exp = ExmByp + clight*Byp;
-                    const amrex::ParticleReal Eyp = EypBxp + clight*Bxp;
+                    const amrex::ParticleReal Eyp = EypBxp - clight*Bxp;
 
                     const amrex::ParticleReal gamma_intermediate = std::sqrt( 1._rt
                         + ux_intermediate*ux_intermediate*inv_c2
@@ -214,7 +214,7 @@ AdvanceBeamParticlesSlice (
                     const amrex::ParticleReal bz_n = vz_n*inv_clight;
 
                     // Lorentz force over charge
-                    const amrex::ParticleReal flx_q = (Exp + vz_n*Byp + vy_n*Bzp);
+                    const amrex::ParticleReal flx_q = (Exp - vz_n*Byp + vy_n*Bzp);
                     const amrex::ParticleReal fly_q = (Eyp + vz_n*Bxp - vx_n*Bzp);
                     const amrex::ParticleReal flz_q = (Ezp + vx_n*Byp - vy_n*Bxp);
                     const amrex::ParticleReal fl_q2 = flx_q*flx_q + fly_q*fly_q + flz_q*flz_q;
