@@ -139,6 +139,9 @@ void ElasticCollisionPerez (
         int i1 = I1s; int i2 = I2s;
         for (int k = 0; k < amrex::max(NI1,NI2); ++k)
         {
+            // adjust the charge to the ionization level of the ion. This assumes that the impact
+            // parameter is much larger than the atomic radius, as the bound electrons are not
+            // treated separately
             if (can_ionize1) q1 *= ion_lev1[I1[i1]];
             if (can_ionize2) q2 *= ion_lev2[I2[i2]];
             // particle's Lorentz factor

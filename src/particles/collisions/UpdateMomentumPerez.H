@@ -88,8 +88,6 @@ void UpdateMomentumPerezElastic (
     T_R const vcy    = (p1y+p2y) / mass_g;
     T_R const vcz    = (p1z+p2z) / mass_g;
     T_R const vcms   = vcx*vcx + vcy*vcy + vcz*vcz;
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(vcms*inv_c2_SI < 1,
-                "Particles with velocities > c in collisional module detected");
     T_R const gc     = T_R(1.0) / std::sqrt( T_R(1.0) - vcms*inv_c2_SI );
 
     // Compute vc dot v1 and v2
@@ -304,8 +302,10 @@ void UpdateMomentumPerezElastic (
         }
         const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
         psi2 = ga - u2z*inv_c;
-        AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
-        AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
+        AMREX_ASSERT_WITH_MESSAGE(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z),
+        "NaNs detected in the updated momentum of the collision module. "
+        "Most likely due to a negative root in the calculation of gc");
+        AMREX_ASSERT_WITH_MESSAGE(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
 }
 
