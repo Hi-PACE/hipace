@@ -29,12 +29,16 @@
  * @param[in,out] psi2 pseudo-potential array of species 2.
  * @param[in] w1 array of weights.
  * @param[in] w2 array of weights.
+ * @param[in] ion_lev1 current ionization level of species 1
+ * @param[in] ion_lev2 current ionization level of species 2
  * @param[in] q1 Physical charge of species 1.
  * @param[in] q2 Physical charge of species 2.
  * @param[in] m1 Physical mass of species 1.
  * @param[in] m2 Physical mass of species 2.
  * @param[in] T1 temperature of species 1 (Joule). If <0, measured per-cell.
  * @param[in] T2 temperature of species 2 (Joule). If <0, measured per-cell.
+ * @param[in] can_ionize1 whether species 1 can be ionized
+ * @param[in] can_ionize2 whether species 2 can be ionized
  * @param[in] dt is the time step length between two collision calls.
  * @param[in] L Coulomb log. If <0, measured per cell.
  * @param[in] dV Volume of the corresponding cell.
@@ -54,9 +58,11 @@ void ElasticCollisionPerez (
     T_R *u1x, T_R *u1y, T_R *psi1,
     T_R *u2x, T_R *u2y, T_R *psi2,
     T_R const *w1, T_R const *w2,
-    T_R const  q1, T_R const  q2,
+    int const *ion_lev1, int const *ion_lev2,
+    T_R q1, T_R q2,
     T_R const  m1, T_R const  m2,
     T_R const  T1, T_R const  T2,
+    const bool can_ionize1, const bool can_ionize2,
     T_R const  dt, T_R const   L, T_R const dV, const PhysConst& cst, const bool normalized_units,
     const amrex::Real background_density_SI, const bool is_same_species,
     amrex::RandomEngine const& engine)
@@ -133,6 +139,11 @@ void ElasticCollisionPerez (
         int i1 = I1s; int i2 = I2s;
         for (int k = 0; k < amrex::max(NI1,NI2); ++k)
         {
+            // adjust the charge to the ionization level of the ion. This assumes that the impact
+            // parameter is much larger than the atomic radius, as the bound electrons are not
+            // treated separately
+            if (can_ionize1) q1 *= ion_lev1[I1[i1]];
+            if (can_ionize2) q2 *= ion_lev2[I2[i2]];
             // particle's Lorentz factor
             const amrex::Real g1 = (
                 1.0_rt +
