@@ -77,7 +77,8 @@ MultiBeam::sortParticlesByBox (const amrex::BoxArray a_ba, const amrex::Geometry
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-    const int islice, const amrex::RealVect& extEu,const amrex::RealVect& extBu,const amrex::RealVect& extEs,const amrex::RealVect& extBs)
+    const int islice, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
+    const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     for (int i=0; i<m_nbeams; i++) {
         ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level, islice, extEu, extBu, extEs, extBs);
