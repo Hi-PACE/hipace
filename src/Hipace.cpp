@@ -124,13 +124,16 @@ Hipace::Hipace () :
     DeprecatedInput("hipace", "external_ExmBy_slope", "external_E_slope");
     DeprecatedInput("hipace", "external_Ez_slope", "external_E_slope");
     DeprecatedInput("hipace", "external_Ez_uniform", "external_E_uniform");
-    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
+    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array {0., 0., 0.};
     queryWithParser(pph, "external_E_uniform", loc_array);
     for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_E_uniform[idim] = loc_array[idim];
+    loc_array = {0., 0., 0.};
     queryWithParser(pph, "external_B_uniform", loc_array);
     for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_B_uniform[idim] = loc_array[idim];
+    loc_array = {0., 0., 0.};
     queryWithParser(pph, "external_E_slope", loc_array);
     for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_E_slope[idim] = loc_array[idim];
+    loc_array = {0., 0., 0.};
     queryWithParser(pph, "external_B_slope", loc_array);
     for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_external_B_slope[idim] = loc_array[idim];
 
