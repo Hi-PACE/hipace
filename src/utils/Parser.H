@@ -94,6 +94,17 @@ namespace Parser
         replaceArrWithParser<double>(pp_geom, "prob_hi");
     }
 
+    /** \brief set default ParmParse parameters before AMReX is initialized
+     */
+    inline void
+    setDefaultParams () {
+        amrex::ParmParse pp_amrex("amrex");
+        if (!pp_amrex.contains("the_arena_is_managed")) {
+            // set default to false
+            pp_amrex.add("the_arena_is_managed", 0);
+        }
+    }
+
     /** \brief return valid int, asserts if inf or NaN
      *
      * \param[in] x value to cast

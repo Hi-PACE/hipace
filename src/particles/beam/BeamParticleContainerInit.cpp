@@ -431,6 +431,8 @@ InitBeamFromFile (const std::string input_file,
         physical_time = series.iterations[num_iteration].time<input_type>();
     }
 
+    if (!Hipace::HeadRank()) return physical_time;
+
     // Initialize variables to translate between names from the file and names in Hipace
     std::string name_particle ="";
     std::string name_r ="", name_rx ="", name_ry ="", name_rz ="";
@@ -611,14 +613,37 @@ InitBeamFromFile (const std::string input_file,
 
     auto electrons = series.iterations[num_iteration].particles[name_particle];
 
-    // copy Data
-    const std::shared_ptr<input_type> r_x_data = electrons[name_r][name_rx].loadChunk<input_type>();
-    const std::shared_ptr<input_type> r_y_data = electrons[name_r][name_ry].loadChunk<input_type>();
-    const std::shared_ptr<input_type> r_z_data = electrons[name_r][name_rz].loadChunk<input_type>();
-    const std::shared_ptr<input_type> u_x_data = electrons[name_u][name_ux].loadChunk<input_type>();
-    const std::shared_ptr<input_type> u_y_data = electrons[name_u][name_uy].loadChunk<input_type>();
-    const std::shared_ptr<input_type> u_z_data = electrons[name_u][name_uz].loadChunk<input_type>();
-    const std::shared_ptr<input_type> w_w_data = electrons[name_w][name_ww].loadChunk<input_type>();
+    const auto num_to_add = electrons[name_r][name_rx].getExtent()[0];
+
+    if(num_to_add >= 2147483647) {
+        amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
+    }
+
+    auto del = [](input_type *p){ amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p)); };
+
+    // copy Data to pinned memory
+    std::shared_ptr<input_type> r_x_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+    std::shared_ptr<input_type> r_y_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+    std::shared_ptr<input_type> r_z_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+    std::shared_ptr<input_type> u_x_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+    std::shared_ptr<input_type> u_y_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+    std::shared_ptr<input_type> u_z_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+    std::shared_ptr<input_type> w_w_data{ reinterpret_cast<input_type*>(
+        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+
+    electrons[name_r][name_rx].loadChunk<input_type>(r_x_data, {0u}, {num_to_add});
+    electrons[name_r][name_ry].loadChunk<input_type>(r_y_data, {0u}, {num_to_add});
+    electrons[name_r][name_rz].loadChunk<input_type>(r_z_data, {0u}, {num_to_add});
+    electrons[name_u][name_ux].loadChunk<input_type>(u_x_data, {0u}, {num_to_add});
+    electrons[name_u][name_uy].loadChunk<input_type>(u_y_data, {0u}, {num_to_add});
+    electrons[name_u][name_uz].loadChunk<input_type>(u_z_data, {0u}, {num_to_add});
+    electrons[name_w][name_ww].loadChunk<input_type>(w_w_data, {0u}, {num_to_add});
 
     series.flush();
 
@@ -669,41 +694,40 @@ InitBeamFromFile (const std::string input_file,
         unit_ww = electrons[name_w][name_ww].unitSI() / si_to_norm_weight;
     }
 
-    series.flush();
-
-    if(electrons[name_r][name_rx].getExtent()[0] >= 2147483647) {
-        amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
-    }
-
     // input data using AddOneBeamParticle function, make necessary variables and arrays
-    const int num_to_add = electrons[name_r][name_rx].getExtent()[0];
+    auto& particle_tile = *this;
+    auto old_size = particle_tile.size();
+    auto new_size = old_size + num_to_add;
+    particle_tile.resize(new_size);
+    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+        particle_tile.GetStructOfArrays().realarray();
+    amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+        particle_tile.GetStructOfArrays().intarray();
+    const int pid = ParticleType::NextID();
+    ParticleType::NextID(pid + num_to_add);
 
-    if (Hipace::HeadRank()) {
+    const input_type * const r_x_ptr = r_x_data.get();
+    const input_type * const r_y_ptr = r_y_data.get();
+    const input_type * const r_z_ptr = r_z_data.get();
+    const input_type * const u_x_ptr = u_x_data.get();
+    const input_type * const u_y_ptr = u_y_data.get();
+    const input_type * const u_z_ptr = u_z_data.get();
+    const input_type * const w_w_ptr = w_w_data.get();
 
-        auto& particle_tile = *this;
-        auto old_size = particle_tile.size();
-        auto new_size = old_size + num_to_add;
-        particle_tile.resize(new_size);
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
-            particle_tile.GetStructOfArrays().realarray();
-        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
-            particle_tile.GetStructOfArrays().intarray();
-        const int pid = ParticleType::NextID();
-        ParticleType::NextID(pid + num_to_add);
-
-        for( int i=0; i < num_to_add; ++i)
-        {
+    amrex::ParallelFor(int(num_to_add),
+        [=] AMREX_GPU_DEVICE (const int i) {
             AddOneBeamParticle(rarrdata, iarrdata,
-                               (amrex::Real)(r_x_data.get()[i] * unit_rx),
-                               (amrex::Real)(r_y_data.get()[i] * unit_ry),
-                               (amrex::Real)(r_z_data.get()[i] * unit_rz),
-                               (amrex::Real)(u_x_data.get()[i] * unit_ux), // = gamma * beta
-                               (amrex::Real)(u_y_data.get()[i] * unit_uy),
-                               (amrex::Real)(u_z_data.get()[i] * unit_uz),
-                               (amrex::Real)(w_w_data.get()[i] * unit_ww),
-                               pid, i, phys_const.c);
-        }
-    }
+                static_cast<amrex::Real>(r_x_ptr[i] * unit_rx),
+                static_cast<amrex::Real>(r_y_ptr[i] * unit_ry),
+                static_cast<amrex::Real>(r_z_ptr[i] * unit_rz),
+                static_cast<amrex::Real>(u_x_ptr[i] * unit_ux), // = gamma * beta
+                static_cast<amrex::Real>(u_y_ptr[i] * unit_uy),
+                static_cast<amrex::Real>(u_z_ptr[i] * unit_uz),
+                static_cast<amrex::Real>(w_w_ptr[i] * unit_ww),
+                pid, i, phys_const.c);
+        });
+
+    amrex::Gpu::streamSynchronize();
 
     return physical_time;
 }
