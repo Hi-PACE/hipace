@@ -176,9 +176,9 @@ AdvanceBeamParticlesSlice (
                     external_E_uniform, external_B_uniform, external_E_slope, external_B_slope);
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
-                const amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
+                amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
                     * ( ExmByp + ( clight - uz * gammap_inv ) * Byp + uy*gammap_inv*Bzp);
-                const amrex::ParticleReal uy_next = uy + dt * charge_mass_ratio
+                amrex::ParticleReal uy_next = uy + dt * charge_mass_ratio
                     * ( EypBxp + ( uz * gammap_inv - clight ) * Bxp - ux*gammap_inv*Bzp);
 
                 // Now computing new longitudinal momentum
