@@ -305,7 +305,7 @@ void UpdateMomentumPerezElastic (
         AMREX_ASSERT_WITH_MESSAGE(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z),
         "NaNs detected in the updated momentum of the collision module. "
         "Most likely due to a negative root in the calculation of gc");
-        AMREX_ASSERT_WITH_MESSAGE(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
+        AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
 }
 
