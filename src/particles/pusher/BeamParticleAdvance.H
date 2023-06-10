@@ -31,8 +31,9 @@
               For the last component, z represents the zeta coordinate zeta = z - c*t
  */
 void
-AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
-                           amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-                           const int islice_local, const amrex::RealVect& extEu,const amrex::RealVect& extBu,const amrex::RealVect& extEs,const amrex::RealVect& extBs);
+AdvanceBeamParticlesSlice (
+    BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
+    int const current_N_level, const int islice_local, const amrex::RealVect& extEu,
+    const amrex::RealVect& extBu, const amrex::RealVect& extEs, const amrex::RealVect& extBs);
 
 #endif //  BEAMPARTICLEADVANCE_H_

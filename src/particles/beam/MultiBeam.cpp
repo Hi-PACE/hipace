@@ -81,7 +81,8 @@ MultiBeam::AdvanceBeamParticlesSlice (
     const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level, islice, extEu, extBu, extEs, extBs);
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level,
+                                    islice, extEu, extBu, extEs, extBs);
     }
 }
 
