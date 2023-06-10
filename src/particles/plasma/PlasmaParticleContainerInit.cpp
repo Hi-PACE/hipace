@@ -316,18 +316,16 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
-                ParticleType& p = pstruct[pidx];
-
                 int icount = 0;
                 for (int idim=0; idim<3; idim++) {
                     if (!reproducible_temperature_dim[idim]) continue;
                     for (int dir=-1; dir<=1; dir+=2){
                         const amrex::Long midx = icount*mirror_offset + pidx;
-                        pstruct[midx] = p;
-                        pstruct[midx].id() = pid + int(midx);
-                        pstruct[midx].pos(0) = p.pos(0);
-                        pstruct[midx].pos(1) = p.pos(1);
+                        arrdata[PlasmaIdx::x][midx] = arrdata[PlasmaIdx::x][pidx];
+                        arrdata[PlasmaIdx::y][midx] = arrdata[PlasmaIdx::y][pidx];
                         arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
+                        int_arrdata[PlasmaIdx::id][midx] = pid + int(midx);
+                        int_arrdata[PlasmaIdx::cpu][midx] = 0; // level 0
 
                         const amrex::Real ux = reproducible_temperature_dim[0] ?
                             a_u_std[0]*dir : 0._rt;
@@ -339,8 +337,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         arrdata[PlasmaIdx::uy][midx] = uy * c_light;
                         arrdata[PlasmaIdx::psi][midx] =
                             std::sqrt(1._rt + ux*ux + uy*uy + uz*uz) - uz*dir;
-                        arrdata[PlasmaIdx::x_prev][midx] = p.pos(0);
-                        arrdata[PlasmaIdx::y_prev][midx] = p.pos(1);
+                        arrdata[PlasmaIdx::x_prev][midx] = arrdata[PlasmaIdx::x][pidx];
+                        arrdata[PlasmaIdx::y_prev][midx] = arrdata[PlasmaIdx::y][pidx];
                         arrdata[PlasmaIdx::ux_half_step][midx] = ux;
                         arrdata[PlasmaIdx::uy_half_step][midx] = uz;
                         arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi_half_step][pidx];
