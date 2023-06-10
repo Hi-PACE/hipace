@@ -21,21 +21,34 @@
 struct BeamIdx
 {
     enum {
-        w = 0,      // weight
+        x=0, y, z,  // position
+        w,          // weight
         ux, uy, uz, // momentum
-        nattribs
+        real_nattribs
+    };
+    enum {
+        id=0, cpu,
+        int_nattribs
     };
 };
 
+using BeamTile = amrex::ParticleTile<
+        amrex::SoAParticle<
+            BeamIdx::real_nattribs,
+            BeamIdx::int_nattribs
+        >,
+        BeamIdx::real_nattribs,
+        BeamIdx::int_nattribs
+    >;
+
 struct BeamBins : amrex::DenseBins<
-        amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>::ParticleType> {
+        BeamTile::ParticleTileDataType> {
 
     template<class...Args>
     void build (Args&&...args) {
         // call build function of the underlying DenseBins object
         // with all of the arguments forwarded
-        amrex::DenseBins<amrex::ParticleTile<
-            amrex::Particle<0, 0>, BeamIdx::nattribs, 0>::ParticleType>::build(args...);
+        amrex::DenseBins<BeamTile::ParticleTileDataType>::build(args...);
 
         // after every build call copy offsets array form GPU to CPU
         const auto offset_size = numBins() + 1;
@@ -58,13 +71,12 @@ struct BeamBins : amrex::DenseBins<
 };
 
 /** \brief Container for particles of 1 beam species. */
-class BeamParticleContainer
-    : public amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>
+class BeamParticleContainer : public BeamTile
 {
 public:
     /** Constructor */
     explicit BeamParticleContainer (std::string name) :
-        amrex::ParticleTile<amrex::Particle<0, 0>, BeamIdx::nattribs, 0>(),
+        BeamTile(),
         m_name(name)
     {
         ReadParameters();
@@ -208,17 +220,20 @@ private:
     std::string m_species_name; /**< the name of the particle species in the beam file */
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_nrp {13};
+    int m_insitu_nrp {18};
     /** Number of int beam properties for in-situ per-slice reduced diagnostics. */
     int m_insitu_nip {1};
     /** Per-slice real beam properties:
-     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
-     * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
+     *      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
+     * sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2],
+     *
+     *     13,     14,     15,   16,     17
+     * [x*ux], [y*uy], [z*uz], [ga], [ga^2]
      * where [] means average over all particles within slice.
      * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
      * Projected emittance: Same as above AFTER averaging all these quantities over slices.
      * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
-     * Np: number of particles in this slice
+     * Momentum spread: sqrt([uz^2]-[uz]^2), and same as above.
      */
     amrex::Vector<amrex::Real> m_insitu_rdata;
     /** Per-slice int beam properties:
@@ -233,8 +248,9 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
-    /** How often the insitu beam diagnostics should be computed and written */
-    int m_insitu_period {-1};
+    /** How often the insitu beam diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
 };
 
 #endif

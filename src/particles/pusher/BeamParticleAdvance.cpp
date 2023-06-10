@@ -81,13 +81,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
     // Extract particle properties
     const int offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-    auto& soa = beam.GetStructOfArrays(); // For momenta and weights
-    amrex::Real * const uxp = soa.GetRealData(BeamIdx::ux).data() + offset;
-    amrex::Real * const uyp = soa.GetRealData(BeamIdx::uy).data() + offset;
-    amrex::Real * const uzp = soa.GetRealData(BeamIdx::uz).data() + offset;
+    const auto ptd = beam.getParticleTileData();
 
-    const auto getPosition = GetParticlePosition<BeamParticleContainer>(beam, offset);
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(beam,gm[0],offset);
+    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(gm[0]);
 
     // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
     BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
@@ -111,15 +107,16 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
         {Hipace::m_depos_order_xy},
         num_particles,
         [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
-            const int ip = indices[cell_start+idx];
+            const int ip = indices[cell_start+idx] + offset;
 
-            amrex::ParticleReal xp, yp, zp;
-            int pid;
-            getPosition(ip, xp, yp, zp, pid);
-            if (pid < 0) return;
-            amrex::Real ux = uxp[ip];
-            amrex::Real uy = uyp[ip];
-            amrex::Real uz = uzp[ip];
+            if (ptd.id(ip) < 0) return;
+
+            amrex::Real xp = ptd.pos(0, ip);
+            amrex::Real yp = ptd.pos(1, ip);
+            amrex::Real zp = ptd.pos(2, ip);
+            amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];
+            amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
+            amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
             for (int i = 0; i < n_subcycles; i++) {
 
@@ -133,7 +130,7 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                 xp += dt * 0.5_rt * ux * gammap_inv;
                 yp += dt * 0.5_rt * uy * gammap_inv;
 
-                if (setPositionEnforceBC(ip, xp, yp, zp)) return;
+                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
 
                 Array3<const amrex::Real> slice_arr = slice_arr_lev0;
                 amrex::Real dx_inv = dx_inv_lev0;
@@ -175,9 +172,9 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
                 const amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
-                    * ( ExmByp + ( clight - uz * gammap_inv ) * Byp );
+                    * ( ExmByp + ( clight - uz * gammap_inv ) * Byp + uy*gammap_inv*Bzp);
                 const amrex::ParticleReal uy_next = uy + dt * charge_mass_ratio
-                    * ( EypBxp + ( uz * gammap_inv - clight ) * Bxp );
+                    * ( EypBxp + ( uz * gammap_inv - clight ) * Bxp - ux*gammap_inv*Bzp);
 
                 // Now computing new longitudinal momentum
                 const amrex::ParticleReal ux_intermediate = ( ux_next + ux ) * 0.5_rt;
@@ -210,14 +207,13 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                 xp += dt * 0.5_rt * ux_next * gamma_next_inv;
                 yp += dt * 0.5_rt * uy_next * gamma_next_inv;
                 if (do_z_push) zp += dt * ( uz_next * gamma_next_inv - clight );
-                if (setPositionEnforceBC(ip, xp, yp, zp)) return;
+                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
                 ux = ux_next;
                 uy = uy_next;
                 uz = uz_next;
             } // end for loop over n_subcycles
-
-            uxp[ip] = ux;
-            uyp[ip] = uy;
-            uzp[ip] = uz;
+            ptd.rdata(BeamIdx::ux)[ip] = ux;
+            ptd.rdata(BeamIdx::uy)[ip] = uy;
+            ptd.rdata(BeamIdx::uz)[ip] = uz;
         });
 }

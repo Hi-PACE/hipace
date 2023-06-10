@@ -12,6 +12,10 @@
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
+#include "utils/InsituUtil.H"
+#ifdef HIPACE_USE_OPENPMD
+#   include <openPMD/auxiliary/Filesystem.hpp>
+#endif
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/particles_utils/FieldGather.H"
@@ -58,14 +62,12 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "can_ionize", m_can_ionize);
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!Hipace::GetInstance().m_normalized_units,
-            "Cannot use Ionization Module in normalized units");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
-            "The initial Ion level must be specified");
+            "The initial ion level must be specified");
     }
     queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
-        "Cannot use neutralize_background for Ion plasma");
+        "Cannot use neutralize_background when ionization is turned on");
 
     if(!queryWithParser(pp, "charge", m_charge)) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_charge != 0,
@@ -170,15 +172,31 @@ PlasmaParticleContainer::ReadParameters ()
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
+    queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
+    queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
 }
 
 void
-PlasmaParticleContainer::InitData ()
+PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
 {
     reserveData();
     resizeData();
 
     InitParticles(m_ppc, m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+
+    if (m_insitu_period > 0) {
+#ifdef HIPACE_USE_OPENPMD
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
+            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            "Must choose a different plasma insitu file prefix compared to the full diagnostics");
+#endif
+        // Allocate memory for in-situ diagnostics
+        m_nslices = geom.Domain().length(2);
+        m_insitu_rdata.resize(m_nslices*m_insitu_nrp, 0.);
+        m_insitu_idata.resize(m_nslices*m_insitu_nip, 0);
+        m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
+        m_insitu_sum_idata.resize(m_insitu_nip, 0);
+    }
 }
 
 void
@@ -208,8 +226,10 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        auto& aos = pti.GetArrayOfStructs();
-        const auto& pos_structs = aos.begin();
+        auto& soa = pti.GetStructOfArrays();
+        const amrex::Real * const AMREX_RESTRICT pos_x = soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = soa.GetRealData(PlasmaIdx::y).data();
+        int * const AMREX_RESTRICT cpup = soa.GetIntData(PlasmaIdx::cpu).data();
 
         const int lev1_idx = std::min(1, current_N_level-1);
         const int lev2_idx = std::min(2, current_N_level-1);
@@ -228,22 +248,22 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
-                const amrex::Real xp = pos_structs[ip].pos(0);
-                const amrex::Real yp = pos_structs[ip].pos(1);
+                const amrex::Real xp = pos_x[ip];
+                const amrex::Real yp = pos_y[ip];
 
                 if (current_N_level > 2 &&
                     lo_x_lev2 < xp && xp < hi_x_lev2 &&
                     lo_y_lev2 < yp && yp < hi_y_lev2) {
                     // level 2
-                    pos_structs[ip].cpu() = 2;
+                    cpup[ip] = 2;
                 } else if (current_N_level > 1 &&
                     lo_x_lev1 < xp && xp < hi_x_lev1 &&
                     lo_y_lev1 < yp && yp < hi_y_lev1) {
                     // level 1
-                    pos_structs[ip].cpu() = 1;
+                    cpup[ip] = 1;
                 } else {
                     // level 0
-                    pos_structs[ip].cpu() = 0;
+                    cpup[ip] = 0;
                 }
             }
         );
@@ -254,14 +274,15 @@ void
 PlasmaParticleContainer::
 IonizationModule (const int lev,
                   const amrex::Geometry& geom,
-                  const Fields& fields)
+                  const Fields& fields,
+                  const amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 
     using namespace amrex::literals;
 
     if (!m_can_ionize) return;
-    const PhysConst phys_const = make_constants_SI();
+    const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
     for (amrex::MFIter mfi_ion = MakeMFIter(0, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
@@ -293,10 +314,14 @@ IonizationModule (const int lev,
         auto& ptile_ion = plevel_ion.at(index);
 
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
-        using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto getPosition = GetParticlePosition<PTileType>(ptile_ion);
 
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
+        // calcuation of E0 in SI units for denormalization
+        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                                         PhysConstSI::q_e*PhysConstSI::q_e /
+                                         (PhysConstSI::ep0 * PhysConstSI::m_e) );
+        const amrex::Real E0 = Hipace::GetInstance().m_normalized_units ?
+                               wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
         const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
@@ -304,6 +329,8 @@ IonizationModule (const int lev,
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
         const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
+        const int * const idp = soa_ion.GetIntData(PlasmaIdx::id).data();
+        const int * const cpup = soa_ion.GetIntData(PlasmaIdx::cpu).data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -320,14 +347,11 @@ IonizationModule (const int lev,
         amrex::ParallelForRNG(num_ions,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
 
-            amrex::ParticleReal xp, yp, zp;
-            int pid;
-            getPosition(ip, xp, yp, zp, pid);
-            // avoid temp slice
-            xp = x_prev[ip];
-            yp = y_prev[ip];
+            if (idp[ip] < 0 || cpup[ip] != lev) return;
 
-            if (pid < 0 || getPosition.m_structs[ip].cpu() != lev) return;
+            // avoid temp slice
+            const amrex::Real xp = x_prev[ip];
+            const amrex::Real yp = y_prev[ip];
 
             // define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
@@ -340,7 +364,7 @@ IonizationModule (const int lev,
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;
-            const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp );
+            const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp )*E0;
 
             // Compute probability of ionization p
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
@@ -377,7 +401,6 @@ IonizationModule (const int lev,
         ptile_elec.resize(new_size);
 
         // Load electron soa and aos after resize
-        ParticleType* pstruct_elec = ptile_elec.GetArrayOfStructs()().data();
         const long pid_start = ParticleType::NextID();
         ParticleType::NextID(pid_start + num_new_electrons.dataValue());
 
@@ -398,22 +421,19 @@ IonizationModule (const int lev,
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                amrex::ParticleReal xp, yp, zp;
-                getPosition(ip, xp, yp, zp);
+                int_arrdata_elec[PlasmaIdx::id ][pidx] = pid_start + pid;
+                int_arrdata_elec[PlasmaIdx::cpu][pidx] = lev; // current level
+                arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
+                arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
+                arrdata_elec[PlasmaIdx::z      ][pidx] = arrdata_ion[PlasmaIdx::z     ][ip];
 
-                pstruct_elec[pidx].id()   = pid_start + pid;
-                pstruct_elec[pidx].cpu()  = lev; // current level
-                pstruct_elec[pidx].pos(0) = xp;
-                pstruct_elec[pidx].pos(1) = yp;
-                pstruct_elec[pidx].pos(2) = zp;
-
-                arrdata_elec[PlasmaIdx::w       ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
-                arrdata_elec[PlasmaIdx::ux      ][pidx] = 0._rt;
-                arrdata_elec[PlasmaIdx::uy      ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
+                arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;
+                arrdata_elec[PlasmaIdx::uy     ][pidx] = 0._rt;
                 // later we could consider adding a finite temperature to the ionized electrons
-                arrdata_elec[PlasmaIdx::psi     ][pidx] = 1._rt;
-                arrdata_elec[PlasmaIdx::x_prev  ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
-                arrdata_elec[PlasmaIdx::y_prev  ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = 1._rt;
+                arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
+                arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::psi_half_step][pidx] = 1._rt;
@@ -429,4 +449,214 @@ IonizationModule (const int lev,
             }
         });
     }
+}
+
+bool
+PlasmaParticleContainer::doInSitu (int step)
+{
+    return (m_insitu_period > 0 && step % m_insitu_period == 0);
+}
+
+void
+PlasmaParticleContainer::InSituComputeDiags (int islice)
+{
+    HIPACE_PROFILE("PlasmaParticleContainer::InSituComputeDiags()");
+
+    using namespace amrex::literals;
+
+    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
+                        m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
+
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
+    const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // loading the data
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
+
+        amrex::Long const num_particles = pti.numParticles();
+
+        // Tuple contains:
+        //      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,    11,    12,   13
+        // sum(w), <x>, <x^2>, <y>, <y^2>, <ux>,   <ux^2>, <uy>, <uy^2>,  <uz>,  <uz^2>, <ga>, <ga^2>, np
+        amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                         amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real,
+                          amrex::Real, amrex::Real, amrex::Real, amrex::Real,
+                          amrex::Real, amrex::Real, amrex::Real, amrex::Real,
+                          amrex::Real, int> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+        reduce_op.eval(
+            num_particles, reduce_data,
+            [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
+            {
+                const amrex::Real xp   = ptd.pos(0, ip);
+                const amrex::Real yp   = ptd.pos(1, ip);
+                const amrex::Real uxp  = ptd.rdata(PlasmaIdx::ux )[ip] * clight_inv; // proper velocity to u
+                const amrex::Real uyp  = ptd.rdata(PlasmaIdx::uy )[ip] * clight_inv;
+                const amrex::Real psip = ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real wp   = ptd.rdata(PlasmaIdx::w  )[ip];
+
+                if (ptd.id(ip) < 0) {
+                    return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
+                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
+                }
+
+                // particle's Lorentz factor
+                const amrex::Real gamma = (1.0_rt + uxp*uxp*clightsq_inv
+                                                  + uyp*uyp*clightsq_inv + psip*psip)/(2.0_rt*psip);
+                amrex::Real uzp = (gamma - psip); // the *c from uz cancels with the /c from the proper velocity conversion
+
+                return {wp,
+                        wp*xp,
+                        wp*xp*xp,
+                        wp*yp,
+                        wp*yp*yp,
+                        wp*uxp,
+                        wp*uxp*uxp,
+                        wp*uyp,
+                        wp*uyp*uyp,
+                        wp*uzp,
+                        wp*uzp*uzp,
+                        wp*gamma,
+                        wp*gamma*gamma,
+                        1};
+            });
+
+        ReduceTuple a = reduce_data.value();
+        const amrex::Real sum_w0 = amrex::get< 0>(a);
+        const amrex::Real sum_w_inv = sum_w0 <= 0._rt ? 0._rt : 1._rt/sum_w0;
+
+        m_insitu_rdata[islice             ] = sum_w0;
+        m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
+        m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
+        m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
+        m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
+        m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
+        m_insitu_idata[islice             ] = amrex::get<13>(a);
+
+        m_insitu_sum_rdata[ 0] += sum_w0;
+        m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
+        m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
+        m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
+        m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
+        m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
+        m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
+        m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
+        m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
+        m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
+        m_insitu_sum_rdata[10] += amrex::get<10>(a);
+        m_insitu_sum_rdata[11] += amrex::get<11>(a);
+        m_insitu_sum_rdata[12] += amrex::get<12>(a);
+        m_insitu_sum_idata[ 0] += amrex::get<13>(a);
+    }
+}
+
+void
+PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
+{
+    HIPACE_PROFILE("PlasmaParticleContainer::InSituWriteToFile()");
+
+#ifdef HIPACE_USE_OPENPMD
+    // create subdirectory
+    openPMD::auxiliary::create_directories(m_insitu_file_prefix);
+#endif
+
+    // zero pad the rank number;
+    std::string::size_type n_zeros = 4;
+    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+
+    // open file
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",
+        std::ofstream::out | std::ofstream::app | std::ofstream::binary};
+
+    const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
+    const std::size_t nslices = static_cast<std::size_t>(m_nslices);
+    const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
+        geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
+    const int is_normalized_units = Hipace::m_normalized_units;
+
+    // specify the structure of the data later available in python
+    // avoid pointers to temporary objects as second argument, stack variables are ok
+    const amrex::Vector<insitu_utils::DataNode> all_data{
+        {"time"    , &time},
+        {"step"    , &step},
+        {"n_slices", &m_nslices},
+        {"charge"  , &m_charge},
+        {"mass"    , &m_mass},
+        {"z_lo"    , &geom.ProbLo()[2]},
+        {"z_hi"    , &geom.ProbHi()[2]},
+        {"normalized_density_factor", &normalized_density_factor},
+        {"is_normalized_units", &is_normalized_units},
+        {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
+        {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
+        {"[y]"     , &m_insitu_rdata[3*nslices], nslices},
+        {"[y^2]"   , &m_insitu_rdata[4*nslices], nslices},
+        {"[ux]"    , &m_insitu_rdata[5*nslices], nslices},
+        {"[ux^2]"  , &m_insitu_rdata[6*nslices], nslices},
+        {"[uy]"    , &m_insitu_rdata[7*nslices], nslices},
+        {"[uy^2]"  , &m_insitu_rdata[8*nslices], nslices},
+        {"[uz]"    , &m_insitu_rdata[9*nslices], nslices},
+        {"[uz^2]"  , &m_insitu_rdata[10*nslices], nslices},
+        {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
+        {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
+        {"sum(w)"  , &m_insitu_rdata[0], nslices},
+        {"Np"      , &m_insitu_idata[0], nslices},
+        {"average" , {
+            {"[x]"   , &(m_insitu_sum_rdata[ 1] /= sum_w0)},
+            {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
+            {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
+            {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
+            {"[ux]"  , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
+            {"[ux^2]", &(m_insitu_sum_rdata[ 6] /= sum_w0)},
+            {"[uy]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
+            {"[uy^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
+            {"[uz]"  , &(m_insitu_sum_rdata[ 9] /= sum_w0)},
+            {"[uz^2]", &(m_insitu_sum_rdata[10] /= sum_w0)},
+            {"[ga]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
+            {"[ga^2]", &(m_insitu_sum_rdata[12] /= sum_w0)}
+        }},
+        {"total"   , {
+            {"sum(w)", &m_insitu_sum_rdata[0]},
+            {"Np"    , &m_insitu_sum_idata[0]}
+        }}
+    };
+
+    if (ofs.tellp() == 0) {
+        // write JSON header containing a NumPy structured datatype
+        insitu_utils::write_header(all_data, ofs);
+    }
+
+    // write binary data according to datatype in header
+    insitu_utils::write_data(all_data, ofs);
+
+    // close file
+    ofs.close();
+    // assert no file errors
+#ifdef HIPACE_USE_OPENPMD
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu plasma diagnostics");
+#else
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu plasma diagnostics. "
+        "Maybe the specified subdirectory does not exist");
+#endif
+
+    // reset arrays for insitu data
+    for (auto& x : m_insitu_rdata) x = 0.;
+    for (auto& x : m_insitu_idata) x = 0;
+    for (auto& x : m_insitu_sum_rdata) x = 0.;
+    for (auto& x : m_insitu_sum_idata) x = 0;
 }

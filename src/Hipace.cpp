@@ -85,7 +85,7 @@ Hipace::Hipace () :
     queryWithParser(pp, "max_step", m_max_step);
 
     int seed;
-    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed);
+    if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
     amrex::ParmParse pph("hipace");
 
@@ -210,8 +210,7 @@ Hipace::InitData ()
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
     if (Hipace::HeadRank()) {
-        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
-                                       m_multi_plasma, m_3D_geom[0], m_fields);
+        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
 #ifdef AMREX_USE_MPI
@@ -222,8 +221,7 @@ Hipace::InitData ()
     m_physical_time += m_dt * (m_numprocs_z-1-amrex::ParallelDescriptor::MyProc());
 #endif
     if (!Hipace::HeadRank()) {
-        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam,
-                                       m_multi_plasma, m_3D_geom[0], m_fields);
+        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
     m_fields.checkInit();
@@ -446,8 +444,7 @@ Hipace::Evolve ()
 
             if (m_physical_time < m_max_time) {
                 m_adaptive_time_step.Calculate(
-                    m_physical_time, m_dt, m_multi_beam, m_multi_plasma,
-                    m_3D_geom[0], m_fields, it, false);
+                    m_physical_time, m_dt, m_multi_beam, m_multi_plasma, it, false);
             } else {
                 m_dt = 2.*m_max_time;
             }
@@ -462,6 +459,7 @@ Hipace::Evolve ()
         }
 
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
+        m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2 && !m_explicit) amrex::AllPrint() << "Rank " << rank <<
@@ -488,6 +486,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     amrex::ParallelContext::push(m_comm_xy);
 
     m_multi_beam.InSituComputeDiags(step, islice, islice_local);
+    m_multi_plasma.InSituComputeDiags(step, islice);
 
     // Get this laser slice from the 3D array
     m_multi_laser.Copy(islice, false);
@@ -539,6 +538,10 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, false, lev);
 
     } // end for (int lev=0; lev<current_N_level; ++lev)
+
+    m_adaptive_time_step.GatherMinAccSlice(
+        m_multi_beam,
+        m_3D_geom[0], m_fields, islice_local);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level, islice_local);
@@ -1042,7 +1045,8 @@ Hipace::Wait (const int step, int it, bool only_ghost)
     {
         const amrex::Long np_total = std::accumulate(np_rcv.begin(), np_rcv.begin()+nbeams, 0);
         if (np_total == 0 && !m_multi_laser.m_use_laser) return;
-        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long psize = sizeof(amrex::ParticleReal)*BeamParticleContainer::NAR
+                                  + sizeof(int)*BeamParticleContainer::NAI;
         const amrex::Long buffer_size = psize*np_total;
         auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
 
@@ -1235,7 +1239,8 @@ Hipace::Notify (const int step, const int it, bool only_ghost)
     {
         const amrex::Long np_total = std::accumulate(np_snd.begin(), np_snd.begin()+nbeams, 0);
         if (np_total == 0 && !m_multi_laser.m_use_laser) return;
-        const amrex::Long psize = sizeof(BeamParticleContainer::SuperParticleType);
+        const amrex::Long psize = sizeof(amrex::ParticleReal)*BeamParticleContainer::NAR
+                                  + sizeof(int)*BeamParticleContainer::NAI;
         const amrex::Long buffer_size = psize*np_total;
         char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
         psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
@@ -1492,18 +1497,19 @@ Hipace::CheckGhostSlice (int it)
 
         // Get pointers to ghost particles
         auto& ptile = m_multi_beam.getBeam(ibeam);
-        auto& aos = ptile.GetArrayOfStructs();
-        const auto& pos_structs = aos.begin() + nreal;
+        auto& soa = ptile.GetStructOfArrays();
+        const amrex::Real * const pos_z = soa.GetRealData(BeamIdx::z).data() + nreal;
+        int * const idp = soa.GetIntData(BeamIdx::id).data() + nreal;
 
         // Invalidate particles out of the ghost slice
         amrex::ParallelFor(
             nghost,
             [=] AMREX_GPU_DEVICE (long idx) {
                 // Get zp of ghost particle
-                const amrex::Real zp = pos_structs[idx].pos(2);
+                const amrex::Real zp = pos_z[idx];
                 // Invalidate ghost particle if not in the ghost slice
                 if ( zp < zmin_leftcell || zp > zmax_leftcell ) {
-                    pos_structs[idx].id() = -1;
+                    idp[idx] = -1;
                 }
             }
             );

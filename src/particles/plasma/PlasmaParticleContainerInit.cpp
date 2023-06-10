@@ -56,6 +56,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         y_offset = -0.5_rt;
     }
 
+    // Reset first ID to 1 as we create a fresh plasma each time we call this function
+    ParticleType::NextID(1);
+
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tile_box  = mfi.tilebox(box_nodal, box_grow);
@@ -107,14 +110,13 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         auto& particles = GetParticles(lev);
         auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
 
-        auto old_size = particle_tile.GetArrayOfStructs().size();
+        auto old_size = particle_tile.size();
         const auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
 
         const int pid = ParticleType::NextID();
         ParticleType::NextID(pid + total_num_particles);
 
-        ParticleType* pstruct = particle_tile.GetArrayOfStructs()().data();
         auto arrdata = particle_tile.GetStructOfArrays().realarray();
         auto int_arrdata = particle_tile.GetStructOfArrays().intarray();
         const int init_ion_lev = m_init_ion_lev;
@@ -225,21 +227,20 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
-                ParticleType& p = pstruct[pidx];
-                p.id()   = pid + int(pidx);
-                p.cpu()  = 0; // level 0
-                p.pos(0) = x;
-                p.pos(1) = y;
-                p.pos(2) = z;
+                int_arrdata[PlasmaIdx::id ][pidx] = pid + int(pidx);
+                int_arrdata[PlasmaIdx::cpu][pidx] = 0; // level 0
+                arrdata[PlasmaIdx::x      ][pidx] = x;
+                arrdata[PlasmaIdx::y      ][pidx] = y;
+                arrdata[PlasmaIdx::z      ][pidx] = z;
 
-                arrdata[PlasmaIdx::w        ][pidx] = scale_fac * density_func(x, y, c_t);
-                arrdata[PlasmaIdx::ux       ][pidx] = u[0] * c_light;
-                arrdata[PlasmaIdx::uy       ][pidx] = u[1] * c_light;
+                arrdata[PlasmaIdx::w      ][pidx] = scale_fac * density_func(x, y, c_t);
+                arrdata[PlasmaIdx::ux     ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy     ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
-                arrdata[PlasmaIdx::x_prev   ][pidx] = x;
-                arrdata[PlasmaIdx::y_prev   ][pidx] = y;
-                arrdata[PlasmaIdx::ux_half_step][pidx] = u[0] * c_light;
-                arrdata[PlasmaIdx::uy_half_step][pidx] = u[1] * c_light;
+                arrdata[PlasmaIdx::x_prev ][pidx] = x;
+                arrdata[PlasmaIdx::y_prev ][pidx] = y;
+                arrdata[PlasmaIdx::ux_half_step ][pidx] = u[0] * c_light;
+                arrdata[PlasmaIdx::uy_half_step ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi_half_step][pidx] = arrdata[PlasmaIdx::psi][pidx];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
@@ -262,9 +263,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
-                ParticleType& p = pstruct[pidx];
-                const amrex::Real x = p.pos(0);
-                const amrex::Real y = p.pos(1);
+                const amrex::Real x = arrdata[PlasmaIdx::x][pidx];
+                const amrex::Real y = arrdata[PlasmaIdx::y][pidx];
                 const amrex::Real x_mirror = x_mid2 - x;
                 const amrex::Real y_mirror = y_mid2 - y;
 
@@ -278,10 +278,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 #endif
                 for (int imirror=0; imirror<3; ++imirror) {
                     const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
-                    pstruct[midx] = p;
-                    pstruct[midx].id() = pid + int(midx);
-                    pstruct[midx].pos(0) = x_arr[imirror];
-                    pstruct[midx].pos(1) = y_arr[imirror];
+
+                    int_arrdata[PlasmaIdx::id][midx] = pid + int(midx);
+                    int_arrdata[PlasmaIdx::cpu][midx] = 0; // level 0
+                    arrdata[PlasmaIdx::x][midx] = x_arr[imirror];
+                    arrdata[PlasmaIdx::y][midx] = y_arr[imirror];
+                    arrdata[PlasmaIdx::z][midx] = arrdata[PlasmaIdx::z][pidx];
 
                     arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
                     arrdata[PlasmaIdx::ux][midx] = arrdata[PlasmaIdx::ux][pidx] * ux_arr[imirror];
@@ -360,14 +362,22 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
 void
 PlasmaParticleContainer::
-InitIonizationModule (const amrex::Geometry& geom,
-                      PlasmaParticleContainer* product_pc)
+InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
+                      const amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitIonizationModule()");
 
     using namespace amrex::literals;
 
     if (!m_can_ionize) return;
+
+    const bool normalized_units = Hipace::GetInstance().m_normalized_units;
+    if (normalized_units) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
+            "For ionization with normalized units, a background plasma density != 0 must "
+            "be specified via 'plasmas.background_density_SI'");
+    }
+
     m_product_pc = product_pc;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
@@ -398,9 +408,12 @@ InitIonizationModule (const amrex::Geometry& geom,
     const amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
     const amrex::Real UH = table_ionization_energies[0];
     const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
-    // partial dx calculation for QSA
-    auto dx = geom.CellSizeArray();
-    const amrex::Real dt = dx[2] / phys_const.c;
+
+    // plasma frequency in SI units to denormalize ionization
+    const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                                     PhysConstSI::q_e*PhysConstSI::q_e /
+                                     (PhysConstSI::ep0 * PhysConstSI::m_e) );
+    const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;
 
     m_adk_power.resize(ion_atomic_number);
     m_adk_prefactor.resize(ion_atomic_number);
