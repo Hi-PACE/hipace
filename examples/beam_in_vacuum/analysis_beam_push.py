@@ -54,5 +54,5 @@ print("beam width simulation x: " + str(std_sim_x))
 print("beam width simulation y: " + str(std_sim_y))
 
 # Assert sub-permille error
-assert((std_sim_x-std_theory)/std_theory < 4.e-3)
-assert((std_sim_y-std_theory)/std_theory < 4.e-3)
+assert((std_sim_x-std_theory)/std_theory < 2.e-3)
+assert((std_sim_y-std_theory)/std_theory < 2.e-3)
