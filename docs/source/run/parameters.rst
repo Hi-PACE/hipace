@@ -518,6 +518,15 @@ which are valid only for certain beam types, are introduced further below under
     For the last component, z actually represents the zeta coordinate zeta = z - c*t.
     For instance, ``hipace.external_B_slope = -1. 1. 0.`` creates an axisymmetric focusing lens of strength 1 T/m.
 
+* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
+    Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
+    Note: using ``do_z_push = 0`` results in unphysical behavior.
+
+* ``<beam name> or beams..do_radiation_reaction`` (`bool`) optional (default `0`)
+    Whether the beam particles undergo energy loss due to classical radiation reactions.
+    The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
+    Currently only implemented for SI units, normalized units will be added soon.
+
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -545,10 +554,6 @@ Option: ``fixed_weight``
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
     divisible by 4.
-
-* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
-    Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
-    Note: using ``do_z_push = 0`` results in unphysical behavior.
 
 * ``<beam name>.z_foc`` (`float`) optional (default `0.`)
     Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
