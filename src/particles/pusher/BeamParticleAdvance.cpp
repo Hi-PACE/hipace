@@ -245,9 +245,9 @@ AdvanceBeamParticlesSlice (
 
                 /* computing next gamma value */
                 const amrex::ParticleReal gamma_next_inv = 1._rt / std::sqrt( 1._rt
-                    + ux_next*ux_next*inv_c2
-                    + uy_next*uy_next*inv_c2
-                    + uz_next*uz_next*inv_c2 );
+                    + (ux_next*ux_next
+                    +  uy_next*uy_next
+                    +  uz_next*uz_next)*inv_c2 );
 
                 /*
                  * computing positions and setting momenta for the next timestep
