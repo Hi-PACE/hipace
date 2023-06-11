@@ -17,10 +17,14 @@
  * \param[in] zp particle position x
  * \param[in,out] ExmByp Ex-By Field on particle
  * \param[in,out] EypBxp Ey+Bx Field on particle
- * \param[in,out] Ezp Ez Field on particle
- * \param[in] ext_ExmBy_slope strength of the external linear field: Ex += ext_ExmBy_slope * x
- * \param[in] ext_Ez_slope strength of the external linear field: Ez += ext_Ez_slope * z
- * \param[in] ext_Ez_uniform strength of the external uniform field: Ez += ext_Ez_uniform
+ * \param[in,out] Ezp Electric field on particle, z component
+ * \param[in,out] Bxp Magnetic field on particle, x component
+ * \param[in,out] Byp Magnetic field on particle, y component
+ * \param[in,out] Bzp Magnetic field on particle, z component
+ * \param[in] ext_E_uniform Uniform electric field Ex-c*By, Ey+c*Bx, Ez to be applied
+ * \param[in] ext_B_uniform Uniform magnetic field Bx, B, Bz to be applied
+ * \param[in] ext_E_slope strength of external electric field d(Ex-c*By)/dx, d(Ey+c*Bx)/dy, d(Ez)/dz
+ * \param[in] ext_B_slope strength of external magnetic field d(Bx)/dy, d(By)/dx, d(Bz)/dz
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void ApplyExternalField(
@@ -30,15 +34,26 @@ void ApplyExternalField(
     amrex::ParticleReal& ExmByp,
     amrex::ParticleReal& EypBxp,
     amrex::ParticleReal& Ezp,
-    const amrex::Real ext_ExmBy_slope,
-    const amrex::Real ext_Ez_slope,
-    const amrex::Real ext_Ez_uniform)
+    amrex::ParticleReal& Bxp,
+    amrex::ParticleReal& Byp,
+    amrex::ParticleReal& Bzp,
+    const amrex::RealVect& ext_E_uniform,
+    const amrex::RealVect& ext_B_uniform,
+    const amrex::RealVect& ext_E_slope,
+    const amrex::RealVect& ext_B_slope)
 {
-    if ((ext_ExmBy_slope == 0.) && (ext_Ez_slope == 0.) && (ext_Ez_uniform == 0.)) return;
 
-    ExmByp += ext_ExmBy_slope * xp;
-    EypBxp += ext_ExmBy_slope * yp;
-    Ezp += ext_Ez_uniform + ext_Ez_slope * zp;
+    if ((ext_E_uniform == amrex::RealVect(0.,0.,0.)) &&
+        (ext_B_uniform == amrex::RealVect(0.,0.,0.)) &&
+        (ext_E_slope == amrex::RealVect(0.,0.,0.)) &&
+        (ext_B_slope == amrex::RealVect(0.,0.,0.)) ) return;
+
+    ExmByp += ext_E_uniform[0] + ext_E_slope[0] * xp;
+    EypBxp += ext_E_uniform[1] + ext_E_slope[1] * yp;
+    Ezp    += ext_E_uniform[2] + ext_E_slope[2] * zp;
+    Bxp    += ext_B_uniform[0] + ext_B_slope[0] * yp;
+    Byp    += ext_B_uniform[1] + ext_B_slope[1] * xp;
+    Bzp    += ext_B_uniform[2] + ext_B_slope[2] * zp;
 
     return;
 }

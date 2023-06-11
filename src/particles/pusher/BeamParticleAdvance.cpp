@@ -1,3 +1,4 @@
+
 /* Copyright 2020-2022
  *
  * This file is part of HiPACE++.
@@ -15,9 +16,10 @@
 #include "utils/GPUUtil.H"
 
 void
-AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
-                           amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-                           const int islice_local)
+AdvanceBeamParticlesSlice (
+    BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
+    int const current_N_level, const int islice_local, const amrex::RealVect& extEu,
+    const amrex::RealVect& extBu, const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -98,9 +100,10 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
     const amrex::Real clight = phys_const.c;
     const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
-    const amrex::Real external_ExmBy_slope = Hipace::m_external_ExmBy_slope;
-    const amrex::Real external_Ez_slope = Hipace::m_external_Ez_slope;
-    const amrex::Real external_Ez_uniform = Hipace::m_external_Ez_uniform;
+    const amrex::RealVect external_E_uniform = extEu;
+    const amrex::RealVect external_B_uniform = extBu;
+    const amrex::RealVect external_E_slope = extEs;
+    const amrex::RealVect external_B_slope = extBs;
 
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
@@ -167,8 +170,8 @@ AdvanceBeamParticlesSlice (BeamParticleContainer& beam, const Fields& fields,
                     slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp,
-                                   external_ExmBy_slope, external_Ez_slope, external_Ez_uniform);
+                ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                    external_E_uniform, external_B_uniform, external_E_slope, external_B_slope);
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
                 const amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
