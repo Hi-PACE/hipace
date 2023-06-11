@@ -235,6 +235,18 @@ then
                      --test-name adaptive_time_step.1Rank
 fi
 
+# adaptive_time_step.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "radiation_reactions.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R radiation_reactions.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/diags/hdf5 \
+                     --test-name radiation_reactions.1Rank
+fi
+
 # grid_current.1Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "grid_current.1Rank" ]]
 then
