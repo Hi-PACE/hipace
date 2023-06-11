@@ -188,9 +188,9 @@ AdvanceBeamParticlesSlice (
                     + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
                 const amrex::ParticleReal gamma_intermediate_inv = 1._rt / std::sqrt( 1._rt
-                    + ux_intermediate*ux_intermediate*inv_c2
-                    + uy_intermediate*uy_intermediate*inv_c2
-                    + uz_intermediate*uz_intermediate*inv_c2 );
+                    + (ux_intermediate*ux_intermediate
+                    +  uy_intermediate*uy_intermediate
+                    +  uz_intermediate*uz_intermediate)*inv_c2 );
 
                 amrex::ParticleReal uz_next = uz + dt * charge_mass_ratio
                     * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
@@ -202,9 +202,9 @@ AdvanceBeamParticlesSlice (
                     const amrex::ParticleReal Eyp = EypBxp - clight*Bxp;
 
                     const amrex::ParticleReal gamma_intermediate = std::sqrt( 1._rt
-                        + ux_intermediate*ux_intermediate*inv_c2
-                        + uy_intermediate*uy_intermediate*inv_c2
-                        + uz_intermediate*uz_intermediate*inv_c2 );
+                        + (ux_intermediate*ux_intermediate
+                        +  uy_intermediate*uy_intermediate
+                        +  uz_intermediate*uz_intermediate)*inv_c2 );
                     // Estimation of the velocity at intermediate time
                     const amrex::ParticleReal vx_n = ux_intermediate*gamma_intermediate_inv;
                     const amrex::ParticleReal vy_n = uy_intermediate*gamma_intermediate_inv;
@@ -214,7 +214,7 @@ AdvanceBeamParticlesSlice (
                     const amrex::ParticleReal bz_n = vz_n*inv_clight;
 
                     // Lorentz force over charge
-                    const amrex::ParticleReal flx_q = (Exp - vz_n*Byp + vy_n*Bzp);
+                    const amrex::ParticleReal flx_q = (Exp + vy_n*Bzp - vz_n*Byp);
                     const amrex::ParticleReal fly_q = (Eyp + vz_n*Bxp - vx_n*Bzp);
                     const amrex::ParticleReal flz_q = (Ezp + vx_n*Byp - vy_n*Bxp);
                     const amrex::ParticleReal fl_q2 = flx_q*flx_q + fly_q*fly_q + flz_q*flz_q;
