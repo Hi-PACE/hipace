@@ -29,7 +29,7 @@ RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-5
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_RR
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_adaptive_ts.py
+$HIPACE_EXAMPLE_DIR/analysis_RR.py
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
