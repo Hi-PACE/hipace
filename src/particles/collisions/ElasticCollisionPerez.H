@@ -95,6 +95,7 @@ void ElasticCollisionPerez (
         n1 = n1 + n2;
         n2 = n1;
     }
+    if (n1 == 0 || n2 == 0) return;
     // compute n12 according to eq. 16 in Perez et al., Phys. Plasmas 19 (8) (2012) 083104
     {
       int i1 = I1s; int i2 = I2s;
@@ -122,7 +123,7 @@ void ElasticCollisionPerez (
 
     // compute Debye length lmdD
     T_R lmdD;
-    if ( T1t < T_R(0.0) || T2t < T_R(0.0) ) {
+    if ( T1t <= T_R(0.0) || T2t <= T_R(0.0) ) {
         lmdD = T_R(0.0);
     }
     else {

@@ -279,14 +279,11 @@ void UpdateMomentumPerezElastic (
         u1x  = p1fx / m1;
         u1y  = p1fy / m1;
         u1z  = p1fz / m1;
-        if (normalized_units) { // backtransform to normalized units
-            u1x *= inv_c_SI;
-            u1y *= inv_c_SI;
-            u1z *= inv_c_SI;
-        }
-        const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2 );
-        psi1 = ga - u1z*inv_c;
-        AMREX_ASSERT(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z));
+        const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2_SI );
+        psi1 = ga - u1z*inv_c_SI;
+        AMREX_ASSERT_WITH_MESSAGE(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z),
+        "NaNs detected in the updated momentum of the collision module. "
+        "Most likely due to a negative root in the calculation of gc");
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
     }
     r = amrex::Random(engine);
@@ -295,17 +292,20 @@ void UpdateMomentumPerezElastic (
         u2x  = p2fx / m2;
         u2y  = p2fy / m2;
         u2z  = p2fz / m2;
-        if (normalized_units) { // backtransform to normalized units
-            u2x *= inv_c_SI;
-            u2y *= inv_c_SI;
-            u2z *= inv_c_SI;
-        }
-        const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2 );
-        psi2 = ga - u2z*inv_c;
+        const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2_SI );
+        psi2 = ga - u2z*inv_c_SI;
         AMREX_ASSERT_WITH_MESSAGE(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z),
         "NaNs detected in the updated momentum of the collision module. "
         "Most likely due to a negative root in the calculation of gc");
         AMREX_ASSERT(!std::isinf(u1x+u1y+u1z+u2x+u2y+u2z));
+    }
+    if (normalized_units) { // backtransform to normalized units
+        u1x *= inv_c_SI;
+        u1y *= inv_c_SI;
+        u1z *= inv_c_SI;
+        u2x *= inv_c_SI;
+        u2y *= inv_c_SI;
+        u2z *= inv_c_SI;
     }
 }
 
