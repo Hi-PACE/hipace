@@ -126,9 +126,7 @@ AdvanceBeamParticlesSlice (
             for (int i = 0; i < n_subcycles; i++) {
 
                 const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
-                    + ux*ux*inv_c2
-                    + uy*uy*inv_c2
-                    + uz*uz*inv_c2 );
+                    + (ux*ux + uy*uy + uz*uz)*inv_c2 );
 
                 // first we do half a step in x,y
                 // This is not required in z, which is pushed in one step later
