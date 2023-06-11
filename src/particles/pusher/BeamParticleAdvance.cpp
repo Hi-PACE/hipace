@@ -107,6 +107,10 @@ AdvanceBeamParticlesSlice (
     const amrex::RealVect external_E_slope = extEs;
     const amrex::RealVect external_B_slope = extBs;
 
+    // Radiation reaction constant
+    const amrex::ParticleReal q_over_mc = charge_mass_ratio*inv_clight;
+    const amrex::ParticleReal RRcoeff = (2.0_rt/3.0_rt)*PhysConstSI::r_e*q_over_mc*q_over_mc;
+
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
         {Hipace::m_depos_order_xy},
@@ -222,10 +226,6 @@ AdvanceBeamParticlesSlice (
                     const amrex::ParticleReal bdotE2 = bdotE*bdotE;
                     const amrex::ParticleReal coeff = gamma_intermediate*gamma_intermediate*(fl_q2-bdotE2);
 
-                    // Radiation reaction constant
-                    const amrex::ParticleReal q_over_mc = charge_mass_ratio*inv_clight;
-                    const amrex::ParticleReal RRcoeff = (2.0_rt/3.0_rt)*PhysConstSI::r_e*q_over_mc*q_over_mc;
-
                     //Compute the components of the RR force
                     const amrex::ParticleReal frx =
                         RRcoeff*(PhysConstSI::c*(fly_q*Bzp - flz_q*Byp) + bdotE*Exp - coeff*bx_n);
@@ -239,7 +239,6 @@ AdvanceBeamParticlesSlice (
                     uy_next += fry*dt;
                     uz_next += frz*dt;
                 }
-
 
                 /* computing next gamma value */
                 const amrex::ParticleReal gamma_next_inv = 1._rt / std::sqrt( 1._rt
