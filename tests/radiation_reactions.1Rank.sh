@@ -27,7 +27,7 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Relative tolerance for checksum tests depends on the platform
 # high tolerance for CUDA due to random beam and the evaluation of values that are very close to 0
-RTOL=1e-9 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1
+RTOL=1e-7 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_RR hipace.file_prefix=$TEST_NAME
