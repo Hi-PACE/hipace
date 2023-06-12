@@ -126,22 +126,12 @@ PlasmaParticleContainer::ReadParameters ()
         "Hence, in 3D, plasma.ppc should only contain 2 values");
         for (int i=0; i<AMREX_SPACEDIM-1; i++) m_ppc[i] = tmp_vector[i];
     }
-    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-    if (queryWithParser(pp, "u_mean", loc_array)) {
-        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-            m_u_mean[idim] = loc_array[idim];
-        }
-    }
-    bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", loc_array);
+    queryWithParser(pp, "u_mean", m_u_mean);
+    bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(temperature_is_specified && thermal_momentum_is_specified),
          "Please specify exlusively either a temperature or the thermal momentum");
-    if (thermal_momentum_is_specified) {
-        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-            m_u_std[idim] = loc_array[idim];
-        }
-    }
 
     if (temperature_is_specified) {
         const PhysConst phys_const_SI = make_constants_SI();

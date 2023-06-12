@@ -15,17 +15,8 @@ GetInitialMomentum::GetInitialMomentum (const std::string& name)
     /* currently only Gaussian beam momentum profile implemented */
     if (m_momentum_profile == BeamMomentumType::Gaussian) {
 
-        amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        if (queryWithParser(pp, "u_mean", loc_array)) {
-            for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-                m_u_mean[idim] = loc_array[idim];
-            }
-        }
-        if (queryWithParser(pp, "u_std", loc_array)) {
-            for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-                m_u_std[idim] = loc_array[idim];
-            }
-        }
+        queryWithParser(pp, "u_mean", m_u_mean);
+        queryWithParser(pp, "u_std", m_u_std);
         bool do_symmetrize = false;
         queryWithParser(pp, "do_symmetrize", do_symmetrize);
         if (do_symmetrize) {

@@ -18,17 +18,8 @@ GetInitialDensity::GetInitialDensity (const std::string& name, amrex::Parser& pa
         m_profile = BeamProfileType::Gaussian;
         getWithParser(pp, "density", m_density);
         m_density = std::abs(m_density);
-        amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        if (queryWithParser(pp, "position_mean", loc_array)) {
-            for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-                m_position_mean[idim] = loc_array[idim];
-            }
-        }
-        if (queryWithParser(pp, "position_std", loc_array)) {
-            for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-                m_position_std[idim] = loc_array[idim];
-            }
-        }
+        queryWithParser(pp, "position_mean", m_position_mean);
+        queryWithParser(pp, "position_std", m_position_std);
     } else if (profile == "flattop") {
         m_profile = BeamProfileType::Flattop;
         getWithParser(pp, "density", m_density);

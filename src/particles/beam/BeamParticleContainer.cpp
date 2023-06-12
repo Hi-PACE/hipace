@@ -77,15 +77,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     amrex::Real ptime {0.};
     if (m_injection_type == "fixed_ppc") {
 
-        amrex::Vector<amrex::Real> tmp_vector;
-        if (queryWithParser(pp, "ppc", tmp_vector)){
-            AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
-            for (int i=0; i<AMREX_SPACEDIM; i++) m_ppc[i] = tmp_vector[i];
-        }
+        queryWithParser(pp, "ppc", m_ppc);
         getWithParser(pp, "zmin", m_zmin);
         getWithParser(pp, "zmax", m_zmax);
         getWithParser(pp, "radius", m_radius);
-        amrex::Array<amrex::Real, AMREX_SPACEDIM> position_mean{0., 0., 0.};
+        amrex::RealVect position_mean{0., 0., 0.};
         queryWithParser(pp, "position_mean", position_mean);
         queryWithParser(pp, "min_density", m_min_density);
         m_min_density = std::abs(m_min_density);
@@ -98,7 +94,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     } else if (m_injection_type == "fixed_weight") {
 
-        amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
         bool can = false;
         amrex::Real zmin = -std::numeric_limits<amrex::Real>::infinity();
         amrex::Real zmax = std::numeric_limits<amrex::Real>::infinity();
@@ -128,8 +123,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Real pos_mean_z = 0;
         Parser::fillWithParser(pos_mean_arr[2], pos_mean_z);
 
-        getWithParser(pp, "position_std", loc_array);
-        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
+        getWithParser(pp, "position_std", m_position_std);
         getWithParser(pp, "num_particles", m_num_particles);
         bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
         bool peak_density_is_specified = queryWithParser(pp, "density", m_density);

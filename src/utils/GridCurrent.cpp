@@ -17,11 +17,8 @@ GridCurrent::GridCurrent ()
 
     if (queryWithParser(pp, "use_grid_current", m_use_grid_current) ) {
         getWithParser(pp, "peak_current_density", m_peak_current_density);
-        amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-        getWithParser(pp, "position_mean", loc_array);
-        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
-        getWithParser(pp, "position_std", loc_array);
-        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_std[idim] = loc_array[idim];
+        getWithParser(pp, "position_mean", m_position_mean);
+        getWithParser(pp, "position_std", m_position_std);
     }
 }
 

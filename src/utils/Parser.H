@@ -12,6 +12,8 @@
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
+#include <AMReX_RealVect.H>
+#include <AMReX_IntVect.H>
 
 #include <algorithm>
 #include <array>
@@ -273,6 +275,38 @@ namespace Parser
             amrex::ErrorStream() << "has wrong length " << n << " should be " << size << '\n';
         }
         AMREX_ALWAYS_ASSERT( n == size );
+        for (auto i=0ul ; i != n ; ++i) {
+            fillWithParser(str_arr[i], val_arr[i]);
+        }
+    }
+
+    inline void
+    fillWithParserArr (std::vector<std::string> const& str_arr, amrex::RealVect& val_arr) {
+        const auto n = str_arr.size();
+        if (n != AMREX_SPACEDIM) {
+            for( auto const& str : str_arr) {
+                amrex::ErrorStream() << str << ' ';
+            }
+            amrex::ErrorStream() << "has wrong length " << n
+                                 << " should be " << AMREX_SPACEDIM << '\n';
+        }
+        AMREX_ALWAYS_ASSERT( n == AMREX_SPACEDIM );
+        for (auto i=0ul ; i != n ; ++i) {
+            fillWithParser(str_arr[i], val_arr[i]);
+        }
+    }
+
+    inline void
+    fillWithParserArr (std::vector<std::string> const& str_arr, amrex::IntVect& val_arr) {
+        const auto n = str_arr.size();
+        if (n != AMREX_SPACEDIM) {
+            for( auto const& str : str_arr) {
+                amrex::ErrorStream() << str << ' ';
+            }
+            amrex::ErrorStream() << "has wrong length " << n
+                                 << " should be " << AMREX_SPACEDIM << '\n';
+        }
+        AMREX_ALWAYS_ASSERT( n == AMREX_SPACEDIM );
         for (auto i=0ul ; i != n ; ++i) {
             fillWithParser(str_arr[i], val_arr[i]);
         }

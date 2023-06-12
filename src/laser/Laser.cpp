@@ -28,7 +28,5 @@ Laser::Laser (std::string name, bool laser_from_file)
     if (duration_is_specified) m_L0 = m_tau/get_phys_const().c;
     queryWithParser(pp, "focal_distance", m_focal_distance);
 
-    amrex::Array<amrex::Real, AMREX_SPACEDIM> loc_array;
-    queryWithParser(pp, "position_mean", loc_array);
-    for (int idim=0; idim < AMREX_SPACEDIM; ++idim) m_position_mean[idim] = loc_array[idim];
+    queryWithParser(pp, "position_mean", m_position_mean);
 }
