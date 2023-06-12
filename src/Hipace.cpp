@@ -542,14 +542,14 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         m_grid_current.DepositCurrentSlice(m_fields, m_3D_geom[lev], lev, islice);
     }
 
-    // Psi Ez Bz solve
+    // Psi ExmBy EypBx Ez Bz solve
     m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
 
     // Bx By solve
     if (m_explicit) {
         for (int lev=0; lev<current_N_level; ++lev) {
             // The algorithm used was derived in
-            // [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
+            // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],
             // it is implemented in the WAND-PIC quasistatic PIC code.
 
             // Set Sx and Sy to beam contribution

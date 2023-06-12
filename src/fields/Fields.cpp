@@ -521,8 +521,9 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
         }
         // Set all quantities to 0 except:
         // Bx and By: the previous slice serves as initial guess.
-        // jx_beam and jy_beam are used from the previous "Next" slice
-        // jx and jy are initially set to jx_beam and jy_beam
+        // jx, jy, jx_beam and jy_beam on WhichSlice::This:
+        // shifted from the previous WhichSlice::Next
+        // with jx and jy initially set to jx_beam and jy_beam
         setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
             "Bz", "Psi", "jz_beam", "rhomjz");
         setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
@@ -1085,9 +1086,10 @@ Fields::MixAndShiftBfields (const amrex::Real relative_Bfield_error,
     AMREX_ALWAYS_ASSERT(Comps[WhichSlice::PCIter]["Bx"]+1==Comps[WhichSlice::PCIter]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[WhichSlice::PCPrevIter]["Bx"]+1==Comps[WhichSlice::PCPrevIter]["By"]);
 
-    /* calculating the mixed temporary B field  B_prev_iter = c*B_iter + d*B_prev_iter.
-     * This is temporarily stored in B_prev_iter just to avoid additional memory allocation.
-     * B_prev_iter is overwritten at the end of this function */
+    /* calculating the mixed temporary B field
+     * B[WhichSlice::PCPrevIter] = c*B[WhichSlice::PCIter] + d*B[WhichSlice::PCPrevIter]. This is
+     * temporarily stored in B[WhichSlice::PCPrevIter] just to avoid additional memory allocation.
+     * B[WhichSlice::PCPrevIter] is overwritten at the end of this function */
     amrex::MultiFab::LinComb(
         slicemf,
         weight_B_iter,      slicemf, Comps[WhichSlice::PCIter    ]["Bx"],
@@ -1135,6 +1137,7 @@ Fields::ComputeRelBFieldError (const int which_slice, const int which_slice_iter
             const int Bx_iter_comp = Comps[which_slice_iter]["Bx"];
             const int By_iter_comp = Comps[which_slice_iter]["By"];
 
+            // factor to account for different cell size with MR
             const amrex::Real factor = geom[lev].CellSize(0) * geom[lev].CellSize(1) /
                 (geom[0].CellSize(0) * geom[0].CellSize(1));
 

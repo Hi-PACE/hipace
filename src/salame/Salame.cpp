@@ -127,7 +127,8 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         for (int lev=0; lev<current_N_level; ++lev) {
             hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "jz_beam");
-            // deposit SALAME beam jz only on the highest level for SalameGetW
+            // deposit SALAME beam jz only on the highest level of each particle for SalameGetW,
+            // since the most accurate field (on the highest level) is supposed to be flattened
             hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
                 islice_local, false, true, false, WhichSlice::Salame, true);
         }
@@ -358,6 +359,7 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
             const int Ez_no_salame = Comps[WhichSlice::Salame]["Ez_no_salame"];
             const int jz = Comps[WhichSlice::Salame]["jz_beam"];
 
+            // factor to account for different cell size with MR
             const amrex::Real factor =
                 hipace->m_3D_geom[lev].CellSize(0) * hipace->m_3D_geom[lev].CellSize(1)
                 / (hipace->m_3D_geom[0].CellSize(0) * hipace->m_3D_geom[0].CellSize(1));

@@ -377,11 +377,11 @@ private:
      *
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
-     * \param[in] lev current level
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] step current time step
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_local,
-                                            const int lev, const int step);
+                                            const int current_N_level, const int step);
 
     int leftmostBoxWithParticles () const;
 };
