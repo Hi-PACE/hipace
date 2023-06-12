@@ -115,24 +115,36 @@ def temperature_in_eV(all_data, per_slice=True, direction='all'):
 
     NumPy structured array over timesteps with the tempature in eV.
     """
+    if per_slice:
+        all_data_loc = all_data
+    else:
+        all_data_loc = all_data["average"]
+
     if direction=='all':
-        return 1/3.*(temperature_in_eV(all_data, per_slice=per_slice, direction='x') +
-                     temperature_in_eV(all_data, per_slice=per_slice, direction='y') +
-                     temperature_in_eV(all_data, per_slice=per_slice, direction='z'))
+        sigma_u_sq = \
+            normalized_momentum_std(all_data_loc, direction='x')**2 + \
+            normalized_momentum_std(all_data_loc, direction='y')**2 + \
+            normalized_momentum_std(all_data_loc, direction='z')**2
     elif (direction=='x' or direction=='y' or direction=='z'):
-        if per_slice:
-            if all_data["is_normalized_units"][0]:
-                return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std(all_data, direction=direction)**2 * np.atleast_2d(all_data["mass"]).T
-            else:
-                return (constants.c**2 / constants.e) * normalized_momentum_std(all_data, direction=direction)**2 * np.atleast_2d(all_data["mass"]).T
-        else:
-            if all_data["is_normalized_units"][0]:
-                return (constants.m_e * constants.c**2 / constants.e) * normalized_momentum_std(all_data["average"], direction=direction)**2 * all_data["mass"]
-            else:
-                return (constants.c**2 / constants.e) * normalized_momentum_std(all_data["average"], direction=direction)**2 * all_data["mass"]
+        sigma_u_sq = normalized_momentum_std(all_data_loc, direction=direction)**2
+        if (sigma_u_sq > 1).any():
+            print("WARNING: relativistic temperature, the temperature per direction may be ")
+            print("ill-defined: T_x + T_y + T_z != T_3d. Check the implementation")
     else:
         print("Error, unknown direction, use 'x', 'y', 'z', or 'all'")
         return
+
+    if per_slice:
+        mass_factor = np.atleast_2d(all_data["mass"]).T
+    else:
+        mass_factor = all_data["mass"]
+
+    if all_data["is_normalized_units"][0]:
+        prefactor = constants.m_e * constants.c**2 / constants.e
+    else:
+        prefactor = constants.c**2 / constants.e
+
+    return 2./3 * prefactor * mass_factor * (np.sqrt(1+sigma_u_sq)-1)
 
 def position_std(all_data, direction='x'):
     """

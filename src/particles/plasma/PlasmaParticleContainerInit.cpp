@@ -327,21 +327,21 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         int_arrdata[PlasmaIdx::id][midx] = pid + int(midx);
                         int_arrdata[PlasmaIdx::cpu][midx] = 0; // level 0
 
-                        const amrex::Real ux = reproducible_temperature_dim[0] ?
+                        const amrex::Real ux = reproducible_temperature_dim[0] && idim == 0 ?
                             a_u_std[0]*dir : 0._rt;
-                        const amrex::Real uy = reproducible_temperature_dim[1] ?
+                        const amrex::Real uy = reproducible_temperature_dim[1] && idim == 1 ?
                             a_u_std[1]*dir : 0._rt;
-                        const amrex::Real uz = reproducible_temperature_dim[2] ?
+                        const amrex::Real uz = reproducible_temperature_dim[2] && idim == 2 ?
                             a_u_std[2]*dir : 0._rt;
+
                         arrdata[PlasmaIdx::ux][midx] = ux * c_light;
                         arrdata[PlasmaIdx::uy][midx] = uy * c_light;
-                        arrdata[PlasmaIdx::psi][midx] =
-                            std::sqrt(1._rt + ux*ux + uy*uy + uz*uz) - uz*dir;
+                        arrdata[PlasmaIdx::psi][midx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz) - uz;
                         arrdata[PlasmaIdx::x_prev][midx] = arrdata[PlasmaIdx::x][pidx];
                         arrdata[PlasmaIdx::y_prev][midx] = arrdata[PlasmaIdx::y][pidx];
                         arrdata[PlasmaIdx::ux_half_step][midx] = ux;
-                        arrdata[PlasmaIdx::uy_half_step][midx] = uz;
-                        arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi_half_step][pidx];
+                        arrdata[PlasmaIdx::uy_half_step][midx] = uy;
+                        arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi][midx];
     #ifdef HIPACE_USE_AB5_PUSH
                         for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                             arrdata[iforce][midx] = 0._rt;

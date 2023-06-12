@@ -132,6 +132,7 @@ PlasmaParticleContainer::ReadParameters ()
             m_u_mean[idim] = loc_array[idim];
         }
     }
+    tmp_vector = {0., 0., 0.};
     if (queryWithParserAlt(pp, "reproducible_temperature_dim", tmp_vector, pp_alt)){
         AMREX_ALWAYS_ASSERT(tmp_vector.size() == AMREX_SPACEDIM);
         for (int i=0; i<AMREX_SPACEDIM; i++) {
@@ -155,10 +156,13 @@ PlasmaParticleContainer::ReadParameters ()
         for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
             if (m_reproducible_temperature) {
                 m_u_std[idim] = m_reproducible_temperature_dim[idim] ?
-                    std::sqrt( 3. / m_reproducible_temperature *
-                    (m_temperature_in_ev * phys_const_SI.q_e)
-                    /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
-                    phys_const_SI.c * phys_const_SI.c ) ) : 0.;
+                    std::sqrt(
+                        std::pow(
+                            1.+3./2.*(m_temperature_in_ev * phys_const_SI.q_e)
+                            /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
+                            phys_const_SI.c * phys_const_SI.c ),2)
+                        - 1.
+                    ) : 0.;
             } else {
                 m_u_std[idim] = std::sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
                                         /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
