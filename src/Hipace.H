@@ -376,6 +376,9 @@ public:
      * \param[in] it Current box, the ghost slice of particles should be in the cell downstream.
      */
     void CheckGhostSlice (int it);
+    /** Background plasma density in SI, used to compute collisions, ionization,
+     * or radiation reactions in normalized units */
+    inline static amrex::Real m_background_density_SI = 0.;
 
 private:
 

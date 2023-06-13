@@ -162,6 +162,8 @@ Hipace::Hipace () :
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
 
+    queryWithParser(pph, "background_density_SI", m_background_density_SI);
+
 #ifdef AMREX_USE_MPI
     queryWithParser(pph, "skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();

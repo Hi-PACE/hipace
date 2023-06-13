@@ -30,6 +30,14 @@ AdvanceBeamParticlesSlice (
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real dt = Hipace::m_dt / n_subcycles;
+    const amrex::Real background_density_SI = Hipace::m_background_density_SI;
+    const bool normalized_units = Hipace::m_normalized_units;
+
+    if (normalized_units && radiation_reaction) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
+            "For radiation reactions with normalized units, a background plasma density != 0 must "
+            "be specified via 'hipace.background_density_SI'");
+    }
 
     const int psi_comp = Comps[WhichSlice::This]["Psi"];
     const int ez_comp = Comps[WhichSlice::This]["Ez"];
@@ -100,6 +108,7 @@ AdvanceBeamParticlesSlice (
 
     const amrex::Real clight = phys_const.c;
     const amrex::Real inv_clight = 1.0_rt/phys_const.c;
+    const amrex::Real inv_clight_SI = 1.0_rt/PhysConstSI::c;
     const amrex::Real inv_c2 = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
     const amrex::RealVect external_E_uniform = extEu;
@@ -108,8 +117,18 @@ AdvanceBeamParticlesSlice (
     const amrex::RealVect external_B_slope = extBs;
 
     // Radiation reaction constant
-    const amrex::ParticleReal q_over_mc = charge_mass_ratio*inv_clight;
+    const amrex::ParticleReal q_over_mc = normalized_units ?
+                                  charge_mass_ratio/PhysConstSI::c*PhysConstSI::q_e/PhysConstSI::m_e
+                                : charge_mass_ratio/PhysConstSI::c;
     const amrex::ParticleReal RRcoeff = (2.0_rt/3.0_rt)*PhysConstSI::r_e*q_over_mc*q_over_mc;
+
+    // calcuation of E0 in SI units for denormalization
+    // using wp_inv to avoid multiplication in kernel
+    const amrex::Real wp_inv = normalized_units ? std::sqrt((PhysConstSI::ep0 * PhysConstSI::m_e)/
+                                     static_cast<double>(background_density_SI) *
+                                     PhysConstSI::q_e*PhysConstSI::q_e  ) : 1;
+    const amrex::Real E0 = Hipace::m_normalized_units ?
+                           PhysConstSI::m_e * PhysConstSI::c / wp_inv / PhysConstSI::q_e : 1;
 
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
@@ -200,20 +219,32 @@ AdvanceBeamParticlesSlice (
 
                 if (radiation_reaction) {
 
-                    const amrex::ParticleReal Exp = ExmByp + clight*Byp;
-                    const amrex::ParticleReal Eyp = EypBxp - clight*Bxp;
+                    amrex::ParticleReal Exp = ExmByp + clight*Byp;
+                    amrex::ParticleReal Eyp = EypBxp - clight*Bxp;
 
+                    // convert to SI units, no backwards conversion as not used after RR calculation
+                    if (normalized_units) {
+                        Exp *= E0;
+                        Eyp *= E0;
+                        Ezp *= E0;
+                        Bxp *= E0;
+                        Byp *= E0;
+                        Bzp *= E0;
+                    }
                     const amrex::ParticleReal gamma_intermediate = std::sqrt( 1._rt
                         + (ux_intermediate*ux_intermediate
                         +  uy_intermediate*uy_intermediate
                         +  uz_intermediate*uz_intermediate)*inv_c2 );
                     // Estimation of the velocity at intermediate time
-                    const amrex::ParticleReal vx_n = ux_intermediate*gamma_intermediate_inv;
-                    const amrex::ParticleReal vy_n = uy_intermediate*gamma_intermediate_inv;
-                    const amrex::ParticleReal vz_n = uz_intermediate*gamma_intermediate_inv;
-                    const amrex::ParticleReal bx_n = vx_n*inv_clight;
-                    const amrex::ParticleReal by_n = vy_n*inv_clight;
-                    const amrex::ParticleReal bz_n = vz_n*inv_clight;
+                    const amrex::ParticleReal vx_n = ux_intermediate*gamma_intermediate_inv
+                                                     *PhysConstSI::c*inv_clight;
+                    const amrex::ParticleReal vy_n = uy_intermediate*gamma_intermediate_inv
+                                                     *PhysConstSI::c*inv_clight;
+                    const amrex::ParticleReal vz_n = uz_intermediate*gamma_intermediate_inv
+                                                     *PhysConstSI::c*inv_clight;
+                    const amrex::ParticleReal bx_n = vx_n*inv_clight_SI;
+                    const amrex::ParticleReal by_n = vy_n*inv_clight_SI;
+                    const amrex::ParticleReal bz_n = vz_n*inv_clight_SI;
 
                     // Lorentz force over charge
                     const amrex::ParticleReal flx_q = (Exp + vy_n*Bzp - vz_n*Byp);
@@ -235,9 +266,11 @@ AdvanceBeamParticlesSlice (
                         RRcoeff*(PhysConstSI::c*(flx_q*Byp - fly_q*Bxp) + bdotE*Ezp - coeff*bz_n);
 
                     //Update momentum using the RR force
-                    ux_next += frx*dt;
-                    uy_next += fry*dt;
-                    uz_next += frz*dt;
+                    // in normalized units wp_inv normalizes the time step
+                    // *clight/inv_clight_SI converts to proper velocity
+                    ux_next += frx*dt*wp_inv*clight*inv_clight_SI;
+                    uy_next += fry*dt*wp_inv*clight*inv_clight_SI;
+                    uz_next += frz*dt*wp_inv*clight*inv_clight_SI;
                 }
 
                 /* computing next gamma value */

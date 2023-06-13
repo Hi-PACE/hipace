@@ -73,7 +73,7 @@ public:
                   The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
                   Note the order of derivatives for the transverse components!
                   For the last component, z represents the zeta coordinate zeta = z - c*t
-    */
+     */
     void AdvanceBeamParticlesSlice (
         const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
         const int islice, const amrex::RealVect& extEu, const amrex::RealVect& extBu,

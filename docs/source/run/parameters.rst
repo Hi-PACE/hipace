@@ -218,6 +218,10 @@ General parameters
     The default value of this function corresponds to a flat Ez field at the position of the SALAME beam.
     Note: `zeta` is always less than or equal to `zeta_initial` and `Ez_initial` is typically below zero for electron beams.
 
+* ``hipace.background_density_SI`` (`float`) optional
+    Background plasma density in SI units. Certain physical modules (collisions, ionization, radiation reactions) depend on the actual background density.
+    Hence, in normalized units, they can only be included, if a background plasma density in SI units is provided using this input parameter.
+
 Field solver parameters
 -----------------------
 
@@ -412,10 +416,7 @@ Binary collisions for plasma species
 WARNING: this module is in development.
 
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
-
-* ``plasmas.background_density_SI`` (`float`) optional
-    Background plasma density in SI units. Only used for collisions in normalized units. Since the collision rate depends on the plasma density itself, it cannot be determined in normalized units without knowing the actual plasma background density.
-    Hence, it must be provided using this input parameter.
+As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
 
 * ``plasmas.collisions`` (list of `strings`) optional
     List of names of types binary Coulomb collisions.
@@ -525,7 +526,7 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name> or beams..do_radiation_reaction`` (`bool`) optional (default `0`)
     Whether the beam particles undergo energy loss due to classical radiation reactions.
     The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
-    Currently only implemented for SI units, normalized units will be added soon.
+    In normalized units, `hipace.background_density_SI` must be specified.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
