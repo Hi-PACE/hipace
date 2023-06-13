@@ -519,7 +519,7 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
             duplicate(lev, WhichSlice::This, {"jx"     , "jy"     },
                            WhichSlice::This, {"jx_beam", "jy_beam"});
         }
-        // Set all quantities to 0 except:
+        // Set all quantities on WhichSlice::This to 0 except:
         // Bx and By: the previous slice serves as initial guess.
         // jx, jy, jx_beam and jy_beam on WhichSlice::This:
         // shifted from the previous WhichSlice::Next
