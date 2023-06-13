@@ -124,9 +124,9 @@ AdvanceBeamParticlesSlice (
 
     // calcuation of E0 in SI units for denormalization
     // using wp_inv to avoid multiplication in kernel
-    const amrex::Real wp_inv = normalized_units ? std::sqrt((PhysConstSI::ep0 * PhysConstSI::m_e)/
-                                     static_cast<double>(background_density_SI) *
-                                     PhysConstSI::q_e*PhysConstSI::q_e  ) : 1;
+    const amrex::Real wp_inv = normalized_units ? std::sqrt(PhysConstSI::ep0 * PhysConstSI::m_e/
+                                     ( static_cast<double>(background_density_SI) *
+                                     PhysConstSI::q_e*PhysConstSI::q_e )  ) : 1;
     const amrex::Real E0 = Hipace::m_normalized_units ?
                            PhysConstSI::m_e * PhysConstSI::c / wp_inv / PhysConstSI::q_e : 1;
 
