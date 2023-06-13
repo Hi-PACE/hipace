@@ -11,6 +11,7 @@
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/sorting/TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/DeprecatedInput.H"
 #include "Hipace.H"
 
 MultiPlasma::MultiPlasma ()
@@ -20,6 +21,9 @@ MultiPlasma::MultiPlasma ()
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
     queryWithParser(pp, "collisions", m_collision_names);
+
+    DeprecatedInput ("plasmas", "background_density_SI",
+                    "hipace.background_density_SI", "", true);
 
     if (m_names[0] == "no_plasma") return;
     m_nplasmas = m_names.size();
