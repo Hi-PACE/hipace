@@ -18,15 +18,17 @@ in the input script with ``my_constants``.
 
 Thereby, the following constants are predefined:
 
-============ =================== ================= ====================
-**variable** **name**            **SI value**      **normalized value**
-q_e          elementary charge   1.602176634e-19   1
-m_e          electron mass       9.1093837015e-31  1
-m_p          proton mass         1.67262192369e-27 1836.15267343
-epsilon0     vacuum permittivity 8.8541878128e-12  1
-mu0          vacuum permeability 1.25663706212e-06 1
-clight       speed of light      299'792'458.      1
-============ =================== ================= ====================
+============ ========================= =====================
+**variable** **name**                  **Value**
+q_e          elementary charge         1.602176634e-19
+m_e          electron mass             9.1093837015e-31
+m_p          proton mass               1.67262192369e-27
+epsilon0     vacuum permittivity       8.8541878128e-12
+mu0          vacuum permeability       1.25663706212e-06
+clight       speed of light            299'792'458.
+hbar         reduced Planck constant   1.054571817e-34
+r_e          classical electron radius 2.817940326204929e-15
+============ ========================= =====================
 
 For a list of supported functions see the
 `AMReX documentation <https://amrex-codes.github.io/amrex/docs_html/Basics.html#parser>`__.

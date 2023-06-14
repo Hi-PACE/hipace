@@ -49,7 +49,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     } else {
         m_phys_const = make_constants_SI();
     }
-    Parser::addConstantsToParser(m_phys_const);
+    Parser::addConstantsToParser();
     Parser::replaceAmrexParamsWithParser();
 
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);

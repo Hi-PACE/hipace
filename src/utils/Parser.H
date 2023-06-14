@@ -38,18 +38,16 @@ namespace Parser
     // {"true", 1},
     // {"false", 0}
 
-    /** \brief add Physical constants to Parser constants
-     *
-     * \param[in] phys_const the constants to add
-     */
+    /** \brief add Physical constants to Parser constants */
     inline void
-    addConstantsToParser (const PhysConst& phys_const) {
-        hipace_constants.insert({"clight", phys_const.c});
-        hipace_constants.insert({"epsilon0", phys_const.ep0});
-        hipace_constants.insert({"mu0", phys_const.mu0});
-        hipace_constants.insert({"q_e", phys_const.q_e});
-        hipace_constants.insert({"m_e", phys_const.m_e});
-        hipace_constants.insert({"m_p", phys_const.m_p});
+    addConstantsToParser () {
+        hipace_constants.insert({"clight",   PhysConstSI::c   });
+        hipace_constants.insert({"epsilon0", PhysConstSI::ep0 });
+        hipace_constants.insert({"mu0",      PhysConstSI::mu0 });
+        hipace_constants.insert({"q_e",      PhysConstSI::q_e });
+        hipace_constants.insert({"m_e",      PhysConstSI::m_e });
+        hipace_constants.insert({"m_p",      PhysConstSI::m_p });
+        hipace_constants.insert({"hbar",     PhysConstSI::hbar})
     }
 
     /** \brief replace ParmParse input with a Parsed version
