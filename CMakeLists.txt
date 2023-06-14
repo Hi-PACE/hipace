@@ -257,8 +257,8 @@ if(BUILD_TESTING)
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        add_test(NAME radiation_reactions.1Rank
-                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/radiation_reactions.1Rank.sh
+        add_test(NAME radiation_reaction.1Rank
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/radiation_reaction.1Rank.sh
                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )

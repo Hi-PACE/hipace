@@ -235,16 +235,16 @@ then
                      --test-name adaptive_time_step.1Rank
 fi
 
-# radiation_reactions.1Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "radiation_reactions.1Rank" ]]
+# radiation_reaction.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "radiation_reaction.1Rank" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R radiation_reactions.1Rank \
+    ctest --output-on-failure -R radiation_reaction.1Rank \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/radiation_reactions.1Rank \
-                     --test-name radiation_reactions.1Rank
+                     --file_name ${build_dir}/bin/radiation_reaction.1Rank \
+                     --test-name radiation_reaction.1Rank
 fi
 
 # grid_current.1Rank

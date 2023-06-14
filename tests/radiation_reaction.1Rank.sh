@@ -9,7 +9,7 @@
 
 
 # This file is part of the HiPACE++ test suite.
-# It runs a HiPACE++ simulation using a beam with radiation reactions in external focusing fields
+# It runs a HiPACE++ simulation using a beam with radiation reaction in external focusing fields
 # emulating the blowout regime and compares the result with theory.
 
 # abort on first encounted error
