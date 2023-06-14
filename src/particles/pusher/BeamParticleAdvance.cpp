@@ -209,9 +209,9 @@ AdvanceBeamParticlesSlice (
                     + dt * 0.5_rt * charge_mass_ratio * Ezp;
 
                 const amrex::ParticleReal gamma_intermediate_inv = 1._rt / std::sqrt( 1._rt
-                    + (ux_intermediate*ux_intermediate
-                    +  uy_intermediate*uy_intermediate
-                    +  uz_intermediate*uz_intermediate)*inv_c2 );
+                    + ( ux_intermediate*ux_intermediate
+                       + uy_intermediate*uy_intermediate
+                       + uz_intermediate*uz_intermediate )*inv_c2 );
 
                 amrex::ParticleReal uz_next = uz + dt * charge_mass_ratio
                     * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
@@ -233,8 +233,8 @@ AdvanceBeamParticlesSlice (
                     }
                     const amrex::ParticleReal gamma_intermediate = std::sqrt(
                         1._rt + ( ux_intermediate*ux_intermediate
-                                 +uy_intermediate*uy_intermediate
-                                 +uz_intermediate*uz_intermediate )*inv_c2 );
+                                 + uy_intermediate*uy_intermediate
+                                 + uz_intermediate*uz_intermediate )*inv_c2 );
                     // Estimation of the velocity at intermediate time
                     const amrex::ParticleReal vx_n = ux_intermediate*gamma_intermediate_inv
                                                      *PhysConstSI::c*inv_clight;
@@ -277,8 +277,8 @@ AdvanceBeamParticlesSlice (
                 /* computing next gamma value */
                 const amrex::ParticleReal gamma_next_inv = 1._rt / std::sqrt( 1._rt
                     + ( ux_next*ux_next
-                       +uy_next*uy_next
-                       +uz_next*uz_next )*inv_c2 );
+                       + uy_next*uy_next
+                       + uz_next*uz_next )*inv_c2 );
 
                 /*
                  * computing positions and setting momenta for the next timestep
