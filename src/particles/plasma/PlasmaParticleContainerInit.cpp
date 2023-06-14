@@ -339,8 +339,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                         arrdata[PlasmaIdx::psi][midx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz) - uz;
                         arrdata[PlasmaIdx::x_prev][midx] = arrdata[PlasmaIdx::x][pidx];
                         arrdata[PlasmaIdx::y_prev][midx] = arrdata[PlasmaIdx::y][pidx];
-                        arrdata[PlasmaIdx::ux_half_step][midx] = ux;
-                        arrdata[PlasmaIdx::uy_half_step][midx] = uy;
+                        arrdata[PlasmaIdx::ux_half_step][midx] = arrdata[PlasmaIdx::ux][midx];
+                        arrdata[PlasmaIdx::uy_half_step][midx] = arrdata[PlasmaIdx::uy][midx];
                         arrdata[PlasmaIdx::psi_half_step][midx] = arrdata[PlasmaIdx::psi][midx];
     #ifdef HIPACE_USE_AB5_PUSH
                         for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
