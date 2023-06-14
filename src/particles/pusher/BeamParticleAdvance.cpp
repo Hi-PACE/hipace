@@ -231,10 +231,10 @@ AdvanceBeamParticlesSlice (
                         Byp *= E0;
                         Bzp *= E0;
                     }
-                    const amrex::ParticleReal gamma_intermediate = std::sqrt( 1._rt
-                        + (ux_intermediate*ux_intermediate
-                        +  uy_intermediate*uy_intermediate
-                        +  uz_intermediate*uz_intermediate)*inv_c2 );
+                    const amrex::ParticleReal gamma_intermediate = std::sqrt(
+                        1._rt + ( ux_intermediate*ux_intermediate
+                                 +uy_intermediate*uy_intermediate
+                                 +uz_intermediate*uz_intermediate )*inv_c2 );
                     // Estimation of the velocity at intermediate time
                     const amrex::ParticleReal vx_n = ux_intermediate*gamma_intermediate_inv
                                                      *PhysConstSI::c*inv_clight;
@@ -242,6 +242,7 @@ AdvanceBeamParticlesSlice (
                                                      *PhysConstSI::c*inv_clight;
                     const amrex::ParticleReal vz_n = uz_intermediate*gamma_intermediate_inv
                                                      *PhysConstSI::c*inv_clight;
+                    // Normalized velocity beta (v/c)
                     const amrex::ParticleReal bx_n = vx_n*inv_clight_SI;
                     const amrex::ParticleReal by_n = vy_n*inv_clight_SI;
                     const amrex::ParticleReal bz_n = vz_n*inv_clight_SI;
@@ -275,9 +276,9 @@ AdvanceBeamParticlesSlice (
 
                 /* computing next gamma value */
                 const amrex::ParticleReal gamma_next_inv = 1._rt / std::sqrt( 1._rt
-                    + (ux_next*ux_next
-                    +  uy_next*uy_next
-                    +  uz_next*uz_next)*inv_c2 );
+                    + ( ux_next*ux_next
+                       +uy_next*uy_next
+                       +uz_next*uz_next )*inv_c2 );
 
                 /*
                  * computing positions and setting momenta for the next timestep

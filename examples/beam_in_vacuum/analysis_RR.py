@@ -54,9 +54,9 @@ error_analytic_gamma = np.abs(mean_gamma_sim-gamma_theo)/gamma_theo
 error_analytic_std_gamma = np.abs(std_gamma_sim-std_gamma_theo)/std_gamma_theo
 error_analytic_emittance = np.abs(epsilonx_sim-emittance_theo)/emittance_theo
 
-assert(error_analytic_gamma < 1e-3)
-assert(error_analytic_std_gamma < 3e-2)
-assert(error_analytic_emittance < 1e-3)
 print("Error on gamma ", error_analytic_gamma)
 print("Error on relative gamma spread ", error_analytic_std_gamma)
 print("Error on emittance ", error_analytic_emittance)
+assert(error_analytic_gamma < 1e-3)
+assert(error_analytic_std_gamma < 3e-2)
+assert(error_analytic_emittance < 1e-3)
