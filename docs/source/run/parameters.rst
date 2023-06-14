@@ -193,6 +193,12 @@ General parameters
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.
 
+* ``hipace.m_comms_buffer_on_gpu`` (`bool`) optional (default `false`)
+    If the buffers used for MPI communication should be allocated on the GPU (device memory).
+    By default they will be allocated on the CPU (pinned memory).
+    Setting this option to true is necessary to take advatige of GPU-Enabled MPI, however for this
+    additional enviroment variables need to be set depending on the system.
+
 * ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
