@@ -48,6 +48,7 @@ namespace Parser
         hipace_constants.insert({"m_e",      PhysConstSI::m_e });
         hipace_constants.insert({"m_p",      PhysConstSI::m_p });
         hipace_constants.insert({"hbar",     PhysConstSI::hbar});
+        hipace_constants.insert({"r_e",      PhysConstSI::r_e});
     }
 
     /** \brief replace ParmParse input with a Parsed version
