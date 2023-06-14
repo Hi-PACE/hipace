@@ -218,6 +218,10 @@ General parameters
     The default value of this function corresponds to a flat Ez field at the position of the SALAME beam.
     Note: `zeta` is always less than or equal to `zeta_initial` and `Ez_initial` is typically below zero for electron beams.
 
+* ``hipace.background_density_SI`` (`float`) optional
+    Background plasma density in SI units. Certain physical modules (collisions, ionization, radiation reactions) depend on the actual background density.
+    Hence, in normalized units, they can only be included, if a background plasma density in SI units is provided using this input parameter.
+
 Field solver parameters
 -----------------------
 
@@ -412,10 +416,7 @@ Binary collisions for plasma species
 WARNING: this module is in development.
 
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
-
-* ``plasmas.background_density_SI`` (`float`) optional
-    Background plasma density in SI units. Only used for collisions in normalized units. Since the collision rate depends on the plasma density itself, it cannot be determined in normalized units without knowing the actual plasma background density.
-    Hence, it must be provided using this input parameter.
+As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
 
 * ``plasmas.collisions`` (list of `strings`) optional
     List of names of types binary Coulomb collisions.
@@ -518,6 +519,15 @@ which are valid only for certain beam types, are introduced further below under
     For the last component, z actually represents the zeta coordinate zeta = z - c*t.
     For instance, ``hipace.external_B_slope = -1. 1. 0.`` creates an axisymmetric focusing lens of strength 1 T/m.
 
+* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
+    Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
+    Note: using ``do_z_push = 0`` results in unphysical behavior.
+
+* ``<beam name> or beams..do_radiation_reaction`` (`bool`) optional (default `0`)
+    Whether the beam particles undergo energy loss due to classical radiation reactions.
+    The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
+    In normalized units, `hipace.background_density_SI` must be specified.
+
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -545,10 +555,6 @@ Option: ``fixed_weight``
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
     divisible by 4.
-
-* ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
-    Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
-    Note: using ``do_z_push = 0`` results in unphysical behavior.
 
 * ``<beam name>.z_foc`` (`float`) optional (default `0.`)
     Distance at which the beam will be focused, calculated from the position at which the beam is initialized.

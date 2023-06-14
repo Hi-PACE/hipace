@@ -21,6 +21,7 @@ namespace PhysConstSI
     static constexpr auto m_e = static_cast<amrex::Real>( 9.1093837015e-31 );
     static constexpr auto m_p = static_cast<amrex::Real>( 1.67262192369e-27 );
     static constexpr auto hbar  = static_cast<amrex::Real>( 1.054571817e-34 );
+    static constexpr auto r_e = static_cast<amrex::Real>( 2.817940326204929e-15 );
 }
 
 /** \brief Namespace containing math constants */

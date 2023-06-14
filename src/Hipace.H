@@ -335,6 +335,9 @@ public:
     inline static bool m_use_amrex_mlmg = false;
     /** Whether the simulation uses a laser pulse */
     inline static bool m_use_laser = false;
+    /** Background plasma density in SI, used to compute collisions, ionization,
+     * or radiation reaction in normalized units */
+    inline static amrex::Real m_background_density_SI = 0.;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */

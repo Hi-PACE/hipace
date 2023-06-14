@@ -57,6 +57,7 @@ BeamParticleContainer::ReadParameters ()
     getWithParser(pp, "injection_type", m_injection_type);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParser(pp, "do_z_push", m_do_z_push);
+    queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);

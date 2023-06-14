@@ -257,6 +257,12 @@ if(BUILD_TESTING)
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME radiation_reaction.1Rank
+                COMMAND bash ${HiPACE_SOURCE_DIR}/tests/radiation_reaction.1Rank.sh
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         add_test(NAME grid_current.1Rank
                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/grid_current.1Rank.sh
                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}

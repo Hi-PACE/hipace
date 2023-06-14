@@ -1,0 +1,43 @@
+amr.n_cell = 16 16 4
+
+amr.max_level = 0
+
+my_constants.ne = 5e24
+my_constants.wp = sqrt( ne * q_e^2 / (epsilon0 * m_e))
+my_constants.E0 = wp * m_e * clight / q_e
+my_constants.kp = wp / clight
+my_constants.kp_inv = 1 / kp
+
+my_constants.K = kp/sqrt(2.)
+my_constants.gamma0 = 2000
+my_constants.emittance_x = 313e-6
+my_constants.sigma_x = sqrt(emittance_x*kp_inv / sqrt(gamma0/2.) )
+my_constants.sigma_ux = emittance_x / sigma_x
+my_constants.uz = sqrt(gamma0^2 - 1 - sigma_ux^2)
+my_constants.w_beta = K*clight/sqrt(gamma0)
+
+hipace.external_E_slope = 1/2*kp*E0 1/2*kp*E0 0.
+
+hipace.dt = 30 /w_beta
+hipace.verbose = 1
+max_step = 5
+diagnostic.output_period = 5
+diagnostic.diag_type = xz
+
+geometry.is_periodic = 1     1     1      # Is periodic?
+geometry.prob_lo     = -30.e-6   -30.e-6   -10.e-6    # physical domain
+geometry.prob_hi     =  30.e-6    30.e-6    10.e-6
+
+beams.names = beam
+beams.insitu_period = 1
+beam.injection_type = fixed_weight
+beam.profile = gaussian
+beam.position_mean = 0 0 0
+beam.position_std = sigma_x 1e-12 1e-6
+beam.density = ne/1e10
+beam.u_mean = 0. 0. uz
+beam.u_std = sigma_ux 0 uz*0.01
+beam.num_particles = 100000
+beam.n_subcycles = 50
+beam.do_radiation_reaction = 1
+beam.do_z_push = 0 # to avoid dephasing
