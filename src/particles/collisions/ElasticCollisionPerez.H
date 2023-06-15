@@ -50,6 +50,7 @@
  * @param[in] normalized_units whether normalized units are used
  * @param[in] background_density_SI background plasma density (only needed for normalized units)
  * @param[in] is_same_species whether the collisions happen within the same species
+ * @param[in] is_beam_coll whether species1 is a beam
  * @param[in] engine AMReX engine for the random number generator.
 */
 
