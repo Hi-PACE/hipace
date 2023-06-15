@@ -134,7 +134,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
                         ux1, uy1, psi1, ux1, uy1, psi1, w1, w1, ion_lev1, ion_lev1,
                         q1, q1, m1, m1, -1.0_rt, -1.0_rt, can_ionize1, can_ionize1,
                         dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
-                        normalized_units, background_density_SI, is_same_species, engine );
+                        normalized_units, background_density_SI, is_same_species, false, engine );
                 }
                 );
             count++;
@@ -225,7 +225,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
                         ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev1, ion_lev2,
                         q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
                         dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
-                        normalized_units, background_density_SI, is_same_species, engine );
+                        normalized_units, background_density_SI, is_same_species, false, engine );
                 }
                 );
             count++;
@@ -249,11 +249,11 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     const PhysConst cst = get_phys_const();
     bool normalized_units = Hipace::m_normalized_units;
 
-    // const amrex::Real clight = cst.c;
-    // const amrex::Real inv_c = 1.0_rt / cst.c;
-    // const amrex::Real inv_c2 = 1.0_rt / ( cst.c * cst.c );
-    // constexpr amrex::Real inv_c_SI = 1.0_rt / PhysConstSI::c;
-    // constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
+    const amrex::Real clight = cst.c;
+    const amrex::Real inv_c = 1.0_rt / cst.c;
+    const amrex::Real inv_c2 = 1.0_rt / ( cst.c * cst.c );
+    constexpr amrex::Real inv_c_SI = 1.0_rt / PhysConstSI::c;
+    constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
 
     // Logically particles per-cell, and return indices of particles in each cell
     BeamBins bins1 = findBeamParticlesInEachTile(bx, 1, islice_local, species1, geom);
@@ -266,21 +266,21 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     for (PlasmaParticleIterator pti(species2); pti.isValid(); ++pti) {
 
         // // Get particles SoA data for species 1
-        // auto& soa1 = pti.GetStructOfArrays();
-        // amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
-        // amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
-        // amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi_half_step).data();
-        // const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
-        // const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
-        // PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
-        // PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
-        // amrex::Real q1 = species1.GetCharge();
-        // amrex::Real m1 = species1.GetMass();
-        // const bool can_ionize1 = species1.m_can_ionize;
+        const int box_offset = species1.m_box_sorter.boxOffsetsPtr()[species1.m_ibox];
+        auto& soa1 = species1.GetStructOfArrays();
+        amrex::Real* const ux1 = soa1.GetRealData(BeamIdx::ux).data() + box_offset;
+        amrex::Real* const uy1 = soa1.GetRealData(BeamIdx::uy).data() + box_offset;
+        amrex::Real* const psi1 = soa1.GetRealData(BeamIdx::uz).data() + box_offset;
+        const amrex::Real* const w1 = soa1.GetRealData(BeamIdx::w).data() + box_offset;
+        BeamBins::index_type * const indices1 = bins1.permutationPtr();
+        BeamBins::index_type const * const offsets1 = bins1.offsetsPtr();
+        amrex::Real q1 = species1.GetCharge();
+        amrex::Real m1 = species1.GetMass();
+        constexpr bool can_ionize1 = false;
 
         // Get particles SoA data for species 2
-        auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
-        auto& soa2 = ptile2.GetStructOfArrays();
+        //auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
+        auto& soa2 = pti.GetStructOfArrays();
         amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux_half_step).data();
         amrex::Real* const uy2 = soa2.GetRealData(PlasmaIdx::uy_half_step).data();
         amrex::Real* const psi2= soa2.GetRealData(PlasmaIdx::psi_half_step).data();
@@ -298,8 +298,9 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
                                          (PhysConstSI::ep0*PhysConstSI::m_e));
-        const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
-                                                : geom.CellSize(2)/PhysConstSI::c;
+        const amrex::Real dt = normalized_units ? Hipace::GetInstance().m_dt/wp
+                                                : Hipace::GetInstance().m_dt;
+
         // Extract particles in the tile that `mfi` points to
         // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
         // ParticleTileType& ptile_2 = species_2->ParticlesAt(lev, mfi);
@@ -310,34 +311,34 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
             n_cells,
             [=] AMREX_GPU_DEVICE (int i_cell, amrex::RandomEngine const& engine) noexcept
             {
-                // // The particles from species1 that are in the cell `i_cell` are
-                // // given by the `indices_1[cell_start_1:cell_stop_1]`
-                // PlasmaBins::index_type const cell_start1 = offsets1[i_cell];
-                // PlasmaBins::index_type const cell_stop1  = offsets1[i_cell+1];
-                // // Same for species 2
-                // PlasmaBins::index_type const cell_start2 = offsets2[i_cell];
-                // PlasmaBins::index_type const cell_stop2  = offsets2[i_cell+1];
-                //
-                // // ux from species1 can be accessed like this:
-                // // ux_1[ indices_1[i] ], where i is between
-                // // cell_start_1 (inclusive) and cell_start_2 (exclusive)
-                //
-                // // Do not collide if one species is missing in the cell
-                // if ( cell_stop1 - cell_start1 < 1 ||
-                //      cell_stop2 - cell_start2 < 1 ) return;
-                // // shuffle
-                // ShuffleFisherYates(indices1, cell_start1, cell_stop1, engine);
-                // ShuffleFisherYates(indices2, cell_start2, cell_stop2, engine);
-                //
-                // // TODO: FIX DT.
-                // // Call the function in order to perform collisions
-                // ElasticCollisionPerez(
-                //     cell_start1, cell_stop1, cell_start2, cell_stop2,
-                //     indices1, indices2,
-                //     ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev1, ion_lev2,
-                //     q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
-                //     dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
-                //     normalized_units, background_density_SI, is_same_species, engine );
+                // The particles from species1 that are in the cell `i_cell` are
+                // given by the `indices_1[cell_start_1:cell_stop_1]`
+                BeamBins::index_type const cell_start1 = offsets1[i_cell];
+                BeamBins::index_type const cell_stop1  = offsets1[i_cell+1];
+                // Same for species 2
+                PlasmaBins::index_type const cell_start2 = offsets2[i_cell];
+                PlasmaBins::index_type const cell_stop2  = offsets2[i_cell+1];
+
+                // ux from species1 can be accessed like this:
+                // ux_1[ indices_1[i] ], where i is between
+                // cell_start_1 (inclusive) and cell_start_2 (exclusive)
+
+                // Do not collide if one species is missing in the cell
+                if ( cell_stop1 - cell_start1 < 1 ||
+                     cell_stop2 - cell_start2 < 1 ) return;
+                // shuffle
+                ShuffleFisherYates(indices1, cell_start1, cell_stop1, engine);
+                ShuffleFisherYates(indices2, cell_start2, cell_stop2, engine);
+
+                // TODO: FIX DT.
+                // Call the function in order to perform collisions
+                ElasticCollisionPerez(
+                    cell_start1, cell_stop1, cell_start2, cell_stop2,
+                    indices1, indices2,
+                    ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev2, ion_lev2, // passing ion_lev2 for beam particles, will never be used
+                    q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
+                    dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
+                    normalized_units, background_density_SI, false, true, engine );
             }
             );
         count++;
