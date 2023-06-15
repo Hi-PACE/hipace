@@ -12,16 +12,15 @@
 #include <AMReX_ParticleTransformation.H>
 
 void
-findParticlesInEachSlice (
-    int ibox, amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom)
+findParticlesInEachSlice (amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom)
 {
     HIPACE_PROFILE("findParticlesInEachSlice()");
 
     // Slice box: only 1 cell transversally, same as bx longitudinally.
     amrex::Box cbx ({0,0,bx.smallEnd(2)}, {0,0,bx.bigEnd(2)});
 
-    const int np = beam.m_box_sorter.boxCountsPtr()[ibox];
-    const int offset = beam.m_box_sorter.boxOffsetsPtr()[ibox];
+    const int np = beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
+    const int offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
 
     // Extract box properties
     const auto lo = lbound(cbx);

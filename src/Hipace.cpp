@@ -439,7 +439,7 @@ Hipace::Evolve ()
 
             ResizeFDiagFAB(it, step);
 
-            m_multi_beam.findParticlesInEachSlice(it, bx, m_3D_geom[0]);
+            m_multi_beam.findParticlesInEachSlice(bx, m_3D_geom[0]);
             AMREX_ALWAYS_ASSERT( bx.bigEnd(Direction::z) >= bx.smallEnd(Direction::z) + 2 );
             // Solve head slice
             SolveOneSlice(bx.bigEnd(Direction::z), bx.length(Direction::z) - 1, step);

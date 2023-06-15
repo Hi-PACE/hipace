@@ -58,10 +58,10 @@ MultiBeam::DepositCurrentSlice (
 }
 
 void
-MultiBeam::findParticlesInEachSlice (int ibox, amrex::Box bx, amrex::Geometry const& geom)
+MultiBeam::findParticlesInEachSlice (amrex::Box bx, amrex::Geometry const& geom)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::findParticlesInEachSlice(ibox, bx, m_all_beams[i], geom);
+        ::findParticlesInEachSlice(bx, m_all_beams[i], geom);
     }
     amrex::Gpu::streamSynchronize();
 }
