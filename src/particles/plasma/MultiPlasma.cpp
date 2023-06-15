@@ -21,8 +21,9 @@ MultiPlasma::MultiPlasma ()
     queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
-    queryWithParser(pp, "collisions", m_collision_names);
 
+    DeprecatedInput ("plasmas", "collisions",
+                    "hipace.collisions", "", true);
     DeprecatedInput ("plasmas", "background_density_SI",
                     "hipace.background_density_SI", "", true);
 
@@ -33,16 +34,6 @@ MultiPlasma::MultiPlasma ()
         m_all_plasmas.emplace_back(PlasmaParticleContainer(m_names[i]));
     }
 
-    /** Initialize the collision objects */
-    m_ncollisions = m_collision_names.size();
-     for (int i = 0; i < m_ncollisions; ++i) {
-         m_all_collisions.emplace_back(CoulombCollision(m_names, m_collision_names[i]));
-     }
-     if (Hipace::m_normalized_units && m_ncollisions > 0) {
-         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_background_density_SI!=0,
-             "For collisions with normalized units, a background plasma density must "
-             "be specified via 'hipace.background_density_SI'");
-     }
 }
 
 void
@@ -168,23 +159,12 @@ MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
     }
 }
 
-void
-MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
-{
-    HIPACE_PROFILE("MultiPlasma::doCoulombCollision()");
-    for (int i = 0; i < m_ncollisions; ++i)
-    {
-        AMREX_ALWAYS_ASSERT(lev == 0);
-        auto& species1 = m_all_plasmas[ m_all_collisions[i].m_species1_index ];
-        auto& species2 = m_all_plasmas[ m_all_collisions[i].m_species2_index ];
-
-        // TODO: enable tiling
-
-        CoulombCollision::doCoulombCollision(
-            lev, bx, geom, species1, species2, m_all_collisions[i].m_isSameSpecies,
-            m_all_collisions[i].m_CoulombLog, Hipace::m_background_density_SI);
-    }
-}
+// void
+// MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
+// {
+//     HIPACE_PROFILE("MultiPlasma::doCoulombCollision()");
+//
+// }
 
 void
 MultiPlasma::ReorderParticles (const int islice)
