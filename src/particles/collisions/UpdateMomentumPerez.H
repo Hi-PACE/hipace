@@ -28,29 +28,15 @@
 template <typename T_R>
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
 void UpdateMomentumPerezElastic (
-    T_R& u1x, T_R& u1y, T_R& psi1, T_R& u2x, T_R& u2y, T_R& psi2,
+    T_R& u1x, T_R& u1y, T_R& u1z, T_R const g1, T_R& u2x, T_R& u2y, T_R& u2z, T_R const g2,
     T_R const n1, T_R const n2, T_R const n12,
     T_R const q1, T_R m1, T_R const w1,
     T_R const q2, T_R m2, T_R const w2,
     T_R const dt, T_R const L,  T_R const lmdD,
-    const PhysConst& cst, const bool normalized_units,
+    T_R const inv_c_SI, T_R const inv_c2_SI, const bool normalized_units,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
-
-    T_R const inv_c2 = T_R(1.0) / ( cst.c * cst.c );
-    T_R constexpr inv_c2_SI = T_R(1.0) / ( PhysConstSI::c * PhysConstSI::c );
-    T_R const inv_c = T_R(1.0) / cst.c;
-    T_R constexpr inv_c_SI = T_R(1.0) / PhysConstSI::c;
-    // Convert from pseudo-potential to momentum
-
-    // particle's Lorentz factor
-    const amrex::Real g1 = (1.0_rt+u1x*u1x*inv_c2 + u1y*u1y*inv_c2 + psi1*psi1) / (2.0_rt*psi1);
-    amrex::Real u1z = cst.c * (g1 - psi1);
-
-    // particle's Lorentz factor
-    const amrex::Real g2 = (1.0_rt+u2x*u2x*inv_c2 + u2y*u2y*inv_c2 + psi2*psi2) / (2.0_rt*psi2);
-    amrex::Real u2z = cst.c * (g2 - psi2);
 
     T_R const diffx = amrex::Math::abs(u1x-u2x);
     T_R const diffy = amrex::Math::abs(u1y-u2y);
@@ -279,8 +265,6 @@ void UpdateMomentumPerezElastic (
         u1x  = p1fx / m1;
         u1y  = p1fy / m1;
         u1z  = p1fz / m1;
-        const amrex::Real ga = std::sqrt( T_R(1.0) + (u1x*u1x+u1y*u1y+u1z*u1z)*inv_c2_SI );
-        psi1 = ga - u1z*inv_c_SI;
         AMREX_ASSERT_WITH_MESSAGE(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z),
         "NaNs detected in the updated momentum of the collision module. "
         "Most likely due to a negative root in the calculation of gc");
@@ -292,8 +276,6 @@ void UpdateMomentumPerezElastic (
         u2x  = p2fx / m2;
         u2y  = p2fy / m2;
         u2z  = p2fz / m2;
-        const amrex::Real ga = std::sqrt( T_R(1.0) + (u2x*u2x+u2y*u2y+u2z*u2z)*inv_c2_SI );
-        psi2 = ga - u2z*inv_c_SI;
         AMREX_ASSERT_WITH_MESSAGE(!std::isnan(u1x+u1y+u1z+u2x+u2y+u2z),
         "NaNs detected in the updated momentum of the collision module. "
         "Most likely due to a negative root in the calculation of gc");

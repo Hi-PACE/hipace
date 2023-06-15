@@ -11,7 +11,6 @@ CoulombCollision::CoulombCollision(
 {
     using namespace amrex::literals;
 
-    // TODO: ionization level
     // TODO: Fix dt
 
     // read collision species
@@ -50,7 +49,14 @@ CoulombCollision::doCoulombCollision (
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
-    bool normalized_units = Hipace::GetInstance().m_normalized_units;
+    bool normalized_units = Hipace::m_normalized_units;
+
+    const amrex::Real clight = cst.c;
+    const amrex::Real inv_c = 1.0_rt / cst.c;
+    const amrex::Real inv_c2 = 1.0_rt / ( cst.c * cst.c );
+    constexpr amrex::Real inv_c_SI = 1.0_rt / PhysConstSI::c;
+    constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
+
     if ( is_same_species ) // species_1 == species_2
     {
         // Logically particles per-cell, and return indices of particles in each cell
@@ -75,7 +81,7 @@ CoulombCollision::doCoulombCollision (
             const bool can_ionize1 = species1.m_can_ionize;
 
             // volume is used to calculate density, but weights already represent density in normalized units
-            const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
+            const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
             // static_cast<double> to avoid precision problems in FP32
             const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                              PhysConstSI::q_e*PhysConstSI::q_e /
@@ -107,7 +113,8 @@ CoulombCollision::doCoulombCollision (
                         indices1, indices1,
                         ux1, uy1, psi1, ux1, uy1, psi1, w1, w1, ion_lev1, ion_lev1,
                         q1, q1, m1, m1, -1.0_rt, -1.0_rt, can_ionize1, can_ionize1,
-                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, is_same_species, engine );
+                        dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
+                        normalized_units, background_density_SI, is_same_species, engine );
                 }
                 );
             count++;
@@ -154,7 +161,7 @@ CoulombCollision::doCoulombCollision (
             const bool can_ionize2 = species2.m_can_ionize;
 
             // volume is used to calculate density, but weights already represent density in normalized units
-            const amrex::Real dV = geom.CellSize(0)*geom.CellSize(1)*geom.CellSize(2);
+            const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
             // static_cast<double> to avoid precision problems in FP32
             const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                              PhysConstSI::q_e*PhysConstSI::q_e /
@@ -197,7 +204,8 @@ CoulombCollision::doCoulombCollision (
                         indices1, indices2,
                         ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev1, ion_lev2,
                         q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
-                        dt, CoulombLog, dV, cst, normalized_units, background_density_SI, is_same_species, engine );
+                        dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
+                        normalized_units, background_density_SI, is_same_species, engine );
                 }
                 );
             count++;
