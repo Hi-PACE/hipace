@@ -29,7 +29,7 @@ TEST_NAME="${FILE_NAME%.*}"
 OMP_NUM_THREADS=1 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         hipace.do_tiling = 0 \
         hipace.file_prefix=$TEST_NAME \
-        plasmas.collisions = collision1 \
+        hipace.collisions = collision1 \
         collision1.species = plasma plasma
 
 # Compare the results with checksum benchmark
