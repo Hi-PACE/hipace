@@ -298,7 +298,7 @@ IonizationModule (const int lev,
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
                                          (PhysConstSI::ep0 * PhysConstSI::m_e) );
-        const amrex::Real E0 = Hipace::GetInstance().m_normalized_units ?
+        const amrex::Real E0 = Hipace::m_normalized_units ?
                                wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();

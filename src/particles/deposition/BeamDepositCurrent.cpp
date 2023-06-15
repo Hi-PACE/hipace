@@ -50,7 +50,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     // requires sometimes just the beam currents
     // Do not access the field if the kernel later does not deposit into it,
     // the field might not be allocated. Use -1 as dummy component instead
-    const std::string beam_str = Hipace::GetInstance().m_explicit ? "_beam" : "";
+    const std::string beam_str = Hipace::m_explicit ? "_beam" : "";
     const int     jxb_cmp = do_beam_jx_jy_deposition  ? Comps[which_slice]["jx"    +beam_str] : -1;
     const int     jyb_cmp = do_beam_jx_jy_deposition  ? Comps[which_slice]["jy"    +beam_str] : -1;
     const int     jzb_cmp = do_beam_jz_deposition     ? Comps[which_slice]["jz"    +beam_str] : -1;
