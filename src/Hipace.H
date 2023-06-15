@@ -164,8 +164,9 @@ public:
 
     /**
      * \brief does Coulomb collisions between plasmas and beams
+     * \param[in] islice_local slice on which collisions are calculated, needed for beam binning
      */
-    void doCoulombCollision ();
+    void doCoulombCollision (const int islice_local);
 
     /**
        \brief Returns true on the head rank, otherwise false.

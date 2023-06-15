@@ -631,7 +631,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
                                            m_external_E_slope, m_external_B_slope);
 
     // collisions for plasmas and beams
-    doCoulombCollision();
+    doCoulombCollision(islice_local);
 
     // Advance laser slice by 1 step and store result to 3D array
     // no MR for laser
@@ -1363,7 +1363,7 @@ Hipace::NotifyFinish (const int it, bool only_ghost, bool only_time)
 }
 
 void
-Hipace::doCoulombCollision ()
+Hipace::doCoulombCollision (const int islice_local)
 {
 
     // collisions for all particles calculated on level 0
@@ -1379,7 +1379,7 @@ Hipace::doCoulombCollision ()
             // TODO: enable tiling
 
             CoulombCollision::doBeamPlasmaCoulombCollision(
-                lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2,
+                lev, m_slice_geom[0].Domain(), m_slice_geom[0], islice_local, species1, species2,
                 m_all_collisions[i].m_CoulombLog, m_background_density_SI);
         } else {
             // do plasma-plasma collisions

@@ -236,8 +236,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
 
 void
 CoulombCollision::doBeamPlasmaCoulombCollision (
-    int lev, const amrex::Box& bx, const amrex::Geometry& geom, BeamParticleContainer& species1,
-    PlasmaParticleContainer& species2, amrex::Real CoulombLog,
+    int lev, const amrex::Box& bx, const amrex::Geometry& geom, int islice_local,
+    BeamParticleContainer& species1, PlasmaParticleContainer& species2, amrex::Real CoulombLog,
     amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("CoulombCollision::doBeamPlasmaCoulombCollision()");
@@ -256,7 +256,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     // constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
 
     // Logically particles per-cell, and return indices of particles in each cell
-    // PlasmaBins bins1 = findParticlesInEachTile(bx, 1, species1, geom);
+    BeamBins bins1 = findBeamParticlesInEachTile(bx, 1, islice_local, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
 
     int const n_cells = bins2.numBins();
