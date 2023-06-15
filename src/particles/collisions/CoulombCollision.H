@@ -8,7 +8,8 @@
 #include <AMReX_ParmParse.H>
 
 /**
- * \brief This class handles Coulomb collisions between 2 plasma species (can be the same).
+ * \brief This class handles Coulomb collisions between 2 particle species
+ * (can be plasma-plasma or beam-plasma, the species can be the same)
  */
 class CoulombCollision
 {
