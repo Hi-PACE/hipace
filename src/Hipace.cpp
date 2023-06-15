@@ -496,6 +496,14 @@ Hipace::Evolve ()
 void
 Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 {
+#ifdef AMREX_USE_MPI
+    {
+        // Call a MPI function so that the MPI implementation has a chance to
+        // run tasks necessary to make progress with asynchronous communications.
+        int flag = 0;
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+    }
+#endif
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
     // Between this push and the corresponding pop at the end of this
