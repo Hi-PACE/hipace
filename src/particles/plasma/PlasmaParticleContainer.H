@@ -21,8 +21,8 @@
 struct PlasmaIdx
 {
     enum {
-        x=0, y, z,          // position
-        w,                  // weight
+        x=0, y,             // position
+        w,                  // weight, this will be returned by pos(2)
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
         x_prev, y_prev,     // positions on the last non-temp slice

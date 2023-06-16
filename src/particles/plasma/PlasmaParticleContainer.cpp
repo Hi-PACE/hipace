@@ -410,7 +410,6 @@ IonizationModule (const int lev,
                 int_arrdata_elec[PlasmaIdx::cpu][pidx] = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
-                arrdata_elec[PlasmaIdx::z      ][pidx] = arrdata_ion[PlasmaIdx::z     ][ip];
 
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;

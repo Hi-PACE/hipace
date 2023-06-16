@@ -211,7 +211,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
@@ -227,7 +226,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 int_arrdata[PlasmaIdx::cpu][pidx] = 0; // level 0
                 arrdata[PlasmaIdx::x      ][pidx] = x;
                 arrdata[PlasmaIdx::y      ][pidx] = y;
-                arrdata[PlasmaIdx::z      ][pidx] = z;
 
                 arrdata[PlasmaIdx::w      ][pidx] = scale_fac * density_func(x, y, c_t);
                 arrdata[PlasmaIdx::ux     ][pidx] = u[0] * c_light;
@@ -279,7 +277,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                     int_arrdata[PlasmaIdx::cpu][midx] = 0; // level 0
                     arrdata[PlasmaIdx::x][midx] = x_arr[imirror];
                     arrdata[PlasmaIdx::y][midx] = y_arr[imirror];
-                    arrdata[PlasmaIdx::z][midx] = arrdata[PlasmaIdx::z][pidx];
 
                     arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
                     arrdata[PlasmaIdx::ux][midx] = arrdata[PlasmaIdx::ux][pidx] * ux_arr[imirror];
