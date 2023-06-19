@@ -24,9 +24,9 @@ struct FieldDiagnosticData
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
     bool m_use_custom_size_hi = false; /**< if a user defined diagnostics size should be used (hi)*/
     /** 3D array with lower ends of the diagnostics grid */
-    amrex::Array<amrex::Real, 3> m_diag_lo {0., 0., 0.};
+    amrex::RealVect m_diag_lo {0., 0., 0.};
     /** 3D array with upper ends of the diagnostics grid */
-    amrex::Array<amrex::Real, 3> m_diag_hi {0., 0., 0.};
+    amrex::RealVect m_diag_hi {0., 0., 0.};
     amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
     bool m_do_laser {false}; /**< Whether to output the laser */
     int m_nfields; /**< Number of physical fields to write */
