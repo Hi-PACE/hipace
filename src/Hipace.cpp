@@ -157,6 +157,8 @@ Hipace::Hipace () :
     queryWithParser(pph, "background_density_SI", m_background_density_SI);
 
 #ifdef AMREX_USE_MPI
+    queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
+    m_comms_arena = m_comms_buffer_on_gpu ? amrex::The_Device_Arena() : amrex::The_Pinned_Arena();
     queryWithParser(pph, "skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();
     m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
@@ -483,6 +485,14 @@ Hipace::Evolve ()
 void
 Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 {
+#ifdef AMREX_USE_MPI
+    {
+        // Call a MPI function so that the MPI implementation has a chance to
+        // run tasks necessary to make progress with asynchronous communications.
+        int flag = 0;
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE);
+    }
+#endif
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
     // Between this push and the corresponding pop at the end of this
@@ -977,7 +987,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         const amrex::Long psize = sizeof(amrex::ParticleReal)*BeamParticleContainer::NAR
                                   + sizeof(int)*BeamParticleContainer::NAI;
         const amrex::Long buffer_size = psize*np_total;
-        auto recv_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+        auto recv_buffer = (char*)m_comms_arena->alloc(buffer_size);
 
         MPI_Status status;
         const int loc_pcomm_z_tag = only_ghost ? pcomm_z_tag_ghost : pcomm_z_tag;
@@ -1052,7 +1062,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
         }
 
         amrex::Gpu::streamSynchronize();
-        amrex::The_Pinned_Arena()->free(recv_buffer);
+        m_comms_arena->free(recv_buffer);
     }
 
     // Receive laser
@@ -1076,7 +1086,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
                      (m_rank_z+1)%m_numprocs_z, lcomm_z_tag, m_comm_z, &lstatus);
         } else {
             // Receive envelope in a host buffer, and copy to laser fab on device
-            auto lrecv_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+            auto lrecv_buffer = (amrex::Real*)m_comms_arena->alloc
                 (sizeof(amrex::Real)*nreals);
             MPI_Recv(lrecv_buffer, nreals,
                      amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
@@ -1090,7 +1100,7 @@ Hipace::Wait (const int step, int it, bool only_ghost)
                      laser_arr(i,j,k,n) = buf(i,j,k,n);
                  });
             amrex::Gpu::streamSynchronize();
-            amrex::The_Pinned_Arena()->free(lrecv_buffer);
+            m_comms_arena->free(lrecv_buffer);
         }
     }
 #endif
@@ -1172,7 +1182,7 @@ Hipace::Notify (const int step, const int it, bool only_ghost)
                                   + sizeof(int)*BeamParticleContainer::NAI;
         const amrex::Long buffer_size = psize*np_total;
         char*& psend_buffer = only_ghost ? m_psend_buffer_ghost : m_psend_buffer;
-        psend_buffer = (char*)amrex::The_Pinned_Arena()->alloc(buffer_size);
+        psend_buffer = (char*)m_comms_arena->alloc(buffer_size);
 
         int offset_beam = 0;
         for (int ibeam = 0; ibeam < nbeams; ibeam++){
@@ -1266,7 +1276,7 @@ Hipace::Notify (const int step, const int it, bool only_ghost)
         amrex::Array4<amrex::Real const> const& laser_arr = laser_fab.array();
         const amrex::Box& lbx = laser_fab.box(); // does not include ghost cells
         const std::size_t nreals = lbx.numPts()*laser_fab.nComp();
-        m_lsend_buffer = (amrex::Real*)amrex::The_Pinned_Arena()->alloc
+        m_lsend_buffer = (amrex::Real*)m_comms_arena->alloc
             (sizeof(amrex::Real)*nreals);
         if (m_multi_laser.is3dOnHost()) {
             amrex::Gpu::streamSynchronize();
@@ -1303,7 +1313,7 @@ Hipace::NotifyFinish (const int it, bool only_ghost, bool only_time)
         if (m_psend_buffer_ghost) {
             MPI_Status status;
             MPI_Wait(&m_psend_request_ghost, &status);
-            amrex::The_Pinned_Arena()->free(m_psend_buffer_ghost);
+            m_comms_arena->free(m_psend_buffer_ghost);
             m_psend_buffer_ghost = nullptr;
         }
     } else {
@@ -1324,13 +1334,13 @@ Hipace::NotifyFinish (const int it, bool only_ghost, bool only_time)
         if (m_psend_buffer) {
             MPI_Status status;
             MPI_Wait(&m_psend_request, &status);
-            amrex::The_Pinned_Arena()->free(m_psend_buffer);
+            m_comms_arena->free(m_psend_buffer);
             m_psend_buffer = nullptr;
         }
         if (m_lsend_buffer) {
             MPI_Status status;
             MPI_Wait(&m_lsend_request, &status);
-            amrex::The_Pinned_Arena()->free(m_lsend_buffer);
+            m_comms_arena->free(m_lsend_buffer);
             m_lsend_buffer = nullptr;
         }
     }
