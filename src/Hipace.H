@@ -138,29 +138,6 @@ public:
      */
     void SolveOneSlice (int islice, const int islice_local, int step);
 
-    /** \brief Full evolve on 1 subslice with explicit solver
-     *
-     * The algorithm used was derived in [Wang, T. et al. arXiv preprint arXiv:2012.00881 (2020)],
-     * it is implemented in the WAND-PIC quasistatic PIC code.
-     *
-     * \param[in] lev MR level
-     * \param[in] step current time step
-     * \param[in] islice longitudinal slice
-     * \param[in] islice_local local index of the slice
-     */
-    void ExplicitSolveOneSubSlice (const int lev, const int step,
-                                   const int islice, const int islice_local);
-
-    /** \brief Full evolve on 1 subslice with predictor-corrector solver
-     *
-     * \param[in] lev MR level
-     * \param[in] step current time step
-     * \param[in] islice longitudinal slice
-     * \param[in] islice_local local index of the slice
-     */
-    void PredictorCorrectorSolveOneSubSlice (const int lev, const int step,
-                                             const int islice, const int islice_local);
-
     /**
      * \brief Initialize Sx and Sy with the beam contributions
      *
@@ -184,13 +161,6 @@ public:
 
     /** \brief reset all laser slices to 0 */
     void ResetLaser ();
-
-    /**
-       \brief Calls FillBoundary on charges and currents on WhichSlice::This
-     *
-     * \param[in] lev MR level
-     */
-    void FillBoundaryChargeCurrents (int lev);
 
     /**
        \brief Returns true on the head rank, otherwise false.
@@ -417,11 +387,11 @@ private:
      *
      * \param[in] islice longitudinal slice
      * \param[in] islice_local local index of the slice
-     * \param[in] lev current level
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] step current time step
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_local,
-                                            const int lev, const int step);
+                                            const int current_N_level, const int step);
 
     int leftmostBoxWithParticles () const;
 };

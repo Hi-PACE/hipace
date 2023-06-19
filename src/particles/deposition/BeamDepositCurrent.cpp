@@ -23,7 +23,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
                      const bool do_beam_rhomjz_deposition,
-                     const int which_slice, int nghost)
+                     const int which_slice, int nghost, const bool only_highest)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
 
@@ -130,7 +130,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
             // Skip invalid particles and ghost particles not in the last slice
             // beam deposits only up to its finest level
-            if (ptd.id(ip) < 0 || (ptd.cpu(ip) < lev)) return;
+            if (ptd.id(ip) < 0 || (only_highest ? (ptd.cpu(ip)!=lev) : (ptd.cpu(ip)<lev))) return;
 
             // --- Get particle quantities
             const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];
