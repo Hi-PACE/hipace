@@ -44,12 +44,11 @@ public:
         const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest=false);
 
     /** Loop over all beam species and build and return the indices of particles sorted per slice
-     * \param[in] ibox box index
      * \param[in] bx 3D box on which per-slice sorting is done
      * \param[in] geom Geometry of the simulation domain
      */
     void
-    findParticlesInEachSlice (int ibox, amrex::Box bx, amrex::Geometry const& geom);
+    findParticlesInEachSlice (amrex::Box bx, amrex::Geometry const& geom);
     /** \brief Loop over all beam species and sort particles by box
      *
      * \param[in] a_ba BoxArray object to put the particles into
