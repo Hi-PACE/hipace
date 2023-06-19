@@ -122,16 +122,6 @@ public:
     /** returns number of plasma species */
     int GetNPlasmas() const {return m_nplasmas;}
 
-    // /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
-    //  *
-    //  * The algorithm implemented is that of [Perez et al., Phys. Plasmas 19, 083104 (2012)]
-    //  *
-    //  * \param[in] lev MR level
-    //  * \param[in] bx box on which plasma particles are sorted per-cell and collide together
-    //  * \param[in] geom Corresponding gemetry
-    //  */
-    // void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
-
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
      */

@@ -159,13 +159,6 @@ MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
     }
 }
 
-// void
-// MultiPlasma::doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom)
-// {
-//     HIPACE_PROFILE("MultiPlasma::doCoulombCollision()");
-//
-// }
-
 void
 MultiPlasma::ReorderParticles (const int islice)
 {
