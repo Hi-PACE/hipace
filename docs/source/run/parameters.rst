@@ -193,10 +193,10 @@ General parameters
     Currently, this option only affects plasma operations (gather, push and deposition).
     The tile size can be set with ``plasmas.sort_bin_size``.
 
-* ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `false`)
+* ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
     Whether the buffers used for MPI communication should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
-    Setting this option to true is necessary to take advatige of GPU-Enabled MPI, however for this
+    Setting this option to `1` is necessary to take advantge of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
 
 * ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)

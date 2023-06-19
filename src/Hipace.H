@@ -372,7 +372,7 @@ public:
     amrex::Parser m_salame_parser;
     /** Function to get the target Ez field for SALAME */
     amrex::ParserExecutor<3> m_salame_target_func;
-    /** If MPI communication buffers should be allocated in device memory */
+    /** Whether MPI communication buffers should be allocated in device memory */
     bool m_comms_buffer_on_gpu = false;
     /** Arena for MPI communications */
     amrex::Arena* m_comms_arena = nullptr;
