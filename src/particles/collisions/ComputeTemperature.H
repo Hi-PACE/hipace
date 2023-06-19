@@ -13,7 +13,7 @@ AMREX_GPU_HOST_DEVICE
 T_R ComputeTemperature (
     T_index const Is, T_index const Ie, T_index const * AMREX_RESTRICT I,
     T_R const * AMREX_RESTRICT ux, T_R const * AMREX_RESTRICT uy, T_R const * AMREX_RESTRICT psi,
-    T_R const m, T_R const clight, T_R const inv_c2 )
+    T_R const m, T_R const clight, T_R const inv_c2, bool is_beam_coll )
 {
     using namespace amrex::literals;
 
@@ -27,9 +27,11 @@ T_R ComputeTemperature (
     for (int i = Is; i < (int) Ie; ++i)
     {
         // particle's Lorentz factor
-        gm = (1.0_rt + (ux[I[i]]*ux[I[i]] + uy[I[i]]*uy[I[i]])*inv_c2
-              + psi[I[i]]*psi[I[i]]) / (2.0_rt * psi[I[i]] );
-        const amrex::Real uz = clight * (gm - psi[I[i]]);
+        gm = is_beam_coll ? std::sqrt( 1._rt + (ux[I[i]]*ux[I[i]] + uy[I[i]]*uy[I[i]]
+                                                + psi[I[i]]*psi[I[i]])*inv_c2 )
+                          : (1.0_rt + (ux[I[i]]*ux[I[i]] + uy[I[i]]*uy[I[i]])*inv_c2
+                                       + psi[I[i]]*psi[I[i]]) / (2.0_rt * psi[I[i]] );
+        const amrex::Real uz = is_beam_coll ? psi[I[i]] : clight * (gm - psi[I[i]]);
         us = ( ux[ I[i] ] * ux[ I[i] ] +
                uy[ I[i] ] * uy[ I[i] ] +
                uz         * uz);
