@@ -41,8 +41,12 @@
  * @param[in] can_ionize2 whether species 2 can be ionized
  * @param[in] dt is the time step length between two collision calls.
  * @param[in] L Coulomb log. If <0, measured per cell.
- * @param[in] dV Volume of the corresponding cell.
- * @param[in] cst physical constants
+ * @param[in] inv_dV inverse volume of the corresponding cell.
+ * @param[in] clight speed of light c
+ * @param[in] inv_c 1/c
+ * @param[in] inv_c_SI 1/c in SI units
+ * @param[in] inv_c2 1/c^2
+ * @param[in] inv_c2_SI 1/c^2 in SI units
  * @param[in] normalized_units whether normalized units are used
  * @param[in] background_density_SI background plasma density (only needed for normalized units)
  * @param[in] is_same_species whether the collisions happen within the same species
@@ -63,12 +67,13 @@ void ElasticCollisionPerez (
     T_R const  m1, T_R const  m2,
     T_R const  T1, T_R const  T2,
     const bool can_ionize1, const bool can_ionize2,
-    T_R const  dt, T_R const   L, T_R const dV, const PhysConst& cst, const bool normalized_units,
+    T_R const  dt, T_R const   L, T_R const inv_dV, T_R const clight, T_R const inv_c,
+    T_R const inv_c_SI, T_R const inv_c2, T_R const inv_c2_SI, const bool normalized_units,
     const amrex::Real background_density_SI, const bool is_same_species,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
-    T_R const inv_c2 = T_R(1.0)/(cst.c*cst.c);
+
     const int NI1 = I1e - I1s;
     const int NI2 = I2e - I2s;
 
@@ -76,12 +81,12 @@ void ElasticCollisionPerez (
     T_R T1t; T_R T2t;
     if ( T1 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1,cst);
+        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1,clight,inv_c2);
     }
     else { T1t = T1; }
     if ( T2 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2,cst);
+        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2,clight,inv_c2);
     }
     else { T2t = T2; }
 
@@ -116,9 +121,9 @@ void ElasticCollisionPerez (
         n2 *= background_density_SI;
         n12 *= background_density_SI;
     } else {
-        n1 /= dV;
-        n2 /= dV;
-        n12 /= dV;
+        n1 *= inv_dV;
+        n2 *= inv_dV;
+        n12 *= inv_dV;
     }
 
     // compute Debye length lmdD
@@ -146,25 +151,36 @@ void ElasticCollisionPerez (
             if (can_ionize1) q1 *= ion_lev1[I1[i1]];
             if (can_ionize2) q2 *= ion_lev2[I2[i2]];
             // particle's Lorentz factor
-            const amrex::Real g1 = (
+            amrex::Real g1 = (
                 1.0_rt +
                 u1x[I1[i1]]*u1x[I1[i1]]*inv_c2 + u1y[I1[i1]]*u1y[I1[i1]]*inv_c2 +
                 psi1[I1[i1]]*psi1[I1[i1]]) / (2.0_rt * psi1[I1[i1]] );
             // particle's Lorentz factor
-            const amrex::Real g2 = (
+            amrex::Real g2 = (
                 1.0_rt +
                 u2x[I2[i2]]*u2x[I2[i2]]*inv_c2 + u2y[I2[i2]]*u2y[I2[i2]]*inv_c2 +
                 psi2[I2[i2]]*psi2[I2[i2]]) / (2.0_rt * psi2[I2[i2]] );
+
+            // Convert from pseudo-potential to momentum
+            amrex::Real u1z = clight * (g1 - psi1[I1[i1]]);
+            amrex::Real u2z = clight * (g2 - psi2[I2[i2]]);
+
             // In the longitudinal push of plasma particles, the dt is different for each particle.
             // The dt applied for collision probability is the average (in the lab frame) of these
             // dts. This is NOT clean. TODO FIXME.
             const amrex::Real dt_fac = 0.5_rt * (g1/psi1[I1[i1]] + g2/psi2[I2[i2]]);
             UpdateMomentumPerezElastic(
-                u1x[ I1[i1] ], u1y[ I1[i1] ], psi1[ I1[i1] ],
-                u2x[ I2[i2] ], u2y[ I2[i2] ], psi2[ I2[i2] ],
-                n1, n2, n12,
-                q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
-                dt * dt_fac, L, lmdD, cst, normalized_units, engine);
+                u1x[ I1[i1] ], u1y[ I1[i1] ], u1z, g1,
+                u2x[ I2[i2] ], u2y[ I2[i2] ], u2z, g2,
+                n1, n2, n12, q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
+                dt * dt_fac, L, lmdD, inv_c_SI, inv_c2_SI, normalized_units, engine);
+
+            g1 = std::sqrt( T_R(1.0) +
+                            (u1x[I1[i1]]*u1x[I1[i1]]+u1y[I1[i1]]*u1y[I1[i1]]+u1z*u1z)*inv_c2 );
+            psi1[I1[i1]] = g1 - u1z*inv_c;
+            g2 = std::sqrt( T_R(1.0) +
+                            (u2x[I2[i2]]*u2x[I2[i2]]+u2y[I2[i2]]*u2y[I2[i2]]+u2z*u2z)*inv_c2 );
+            psi2[I2[i2]] = g2 - u2z*inv_c;
 
             ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
             ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
