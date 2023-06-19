@@ -436,6 +436,9 @@ IonizationModule (const int lev,
                 int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
             }
         });
+
+        // synchronize before ion_mask and ip_elec go out of scope
+        amrex::Gpu::streamSynchronize();
     }
 }
 

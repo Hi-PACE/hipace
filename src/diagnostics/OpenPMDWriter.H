@@ -68,6 +68,7 @@ private:
                            unsigned long long const box_offset,
                            const unsigned long long numParticleOnTile);
 
+public: // for device lambda
     /** \brief writing openPMD beam particle data
      *
      * \param[in] beams multi beam container which is written to openPMD file
@@ -82,6 +83,7 @@ private:
                                 const amrex::Geometry& geom,
                                 const amrex::Vector< std::string > beamnames);
 
+private:
     /** \brief writing openPMD field data
      *
      * \param[in] fab the FArrayBox to dump

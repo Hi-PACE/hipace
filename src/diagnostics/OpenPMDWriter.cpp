@@ -209,12 +209,25 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         {
             // save particle ID
-            std::shared_ptr< uint64_t > ids( new uint64_t[numParticleOnTile],
-                                             [](uint64_t const *p){ delete[] p; } );
+            std::shared_ptr< uint64_t > ids(
+                reinterpret_cast<uint64_t*>(
+                    amrex::The_Pinned_Arena()->alloc(sizeof(uint64_t)*numParticleOnTile)
+                ),
+                [](uint64_t *p){
+                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
+                });
 
-            for (uint64_t i=0; i<numParticleOnTile; i++) {
-                ids.get()[i] = beam.id(i);
-            }
+            const int* const id_gpu_data = beam.GetStructOfArrays()
+                .GetIntData(BeamIdx::id).data() + box_offset;
+            uint64_t* const id_data = ids.get();
+
+            amrex::ParallelFor(numParticleOnTile,
+                [=] AMREX_GPU_DEVICE (uint64_t i) {
+                    id_data[i] = static_cast<uint64_t>(id_gpu_data[i]);
+                });
+
+            amrex::Gpu::streamSynchronize();
+
             auto const scalar = openPMD::RecordComponent::SCALAR;
             beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});
         }
@@ -222,7 +235,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, box_offset,
                          numParticleOnTile);
 
-         m_tmp_offset[ibeam] = numParticleOnTile64;
+        m_tmp_offset[ibeam] = numParticleOnTile64;
     }
 }
 
@@ -350,14 +363,26 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     {
         for (int idx=0; idx<NumSoARealAttributes; idx++) {
 
+            std::shared_ptr< amrex::ParticleReal > real_attr(
+                reinterpret_cast<amrex::ParticleReal*>(
+                    amrex::The_Pinned_Arena()->alloc(sizeof(amrex::ParticleReal)*numParticleOnTile)
+                ),
+                [](amrex::ParticleReal *p){
+                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
+                });
+
+            amrex::Gpu::copy(amrex::Gpu::deviceToHost,
+                soa.GetRealData(idx).begin() + box_offset,
+                soa.GetRealData(idx).begin() + box_offset + numParticleOnTile64,
+                real_attr.get());
+
             // handle scalar and non-scalar records by name
             std::string record_name, component_name;
             std::tie(record_name, component_name) = utils::name2openPMD(real_comp_names[idx]);
             auto& currRecord = currSpecies[record_name];
             auto& currRecordComp = currRecord[component_name];
 
-            currRecordComp.storeChunkRaw(soa.GetRealData(idx).data()+box_offset,
-                                         {offset}, {numParticleOnTile64});
+            currRecordComp.storeChunk(real_attr, {offset}, {numParticleOnTile64});
         } // end for NumSoARealAttributes
     }
 }
