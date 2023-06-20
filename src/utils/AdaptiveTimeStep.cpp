@@ -91,7 +91,7 @@ AdaptiveTimeStep::Calculate (
 
     // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
-    const int numprocs_z = Hipace::GetInstance().m_numprocs_z;
+    const int numprocs_z = Hipace::m_numprocs_z;
 
     amrex::Vector<amrex::Real> new_dts;
     new_dts.resize(nbeams);

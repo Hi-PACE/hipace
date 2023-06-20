@@ -184,18 +184,6 @@ public:
      * longitudinal parallelization)
      */
     MPI_Comm m_comm_z = MPI_COMM_NULL;
-    /** Number of processors in the transverse x direction */
-    int m_numprocs_x = 1;
-    /** Number of processors in the transverse y direction */
-    int m_numprocs_y = 1;
-    /** Number of processors in the longitudinal z direction */
-    int m_numprocs_z = 0;
-    /** My rank in the transverse communicator */
-    int m_rank_xy = 0;
-    /** My rank in the longitudinal communicator */
-    int m_rank_z = 0;
-    /** Max number of grid size in the longitudinal direction */
-    int m_boxes_in_z = 1;
     /** Send buffer for particle longitudinal parallelization (pipeline) */
     char* m_psend_buffer = nullptr;
     char* m_psend_buffer_ghost = nullptr;
@@ -252,12 +240,22 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
+    /** Number of processors in the transverse x direction */
+    inline static int m_numprocs_x = 1;
+    /** Number of processors in the transverse y direction */
+    inline static int m_numprocs_y = 1;
+    /** Number of processors in the longitudinal z direction */
+    inline static int m_numprocs_z = 0;
+    /** My rank in the transverse communicator */
+    inline static int m_rank_xy = 0;
+    /** My rank in the longitudinal communicator */
+    inline static int m_rank_z = 0;
+    /** Max number of grid size in the longitudinal direction */
+    inline static int m_boxes_in_z = 1;
     /** Number of time iterations */
     inline static int m_max_step = 0;
     /** Maximum simulation time */
     inline static amrex::Real m_max_time = std::numeric_limits<amrex::Real>::infinity();
-    /** Time step for the beam evolution */
-    inline static amrex::Real m_dt = 0.0;
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     inline static amrex::Real m_physical_time = 0.0;
@@ -295,6 +293,8 @@ public:
     /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
      * Otherwise, changing this parameter only will not affect the simulation results. */
     inline static int m_beam_injection_cr = 1;
+    /** Whether the explicit field solver is used */
+    inline static bool m_explicit = true;
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
     inline static amrex::Real m_MG_tolerance_rel = 1.e-4;
     /** Absolute tolerance for the multigrid solver, when using the explicit solver */
@@ -308,6 +308,8 @@ public:
     /** Background plasma density in SI, used to compute collisions, ionization,
      * or radiation reaction in normalized units */
     inline static amrex::Real m_background_density_SI = 0.;
+    /** Time step for the beam evolution */
+    amrex::Real m_dt = 0.0;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
@@ -326,8 +328,6 @@ public:
     int m_leftmost_box_rcv = std::numeric_limits<int>::max();
     /** Whether to skip communications of boxes that contain no beam particles */
     int m_skip_empty_comms = false;
-    /** Whether the explicit field solver is used */
-    bool m_explicit = true;
     /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 3;
     /** if the SALAME-only field should be computed exactly with plasma particles */

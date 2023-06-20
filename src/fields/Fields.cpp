@@ -58,7 +58,7 @@ Fields::AllocData (
             m_source_nguard = amrex::IntVect{0, 0, 0};
         }
 
-        m_explicit = Hipace::GetInstance().m_explicit;
+        m_explicit = Hipace::m_explicit;
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
         const bool any_salame = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame();
 
@@ -557,7 +557,7 @@ Fields::ShiftSlices (int lev)
 {
     HIPACE_PROFILE("Fields::ShiftSlices()");
 
-    const bool explicit_solve = Hipace::GetInstance().m_explicit;
+    const bool explicit_solve = Hipace::m_explicit;
 
     // only shift the slices that are allocated
     if (explicit_solve) {
@@ -725,7 +725,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 
             amrex::Real offset = 1;
             amrex::Real factor = 1;
-            if ((component == "Bx" || component == "By") && Hipace::GetInstance().m_explicit &&
+            if ((component == "Bx" || component == "By") && Hipace::m_explicit &&
                 (getSlices(lev).box(0).length(0) % 2 == 0)) {
                 // hpmg has the boundary condition at a different place
                 // compared to the fft poisson solver
