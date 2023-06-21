@@ -304,8 +304,6 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     });
 }
     }
-
-    AMREX_ASSERT(OK());
 }
 
 void
