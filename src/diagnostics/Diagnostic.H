@@ -77,7 +77,7 @@ public:
                          amrex::Real output_time, amrex::Real max_time)
     {
         return  fd.m_nfields_with_laser > 0 &&
-            utils::doOutput(fd.m_output_period, output_step, max_step,
+            utils::doDiagnostics(fd.m_output_period, output_step, max_step,
                             output_time, max_time);
     }
 
@@ -108,7 +108,7 @@ public:
                         amrex::Real output_time, amrex::Real max_time) const
     {
         return m_output_beam_names.size() > 0 &&
-            utils::doOutput(m_beam_output_period, output_step, max_step,
+            utils::doDiagnostics(m_beam_output_period, output_step, max_step,
                             output_time, max_time);
     }
 

@@ -57,7 +57,7 @@ namespace utils
      * \param[in] output_time physical time of the current step
      * \param[in] max_time maximum simulation time
      */
-     bool doOutput (int output_period, int output_step, int max_step,
+     bool doDiagnostics (int output_period, int output_step, int max_step,
                     amrex::Real output_time, amrex::Real max_time);
 
 #ifdef HIPACE_USE_OPENPMD
