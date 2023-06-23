@@ -466,8 +466,8 @@ Hipace::Evolve ()
         // exit loop over time steps, if max time is exceeded
         if (m_physical_time > m_max_time) break;
 
-        m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
-        m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
+        m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
+        m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
 
         // printing and resetting predictor corrector loop diagnostics
         if (m_verbose>=2 && !m_explicit) amrex::AllPrint() << "Rank " << rank <<
@@ -501,8 +501,9 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     // for function, the parallelcontext is the transverse communicator
     amrex::ParallelContext::push(m_comm_xy);
 
-    m_multi_beam.InSituComputeDiags(step, islice, islice_local);
-    m_multi_plasma.InSituComputeDiags(step, islice);
+    m_multi_beam.InSituComputeDiags(step, islice, islice_local, m_max_step,
+                                    m_physical_time, m_max_time);
+    m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
 
     // Get this laser slice from the 3D array
     m_multi_laser.Copy(islice, false);

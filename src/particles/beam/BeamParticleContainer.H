@@ -185,9 +185,9 @@ public:
                      const int which_slice, const int islice_local, const int nghost);
 
     amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
-
-    bool doInSitu (int step);
-
+    /** How often the insitu beam diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
 private:
     std::string m_name; /**< name of the species */
     amrex::Real m_zmin; /**< Min longitudinal particle position of the beam */
@@ -249,9 +249,6 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
-    /** How often the insitu beam diagnostics should be computed and written
-     * Default is 0, meaning no output */
-    int m_insitu_period {0};
 };
 
 #endif

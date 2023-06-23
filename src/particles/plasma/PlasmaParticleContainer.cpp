@@ -431,12 +431,6 @@ IonizationModule (const int lev,
     }
 }
 
-bool
-PlasmaParticleContainer::doInSitu (int step)
-{
-    return (m_insitu_period > 0 && step % m_insitu_period == 0);
-}
-
 void
 PlasmaParticleContainer::InSituComputeDiags (int islice)
 {

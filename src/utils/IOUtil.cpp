@@ -14,7 +14,7 @@
 
 
 std::vector< double >
-utils::getRelativeCellPosition(amrex::FArrayBox const& fab)
+utils::getRelativeCellPosition (amrex::FArrayBox const& fab)
 {
     amrex::Box const box = fab.box();
     amrex::IndexType const idx_type = box.ixType();
@@ -31,7 +31,7 @@ utils::getRelativeCellPosition(amrex::FArrayBox const& fab)
 }
 
 std::vector<std::uint64_t>
-utils::getReversedVec( const amrex::IntVect& v )
+utils::getReversedVec ( const amrex::IntVect& v )
 {
   // Convert the IntVect v to and std::vector u
   std::vector<std::uint64_t> u = {
@@ -49,7 +49,7 @@ utils::getReversedVec( const amrex::IntVect& v )
 }
 
 std::vector<double>
-utils::getReversedVec( const amrex::Real* v )
+utils::getReversedVec ( const amrex::Real* v )
 {
   // Convert Real* v to and std::vector u
   std::vector<double> u = {
@@ -66,9 +66,19 @@ utils::getReversedVec( const amrex::Real* v )
   return u;
 }
 
+bool
+utils::doDiagnostics (int output_period, int output_step, int max_step,
+               amrex::Real output_time, amrex::Real max_time)
+{
+    return output_period > 0 && (
+        (output_time == max_time) ||
+        (output_step == max_step) ||
+        (output_step % output_period == 0) );
+}
+
 #ifdef HIPACE_USE_OPENPMD
 std::pair< std::string, std::string >
-utils::name2openPMD( std::string const& fullName )
+utils::name2openPMD ( std::string const& fullName )
 {
     std::string record_name = fullName;
     std::string component_name = openPMD::RecordComponent::SCALAR;
@@ -87,7 +97,7 @@ utils::name2openPMD( std::string const& fullName )
  * @return map with base quantities and power scaling
  */
 std::map< openPMD::UnitDimension, double >
-utils::getUnitDimension( std::string const & record_name )
+utils::getUnitDimension ( std::string const & record_name )
 {
 
     if( record_name == "position" ) return {
