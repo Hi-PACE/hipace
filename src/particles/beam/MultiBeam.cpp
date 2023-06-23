@@ -220,10 +220,10 @@ MultiBeam::InSituComputeDiags (int step, int islice, int islice_local,
                                int max_step, amrex::Real physical_time,
                                amrex::Real max_time)
 {
-    for (int i = 0; i < m_nbeams; ++i) {
-        if (utils::doOutput(m_all_beams[i].m_insitu_period, step,
+    for (auto& beam : m_all_beams) {
+        if (utils::doOutput(beam.m_insitu_period, step,
                             max_step, physical_time, max_time)) {
-            m_all_beams[i].InSituComputeDiags(islice, islice_local);
+            beam.InSituComputeDiags(islice, islice_local);
         }
     }
 }

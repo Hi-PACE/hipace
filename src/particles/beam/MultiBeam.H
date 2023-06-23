@@ -83,10 +83,20 @@ public:
      * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] islice_local local index of the slice
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] physical_time physical time at the given step
+     * \param[in] max_time maximum time of simulation
      */
     void InSituComputeDiags (int step, int islice, int islice_local,
                              int max_step, amrex::Real physical_time,
                              amrex::Real max_time);
+    /** Write reduced beam diagnostics to file
+     * \param[in] step time step of simulation
+     * \param[in] time physical time at the given step
+     * \param[in] geom Simulation geometry
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
                             int max_step, amrex::Real max_time);
     /** Loop over species and init them

@@ -150,7 +150,6 @@ public:
      * \param[in] geom Geometry object for the whole domain
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
-    bool doInSitu (int step);
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
@@ -186,7 +185,9 @@ public:
     int m_reorder_period = 0;
     /** 2D reordering index type. 0: cell, 1: node, 2: both */
     amrex::IntVect m_reorder_idx_type = {0, 0, 0};
-
+    /** How often the insitu plasma diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
 private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */
@@ -215,9 +216,6 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/plasma_insitu";
-    /** How often the insitu plasma diagnostics should be computed and written
-     * Default is 0, meaning no output */
-    int m_insitu_period {0};
 };
 
 /** \brief Iterator over boxes in a particle container */
