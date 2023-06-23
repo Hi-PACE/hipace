@@ -463,6 +463,8 @@ Hipace::Evolve ()
             WriteDiagnostics(step, it, OpenPMDWriterCallType::fields);
             Notify(step, it);
         }
+        // exit loop over time steps, if max time is exceeded
+        if (m_physical_time > m_max_time) break;
 
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0]);
