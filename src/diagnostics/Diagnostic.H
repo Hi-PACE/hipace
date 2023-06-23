@@ -8,6 +8,8 @@
 #ifndef DIAGNOSTIC_H_
 #define DIAGNOSTIC_H_
 
+#include "utils/IOUtil.H"
+
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
 
@@ -74,10 +76,9 @@ public:
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
-        return fd.m_output_period > 0 && fd.m_nfields_with_laser > 0 && (
-            (output_time == max_time) ||
-            (output_step == max_step) ||
-            (output_step % fd.m_output_period == 0) );
+        return  fd.m_nfields_with_laser > 0 &&
+            utils::doOutput(fd.m_output_period, output_step, max_step,
+                            output_time, max_time);
     }
 
     /** \brief determines if any field diagnostic has any output on in this time step
@@ -106,10 +107,9 @@ public:
     bool hasBeamOutput (int output_step, int max_step,
                         amrex::Real output_time, amrex::Real max_time) const
     {
-        return m_beam_output_period > 0 && m_output_beam_names.size() > 0 && (
-            (output_time == max_time) ||
-            (output_step == max_step) ||
-            (output_step % m_beam_output_period == 0) );
+        return m_output_beam_names.size() > 0 &&
+            utils::doOutput(m_beam_output_period, output_step, max_step,
+                            output_time, max_time);
     }
 
     /** \brief determines if any field or beam diagnostic has any output on in this time step

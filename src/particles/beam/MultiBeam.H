@@ -84,8 +84,11 @@ public:
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] islice_local local index of the slice
      */
-    void InSituComputeDiags (int step, int islice, int islice_local);
-    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
+    void InSituComputeDiags (int step, int islice, int islice_local,
+                             int max_step, amrex::Real physical_time,
+                             amrex::Real max_time);
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
+                            int max_step, amrex::Real max_time);
     /** Loop over species and init them
      * \param[in] geom Simulation geometry
      * \return physical time at which the simulation will start

@@ -304,12 +304,6 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     );
 }
 
-bool
-BeamParticleContainer::doInSitu (int step)
-{
-    return (m_insitu_period > 0 && step % m_insitu_period == 0);
-}
-
 void
 BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
 {

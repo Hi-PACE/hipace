@@ -51,14 +51,14 @@ namespace utils
 
     /** \brief
      * returns whether output should be writen to file
+     * \param[in] output_period period of the output
+     * \param[in] output_step current step
+     * \param[in] max_step maximum step of simulation
+     * \param[in] output_time physical time of the current step
+     * \param[in] max_time maximum simulation time
      */
-     bool doOutput (int output_step, int max_step,
-                         amrex::Real output_time, amrex::Real max_time) const
-     {
-         return m_beam_output_period > 0 && m_output_beam_names.size() > 0 && (
-             (output_time == max_time) ||
-             (output_step == max_step) ||
-             (output_step % m_beam_output_period == 0) );
+     bool doOutput (int output_period, int output_step, int max_step,
+                    amrex::Real output_time, amrex::Real max_time);
 
 #ifdef HIPACE_USE_OPENPMD
     std::pair< std::string, std::string >

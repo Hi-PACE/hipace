@@ -66,6 +66,16 @@ utils::getReversedVec ( const amrex::Real* v )
   return u;
 }
 
+bool
+utils::doOutput (int output_period, int output_step, int max_step,
+               amrex::Real output_time, amrex::Real max_time)
+{
+    return output_period > 0 && (
+        (output_time == max_time) ||
+        (output_step == max_step) ||
+        (output_step % output_period == 0) );
+}
+
 #ifdef HIPACE_USE_OPENPMD
 std::pair< std::string, std::string >
 utils::name2openPMD ( std::string const& fullName )

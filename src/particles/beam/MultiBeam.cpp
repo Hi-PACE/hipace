@@ -10,6 +10,7 @@
 #include "particles/sorting/SliceSort.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "utils/DeprecatedInput.H"
+#include "utils/IOUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 
 MultiBeam::MultiBeam ()
@@ -215,20 +216,25 @@ MultiBeam::PackLocalGhostParticles (int it)
 }
 
 void
-MultiBeam::InSituComputeDiags (int step, int islice, int islice_local)
+MultiBeam::InSituComputeDiags (int step, int islice, int islice_local,
+                               int max_step, amrex::Real physical_time,
+                               amrex::Real max_time)
 {
     for (int i = 0; i < m_nbeams; ++i) {
-        if (m_all_beams[i].doInSitu(step)) {
+        if (utils::doOutput(m_all_beams[i].m_insitu_period, step,
+                            max_step, physical_time, max_time)) {
             m_all_beams[i].InSituComputeDiags(islice, islice_local);
         }
     }
 }
 
 void
-MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
+MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
+                              int max_step, amrex::Real max_time)
 {
     for (auto& beam : m_all_beams) {
-        if (beam.doInSitu(step)) {
+        if (utils::doOutput(beam.m_insitu_period, step,
+                            max_step, time, max_time)) {
             beam.InSituWriteToFile(step, time, geom);
         }
     }
