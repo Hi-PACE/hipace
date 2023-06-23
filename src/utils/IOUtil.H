@@ -39,7 +39,7 @@ namespace utils
      * (used for compatibility with the openPMD API)
      */
     std::vector<std::uint64_t>
-    getReversedVec( const amrex::IntVect& v );
+    getReversedVec ( const amrex::IntVect& v );
 
     /** \brief
      * Convert Real* pointer to a std::vector<double>,
@@ -47,11 +47,22 @@ namespace utils
      * (used for compatibility with the openPMD API)
      */
     std::vector<double>
-    getReversedVec( const amrex::Real* v );
+    getReversedVec ( const amrex::Real* v );
+
+    /** \brief
+     * returns whether output should be writen to file
+     */
+     bool doOutput (int output_step, int max_step,
+                         amrex::Real output_time, amrex::Real max_time) const
+     {
+         return m_beam_output_period > 0 && m_output_beam_names.size() > 0 && (
+             (output_time == max_time) ||
+             (output_step == max_step) ||
+             (output_step % m_beam_output_period == 0) );
 
 #ifdef HIPACE_USE_OPENPMD
     std::pair< std::string, std::string >
-    name2openPMD( std::string const& fullName );
+    name2openPMD ( std::string const& fullName );
 
     /** Get the openPMD physical dimensionality of a record
      *
@@ -59,7 +70,7 @@ namespace utils
      * @return map with base quantities and power scaling
      */
     std::map< openPMD::UnitDimension, double >
-    getUnitDimension( std::string const & record_name );
+    getUnitDimension ( std::string const & record_name );
 #endif
 
 }
