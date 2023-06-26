@@ -231,7 +231,7 @@ namespace Parser
     }
 
     inline void
-    fillWithParser (std::string const& str, std::string& val) {
+    fillWithParser (std::string const& str, std::string& val, bool do_escape_backtransform=true) {
         std::string loc_str = str;
 
         // replace {{ and }} with 1 and 2
@@ -244,6 +244,7 @@ namespace Parser
         }
 
         // replace {expression} with to_string(parser(expression))
+        static std::set<std::string> recursive_symbols{};
         while ( (pos=loc_str.rfind("{")) != std::string::npos) {
             const auto pos_end = loc_str.find("}", pos);
             if (pos_end == std::string::npos) {
@@ -253,19 +254,42 @@ namespace Parser
                 AMREX_ALWAYS_ASSERT(pos_end != std::string::npos);
             }
             const std::string parse_string = loc_str.substr(pos+1, pos_end-pos-1);
-            double parse_val = 0.;
-            fillWithParser(parse_string, parse_val);
-            std::stringstream ss{};
-            ss << parse_val;
-            loc_str.replace(pos, pos_end-pos+1, ss.str());
+
+            amrex::ParmParse pp_my_constants("my_constants");
+            if (pp_my_constants.contains(parse_string.c_str())) {
+                if (recursive_symbols.count(parse_string) != 0) {
+                    amrex::ErrorStream() << "Expression '"
+                                         << str
+                                         << "' contains recursive symbol '"
+                                         << parse_string
+                                         << "'!\n";
+                    AMREX_ALWAYS_ASSERT(recursive_symbols.count(parse_string) == 0);
+                }
+                std::string replacer;
+                pp_my_constants.get(parse_string.c_str(), replacer);
+                std::string parse_val;
+                recursive_symbols.insert(parse_string);
+                // for proper escape handling
+                fillWithParser(replacer, parse_val, false);
+                recursive_symbols.erase(parse_string);
+                loc_str.replace(pos, pos_end-pos+1, parse_val);
+            } else {
+                double parse_val = 0.;
+                fillWithParser(parse_string, parse_val);
+                std::stringstream ss{};
+                ss << parse_val;
+                loc_str.replace(pos, pos_end-pos+1, ss.str());
+            }
         }
 
-        // replace 1 and 2 with { and }
-        while ( (pos=loc_str.find(char(1))) != std::string::npos) {
-            loc_str.replace(pos, 1, "{");
-        }
-        while ( (pos=loc_str.rfind(char(2))) != std::string::npos) {
-            loc_str.replace(pos, 1, "}");
+        if (do_escape_backtransform) {
+            // replace 1 and 2 with { and }
+            while ( (pos=loc_str.find(char(1))) != std::string::npos) {
+                loc_str.replace(pos, 1, "{");
+            }
+            while ( (pos=loc_str.rfind(char(2))) != std::string::npos) {
+                loc_str.replace(pos, 1, "}");
+            }
         }
 
         val = loc_str;
