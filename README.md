@@ -6,16 +6,23 @@
 [![DOI (source)](https://img.shields.io/badge/DOI%20(source)-10.5281/zenodo.5358483-blue.svg)](https://doi.org/10.5281/zenodo.5358483)
 [![DOI (paper)](https://img.shields.io/badge/DOI%20(paper)-10.1016/j.cpc.2022.108421-blue.svg)](https://doi.org/10.1016/j.cpc.2022.108421)
 
-HiPACE++ is an open-source portable GPU-capable quasistatic particle-in-cell code for wakefield acceleration written in C++.
+HiPACE++ is an open-source portable GPU-capable quasi-static particle-in-cell code for wakefield acceleration written in C++.
 It is a full re-writing of the legacy code [HiPACE](http://dx.doi.org/10.1088/0741-3335/56/8/084012), the Highly efficient Plasma ACcelerator Emulator.
 Its main features are:
- - Multiple beams and multiple plasma species to simulation beam-driven wakefield acceleration
- - Field ionization of the plasma using the ADK model
- - Two field solver methods, the original HiPACE predictor-corrector loop and an [explicit solver](https://arxiv.org/abs/2012.00881)
+ - Multiple beams and plasma species to simulation beam-driven wakefield acceleration
+ - A laser envelope solver to simulate laser-driven wakefield acceleration
+ - An advanced [explicit field solver](https://doi.org/10.1103/PhysRevAccelBeams.25.104603) for increased accuracy
  - Diagnostics compliant with the [openPMD standard](https://github.com/openPMD/openPMD-standard)
- - Read an arbitrary particle beam from file
- - more coming soon...
+ - Arbitrary profiles for the beams and plasma profiles
+ - Readers from files for the beam and laser profiles
+ - Adaptive time step and sub-cycling
+ - Additional physics (field ionization, binary collisions, temperature effects, radiation reactions)
 
 HiPACE++ is built on the [AMReX](https://amrex-codes.github.io) library, which provides for particle and field data structures.
 
 Please have a look at our [documentation](https://hipace.readthedocs.io) and join the [chat](https://hipace.readthedocs.io/en/latest/run/chat.html)!
+
+# Announcement
+
+On the 11th of July 2023, there will be a virtual HiPACE++ workshop from 4pm to 7pm CET.
+Feel free to sign up on the [indico webpage](https://indico.desy.de/event/40158/)
