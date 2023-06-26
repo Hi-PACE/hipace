@@ -1,5 +1,6 @@
 .. _build-source:
 
+.. these lines below don't seem to work anymore, fixing it by hand
 .. raw:: html
 
    <style>
@@ -51,11 +52,19 @@ Optional dependencies include:
 
 Please choose **one** of the installation methods below to get started:
 
+HPC platforms
+-------------
+
+If want to use HiPACE++ on a specific high-performance computing (HPC) systems, jump directly to our :ref:`HPC system-specific documentation <install-hpc>`.
+
 .. _install-spack:
 
 .. only:: html
 
    .. image:: spack.svg
+      :width: 32px
+      :align: left
+
 
 Using the Spack package manager
 -------------------------------
@@ -81,15 +90,19 @@ The dependencies can be installed via the package manager
 (in new terminals, re-activate the environment with ``spack env activate hipace-dev`` again)
 
 .. note::
-   On Ubuntu distributions, the InstallError ``"OpenMPI requires both C and Fortran compilers"`` can occur because the Fortran compilers are sometimes not set automatically in Spack.
+   On Linux distributions, the InstallError ``"OpenMPI requires both C and Fortran compilers"`` can occur because the Fortran compilers are sometimes not set automatically in Spack.
    To fix this, the Fortran compilers must be set manually using ``spack config edit compilers`` (more information can be found `here <https://spack.readthedocs.io/en/latest/getting_started.html#compiler-configuration>`__).
    For GCC, the flags ``f77 : null`` and ``fc : null`` must be set to ``f77 : gfortran`` and ``fc : gfortran``.
+
+   On macOS, a Fortran compiler like gfortran might be missing and must be installed by hand to fix this issue.
 
 .. _install-brew:
 
 .. only:: html
 
    .. image:: brew.svg
+      :width: 32px
+      :align: left
 
 Using the Brew package manager
 ------------------------------
@@ -225,15 +238,3 @@ The documentation is written at the `RST <https://sphinx-tutorial.readthedocs.io
    open build/html/index.html
 
 The last line would work on MacOS. On another platform, open the html file with your favorite browser.
-
-HPC platforms
--------------
-
-.. toctree::
-   :maxdepth: 1
-
-   platforms/booster_jsc.rst
-   platforms/maxwell_desy.rst
-   platforms/lumi_csc.rst
-   platforms/perlmutter_nersc.rst
-   platforms/spock_olcf.rst
