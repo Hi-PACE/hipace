@@ -38,6 +38,88 @@ as command line parameters. Multi-line expressions are allowed if surrounded by 
 General parameters
 ------------------
 
+* ``hipace.normalized_units`` (`bool`) optional (default `0`)
+    Using normalized units in the simulation.
+
+* ``random_seed`` (`integer`) optional (default `1`)
+    Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
+    Note that on GPU, since the order of operations is not ensured, the providing of a seed does not guarantee reproducibility to the level of machine precision.
+
+* ``hipace.verbose`` (`int`) optional (default `0`)
+    Level of verbosity.
+
+      * ``hipace.verbose = 1``, prints only the time steps, which are computed.
+
+      * ``hipace.verbose = 2`` additionally prints the number of iterations in the
+        predictor-corrector loop, as well as the B-Field error at each slice.
+
+      * ``hipace.verbose = 3`` also prints the number of particles, which violate the quasi-static
+        approximation and were neglected at each slice. It prints the number of ionized particles,
+        if ionization occurred. It also adds additional information if beams
+        are read in from file.
+
+* ``hipace.do_device_synchronize`` (`int`) optional (default `0`)
+    Level of synchronization on GPU.
+
+      * ``hipace.do_device_synchronize = 0``, synchronization happens only when necessary.
+
+      * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
+        via ``HIPACE_PROFILE``)
+
+      * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
+        are profiled via ``HIPACE_DETAIL_PROFILE``)
+
+* ``amrex.the_arena_is_managed`` (`bool`) optional (default `0`)
+    Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
+    but generally it is recommended to not use it.
+
+* ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
+    Whether the buffers used for MPI communication should be allocated on the GPU (device memory).
+    By default they will be allocated on the CPU (pinned memory).
+    Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
+    additional enviroment variables need to be set depending on the system.
+
+* ``hipace.do_tiling`` (`bool`) optional (default `true`)
+    Whether to use tiling, when running on CPU.
+    Currently, this option only affects plasma operations (gather, push and deposition).
+    The tile size can be set with ``plasmas.sort_bin_size``.
+
+* ``hipace.depos_order_xy`` (`int`) optional (default `2`)
+    Transverse particle shape order. Currently, `0,1,2,3` are implemented.
+
+* ``hipace.depos_order_z`` (`int`) optional (default `0`)
+    Longitudinal particle shape order. Currently, only `0` is implemented.
+
+* ``hipace.depos_derivative_type`` (`int`) optional (default `2`)
+    Type of derivative used in explicit deposition. `0`: analytic, `1`: nodal, `2`: centered
+
+* ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
+    If the loop over depos_order is included in the loop over particles.
+
+* ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
+    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
+    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
+    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
+    fail otherwise. As an example, a simulation with `2048 x 2048 x 2048` grid points
+    requires ``hipace.beam_injection_cr = 8``.
+
+* ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
+    Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
+    ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
+
+* ``hipace.boxes_in_z`` (`int`) optional (default `1`)
+    Number of boxes along the z-axis. In serial runs, the arrays for 3D IO can easily exceed the
+    memory of a GPU. Using multiple boxes reduces the memory requirements by the same factor.
+    This option is only available in serial runs, in parallel runs, please use more GPU to achieve
+    the same effect.
+
+* ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
+    Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
+    if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
+
+Geometry
+--------
+
 * ``amr.n_cell`` (3 `integer`)
     Number of cells in x, y and z.
     With the explicit solver (default), the number of cells in the x and y directions must be either :math:`2^n-1` (common values are 511, 1023, 2047, best configuration for performance) or :math:`2^n` where :math:`n` is an integer. Some other values might work, like :math:`3 \times 2^n-1`, but use at your own risk.
@@ -75,13 +157,12 @@ General parameters
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
+Time step
+---------
+
 * ``max_step`` (`integer`) optional (default `0`)
     Maximum number of time steps. `0` means that the 0th time step will be calculated, which are the
     fields of the initial beams.
-
-* ``random_seed`` (`integer`) optional (default `1`)
-    Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
-    Note that on GPU, since the order of operations is not ensured, the providing of a seed does not guarantee reproducibility to the level of machine precision.
 
 * ``hipace.max_time`` (`float`) optional (default `infinity`)
     Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
@@ -125,110 +206,6 @@ General parameters
 * ``hipace.adaptive_threshold_uz`` (`Real`) optional (default `2.`)
     Only used when using adaptive time step (see ``hipace.dt`` above).
     Threshold beam momentum, below which the time step is not decreased (to avoid arbitrarily small time steps).
-
-* ``hipace.normalized_units`` (`bool`) optional (default `0`)
-    Using normalized units in the simulation.
-
-* ``hipace.verbose`` (`int`) optional (default `0`)
-    Level of verbosity.
-
-      * ``hipace.verbose = 1``, prints only the time steps, which are computed.
-
-      * ``hipace.verbose = 2`` additionally prints the number of iterations in the
-        predictor-corrector loop, as well as the B-Field error at each slice.
-
-      * ``hipace.verbose = 3`` also prints the number of particles, which violate the quasi-static
-        approximation and were neglected at each slice. It prints the number of ionized particles,
-        if ionization occurred. It also adds additional information if beams
-        are read in from file.
-
-* ``hipace.do_device_synchronize`` (`int`) optional (default `0`)
-    Level of synchronization on GPU.
-
-      * ``hipace.do_device_synchronize = 0``, synchronization happens only when necessary.
-
-      * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
-        via ``HIPACE_PROFILE``)
-
-      * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
-        are profiled via ``HIPACE_DETAIL_PROFILE``)
-
-* ``hipace.depos_order_xy`` (`int`) optional (default `2`)
-    Transverse particle shape order. Currently, `0,1,2,3` are implemented.
-
-* ``hipace.depos_order_z`` (`int`) optional (default `0`)
-    Longitudinal particle shape order. Currently, only `0` is implemented.
-
-* ``hipace.depos_derivative_type`` (`int`) optional (default `2`)
-    Type of derivative used in explicit deposition. `0`: analytic, `1`: nodal, `2`: centered
-
-* ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
-    If the loop over depos_order is included in the loop over particles.
-
-* ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
-    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
-    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
-    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
-    fail otherwise. As an example, a simulation with `2048 x 2048 x 2048` grid points
-    requires ``hipace.beam_injection_cr = 8``.
-
-* ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
-    Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
-    ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
-
-* ``hipace.boxes_in_z`` (`int`) optional (default `1`)
-    Number of boxes along the z-axis. In serial runs, the arrays for 3D IO can easily exceed the
-    memory of a GPU. Using multiple boxes reduces the memory requirements by the same factor.
-    This option is only available in serial runs, in parallel runs, please use more GPU to achieve
-    the same effect.
-
-* ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
-    OpenPMD backend. This can either be ``h5``, ``bp``, or ``json``. The default is chosen by what is
-    available. If both Adios2 and HDF5 are available, ``h5`` is used. Note that ``json`` is extremely
-    slow and is not recommended for production runs.
-
-* ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
-    Path of the output.
-
-* ``hipace.do_tiling`` (`bool`) optional (default `true`)
-    Whether to use tiling, when running on CPU.
-    Currently, this option only affects plasma operations (gather, push and deposition).
-    The tile size can be set with ``plasmas.sort_bin_size``.
-
-* ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
-    Whether the buffers used for MPI communication should be allocated on the GPU (device memory).
-    By default they will be allocated on the CPU (pinned memory).
-    Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
-    additional enviroment variables need to be set depending on the system.
-
-* ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
-    Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
-    if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
-
-* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
-    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
-    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
-    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
-
-* ``hipace.salame_n_iter`` (`int`) optional (default `3`)
-    Number of iterations the SALAME algorithm should do when it is used.
-
-* ``hipace.salame_do_advance`` (`bool`) optional (default `1`)
-    Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field
-    by advancing plasma (if `1`) particles or by approximating it using the chi field (if `0`).
-
-* ``hipace.salame_Ez_target(zeta,zeta_initial,Ez_initial)`` (`string`) optional (default `Ez_initial`)
-    Parser function to specify the target Ez field at the witness beam for SALAME.
-    ``zeta``: position of the Ez field to set.
-    ``zeta_initial``: position where the SALAME algorithm first started.
-    ``Ez_initial``: field value at `zeta_initial`.
-    For `zeta` equal to `zeta_initial`, the function should return `Ez_initial`.
-    The default value of this function corresponds to a flat Ez field at the position of the SALAME beam.
-    Note: `zeta` is always less than or equal to `zeta_initial` and `Ez_initial` is typically below zero for electron beams.
-
-* ``hipace.background_density_SI`` (`float`) optional
-    Background plasma density in SI units. Certain physical modules (collisions, ionization, radiation reactions) depend on the actual background density.
-    Hence, in normalized units, they can only be included, if a background plasma density in SI units is provided using this input parameter.
 
 Field solver parameters
 -----------------------
@@ -418,25 +395,6 @@ When both are specified, the per-species value is used.
     making the opposite index type ideal. Since the normal deposition still requires the original index type,
     the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
 
-Binary collisions for plasma species
-------------------------------------
-
-WARNING: this module is in development.
-
-HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
-As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
-
-* ``plasmas.collisions`` (list of `strings`) optional
-    List of names of types binary Coulomb collisions.
-    Each will represent collisions between 2 plasma species (potentially the same).
-
-* ``<collision name>.species`` (two `strings`) optional
-    The name of the two plasma species for which collisions should be included.
-
-* ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
-    Coulomb logarithm used for this collision.
-    If not specified, the Coulomb logarithm is determined from the temperature in each cell.
-
 Beam parameters
 ---------------
 
@@ -500,13 +458,6 @@ which are valid only for certain beam types, are introduced further below under
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
 
-* ``<beam name>.do_salame`` (`bool`) optional (default `0`)
-    Whether to use the SALAME algorithm [S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020)] to automatically flatten the accelerating field in the first time step. If turned on, the per-slice
-    beam weight in the first time-step is adjusted such that the Ez field will be uniform in the beam.
-    This will ignore the contributions to jx, jy and rho from the beam in the first time-step.
-    It is recommended to use this option with a fixed weight can beam.
-    If a gaussian beam profile is used, then the zmin and zmax parameters should be used.
-
 * ``hipace.external_E_uniform`` (3 `float`) optional (default `0. 0. 0.`)
     Uniform external electric field applied to beam particles.
     The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
@@ -530,11 +481,6 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
-
-* ``<beam name> or beams..do_radiation_reaction`` (`bool`) optional (default `0`)
-    Whether the beam particles undergo energy loss due to classical radiation reactions.
-    The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
-    In normalized units, `hipace.background_density_SI` must be specified.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -611,6 +557,35 @@ Option: ``from_file``
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
 
+SALAME algorithm
+^^^^^^^^^^^^^^^^
+
+HiPACE++ features the Slicing Advanced Loading Algorithm for Minimizing Energy Spread to generate a beam profile that
+automatically loads the wake optimally, i.e., that the initial wakefield is flattened by the charge of the beam.
+For more information, see the corresponding publication `S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020) <https://doi.org/10.1103/PhysRevAccelBeams.23.121301>`__
+
+* ``<beam name>.do_salame`` (`bool`) optional (default `0`)
+    If turned on, the per-slice beam weight in the first time-step is adjusted such that the Ez field is uniform in the beam.
+    This ignores the contributions to jx, jy and rho from the beam in the first time-step.
+    It is recommended to use this option with a fixed weight can beam.
+    If a gaussian beam profile is used, then the zmin and zmax parameters should be used.
+
+* ``hipace.salame_n_iter`` (`int`) optional (default `3`)
+    Number of iterations the SALAME algorithm should do when it is used.
+
+* ``hipace.salame_do_advance`` (`bool`) optional (default `1`)
+    Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field
+    by advancing plasma (if `1`) particles or by approximating it using the chi field (if `0`).
+
+* ``hipace.salame_Ez_target(zeta,zeta_initial,Ez_initial)`` (`string`) optional (default `Ez_initial`)
+    Parser function to specify the target Ez field at the witness beam for SALAME.
+    ``zeta``: position of the Ez field to set.
+    ``zeta_initial``: position where the SALAME algorithm first started.
+    ``Ez_initial``: field value at `zeta_initial`.
+    For `zeta` equal to `zeta_initial`, the function should return `Ez_initial`.
+    The default value of this function corresponds to a flat Ez field at the position of the SALAME beam.
+    Note: `zeta` is always less than or equal to `zeta_initial` and `Ez_initial` is typically below zero for electron beams.
+
 Laser parameters
 ----------------
 
@@ -656,7 +631,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     The file should comply with the `LaserEnvelope extension of the openPMD-standard <https://github.com/openPMD/openPMD-standard/blob/upcoming-2.0.0/EXT_LaserEnvelope.md>`__, as generated by `LASY <https://github.com/LASY-org/LASY>`__.
     Currently supported geometries: 3D or cylindrical profiles with azimuthal decomposition.
     The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
-    If this parameter is set, then the file will be used to initialize all lasers instead of using a gaussian profile.
+    If this parameter is set, then the file is used to initialize all lasers instead of using a gaussian profile.
 
 * ``lasers.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
     Name of the laser envelope field inside the openPMD file to be read in.
@@ -677,7 +652,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     The laser pulse length in `z`. Use either the pulse length or the pulse duration ``<laser name>.tau``.
 
 * ``<laser name>.tau`` (`float`) optional (default `0`)
-    The laser pulse duration. The pulse length will be set to `laser.tau`:math:`/c_0`.
+    The laser pulse duration. The pulse length is set to `laser.tau`:math:`/c_0`.
     Use either the pulse length or the pulse duration.
 
 * ``<laser name>.focal_distance`` (`float`)
@@ -692,6 +667,14 @@ in-situ diagnostics allow for fast analysis of large beams or the plasma particl
 * ``diagnostic.output_period`` (`integer`) optional (default `0`)
     Output period for standard beam and field diagnostics. Field or beam specific diagnostics can overwrite this parameter.
     No output is given for ``diagnostic.output_period = 0``.
+
+* ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
+    Path of the output.
+
+* ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
+    OpenPMD backend. This can either be ``h5``, ``bp``, or ``json``. The default is chosen by what is
+    available. If both Adios2 and HDF5 are available, ``h5`` is used. Note that ``json`` is extremely
+    slow and is not recommended for production runs.
 
 Beam diagnostics
 ^^^^^^^^^^^^^^^^
@@ -725,7 +708,7 @@ Field diagnostics
     Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
     output. Use 3D output with parsimony, it may increase disk Space usage and simulation time
     significantly. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
-    x-axis, respectively. In case of an even number of grid points, the value will be averaged
+    x-axis, respectively. In case of an even number of grid points, the value is averaged
     between the two inner grid points.
 
 * ``<diag name> or diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
@@ -742,7 +725,7 @@ Field diagnostics
     plasma and the beam, with ``rhomjz`` equal to :math:`\rho-j_z/c`.
     For the explicit solver, the current and charge densities of the beam and
     for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
-    If ``rho`` is explicitly mentioned as ``field_data``, it will be deposited by the plasma
+    If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
     to be available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
@@ -752,6 +735,11 @@ Field diagnostics
 
 * ``<diag name> or diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
     Upper limit for the diagnostic grid.
+
+* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
+    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
@@ -801,3 +789,44 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 
 * ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"plasma_diags/insitu"``)
     Path of the plasma in-situ output. Must not be the same as `hipace.file_prefix`.
+
+
+Advanced physics
+----------------
+
+Advanced physics describe the physics modules implemented in HiPACE++ that go beyond the standard electromagnetic equations.
+This includes ionization (see plasma parameters), binary collisions, and radiation reactions. Since all of these require the actual plasma density,
+they need a background density in SI units, if the simulation runs in normalized units.
+
+* ``hipace.background_density_SI`` (`float`) optional
+    Background plasma density in SI units. Certain physical modules (collisions, ionization, radiation reactions) depend on the actual background density.
+    Hence, in normalized units, they can only be included, if a background plasma density in SI units is provided using this input parameter.
+
+Binary collisions
+^^^^^^^^^^^^^^^^^
+
+WARNING: this module is in development.
+
+HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
+As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
+
+* ``plasmas.collisions`` (list of `strings`) optional
+    List of names of types binary Coulomb collisions.
+    Each will represent collisions between 2 plasma species (potentially the same).
+
+* ``<collision name>.species`` (two `strings`) optional
+    The name of the two plasma species for which collisions should be included.
+
+* ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
+    Coulomb logarithm used for this collision.
+    If not specified, the Coulomb logarithm is determined from the temperature in each cell.
+
+Radiation reactions
+^^^^^^^^^^^^^^^^^^^
+
+Whether the energy loss due to classical radiation reactions of beam particles are calculated.
+
+* ``<beam name> or beams.do_radiation_reaction`` (`bool`) optional (default `0`)
+    Whether the beam particles undergo energy loss due to classical radiation reactions.
+    The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
+    In normalized units, `hipace.background_density_SI` must be specified.
