@@ -23,6 +23,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <sstream>
 
 
 template<class T>
@@ -231,7 +232,43 @@ namespace Parser
 
     inline void
     fillWithParser (std::string const& str, std::string& val) {
-        val = str;
+        std::string loc_str = str;
+
+        // replace {{ and }} with 1 and 2
+        std::string::size_type pos = 0;
+        while ( (pos=loc_str.find("{{")) != std::string::npos) {
+            loc_str.replace(pos, 2, std::string{char(1)});
+        }
+        while ( (pos=loc_str.rfind("}}")) != std::string::npos) {
+            loc_str.replace(pos, 2, std::string{char(2)});
+        }
+
+        // replace {expression} with to_string(parser(expression))
+        while ( (pos=loc_str.rfind("{")) != std::string::npos) {
+            const auto pos_end = loc_str.find("}", pos);
+            if (pos_end == std::string::npos) {
+                amrex::ErrorStream() << "Bad format for input '"
+                                     << str
+                                     << "', unclosed brace!\n";
+                AMREX_ALWAYS_ASSERT(pos_end != std::string::npos);
+            }
+            const std::string parse_string = loc_str.substr(pos+1, pos_end-pos-1);
+            double parse_val = 0.;
+            fillWithParser(parse_string, parse_val);
+            std::stringstream ss{};
+            ss << parse_val;
+            loc_str.replace(pos, pos_end-pos+1, ss.str());
+        }
+
+        // replace 1 and 2 with { and }
+        while ( (pos=loc_str.find(char(1))) != std::string::npos) {
+            loc_str.replace(pos, 1, "{");
+        }
+        while ( (pos=loc_str.rfind(char(2))) != std::string::npos) {
+            loc_str.replace(pos, 1, "}");
+        }
+
+        val = loc_str;
     }
 
     /** \brief fill second argument val of array type with a value obtained through Parsing str_arr
