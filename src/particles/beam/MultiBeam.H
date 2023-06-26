@@ -43,12 +43,6 @@ public:
         int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
         const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest=false);
 
-    /** Loop over all beam species and build and return the indices of particles sorted per slice
-     * \param[in] bx 3D box on which per-slice sorting is done
-     * \param[in] geom Geometry of the simulation domain
-     */
-    void
-    findParticlesInEachSlice (amrex::Box bx, amrex::Geometry const& geom);
     /** \brief Loop over all beam species and sort particles by box
      *
      * \param[in] a_ba BoxArray object to put the particles into
@@ -121,22 +115,6 @@ public:
     /** returns the name of a beam */
     std::string get_name (int i) const {return m_all_beams[i].get_name();}
 
-    /** returns the local number of particles of a beam */
-    unsigned long long get_local_n_part (int i) const
-        {return m_all_beams[i].TotalNumberOfParticles(1,1);}
-
-    /** returns the local number of particles of a beam */
-    unsigned long long get_total_num_particles (int i) const
-        {return m_all_beams[i].get_total_num_particles();}
-
-    /** \brief Check that all beams have the same number of Real components
-     * and return this number */
-    int NumRealComps ();
-
-    /** \brief Check that all beams have the same number of Int components
-     * and return this number */
-    int NumIntComps ();
-
     /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] geom3D Geometry object for the whole domain
@@ -145,44 +123,6 @@ public:
      */
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
                      const int which_slice, const int islice_local);
-
-    /** \brief Store number of particles of each beam in m_n_real_particles */
-    void StoreNRealParticles ();
-
-    /** \brief Calculate and return the number of ghost particles in beam ibeam in box it.
-     * This is the number of particles in the last slice of it, so ghost particles of it+1.
-     *
-     * \param[in] ibeam index of the beam
-     * \param[in] bx box in which we want to acce particles
-     */
-    int NGhostParticles (int ibeam, amrex::Box bx);
-
-    /** \brief remove ghost particles, in practice those after the last slice. */
-    void RemoveGhosts ();
-
-    void SetIbox (const int ibox);
-
-    /** Return the number of particles in beam ibeam
-     *
-     * \param[in] ibeam beam index
-     */
-    int Npart (int ibeam) const {return m_all_beams[ibeam].numParticles();}
-
-    /** \brief copy particles in box it-1 in the ghost buffer at the end of the particle array.
-     *
-     * The head rank does not receive ghost particles from anyone, but still has to handle them.
-     * Besides, slipped particles should also be appended as ghost slices.
-     * This function performs both of these tasks.
-     *
-     * \param[in] it index of the box from which we copy particles to the ghost buffer
-     */
-    void PackLocalGhostParticles (int it);
-
-    /** \brief getter function for number of real particles (as opposed to ghost particles)
-     *
-     * \param[in] ibeam index of the beam
-     */
-    int getNRealParticles (int ibeam) const {return m_n_real_particles[ibeam];}
 
     /** \brief returns if the SALAME algorithm should be used on this slice
      * \param[in] step time step of simulation

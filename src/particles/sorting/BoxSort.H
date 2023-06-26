@@ -21,7 +21,7 @@ public:
     using index_type = unsigned int;
 
     void sortParticlesByBox (BeamParticleContainer& a_beam,
-                             const amrex::BoxArray a_ba, const amrex::Geometry& a_geom);
+                             const amrex::Box bx, const amrex::Geometry& a_geom);
 
     //! \brief returns the pointer to the permutation array
     index_type* boxCountsPtr () noexcept { return m_box_counts_cpu.dataPtr(); }
@@ -35,8 +35,6 @@ public:
     //! \brief returns the pointer to the offsets array
     const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets_cpu.dataPtr(); }
 
-    /** Get the index of the most downstream box that has beam particles */
-    int leftmostBoxWithParticles () const;
 
 private:
     /** Object to locate the box in which a particle is located */

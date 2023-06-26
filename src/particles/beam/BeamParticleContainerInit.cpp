@@ -40,8 +40,8 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata,
-        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata, const amrex::Real& x,
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata,
+        amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
         const amrex::Real& uz, const amrex::Real& weight, const int& pid,
         const int& ip, const amrex::Real& speed_of_light) noexcept
@@ -55,7 +55,6 @@ namespace
         rarrdata[BeamIdx::w  ][ip] = std::abs(weight);
 
         iarrdata[BeamIdx::id ][ip] = pid > 0 ? pid + ip : pid;
-        iarrdata[BeamIdx::cpu][ip] = 0; // level 0
     }
 }
 
@@ -172,7 +171,7 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
         int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
         // Second: allocate the memory for these particles
-        auto& particle_tile = *this;
+        auto& particle_tile = getBeamInitSlice();
 
         auto old_size = particle_tile.size();
         auto new_size = old_size + num_to_add;
@@ -180,14 +179,13 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
         if (num_to_add == 0) return;
 
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
 
-        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+        amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
             particle_tile.GetStructOfArrays().intarray();
 
-        int pid = ParticleType::NextID();
-        ParticleType::NextID(pid + num_to_add);
+        int pid = 1;
 
         PhysConst phys_const = get_phys_const();
 
@@ -273,19 +271,18 @@ InitBeamFixedWeight (int num_to_add,
 
     if (Hipace::HeadRank()) {
 
-        auto& particle_tile = *this;
+        auto& particle_tile = getBeamInitSlice();
         auto old_size = particle_tile.size();
         auto new_size = do_symmetrize? old_size + 4*num_to_add : old_size + num_to_add;
         particle_tile.resize(new_size);
 
         // Access particles' SoA
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata =
             particle_tile.GetStructOfArrays().realarray();
-        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+        amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
             particle_tile.GetStructOfArrays().intarray();
 
-        const int pid = ParticleType::NextID();
-        ParticleType::NextID(pid + num_to_add);
+        const int pid = 1;
 
         const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
         const amrex::Real single_charge = m_charge;
@@ -695,16 +692,15 @@ InitBeamFromFile (const std::string input_file,
     }
 
     // input data using AddOneBeamParticle function, make necessary variables and arrays
-    auto& particle_tile = *this;
+    auto& particle_tile = getBeamInitSlice();
     auto old_size = particle_tile.size();
     auto new_size = old_size + num_to_add;
     particle_tile.resize(new_size);
-    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata =
         particle_tile.GetStructOfArrays().realarray();
-    amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+    amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
         particle_tile.GetStructOfArrays().intarray();
-    const int pid = ParticleType::NextID();
-    ParticleType::NextID(pid + num_to_add);
+    const int pid = 1;
 
     const input_type * const r_x_ptr = r_x_data.get();
     const input_type * const r_y_ptr = r_y_data.get();

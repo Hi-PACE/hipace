@@ -184,7 +184,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         auto& beam = beams.getBeam(ibeam);
 
-        const unsigned long long np = beams.get_total_num_particles(ibeam);
+        const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
         if (m_last_beam_output_dumped != output_step) {
             SetupPos(beam_species, beam, np, geom);
             SetupRealProperties(beam_species, m_real_names, np);
@@ -197,12 +197,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         } else {
             m_offset[ibeam] += m_tmp_offset[ibeam];
         }
-        const uint64_t box_offset = beam.m_box_sorter.boxOffsetsPtr()[it];
 
-        auto const numParticleOnTile = beam.m_box_sorter.boxCountsPtr()[it];
-        uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-
-        if (numParticleOnTile == 0) {
+        if (np == 0) {
             m_tmp_offset[ibeam] = 0;
             continue;
         }
@@ -211,17 +207,17 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             // save particle ID
             std::shared_ptr< uint64_t > ids(
                 reinterpret_cast<uint64_t*>(
-                    amrex::The_Pinned_Arena()->alloc(sizeof(uint64_t)*numParticleOnTile)
+                    amrex::The_Pinned_Arena()->alloc(sizeof(uint64_t)*np)
                 ),
                 [](uint64_t *p){
                     amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
                 });
 
-            const int* const id_gpu_data = beam.GetStructOfArrays()
-                .GetIntData(BeamIdx::id).data() + box_offset;
+            const int* const id_gpu_data = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays()
+                .GetIntData(BeamIdx::id).data();
             uint64_t* const id_data = ids.get();
 
-            amrex::ParallelFor(numParticleOnTile,
+            amrex::ParallelFor(np,
                 [=] AMREX_GPU_DEVICE (uint64_t i) {
                     id_data[i] = static_cast<uint64_t>(id_gpu_data[i]);
                 });
@@ -229,13 +225,13 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             amrex::Gpu::streamSynchronize();
 
             auto const scalar = openPMD::RecordComponent::SCALAR;
-            beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {numParticleOnTile64});
+            beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {np});
         }
         //  save "extra" particle properties in SoA (momenta and weight)
-        SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, box_offset,
-                         numParticleOnTile);
+        SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, 0,
+                         np);
 
-        m_tmp_offset[ibeam] = numParticleOnTile64;
+        m_tmp_offset[ibeam] = np;
     }
 }
 
@@ -359,7 +355,7 @@ OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
     int const NumSoARealAttributes = real_comp_names.size();
 
     uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-    auto const& soa = pc.GetStructOfArrays();
+    auto const& soa = pc.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
     {
         for (int idx=0; idx<NumSoARealAttributes; idx++) {
 

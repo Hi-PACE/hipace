@@ -19,23 +19,21 @@
  * \param[in,out] fields the general field class, modified by this function
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
- * \param[in] islice index of the slice on which the beam particles are pushed
  * \param[in] do_beam_jx_jy_deposition whether the beams deposit Jx and Jy
  * \param[in] do_beam_jz_deposition whether the beams deposit Jz
  * \param[in] do_beam_rhomjz_deposition whether the beams deposit rhomjz
- * \param[in] which_slice defines if this or the next slice is handled
- * \param[in] nghost number of ghost particles, all at the end of the particle array.
- *            Use for depositing transverse currents in the Next slice when processing
- *            islice = 0.
+ * \param[in] which_slice defines if this, next the salame field slice is used
+ * \param[in] which_beam_slice defines if this or the next beam slice is used
  * \param[in] only_highest if the particles deposit only on their highest MR level
  */
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
-                     amrex::Vector<amrex::Geometry> const& gm, int const lev, const int islice,
+                     amrex::Vector<amrex::Geometry> const& gm, int const lev,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
                      const bool do_beam_rhomjz_deposition,
-                     const int which_slice, int nghost, const bool only_highest=false);
+                     const int which_slice, const WhichBeamSlice::beam_slice which_beam_slice,
+                     const bool only_highest=false);
 
 
 #endif //  BEAMDEPOSITCURRENT_H_

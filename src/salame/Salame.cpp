@@ -399,32 +399,21 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
 }
 
 void
-SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice)
+SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int)
 {
     for (int i=0; i<(hipace->m_multi_beam.get_nbeams()); i++) {
         auto& beam = hipace->m_multi_beam.getBeam(i);
 
         if (!beam.m_do_salame) continue;
 
-        const int box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-
-        auto& soa = beam.GetStructOfArrays(); // For id, momenta and weights
-        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
-        int * const idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
-
-        BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
-        BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
-
-        BeamBins::index_type cell_start = offsets[islice];
-        BeamBins::index_type cell_stop = offsets[islice+1];
-
-        int const num_particles = cell_stop-cell_start;
+        // For id and weights
+        auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+        int * const idp = soa.GetIntData(BeamIdx::id).data();
 
         amrex::ParallelFor(
-            num_particles,
-            [=] AMREX_GPU_DEVICE (long idx) {
-                // Particles in the same slice must be accessed through the bin sorter
-                const int ip = indices[cell_start+idx];
+            beam.getNumParticles(WhichBeamSlice::This),
+            [=] AMREX_GPU_DEVICE (long ip) {
                 // Skip invalid particles and ghost particles not in the last slice
                 if (idp[ip] < 0) return;
 

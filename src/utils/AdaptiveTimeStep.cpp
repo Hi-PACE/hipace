@@ -110,16 +110,12 @@ AdaptiveTimeStep::Calculate (
             m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30;
         }
 
-        const uint64_t box_offset = initial ? 0 : beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-        const uint64_t numParticleOnTile = initial ? beam.numParticles()
-                                                   : beam.m_box_sorter.boxCountsPtr()[beam.m_ibox];
-
-
         // Extract particle properties
-        const auto& soa = beam.GetStructOfArrays(); // For momenta and weights
-        const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
-        const auto wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
-        const auto idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
+        // For momenta and weights
+        const auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+        const auto wp = soa.GetRealData(BeamIdx::w).data();
+        const auto idp = soa.GetIntData(BeamIdx::id).data();
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpMin> reduce_op;
@@ -127,7 +123,7 @@ AdaptiveTimeStep::Calculate (
                         reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
-        reduce_op.eval(numParticleOnTile, reduce_data,
+        reduce_op.eval(beam.getNumParticles(WhichBeamSlice::This), reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
                 if (idp[ip] < 0) return {
@@ -248,13 +244,6 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
         const auto& beam = beams.getBeam(ibeam);
         const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
-        BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
-        BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
-        BeamBins::index_type const cell_start = offsets[islice];
-        BeamBins::index_type const cell_stop  = offsets[islice+1];
-        amrex::Long const num_particles = cell_stop-cell_start;
-        amrex::Long const offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-
         amrex::ReduceOps<amrex::ReduceOpMin> reduce_op;
         amrex::ReduceData<amrex::Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -268,15 +257,14 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
-        auto const& soa = beam.GetStructOfArrays();
-        const auto pos_x = soa.GetRealData(BeamIdx::x).data() + offset;
-        const auto pos_y = soa.GetRealData(BeamIdx::y).data() + offset;
-        const auto idp = soa.GetIntData(BeamIdx::id).data() + offset;
+        auto const& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        const auto pos_x = soa.GetRealData(BeamIdx::x).data();
+        const auto pos_y = soa.GetRealData(BeamIdx::y).data();
+        const auto idp = soa.GetIntData(BeamIdx::id).data();
 
-        reduce_op.eval(num_particles, reduce_data,
-            [=] AMREX_GPU_DEVICE (long idx) noexcept -> ReduceTuple
+        reduce_op.eval(beam.getNumParticles(WhichBeamSlice::This), reduce_data,
+            [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
-                const amrex::Long ip = indices[cell_start+idx];
                 if (idp[ip] < 0) return { 0._rt };
                 const amrex::Real xp = pos_x[ip];
                 const amrex::Real yp = pos_y[ip];
