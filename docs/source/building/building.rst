@@ -55,7 +55,7 @@ Please choose **one** of the installation methods below to get started:
 HPC platforms
 -------------
 
-If want to use HiPACE++ on a specific high-performance computing (HPC) systems, jump directly to our :ref:`HPC system-specific documentation <install-hpc>`.
+If you want to use HiPACE++ on a specific high-performance computing (HPC) systems, jump directly to our :ref:`HPC system-specific documentation <install-hpc>`.
 
 .. _install-spack:
 

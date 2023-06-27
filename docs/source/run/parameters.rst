@@ -351,7 +351,8 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial ionization state of the plasma. `0` for neutral gasses.
-    If set, the plasma charge gets multiplied by this number.
+    If set, the plasma charge gets multiplied by this number. If the plasma species is not ionizable,
+    the initial ionization level is set to 1.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced
@@ -560,9 +561,11 @@ Option: ``from_file``
 SALAME algorithm
 ^^^^^^^^^^^^^^^^
 
-HiPACE++ features the Slicing Advanced Loading Algorithm for Minimizing Energy Spread to generate a beam profile that
-automatically loads the wake optimally, i.e., that the initial wakefield is flattened by the charge of the beam.
-For more information, see the corresponding publication `S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020) <https://doi.org/10.1103/PhysRevAccelBeams.23.121301>`__
+HiPACE++ features the Slicing Advanced Loading Algorithm for Minimizing Energy Spread (SALAME) to generate a beam profile that
+automatically loads the wake optimally, i.e., that the initial wakefield is flattened by the charge of the beam. Important note:
+In the algorithm, the weight of the beam particles is adjusted while the plasma response is computed. Since the beam is written to file
+**before** the plasma response is calculated, the SALAME beam has incorrect weights in the 0th time step.
+For more information on the algorithm, see the corresponding publication `S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020) <https://doi.org/10.1103/PhysRevAccelBeams.23.121301>`__
 
 * ``<beam name>.do_salame`` (`bool`) optional (default `0`)
     If turned on, the per-slice beam weight in the first time-step is adjusted such that the Ez field is uniform in the beam.
@@ -791,10 +794,10 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
     Path of the plasma in-situ output. Must not be the same as `hipace.file_prefix`.
 
 
-Advanced physics
+Additional physics
 ----------------
 
-Advanced physics describe the physics modules implemented in HiPACE++ that go beyond the standard electromagnetic equations.
+Additional physics describe the physics modules implemented in HiPACE++ that go beyond the standard electromagnetic equations.
 This includes ionization (see plasma parameters), binary collisions, and radiation reactions. Since all of these require the actual plasma density,
 they need a background density in SI units, if the simulation runs in normalized units.
 
