@@ -3,7 +3,7 @@
 HPC platforms
 =============
 
-On selected high-performance computing (HPC) systems, HiPACE++ has documented the installation routines.
+Specific installation instructions for a set of supercomputers can be found below.
 Follow the guide here instead of the generic installation routines for optimal stability and best performance.
 
 

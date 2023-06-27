@@ -39,11 +39,11 @@ General parameters
 ------------------
 
 * ``hipace.normalized_units`` (`bool`) optional (default `0`)
-    Using normalized units in the simulation.
+    Whether the simulation uses the normalized unit system commonly used in wakefield acceleration, see e.g. `chapter 2 of this reference <https://iopscience.iop.org/article/10.1088/0741-3335/56/8/084012>`__. Otherwise, the code assumes SI (Système International) unit system.
 
 * ``random_seed`` (`integer`) optional (default `1`)
     Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
-    Note that on GPU, since the order of operations is not ensured, the providing of a seed does not guarantee reproducibility to the level of machine precision.
+    Note that on GPU, since the order of operations is not ensured, providing a seed does not guarantee reproducibility to the level of machine precision.
 
 * ``hipace.verbose`` (`int`) optional (default `0`)
     Level of verbosity.
@@ -53,7 +53,7 @@ General parameters
       * ``hipace.verbose = 2`` additionally prints the number of iterations in the
         predictor-corrector loop, as well as the B-Field error at each slice.
 
-      * ``hipace.verbose = 3`` also prints the number of particles, which violate the quasi-static
+      * ``hipace.verbose = 3`` also prints the number of particles that violate the quasi-static
         approximation and were neglected at each slice. It prints the number of ionized particles,
         if ionization occurred. It also adds additional information if beams
         are read in from file.
@@ -562,7 +562,7 @@ SALAME algorithm
 ^^^^^^^^^^^^^^^^
 
 HiPACE++ features the Slicing Advanced Loading Algorithm for Minimizing Energy Spread (SALAME) to generate a beam profile that
-automatically loads the wake optimally, i.e., that the initial wakefield is flattened by the charge of the beam. Important note:
+automatically loads the wake optimally, i.e., so that the initial wakefield is flattened by the charge of the beam. Important note:
 In the algorithm, the weight of the beam particles is adjusted while the plasma response is computed. Since the beam is written to file
 **before** the plasma response is calculated, the SALAME beam has incorrect weights in the 0th time step.
 For more information on the algorithm, see the corresponding publication `S. Diederichs et al., Phys. Rev. Accel. Beams 23, 121301 (2020) <https://doi.org/10.1103/PhysRevAccelBeams.23.121301>`__
@@ -824,12 +824,12 @@ As collisions depend on the physical density, in normalized units `hipace.backgr
     Coulomb logarithm used for this collision.
     If not specified, the Coulomb logarithm is determined from the temperature in each cell.
 
-Radiation reactions
-^^^^^^^^^^^^^^^^^^^
+Radiation reaction
+^^^^^^^^^^^^^^^^^^
 
-Whether the energy loss due to classical radiation reactions of beam particles are calculated.
+Whether the energy loss due to classical radiation reaction of beam particles is calculated.
 
 * ``<beam name> or beams.do_radiation_reaction`` (`bool`) optional (default `0`)
-    Whether the beam particles undergo energy loss due to classical radiation reactions.
+    Whether the beam particles undergo energy loss due to classical radiation reaction.
     The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
     In normalized units, `hipace.background_density_SI` must be specified.
