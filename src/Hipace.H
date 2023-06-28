@@ -19,6 +19,7 @@
 #include "laser/MultiLaser.H"
 #include "utils/Constants.H"
 #include "utils/Parser.H"
+#include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
 #include "diagnostics/OpenPMDWriter.H"
 
@@ -240,6 +241,8 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
+
+    MultiBuffer m_multi_buffer;
     /** Number of processors in the transverse x direction */
     inline static int m_numprocs_x = 1;
     /** Number of processors in the transverse y direction */

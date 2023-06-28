@@ -80,7 +80,7 @@ MultiBeam::AdvanceBeamParticlesSlice (
 void
 MultiBeam::TagByLevel (
     const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
-    const int islice_local)
+    const int)
 {
     for (int i=0; i<m_nbeams; i++) {
         m_all_beams[i].TagByLevel(current_N_level, geom3D, which_slice);
@@ -121,7 +121,7 @@ bool MultiBeam::AnySpeciesSalame () {
     return false;
 }
 
-bool MultiBeam::isSalameNow (const int step, const int islice)
+bool MultiBeam::isSalameNow (const int step, const int)
 {
     if (step != 0) return false;
 

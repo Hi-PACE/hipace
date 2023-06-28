@@ -214,6 +214,12 @@ Hipace::InitData ()
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
     m_fields.checkInit();
+
+    m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
+                              m_multi_beam.get_nbeams(),
+                              amrex::ParallelDescriptor::MyProc(),
+                              amrex::ParallelDescriptor::NProcs(),
+                              m_comms_buffer_on_gpu);
 }
 
 void
@@ -349,7 +355,7 @@ Hipace::Evolve ()
 
         // deposit neutralizing background on every MR level
         if (m_N_level > 1) {
-                m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
+            m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
         }
 
         for (int lev=0; lev<m_N_level; ++lev) {
@@ -455,6 +461,13 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         }
     }
 
+    if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
+        m_multi_buffer.get_data(islice, m_multi_beam, WhichBeamSlice::This);
+    }
+    if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
+        m_multi_buffer.get_data(islice-1, m_multi_beam, WhichBeamSlice::Next);
+    }
+
     if (m_N_level > 1) {
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This, islice_local);
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::Next, islice_local);
@@ -556,6 +569,11 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
                                            m_external_E_uniform, m_external_B_uniform,
                                            m_external_E_slope, m_external_B_slope);
 
+    // TODO: beam sorting
+
+    bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
+    m_multi_buffer.put_data(islice, m_multi_beam, WhichBeamSlice::This, is_last_step);
+
     // collisions for all particles calculated on level 0
     m_multi_plasma.doCoulombCollision(0, m_slice_geom[0].Domain(), m_slice_geom[0]);
 
@@ -568,6 +586,8 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     for (int lev=0; lev<current_N_level; ++lev) {
         m_fields.ShiftSlices(lev);
     }
+
+    m_multi_beam.shiftBeamSlices();
 
     // After this, the parallel context is the full 3D communicator again
     amrex::ParallelContext::pop();

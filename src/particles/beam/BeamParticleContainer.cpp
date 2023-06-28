@@ -246,7 +246,7 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
 }
 
 void
-BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
+BeamParticleContainer::InSituComputeDiags (int islice, int)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags()");
 

@@ -134,6 +134,12 @@ public:
      */
     bool AnySpeciesSalame ();
 
+    void shiftBeamSlices () {
+        for (auto& beam : m_all_beams) {
+            beam.shiftBeamSlices();
+        }
+    }
+
 private:
 
     amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */

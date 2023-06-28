@@ -157,33 +157,37 @@ public:
         m_slice_permutation = (m_slice_permutation + 1) % WhichBeamSlice::N;
     }
 
-    BeamTile& getBeamSlice (int slice) {
-        return m_slices[(slice + m_slice_permutation) % WhichBeamSlice::N];
+    BeamTile& getBeamSlice (int which_slice) {
+        return m_slices[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    const BeamTile& getBeamSlice (int slice) const {
-        return m_slices[(slice + m_slice_permutation) % WhichBeamSlice::N];
+    const BeamTile& getBeamSlice (int which_slice) const {
+        return m_slices[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    int getNumParticles (int slice) const {
-        return m_num_particles_without_slipped[(slice + m_slice_permutation) % WhichBeamSlice::N];
+    int getNumParticles (int which_slice) const {
+        return m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    int getNumParticlesIncludingSlipped (int slice) const {
-        return m_num_particles_with_slipped[(slice + m_slice_permutation) % WhichBeamSlice::N];
+    int getNumParticlesIncludingSlipped (int which_slice) const {
+        return m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    void resize (int slice, int num_particles, int num_slipped_particles) {
-        m_num_particles_without_slipped[(slice + m_slice_permutation) % WhichBeamSlice::N] =
+    void resize (int which_slice, int num_particles, int num_slipped_particles) {
+        m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
             num_particles;
-        m_num_particles_with_slipped[(slice + m_slice_permutation) % WhichBeamSlice::N] =
+        m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
             num_particles + num_slipped_particles;
-        getBeamSlice(slice).resize(num_particles + num_slipped_particles);
+        getBeamSlice(which_slice).resize(num_particles + num_slipped_particles);
     }
 
     BeamTileInit& getBeamInitSlice () {
         return m_init_slice;
     }
+
+    void intializeSlice(int slice, int which_slice) {
+        (void)(slice+which_slice);
+    };
 
 private:
     int m_slice_permutation = 0;

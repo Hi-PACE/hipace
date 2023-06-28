@@ -223,7 +223,7 @@ AdaptiveTimeStep::Calculate (
 
 void
 AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& geom,
-                                     const Fields& fields, const int islice)
+                                     const Fields& fields, const int)
 {
     using namespace amrex::literals;
 
