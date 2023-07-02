@@ -180,6 +180,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     }
 
+    m_init_sorter.sortParticlesByBox(*this, geom);
+
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
@@ -241,6 +243,35 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
                 // level 0
                 cpup[ip] = 0;
             }
+        }
+    );
+}
+
+void
+BeamParticleContainer::intializeSlice(int slice, int which_slice) {
+    const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
+
+    resize(which_slice, num_particles, 0);
+
+    auto ptd_init = getBeamInitSlice().getParticleTileData();
+    auto ptd = getBeamSlice(which_slice).getParticleTileData();
+
+    const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
+    const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
+
+    amrex::ParallelFor(num_particles,
+        [=] AMREX_GPU_DEVICE (const int ip) {
+            const int idx_src = permutations[slice_offset + ip];
+            ptd.rdata(BeamIdx::x)[ip] = ptd_init.rdata(BeamIdx::x)[idx_src];
+            ptd.rdata(BeamIdx::y)[ip] = ptd_init.rdata(BeamIdx::y)[idx_src];
+            ptd.rdata(BeamIdx::z)[ip] = ptd_init.rdata(BeamIdx::z)[idx_src];
+            ptd.rdata(BeamIdx::w)[ip] = ptd_init.rdata(BeamIdx::w)[idx_src];
+            ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
+            ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
+            ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
+
+            ptd.idata(BeamIdx::id)[ip] = ptd_init.idata(BeamIdx::id)[idx_src];
+            ptd.idata(BeamIdx::cpu)[ip] = 0;
         }
     );
 }

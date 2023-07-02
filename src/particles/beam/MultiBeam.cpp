@@ -58,6 +58,14 @@ MultiBeam::DepositCurrentSlice (
 }
 
 void
+MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
+{
+    for (int i=0; i<m_nbeams; i++) {
+        ::shiftSlippedParticles(m_all_beams[i], slice, geom);
+    }
+}
+
+void
 MultiBeam::sortParticlesByBox (const amrex::BoxArray, const amrex::Geometry&)
 {
     for (int i=0; i<m_nbeams; i++) {

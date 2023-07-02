@@ -185,9 +185,7 @@ public:
         return m_init_slice;
     }
 
-    void intializeSlice(int slice, int which_slice) {
-        (void)(slice+which_slice);
-    };
+    void intializeSlice(int slice, int which_slice);
 
 private:
     int m_slice_permutation = 0;
@@ -195,6 +193,7 @@ private:
     std::array<int, WhichBeamSlice::N> m_num_particles_without_slipped {};
     std::array<int, WhichBeamSlice::N> m_num_particles_with_slipped {};
     BeamTileInit m_init_slice {};
+    BoxSorter m_init_sorter;
 public:
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */

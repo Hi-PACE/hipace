@@ -569,7 +569,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
                                            m_external_E_uniform, m_external_B_uniform,
                                            m_external_E_slope, m_external_B_slope);
 
-    // TODO: beam sorting
+    m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
     bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, WhichBeamSlice::This, is_last_step);

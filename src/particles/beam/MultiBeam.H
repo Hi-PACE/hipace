@@ -43,6 +43,8 @@ public:
         int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
         const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest=false);
 
+    void
+    shiftSlippedParticles (const int slice, amrex::Geometry const& geom);
     /** \brief Loop over all beam species and sort particles by box
      *
      * \param[in] a_ba BoxArray object to put the particles into

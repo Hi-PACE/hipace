@@ -17,11 +17,10 @@
  *
  * Note that this does *not* rearrange particle arrays
  *
- * \param[in] bx 3d box in which particles are sorted per slice
  * \param[in] beam Beam particle container
  * \param[in] geom Geometry
  */
 void
-findParticlesInEachSlice (amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom);
+shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geometry const& geom);
 
 #endif // HIPACE_SLICESORT_H_
