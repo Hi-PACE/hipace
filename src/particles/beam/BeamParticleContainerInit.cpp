@@ -187,7 +187,6 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
 
         const int pid = BeamTileInit::ParticleType::NextID();
         BeamTileInit::ParticleType::NextID(pid + num_to_add);
-        std::cout << "NEXT ID: " << pid << std::endl;
 
         PhysConst phys_const = get_phys_const();
 

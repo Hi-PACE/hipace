@@ -99,9 +99,9 @@ private:
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
 
-    std::vector<std::shared_ptr<int>> m_int_beam_data {};
-    std::vector<std::shared_ptr<uint64_t>> m_uint64_beam_data {};
-    std::vector<std::shared_ptr<amrex::ParticleReal>> m_real_beam_data {};
+    std::vector<std::vector<std::shared_ptr<int>>> m_int_beam_data {};
+    std::vector<std::vector<std::shared_ptr<uint64_t>>> m_uint64_beam_data {};
+    std::vector<std::vector<std::shared_ptr<amrex::ParticleReal>>> m_real_beam_data {};
 
 public:
     /** Constructor */

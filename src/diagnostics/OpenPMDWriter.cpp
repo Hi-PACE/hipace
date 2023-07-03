@@ -166,6 +166,9 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
 
     const int nbeams = beams.get_nbeams();
     m_offset.resize(nbeams);
+    m_int_beam_data.resize(nbeams);
+    m_uint64_beam_data.resize(nbeams);
+    m_real_beam_data.resize(nbeams);
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
@@ -174,10 +177,10 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
         // initialize beam IO on first slice
         const uint64_t np_total = beams.getBeam(ibeam).getTotalNumParticles();
 
-        m_int_beam_data.resize(m_int_names.size());
+        m_int_beam_data[ibeam].resize(m_int_names.size());
 
-        for (std::size_t idx=0; idx<m_int_beam_data.size(); idx++) {
-            m_int_beam_data[idx].reset(
+        for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
+            m_int_beam_data[ibeam][idx].reset(
                 reinterpret_cast<int*>(
                     amrex::The_Pinned_Arena()->alloc(sizeof(int)*np_total)
                 ),
@@ -186,10 +189,10 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
                 });
         }
 
-        m_uint64_beam_data.resize(m_int_names.size());
+        m_uint64_beam_data[ibeam].resize(m_int_names.size());
 
-        for (std::size_t idx=0; idx<m_uint64_beam_data.size(); idx++) {
-            m_uint64_beam_data[idx].reset(
+        for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
+            m_uint64_beam_data[ibeam][idx].reset(
                 reinterpret_cast<uint64_t*>(
                     amrex::The_Cpu_Arena()->alloc(sizeof(uint64_t)*np_total)
                 ),
@@ -198,10 +201,10 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
                 });
         }
 
-        m_real_beam_data.resize(m_real_names.size());
+        m_real_beam_data[ibeam].resize(m_real_names.size());
 
-        for (std::size_t idx=0; idx<m_real_beam_data.size(); idx++) {
-            m_real_beam_data[idx].reset(
+        for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
+            m_real_beam_data[ibeam][idx].reset(
                 reinterpret_cast<amrex::ParticleReal*>(
                     amrex::The_Pinned_Arena()->alloc(sizeof(amrex::ParticleReal)*np_total)
                 ),
@@ -226,7 +229,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
     amrex::Gpu::streamSynchronize();
 
     const int nbeams = beams.get_nbeams();
-    m_offset.resize(nbeams);
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
@@ -243,9 +245,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         SetupPos(beam_species, beam, np_total, geom);
         SetupRealProperties(beam_species, m_real_names, np_total);
 
-        for (std::size_t idx=0; idx<m_int_beam_data.size(); idx++) {
-            const int * const int_data = m_int_beam_data[idx].get();
-            uint64_t * const uint64_data = m_uint64_beam_data[idx].get();
+        for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
+            const int * const int_data = m_int_beam_data[ibeam][idx].get();
+            uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
 
             for (uint64_t i=0; i<np_total; ++i) {
                 uint64_data[i] = static_cast<uint64_t>(int_data[i]);
@@ -256,16 +258,16 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             auto& currRecord = beam_species[record_name];
             auto& currRecordComp = currRecord[component_name];
             // not read until the data is flushed
-            currRecordComp.storeChunk(m_uint64_beam_data[idx], {0ull}, {np_total});
+            currRecordComp.storeChunk(m_uint64_beam_data[ibeam][idx], {0ull}, {np_total});
         }
 
-        for (std::size_t idx=0; idx<m_real_beam_data.size(); idx++) {
+        for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
             // handle scalar and non-scalar records by name
             auto [record_name, component_name] = utils::name2openPMD(m_real_names[idx]);
             auto& currRecord = beam_species[record_name];
             auto& currRecordComp = currRecord[component_name];
             // not read until the data is flushed
-            currRecordComp.storeChunk(m_real_beam_data[idx], {0ull}, {np_total});
+            currRecordComp.storeChunk(m_real_beam_data[ibeam][idx], {0ull}, {np_total});
         }
     }
 }
@@ -276,7 +278,6 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
     HIPACE_PROFILE("OpenPMDWriter::CopyBeams()");
 
     const int nbeams = beams.get_nbeams();
-
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
@@ -290,18 +291,18 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
             // copy data from GPU to IO buffer
             auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
 
-            for (std::size_t idx=0; idx<m_int_beam_data.size(); idx++) {
+            for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     soa.GetIntData(idx).begin(),
                     soa.GetIntData(idx).begin() + np,
-                    m_int_beam_data[idx].get() + m_offset[ibeam]);
+                    m_int_beam_data[ibeam][idx].get() + m_offset[ibeam]);
             }
 
-            for (std::size_t idx=0; idx<m_real_beam_data.size(); idx++) {
+            for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     soa.GetRealData(idx).begin(),
                     soa.GetRealData(idx).begin() + np,
-                    m_real_beam_data[idx].get() + m_offset[ibeam]);
+                    m_real_beam_data[ibeam][idx].get() + m_offset[ibeam]);
             }
         }
 
