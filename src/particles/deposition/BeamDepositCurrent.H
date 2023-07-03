@@ -32,7 +32,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
                      const bool do_beam_rhomjz_deposition,
-                     const int which_slice, const WhichBeamSlice::beam_slice which_beam_slice,
+                     const int which_slice, const int which_beam_slice,
                      const bool only_highest=false);
 
 

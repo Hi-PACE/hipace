@@ -184,11 +184,10 @@ PlasmaParticleContainer::ReorderParticles (const int islice)
 }
 
 void
-PlasmaParticleContainer::UpdateDensityFunction ()
+PlasmaParticleContainer::UpdateDensityFunction (const amrex::Real pos_z)
 {
     if (!m_use_density_table) return;
-    amrex::Real c_t = get_phys_const().c * Hipace::m_physical_time;
-    auto iter = m_density_table.lower_bound(c_t);
+    auto iter = m_density_table.lower_bound(pos_z);
     if (iter == m_density_table.end()) --iter;
     m_density_func = makeFunctionWithParser<3>(iter->second, m_parser, {"x", "y", "z"});
 }

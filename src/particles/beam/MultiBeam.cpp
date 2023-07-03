@@ -41,8 +41,9 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 void
 MultiBeam::DepositCurrentSlice (
     Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
-    int, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
-    const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest)
+    const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+    const bool do_beam_rhomjz_deposition, const int which_slice, const int which_beam_slice,
+    const bool only_highest)
 
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -52,7 +53,7 @@ MultiBeam::DepositCurrentSlice (
                                   do_beam_jx_jy_deposition && !is_salame,
                                   do_beam_jz_deposition,
                                   do_beam_rhomjz_deposition && !is_salame,
-                                  which_slice, WhichBeamSlice::This, only_highest);
+                                  which_slice, which_beam_slice, only_highest);
         }
     }
 }
@@ -68,19 +69,18 @@ MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-    const int islice, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
+    const amrex::RealVect& extEu, const amrex::RealVect& extBu,
     const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     for (int i=0; i<m_nbeams; i++) {
         ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level,
-                                    islice, extEu, extBu, extEs, extBs);
+                                    extEu, extBu, extEs, extBs);
     }
 }
 
 void
 MultiBeam::TagByLevel (
-    const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
-    const int)
+    const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice)
 {
     for (int i=0; i<m_nbeams; i++) {
         m_all_beams[i].TagByLevel(current_N_level, geom3D, which_slice);
@@ -88,14 +88,13 @@ MultiBeam::TagByLevel (
 }
 
 void
-MultiBeam::InSituComputeDiags (int step, int islice, int islice_local,
+MultiBeam::InSituComputeDiags (int step, int islice,
                                int max_step, amrex::Real physical_time,
                                amrex::Real max_time)
 {
     for (auto& beam : m_all_beams) {
-        if (utils::doDiagnostics(beam.m_insitu_period, step,
-                            max_step, physical_time, max_time)) {
-            beam.InSituComputeDiags(islice, islice_local);
+        if (utils::doDiagnostics(beam.m_insitu_period, step, max_step, physical_time, max_time)) {
+            beam.InSituComputeDiags(islice);
         }
     }
 }
@@ -105,8 +104,7 @@ MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry&
                               int max_step, amrex::Real max_time)
 {
     for (auto& beam : m_all_beams) {
-        if (utils::doDiagnostics(beam.m_insitu_period, step,
-                            max_step, time, max_time)) {
+        if (utils::doDiagnostics(beam.m_insitu_period, step, max_step, time, max_time)) {
             beam.InSituWriteToFile(step, time, geom);
         }
     }
@@ -121,7 +119,7 @@ bool MultiBeam::AnySpeciesSalame () {
     return false;
 }
 
-bool MultiBeam::isSalameNow (const int step, const int)
+bool MultiBeam::isSalameNow (const int step)
 {
     if (step != 0) return false;
 

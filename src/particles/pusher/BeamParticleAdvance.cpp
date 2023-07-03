@@ -18,7 +18,7 @@
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    int const current_N_level, const int, const amrex::RealVect& extEu,
+    int const current_N_level, const amrex::RealVect& extEu,
     const amrex::RealVect& extBu, const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");

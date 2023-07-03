@@ -77,11 +77,10 @@ public:
      * \param[in] beams multibeam containing all beams
      * \param[in] geom geometry object
      * \param[in] fields field object
-     * \param[in] islice current slice number
      */
     void
     GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& geom,
-                       const Fields& fields, const int islice);
+                       const Fields& fields);
 
     /** Right before starting a time step, correct its dt to account for local plasma density
      * and resolve density gradients.

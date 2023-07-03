@@ -45,8 +45,11 @@ void MultiBuffer::free_buffer (int slice) {
     m_datanodes[slice].m_buffer_size = 0;
 }
 
-void MultiBuffer::initialize (int nslices, int nbeams, int rank_id,
-                              int n_ranks, bool buffer_on_host) {
+void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host) {
+
+    m_comm = amrex::ParallelDescriptor::Communicator();
+    const int rank_id = amrex::ParallelDescriptor::MyProc();
+    const int n_ranks = amrex::ParallelDescriptor::NProcs();
 
     m_nslices = nslices;
     m_nbeams = nbeams;

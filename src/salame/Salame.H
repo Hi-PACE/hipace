@@ -20,12 +20,10 @@
  * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
- * \param[in] islice_local slice index of the local box
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice,
-              const int islice_local);
+              bool& overloaded, const int current_N_level, const int step, const int islice);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
  * \param[in] hipace pointer to Hipace instance
@@ -61,9 +59,8 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice);
 /** Multiply SALAME beam weight on this slice with W
  * \param[in] W weight multiplier
  * \param[in] hipace pointer to Hipace instance
- * \param[in] islice slice index of the local box
  */
 void
-SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice);
+SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace);
 
 #endif //  SALAME_H_

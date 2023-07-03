@@ -132,9 +132,8 @@ public:
 
     /** Compute reduced beam diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] islice_local local index of the slice
      */
-    void InSituComputeDiags (int islice, int islice_local);
+    void InSituComputeDiags (int islice);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step

@@ -13,19 +13,17 @@
 
 #ifndef AMREX_USE_MPI
 using MPI_Request = int;
-using MPI_Status = int;
 using MPI_Comm = int;
 constexpr MPI_Request MPI_REQUEST_NULL = 0;
-constexpr MPI_Comm MPI_COMM_WORLD = 0;
+constexpr MPI_Comm MPI_COMM_NULL = 0;
 #endif
-
 
 class MultiBuffer
 {
 
 public:
 
-    void initialize (int nslices, int nbeams, int rank_num, int n_ranks, bool buffer_on_host);
+    void initialize (int nslices, int nbeams, bool buffer_on_host);
 
     void get_data (int slice, MultiBeam& beams, int beam_slice);
 
@@ -79,7 +77,7 @@ private:
     int m_tag_time_start = 0;
     int m_tag_buffer_start = 0;
     int m_tag_metadata_start = 0;
-    MPI_Comm m_comm = MPI_COMM_WORLD;
+    MPI_Comm m_comm = MPI_COMM_NULL;
 
     bool m_buffer_on_host = true;
 

@@ -290,7 +290,7 @@ BeamParticleContainer::resize (int which_slice, int num_particles, int num_slipp
 }
 
 void
-BeamParticleContainer::InSituComputeDiags (int islice, int)
+BeamParticleContainer::InSituComputeDiags (int islice)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags()");
 

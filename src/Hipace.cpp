@@ -83,17 +83,9 @@ Hipace::Hipace () :
     if (str_dt != "adaptive") queryWithParser(pph, "dt", m_dt);
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
-    queryWithParser(pph, "numprocs_x", m_numprocs_x);
-    queryWithParser(pph, "numprocs_y", m_numprocs_y);
-    m_numprocs_z = amrex::ParallelDescriptor::NProcs() / (m_numprocs_x*m_numprocs_y);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_z <= m_max_step+1,
+    m_numprocs = amrex::ParallelDescriptor::NProcs();
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step+1,
                                      "Please use more or equal time steps than number of ranks");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs_x*m_numprocs_y*m_numprocs_z
-                                     == amrex::ParallelDescriptor::NProcs(),
-                                     "Check hipace.numprocs_x and hipace.numprocs_y");
-    queryWithParser(pph, "boxes_in_z", m_boxes_in_z);
-    if (m_boxes_in_z > 1) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_numprocs_z == 1,
-                            "Multiple boxes per rank only implemented for one rank.");
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
@@ -144,16 +136,7 @@ Hipace::Hipace () :
 #endif
 
     queryWithParser(pph, "background_density_SI", m_background_density_SI);
-
-#ifdef AMREX_USE_MPI
     queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
-    queryWithParser(pph, "skip_empty_comms", m_skip_empty_comms);
-    int myproc = amrex::ParallelDescriptor::MyProc();
-    m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
-    MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_z, myproc, &m_comm_xy);
-    MPI_Comm_rank(m_comm_xy, &m_rank_xy);
-    MPI_Comm_split(amrex::ParallelDescriptor::Communicator(), m_rank_xy, myproc, &m_comm_z);
-#endif
 
     MakeGeometry();
 
@@ -161,12 +144,7 @@ Hipace::Hipace () :
 }
 
 Hipace::~Hipace ()
-{
-#ifdef AMREX_USE_MPI
-    MPI_Comm_free(&m_comm_xy);
-    MPI_Comm_free(&m_comm_z);
-#endif
-}
+{}
 
 void
 Hipace::InitData ()
@@ -202,11 +180,12 @@ Hipace::InitData ()
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
 #ifdef AMREX_USE_MPI
-    m_adaptive_time_step.BroadcastTimeStep(m_dt, m_comm_z, m_numprocs_z);
+    m_adaptive_time_step.BroadcastTimeStep(m_dt, amrex::ParallelDescriptor::Communicator(),
+                                                 m_numprocs);
 #endif
     m_physical_time = m_initial_time;
 #ifdef AMREX_USE_MPI
-    m_physical_time += m_dt * (m_numprocs_z-1-amrex::ParallelDescriptor::MyProc());
+    m_physical_time += m_dt * (m_numprocs-1-amrex::ParallelDescriptor::MyProc());
 #endif
     if (!Hipace::HeadRank()) {
         m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
@@ -216,8 +195,6 @@ Hipace::InitData ()
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
                               m_multi_beam.get_nbeams(),
-                              amrex::ParallelDescriptor::MyProc(),
-                              amrex::ParallelDescriptor::NProcs(),
                               !m_comms_buffer_on_gpu);
 }
 
@@ -239,8 +216,6 @@ Hipace::MakeGeometry ()
 
     // this will get prob_lo, prob_hi and is_periodic from the input file
     m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, nullptr);
-
-    const int n_boxes = (m_boxes_in_z == 1) ? m_numprocs_z : m_boxes_in_z;
 
     amrex::BoxList bl{domain_3D};
     amrex::Vector<int> procmap{amrex::ParallelDescriptor::MyProc()};
@@ -292,22 +267,8 @@ Hipace::MakeGeometry ()
             "(with a few cells to spare)"
         );
 
-        amrex::BoxList bl_lev{};
-        amrex::Vector<int> procmap_lev{};
-        for (int i=0; i<n_boxes; ++i) {
-            if (m_3D_ba[0][i].smallEnd(2) > zeta_hi || m_3D_ba[0][i].bigEnd(2) < zeta_lo) {
-                continue;
-            }
-            // enforce parent-child relationship with level 0 BoxArray
-            bl_lev.push_back(
-                amrex::Box(domain_3D_lev)
-                    .setSmall(2, std::max(domain_3D_lev.smallEnd(2), m_3D_ba[0][i].smallEnd(2)) )
-                    .setBig(2, std::min(domain_3D_lev.bigEnd(2), m_3D_ba[0][i].bigEnd(2)) )
-            );
-            procmap_lev.push_back(
-                (i*m_numprocs_z)/n_boxes
-            );
-        }
+        amrex::BoxList bl_lev{domain_3D_lev};
+        amrex::Vector<int> procmap_lev{amrex::ParallelDescriptor::MyProc()};
         m_3D_ba[lev].define(bl_lev);
         m_3D_dm[lev].define(procmap_lev);
     }
@@ -335,7 +296,7 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
 
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
-    for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
+    for (int step = m_numprocs - 1 - rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
 
@@ -351,8 +312,37 @@ Hipace::Evolve ()
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
 
         if (m_physical_time > m_max_time) {
-            if (step+1 <= m_max_step && !m_has_last_step) m_multi_buffer.put_time(m_physical_time);
+            if (step+1 <= m_max_step && !m_has_last_step) {
+                m_multi_buffer.put_time(m_physical_time);
+            }
             break;
+        }
+
+        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+
+        amrex::Real next_time = 0.;
+
+        // adjust time step to reach max_time
+        if (m_physical_time == m_max_time) {
+            m_has_last_step = true;
+            m_dt = 0.;
+            next_time = 2. * m_max_time + 1.;
+        } else if (m_physical_time + m_dt >= m_max_time) {
+            m_dt = m_max_time - m_physical_time;
+            next_time = m_max_time;
+        } else {
+            next_time = m_physical_time + m_dt;
+        }
+
+        if (m_verbose >= 1) {
+            std::cout << "Rank " << rank
+                      << " started  step " << step
+                      << " at time = " << m_physical_time
+                      << " with dt = " << m_dt << std::endl;
+        }
+
+        if (step+1 <= m_max_step) {
+            m_multi_buffer.put_time(next_time);
         }
 
         // Only reset plasma after receiving time step, to use proper density
@@ -372,20 +362,6 @@ Hipace::Evolve ()
                 m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
         }
 
-        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
-
-        // adjust time step to reach max_time
-        if (m_physical_time == m_max_time) {
-            m_has_last_step = true;
-            m_dt = 0.;
-            if (step+1 <= m_max_step) m_multi_buffer.put_time(2. * m_max_time + 1.);
-        } else if (m_physical_time + m_dt >= m_max_time) {
-            m_dt = m_max_time - m_physical_time;
-            if (step+1 <= m_max_step) m_multi_buffer.put_time(m_max_time);
-        } else {
-            if (step+1 <= m_max_step) m_multi_buffer.put_time(m_physical_time + m_dt);
-        }
-
 #ifdef HIPACE_USE_OPENPMD
         // need correct physical time for this check
         if (m_diags.hasAnyOutput(step, m_max_step, m_physical_time, m_max_time)) {
@@ -393,16 +369,13 @@ Hipace::Evolve ()
         }
 #endif
 
-        if (m_verbose>=1) std::cout<<"Rank "<<rank<<" started  step "<<step
-                                <<" at time = "<<m_physical_time<< " with dt = "<<m_dt<<'\n';
-
         WriteDiagnostics(step, 0, OpenPMDWriterCallType::beams);
 
         ResizeFDiagFAB(0, step);
 
         // Solve slices
         for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-            SolveOneSlice(isl, 0, step);
+            SolveOneSlice(isl, step);
         };
 
         if (m_physical_time < m_max_time) {
@@ -410,21 +383,24 @@ Hipace::Evolve ()
                 m_physical_time, m_dt, m_multi_beam, m_multi_plasma, 0, false);
         }
 
-        // averaging predictor corrector loop diagnostics
-        m_predcorr_avg_iterations /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
-        m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
-
         WriteDiagnostics(step, 0, OpenPMDWriterCallType::fields);
 
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
 
-        // printing and resetting predictor corrector loop diagnostics
-        if (m_verbose>=2 && !m_explicit) amrex::AllPrint() << "Rank " << rank <<
-                                ": avg. number of iterations " << m_predcorr_avg_iterations <<
-                                " avg. transverse B field error " << m_predcorr_avg_B_error << "\n";
-        m_predcorr_avg_iterations = 0.;
-        m_predcorr_avg_B_error = 0.;
+        if (!m_explicit) {
+            // averaging predictor corrector loop diagnostics
+            m_predcorr_avg_iterations /= bx.length(Direction::z);
+            m_predcorr_avg_B_error /= bx.length(Direction::z);
+            if (m_verbose >= 2) {
+                amrex::AllPrint() << "Rank " << rank
+                                  << ": avg. number of iterations " << m_predcorr_avg_iterations
+                                  <<" avg. transverse B field error " << m_predcorr_avg_B_error
+                                  << "\n";
+            }
+            m_predcorr_avg_iterations = 0.;
+            m_predcorr_avg_B_error = 0.;
+        }
 
 #ifdef HIPACE_USE_OPENPMD
         m_openpmd_writer.reset();
@@ -433,7 +409,7 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, const int islice_local, int step)
+Hipace::SolveOneSlice (int islice, int step)
 {
 #ifdef AMREX_USE_MPI
     {
@@ -445,11 +421,7 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
 #endif
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    // Between this push and the corresponding pop at the end of this
-    // for function, the parallelcontext is the transverse communicator
-    amrex::ParallelContext::push(m_comm_xy);
-
-    m_multi_beam.InSituComputeDiags(step, islice, islice_local, m_max_step,
+    m_multi_beam.InSituComputeDiags(step, islice, m_max_step,
                                     m_physical_time, m_max_time);
     m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
 
@@ -473,8 +445,8 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     }
 
     if (m_N_level > 1) {
-        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This, islice_local);
-        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::Next, islice_local);
+        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This);
+        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::Next);
         m_multi_plasma.TagByLevel(current_N_level, m_3D_geom);
     }
 
@@ -497,20 +469,21 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
                 true, false, m_deposit_rho, true, true, m_3D_geom, lev);
 
             // deposit jx_beam and jy_beam in the Next slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
-                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
-                false, true, m_do_beam_jz_minus_rho, WhichSlice::This);
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
                 true, true, m_deposit_rho, m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
-                m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho, WhichSlice::This);
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho,
+                WhichSlice::This, WhichBeamSlice::This);
         }
         // add neutralizing background
         m_fields.AddRhoIons(lev);
@@ -540,14 +513,14 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
         }
     } else {
         // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
-        PredictorCorrectorLoopToSolveBxBy(islice, islice_local, current_N_level, step);
+        PredictorCorrectorLoopToSolveBxBy(islice, current_N_level, step);
     }
 
-    if (m_multi_beam.isSalameNow(step, islice_local)) {
+    if (m_multi_beam.isSalameNow(step)) {
         // Modify the beam particle weights on this slice to flatten Ez.
         // As the beam current is modified, Bx and By are also recomputed.
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
-                    m_salame_overloaded, current_N_level, step, islice, islice_local);
+                    m_salame_overloaded, current_N_level, step, islice);
     }
 
     // copy fields to diagnostic array
@@ -566,10 +539,10 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     }
 
     // get minimum beam acceleration on level 0
-    m_adaptive_time_step.GatherMinAccSlice(m_multi_beam,  m_3D_geom[0], m_fields, islice_local);
+    m_adaptive_time_step.GatherMinAccSlice(m_multi_beam,  m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level, islice_local,
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level,
                                            m_external_E_uniform, m_external_B_uniform,
                                            m_external_E_slope, m_external_B_slope);
 
@@ -592,9 +565,6 @@ Hipace::SolveOneSlice (int islice, const int islice_local, int step)
     }
 
     m_multi_beam.shiftBeamSlices();
-
-    // After this, the parallel context is the full 3D communicator again
-    amrex::ParallelContext::pop();
 }
 
 void
@@ -797,8 +767,8 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
 }
 
 void
-Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_local,
-                                           const int current_N_level, const int step)
+Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N_level,
+                                           const int step)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -849,8 +819,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_lo
                 true, false, false, false, false, m_3D_geom, lev);
 
             // beams deposit jx jy to the next slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step, islice_local,
-                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next);
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
         }
 
         // Calculate Bx and By

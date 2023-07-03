@@ -91,7 +91,7 @@ AdaptiveTimeStep::Calculate (
 
     // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
-    const int numprocs_z = Hipace::m_numprocs_z;
+    const int numprocs = Hipace::m_numprocs;
 
     amrex::Vector<amrex::Real> new_dts;
     new_dts.resize(nbeams);
@@ -187,7 +187,7 @@ AdaptiveTimeStep::Calculate (
                   Calculate the time step for this beam used in the next time iteration
                   of the current rank, to resolve the betatron period with m_nt_per_betatron
                   points per period, assuming full blowout regime. The z-dependence of the
-                  plasma profile is considered. As this time step will start in numprocs_z
+                  plasma profile is considered. As this time step will start in numprocs
                   time steps, so the beam may have propagated a significant distance.
                   If m_adaptive_predict_step is true, we estimate this distance and use it
                   for a more accurate time step estimation.
@@ -195,7 +195,7 @@ AdaptiveTimeStep::Calculate (
                 amrex::Real new_dt = dt;
                 amrex::Real new_time = t;
                 amrex::Real min_uz = beams_min_uz[ibeam];
-                const int niter = m_adaptive_predict_step ? numprocs_z : 1;
+                const int niter = m_adaptive_predict_step ? numprocs : 1;
                 for (int i = 0; i < niter; i++)
                 {
                     plasma_density = plasmas.maxDensity(c * new_time);
@@ -223,7 +223,7 @@ AdaptiveTimeStep::Calculate (
 
 void
 AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& geom,
-                                     const Fields& fields, const int)
+                                     const Fields& fields)
 {
     using namespace amrex::literals;
 

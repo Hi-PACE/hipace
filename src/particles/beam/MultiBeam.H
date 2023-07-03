@@ -10,8 +10,6 @@
 
 #include "BeamParticleContainer.H"
 #include "fields/Fields.H"
-#include "particles/sorting/SliceSort.H"
-#include "particles/sorting/BoxSort.H"
 
 class MultiBeam
 {
@@ -31,26 +29,25 @@ public:
      * \param[in] geom Geometry vector for all levels
      * \param[in] lev MR level
      * \param[in] step time step of simulation
-     * \param[in] islice slice index in which the current is stored
      * \param[in] do_beam_jx_jy_deposition whether the beam deposits Jx and Jy
      * \param[in] do_beam_jz_deposition whether the beam deposits Jz
      * \param[in] do_beam_rhomjz_deposition whether the beam deposits rhomjz
-     * \param[in] which_slice defines if this or the next slice is handled
+     * \param[in] which_slice defines if this, next or salame slice is handled
+     * \param[in] which_beam_slice defines if this or the next beam slice is handled
      * \param[in] only_highest if the particles deposit only on their highest MR level
      */
     void DepositCurrentSlice (
         Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
-        int islice, const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
-        const bool do_beam_rhomjz_deposition, const int which_slice, const bool only_highest=false);
+        const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
+        const bool do_beam_rhomjz_deposition, const int which_slice, const int which_beam_slice,
+        const bool only_highest=false);
 
-    void
-    shiftSlippedParticles (const int slice, amrex::Geometry const& geom);
+    void shiftSlippedParticles (const int slice, amrex::Geometry const& geom);
 
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] gm Geometry object at level lev
      * \param[in] current_N_level number of MR levels active on the current slice
-     * \param[in] islice slice index in which the current is stored
      * \param[in] extEu uniform external electric field applied to beam particles.
                   The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
      * \param[in] extBu Uniform external magnetic field applied to beam particles.
@@ -65,18 +62,17 @@ public:
      */
     void AdvanceBeamParticlesSlice (
         const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-        const int islice, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
+        const amrex::RealVect& extEu, const amrex::RealVect& extBu,
         const amrex::RealVect& extEs, const amrex::RealVect& extBs);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] islice_local local index of the slice
      * \param[in] max_step maximum time step of simulation
      * \param[in] physical_time physical time at the given step
      * \param[in] max_time maximum time of simulation
      */
-    void InSituComputeDiags (int step, int islice, int islice_local,
+    void InSituComputeDiags (int step, int islice,
                              int max_step, amrex::Real physical_time,
                              amrex::Real max_time);
     /** Write reduced beam diagnostics to file
@@ -114,16 +110,14 @@ public:
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] geom3D Geometry object for the whole domain
      * \param[in] which_slice slice to mark
-     * \param[in] islice_local local index of the slice
      */
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
-                     const int which_slice, const int islice_local);
+                     const int which_slice);
 
     /** \brief returns if the SALAME algorithm should be used on this slice
      * \param[in] step time step of simulation
-     * \param[in] islice slice index of the local box
      */
-    bool isSalameNow (const int step, const int islice);
+    bool isSalameNow (const int step);
 
     /** \brief returns if any beam uses the SALAME algorithm
      */
