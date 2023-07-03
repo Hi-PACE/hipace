@@ -147,7 +147,6 @@ Hipace::Hipace () :
 
 #ifdef AMREX_USE_MPI
     queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
-    m_comms_arena = m_comms_buffer_on_gpu ? amrex::The_Device_Arena() : amrex::The_Pinned_Arena();
     queryWithParser(pph, "skip_empty_comms", m_skip_empty_comms);
     int myproc = amrex::ParallelDescriptor::MyProc();
     m_rank_z = myproc/(m_numprocs_x*m_numprocs_y);
@@ -219,7 +218,7 @@ Hipace::InitData ()
                               m_multi_beam.get_nbeams(),
                               amrex::ParallelDescriptor::MyProc(),
                               amrex::ParallelDescriptor::NProcs(),
-                              m_comms_buffer_on_gpu);
+                              !m_comms_buffer_on_gpu);
 }
 
 void
@@ -334,7 +333,6 @@ Hipace::Evolve ()
 {
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
-    m_multi_beam.sortParticlesByBox(m_3D_ba[0], m_3D_geom[0]);
 
     // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
     for (int step = m_numprocs_z - 1 - m_rank_z; step <= m_max_step; step += m_numprocs_z)
@@ -348,6 +346,13 @@ Hipace::Evolve ()
             AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
             // Before that, the 3D fields of the envelope are not initialized (not even allocated).
             m_multi_laser.Init3DEnvelope(step, bx, m_3D_geom[0]);
+        }
+
+        m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
+
+        if (m_physical_time > m_max_time) {
+            if (step+1 <= m_max_step && !m_has_last_step) m_multi_buffer.put_time(m_physical_time);
+            break;
         }
 
         // Only reset plasma after receiving time step, to use proper density
@@ -367,13 +372,19 @@ Hipace::Evolve ()
                 m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
         }
 
-        if (m_physical_time >= m_max_time) {
-            if (m_physical_time > m_max_time) break;
-        }
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
 
         // adjust time step to reach max_time
-        m_dt = std::min(m_dt, m_max_time - m_physical_time);
+        if (m_physical_time == m_max_time) {
+            m_has_last_step = true;
+            m_dt = 0.;
+            if (step+1 <= m_max_step) m_multi_buffer.put_time(2. * m_max_time + 1.);
+        } else if (m_physical_time + m_dt >= m_max_time) {
+            m_dt = m_max_time - m_physical_time;
+            if (step+1 <= m_max_step) m_multi_buffer.put_time(m_max_time);
+        } else {
+            if (step+1 <= m_max_step) m_multi_buffer.put_time(m_physical_time + m_dt);
+        }
 
 #ifdef HIPACE_USE_OPENPMD
         // need correct physical time for this check
@@ -397,8 +408,6 @@ Hipace::Evolve ()
         if (m_physical_time < m_max_time) {
             m_adaptive_time_step.Calculate(
                 m_physical_time, m_dt, m_multi_beam, m_multi_plasma, 0, false);
-        } else {
-            m_dt = 2.*m_max_time;
         }
 
         // averaging predictor corrector loop diagnostics
@@ -406,9 +415,6 @@ Hipace::Evolve ()
         m_predcorr_avg_B_error /= (bx.bigEnd(Direction::z) + 1 - bx.smallEnd(Direction::z));
 
         WriteDiagnostics(step, 0, OpenPMDWriterCallType::fields);
-
-        // exit loop over time steps, if max time is exceeded
-        if (m_physical_time > m_max_time) break;
 
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
@@ -419,8 +425,6 @@ Hipace::Evolve ()
                                 " avg. transverse B field error " << m_predcorr_avg_B_error << "\n";
         m_predcorr_avg_iterations = 0.;
         m_predcorr_avg_B_error = 0.;
-
-        m_physical_time += m_dt;
 
 #ifdef HIPACE_USE_OPENPMD
         m_openpmd_writer.reset();

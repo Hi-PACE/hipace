@@ -31,6 +31,10 @@ public:
 
     void put_data (int slice, MultiBeam& beams, int beam_slice, bool is_last_time_step);
 
+    amrex::Real get_time ();
+
+    void put_time (amrex::Real time);
+
     ~MultiBuffer();
 
 private:
@@ -71,7 +75,8 @@ private:
     amrex::Vector<DataNode> m_datanodes {};
 
     int m_rank_send_to = 0;
-    int m_rank_receive_from =0;
+    int m_rank_receive_from = 0;
+    int m_tag_time_start = 0;
     int m_tag_buffer_start = 0;
     int m_tag_metadata_start = 0;
     MPI_Comm m_comm = MPI_COMM_WORLD;
@@ -81,6 +86,12 @@ private:
     int m_nslices = 0;
     int m_nbeams = 0;
     bool m_is_head_rank = false;
+    bool m_is_serial = true;
+
+    amrex::Real m_time_send_buffer = 0.;
+    MPI_Request m_time_send_request = MPI_REQUEST_NULL;
+    bool m_time_send_started = false;
+
 
     std::size_t get_metadata_size ();
 

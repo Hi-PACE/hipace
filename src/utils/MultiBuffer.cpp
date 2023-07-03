@@ -56,7 +56,9 @@ void MultiBuffer::initialize (int nslices, int nbeams, int rank_id,
     m_rank_receive_from = (rank_id + 1) % n_ranks;
 
     m_is_head_rank = rank_id + 1 == n_ranks;
+    m_is_serial = n_ranks == 1;
 
+    m_tag_time_start = 0;
     m_tag_buffer_start = 1;
     m_tag_metadata_start = m_tag_buffer_start + m_nslices;
 
@@ -82,14 +84,34 @@ void MultiBuffer::initialize (int nslices, int nbeams, int rank_id,
 
 
 MultiBuffer::~MultiBuffer() {
+#ifdef AMREX_USE_MPI
     for (int i = m_nslices-1; i >= 0; --i) {
-        if (m_datanodes[i].m_metadata_progress == comm_progress::send_started) {
-            MPI_Cancel(&(m_datanodes[i].m_request));
+        make_progress(i, false);
+        if (m_datanodes[i].m_metadata_progress == comm_progress::receive_started) {
+            MPI_Cancel(&(m_datanodes[i].m_metadata_request));
+            MPI_Wait(&(m_datanodes[i].m_metadata_request), MPI_STATUS_IGNORE);
         }
     }
+    if (m_time_send_started) {
+        MPI_Wait(&m_time_send_request, MPI_STATUS_IGNORE);
+        m_time_send_started = false;
+    }
+#endif
 }
 
 void MultiBuffer::make_progress (int slice, bool is_blocking) {
+
+    if (m_is_serial) {
+        if (is_blocking) {
+            AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_metadata_progress == comm_progress::ready_to_send);
+            AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_progress == comm_progress::ready_to_send);
+            m_datanodes[slice].m_metadata_progress = comm_progress::received;
+            m_datanodes[slice].m_progress = comm_progress::received;
+        }
+        return;
+    }
+
+#ifdef AMREX_USE_MPI
 
     if (m_datanodes[slice].m_metadata_progress == comm_progress::ready_to_send) {
         MPI_Isend(
@@ -212,9 +234,12 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
         AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_metadata_progress == comm_progress::received);
         AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_progress == comm_progress::received);
     }
+
+#endif
 }
 
 void MultiBuffer::get_data (int slice, MultiBeam& beams, int beam_slice) {
+    HIPACE_PROFILE("MultiBuffer::get_data()");
     if (m_datanodes[slice].m_progress == comm_progress::ready_to_define) {
         for (int b = 0; b < m_nbeams; ++b) {
             beams.getBeam(b).intializeSlice(slice, beam_slice);
@@ -231,6 +256,7 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, int beam_slice) {
 }
 
 void MultiBuffer::put_data (int slice, MultiBeam& beams, int beam_slice, bool is_last_time_step) {
+    HIPACE_PROFILE("MultiBuffer::put_data()");
     if (is_last_time_step) {
         m_datanodes[slice].m_progress = comm_progress::sim_completed;
         m_datanodes[slice].m_metadata_progress = comm_progress::sim_completed;
@@ -246,6 +272,53 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, int beam_slice, bool is
     for (int i = m_nslices-1; i >= 0; --i) {
         make_progress(i, false);
     }
+}
+
+amrex::Real MultiBuffer::get_time () {
+    HIPACE_PROFILE("MultiBuffer::get_time()");
+
+    if (m_is_serial) {
+        return m_time_send_buffer;
+    }
+
+#ifdef AMREX_USE_MPI
+    amrex::Real time_buffer = 0.;
+    MPI_Recv(
+        &time_buffer,
+        1,
+        amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+        m_rank_receive_from,
+        m_tag_time_start,
+        m_comm,
+        MPI_STATUS_IGNORE);
+    return time_buffer;
+#endif
+}
+
+void MultiBuffer::put_time (amrex::Real time) {
+    HIPACE_PROFILE("MultiBuffer::put_time()");
+
+    if (m_is_serial) {
+        m_time_send_buffer = time;
+        return;
+    }
+
+#ifdef AMREX_USE_MPI
+    if (m_time_send_started) {
+        MPI_Wait(&m_time_send_request, MPI_STATUS_IGNORE);
+        m_time_send_started = false;
+    }
+    m_time_send_buffer = time;
+    MPI_Isend(
+        &m_time_send_buffer,
+        1,
+        amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
+        m_rank_send_to,
+        m_tag_time_start,
+        m_comm,
+        &m_time_send_request);
+    m_time_send_started = true;
+#endif
 }
 
 void MultiBuffer::write_metadata (int slice, MultiBeam& beams, int beam_slice) {

@@ -248,7 +248,9 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
 }
 
 void
-BeamParticleContainer::intializeSlice(int slice, int which_slice) {
+BeamParticleContainer::intializeSlice (int slice, int which_slice) {
+    HIPACE_PROFILE("BeamParticleContainer::intializeSlice()");
+
     const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
     resize(which_slice, num_particles, 0);
@@ -274,6 +276,17 @@ BeamParticleContainer::intializeSlice(int slice, int which_slice) {
             ptd.idata(BeamIdx::cpu)[ip] = 0;
         }
     );
+}
+
+void
+BeamParticleContainer::resize (int which_slice, int num_particles, int num_slipped_particles) {
+    HIPACE_PROFILE("BeamParticleContainer::resize()");
+
+    m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
+        num_particles;
+    m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
+        num_particles + num_slipped_particles;
+    getBeamSlice(which_slice).resize(num_particles + num_slipped_particles);
 }
 
 void

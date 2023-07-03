@@ -66,14 +66,6 @@ MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 }
 
 void
-MultiBeam::sortParticlesByBox (const amrex::BoxArray, const amrex::Geometry&)
-{
-    for (int i=0; i<m_nbeams; i++) {
-        //m_all_beams[i].m_box_sorter.sortParticlesByBox(m_all_beams[i], a_ba, a_geom);
-    }
-}
-
-void
 MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
     const int islice, const amrex::RealVect& extEu, const amrex::RealVect& extBu,

@@ -185,25 +185,6 @@ public:
      * longitudinal parallelization)
      */
     MPI_Comm m_comm_z = MPI_COMM_NULL;
-    /** Send buffer for particle longitudinal parallelization (pipeline) */
-    char* m_psend_buffer = nullptr;
-    char* m_psend_buffer_ghost = nullptr;
-    amrex::Real m_tsend_buffer {-1.};
-    /** Send buffer for the number of particles for each beam (pipeline) */
-    amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
-    amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
-    /** status of the number of particles send request */
-    MPI_Request m_nsend_request = MPI_REQUEST_NULL;
-    MPI_Request m_nsend_request_ghost = MPI_REQUEST_NULL;
-    /** status of the particle send request */
-    MPI_Request m_psend_request = MPI_REQUEST_NULL;
-    MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
-    /** status of the physical time send request */
-    MPI_Request m_tsend_request = MPI_REQUEST_NULL;
-    // Laser buffer
-    amrex::Real* m_lsend_buffer = nullptr;
-    // status of laser send
-    MPI_Request m_lsend_request = MPI_REQUEST_NULL;
     /** 3D Geometry, vector over MR levels */
     amrex::Vector<amrex::Geometry> m_3D_geom;
     /** 3D DistributionMapping. Does not represent the parallelization pipeline correctly */
@@ -264,6 +245,8 @@ public:
     inline static amrex::Real m_physical_time = 0.0;
     /** Physical time at the beginning of the simulation */
     inline static amrex::Real m_initial_time = 0.0;
+
+    bool m_has_last_step = false;
     /** Level of verbosity */
     inline static int m_verbose = 0;
     /** Relative transverse B field error tolerance in the predictor corrector loop
@@ -347,8 +330,6 @@ public:
     amrex::ParserExecutor<3> m_salame_target_func;
     /** Whether MPI communication buffers should be allocated in device memory */
     bool m_comms_buffer_on_gpu = false;
-    /** Arena for MPI communications */
-    amrex::Arena* m_comms_arena = nullptr;
 
     /** \brief Check that the ghost beam particles are in the proper box, and invalidate
      * those not in the right slice.

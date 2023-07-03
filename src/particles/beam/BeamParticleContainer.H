@@ -54,8 +54,8 @@ using BeamTileInit = amrex::ParticleTile<
             BeamIdx::int_nattribs_in_buffer
         >,
         BeamIdx::real_nattribs_in_buffer,
-        BeamIdx::int_nattribs_in_buffer,
-        amrex::PinnedArenaAllocator
+        BeamIdx::int_nattribs_in_buffer /*,
+        amrex::PinnedArenaAllocator*/
     >;
 
 /** \brief Container for particles of 1 beam species. */
@@ -173,13 +173,7 @@ public:
         return m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    void resize (int which_slice, int num_particles, int num_slipped_particles) {
-        m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
-            num_particles;
-        m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
-            num_particles + num_slipped_particles;
-        getBeamSlice(which_slice).resize(num_particles + num_slipped_particles);
-    }
+    void resize (int which_slice, int num_particles, int num_slipped_particles);
 
     BeamTileInit& getBeamInitSlice () {
         return m_init_slice;
