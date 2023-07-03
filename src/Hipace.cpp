@@ -143,9 +143,6 @@ Hipace::Hipace () :
     m_use_laser = m_multi_laser.m_use_laser;
 }
 
-Hipace::~Hipace ()
-{}
-
 void
 Hipace::InitData ()
 {

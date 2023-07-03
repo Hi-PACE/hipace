@@ -18,6 +18,7 @@
  * Note that this does *not* rearrange particle arrays
  *
  * \param[in] beam Beam particle container
+ * \param[in] slice longitudinal slice
  * \param[in] geom Geometry
  */
 void

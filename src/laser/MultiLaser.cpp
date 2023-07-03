@@ -189,7 +189,7 @@ void
 MultiLaser::GetEnvelopeFromFileHelper (const amrex::Geometry& gm) {
 
     HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
-
+#ifdef HIPACE_USE_OPENPMD
     openPMD::Datatype input_type = openPMD::Datatype::INT;
     {
         // Check what kind of Datatype is used in the Laser file
@@ -234,6 +234,11 @@ MultiLaser::GetEnvelopeFromFileHelper (const amrex::Geometry& gm) {
     } else {
         amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
     }
+#else
+    amrex::ignore_unused(gm);
+    amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
+                 "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+#endif // HIPACE_USE_OPENPMD
 }
 
 template<typename input_type>
@@ -243,7 +248,7 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     using namespace amrex::literals;
 
     HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
-
+#ifdef HIPACE_USE_OPENPMD
     const PhysConst phc = get_phys_const();
     const amrex::Real clight = phc.c;
 
@@ -406,6 +411,11 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
             }
         } // End of 3 loops (1 per dimension) over laser array from simulation
     } // End if statement over file laser geometry (rt or xyt)
+#else
+    amrex::ignore_unused(gm);
+    amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
+                 "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+#endif // HIPACE_USE_OPENPMD
 }
 
 

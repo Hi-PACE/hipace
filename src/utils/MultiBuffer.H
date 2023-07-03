@@ -11,13 +11,6 @@
 #include <AMReX_AmrCore.H>
 #include "particles/beam/MultiBeam.H"
 
-#ifndef AMREX_USE_MPI
-using MPI_Request = int;
-using MPI_Comm = int;
-constexpr MPI_Request MPI_REQUEST_NULL = 0;
-constexpr MPI_Comm MPI_COMM_NULL = 0;
-#endif
-
 class MultiBuffer
 {
 
@@ -65,7 +58,11 @@ private:
         MPI_Request m_metadata_request = MPI_REQUEST_NULL;
     };
 
+#ifdef AMREX_USE_MPI
     using storage_type = amrex::ParallelDescriptor::lull_t;
+#else
+    using storage_type = unsigned long long[8];
+#endif
 
     static constexpr std::size_t buffer_size_roundup = std::lcm(alignof(amrex::Real), alignof(int));
 
