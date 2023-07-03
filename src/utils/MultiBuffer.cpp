@@ -295,6 +295,8 @@ amrex::Real MultiBuffer::get_time () {
         m_comm,
         MPI_STATUS_IGNORE);
     return time_buffer;
+#else
+    return m_time_send_buffer;
 #endif
 }
 
