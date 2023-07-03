@@ -180,6 +180,10 @@ public:
 
     void intializeSlice(int slice, int which_slice);
 
+    unsigned long long getTotalNumParticles () const {
+        return m_total_num_particles;
+    }
+
 private:
     int m_slice_permutation = 0;
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
@@ -187,6 +191,7 @@ private:
     std::array<int, WhichBeamSlice::N> m_num_particles_with_slipped {};
     BeamTileInit m_init_slice {};
     BoxSorter m_init_sorter;
+    unsigned long long m_total_num_particles = 0;
 public:
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */

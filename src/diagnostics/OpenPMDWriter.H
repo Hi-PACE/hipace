@@ -53,37 +53,17 @@ private:
                               const amrex::Vector<std::string>& real_comp_names,
                               const unsigned long long np);
 
-    /** \brief save the SoA beam data to openPMD
-     *
-     * \param[in,out] pti beam particle iterator of the data to be dumped
-     * \param[in,out] currSpecies openPMD species to set up
-     * \param[in] offset number of particles which have already been written
-     * \param[in] real_comp_names vector with the names of the real components (weight, ux, uy, uz)
-     * \param[in] box_offset offset for the particles in the current box
-     * \param[in] numParticleOnTile number of particles in this box
-     */
-    void SaveRealProperty (BeamParticleContainer& pc, openPMD::ParticleSpecies& currSpecies,
-                           unsigned long long const offset,
-                           amrex::Vector<std::string> const& real_comp_names,
-                           unsigned long long const box_offset,
-                           const unsigned long long numParticleOnTile);
-
-public: // for device lambda
     /** \brief writing openPMD beam particle data
      *
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in,out] iteration openPMD iteration to which the data is written
-     * \param[in] output_step current time step to dump
-     * \param[in] it current box number
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] beamnames list of the names of the beam to be written to file
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
-                                const int output_step, const int it,
                                 const amrex::Geometry& geom,
                                 const amrex::Vector< std::string > beamnames);
 
-private:
     /** \brief writing openPMD field data
      *
      * \param[in] fab the FArrayBox to dump
@@ -95,6 +75,12 @@ private:
     void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
                          const int slice_dir, const amrex::Vector< std::string > varnames,
                          openPMD::Iteration iteration);
+
+    /** Named Beam SoA attributes per particle as defined in BeamIdx
+     */
+    amrex::Vector<std::string> m_int_names {
+        "id"
+    };
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
@@ -110,14 +96,13 @@ private:
     /** openPMD backend: h5, bp, or json. Default depends on what is available */
     std::string m_openpmd_backend = "default";
 
-    /** Last iteration that had beams written to file.
-     * This is stored to make sure we don't write the last iteration multiple times. */
-    int m_last_beam_output_dumped;
-
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
-    /** vector of length nbeams with the temporary numbers of particles already written to file */
-    amrex::Vector<uint64_t> m_tmp_offset;
+
+    std::vector<std::shared_ptr<int>> m_int_beam_data {};
+    std::vector<std::shared_ptr<uint64_t>> m_uint64_beam_data {};
+    std::vector<std::shared_ptr<amrex::ParticleReal>> m_real_beam_data {};
+
 public:
     /** Constructor */
     explicit OpenPMDWriter ();
@@ -126,6 +111,13 @@ public:
      */
     void InitDiagnostics ();
 
+    /** \brief Initialize IO buffer for beams
+     *
+     * \param[in] beams multi beam container which is written to openPMD file
+     * \param[in] beamnames list of the names of the beam to be written to file
+     */
+    void InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
+
     /** \brief writing openPMD data
      *
      * \param[in] field_diag field diagnostic data
@@ -133,20 +125,26 @@ public:
      * \param[in] physical_time Physical time of the currenerationt it.
      * \param[in] output_step current iteration to be written to file
      * \param[in] beamnames list of the names of the beam to be written to file
-     * \param[in] it current box number
      * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
      * \param[in] call_type whether the beams or the fields should be written to file
      */
-    void WriteDiagnostics(
+    void WriteDiagnostics (
         const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
         const amrex::Real physical_time, const int output_step,
-        const amrex::Vector< std::string > beamnames, const int it,
+        const amrex::Vector< std::string > beamnames,
         amrex::Vector<amrex::Geometry> const& geom3D,
         const OpenPMDWriterCallType call_type);
 
-    /** \brief Resets the openPMD series of all levels
+    /** \brief Copy beam data into IO buffer
+     *
+     * \param[in] beams multi beam container which is written to openPMD file
+     * \param[in] beamnames list of the names of the beam to be written to file
      */
-    void reset ();
+    void CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
+
+    /** \brief Resets and flushes the openPMD series of all levels
+     */
+    void flush ();
 
     /** Prefix/path for the output files */
     std::string m_file_prefix;

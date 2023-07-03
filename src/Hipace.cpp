@@ -362,16 +362,8 @@ Hipace::Evolve ()
                 m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
         }
 
-#ifdef HIPACE_USE_OPENPMD
-        // need correct physical time for this check
-        if (m_diags.hasAnyOutput(step, m_max_step, m_physical_time, m_max_time)) {
-            m_openpmd_writer.InitDiagnostics();
-        }
-#endif
-
-        WriteDiagnostics(step, 0, OpenPMDWriterCallType::beams);
-
-        ResizeFDiagFAB(0, step);
+        // need correct physical time for this
+        InitDiagnostics(step);
 
         // Solve slices
         for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -383,7 +375,7 @@ Hipace::Evolve ()
                 m_physical_time, m_dt, m_multi_beam, m_multi_plasma, 0, false);
         }
 
-        WriteDiagnostics(step, 0, OpenPMDWriterCallType::fields);
+        WriteDiagnostics(step);
 
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
@@ -402,9 +394,7 @@ Hipace::Evolve ()
             m_predcorr_avg_B_error = 0.;
         }
 
-#ifdef HIPACE_USE_OPENPMD
-        m_openpmd_writer.reset();
-#endif
+        FlushDiagnostics();
     }
 }
 
@@ -420,10 +410,6 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 #endif
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
-
-    m_multi_beam.InSituComputeDiags(step, islice, m_max_step,
-                                    m_physical_time, m_max_time);
-    m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
 
     // Get this laser slice from the 3D array
     m_multi_laser.Copy(islice, false);
@@ -443,6 +429,10 @@ Hipace::SolveOneSlice (int islice, int step)
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, WhichBeamSlice::Next);
     }
+
+    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
+    m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
+    FillBeamDiagnostics(step);
 
     if (m_N_level > 1) {
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This);
@@ -525,7 +515,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // copy fields to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
-        FillDiagnostics(lev, islice);
+        FillFieldDiagnostics(lev, islice);
     }
 
     // plasma ionization
@@ -871,20 +861,29 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
 }
 
 void
-Hipace::ResizeFDiagFAB (const int it, const int step)
+Hipace::InitDiagnostics (const int step)
 {
+#ifdef HIPACE_USE_OPENPMD
+    // need correct physical time for this check
+    if (m_diags.hasAnyOutput(step, m_max_step, m_physical_time, m_max_time)) {
+        m_openpmd_writer.InitDiagnostics();
+    }
+    if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
+        m_openpmd_writer.InitBeamData(m_multi_beam, getDiagBeamNames());
+    }
+#endif
     for (int lev=0; lev<m_N_level; ++lev) {
-        m_diags.ResizeFDiagFAB(m_3D_ba[lev][it], m_3D_geom[lev].Domain(), lev, m_3D_geom[lev],
+        m_diags.ResizeFDiagFAB(m_3D_geom[lev].Domain(), lev, m_3D_geom[lev],
                                step, m_max_step, m_physical_time, m_max_time);
     }
 }
 
 void
-Hipace::FillDiagnostics (const int lev, int i_slice)
+Hipace::FillFieldDiagnostics (const int lev, int islice)
 {
     for (auto& fd : m_diags.getFieldData()) {
         if (fd.m_level == lev && fd.m_has_field) {
-            m_fields.Copy(lev, i_slice, fd.m_geom_io, fd.m_F,
+            m_fields.Copy(lev, islice, fd.m_geom_io, fd.m_F,
                 fd.m_F.box(), m_3D_geom[lev],
                 fd.m_comps_output_idx, fd.m_nfields,
                 fd.m_do_laser, m_multi_laser);
@@ -893,27 +892,42 @@ Hipace::FillDiagnostics (const int lev, int i_slice)
 }
 
 void
-Hipace::WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type)
+Hipace::FillBeamDiagnostics (const int step)
 {
-    HIPACE_PROFILE("Hipace::WriteDiagnostics()");
+#ifdef HIPACE_USE_OPENPMD
+    if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
+        m_openpmd_writer.CopyBeams(m_multi_beam, getDiagBeamNames());
+    }
+#else
+    amrex::ignore_unused(step);
+#endif
+}
 
-    if (call_type == OpenPMDWriterCallType::beams) {
-        if (!m_diags.hasBeamOutput(output_step, m_max_step, m_physical_time, m_max_time)) {
-            return;
-        }
-    } else if (call_type == OpenPMDWriterCallType::fields) {
-        if (!m_diags.hasAnyFieldOutput(output_step, m_max_step, m_physical_time, m_max_time)) {
-            return;
-        }
+void
+Hipace::WriteDiagnostics (const int step)
+{
+#ifdef HIPACE_USE_OPENPMD
+    if (m_diags.hasAnyFieldOutput(step, m_max_step, m_physical_time, m_max_time)) {
+        m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
+                        m_physical_time, step, getDiagBeamNames(),
+                        m_3D_geom, OpenPMDWriterCallType::fields);
     }
 
-#ifdef HIPACE_USE_OPENPMD
-    amrex::Gpu::streamSynchronize();
-    m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
-                        m_physical_time, output_step, getDiagBeamNames(),
-                        it, m_3D_geom, call_type);
+    if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
+        m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
+                        m_physical_time, step, getDiagBeamNames(),
+                        m_3D_geom, OpenPMDWriterCallType::beams);
+    }
 #else
-    amrex::ignore_unused(it, call_type);
+    amrex::ignore_unused(step);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
+#endif
+}
+
+void
+Hipace::FlushDiagnostics ()
+{
+#ifdef HIPACE_USE_OPENPMD
+    m_openpmd_writer.flush();
 #endif
 }

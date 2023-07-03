@@ -180,7 +180,19 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     }
 
-    m_init_sorter.sortParticlesByBox(*this, geom);
+    m_total_num_particles = getBeamInitSlice().size();
+
+#ifdef AMREX_USE_MPI
+    MPI_Bcast(&m_total_num_particles,
+              1,
+              amrex::ParallelDescriptor::Mpi_typemap<decltype(m_total_num_particles)>::type(),
+              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              amrex::ParallelDescriptor::Communicator());
+#endif
+
+    if (Hipace::HeadRank()) {
+        m_init_sorter.sortParticlesByBox(*this, geom);
+    }
 
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD

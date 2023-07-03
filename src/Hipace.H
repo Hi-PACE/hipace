@@ -91,10 +91,9 @@ public:
     /** \brief Dump simulation data to file
      *
      * \param[in] output_step current iteration
-     * \param[in] it current box number
      * \param[in] call_type whether the beams or the fields should be written to file
      */
-    void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
+    void WriteDiagnostics (int output_step, const OpenPMDWriterCallType call_type);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;}
@@ -286,13 +285,12 @@ private:
     /** Diagnostics */
     Diagnostic m_diags;
 
-    /** \brief resizes the diagnostic fab to the correct box in a loop over boxes
-     *
-     * \param[in] it index of box to be resized to
-     * \param[in] step current time step
-     */
-    void ResizeFDiagFAB (const int it, const int step);
-    void FillDiagnostics (const int lev, int i_slice);
+    void InitDiagnostics (const int step);
+    void FillFieldDiagnostics (const int lev, int islice);
+    void FillBeamDiagnostics (const int step);
+    void WriteDiagnostics (const int step);
+    void FlushDiagnostics ();
+
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); }
 

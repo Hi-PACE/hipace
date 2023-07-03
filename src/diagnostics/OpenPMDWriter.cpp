@@ -57,7 +57,6 @@ OpenPMDWriter::InitDiagnostics ()
 
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
-    m_last_beam_output_dumped = -1;
 
     // TODO: meta-data: author, mesh path, extensions, software
 }
@@ -66,7 +65,7 @@ void
 OpenPMDWriter::WriteDiagnostics (
     const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
     const amrex::Real physical_time, const int output_step,
-    const amrex::Vector< std::string > beamnames, const int it,
+    const amrex::Vector< std::string > beamnames,
     amrex::Vector<amrex::Geometry> const& geom3D,
     const OpenPMDWriterCallType call_type)
 {
@@ -74,19 +73,13 @@ OpenPMDWriter::WriteDiagnostics (
     iteration.setTime(physical_time);
 
     if (call_type == OpenPMDWriterCallType::beams ) {
-        const int lev = 0;
-        WriteBeamParticleData(a_multi_beam, iteration, output_step, it,
-                              geom3D[lev], beamnames);
-        m_last_beam_output_dumped = output_step;
-        m_outputSeries->flush();
+        WriteBeamParticleData(a_multi_beam, iteration, geom3D[0], beamnames);
     } else if (call_type == OpenPMDWriterCallType::fields) {
         for (const auto& fd : field_diag) {
             if (fd.m_has_field) {
-                WriteFieldData(fd.m_F, fd.m_geom_io, fd.m_slice_dir, fd.m_comps_output,
-                           iteration);
+                WriteFieldData(fd.m_F, fd.m_geom_io, fd.m_slice_dir, fd.m_comps_output, iteration);
             }
         }
-        m_outputSeries->flush();
     }
 }
 
@@ -96,6 +89,8 @@ OpenPMDWriter::WriteFieldData (
     const int slice_dir, const amrex::Vector< std::string > varnames,
     openPMD::Iteration iteration)
 {
+    HIPACE_PROFILE("OpenPMDWriter::WriteFieldData()");
+
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
 
@@ -165,16 +160,73 @@ OpenPMDWriter::WriteFieldData (
 }
 
 void
-OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
-                                      const int output_step, const int it,
-                                      const amrex::Geometry& geom,
-                                      const amrex::Vector< std::string > beamnames)
+OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
 {
-    HIPACE_PROFILE("WriteBeamParticleData()");
+    HIPACE_PROFILE("OpenPMDWriter::InitBeamData()");
 
     const int nbeams = beams.get_nbeams();
     m_offset.resize(nbeams);
-    m_tmp_offset.resize(nbeams);
+    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+
+        std::string name = beams.get_name(ibeam);
+        if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
+
+        // initialize beam IO on first slice
+        const uint64_t np_total = beams.getBeam(ibeam).getTotalNumParticles();
+
+        m_int_beam_data.resize(m_int_names.size());
+
+        for (std::size_t idx=0; idx<m_int_beam_data.size(); idx++) {
+            m_int_beam_data[idx].reset(
+                reinterpret_cast<int*>(
+                    amrex::The_Pinned_Arena()->alloc(sizeof(int)*np_total)
+                ),
+                [](int *p){
+                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
+                });
+        }
+
+        m_uint64_beam_data.resize(m_int_names.size());
+
+        for (std::size_t idx=0; idx<m_uint64_beam_data.size(); idx++) {
+            m_uint64_beam_data[idx].reset(
+                reinterpret_cast<uint64_t*>(
+                    amrex::The_Cpu_Arena()->alloc(sizeof(uint64_t)*np_total)
+                ),
+                [](uint64_t *p){
+                    amrex::The_Cpu_Arena()->free(reinterpret_cast<void*>(p));
+                });
+        }
+
+        m_real_beam_data.resize(m_real_names.size());
+
+        for (std::size_t idx=0; idx<m_real_beam_data.size(); idx++) {
+            m_real_beam_data[idx].reset(
+                reinterpret_cast<amrex::ParticleReal*>(
+                    amrex::The_Pinned_Arena()->alloc(sizeof(amrex::ParticleReal)*np_total)
+                ),
+                [](amrex::ParticleReal *p){
+                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
+                });
+        }
+
+        // if first slice of loop over slices, reset offset
+        m_offset[ibeam] = 0;
+    }
+}
+
+void
+OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
+                                      const amrex::Geometry& geom,
+                                      const amrex::Vector< std::string > beamnames)
+{
+    HIPACE_PROFILE("OpenPMDWriter::WriteBeamParticleData()");
+
+    // sync GPU to get ids
+    amrex::Gpu::streamSynchronize();
+
+    const int nbeams = beams.get_nbeams();
+    m_offset.resize(nbeams);
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
@@ -184,54 +236,76 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         auto& beam = beams.getBeam(ibeam);
 
+        // initialize beam IO on first slice
+        AMREX_ALWAYS_ASSERT(m_offset[ibeam] <= beam.getTotalNumParticles());
+        const uint64_t np_total = m_offset[ibeam];
+
+        SetupPos(beam_species, beam, np_total, geom);
+        SetupRealProperties(beam_species, m_real_names, np_total);
+
+        for (std::size_t idx=0; idx<m_int_beam_data.size(); idx++) {
+            const int * const int_data = m_int_beam_data[idx].get();
+            uint64_t * const uint64_data = m_uint64_beam_data[idx].get();
+
+            for (uint64_t i=0; i<np_total; ++i) {
+                uint64_data[i] = static_cast<uint64_t>(int_data[i]);
+            }
+
+            // handle scalar and non-scalar records by name
+            auto [record_name, component_name] = utils::name2openPMD(m_int_names[idx]);
+            auto& currRecord = beam_species[record_name];
+            auto& currRecordComp = currRecord[component_name];
+            // not read until the data is flushed
+            currRecordComp.storeChunk(m_uint64_beam_data[idx], {0ull}, {np_total});
+        }
+
+        for (std::size_t idx=0; idx<m_real_beam_data.size(); idx++) {
+            // handle scalar and non-scalar records by name
+            auto [record_name, component_name] = utils::name2openPMD(m_real_names[idx]);
+            auto& currRecord = beam_species[record_name];
+            auto& currRecordComp = currRecord[component_name];
+            // not read until the data is flushed
+            currRecordComp.storeChunk(m_real_beam_data[idx], {0ull}, {np_total});
+        }
+    }
+}
+
+void
+OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
+{
+    HIPACE_PROFILE("OpenPMDWriter::CopyBeams()");
+
+    const int nbeams = beams.get_nbeams();
+
+    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+
+        std::string name = beams.get_name(ibeam);
+        if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
+
+        auto& beam = beams.getBeam(ibeam);
+
         const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
-        if (m_last_beam_output_dumped != output_step) {
-            SetupPos(beam_species, beam, np, geom);
-            SetupRealProperties(beam_species, m_real_names, np);
+
+        if (np != 0) {
+            // copy data from GPU to IO buffer
+            auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+
+            for (std::size_t idx=0; idx<m_int_beam_data.size(); idx++) {
+                amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
+                    soa.GetIntData(idx).begin(),
+                    soa.GetIntData(idx).begin() + np,
+                    m_int_beam_data[idx].get() + m_offset[ibeam]);
+            }
+
+            for (std::size_t idx=0; idx<m_real_beam_data.size(); idx++) {
+                amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
+                    soa.GetRealData(idx).begin(),
+                    soa.GetRealData(idx).begin() + np,
+                    m_real_beam_data[idx].get() + m_offset[ibeam]);
+            }
         }
 
-        // if first box of loop over boxes, reset offset
-        if ( it == amrex::ParallelDescriptor::NProcs() -1 ) {
-            m_offset[ibeam] = 0;
-            m_tmp_offset[ibeam] = 0;
-        } else {
-            m_offset[ibeam] += m_tmp_offset[ibeam];
-        }
-
-        if (np == 0) {
-            m_tmp_offset[ibeam] = 0;
-            continue;
-        }
-
-        {
-            // save particle ID
-            std::shared_ptr< uint64_t > ids(
-                reinterpret_cast<uint64_t*>(
-                    amrex::The_Pinned_Arena()->alloc(sizeof(uint64_t)*np)
-                ),
-                [](uint64_t *p){
-                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
-                });
-
-            const int* const id_gpu_data = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays()
-                .GetIntData(BeamIdx::id).data();
-            uint64_t* const id_data = ids.get();
-
-            amrex::ParallelFor(np,
-                [=] AMREX_GPU_DEVICE (uint64_t i) {
-                    id_data[i] = static_cast<uint64_t>(id_gpu_data[i]);
-                });
-
-            amrex::Gpu::streamSynchronize();
-
-            auto const scalar = openPMD::RecordComponent::SCALAR;
-            beam_species["id"][scalar].storeChunk(ids, {m_offset[ibeam]}, {np});
-        }
-        //  save "extra" particle properties in SoA (momenta and weight)
-        SaveRealProperty(beam, beam_species, m_offset[ibeam], m_real_names, 0,
-                         np);
-
-        m_tmp_offset[ibeam] = np;
+        m_offset[ibeam] += np;
     }
 }
 
@@ -343,48 +417,16 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
     } // end for NumSoARealAttributes
 }
 
-void
-OpenPMDWriter::SaveRealProperty (BeamParticleContainer& pc,
-                                 openPMD::ParticleSpecies& currSpecies,
-                                 unsigned long long const offset,
-                                 amrex::Vector<std::string> const& real_comp_names,
-                                 unsigned long long const box_offset,
-                                 const unsigned long long numParticleOnTile)
+void OpenPMDWriter::flush ()
 {
-    /* we have 4 SoA real attributes: weight, ux, uy, uz */
-    int const NumSoARealAttributes = real_comp_names.size();
-
-    uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-    auto const& soa = pc.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-    {
-        for (int idx=0; idx<NumSoARealAttributes; idx++) {
-
-            std::shared_ptr< amrex::ParticleReal > real_attr(
-                reinterpret_cast<amrex::ParticleReal*>(
-                    amrex::The_Pinned_Arena()->alloc(sizeof(amrex::ParticleReal)*numParticleOnTile)
-                ),
-                [](amrex::ParticleReal *p){
-                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
-                });
-
-            amrex::Gpu::copy(amrex::Gpu::deviceToHost,
-                soa.GetRealData(idx).begin() + box_offset,
-                soa.GetRealData(idx).begin() + box_offset + numParticleOnTile64,
-                real_attr.get());
-
-            // handle scalar and non-scalar records by name
-            std::string record_name, component_name;
-            std::tie(record_name, component_name) = utils::name2openPMD(real_comp_names[idx]);
-            auto& currRecord = currSpecies[record_name];
-            auto& currRecordComp = currRecord[component_name];
-
-            currRecordComp.storeChunk(real_attr, {offset}, {numParticleOnTile64});
-        } // end for NumSoARealAttributes
+    amrex::Gpu::streamSynchronize();
+    m_int_beam_data.resize(0);
+    m_uint64_beam_data.resize(0);
+    m_real_beam_data.resize(0);
+    if (m_outputSeries) {
+        HIPACE_PROFILE("OpenPMDWriter::flush()");
+        m_outputSeries->flush();
     }
-}
-
-void OpenPMDWriter::reset ()
-{
     m_outputSeries.reset();
 }
 
