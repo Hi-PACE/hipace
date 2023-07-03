@@ -185,7 +185,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
         amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
             particle_tile.GetStructOfArrays().intarray();
 
-        int pid = 1;
+        const int pid = BeamTileInit::ParticleType::NextID();
+        BeamTileInit::ParticleType::NextID(pid + num_to_add);
 
         PhysConst phys_const = get_phys_const();
 
@@ -282,7 +283,8 @@ InitBeamFixedWeight (int num_to_add,
         amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
             particle_tile.GetStructOfArrays().intarray();
 
-        const int pid = 1;
+        const int pid = BeamTileInit::ParticleType::NextID();
+        BeamTileInit::ParticleType::NextID(pid + num_to_add);
 
         const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
         const amrex::Real single_charge = m_charge;
@@ -700,7 +702,8 @@ InitBeamFromFile (const std::string input_file,
         particle_tile.GetStructOfArrays().realarray();
     amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
         particle_tile.GetStructOfArrays().intarray();
-    const int pid = 1;
+    const int pid = BeamTileInit::ParticleType::NextID();
+    BeamTileInit::ParticleType::NextID(pid + num_to_add);
 
     const input_type * const r_x_ptr = r_x_data.get();
     const input_type * const r_y_ptr = r_y_data.get();
