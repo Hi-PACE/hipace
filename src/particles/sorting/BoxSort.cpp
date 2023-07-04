@@ -15,7 +15,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::
 {
     HIPACE_PROFILE("sortBeamParticlesByBox()");
 
-    int const np = a_beam.getBeamInitSlice().numParticles();
+    const index_type np = a_beam.getBeamInitSlice().numParticles();
     auto ptd = a_beam.getBeamInitSlice().getParticleTileData();
 
     int num_boxes = a_geom.Domain().length(2);
@@ -36,29 +36,31 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::
     const amrex::Real dzi = a_geom.InvCellSize(2);
     const amrex::Real plo_z = a_geom.ProbLo(2);
 
-    AMREX_FOR_1D ( np, i,
-    {
-        int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi - lo_z);
-        if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
-        if (dst_box < 0) {
-            // particle has left domain transversely, stick it at the end and invalidate
-            dst_box = num_boxes;
-            ptd.id(i) = -std::abs(ptd.id(i));
-        }
-        unsigned int index = amrex::Gpu::Atomic::Add(&p_box_counts[dst_box], 1u);
-        p_local_offsets[i] = index;
-    });
+    amrex::ParallelFor(np,
+        [=] AMREX_GPU_DEVICE (const index_type i) {
+            int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi - lo_z);
+            if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
+            if (dst_box < 0 || dst_box > num_boxes) {
+                // particle has left domain transversely, stick it at the end and invalidate
+                dst_box = num_boxes;
+                ptd.id(i) = -std::abs(ptd.id(i));
+            }
+            unsigned int index = amrex::Gpu::Atomic::Add(&p_box_counts[dst_box], 1u);
+            p_local_offsets[i] = index;
+        });
 
     amrex::Gpu::exclusive_scan(box_counts.begin(), box_counts.end(), box_offsets.begin());
 
     auto p_box_offsets = box_offsets.dataPtr();
-    AMREX_FOR_1D ( np, i,
-    {
-        int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi - lo_z);
-        if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
-        if (dst_box < 0) dst_box = num_boxes;
-        p_permutations[p_local_offsets[i] + p_box_offsets[dst_box]] = i;
-    });
+
+    amrex::ParallelFor(np,
+        [=] AMREX_GPU_DEVICE (const index_type i) {
+            int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi - lo_z);
+            if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
+            if (dst_box < 0 || dst_box > num_boxes) dst_box = num_boxes;
+            AMREX_ALWAYS_ASSERT(p_local_offsets[i] + p_box_offsets[dst_box] < np);
+            p_permutations[p_local_offsets[i] + p_box_offsets[dst_box]] = i;
+        });
 
 #ifdef AMREX_USE_GPU
     amrex::Gpu::dtoh_memcpy_async(m_box_counts_cpu.dataPtr(), box_counts.dataPtr(),
