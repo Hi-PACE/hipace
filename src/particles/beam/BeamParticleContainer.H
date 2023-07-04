@@ -154,6 +154,7 @@ public:
 
     void shiftBeamSlices () {
         m_slice_permutation = (m_slice_permutation + 1) % WhichBeamSlice::N;
+        resize(WhichBeamSlice::Next, 0, 0);
     }
 
     BeamTile& getBeamSlice (int which_slice) {
