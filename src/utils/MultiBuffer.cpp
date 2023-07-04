@@ -88,12 +88,62 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host) {
 
 MultiBuffer::~MultiBuffer() {
 #ifdef AMREX_USE_MPI
-    for (int i = m_nslices-1; i >= 0; --i) {
-        make_progress(i, false);
-        if (m_datanodes[i].m_metadata_progress == comm_progress::receive_started) {
-            MPI_Cancel(&(m_datanodes[i].m_metadata_request));
-            MPI_Wait(&(m_datanodes[i].m_metadata_request), MPI_STATUS_IGNORE);
+    for (int slice = m_nslices-1; slice >= 0; --slice) {
+        if (m_datanodes[slice].m_metadata_progress == comm_progress::ready_to_send) {
+            MPI_Isend(
+                get_metadata_location(slice),
+                get_metadata_size(),
+                amrex::ParallelDescriptor::Mpi_typemap<std::size_t>::type(),
+                m_rank_send_to,
+                m_tag_metadata_start + slice,
+                m_comm,
+                &(m_datanodes[slice].m_metadata_request));
+            m_datanodes[slice].m_metadata_progress = comm_progress::send_started;
         }
+
+        if (m_datanodes[slice].m_progress == comm_progress::ready_to_send) {
+            if (m_datanodes[slice].m_buffer_size == 0) {
+                m_datanodes[slice].m_progress = comm_progress::sent;
+            } else {
+                MPI_Isend(
+                    m_datanodes[slice].m_buffer,
+                    m_datanodes[slice].m_buffer_size,
+                    amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
+                    m_rank_send_to,
+                    m_tag_buffer_start + slice,
+                    m_comm,
+                    &(m_datanodes[slice].m_request));
+                m_datanodes[slice].m_progress = comm_progress::send_started;
+            }
+        }
+
+        if (m_datanodes[slice].m_metadata_progress == comm_progress::send_started) {
+            MPI_Wait(&(m_datanodes[slice].m_metadata_request), MPI_STATUS_IGNORE);
+            m_datanodes[slice].m_metadata_progress = comm_progress::sent;
+        }
+
+        if (m_datanodes[slice].m_progress == comm_progress::send_started) {
+            MPI_Wait(&(m_datanodes[slice].m_request), MPI_STATUS_IGNORE);
+            free_buffer(slice);
+            m_datanodes[slice].m_progress = comm_progress::sent;
+        }
+
+        if (m_datanodes[slice].m_metadata_progress == comm_progress::receive_started) {
+            MPI_Cancel(&(m_datanodes[slice].m_metadata_request));
+            MPI_Wait(&(m_datanodes[slice].m_metadata_request), MPI_STATUS_IGNORE);
+            m_datanodes[slice].m_metadata_progress = comm_progress::sim_completed;
+        }
+
+        if (m_datanodes[slice].m_metadata_progress == comm_progress::sent) {
+            m_datanodes[slice].m_metadata_progress = comm_progress::sim_completed;
+        }
+
+        if (m_datanodes[slice].m_progress == comm_progress::sent) {
+            m_datanodes[slice].m_progress = comm_progress::sim_completed;
+        }
+
+        AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_metadata_progress == comm_progress::sim_completed);
+        AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_progress == comm_progress::sim_completed);
     }
     if (m_time_send_started) {
         MPI_Wait(&m_time_send_request, MPI_STATUS_IGNORE);

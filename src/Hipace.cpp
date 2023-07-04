@@ -172,22 +172,15 @@ Hipace::InitData ()
     }
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
+
     if (Hipace::HeadRank()) {
-        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
+        m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, true);
+        m_adaptive_time_step.CalculateFromMinUz(m_physical_time,m_dt,m_multi_beam,m_multi_plasma);
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
-#ifdef AMREX_USE_MPI
-    m_adaptive_time_step.BroadcastTimeStep(m_dt, amrex::ParallelDescriptor::Communicator(),
-                                                 m_numprocs);
-#endif
-    m_physical_time = m_initial_time;
-#ifdef AMREX_USE_MPI
-    m_physical_time += m_dt * (m_numprocs-1-amrex::ParallelDescriptor::MyProc());
-#endif
-    if (!Hipace::HeadRank()) {
-        m_adaptive_time_step.Calculate(m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
-        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
-    }
+
+    m_adaptive_time_step.BroadcastTimeStep(m_dt);
+
     m_fields.checkInit();
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
@@ -367,10 +360,8 @@ Hipace::Evolve ()
             SolveOneSlice(isl, step);
         };
 
-        if (m_physical_time < m_max_time) {
-            m_adaptive_time_step.Calculate(
-                m_physical_time, m_dt, m_multi_beam, m_multi_plasma, 0, false);
-        }
+        m_adaptive_time_step.CalculateFromMinUz(
+            m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
 
         WriteDiagnostics(step);
 
@@ -526,7 +517,7 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     // get minimum beam acceleration on level 0
-    m_adaptive_time_step.GatherMinAccSlice(m_multi_beam,  m_3D_geom[0], m_fields);
+    m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, current_N_level,
@@ -534,6 +525,9 @@ Hipace::SolveOneSlice (int islice, int step)
                                            m_external_E_slope, m_external_B_slope);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
+
+    // get minimum beam uz after push
+    m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
     bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, WhichBeamSlice::This, is_last_step);

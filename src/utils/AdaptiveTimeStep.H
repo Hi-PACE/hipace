@@ -52,28 +52,28 @@ public:
     /** Constructor */
     explicit AdaptiveTimeStep (const int nbeams);
 
-#ifdef AMREX_USE_MPI
     /** Head rank initial time step
      * \param[in,out] dt initial time step
-     * \param[in] a_comm_z longitudinal MPI communicator
-     * \param[in] a_numprocs_z number of ranks in the z direction
      */
-    void BroadcastTimeStep (amrex::Real& dt, MPI_Comm a_comm_z, int a_numprocs_z);
-#endif
+    void BroadcastTimeStep (amrex::Real& dt);
+
+    /** gather min uz from the beam slice
+     * \param[in] beams multibeam containing all beams
+     * \param[in] initial whether to calculate the initial dt from the beam init slice
+     */
+    void
+    GatherMinUzSlice (MultiBeam& beams, const bool initial);
 
     /** calculate the adaptive time step based on the beam energy
      * \param[in] t current physical time
      * \param[in,out] dt the time step
      * \param[in] beams multibeam containing all beams
      * \param[in] plasmas multiplasma to get density profile info
-     * \param[in] it current box number
-     * \param[in] initial whether to calculate the initial dt
      */
     void
-    Calculate (amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas,
-               const int it=0, const bool initial=true);
+    CalculateFromMinUz (amrex::Real t, amrex::Real& dt, MultiBeam& beams, MultiPlasma& plasmas);
 
-    /** calculate the adaptive time step based on the beam energy
+    /** gather min Ez from the beam slice
      * \param[in] beams multibeam containing all beams
      * \param[in] geom geometry object
      * \param[in] fields field object

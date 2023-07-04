@@ -122,7 +122,7 @@ AdvanceBeamParticlesSlice (
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
         {Hipace::m_depos_order_xy},
-        beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This),
+        beam.getNumParticles(WhichBeamSlice::This),
         [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
 
             if (ptd.id(ip) < 0) return;
