@@ -132,4 +132,4 @@ and use it to submit a simulation.
       export UCX_RC_MLX5_TM_ENABLE=y
       export UCX_MEMTYPE_CACHE=n
 
-   Note that using GPU-aware MPI requires more GPU memory.
+   Note that using GPU-aware MPI may require more GPU memory.
