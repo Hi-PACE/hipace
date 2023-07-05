@@ -56,3 +56,14 @@ submission script:
 The ``-npernode`` must be set to ``GPUS_PER_NODE``, otherwise not all GPUs are used correctly.
 There are nodes with 4 GPUs and 1 GPU (see the `Maxwell documentation on compute infrastructure <https://confluence.desy.de/display/MXW/Compute+Infrastructure>`__.
 for more details and the required constraints). Please set the value accordingly.
+
+.. tip::
+   Parallel simulations can be largely accelerated by using GPU-aware MPI.
+   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set and the following two flags must be passed in the job script:
+
+   .. code-block:: bash
+
+      export UCX_RC_MLX5_TM_ENABLE=y
+      export UCX_MEMTYPE_CACHE=n
+
+   Note that using GPU-aware MPI requires more GPU memory.
