@@ -814,7 +814,7 @@ HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (
 for collisions between plasma-plasma and beam-plasma.
 As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
 
-* ``plasmas.collisions`` (list of `strings`) optional
+* ``hipace.collisions`` (list of `strings`) optional
     List of names of binary Coulomb collisions.
     Each will represent collisions between 2 species.
 
