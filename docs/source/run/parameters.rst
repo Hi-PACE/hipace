@@ -207,20 +207,6 @@ Time step
     Only used when using adaptive time step (see ``hipace.dt`` above).
     Threshold beam momentum, below which the time step is not decreased (to avoid arbitrarily small time steps).
 
-
-* ``plasmas.collisions`` (list of `strings`) optional
-    List of names of binary Coulomb collisions.
-    Each will represent collisions between 2 species.
-
-* ``<collision name>.species`` (two `strings`) optional
-    The name of the two species for which collisions should be included.
-    This can either be plasma-plasma or beam-plasma collisions. For plasma-plasma collisions, the species can be the same to model collisions within a species.
-    The names must be in `plasmas.names` or `beams.names` (for beam-plasma collisions).
-
-* ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
-    Coulomb logarithm used for this collision.
-    If not specified, the Coulomb logarithm is determined from the temperature in each cell.
-
 Field solver parameters
 -----------------------
 
