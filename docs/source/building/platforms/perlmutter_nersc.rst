@@ -78,7 +78,7 @@ You can then create your directory in your ``$PSCRATCH``, where you can put your
     # pin to closest NIC to GPU
     export MPICH_OFI_NIC_POLICY=GPU
 
-    # to use GPU-aware MPI use the first line
+    # for GPU-aware MPI use the first line
     #GPU_AWARE_MPI="hipace.comms_buffer_on_gpu=1"
     GPU_AWARE_MPI=""
 
