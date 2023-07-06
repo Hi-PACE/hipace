@@ -345,6 +345,12 @@ if(BUILD_TESTING)
                     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )
 
+            add_test(NAME collisions_beam.SI.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/collisions_beam.SI.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
             add_test(NAME ion_motion.SI.1Rank
                     COMMAND bash ${HiPACE_SOURCE_DIR}/tests/ion_motion.SI.1Rank.sh
                             $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}

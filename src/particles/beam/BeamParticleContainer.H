@@ -157,6 +157,10 @@ public:
     std::string get_name () const {return m_name;}
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
+    /** Returns elementary charge q_e (or -q_e for electrons). */
+    amrex::Real GetCharge () const {return m_charge;}
+    /** Returns mass of physical species */
+    amrex::Real GetMass () const {return m_mass;}
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
     int m_n_subcycles {10}; /**< Number of sub-cycles in the beam pusher */
     bool m_do_radiation_reaction {false}; /**< whether to calculate radiation losses */

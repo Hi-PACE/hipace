@@ -810,15 +810,18 @@ Binary collisions
 
 WARNING: this module is in development.
 
-HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX, between plasma species.
+HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX,
+for collisions between plasma-plasma and beam-plasma.
 As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
 
-* ``plasmas.collisions`` (list of `strings`) optional
-    List of names of types binary Coulomb collisions.
-    Each will represent collisions between 2 plasma species (potentially the same).
+* ``hipace.collisions`` (list of `strings`) optional
+    List of names of binary Coulomb collisions.
+    Each will represent collisions between 2 species.
 
 * ``<collision name>.species`` (two `strings`) optional
-    The name of the two plasma species for which collisions should be included.
+    The name of the two species for which collisions should be included.
+    This can either be plasma-plasma or beam-plasma collisions. For plasma-plasma collisions, the species can be the same to model collisions within a species.
+    The names must be in `plasmas.names` or `beams.names` (for beam-plasma collisions).
 
 * ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
     Coulomb logarithm used for this collision.

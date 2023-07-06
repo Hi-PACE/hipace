@@ -50,6 +50,7 @@
  * @param[in] normalized_units whether normalized units are used
  * @param[in] background_density_SI background plasma density (only needed for normalized units)
  * @param[in] is_same_species whether the collisions happen within the same species
+ * @param[in] is_beam_coll whether species1 is a beam
  * @param[in] engine AMReX engine for the random number generator.
 */
 
@@ -69,7 +70,7 @@ void ElasticCollisionPerez (
     const bool can_ionize1, const bool can_ionize2,
     T_R const  dt, T_R const   L, T_R const inv_dV, T_R const clight, T_R const inv_c,
     T_R const inv_c_SI, T_R const inv_c2, T_R const inv_c2_SI, const bool normalized_units,
-    const amrex::Real background_density_SI, const bool is_same_species,
+    const amrex::Real background_density_SI, const bool is_same_species, bool is_beam_coll,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
@@ -81,12 +82,13 @@ void ElasticCollisionPerez (
     T_R T1t; T_R T2t;
     if ( T1 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1,clight,inv_c2);
+        T1t = ComputeTemperature(I1s,I1e,I1,u1x,u1y,psi1,m1,clight,inv_c2,is_beam_coll);
     }
     else { T1t = T1; }
     if ( T2 <= T_R(0.0) && L <= T_R(0.0) )
     {
-        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2,clight,inv_c2);
+        // second species is always plasma thus is_beam_coll is always false
+        T2t = ComputeTemperature(I2s,I2e,I2,u2x,u2y,psi2,m2,clight,inv_c2,false);
     }
     else { T2t = T2; }
 
@@ -151,24 +153,22 @@ void ElasticCollisionPerez (
             if (can_ionize1) q1 *= ion_lev1[I1[i1]];
             if (can_ionize2) q2 *= ion_lev2[I2[i2]];
             // particle's Lorentz factor
-            amrex::Real g1 = (
-                1.0_rt +
-                u1x[I1[i1]]*u1x[I1[i1]]*inv_c2 + u1y[I1[i1]]*u1y[I1[i1]]*inv_c2 +
-                psi1[I1[i1]]*psi1[I1[i1]]) / (2.0_rt * psi1[I1[i1]] );
+            amrex::Real g1 = is_beam_coll ? std::sqrt( 1._rt
+                + (u1x[I1[i1]]*u1x[I1[i1]] + u1y[I1[i1]]*u1y[I1[i1]] + psi1[I1[i1]]*psi1[I1[i1]])*inv_c2 )
+                : (1.0_rt + u1x[I1[i1]]*u1x[I1[i1]]*inv_c2 + u1y[I1[i1]]*u1y[I1[i1]]*inv_c2 +
+                   psi1[I1[i1]]*psi1[I1[i1]]) / (2.0_rt * psi1[I1[i1]] );
             // particle's Lorentz factor
-            amrex::Real g2 = (
-                1.0_rt +
-                u2x[I2[i2]]*u2x[I2[i2]]*inv_c2 + u2y[I2[i2]]*u2y[I2[i2]]*inv_c2 +
-                psi2[I2[i2]]*psi2[I2[i2]]) / (2.0_rt * psi2[I2[i2]] );
+            amrex::Real g2 = (1.0_rt + u2x[I2[i2]]*u2x[I2[i2]]*inv_c2 + u2y[I2[i2]]*u2y[I2[i2]]*inv_c2 +
+                   psi2[I2[i2]]*psi2[I2[i2]]) / (2.0_rt * psi2[I2[i2]] );
 
             // Convert from pseudo-potential to momentum
-            amrex::Real u1z = clight * (g1 - psi1[I1[i1]]);
+            amrex::Real u1z = is_beam_coll ? psi1[I1[i1]] : clight * (g1 - psi1[I1[i1]]);
             amrex::Real u2z = clight * (g2 - psi2[I2[i2]]);
 
             // In the longitudinal push of plasma particles, the dt is different for each particle.
             // The dt applied for collision probability is the average (in the lab frame) of these
             // dts. This is NOT clean. TODO FIXME.
-            const amrex::Real dt_fac = 0.5_rt * (g1/psi1[I1[i1]] + g2/psi2[I2[i2]]);
+            const amrex::Real dt_fac = is_beam_coll ? 1.0_rt : 0.5_rt * (g1/psi1[I1[i1]] + g2/psi2[I2[i2]]);
             UpdateMomentumPerezElastic(
                 u1x[ I1[i1] ], u1y[ I1[i1] ], u1z, g1,
                 u2x[ I2[i2] ], u2y[ I2[i2] ], u2z, g2,
@@ -177,7 +177,7 @@ void ElasticCollisionPerez (
 
             g1 = std::sqrt( T_R(1.0) +
                             (u1x[I1[i1]]*u1x[I1[i1]]+u1y[I1[i1]]*u1y[I1[i1]]+u1z*u1z)*inv_c2 );
-            psi1[I1[i1]] = g1 - u1z*inv_c;
+            psi1[I1[i1]] = is_beam_coll ? u1z : g1 - u1z*inv_c;
             g2 = std::sqrt( T_R(1.0) +
                             (u2x[I2[i2]]*u2x[I2[i2]]+u2y[I2[i2]]*u2y[I2[i2]]+u2z*u2z)*inv_c2 );
             psi2[I2[i2]] = g2 - u2z*inv_c;

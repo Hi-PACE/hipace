@@ -163,6 +163,12 @@ public:
     void ResetLaser ();
 
     /**
+     * \brief does Coulomb collisions between plasmas and beams
+     * \param[in] islice_local slice on which collisions are calculated, needed for beam binning
+     */
+    void doCoulombCollision (const int islice_local);
+
+    /**
        \brief Returns true on the head rank, otherwise false.
      */
     static bool HeadRank ()
@@ -310,6 +316,8 @@ public:
     inline static amrex::Real m_background_density_SI = 0.;
     /** Time step for the beam evolution */
     amrex::Real m_dt = 0.0;
+    /** Number of binary collisions */
+    inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
@@ -367,6 +375,11 @@ private:
 private:
     /** Diagnostics */
     Diagnostic m_diags;
+
+    /** User-input names of the binary collisions to be used */
+    std::vector<std::string> m_collision_names;
+    /** Vector of binary collisions */
+    amrex::Vector< CoulombCollision > m_all_collisions;
 
     /** \brief resizes the diagnostic fab to the correct box in a loop over boxes
      *

@@ -367,6 +367,18 @@ then
                      --test-name collisions.SI.1Rank
 fi
 
+# collisions_beam.SI.1Rank
+if [[ $all_tests = true ]] || [[ $one_test_name = "collisions_beam.SI.1Rank" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R collisions_beam.SI.1Rank \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/collisions_beam.SI.1Rank \
+                     --test-name collisions_beam.SI.1Rank
+fi
+
 # beam_in_vacuum_open_boundary.normalized.1Rank
 if [[ $all_tests = true ]] || [[ $one_test_name = "beam_in_vacuum_open_boundary.normalized.1Rank" ]]
 then
