@@ -79,14 +79,14 @@ You can then create your directory in your ``$PSCRATCH``, where you can put your
     export MPICH_OFI_NIC_POLICY=GPU
 
     # for GPU-aware MPI use the first line
-    #GPU_AWARE_MPI="hipace.comms_buffer_on_gpu=1"
-    GPU_AWARE_MPI=""
+    #HIPACE_GPU_AWARE_MPI="hipace.comms_buffer_on_gpu=1"
+    HIPACE_GPU_AWARE_MPI=""
 
     # CUDA visible devices are ordered inverse to local task IDs
     #   Reference: nvidia-smi topo -m
     srun --cpu-bind=cores bash -c "
         export CUDA_VISIBLE_DEVICES=\$((3-SLURM_LOCALID));
-        ${EXE} ${INPUTS} ${GPU_AWARE_MPI}" \
+        ${EXE} ${INPUTS} ${HIPACE_GPU_AWARE_MPI}" \
       > output.txt
 
 
