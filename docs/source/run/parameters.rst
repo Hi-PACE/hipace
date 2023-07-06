@@ -795,7 +795,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 
 
 Additional physics
-----------------
+------------------
 
 Additional physics describe the physics modules implemented in HiPACE++ that go beyond the standard electromagnetic equations.
 This includes ionization (see plasma parameters), binary collisions, and radiation reactions. Since all of these require the actual plasma density,

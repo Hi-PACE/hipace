@@ -63,6 +63,12 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
 
 and use it to submit a simulation.
 
+.. tip::
+   Parallel simulations can be largely accelerated by using GPU-aware MPI.
+   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set.
+
+   Note that using GPU-aware MPI may require more GPU memory.
+
 Running on CPU
 --------------
 
