@@ -12,8 +12,7 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/InsituUtil.H"
-#include <AMReX_AmrParticles.H>
-#include <AMReX_Particles.H>
+#include "particles/particles_utils/ParticleUtil.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
