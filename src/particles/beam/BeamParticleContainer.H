@@ -175,7 +175,8 @@ public:
     BeamBins m_slice_bins;
 
     unsigned long long m_total_num_particles {0};
-
+    /** Whether to reset the global ID incrementor to 1 before initializing this beam */
+    bool m_do_reset_id_init {false};
     unsigned long long get_total_num_particles () const {return m_total_num_particles;}
 
     /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
