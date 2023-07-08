@@ -538,14 +538,14 @@ Hipace::SolveOneSlice (int islice, int step)
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
+    // collisions for plasmas and beams
+    doCoulombCollision();
+
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
     bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, WhichBeamSlice::This, is_last_step);
-
-    // collisions for plasmas and beams
-    doCoulombCollision();
 
     // Advance laser slice by 1 step and store result to 3D array
     // no MR for laser
