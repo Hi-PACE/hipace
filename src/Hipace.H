@@ -127,6 +127,11 @@ public:
     void ResetLaser ();
 
     /**
+     * \brief does Coulomb collisions between plasmas and beams
+     */
+    void doCoulombCollision ();
+
+    /**
        \brief Returns true on the head rank, otherwise false.
      */
     static bool HeadRank ()
@@ -241,6 +246,8 @@ public:
     inline static amrex::Real m_background_density_SI = 0.;
     /** Time step for the beam evolution */
     amrex::Real m_dt = 0.0;
+    /** Number of binary collisions */
+    inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
@@ -278,9 +285,12 @@ private:
 #endif
     /** hpmg solver for the explicit Bx and by solver */
     amrex::Vector<std::unique_ptr<hpmg::MultiGrid>> m_hpmg;
-private:
     /** Diagnostics */
     Diagnostic m_diags;
+    /** User-input names of the binary collisions to be used */
+    std::vector<std::string> m_collision_names;
+    /** Vector of binary collisions */
+    amrex::Vector< CoulombCollision > m_all_collisions;
 
     void InitDiagnostics (const int step);
     void FillFieldDiagnostics (const int lev, int islice);

@@ -141,6 +141,18 @@ Hipace::Hipace () :
     MakeGeometry();
 
     m_use_laser = m_multi_laser.m_use_laser;
+
+    queryWithParser(pph, "collisions", m_collision_names);
+    /** Initialize the collision objects */
+    m_ncollisions = m_collision_names.size();
+     for (int i = 0; i < m_ncollisions; ++i) {
+         m_all_collisions.emplace_back(CoulombCollision(m_multi_plasma.m_names, m_multi_beam.m_names, m_collision_names[i]));
+     }
+     if (m_normalized_units && m_ncollisions > 0) {
+         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
+             "For collisions with normalized units, a background plasma density must "
+             "be specified via 'hipace.background_density_SI'");
+     }
 }
 
 void
@@ -532,8 +544,8 @@ Hipace::SolveOneSlice (int islice, int step)
     bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, WhichBeamSlice::This, is_last_step);
 
-    // collisions for all particles calculated on level 0
-    m_multi_plasma.doCoulombCollision(0, m_slice_geom[0].Domain(), m_slice_geom[0]);
+    // collisions for plasmas and beams
+    doCoulombCollision();
 
     // Advance laser slice by 1 step and store result to 3D array
     // no MR for laser
@@ -849,6 +861,39 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
     m_predcorr_avg_B_error += relative_Bfield_error;
     if (m_verbose >= 2) amrex::Print() << "islice: " << islice <<
                 " n_iter: "<<i_iter<<" relative B field error: "<<relative_Bfield_error<< "\n";
+}
+
+void
+Hipace::doCoulombCollision ()
+{
+
+    // collisions for all particles calculated on level 0
+    const int lev = 0;
+
+    for (int i = 0; i < m_ncollisions; ++i)
+    {
+        if (m_all_collisions[i].m_nbeams == 1) {
+            // do beam-plasma collisions
+            auto& species1 = m_multi_beam.m_all_beams[ m_all_collisions[i].m_species1_index ];
+            auto& species2 = m_multi_plasma.m_all_plasmas[ m_all_collisions[i].m_species2_index ];
+
+            // TODO: enable tiling
+
+            CoulombCollision::doBeamPlasmaCoulombCollision(
+                lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2,
+                m_all_collisions[i].m_CoulombLog, m_background_density_SI);
+        } else {
+            // do plasma-plasma collisions
+            auto& species1 = m_multi_plasma.m_all_plasmas[ m_all_collisions[i].m_species1_index ];
+            auto& species2 = m_multi_plasma.m_all_plasmas[ m_all_collisions[i].m_species2_index ];
+
+            // TODO: enable tiling
+
+            CoulombCollision::doPlasmaPlasmaCoulombCollision(
+                lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2, m_all_collisions[i].m_isSameSpecies,
+                m_all_collisions[i].m_CoulombLog, m_background_density_SI);
+        }
+    }
 }
 
 void

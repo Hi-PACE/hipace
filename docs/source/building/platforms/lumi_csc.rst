@@ -93,3 +93,13 @@ You can then create your directory in ``/project/project_<project id>``, where y
 
 
 and use it to submit a simulation.
+
+.. tip::
+   Parallel simulations can be largely accelerated by using GPU-aware MPI.
+   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set and the following flag must be passed in the job script:
+
+   .. code-block:: bash
+
+      export FI_MR_CACHE_MAX_COUNT=0
+
+   Note that using GPU-aware MPI may require more GPU memory.

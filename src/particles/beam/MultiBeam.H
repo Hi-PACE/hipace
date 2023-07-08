@@ -122,6 +122,8 @@ public:
     /** \brief returns if any beam uses the SALAME algorithm
      */
     bool AnySpeciesSalame ();
+    amrex::Vector<std::string> m_names {"no_beam"}; /**< names of all beam containers */
+    amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
 
     void shiftBeamSlices () {
         for (auto& beam : m_all_beams) {
@@ -131,8 +133,6 @@ public:
 
 private:
 
-    amrex::Vector<BeamParticleContainer> m_all_beams; /**< contains all beam containers */
-    amrex::Vector<std::string> m_names {"no_beam"}; /**< names of all beam containers */
     int m_nbeams {0}; /**< number of beam containers */
     /** number of real particles per beam, as opposed to ghost particles */
     amrex::Vector<amrex::Long> m_n_real_particles;

@@ -65,22 +65,35 @@ You can then create your directory in your ``$PSCRATCH``, where you can put your
     #SBATCH -q regular
     #SBATCH -C gpu
     #SBATCH -c 32
-    #SBATCH --ntasks-per-gpu=1
+    #SBATCH --exclusive
+    #SBATCH --gpu-bind=none
     #SBATCH --gpus-per-node=4
     #SBATCH -o hipace.o%j
     #SBATCH -e hipace.e%j
-
-    # GPU-aware MPI
-    export MPICH_GPU_SUPPORT_ENABLED=1
-
-    # expose one GPU per MPI rank
-    export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
 
     # path to executable and input script
     EXE=$HOME/src/hipace/build/bin/hipace
     INPUTS=inputs
 
-    srun ${EXE} ${INPUTS}
+    # pin to closest NIC to GPU
+    export MPICH_OFI_NIC_POLICY=GPU
+
+    # for GPU-aware MPI use the first line
+    #HIPACE_GPU_AWARE_MPI="hipace.comms_buffer_on_gpu=1"
+    HIPACE_GPU_AWARE_MPI=""
+
+    # CUDA visible devices are ordered inverse to local task IDs
+    #   Reference: nvidia-smi topo -m
+    srun --cpu-bind=cores bash -c "
+        export CUDA_VISIBLE_DEVICES=\$((3-SLURM_LOCALID));
+        ${EXE} ${INPUTS} ${HIPACE_GPU_AWARE_MPI}" \
+      > output.txt
 
 
 and use it to submit a simulation. Note, that this example simulation runs on 8 GPUs, since `-N = 2` yields 2 nodes with 4 GPUs each.
+
+.. tip::
+   Parallel simulations can be largely accelerated by using GPU-aware MPI.
+   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set (see the job script above).
+
+   Note that using GPU-aware MPI may require more GPU memory.

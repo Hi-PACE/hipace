@@ -150,6 +150,12 @@ public:
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
                      const int which_slice);
 
+    /** Returns elementary charge q_e (or -q_e for electrons). */
+    amrex::Real GetCharge () const {return m_charge;}
+
+    /** Returns mass of physical species */
+    amrex::Real GetMass () const {return m_mass;}
+
     std::string get_name () const {return m_name;}
 
     void shiftBeamSlices () {
