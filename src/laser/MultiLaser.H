@@ -125,29 +125,24 @@ public:
     /** get function for the 2D slices (const version) */
     const amrex::MultiFab& getSlices () const {return m_slices; }
 
-    /** Return the 3D FArrayBox containing the laser envelope, const version */
-    const amrex::FArrayBox& getFAB () const {return m_F;}
-
-    /** Retun the 3D FArrayBox containing the laser envelope, non-const version */
-    amrex::FArrayBox& getFAB () {return m_F;}
-
     /** getter function, whether 3D envelope is store in host memory */
     int is3dOnHost () const {return m_3d_on_host;}
 
     /** \brief Allocate laser multifab
      * \param[in] slice_ba box array of the slice
      * \param[in] slice_dm corresponding distribution mapping
+     * \param[in] geom_3D 3D Geometry for level 0
      */
     void InitData (const amrex::BoxArray& slice_ba,
-                   const amrex::DistributionMapping& slice_dm);
+                   const amrex::DistributionMapping& slice_dm,
+                   const amrex::Geometry& geom_3D);
 
-    /** \brief Initialize 3D laser field on current box.
+    /** \brief Initialize on slice of the 3D laser field.
      *
-     * \param[in] step time step of the simulation
-     * \param[in] bx Box on which the laser field is initialized
-     * \param[in] gm Geometry of the problem
+     * \param[in] islice slice index, referring to the 3D slice
+     * \param[in] comp laser component to initialize
      */
-    void Init3DEnvelope (int step, amrex::Box bx, const amrex::Geometry& gm);
+    void InitSliceEnvelope (const int islice, const int comp);
 
     /** \brief Read in a laser from an openPMD file
      *
@@ -162,48 +157,43 @@ public:
     template<typename input_type>
     void GetEnvelopeFromFile (const amrex::Geometry& gm);
 
-    /** \brief Copy from 2D slice on device to 3D array on host, and vice-versa
-     *
-     * \param[in] isl slice index, referring to the 3D slice
-     * \param[in] to3d if true, copy from 2D slice to 3D array. Otherwise, the other way.
+    /** \brief Shift 2D slices in zeta
      */
-    void Copy (int isl, bool to3d);
+    void ShiftLaserSlices ();
 
     /** Wrapper function to advance a laser slice by 1 time step.
      * \param[in] fields Field object
-     * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSlice (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
+    void AdvanceSlice (const Fields& fields, amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
      * \param[in] fields Field object
-     * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceMG (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
+    void AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
      * \param[in] fields Field object
-     * \param[in] geom Geometry object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceFFT (const Fields& fields, const amrex::Geometry& geom, amrex::Real dt, int step);
+    void AdvanceSliceFFT (const Fields& fields, amrex::Real dt, int step);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
      *
      * \param[in] geom Geometry object for the slice
      * \param[in] islice slice index
+     * \param[in] comp laser component to initialize
      */
-    void InitLaserSlice (const amrex::Geometry& geom, const int islice);
+    void InitLaserSlice (const amrex::Geometry& geom, const int islice, const int comp);
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
@@ -222,6 +212,7 @@ private:
     std::string m_solver_type = "multigrid";
     bool m_use_phase {true};
     amrex::Box m_slice_box;
+    amrex::Geometry m_laser_geom_3D;
 
     /** if the lasers are initialized from openPMD file */
     bool m_laser_from_file = false;
@@ -240,8 +231,6 @@ private:
 
     /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
     int m_nfields_3d {4};
-    /** 3D laser data. Could be a vector over levels if MR needed for laser */
-    amrex::FArrayBox m_F;
     /** Array of N slices required to compute current slice */
     amrex::MultiFab m_slices;
     amrex::Real m_MG_tolerance_rel = 1.e-4;

@@ -178,7 +178,8 @@ Hipace::InitData ()
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev],
                        m_multi_plasma.m_sort_bin_size);
         if (lev==0) {
-            m_multi_laser.InitData(m_slice_ba[0], m_slice_dm[0]); // laser inits only on level 0
+            // laser inits only on level 0
+            m_multi_laser.InitData(m_slice_ba[0], m_slice_dm[0], m_3D_geom[0]);
         }
         m_diags.Initialize(lev, m_multi_laser.m_use_laser);
     }
@@ -197,7 +198,9 @@ Hipace::InitData ()
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
                               m_multi_beam.get_nbeams(),
-                              !m_comms_buffer_on_gpu);
+                              !m_comms_buffer_on_gpu,
+                              m_multi_laser.m_use_laser,
+                              m_slice_ba[0][0]);
 }
 
 void
@@ -307,8 +310,6 @@ Hipace::Evolve ()
         if (m_multi_laser.m_use_laser) {
             AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
             AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
-            // Before that, the 3D fields of the envelope are not initialized (not even allocated).
-            m_multi_laser.Init3DEnvelope(step, bx, m_3D_geom[0]);
         }
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
@@ -411,9 +412,6 @@ Hipace::SolveOneSlice (int islice, int step)
 #endif
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
-    // Get this laser slice from the 3D array
-    m_multi_laser.Copy(islice, false);
-
     int current_N_level = 1;
 
     for (int lev=1; lev<m_N_level; ++lev) {
@@ -424,10 +422,7 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
-        m_multi_buffer.get_data(islice, m_multi_beam, WhichBeamSlice::This);
-    }
-    if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
-        m_multi_buffer.get_data(islice-1, m_multi_beam, WhichBeamSlice::Next);
+        m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
     }
 
     m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
@@ -436,7 +431,6 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (m_N_level > 1) {
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This);
-        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::Next);
         m_multi_plasma.TagByLevel(current_N_level, m_3D_geom);
     }
 
@@ -457,10 +451,6 @@ Hipace::SolveOneSlice (int islice, int step)
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
                 true, false, m_deposit_rho, true, true, m_3D_geom, lev);
-
-            // deposit jx_beam and jy_beam in the Next slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
-                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
@@ -485,12 +475,28 @@ Hipace::SolveOneSlice (int islice, int step)
     // Psi ExmBy EypBx Ez Bz solve
     m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
 
+    // Advance laser slice by 1 step using chi
+    // no MR for laser
+    m_multi_laser.AdvanceSlice(m_fields, m_dt, step);
+
+    if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
+        m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
+    }
+
+    if (m_N_level > 1) {
+        m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::Next);
+    }
+
     // Bx By solve
     if (m_explicit) {
         for (int lev=0; lev<current_N_level; ++lev) {
             // The algorithm used was derived in
             // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],
-            // it is implemented in the WAND-PIC quasistatic PIC code.
+            // it is implemented in the WAND-PIC quasistatic PIC code.#
+
+            // deposit jx_beam and jy_beam in the Next slice
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
 
             // Set Sx and Sy to beam contribution
             InitializeSxSyWithBeam(lev);
@@ -545,12 +551,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
     bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
-    m_multi_buffer.put_data(islice, m_multi_beam, WhichBeamSlice::This, is_last_step);
-
-    // Advance laser slice by 1 step and store result to 3D array
-    // no MR for laser
-    m_multi_laser.AdvanceSlice(m_fields, m_3D_geom[0], m_dt, step);
-    m_multi_laser.Copy(islice, true);
+    m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This, is_last_step);
 
     // shift all levels
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -558,6 +559,8 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     m_multi_beam.shiftBeamSlices();
+
+    m_multi_laser.ShiftLaserSlices();
 }
 
 void
