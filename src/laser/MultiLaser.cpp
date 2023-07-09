@@ -157,7 +157,6 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
         src_box.setBig(2, islice);
         m_slices[0].copy<amrex::RunOn::Device>(m_F_input_file, src_box, 0, m_slice_box, comp, 2);
     } else {
-        std::cout << " Laser slice init slice: " << islice << " comp " << comp << std::endl;
         // Compute initial field on the current (device) slice comp and comp + 1
         InitLaserSlice(m_laser_geom_3D, islice, comp);
     }

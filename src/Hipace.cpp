@@ -200,7 +200,7 @@ Hipace::InitData ()
                               m_multi_beam.get_nbeams(),
                               !m_comms_buffer_on_gpu,
                               m_multi_laser.m_use_laser,
-                              m_slice_ba[0][0]);
+                              m_multi_laser.getSlices()[0].box());
 }
 
 void
