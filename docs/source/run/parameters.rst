@@ -483,6 +483,9 @@ which are valid only for certain beam types, are introduced further below under
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
+* ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
+    Wheter to reset the ID incrementor to 1 before initializing beam particles.
+
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
