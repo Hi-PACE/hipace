@@ -68,6 +68,11 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host, bool
     m_tag_buffer_start = 1;
     m_tag_metadata_start = m_tag_buffer_start + m_nslices;
 
+    for (int p = 0; p < comm_progress::nprogress; ++p) {
+        m_async_metadata_slice[p] = m_nslices - 1;
+        m_async_data_slice[p] = m_nslices - 1;
+    }
+
     m_metadata.resize(get_metadata_size() * m_nslices);
     m_datanodes.resize(m_nslices);
 
@@ -331,16 +336,68 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         m_datanodes[slice].m_progress = comm_progress::ready_to_send;
         m_datanodes[slice].m_metadata_progress = comm_progress::ready_to_send;
     }
-    for (int i = m_nslices-1; i >= 0; --i) {
-        make_progress(i, false);
+
+    make_progress(slice, false);
+
+    for (int p=comm_progress::async_progress_end-1; p>comm_progress::async_progress_begin; --p) {
+        if (p == comm_progress::async_progress_end-1) {
+            if (m_async_metadata_slice[p] == slice) {
+                if (slice == 0) {
+                    m_async_metadata_slice[p] = m_nslices - 1;
+                } else {
+                    --m_async_metadata_slice[p];
+                }
+            }
+        } else {
+            if ((m_async_metadata_slice[p+1] < slice) == (m_async_metadata_slice[p] <= slice)) {
+                if (m_async_metadata_slice[p+1] < m_async_metadata_slice[p]) {
+                    m_async_metadata_slice[p] = m_async_metadata_slice[p+1];
+                }
+            } else if (m_async_metadata_slice[p+1] > slice && m_async_metadata_slice[p] <= slice) {
+                m_async_metadata_slice[p] = m_async_metadata_slice[p+1];
+            }
+        }
+
+        for (int i = m_async_metadata_slice[p]; i!=slice; (i==0) ? i=m_nslices-1 : --i) {
+            m_async_metadata_slice[p] = i;
+            if (m_datanodes[i].m_metadata_progress < p) {
+                make_progress(i, false);
+            }
+            if (m_datanodes[i].m_metadata_progress < p) {
+                break;
+            }
+        }
     }
-    //make_progress(slice, false);
-    //for (int i = std::min(m_nslices-1, slice+10); i >= std::max(0, slice-10); --i) {
-    //    make_progress(i, false);
-    //}
-    //for (int i = m_nslices - 1 - slice%100; i >= 0; i-=100) {
-    //    make_progress(i, false);
-    //}
+
+    for (int p=comm_progress::async_progress_end-1; p>comm_progress::async_progress_begin; --p) {
+        if (p == comm_progress::async_progress_end-1) {
+            if (m_async_data_slice[p] == slice) {
+                if (slice == 0) {
+                    m_async_data_slice[p] = m_nslices - 1;
+                } else {
+                    --m_async_data_slice[p];
+                }
+            }
+        } else {
+            if ((m_async_data_slice[p+1] < slice) == (m_async_data_slice[p] <= slice)) {
+                if (m_async_data_slice[p+1] < m_async_data_slice[p]) {
+                    m_async_data_slice[p] = m_async_data_slice[p+1];
+                }
+            } else if (m_async_data_slice[p+1] > slice && m_async_data_slice[p] <= slice) {
+                m_async_data_slice[p] = m_async_data_slice[p+1];
+            }
+        }
+
+        for (int i = m_async_data_slice[p]; i!=slice; (i==0) ? i=m_nslices-1 : --i) {
+            m_async_data_slice[p] = i;
+            if (m_datanodes[i].m_progress < p) {
+                make_progress(i, false);
+            }
+            if (m_datanodes[i].m_progress < p) {
+                break;
+            }
+        }
+    }
 }
 
 amrex::Real MultiBuffer::get_time () {

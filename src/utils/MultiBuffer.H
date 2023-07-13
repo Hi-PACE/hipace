@@ -39,16 +39,19 @@ private:
         device
     };
 
-    enum struct comm_progress {
+    enum comm_progress : int {
         uninitialized,
-        ready_to_define,
-        in_use,
+        sim_completed,
+        async_progress_begin,
         ready_to_send,
         send_started,
         sent,
         receive_started,
         received,
-        sim_completed
+        async_progress_end,
+        ready_to_define,
+        in_use,
+        nprogress,
     };
 
     struct DataNode {
@@ -94,6 +97,8 @@ private:
     MPI_Request m_time_send_request = MPI_REQUEST_NULL;
     bool m_time_send_started = false;
 
+    std::array<int, comm_progress::nprogress> m_async_metadata_slice {};
+    std::array<int, comm_progress::nprogress> m_async_data_slice {};
 
     std::size_t get_metadata_size ();
 
