@@ -207,6 +207,8 @@ public:
     bool m_do_radiation_reaction {false}; /**< whether to calculate radiation losses */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
+    /** Whether to reset the global ID incrementor to 1 before initializing this beam */
+    bool m_do_reset_id_init {false};
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */
     int m_insitu_period {0};

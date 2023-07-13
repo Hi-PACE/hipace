@@ -62,6 +62,7 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
+    queryWithParserAlt(pp, "do_reset_id_init", m_do_reset_id_init, pp_alt);
     queryWithParser(pp, "do_salame", m_do_salame);
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
@@ -76,6 +77,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     amrex::ParmParse pp(m_name);
     amrex::ParmParse pp_alt("beams");
     amrex::Real ptime {0.};
+    if (m_do_reset_id_init) BeamTileInit::ParticleType::NextID(1);
     if (m_injection_type == "fixed_ppc") {
 
         queryWithParser(pp, "ppc", m_ppc);
