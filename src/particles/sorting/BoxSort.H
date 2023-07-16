@@ -39,7 +39,7 @@ public:
     amrex::Vector<index_type> m_box_counts_cpu;
     /** Index of the first particle in each box, stored on the cpu*/
     amrex::Vector<index_type> m_box_offsets_cpu;
-    amrex::Gpu::DeviceVector<index_type> m_box_permutations;
+    amrex::PODVector<index_type, amrex::PolymorphicArenaAllocator<index_type>> m_box_permutations;
 };
 
 #endif // HIPACE_BoxSort_H_
