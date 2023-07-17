@@ -20,7 +20,9 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
 
     const auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-    const amrex::Real min_z = geom.ProbLo(2) + (slice-geom.Domain().smallEnd(2))*geom.CellSize(2);
+    AMREX_ALWAYS_ASSERT( geom.Domain().smallEnd(2) == 0);
+    const amrex::Real dzi = geom.InvCellSize(2);
+    const amrex::Real plo_z = geom.ProbLo(2);
 
     amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
     amrex::ReduceData<int, int> reduce_data(reduce_op);
@@ -34,7 +36,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
         {
             if (ptd.id(ip) < 0) {
                 return {1, 0};
-            } else if (ptd.pos(2, ip) < min_z) {
+            } else if (static_cast<int>((ptd.pos(2, ip) - plo_z) * dzi) < slice) {
                 return {0, 1};
             } else {
                 return {0, 0};
@@ -66,11 +68,11 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
     const int num_stay2 = amrex::Scan::PrefixSum<int> (num_particles,
         [=] AMREX_GPU_DEVICE (const int ip) -> int
         {
-            return ptd.id(ip) >= 0 && ptd.pos(2, ip) >= min_z;
+            return ptd.id(ip) >= 0 && (static_cast<int>((ptd.pos(2, ip) - plo_z) * dzi) >= slice);
         },
         [=] AMREX_GPU_DEVICE (const int ip, const int s)
         {
-            if (ptd.id(ip) >= 0 && ptd.pos(2, ip) >= min_z) {
+            if (ptd.id(ip) >= 0 && (static_cast<int>((ptd.pos(2, ip) - plo_z) * dzi) >= slice)) {
                 for (int j=0; j<ptd_tmp.NAR; ++j) {
                     ptd_tmp.rdata(j)[s] = ptd.rdata(j)[ip];
                 }
@@ -88,11 +90,11 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
     const int num_slipped2 = amrex::Scan::PrefixSum<int> (num_particles,
         [=] AMREX_GPU_DEVICE (const int ip) -> int
         {
-            return ptd.id(ip) >= 0 && ptd.pos(2, ip) < min_z;
+            return ptd.id(ip) >= 0 && (static_cast<int>((ptd.pos(2, ip) - plo_z) * dzi) < slice);
         },
         [=] AMREX_GPU_DEVICE (const int ip, const int s)
         {
-            if (ptd.id(ip) >= 0 && ptd.pos(2, ip) < min_z) {
+            if (ptd.id(ip) >= 0 && (static_cast<int>((ptd.pos(2, ip) - plo_z) * dzi) < slice)) {
                 for (int j=0; j<ptd_next.NAR; ++j) {
                     ptd_next.rdata(j)[s+next_size] = ptd.rdata(j)[ip];
                 }

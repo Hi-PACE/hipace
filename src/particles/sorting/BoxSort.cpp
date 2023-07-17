@@ -39,13 +39,12 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::
     auto p_permutations = m_box_permutations.dataPtr();
 
     // Extract box properties
-    const int lo_z = a_geom.Domain().smallEnd(2);
     const amrex::Real dzi = a_geom.InvCellSize(2);
     const amrex::Real plo_z = a_geom.ProbLo(2);
 
     amrex::ParallelFor(np,
         [=] AMREX_GPU_DEVICE (const index_type i) {
-            int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi - lo_z);
+            int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi);
             if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
             if (dst_box < 0 || dst_box > num_boxes) {
                 // particle has left domain transversely, stick it at the end and invalidate
@@ -62,7 +61,7 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::
 
     amrex::ParallelFor(np,
         [=] AMREX_GPU_DEVICE (const index_type i) {
-            int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi - lo_z);
+            int dst_box = static_cast<int>((ptd.pos(2, i) - plo_z) * dzi);
             if (ptd.id(i) < 0) dst_box = num_boxes; // if pid is invalid, remove particle
             if (dst_box < 0 || dst_box > num_boxes) dst_box = num_boxes;
             p_permutations[p_local_offsets[i] + p_box_offsets[dst_box]] = i;
