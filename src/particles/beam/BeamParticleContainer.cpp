@@ -71,12 +71,12 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
-        soa.GetRealData()[rcomp].m_arena =
-            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena();
+        soa.GetRealData()[rcomp].setArena(
+            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
     for (int icomp = 0; icomp < BeamIdx::int_nattribs_in_buffer; ++icomp) {
-        soa.GetIntData()[icomp].m_arena =
-            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena();
+        soa.GetIntData()[icomp].setArena(
+            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
 }
 

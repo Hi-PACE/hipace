@@ -15,8 +15,8 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::
 {
     HIPACE_PROFILE("sortBeamParticlesByBox()");
 
-    m_box_permutations.m_arena =
-        a_beam.m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena();
+    m_box_permutations.setArena(
+        a_beam.m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
 
     const index_type np = a_beam.getBeamInitSlice().numParticles();
     auto ptd = a_beam.getBeamInitSlice().getParticleTileData();
@@ -27,8 +27,8 @@ void BoxSorter::sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::
     m_box_permutations.resize(np);
 
     amrex::PODVector<index_type, amrex::PolymorphicArenaAllocator<index_type>> local_offsets {};
-    local_offsets.m_arena =
-        a_beam.m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena();
+    local_offsets.setArena(
+        a_beam.m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     local_offsets.resize(np);
 
     amrex::Gpu::DeviceVector<index_type> box_counts (num_boxes+1, 0);
