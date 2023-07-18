@@ -65,7 +65,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 
-    if (species1.TotalNumberOfParticles() == 0 || species2.TotalNumberOfParticles() == 0) return;
+    if (species1.TotalNumberOfParticles(false, true) == 0 ||
+        species2.TotalNumberOfParticles(false, true) == 0) return;
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
@@ -243,7 +244,8 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     HIPACE_PROFILE("CoulombCollision::doBeamPlasmaCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 
-    if (species1.getNumParticles(WhichBeamSlice::This) == 0 || species2.TotalNumberOfParticles() == 0) return;
+    if (species1.getNumParticles(WhichBeamSlice::This) == 0 ||
+        species2.TotalNumberOfParticles(false, true) == 0) return;
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
