@@ -125,9 +125,6 @@ public:
     /** get function for the 2D slices (const version) */
     const amrex::MultiFab& getSlices () const {return m_slices; }
 
-    /** getter function, whether 3D envelope is store in host memory */
-    int is3dOnHost () const {return m_3d_on_host;}
-
     /** \brief Allocate laser multifab
      * \param[in] slice_ba box array of the slice
      * \param[in] slice_dm corresponding distribution mapping
@@ -206,7 +203,6 @@ private:
     amrex::Vector<std::string> m_names {"no_laser"}; /**< name of the laser */
     int m_nlasers; /**< Number of laser pulses */
     amrex::Vector<Laser> m_all_lasers; /**< Each is a laser pulse */
-    int m_3d_on_host {0};/** Whether the 3D laser envelope is stored in host or device memory */
     /** Number of guard cells for slices MultiFab */
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
     std::string m_solver_type = "multigrid";

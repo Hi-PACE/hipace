@@ -11,6 +11,7 @@
 #include "utils/Constants.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/DeprecatedInput.H"
 #ifdef AMREX_USE_CUDA
 #  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
 #endif
@@ -53,7 +54,7 @@ MultiLaser::ReadParameters ()
     if (!m_laser_from_file) {
         getWithParser(pp, "lambda0", m_lambda0);
     }
-    queryWithParser(pp, "3d_on_host", m_3d_on_host);
+    DeprecatedInput("lasers", "3d_on_host", "hipace.comms_buffer_on_gpu", "", true);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");

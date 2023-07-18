@@ -74,7 +74,7 @@ General parameters
     but generally it is recommended to not use it.
 
 * ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
-    Whether the buffers used for MPI communication should be allocated on the GPU (device memory).
+    Whether the buffers that hold the beam and the 3D laser envelope should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
@@ -478,7 +478,11 @@ which are valid only for certain beam types, are introduced further below under
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
 * ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
-    Wheter to reset the ID incrementor to 1 before initializing beam particles.
+    Whether to reset the ID incrementor to 1 before initializing beam particles.
+
+* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
+    Whether to initialize the beam on the CPU instead of the GPU.
+    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -622,9 +626,6 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
 * ``lasers.MG_average_rhs`` (`0` or `1`) optional (default `1`)
     Whether to use the most stable discretization for the envelope solver.
-
-* ``lasers.3d_on_host`` (`0` or `1`) optional (default `0`)
-    When running on GPU: whether the 3D array containing the laser envelope is stored in host memory (CPU, slower but large memory available) or in device memory (GPU, faster but less memory available).
 
 * ``lasers.input_file`` (`string`) optional (default `""`)
     Path to an openPMD file containing a laser envelope.

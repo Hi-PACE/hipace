@@ -339,8 +339,11 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
 
     make_progress(slice, false);
 
+    // make asynchronous progress for metadata
+    // only check slices that have a chance of making progress
     for (int p=comm_progress::async_progress_end-1; p>comm_progress::async_progress_begin; --p) {
         if (p == comm_progress::async_progress_end-1) {
+            // first progress type starts at slice-1 or where it last stopped
             if (m_async_metadata_slice[p] == slice) {
                 if (slice == 0) {
                     m_async_metadata_slice[p] = m_nslices - 1;
@@ -349,6 +352,8 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
                 }
             }
         } else {
+            // all other progress types start at the minimum of where they or
+            // the previous progress type last stopped
             if ((m_async_metadata_slice[p+1] < slice) == (m_async_metadata_slice[p] <= slice)) {
                 if (m_async_metadata_slice[p+1] < m_async_metadata_slice[p]) {
                     m_async_metadata_slice[p] = m_async_metadata_slice[p+1];
@@ -358,6 +363,7 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
             }
         }
 
+        // start at slice-1 (next slice), iterate backwards, loop around, stop at slice+1
         for (int i = m_async_metadata_slice[p]; i!=slice; (i==0) ? i=m_nslices-1 : --i) {
             m_async_metadata_slice[p] = i;
             if (m_datanodes[i].m_metadata_progress < p) {
@@ -369,8 +375,11 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         }
     }
 
+    // make asynchronous progress for data
+    // only check slices that have a chance of making progress
     for (int p=comm_progress::async_progress_end-1; p>comm_progress::async_progress_begin; --p) {
         if (p == comm_progress::async_progress_end-1) {
+            // first progress type starts at slice-1 or where it last stopped
             if (m_async_data_slice[p] == slice) {
                 if (slice == 0) {
                     m_async_data_slice[p] = m_nslices - 1;
@@ -379,6 +388,8 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
                 }
             }
         } else {
+            // all other progress types start at the minimum of where they or
+            // the previous progress type last stopped
             if ((m_async_data_slice[p+1] < slice) == (m_async_data_slice[p] <= slice)) {
                 if (m_async_data_slice[p+1] < m_async_data_slice[p]) {
                     m_async_data_slice[p] = m_async_data_slice[p+1];
@@ -388,6 +399,7 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
             }
         }
 
+        // start at slice-1 (next slice), iterate backwards, loop around, stop at slice+1
         for (int i = m_async_data_slice[p]; i!=slice; (i==0) ? i=m_nslices-1 : --i) {
             m_async_data_slice[p] = i;
             if (m_datanodes[i].m_progress < p) {
