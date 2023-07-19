@@ -243,6 +243,17 @@ Hipace::InitData ()
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
     }
     m_fields.checkInit();
+
+    amrex::ParmParse pph("hipace");
+    bool do_output_input = false;
+    queryWithParser(pph, "output_input", do_output_input);
+    if (do_output_input && amrex::ParallelDescriptor::IOProcessor()) {
+        amrex::OutStream() <<
+            "Input parameters:==================================================================\n";
+        amrex::ParmParse::dumpTable(amrex::OutStream(), true);
+        amrex::OutStream() <<
+            "===================================================================================\n";
+    }
 }
 
 void
