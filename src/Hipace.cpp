@@ -201,6 +201,17 @@ Hipace::InitData ()
                               !m_comms_buffer_on_gpu,
                               m_use_laser,
                               m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
+
+    amrex::ParmParse pph("hipace");
+    bool do_output_input = false;
+    queryWithParser(pph, "output_input", do_output_input);
+    if (do_output_input && amrex::ParallelDescriptor::IOProcessor()) {
+        amrex::OutStream() <<
+            "Input parameters:==================================================================\n";
+        amrex::ParmParse::dumpTable(amrex::OutStream(), true);
+        amrex::OutStream() <<
+            "===================================================================================\n";
+    }
 }
 
 void
