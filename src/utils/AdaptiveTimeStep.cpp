@@ -89,8 +89,7 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
     HIPACE_PROFILE("AdaptiveTimeStep::GatherMinUzSlice()");
 
     const PhysConst phys_const = get_phys_const();
-    const amrex::Real c = phys_const.c;
-    const amrex::Real clightinv = 1._rt/c;
+    const amrex::Real clightinv = 1._rt/phys_const.c;
 
     const int nbeams = beams.get_nbeams();
 
@@ -250,7 +249,7 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
     if (!m_do_adaptive_time_step) return;
     if (!m_adaptive_gather_ez) return;
 
-    HIPACE_PROFILE("AdaptiveTimeStep::Calculate()");
+    HIPACE_PROFILE("AdaptiveTimeStep::GatherMinAccSlice()");
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clightinv = 1._rt/phys_const.c;

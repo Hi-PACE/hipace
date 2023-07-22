@@ -503,7 +503,7 @@ Hipace::SolveOneSlice (int islice, int step)
         for (int lev=0; lev<current_N_level; ++lev) {
             // The algorithm used was derived in
             // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],
-            // it is implemented in the WAND-PIC quasistatic PIC code.#
+            // it is implemented in the WAND-PIC quasistatic PIC code.
 
             // deposit jx_beam and jy_beam in the Next slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
