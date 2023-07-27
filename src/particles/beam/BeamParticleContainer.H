@@ -288,6 +288,7 @@ private:
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
 
+    // to estimate min uz
     friend AdaptiveTimeStep;
 };
 
