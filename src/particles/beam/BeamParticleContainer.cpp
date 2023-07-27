@@ -94,16 +94,13 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         getWithParser(pp, "zmin", m_zmin);
         getWithParser(pp, "zmax", m_zmax);
         getWithParser(pp, "radius", m_radius);
-        amrex::RealVect position_mean{0., 0., 0.};
-        queryWithParser(pp, "position_mean", position_mean);
+        queryWithParser(pp, "position_mean", m_position_mean);
         queryWithParser(pp, "min_density", m_min_density);
         m_min_density = std::abs(m_min_density);
-        amrex::Vector<int> random_ppc {false, false, false};
-        queryWithParser(pp, "random_ppc", random_ppc);
-        const GetInitialDensity get_density(m_name, m_density_parser);
-        const GetInitialMomentum get_momentum(m_name);
-        InitBeamFixedPPC(m_ppc, get_density, get_momentum, geom, m_zmin,
-                         m_zmax, m_radius, position_mean, m_min_density, random_ppc);
+        queryWithParser(pp, "random_ppc", m_random_ppc);
+        m_get_density = GetInitialDensity{m_name, m_density_parser};
+        m_get_momentum =  GetInitialMomentum{m_name};
+        InitBeamFixedPPC3D();
 
     } else if (m_injection_type == "fixed_weight") {
 
@@ -166,6 +163,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, pos_mean_x, pos_mean_y, pos_mean_z,
                             m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax);
+        m_total_num_particles = getBeamInitSlice().size();
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
@@ -182,6 +180,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         ptime = InitBeamFromFileHelper(m_input_file, coordinates_specified, m_file_coordinates_xyz,
                                        geom, m_plasma_density, m_num_iteration, m_species_name,
                                        species_specified);
+        m_total_num_particles = getBeamInitSlice().size();
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
@@ -192,8 +191,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     }
 
-    m_total_num_particles = getBeamInitSlice().size();
-
 #ifdef AMREX_USE_MPI
     MPI_Bcast(&m_total_num_particles,
               1,
@@ -202,7 +199,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
               amrex::ParallelDescriptor::Communicator());
 #endif
 
-    if (Hipace::HeadRank()) {
+    if (Hipace::HeadRank() && m_injection_type != "fixed_ppc") {
         m_init_sorter.sortParticlesByBox(*this, geom);
     }
 
@@ -275,31 +272,35 @@ void
 BeamParticleContainer::intializeSlice (int slice, int which_slice) {
     HIPACE_PROFILE("BeamParticleContainer::intializeSlice()");
 
-    const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
+    if (m_injection_type == "fixed_ppc") {
+        InitBeamFixedPPCSlice(slice, which_slice);
+    } else {
+        const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
-    resize(which_slice, num_particles, 0);
+        resize(which_slice, num_particles, 0);
 
-    auto ptd_init = getBeamInitSlice().getParticleTileData();
-    auto ptd = getBeamSlice(which_slice).getParticleTileData();
+        auto ptd_init = getBeamInitSlice().getParticleTileData();
+        auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
-    const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
-    const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
+        const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
+        const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
 
-    amrex::ParallelFor(num_particles,
-        [=] AMREX_GPU_DEVICE (const int ip) {
-            const int idx_src = permutations[slice_offset + ip];
-            ptd.rdata(BeamIdx::x)[ip] = ptd_init.rdata(BeamIdx::x)[idx_src];
-            ptd.rdata(BeamIdx::y)[ip] = ptd_init.rdata(BeamIdx::y)[idx_src];
-            ptd.rdata(BeamIdx::z)[ip] = ptd_init.rdata(BeamIdx::z)[idx_src];
-            ptd.rdata(BeamIdx::w)[ip] = ptd_init.rdata(BeamIdx::w)[idx_src];
-            ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
-            ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
-            ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
+        amrex::ParallelFor(num_particles,
+            [=] AMREX_GPU_DEVICE (const int ip) {
+                const int idx_src = permutations[slice_offset + ip];
+                ptd.rdata(BeamIdx::x)[ip] = ptd_init.rdata(BeamIdx::x)[idx_src];
+                ptd.rdata(BeamIdx::y)[ip] = ptd_init.rdata(BeamIdx::y)[idx_src];
+                ptd.rdata(BeamIdx::z)[ip] = ptd_init.rdata(BeamIdx::z)[idx_src];
+                ptd.rdata(BeamIdx::w)[ip] = ptd_init.rdata(BeamIdx::w)[idx_src];
+                ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
+                ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
+                ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
 
-            ptd.idata(BeamIdx::id)[ip] = ptd_init.idata(BeamIdx::id)[idx_src];
-            ptd.idata(BeamIdx::cpu)[ip] = 0;
-        }
-    );
+                ptd.idata(BeamIdx::id)[ip] = ptd_init.idata(BeamIdx::id)[idx_src];
+                ptd.idata(BeamIdx::cpu)[ip] = 0;
+            }
+        );
+    }
 }
 
 void
