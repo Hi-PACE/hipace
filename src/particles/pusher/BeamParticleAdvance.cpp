@@ -227,9 +227,9 @@ AdvanceBeamParticlesSlice (
                         Exp *= E0;
                         Eyp *= E0;
                         Ezp *= E0;
-                        Bxp *= E0;
-                        Byp *= E0;
-                        Bzp *= E0;
+                        Bxp *= E0*inv_clight_SI;
+                        Byp *= E0*inv_clight_SI;
+                        Bzp *= E0*inv_clight_SI;
                     }
                     const amrex::ParticleReal gamma_intermediate = std::sqrt(
                         1._rt + ( ux_intermediate*ux_intermediate
