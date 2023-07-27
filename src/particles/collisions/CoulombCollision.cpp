@@ -65,7 +65,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 
-    if (species1.TotalNumberOfParticles() == 0 || species2.TotalNumberOfParticles() == 0) return;
+    if (species1.TotalNumberOfParticles(false, true) == 0 ||
+        species2.TotalNumberOfParticles(false, true) == 0) return;
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
@@ -236,14 +237,15 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
 
 void
 CoulombCollision::doBeamPlasmaCoulombCollision (
-    int lev, const amrex::Box& bx, const amrex::Geometry& geom, int islice_local,
+    int lev, const amrex::Box& bx, const amrex::Geometry& geom,
     BeamParticleContainer& species1, PlasmaParticleContainer& species2, amrex::Real CoulombLog,
     amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("CoulombCollision::doBeamPlasmaCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 
-    if (species1.TotalNumberOfParticles() == 0 || species2.TotalNumberOfParticles() == 0) return;
+    if (species1.getNumParticles(WhichBeamSlice::This) == 0 ||
+        species2.TotalNumberOfParticles(false, true) == 0) return;
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
@@ -256,7 +258,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
 
     // Logically particles per-cell, and return indices of particles in each cell
-    BeamBins bins1 = findBeamParticlesInEachTile(bx, 1, islice_local, species1, geom);
+    BeamBins bins1 = findBeamParticlesInEachTile(bx, 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
 
     int const n_cells = bins2.numBins();
@@ -266,12 +268,11 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     for (PlasmaParticleIterator pti(species2); pti.isValid(); ++pti) {
 
         // // Get particles SoA data for species 1
-        const int box_offset = species1.m_box_sorter.boxOffsetsPtr()[species1.m_ibox];
-        auto& soa1 = species1.GetStructOfArrays();
-        amrex::Real* const ux1 = soa1.GetRealData(BeamIdx::ux).data() + box_offset;
-        amrex::Real* const uy1 = soa1.GetRealData(BeamIdx::uy).data() + box_offset;
-        amrex::Real* const psi1 = soa1.GetRealData(BeamIdx::uz).data() + box_offset;
-        const amrex::Real* const w1 = soa1.GetRealData(BeamIdx::w).data() + box_offset;
+        auto& soa1 = species1.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        amrex::Real* const ux1 = soa1.GetRealData(BeamIdx::ux).data();
+        amrex::Real* const uy1 = soa1.GetRealData(BeamIdx::uy).data();
+        amrex::Real* const psi1 = soa1.GetRealData(BeamIdx::uz).data();
+        const amrex::Real* const w1 = soa1.GetRealData(BeamIdx::w).data();
         BeamBins::index_type * const indices1 = bins1.permutationPtr();
         BeamBins::index_type const * const offsets1 = bins1.offsetsPtr();
         amrex::Real q1 = species1.GetCharge();

@@ -79,9 +79,9 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
-        UpdateDensityFunction();
-        auto density_func = m_density_func;
         const amrex::Real c_light = get_phys_const().c;
+        UpdateDensityFunction(c_light * Hipace::m_physical_time);
+        auto density_func = m_density_func;
         const amrex::Real c_t = c_light * Hipace::m_physical_time;
         const amrex::Real min_density = m_min_density;
 

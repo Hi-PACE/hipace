@@ -194,7 +194,7 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
 }
 
 void
-Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_domain, const int lev,
+Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
                             amrex::Geometry const& geom, int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time)
 {
@@ -204,11 +204,9 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
 
         if (fd.m_level != lev) continue;
 
-        amrex::Box local_box = a_local_box;
         amrex::Box domain = a_domain;
 
         if (fd.m_include_ghost_cells) {
-            local_box.grow(Fields::m_slices_nguards);
             domain.grow(Fields::m_slices_nguards);
         }
 
@@ -234,7 +232,6 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
             }
             // calculate intersection of boxes to prevent them getting larger
             domain &= cut_domain;
-            local_box &= domain;
         }
 
         amrex::RealBox diag_domain = geom.ProbDomain();
@@ -246,34 +243,30 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_dom
                 + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
         }
         // trim the 3D box to slice box for slice IO
-        TrimIOBox(fd.m_slice_dir, local_box, domain, diag_domain);
+        TrimIOBox(fd.m_slice_dir, domain, diag_domain);
 
-        local_box.coarsen(fd.m_diag_coarsen);
         domain.coarsen(fd.m_diag_coarsen);
 
         fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-        fd.m_has_field = local_box.ok()
+        fd.m_has_field = domain.ok()
                          && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
         if(fd.m_has_field) {
-            fd.m_F.resize(local_box, fd.m_nfields_with_laser, amrex::The_Pinned_Arena());
+            fd.m_F.resize(domain, fd.m_nfields_with_laser, amrex::The_Pinned_Arena());
             fd.m_F.setVal<amrex::RunOn::Host>(0);
         }
     }
 }
 
 void
-Diagnostic::TrimIOBox (int slice_dir, amrex::Box& box_3d,
-                       amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
+Diagnostic::TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
 {
     if (slice_dir >= 0){
         const amrex::Real half_cell_size = rbox_3d.length(slice_dir) /
                                            ( 2. * domain_3d.length(slice_dir) );
         const amrex::Real mid = (rbox_3d.lo(slice_dir) + rbox_3d.hi(slice_dir)) / 2.;
         // Flatten the box down to 1 cell in the approprate direction.
-        box_3d.setSmall(slice_dir, 0);
-        box_3d.setBig  (slice_dir, 0);
         domain_3d.setSmall(slice_dir, 0);
         domain_3d.setBig  (slice_dir, 0);
         rbox_3d.setLo(slice_dir, mid - half_cell_size);

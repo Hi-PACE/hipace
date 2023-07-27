@@ -18,7 +18,7 @@
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    int const current_N_level, const int islice_local, const amrex::RealVect& extEu,
+    int const current_N_level, const amrex::RealVect& extEu,
     const amrex::RealVect& extBu, const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
@@ -91,20 +91,9 @@ AdvanceBeamParticlesSlice (
     const amrex::Real hi_y_lev2 = gm[lev2_idx].ProbHi(1);
 
     // Extract particle properties
-    const int offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-    const auto ptd = beam.getParticleTileData();
+    const auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamParticleContainer>(gm[0]);
-
-    // Declare a DenseBins to pass it to doDepositionShapeN, although it will not be used.
-    BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
-    BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
-    BeamBins::index_type const
-        cell_start = offsets[islice_local], cell_stop = offsets[islice_local+1];
-    // The particles that are in slice islice_local are
-    // given by the indices[cell_start:cell_stop]
-
-    int const num_particles = cell_stop-cell_start;
+    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamTile>(gm[0]);
 
     const amrex::Real clight = phys_const.c;
     const amrex::Real inv_clight = 1.0_rt/phys_const.c;
@@ -133,9 +122,8 @@ AdvanceBeamParticlesSlice (
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
         {Hipace::m_depos_order_xy},
-        num_particles,
-        [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
-            const int ip = indices[cell_start+idx] + offset;
+        beam.getNumParticles(WhichBeamSlice::This),
+        [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
 
             if (ptd.id(ip) < 0) return;
 

@@ -53,7 +53,6 @@ public:
      * \param[in] lev MR level
      * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
      * \param[in] geom corresponding geometry object
-     * \param[in] islice_local local slice on which collisions are calculated
      * \param[in,out] species1 beam species
      * \param[in,out] species2 plasma species
      * \param[in] CoulombLog Value of the Coulomb logarithm used for the collisions. If <0, the
@@ -61,7 +60,7 @@ public:
      * \param[in] background_density_SI background plasma density (only needed for normalized units)
      **/
     static void doBeamPlasmaCoulombCollision (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom, int islice_local,
+        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
         BeamParticleContainer& species1, PlasmaParticleContainer& species2, amrex::Real CoulombLog,
         amrex::Real background_density_SI);
 

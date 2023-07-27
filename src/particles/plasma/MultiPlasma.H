@@ -71,7 +71,7 @@ public:
      * the max is taken across species AND include m_adaptive_density, giving a way to
      * specify a density to the adaptive time step calculator even with no plasma species.
      */
-    amrex::Real maxDensity (amrex::Real z) const;
+    amrex::Real maxDensity (amrex::Real z);
 
     /** \brief Gather field values and push particles
      *

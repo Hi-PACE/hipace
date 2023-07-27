@@ -68,6 +68,16 @@ BeamParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
+    queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
+    auto& soa = getBeamInitSlice().GetStructOfArrays();
+    for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
+        soa.GetRealData()[rcomp].setArena(
+            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
+    }
+    for (int icomp = 0; icomp < BeamIdx::int_nattribs_in_buffer; ++icomp) {
+        soa.GetIntData()[icomp].setArena(
+            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
+    }
 }
 
 amrex::Real
@@ -77,7 +87,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     amrex::ParmParse pp(m_name);
     amrex::ParmParse pp_alt("beams");
     amrex::Real ptime {0.};
-    if (m_do_reset_id_init) ParticleType::NextID(1);
+    if (m_do_reset_id_init) BeamTileInit::ParticleType::NextID(1);
     if (m_injection_type == "fixed_ppc") {
 
         queryWithParser(pp, "ppc", m_ppc);
@@ -182,6 +192,20 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     }
 
+    m_total_num_particles = getBeamInitSlice().size();
+
+#ifdef AMREX_USE_MPI
+    MPI_Bcast(&m_total_num_particles,
+              1,
+              amrex::ParallelDescriptor::Mpi_typemap<decltype(m_total_num_particles)>::type(),
+              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              amrex::ParallelDescriptor::Communicator());
+#endif
+
+    if (Hipace::HeadRank()) {
+        m_init_sorter.sortParticlesByBox(*this, geom);
+    }
+
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
@@ -195,74 +219,19 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
         m_insitu_sum_idata.resize(m_insitu_nip, 0);
     }
-    /* setting total number of particles, which is required for openPMD I/O */
-    m_total_num_particles = TotalNumberOfParticles();
 
     return ptime;
 }
 
-amrex::Long BeamParticleContainer::TotalNumberOfParticles (bool only_valid, bool only_local) const
-{
-    amrex::Long nparticles = 0;
-    if (only_valid) {
-        amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
-        amrex::ReduceData<unsigned long long> reduce_data(reduce_op);
-        using ReduceTuple = typename decltype(reduce_data)::Type;
-
-        auto const& ptsoa = this->GetStructOfArrays();
-        const int * const idp = ptsoa.GetIntData(BeamIdx::id).data();
-
-        reduce_op.eval(ptsoa.numParticles(), reduce_data,
-                       [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
-                       {
-                           return (idp[i] > 0) ? 1 : 0;
-                       });
-        nparticles = static_cast<amrex::Long>(amrex::get<0>(reduce_data.value()));
-    }
-    else {
-        nparticles = this->numParticles();
-    }
-
-    if (!only_local) {
-        amrex::ParallelAllReduce::Sum(nparticles, amrex::ParallelContext::CommunicatorSub());
-    }
-
-    return nparticles;
-}
-
 void BeamParticleContainer::TagByLevel (const int current_N_level,
-    amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice,
-    const int islice_local, const int nghost)
+    amrex::Vector<amrex::Geometry> const& geom3D, const int which_slice)
 {
     HIPACE_PROFILE("BeamParticleContainer::TagByLevel()");
 
-    const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice_local == 0));
-    int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
-    if (deposit_ghost) box_offset = numParticles()-nghost;
-
-    auto& soa = GetStructOfArrays();
-    const amrex::Real * const pos_x = soa.GetRealData(BeamIdx::x).data() + box_offset;
-    const amrex::Real * const pos_y = soa.GetRealData(BeamIdx::y).data() + box_offset;
-    int * const cpup = soa.GetIntData(BeamIdx::cpu).data() + box_offset;
-
-    BeamBins::index_type const * const indices = m_slice_bins.permutationPtr();
-    BeamBins::index_type const * const offsets = m_slice_bins.offsetsPtrCpu();
-    BeamBins::index_type cell_start = 0;
-    BeamBins::index_type cell_stop = 0;
-    if (which_slice == WhichSlice::This) {
-        cell_start = offsets[islice_local];
-        cell_stop  = offsets[islice_local+1];
-    } else {
-        if (islice_local > 0) {
-            cell_start = offsets[islice_local-1];
-            cell_stop  = offsets[islice_local];
-        } else {
-            cell_start = 0;
-            cell_stop  = nghost;
-        }
-    }
-
-    int const num_particles = cell_stop-cell_start;
+    auto& soa = getBeamSlice(which_slice).GetStructOfArrays();
+    const amrex::Real * const pos_x = soa.GetRealData(BeamIdx::x).data();
+    const amrex::Real * const pos_y = soa.GetRealData(BeamIdx::y).data();
+    int * const cpup = soa.GetIntData(BeamIdx::cpu).data();
 
     const int lev1_idx = std::min(1, current_N_level-1);
     const int lev2_idx = std::min(2, current_N_level-1);
@@ -279,12 +248,8 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     const amrex::Real hi_y_lev1 = geom3D[lev1_idx].ProbHi(1);
     const amrex::Real hi_y_lev2 = geom3D[lev2_idx].ProbHi(1);
 
-    amrex::ParallelFor(num_particles,
-        [=] AMREX_GPU_DEVICE (int idx) {
-            // Particles in the same slice must be accessed through the bin sorter.
-            // Ghost particles are simply contiguous in memory.
-            const int ip = deposit_ghost ? cell_start+idx : indices[cell_start+idx];
-
+    amrex::ParallelFor(getNumParticlesIncludingSlipped(which_slice),
+        [=] AMREX_GPU_DEVICE (int ip) {
             const amrex::Real xp = pos_x[ip];
             const amrex::Real yp = pos_y[ip];
 
@@ -307,7 +272,49 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
 }
 
 void
-BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
+BeamParticleContainer::intializeSlice (int slice, int which_slice) {
+    HIPACE_PROFILE("BeamParticleContainer::intializeSlice()");
+
+    const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
+
+    resize(which_slice, num_particles, 0);
+
+    auto ptd_init = getBeamInitSlice().getParticleTileData();
+    auto ptd = getBeamSlice(which_slice).getParticleTileData();
+
+    const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
+    const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
+
+    amrex::ParallelFor(num_particles,
+        [=] AMREX_GPU_DEVICE (const int ip) {
+            const int idx_src = permutations[slice_offset + ip];
+            ptd.rdata(BeamIdx::x)[ip] = ptd_init.rdata(BeamIdx::x)[idx_src];
+            ptd.rdata(BeamIdx::y)[ip] = ptd_init.rdata(BeamIdx::y)[idx_src];
+            ptd.rdata(BeamIdx::z)[ip] = ptd_init.rdata(BeamIdx::z)[idx_src];
+            ptd.rdata(BeamIdx::w)[ip] = ptd_init.rdata(BeamIdx::w)[idx_src];
+            ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
+            ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
+            ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
+
+            ptd.idata(BeamIdx::id)[ip] = ptd_init.idata(BeamIdx::id)[idx_src];
+            ptd.idata(BeamIdx::cpu)[ip] = 0;
+        }
+    );
+}
+
+void
+BeamParticleContainer::resize (int which_slice, int num_particles, int num_slipped_particles) {
+    HIPACE_PROFILE("BeamParticleContainer::resize()");
+
+    m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
+        num_particles;
+    m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
+        num_particles + num_slipped_particles;
+    getBeamSlice(which_slice).resize(num_particles + num_slipped_particles);
+}
+
+void
+BeamParticleContainer::InSituComputeDiags (int islice)
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituComputeDiags()");
 
@@ -320,22 +327,15 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
-    const int box_offset = m_box_sorter.boxOffsetsPtr()[m_ibox];
-    auto const& soa = this->GetStructOfArrays();
-    const auto pos_x = soa.GetRealData(BeamIdx::x).data() + box_offset;
-    const auto pos_y = soa.GetRealData(BeamIdx::y).data() + box_offset;
-    const auto pos_z = soa.GetRealData(BeamIdx::z).data() + box_offset;
-    const auto  wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
-    const auto uxp = soa.GetRealData(BeamIdx::ux).data() + box_offset;
-    const auto uyp = soa.GetRealData(BeamIdx::uy).data() + box_offset;
-    const auto uzp = soa.GetRealData(BeamIdx::uz).data() + box_offset;
-    auto idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
-
-    BeamBins::index_type const * const indices = m_slice_bins.permutationPtr();
-    BeamBins::index_type const * const offsets = m_slice_bins.offsetsPtrCpu();
-    BeamBins::index_type const cell_start = offsets[islice_local];
-    BeamBins::index_type const cell_stop = offsets[islice_local+1];
-    int const num_particles = cell_stop-cell_start;
+    auto const& soa = getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+    const auto pos_x = soa.GetRealData(BeamIdx::x).data();
+    const auto pos_y = soa.GetRealData(BeamIdx::y).data();
+    const auto pos_z = soa.GetRealData(BeamIdx::z).data();
+    const auto  wp = soa.GetRealData(BeamIdx::w).data();
+    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
+    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
+    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
+    auto idp = soa.GetIntData(BeamIdx::id).data();
 
     // Tuple contains:
     //      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
@@ -357,10 +357,9 @@ BeamParticleContainer::InSituComputeDiags (int islice, int islice_local)
                       amrex::Real, amrex::Real, int> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
     reduce_op.eval(
-        num_particles, reduce_data,
-        [=] AMREX_GPU_DEVICE (int i) -> ReduceTuple
+        getNumParticles(WhichBeamSlice::This), reduce_data,
+        [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
         {
-            const int ip = indices[cell_start+i];
             if (idp[ip] < 0) {
                 return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
                     0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};

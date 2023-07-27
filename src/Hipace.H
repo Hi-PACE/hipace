@@ -19,6 +19,7 @@
 #include "laser/MultiLaser.H"
 #include "utils/Constants.H"
 #include "utils/Parser.H"
+#include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
 #include "diagnostics/OpenPMDWriter.H"
 
@@ -72,9 +73,6 @@ public:
      * and initialize longitudinal and transverse MPI communicators */
     Hipace ();
 
-    /** Destructor */
-    ~Hipace ();
-
     /** Get singleton instance */
     static Hipace& GetInstance ();
 
@@ -87,45 +85,12 @@ public:
     /** Make Geometry, DistributionMapping and BoxArray for all MR levels */
     void MakeGeometry ();
 
-    /** \brief Receive field slices from rank upstream
-     *
-     * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be received (2 and 3),
-     * MPI_Recv slices from the upstream rank into this buffer and copy from the buffer to
-     * slice multifabs of current rank.
-     *
-     * \param[in] step current time step
-     * \param[in] it index of the box for which data is received
-     * \param[in] only_ghost whether to recv only ghost particles
-     */
-    void Wait (const int step, int it, bool only_ghost=false);
-
-    /** \brief Send field slices to rank downstream
-     *
-     * Initialize a buffer (in pinned memory on Nvidia GPUs) for slices to be sent (2 and 3),
-     * copy from slice multifabs of current rank to the buffer, MPI_Isend the buffer to
-     * the rank downstream.
-     *
-     * \param[in] step current time step
-     * \param[in] it current box number
-     * \param[in] only_ghost whether to send only ghost particles
-     */
-    void Notify (const int step, const int it, bool only_ghost=false);
-
-    /** \brief When slices sent to rank downstream, free buffer memory and make buffer nullptr
-     *
-     * \param[in] it current box number
-     * \param[in] only_ghost whether to pack only ghost particles (or only valid particles)
-     * \param[in] only_time whether only the time is send (and no beam particles)
-     */
-    void NotifyFinish (const int it=0, bool only_ghost=false, bool only_time=false);
-
     /** \brief Dump simulation data to file
      *
      * \param[in] output_step current iteration
-     * \param[in] it current box number
      * \param[in] call_type whether the beams or the fields should be written to file
      */
-    void WriteDiagnostics (int output_step, const int it, const OpenPMDWriterCallType call_type);
+    void WriteDiagnostics (int output_step, const OpenPMDWriterCallType call_type);
 
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;}
@@ -133,10 +98,9 @@ public:
     /** \brief Full evolve on 1 slice
      *
      * \param[in] islice slice number
-     * \param[in] islice_local local index of the slice
      * \param[in] step current time step
      */
-    void SolveOneSlice (int islice, const int islice_local, int step);
+    void SolveOneSlice (int islice, int step);
 
     /**
      * \brief Initialize Sx and Sy with the beam contributions
@@ -164,9 +128,8 @@ public:
 
     /**
      * \brief does Coulomb collisions between plasmas and beams
-     * \param[in] islice_local slice on which collisions are calculated, needed for beam binning
      */
-    void doCoulombCollision (const int islice_local);
+    void doCoulombCollision ();
 
     /**
        \brief Returns true on the head rank, otherwise false.
@@ -182,33 +145,6 @@ public:
      */
     static std::string Version ();
 
-    /** Transverse MPI communicator (for transverse exchanges in 1 slice in the presence of
-     * transverse parallelization)
-     */
-    MPI_Comm m_comm_xy = MPI_COMM_NULL;
-    /** Longitudinal MPI communicator (to send data downstream in the presence of
-     * longitudinal parallelization)
-     */
-    MPI_Comm m_comm_z = MPI_COMM_NULL;
-    /** Send buffer for particle longitudinal parallelization (pipeline) */
-    char* m_psend_buffer = nullptr;
-    char* m_psend_buffer_ghost = nullptr;
-    amrex::Real m_tsend_buffer {-1.};
-    /** Send buffer for the number of particles for each beam (pipeline) */
-    amrex::Vector<int> m_np_snd = amrex::Vector<int>(0);
-    amrex::Vector<int> m_np_snd_ghost = amrex::Vector<int>(0);
-    /** status of the number of particles send request */
-    MPI_Request m_nsend_request = MPI_REQUEST_NULL;
-    MPI_Request m_nsend_request_ghost = MPI_REQUEST_NULL;
-    /** status of the particle send request */
-    MPI_Request m_psend_request = MPI_REQUEST_NULL;
-    MPI_Request m_psend_request_ghost = MPI_REQUEST_NULL;
-    /** status of the physical time send request */
-    MPI_Request m_tsend_request = MPI_REQUEST_NULL;
-    // Laser buffer
-    amrex::Real* m_lsend_buffer = nullptr;
-    // status of laser send
-    MPI_Request m_lsend_request = MPI_REQUEST_NULL;
     /** 3D Geometry, vector over MR levels */
     amrex::Vector<amrex::Geometry> m_3D_geom;
     /** 3D DistributionMapping. Does not represent the parallelization pipeline correctly */
@@ -246,18 +182,10 @@ public:
     MultiBeam m_multi_beam;
     /** Contains all plasma species */
     MultiPlasma m_multi_plasma;
-    /** Number of processors in the transverse x direction */
-    inline static int m_numprocs_x = 1;
-    /** Number of processors in the transverse y direction */
-    inline static int m_numprocs_y = 1;
+
+    MultiBuffer m_multi_buffer;
     /** Number of processors in the longitudinal z direction */
-    inline static int m_numprocs_z = 0;
-    /** My rank in the transverse communicator */
-    inline static int m_rank_xy = 0;
-    /** My rank in the longitudinal communicator */
-    inline static int m_rank_z = 0;
-    /** Max number of grid size in the longitudinal direction */
-    inline static int m_boxes_in_z = 1;
+    inline static int m_numprocs = 0;
     /** Number of time iterations */
     inline static int m_max_step = 0;
     /** Maximum simulation time */
@@ -267,6 +195,8 @@ public:
     inline static amrex::Real m_physical_time = 0.0;
     /** Physical time at the beginning of the simulation */
     inline static amrex::Real m_initial_time = 0.0;
+
+    bool m_has_last_step = false;
     /** Level of verbosity */
     inline static int m_verbose = 0;
     /** Relative transverse B field error tolerance in the predictor corrector loop
@@ -328,14 +258,6 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
-    /** index of the most downstream box to send that contains beam particles.
-     * Used to avoid send/recv for empty data */
-    int m_leftmost_box_snd = std::numeric_limits<int>::max();
-    /** index of the most downstream box to be received that contains beam particles.
-     * Used to avoid send/recv for empty data */
-    int m_leftmost_box_rcv = std::numeric_limits<int>::max();
-    /** Whether to skip communications of boxes that contain no beam particles */
-    int m_skip_empty_comms = false;
     /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 3;
     /** if the SALAME-only field should be computed exactly with plasma particles */
@@ -352,15 +274,6 @@ public:
     amrex::ParserExecutor<3> m_salame_target_func;
     /** Whether MPI communication buffers should be allocated in device memory */
     bool m_comms_buffer_on_gpu = false;
-    /** Arena for MPI communications */
-    amrex::Arena* m_comms_arena = nullptr;
-
-    /** \brief Check that the ghost beam particles are in the proper box, and invalidate
-     * those not in the right slice.
-     *
-     * \param[in] it Current box, the ghost slice of particles should be in the cell downstream.
-     */
-    void CheckGhostSlice (int it);
 
 private:
 
@@ -372,22 +285,19 @@ private:
 #endif
     /** hpmg solver for the explicit Bx and by solver */
     amrex::Vector<std::unique_ptr<hpmg::MultiGrid>> m_hpmg;
-private:
     /** Diagnostics */
     Diagnostic m_diags;
-
     /** User-input names of the binary collisions to be used */
     std::vector<std::string> m_collision_names;
     /** Vector of binary collisions */
     amrex::Vector< CoulombCollision > m_all_collisions;
 
-    /** \brief resizes the diagnostic fab to the correct box in a loop over boxes
-     *
-     * \param[in] it index of box to be resized to
-     * \param[in] step current time step
-     */
-    void ResizeFDiagFAB (const int it, const int step);
-    void FillDiagnostics (const int lev, int i_slice);
+    void InitDiagnostics (const int step);
+    void FillFieldDiagnostics (const int lev, int islice);
+    void FillBeamDiagnostics (const int step);
+    void WriteDiagnostics (const int step);
+    void FlushDiagnostics ();
+
     /** \brief get diagnostics Component names of Fields to output */
     amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); }
 
@@ -403,14 +313,11 @@ private:
      * as well as the plasma particle force terms.
      *
      * \param[in] islice longitudinal slice
-     * \param[in] islice_local local index of the slice
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] step current time step
      */
-    void PredictorCorrectorLoopToSolveBxBy (const int islice, const int islice_local,
-                                            const int current_N_level, const int step);
-
-    int leftmostBoxWithParticles () const;
+    void PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N_level,
+                                            const int step);
 };
 
 #endif

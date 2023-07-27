@@ -56,7 +56,7 @@ findParticlesInEachTile (
 
 BeamBins
 findBeamParticlesInEachTile (
-    amrex::Box bx, int bin_size, int islice_local,
+    amrex::Box bx, int bin_size,
     BeamParticleContainer& beam, const amrex::Geometry& geom)
 {
     HIPACE_PROFILE("findBeamParticlesInEachTile()");
@@ -66,17 +66,6 @@ findBeamParticlesInEachTile (
     const amrex::Box cbx = {{tcbx.smallEnd(0),tcbx.smallEnd(1),0}, {tcbx.bigEnd(0),tcbx.bigEnd(1),0}};
 
     BeamBins bins;
-
-    const int box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-
-    BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
-    BeamBins::index_type const * const slice_offsets = beam.m_slice_bins.offsetsPtrCpu();
-    BeamBins::index_type const
-        cell_start = slice_offsets[islice_local], cell_stop = slice_offsets[islice_local+1];
-    // The particles that are in slice islice_local are
-    // given by the indices[cell_start:cell_stop]
-
-    int const num_particles = cell_stop-cell_start;
 
     // Extract box properties
     const auto lo = lbound(cbx);
@@ -88,14 +77,13 @@ findBeamParticlesInEachTile (
 
     // Find the particles that are in each slice and return collections of indices per slice.
     bins.build(
-        num_particles, beam.getParticleTileData(), cbx,
+        beam.getNumParticles(WhichBeamSlice::This),
+        beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData(),
+        cbx,
         // Pass lambda function that returns the slice index
-        [=] AMREX_GPU_DEVICE (const BeamParticleContainer::ParticleTileDataType& pdt,
-                              unsigned int idx)
+        [=] AMREX_GPU_DEVICE (const BeamTile::ParticleType& p)
         noexcept -> amrex::IntVect
         {
-            auto p = pdt[indices[cell_start+idx] + box_offset];
-
             return amrex::IntVect(
                 AMREX_D_DECL(
                     static_cast<int>((p.pos(0)-plo[0])*dxi[0]-lo.x),
