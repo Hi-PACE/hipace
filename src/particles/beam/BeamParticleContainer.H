@@ -17,6 +17,8 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
+class AdaptiveTimeStep;
+
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
@@ -285,6 +287,8 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
+
+    friend AdaptiveTimeStep;
 };
 
 #endif
