@@ -166,7 +166,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, pos_mean_x, pos_mean_y, pos_mean_z,
-                            m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax, radius);
+                            m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax, m_radius);
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
