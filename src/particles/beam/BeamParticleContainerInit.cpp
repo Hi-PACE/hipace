@@ -260,7 +260,8 @@ InitBeamFixedWeight (int num_to_add,
                      const amrex::Real total_charge,
                      const amrex::Real z_foc,
                      const bool do_symmetrize,
-                     const bool can, const amrex::Real zmin, const amrex::Real zmax)
+                     const bool can, const amrex::Real zmin, const amrex::Real zmax,
+                     const amrex::Real radius)
 {
     HIPACE_PROFILE("BeamParticleContainer::InitParticles()");
     using namespace amrex::literals;
@@ -308,7 +309,8 @@ InitBeamFixedWeight (int num_to_add,
 
                 const amrex::Real z_central = z + z_mean;
                 int valid_id = pid;
-                if (z_central < zmin || z_central > zmax) valid_id = -1;
+                if (z_central < zmin || z_central > zmax ||
+                    x*x + y*y > radius*radius) valid_id = -1;
 
                 const amrex::Real cental_x_pos = pos_mean_x(z_central);
                 const amrex::Real cental_y_pos = pos_mean_y(z_central);

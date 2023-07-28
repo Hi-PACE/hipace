@@ -103,7 +103,8 @@ public:
                               const amrex::Real total_charge,
                               const amrex::Real z_foc,
                               const bool do_symmetrize,
-                              const bool can, const amrex::Real zmin, const amrex::Real zmax);
+                              const bool can, const amrex::Real zmin, const amrex::Real zmax,
+                              const amrex::Real radius);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
