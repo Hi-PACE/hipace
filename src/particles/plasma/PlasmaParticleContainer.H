@@ -111,8 +111,9 @@ public:
     void ReorderParticles (const int islice);
 
     /** Update m_density_func with m_density_table if applicable
+     * \param[in] pos_z z position to evaluate m_density_table
      */
-    void UpdateDensityFunction ();
+    void UpdateDensityFunction (const amrex::Real pos_z);
 
     /** \brief Store the finest level of every plasma particle in the cpu() attribute.
      * \param[in] current_N_level number of MR levels active on the current slice

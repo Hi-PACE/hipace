@@ -19,11 +19,11 @@
 
 void
 DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
-                     amrex::Vector<amrex::Geometry> const& gm, int const lev ,const int islice,
+                     amrex::Vector<amrex::Geometry> const& gm, int const lev,
                      const bool do_beam_jx_jy_deposition,
                      const bool do_beam_jz_deposition,
                      const bool do_beam_rhomjz_deposition,
-                     const int which_slice, int nghost, const bool only_highest)
+                     const int which_slice, const int which_beam_slice, const bool only_highest)
 {
     HIPACE_PROFILE("DepositCurrentSlice_BeamParticleContainer()");
 
@@ -46,6 +46,8 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
         "jx, jy, jz and rho must be nodal in all directions.");
 
+    if (!do_beam_jx_jy_deposition && !do_beam_jz_deposition && !do_beam_rhomjz_deposition) return;
+
     // we deposit to the beam currents, because the explicit solver
     // requires sometimes just the beam currents
     // Do not access the field if the kernel later does not deposit into it,
@@ -60,18 +62,10 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
     amrex::Real const y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
 
-    // Whether the ghost slice has to be deposited
-    const bool deposit_ghost = ((which_slice==WhichSlice::Next) && (islice == 0));
-    if (deposit_ghost && !do_beam_jx_jy_deposition) return;
-
-    // Ghost particles are indexed [beam.numParticles()-nghost, beam.numParticles()-1]
-    int box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-    if (deposit_ghost) box_offset = beam.numParticles()-nghost;
-
     PhysConst const phys_const = get_phys_const();
 
     // Extract particle properties
-    const auto ptd = beam.getParticleTileData();
+    const auto ptd = beam.getBeamSlice(which_beam_slice).getParticleTileData();
 
     // Extract box properties
     const amrex::Real dxi = gm[lev].InvCellSize(0);
@@ -95,38 +89,13 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     Array3<amrex::Real> const isl_arr = isl_fab.array();
 
-    BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
-    BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
-    BeamBins::index_type cell_start = 0;
-    BeamBins::index_type cell_stop = 0;
-
-    // The particles that are in slice islice are
-    // given by the indices[cell_start:cell_stop]
-    if (which_slice == WhichSlice::This || which_slice == WhichSlice::Salame) {
-        cell_start = offsets[islice];
-        cell_stop  = offsets[islice+1];
-    } else {
-        if (islice > 0) {
-            cell_start = offsets[islice-1];
-            cell_stop  = offsets[islice];
-        } else {
-            cell_start = 0;
-            cell_stop  = nghost;
-        }
-    }
-    int const num_particles = cell_stop-cell_start;
-
     // Loop over particles and deposit into jx_fab, jy_fab, and jz_fab
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
         {Hipace::m_depos_order_xy},
-        num_particles,
-        [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
+        beam.getNumParticles(which_beam_slice),
+        [=] AMREX_GPU_DEVICE (long ip, auto depos_order) {
             constexpr int depos_order_xy = depos_order.value;
-
-            // Particles in the same slice must be accessed through the bin sorter.
-            // Ghost particles are simply contiguous in memory.
-            const int ip = (deposit_ghost ? cell_start+idx : indices[cell_start+idx]) + box_offset;
 
             // Skip invalid particles and ghost particles not in the last slice
             // beam deposits only up to its finest level

@@ -13,15 +13,14 @@
 
 #include <AMReX_MultiFab.H>
 
-/** \brief Find particles that are in each slice, and return collections of indices per slice.
+/** \brief move particles that are not in WhichBeamSlice::This (including slipped) anymore
+ * to WhichBeamSlice::Next (slipped region) while also fully deleting invalid particles.
  *
- * Note that this does *not* rearrange particle arrays
- *
- * \param[in] bx 3d box in which particles are sorted per slice
  * \param[in] beam Beam particle container
+ * \param[in] slice longitudinal slice
  * \param[in] geom Geometry
  */
 void
-findParticlesInEachSlice (amrex::Box bx, BeamParticleContainer& beam, amrex::Geometry const& geom);
+shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geometry const& geom);
 
 #endif // HIPACE_SLICESORT_H_

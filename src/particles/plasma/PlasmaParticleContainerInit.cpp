@@ -60,14 +60,28 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& tile_box  = mfi.tilebox(box_nodal, box_grow);
+        amrex::Box tile_box  = mfi.tilebox(box_nodal, box_grow);
+
+        if (a_radius != std::numeric_limits<amrex::Real>::infinity()) {
+            amrex::IntVect lo_limit {
+                static_cast<int>(std::round((-a_radius - plo[0])/dx[0] - 2)),
+                static_cast<int>(std::round((-a_radius - plo[1])/dx[1] - 2)),
+                tile_box.smallEnd(2)
+            };
+            amrex::IntVect hi_limit {
+                static_cast<int>(std::round(( a_radius - plo[0])/dx[0] + 2)),
+                static_cast<int>(std::round(( a_radius - plo[1])/dx[1] + 2)),
+                tile_box.bigEnd(2)
+            };
+            tile_box &= amrex::Box(lo_limit, hi_limit, box_nodal);
+        }
 
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
-        UpdateDensityFunction();
-        auto density_func = m_density_func;
         const amrex::Real c_light = get_phys_const().c;
+        UpdateDensityFunction(c_light * Hipace::m_physical_time);
+        auto density_func = m_density_func;
         const amrex::Real c_t = c_light * Hipace::m_physical_time;
         const amrex::Real min_density = m_min_density;
 

@@ -9,7 +9,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.18.0)
-project(HiPACE VERSION 23.05)
+project(HiPACE VERSION 23.07)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -341,6 +341,12 @@ if(BUILD_TESTING)
 
             add_test(NAME collisions.SI.1Rank
                     COMMAND bash ${HiPACE_SOURCE_DIR}/tests/collisions.SI.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
+            add_test(NAME collisions_beam.SI.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/collisions_beam.SI.1Rank.sh
                             $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )

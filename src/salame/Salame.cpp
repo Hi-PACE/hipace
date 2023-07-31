@@ -12,8 +12,7 @@
 
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice,
-              const int islice_local)
+              bool& overloaded, const int current_N_level, const int step, const int islice)
 {
     HIPACE_PROFILE("SalameModule()");
 
@@ -79,7 +78,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         for (int lev=0; lev<current_N_level; ++lev) {
             // deposit SALAME beam jz
             hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
-                islice_local, false, true, false, WhichSlice::Salame);
+                false, true, false, WhichSlice::Salame, WhichBeamSlice::This);
         }
 
         for (int lev=0; lev<current_N_level; ++lev) {
@@ -130,7 +129,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             // deposit SALAME beam jz only on the highest level of each particle for SalameGetW,
             // since the most accurate field (on the highest level) is supposed to be flattened
             hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
-                islice_local, false, true, false, WhichSlice::Salame, true);
+                false, true, false, WhichSlice::Salame, WhichBeamSlice::This, true);
         }
 
         // W = (Ez_target - Ez_no_salame) / Ez_only_salame + 1
@@ -149,7 +148,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
                        << " Total weight is " << W_total << '\n';
 
-        SalameMultiplyBeamWeight(W, hipace, islice_local);
+        SalameMultiplyBeamWeight(W, hipace);
 
         // STEP 4: recompute Bx and By with the new SALAME beam weight.
         // This is done a bit overkill by depositing again. A linear combination of the available
@@ -160,7 +159,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
             // deposit beam jz
             hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
-                islice_local, false, true, false, WhichSlice::This);
+                false, true, false, WhichSlice::This, WhichBeamSlice::This);
 
             hipace->m_grid_current.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom[lev], lev, islice);
         }
@@ -399,32 +398,21 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
 }
 
 void
-SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace, const int islice)
+SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
 {
     for (int i=0; i<(hipace->m_multi_beam.get_nbeams()); i++) {
         auto& beam = hipace->m_multi_beam.getBeam(i);
 
         if (!beam.m_do_salame) continue;
 
-        const int box_offset = beam.m_box_sorter.boxOffsetsPtr()[beam.m_ibox];
-
-        auto& soa = beam.GetStructOfArrays(); // For id, momenta and weights
-        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data() + box_offset;
-        int * const idp = soa.GetIntData(BeamIdx::id).data() + box_offset;
-
-        BeamBins::index_type const * const indices = beam.m_slice_bins.permutationPtr();
-        BeamBins::index_type const * const offsets = beam.m_slice_bins.offsetsPtrCpu();
-
-        BeamBins::index_type cell_start = offsets[islice];
-        BeamBins::index_type cell_stop = offsets[islice+1];
-
-        int const num_particles = cell_stop-cell_start;
+        // For id and weights
+        auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
+        int * const idp = soa.GetIntData(BeamIdx::id).data();
 
         amrex::ParallelFor(
-            num_particles,
-            [=] AMREX_GPU_DEVICE (long idx) {
-                // Particles in the same slice must be accessed through the bin sorter
-                const int ip = indices[cell_start+idx];
+            beam.getNumParticles(WhichBeamSlice::This),
+            [=] AMREX_GPU_DEVICE (long ip) {
                 // Skip invalid particles and ghost particles not in the last slice
                 if (idp[ip] < 0) return;
 

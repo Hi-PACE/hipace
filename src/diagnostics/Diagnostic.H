@@ -133,16 +133,13 @@ public:
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *
      * \param[in] slice_dir slicing direction
-     * \param[in,out] box_3d local box to be possibly trimmed to a slice box
      * \param[in,out] domain_3d domain box to be possibly trimmed to a slice box
      * \param[in,out] rbox_3d real box to be possibly trimmed to a slice box
      */
-    void TrimIOBox (int slice_dir, amrex::Box& box_3d,
-                    amrex::Box& domain_3d, amrex::RealBox& rbox_3d);
+    void TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbox_3d);
 
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *
-     * \param[in] a_local_box box to which the FArrayBox of the diagnostics will be resized to
      * \param[in] a_domain box to which the Geometry of the diagnostics will be resized to
      * \param[in] lev MR level
      * \param[in] geom geometry of the full simulation domain
@@ -151,7 +148,7 @@ public:
      * \param[in] output_time physical time of current step
      * \param[in] max_time physical time of last step
      */
-    void ResizeFDiagFAB (const amrex::Box a_local_box, const amrex::Box a_domain, const int lev,
+    void ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
                          amrex::Geometry const& geom, int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time);
 

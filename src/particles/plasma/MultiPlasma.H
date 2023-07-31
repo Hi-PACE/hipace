@@ -71,7 +71,7 @@ public:
      * the max is taken across species AND include m_adaptive_density, giving a way to
      * specify a density to the adaptive time step calculator even with no plasma species.
      */
-    amrex::Real maxDensity (amrex::Real z) const;
+    amrex::Real maxDensity (amrex::Real z);
 
     /** \brief Gather field values and push particles
      *
@@ -122,16 +122,6 @@ public:
     /** returns number of plasma species */
     int GetNPlasmas() const {return m_nplasmas;}
 
-    /** Perform binary elastic Coulomb collision, inter- and/or intra-species.
-     *
-     * The algorithm implemented is that of [Perez et al., Phys. Plasmas 19, 083104 (2012)]
-     *
-     * \param[in] lev MR level
-     * \param[in] bx box on which plasma particles are sorted per-cell and collide together
-     * \param[in] geom Corresponding gemetry
-     */
-    void doCoulombCollision (int lev, amrex::Box bx, amrex::Geometry geom);
-
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
      */
@@ -166,22 +156,15 @@ public:
 
     int m_sort_bin_size {32}; /**< Tile size to sort plasma particles */
 
-    /** Number of binary collisions */
-    int m_ncollisions = 0;
-
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     int m_nplasmas = 0; /**< number of plasma containers */
 
     amrex::Vector<PlasmaBins> m_all_bins; /**< Logical tile bins for all plasma containers */
-private:
     amrex::Vector<std::string> m_names {"no_plasma"}; /**< names of all plasma containers */
+private:
     /** Background (hypothetical) density, used to compute the adaptive time step */
     amrex::Real m_adaptive_density = 0.;
 
-    /** User-input names of the binary collisions to be used */
-    std::vector<std::string> m_collision_names;
-    /** Vector of binary collisions */
-    amrex::Vector< CoulombCollision > m_all_collisions;
 };
 
 #endif // MULTIPLASMA_H_

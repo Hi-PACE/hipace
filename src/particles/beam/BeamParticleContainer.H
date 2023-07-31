@@ -24,12 +24,20 @@ struct BeamIdx
         x=0, y, z,  // position
         w,          // weight
         ux, uy, uz, // momentum
-        real_nattribs
+        real_nattribs_in_buffer,
+        real_nattribs=real_nattribs_in_buffer
     };
     enum {
-        id=0, cpu,
+        id=0,        // id
+        int_nattribs_in_buffer,
+        // cpu is not stored or communicated in MultiBuffer, only used temporarily per slice
+        cpu=int_nattribs_in_buffer,
         int_nattribs
     };
+};
+
+struct WhichBeamSlice {
+    enum beam_slice : int { Next=0, This, N };
 };
 
 using BeamTile = amrex::ParticleTile<
@@ -41,42 +49,23 @@ using BeamTile = amrex::ParticleTile<
         BeamIdx::int_nattribs
     >;
 
-struct BeamBins : amrex::DenseBins<
-        BeamTile::ParticleTileDataType> {
-
-    template<class...Args>
-    void build (Args&&...args) {
-        // call build function of the underlying DenseBins object
-        // with all of the arguments forwarded
-        amrex::DenseBins<BeamTile::ParticleTileDataType>::build(args...);
-
-        // after every build call copy offsets array form GPU to CPU
-        const auto offset_size = numBins() + 1;
-        const auto offsets_gpu = offsetsPtr();
-        m_offsets_cpu.resize(offset_size);
-#ifdef AMREX_USE_GPU
-        amrex::Gpu::dtoh_memcpy_async(m_offsets_cpu.dataPtr(), offsets_gpu,
-                                      offset_size * sizeof(index_type));
-        amrex::Gpu::streamSynchronize();
-#else
-        std::memcpy(m_offsets_cpu.dataPtr(), offsets_gpu,
-                    offset_size * sizeof(index_type));
-#endif
-    }
-
-    // get offsets array on the CPU
-    const index_type* offsetsPtrCpu () const noexcept { return m_offsets_cpu.dataPtr(); }
-
-    amrex::Vector<index_type> m_offsets_cpu;
-};
+using BeamTileInit = amrex::ParticleTile<
+        amrex::SoAParticle<
+            BeamIdx::real_nattribs_in_buffer,
+            BeamIdx::int_nattribs_in_buffer
+        >,
+        BeamIdx::real_nattribs_in_buffer,
+        BeamIdx::int_nattribs_in_buffer,
+        // use PolymorphicArenaAllocator to either use Pinned or Device memory at runtime
+        amrex::PolymorphicArenaAllocator
+    >;
 
 /** \brief Container for particles of 1 beam species. */
-class BeamParticleContainer : public BeamTile
+class BeamParticleContainer
 {
 public:
     /** Constructor */
     explicit BeamParticleContainer (std::string name) :
-        BeamTile(),
         m_name(name)
     {
         ReadParameters();
@@ -145,16 +134,74 @@ public:
 
     /** Compute reduced beam diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] islice_local local index of the slice
      */
-    void InSituComputeDiags (int islice, int islice_local);
+    void InSituComputeDiags (int islice);
+
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] geom Geometry object for the whole domain
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
+
+    /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
+     * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] which_slice slice to mark
+     */
+    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
+                     const int which_slice);
+
+    /** Returns elementary charge q_e (or -q_e for electrons). */
+    amrex::Real GetCharge () const {return m_charge;}
+
+    /** Returns mass of physical species */
+    amrex::Real GetMass () const {return m_mass;}
+
     std::string get_name () const {return m_name;}
+
+    void shiftBeamSlices () {
+        m_slice_permutation = (m_slice_permutation + 1) % WhichBeamSlice::N;
+        resize(WhichBeamSlice::Next, 0, 0);
+    }
+
+    BeamTile& getBeamSlice (int which_slice) {
+        return m_slices[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
+    }
+
+    const BeamTile& getBeamSlice (int which_slice) const {
+        return m_slices[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
+    }
+
+    int getNumParticles (int which_slice) const {
+        return m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
+    }
+
+    int getNumParticlesIncludingSlipped (int which_slice) const {
+        return m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
+    }
+
+    void resize (int which_slice, int num_particles, int num_slipped_particles);
+
+    BeamTileInit& getBeamInitSlice () {
+        return m_init_slice;
+    }
+
+    void intializeSlice(int slice, int which_slice);
+
+    unsigned long long getTotalNumParticles () const {
+        return m_total_num_particles;
+    }
+
+private:
+    int m_slice_permutation = 0;
+    std::array<BeamTile, WhichBeamSlice::N> m_slices {};
+    std::array<int, WhichBeamSlice::N> m_num_particles_without_slipped {};
+    std::array<int, WhichBeamSlice::N> m_num_particles_with_slipped {};
+    BeamTileInit m_init_slice {};
+    BoxSorter m_init_sorter;
+    unsigned long long m_total_num_particles = 0;
+public:
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
     bool m_do_z_push {true}; /**< Pushing beam particles in z direction */
@@ -162,29 +209,9 @@ public:
     bool m_do_radiation_reaction {false}; /**< whether to calculate radiation losses */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
-    int m_num_particles_on_upstream_ranks {0};
-    /** Used to sort and reorder the beam particles into boxes for pipelining */
-    BoxSorter m_box_sorter;
-    /** the index of the currently active box (level 0) */
-    int m_ibox {-1};
-    /** Used to bin beam particles to a slice within a box */
-    BeamBins m_slice_bins;
-
-    unsigned long long m_total_num_particles {0};
-
-    unsigned long long get_total_num_particles () const {return m_total_num_particles;}
-
-    /** \brief Store the finest level of every beam particle on which_slice in the cpu() attribute.
-     * \param[in] current_N_level number of MR levels active on the current slice
-     * \param[in] geom3D Geometry object for the whole domain
-     * \param[in] which_slice slice to mark
-     * \param[in] islice_local local index of the slice
-     * \param[in] nghost number of ghost particles
-     */
-    void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
-                     const int which_slice, const int islice_local, const int nghost);
-
-    amrex::Long TotalNumberOfParticles (bool only_valid=true, bool only_local=false) const;
+    /** Whether to reset the global ID incrementor to 1 before initializing this beam */
+    bool m_do_reset_id_init {false};
+    bool m_initialize_on_cpu {false};
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */
     int m_insitu_period {0};
