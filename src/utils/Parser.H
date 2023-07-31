@@ -253,10 +253,23 @@ namespace Parser
                                      << "', unclosed brace!\n";
                 AMREX_ALWAYS_ASSERT(pos_end != std::string::npos);
             }
-            const std::string parse_string = loc_str.substr(pos+1, pos_end-pos-1);
+            auto pos_start_trim = pos + 1;
+            auto pos_count_trim = pos_end - pos - 1;
+            // remove leading and trailing spaces
+            while (loc_str.at(pos_start_trim) == ' ' && pos_count_trim > 0) {
+                ++pos_start_trim;
+                --pos_count_trim;
+            }
+            while (loc_str.at(pos_start_trim + pos_count_trim - 1) == ' ' && pos_count_trim > 0) {
+                --pos_count_trim;
+            }
+            const std::string parse_string = loc_str.substr(pos_start_trim, pos_count_trim);
 
             amrex::ParmParse pp_my_constants("my_constants");
-            if (pp_my_constants.contains(parse_string.c_str())) {
+            if (pos_count_trim == 0) {
+                loc_str.replace(pos, pos_end-pos+1, "");
+            } else if (pp_my_constants.contains(parse_string.c_str())) {
+                // use my_constants directly (with recursive string parsing) if available
                 if (recursive_symbols.count(parse_string) != 0) {
                     amrex::ErrorStream() << "Expression '"
                                          << str
@@ -274,6 +287,7 @@ namespace Parser
                 recursive_symbols.erase(parse_string);
                 loc_str.replace(pos, pos_end-pos+1, parse_val);
             } else {
+                // else parse as number
                 double parse_val = 0.;
                 fillWithParser(parse_string, parse_val);
                 std::stringstream ss{};
