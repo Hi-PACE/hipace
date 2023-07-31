@@ -218,8 +218,10 @@ public:
     inline static bool m_do_beam_jx_jy_deposition = true;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
     inline static bool m_do_beam_jz_minus_rho = false;
-    /** Whether to deposit  rho (plasma) for diagnostics */
+    /** Whether to deposit rho (plasma) for diagnostics */
     inline static bool m_deposit_rho = false;
+    /** Whether to deposit rho for every individual plasma for diagnostics */
+    inline static bool m_deposit_rho_individual = false;
     /** Whether to use tiling for particle operations */
 #ifdef AMREX_USE_GPU
     inline static bool m_do_tiling = false;

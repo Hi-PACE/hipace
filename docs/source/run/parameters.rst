@@ -747,6 +747,11 @@ Field diagnostics
     Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
     If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
 
+* ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
+    This option works similar to ``hipace.deposit_rho``,
+    however the charge density from every plasma species will be deposited into individual fields
+    that are accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
+
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
 
