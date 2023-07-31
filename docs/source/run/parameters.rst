@@ -34,6 +34,8 @@ For a list of supported functions see the
 `AMReX documentation <https://amrex-codes.github.io/amrex/docs_html/Basics.html#parser>`__.
 Sometimes it is necessary to use double-quotes around expressions, especially when providing them
 as command line parameters. Multi-line expressions are allowed if surrounded by double-quotes.
+For input parameters of type `string` curly braces ``{}`` are needed to access ``my_constants``
+or to evaluate expressions with the parser, similar to Python f-strings.
 
 General parameters
 ------------------
