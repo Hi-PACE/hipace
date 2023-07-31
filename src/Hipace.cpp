@@ -521,16 +521,16 @@ Hipace::SolveOneSlice (int islice, int step)
         PredictorCorrectorLoopToSolveBxBy(islice, current_N_level, step);
     }
 
-    // get beam diagnostics after SALAME but before beam push
-    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
-    FillBeamDiagnostics(step);
-
     if (m_multi_beam.isSalameNow(step)) {
         // Modify the beam particle weights on this slice to flatten Ez.
         // As the beam current is modified, Bx and By are also recomputed.
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
                     m_salame_overloaded, current_N_level, step, islice);
     }
+
+    // get beam diagnostics after SALAME but before beam push
+    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
+    FillBeamDiagnostics(step);
 
     // copy fields to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
