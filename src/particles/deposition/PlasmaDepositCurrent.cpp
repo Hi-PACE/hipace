@@ -87,6 +87,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real charge_invvol = charge * invvol;
         const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
+        const amrex::Real laser_norm = (charge/pc.q_e) * (pc.m_e/mass)
+                                     * (charge/pc.q_e) * (pc.m_e/mass);
 
         int n_qsa_violation = 0;
         amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
@@ -196,9 +198,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 // calculate charge of the plasma particles
                 amrex::Real q_invvol = charge_invvol * ptd.rdata(PlasmaIdx::w)[ip];
                 amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
+                [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
                 if constexpr (can_ionize.value) {
                     q_invvol *= ptd.idata(PlasmaIdx::ion_lev)[ip];
                     q_mu0_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    laser_norm_ion *=
+                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
                 }
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
@@ -209,11 +214,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 if constexpr (use_laser.value) {
                     doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, laser_arr,
                                                         dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                    Aabssqp *= laser_norm_ion;
                 }
 
                 // calculate gamma/psi for plasma particles
                 const amrex::Real gamma_psi = 0.5_rt * (
-                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv // TODO: fix units
+                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
                     + vx_c * vx_c * clightinv * clightinv
                     + vy_c * vy_c * clightinv * clightinv
                     + 1._rt

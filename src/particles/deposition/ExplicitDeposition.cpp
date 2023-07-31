@@ -126,16 +126,18 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 amrex::Real Aabssqp = 0._rt;
                 // Rename variable for NVCC lambda capture to work
                 [[maybe_unused]] auto laser_arr = a_laser_arr;
+                [[maybe_unused]] auto laser_fac = a_laser_fac;
                 if constexpr (use_laser.value) {
                     // Its important that Aabssqp is first fully gathered and not used
                     // directly per cell like AabssqDxp and AabssqDyp
                     doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, laser_arr,
                                                      dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                    Aabssqp *= laser_fac * q_mass_ratio * q_mass_ratio;
                 }
 
                 // calculate gamma/psi for plasma particles
                 const amrex::Real gamma_psi = 0.5_rt * (
-                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv // TODO: fix units
+                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
                     + vx * vx
                     + vy * vy
                     + 1._rt
@@ -171,7 +173,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                         amrex::Real AabssqDxp = 0._rt;
                         amrex::Real AabssqDyp = 0._rt;
                         // Rename variables for NVCC lambda capture to work
-                        [[maybe_unused]] auto laser_fac = a_laser_fac;
                         [[maybe_unused]] auto clight = a_clight;
                         if constexpr (use_laser.value) {
                             // avoid going outside of domain
