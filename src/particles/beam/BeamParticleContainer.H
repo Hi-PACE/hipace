@@ -209,8 +209,6 @@ public:
      * Default is 0, meaning no output */
     int m_insitu_period {0};
 private:
-    static inline uint64_t m_id64 = 1;
-
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;
@@ -228,6 +226,7 @@ private:
     GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
     /** Density parser for fixed-ppc beam. Owns data for m_density_func */
     amrex::Parser m_density_parser;
+    uint64_t m_id64 = 1; /**< 64 bit ID to initialize many particles without overflowing */
 
     // fixed_weight:
 
