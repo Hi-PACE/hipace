@@ -436,9 +436,7 @@ Hipace::SolveOneSlice (int islice, int step)
         m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
     }
 
-    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
     m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
-    FillBeamDiagnostics(step);
 
     if (m_N_level > 1) {
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This);
@@ -529,6 +527,10 @@ Hipace::SolveOneSlice (int islice, int step)
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
                     m_salame_overloaded, current_N_level, step, islice);
     }
+
+    // get beam diagnostics after SALAME but before beam push
+    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
+    FillBeamDiagnostics(step);
 
     // copy fields to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
