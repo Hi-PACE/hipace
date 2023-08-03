@@ -212,8 +212,6 @@ private:
 
     /** if the lasers are initialized from openPMD file */
     bool m_laser_from_file = false;
-    /** if the input file was already read */
-    bool m_input_file_is_read = false;
     /** full 3D laser data stored on the host */
     amrex::FArrayBox m_F_input_file;
     /** path to input openPMD file */

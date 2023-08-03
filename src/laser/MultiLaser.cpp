@@ -138,6 +138,21 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
             FFTW_BACKWARD, FFTW_ESTIMATE);
 #endif
     }
+
+    if (m_laser_from_file) {
+        if (Hipace::HeadRank()) {
+            m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
+            GetEnvelopeFromFileHelper(m_laser_geom_3D);
+        }
+#ifdef AMREX_USE_MPI
+        // need to communicate m_lambda0 as it is read in from the input file only by the head rank
+        MPI_Bcast(&m_lambda0,
+            1,
+            amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
+            amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+            amrex::ParallelDescriptor::Communicator());
+#endif
+    }
 }
 
 void
@@ -148,11 +163,6 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
     HIPACE_PROFILE("MultiLaser::InitSliceEnvelope()");
 
     if (m_laser_from_file) {
-        if (!m_input_file_is_read) {
-            m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-            GetEnvelopeFromFileHelper(m_laser_geom_3D);
-            m_input_file_is_read = true;
-        }
         amrex::Box src_box = m_slice_box;
         src_box.setSmall(2, islice);
         src_box.setBig(2, islice);
