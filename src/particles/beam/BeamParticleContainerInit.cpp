@@ -303,14 +303,14 @@ InitBeamFixedWeight (int num_to_add,
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0],u[1],u[2], engine, z, duz_per_uz0_dzeta);
 
-                // Propagate each electron ballistically for z_foc
-                x -= z_foc*u[0]/get_momentum.m_u_mean[2];
-                y -= z_foc*u[1]/get_momentum.m_u_mean[2];
-
                 const amrex::Real z_central = z + z_mean;
                 int valid_id = pid;
                 if (z_central < zmin || z_central > zmax ||
                     x*x + y*y > radius*radius) valid_id = -1;
+
+                // Propagate each electron ballistically for z_foc
+                x -= z_foc*u[0]/get_momentum.m_u_mean[2];
+                y -= z_foc*u[1]/get_momentum.m_u_mean[2];
 
                 const amrex::Real cental_x_pos = pos_mean_x(z_central);
                 const amrex::Real cental_y_pos = pos_mean_y(z_central);

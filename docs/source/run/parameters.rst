@@ -433,6 +433,10 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.zmax`` (`float`) (default `infinity`)
     Maximum in `z` at which particles are injected.
 
+* ``<beam name>.radius`` (`float`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
+
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
     the specific Ionization Energy of each state.
@@ -526,10 +530,6 @@ Option: ``fixed_ppc``
 
 * ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
-
-* ``<beam name>.radius`` (`float`)
-    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
-    injected.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam.
