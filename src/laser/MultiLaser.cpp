@@ -87,7 +87,7 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
 
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
-    int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+    int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     m_slices.define(
         slice_ba, slice_dm, WhichLaserSlice::N, m_slices_nguards,
@@ -489,8 +489,9 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step)
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        acoeff_real.resize(bx, 1, amrex::The_Arena());
-        rhs_mg.resize(bx, 2, amrex::The_Arena());
+        // need one ghost cell for 2^n-1 MG solve
+        acoeff_real.resize(mfi.growntilebox(amrex::IntVect{1, 1, 0}), 1, amrex::The_Arena());
+        rhs_mg.resize(mfi.growntilebox(amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
         Array3<amrex::Real> arr = m_slices.array(mfi);
         Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
         Array3<amrex::Real> acoeff_real_arr = acoeff_real.array();
