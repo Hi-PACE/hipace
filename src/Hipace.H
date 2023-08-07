@@ -234,7 +234,7 @@ public:
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
     inline static amrex::Real m_MG_tolerance_rel = 1.e-4;
     /** Absolute tolerance for the multigrid solver, when using the explicit solver */
-    inline static amrex::Real m_MG_tolerance_abs = 0.;
+    inline static amrex::Real m_MG_tolerance_abs = std::numeric_limits<amrex::Real>::min();
     /** Level of verbosity for the MG solver */
     inline static int m_MG_verbose = 0;
     /** Whether to use amrex MLMG solver */
