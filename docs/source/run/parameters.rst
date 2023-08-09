@@ -96,13 +96,6 @@ General parameters
 * ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
     If the loop over depos_order is included in the loop over particles.
 
-* ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
-    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
-    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
-    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
-    fail otherwise. As an example, a simulation with `2048 x 2048 x 2048` grid points
-    requires ``hipace.beam_injection_cr = 8``.
-
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
     Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
     ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
@@ -732,7 +725,8 @@ Field diagnostics
     For the explicit solver, the current and charge densities of the beam and
     for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
-    to be available as a diagnostic.
+    to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
+    the charge density of that plasma species will be separately available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
@@ -746,6 +740,11 @@ Field diagnostics
     If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
     Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
     If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
+* ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
+    This option works similar to ``hipace.deposit_rho``,
+    however the charge density from every plasma species will be deposited into individual fields
+    that are accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^

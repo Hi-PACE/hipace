@@ -60,73 +60,46 @@ namespace
 
 void
 BeamParticleContainer::
-InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
-                  const GetInitialDensity& get_density,
-                  const GetInitialMomentum& get_momentum,
-                  const amrex::Geometry& a_geom,
-                  const amrex::Real a_zmin,
-                  const amrex::Real a_zmax,
-                  const amrex::Real a_radius,
-                  const amrex::RealVect a_position_mean,
-                  const amrex::Real a_min_density,
-                  const amrex::Vector<int>& random_ppc)
+InitBeamFixedPPC3D ()
 {
-    HIPACE_PROFILE("BeamParticleContainer::InitParticles()");
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedPPC3D()");
 
     if (!Hipace::HeadRank()) { return; }
 
-    const amrex::IntVect ncells = a_geom.Domain().length();
-    amrex::Long ncells_total = (amrex::Long) ncells[0] * ncells[1] * ncells[2];
-    if ( ncells_total / Hipace::m_beam_injection_cr / Hipace::m_beam_injection_cr
-         > std::numeric_limits<int>::max() / 100 ){
-        amrex::Print()<<"WARNING: the number of cells is close to overflowing the maximum int,\n";
-        amrex::Print()<<"consider using a larger hipace.beam_injection_cr\n";
-    }
+    const amrex::Geometry geom_3D = Hipace::GetInstance().m_3D_geom[0];
+    const amrex::Box domain_box = geom_3D.Domain();
+    const auto dx = geom_3D.CellSizeArray();
+    const auto plo = geom_3D.ProbLoArray();
 
-    // Since each box is allows to be very large, its number of cells may exceed the largest
-    // int (~2.e9). To avoid this, we use a coarsened box (the coarsening ratio is cr, see below)
-    // to inject particles. This is just a trick to have fewer cells, it injects the same
-    // by using fewer larger cells and more particles per cell.
-    amrex::IntVect cr {Hipace::m_beam_injection_cr,Hipace::m_beam_injection_cr,1};
-    AMREX_ALWAYS_ASSERT(cr[AMREX_SPACEDIM-1] == 1);
-    auto dx = a_geom.CellSizeArray();
-    for (int i=0; i<AMREX_SPACEDIM; i++) dx[i] *= cr[i];
-    const auto plo = a_geom.ProbLoArray();
+    const amrex::IntVect ppc = m_ppc;
+    const int num_ppc = ppc[0] * ppc[1] * ppc[2];
 
-    amrex::IntVect ppc_cr = a_num_particles_per_cell;
-    for (int i=0; i<AMREX_SPACEDIM; i++) ppc_cr[i] *= cr[i];
+    const amrex::Real x_mean = m_position_mean[0];
+    const amrex::Real y_mean = m_position_mean[1];
+    const amrex::Real z_min = m_zmin;
+    const amrex::Real z_max = m_zmax;
+    const amrex::Real radius = m_radius;
+    const amrex::Real min_density = m_min_density;
+    const amrex::GpuArray<int, 3> rand_ppc {m_random_ppc[0], m_random_ppc[1], m_random_ppc[2]};
 
-    const int num_ppc = AMREX_D_TERM( ppc_cr[0], *ppc_cr[1], *ppc_cr[2]);
+    const GetInitialDensity get_density = m_get_density;
 
-    const amrex::Real scale_fac = Hipace::m_normalized_units ?
-        1./num_ppc*cr[0]*cr[1]*cr[2] : dx[0]*dx[1]*dx[2]/num_ppc;
-
-    const amrex::Real x_mean = a_position_mean[0];
-    const amrex::Real y_mean = a_position_mean[1];
-
-    // First: loop over all cells, and count the particles effectively injected.
-    amrex::Box domain_box = a_geom.Domain();
-    domain_box.coarsen(cr);
-    const auto lo = amrex::lbound(domain_box);
-    const auto hi = amrex::ubound(domain_box);
-
-    amrex::Gpu::DeviceVector<unsigned int> counts(domain_box.numPts(), 0);
-    unsigned int* pcount = counts.dataPtr();
-
-    amrex::Gpu::DeviceVector<unsigned int> offsets(domain_box.numPts());
-    unsigned int* poffset = offsets.dataPtr();
-
-    const amrex::GpuArray<int, 3> rand_ppc {random_ppc[0], random_ppc[1], random_ppc[2]};
-
-    amrex::ParallelForRNG(
-        domain_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
+    amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
+    amrex::ReduceData<uint64_t> reduce_data(reduce_op);
+    using ReduceTuple = typename decltype(reduce_data)::Type;
+    reduce_op.eval(
+        domain_box.numPts(), reduce_data,
+        [=] AMREX_GPU_DEVICE (amrex::Long idx) -> ReduceTuple
         {
+            auto [i, j, k] = domain_box.atOffset3d(idx).arr;
+
+            uint64_t count = 0;
+
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
                 amrex::Real r[3];
 
-                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part, engine, rand_ppc);
+                ParticleUtil::get_position_unit_cell(r, ppc, i_part);
 
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
@@ -135,8 +108,8 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                 if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false ) {
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
-                    if (z >= a_zmax || z < a_zmin ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > a_radius*a_radius) {
+                    if (z >= z_max || z < z_min ||
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius*radius) {
                             continue;
                         }
                 } else {
@@ -145,82 +118,147 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                     amrex::Real xc = plo[0]+i*dx[0];
                     amrex::Real yc = plo[1]+j*dx[1];
                     amrex::Real zc = plo[2]+k*dx[2];
-                    if (zc >= a_zmax || zc < a_zmin ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > a_radius*a_radius) {
+                    if (zc >= z_max || zc < z_min ||
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius*radius) {
                             continue;
                         }
                 }
 
                 const amrex::Real density = get_density(x, y, z);
-                if (density < a_min_density) continue;
+                if (density < min_density) continue;
 
-                int ix = i - lo.x;
-                int iy = j - lo.y;
-                int iz = k - lo.z;
-                int nx = hi.x-lo.x+1;
-                int ny = hi.y-lo.y+1;
-                int nz = hi.z-lo.z+1;
-                unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
-                unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
-                unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
-                unsigned int cellid = (uix * ny + uiy) * nz + uiz;
-                pcount[cellid] += 1;
+                ++count;
             }
+
+            return {count};
         });
 
-        int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
+    ReduceTuple a = reduce_data.value();
+    m_total_num_particles = amrex::get<0>(a);
+}
 
-        // Second: allocate the memory for these particles
-        auto& particle_tile = getBeamInitSlice();
+void
+BeamParticleContainer::
+InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedPPCSlice()");
 
-        auto old_size = particle_tile.size();
-        auto new_size = old_size + num_to_add;
-        particle_tile.resize(new_size);
+    if (!Hipace::HeadRank()) { return; }
 
-        if (num_to_add == 0) return;
+    const amrex::Geometry geom_3D = Hipace::GetInstance().m_3D_geom[0];
+    const amrex::Geometry slice_geom = Hipace::GetInstance().m_slice_geom[0];
+    const amrex::Box slice_box = slice_geom.Domain();
+    const auto dx = geom_3D.CellSizeArray();
+    const auto plo = geom_3D.ProbLoArray();
 
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata =
-            particle_tile.GetStructOfArrays().realarray();
+    const amrex::IntVect ppc = m_ppc;
+    const int num_ppc = ppc[0] * ppc[1] * ppc[2];
 
-        amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
-            particle_tile.GetStructOfArrays().intarray();
+    const amrex::Real scale_fac = Hipace::m_normalized_units ?
+        1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
 
-        const int pid = BeamTileInit::ParticleType::NextID();
-        BeamTileInit::ParticleType::NextID(pid + num_to_add);
+    const amrex::Real x_mean = m_position_mean[0];
+    const amrex::Real y_mean = m_position_mean[1];
+    const amrex::Real z_min = m_zmin;
+    const amrex::Real z_max = m_zmax;
+    const amrex::Real radius = m_radius;
+    const amrex::Real min_density = m_min_density;
+    const amrex::GpuArray<int, 3> rand_ppc {m_random_ppc[0], m_random_ppc[1], m_random_ppc[2]};
 
-        PhysConst phys_const = get_phys_const();
+    const GetInitialDensity get_density = m_get_density;
+    const GetInitialMomentum get_momentum = m_get_momentum;
 
-        amrex::ParallelForRNG(domain_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
+    // First: loop over all cells, and count the particles effectively injected.
+
+    amrex::Gpu::DeviceVector<int> counts(slice_box.numPts(), 0);
+    const Array2<int> count_arr {{counts.dataPtr(), amrex::begin(slice_box),
+                                  amrex::end(slice_box), 1}};
+
+    amrex::Gpu::DeviceVector<int> offsets(slice_box.numPts());
+    const Array2<int> offset_arr {{offsets.dataPtr(), amrex::begin(slice_box),
+                                   amrex::end(slice_box), 1}};
+
+    amrex::ParallelForRNG(slice_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int, const amrex::RandomEngine& engine) noexcept
         {
-            int ix = i - lo.x;
-            int iy = j - lo.y;
-            int iz = k - lo.z;
-            int nx = hi.x-lo.x+1;
-            int ny = hi.y-lo.y+1;
-            int nz = hi.z-lo.z+1;
-            unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
-            unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
-            unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
-            unsigned int cellid = (uix * ny + uiy) * nz + uiz;
+            int count = 0;
 
-            int pidx = int(poffset[cellid] - poffset[0]);
+            for (int i_part=0; i_part<num_ppc;i_part++)
+            {
+                amrex::Real r[3];
+
+                ParticleUtil::get_position_unit_cell(r, ppc, i_part, engine, rand_ppc);
+
+                amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                amrex::Real z = plo[2] + (islice + r[2])*dx[2];
+
+                if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false ) {
+                    // If particles are evenly spaced, discard particles
+                    // individually if they are out of bounds
+                    if (z >= z_max || z < z_min ||
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius*radius) {
+                            continue;
+                        }
+                } else {
+                    // If particles are randomly spaced, discard particles
+                    // if the cell is outside the domain
+                    amrex::Real xc = plo[0]+i*dx[0];
+                    amrex::Real yc = plo[1]+j*dx[1];
+                    amrex::Real zc = plo[2]+islice*dx[2];
+                    if (zc >= z_max || zc < z_min ||
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius*radius) {
+                            continue;
+                        }
+                }
+
+                const amrex::Real density = get_density(x, y, z);
+                if (density < min_density) continue;
+
+                ++count;
+            }
+
+            count_arr(i, j) = count;
+        });
+
+    int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
+
+    // Second: allocate the memory for these particles
+    resize(which_beam_slice, num_to_add, 0);
+    if (num_to_add == 0) return;
+    auto& particle_tile = getBeamSlice(which_beam_slice);
+
+    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+        particle_tile.GetStructOfArrays().realarray();
+
+    amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+        particle_tile.GetStructOfArrays().intarray();
+
+    const uint64_t pid = m_id64;
+    m_id64 += num_to_add;
+
+    const amrex::Real speed_of_light = get_phys_const().c;
+
+    amrex::ParallelForRNG(slice_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int, const amrex::RandomEngine& engine) noexcept
+        {
+            int pidx = offset_arr(i, j);
 
             for (int i_part=0; i_part<num_ppc;i_part++)
             {
                 amrex::Real r[3] = {0.,0.,0.};
 
-                ParticleUtil::get_position_unit_cell(r, ppc_cr, i_part, engine, rand_ppc);
+                ParticleUtil::get_position_unit_cell(r, ppc, i_part, engine, rand_ppc);
 
                 amrex::Real x = plo[0] + (i + r[0])*dx[0];
                 amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
+                amrex::Real z = plo[2] + (islice + r[2])*dx[2];
 
                 if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false) {
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
-                    if (z >= a_zmax || z < a_zmin ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > a_radius*a_radius) {
+                    if (z >= z_max || z < z_min ||
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius*radius) {
                             continue;
                         }
                 } else {
@@ -228,22 +266,37 @@ InitBeamFixedPPC (const amrex::IntVect& a_num_particles_per_cell,
                     // if the cell is outside the domain
                     amrex::Real xc = plo[0]+i*dx[0];
                     amrex::Real yc = plo[1]+j*dx[1];
-                    amrex::Real zc = plo[2]+k*dx[2];
-                    if (zc >= a_zmax || zc < a_zmin ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > a_radius*a_radius) {
+                    amrex::Real zc = plo[2]+islice*dx[2];
+                    if (zc >= z_max || zc < z_min ||
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius*radius) {
                             continue;
                         }
                 }
 
                 const amrex::Real density = get_density(x, y, z);
-                if (density < a_min_density) continue;
+                if (density < min_density) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
-                get_momentum(u[0],u[1],u[2], engine);
+                get_momentum(u[0], u[1], u[2], engine);
 
                 const amrex::Real weight = density * scale_fac;
-                AddOneBeamParticle(rarrdata, iarrdata, x, y, z, u[0], u[1], u[2], weight,
-                                   pid, pidx, phys_const.c);
+
+                rarrdata[BeamIdx::x  ][pidx] = x;
+                rarrdata[BeamIdx::y  ][pidx] = y;
+                rarrdata[BeamIdx::z  ][pidx] = z;
+                rarrdata[BeamIdx::ux ][pidx] = u[0] * speed_of_light;
+                rarrdata[BeamIdx::uy ][pidx] = u[1] * speed_of_light;
+                rarrdata[BeamIdx::uz ][pidx] = u[2] * speed_of_light;
+                rarrdata[BeamIdx::w  ][pidx] = std::abs(weight);
+
+                // ensure id is always valid
+                // it will repeat if there are more than 2^31-1 particles
+                int id = int((pid + pidx) & ((1ull << 31) - 1));
+                if (id == 0) id = 1;
+
+                iarrdata[BeamIdx::id ][pidx] = id;
+                iarrdata[BeamIdx::cpu][pidx] = 0;
+
                 ++pidx;
             }
         });

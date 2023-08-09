@@ -83,6 +83,11 @@ Fields::AllocData (
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
             }
+            if (Hipace::m_deposit_rho_individual) {
+                for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+                    Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
+                }
+            }
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
@@ -122,6 +127,11 @@ Fields::AllocData (
             }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
+            }
+            if (Hipace::m_deposit_rho_individual) {
+                for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+                    Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
+                }
             }
 
             isl = WhichSlice::Previous;
@@ -504,11 +514,7 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
 {
     HIPACE_PROFILE("Fields::InitializeSlices()");
 
-    const bool explicit_solve = Hipace::GetInstance().m_explicit;
-    const bool deposit_rho = Hipace::GetInstance().m_deposit_rho;
-    const bool use_laser = Hipace::GetInstance().m_use_laser;
-
-    if (explicit_solve) {
+    if (Hipace::m_explicit) {
         if (lev != 0 && islice == geom[lev].Domain().bigEnd(Direction::z)) {
             // first slice of lev (islice goes backwards)
             // iterpolate jx_beam and jy_beam from lev-1 to lev
@@ -527,9 +533,6 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
         setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
             "Bz", "Psi", "jz_beam", "rhomjz");
         setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
-        if (deposit_rho) {
-            setVal(0., lev, WhichSlice::This, "rho");
-        }
     } else {
         if (lev != 0 && islice == geom[lev].Domain().bigEnd(Direction::z)) {
             // first slice of lev (islice goes backwards)
@@ -543,11 +546,16 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
         }
         setVal(0., lev, WhichSlice::This,
             "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
-        if (use_laser) {
+        if (Hipace::m_use_laser) {
             setVal(0., lev, WhichSlice::This, "chi");
         }
-        if (deposit_rho) {
-            setVal(0., lev, WhichSlice::This, "rho");
+    }
+    if (Hipace::m_deposit_rho) {
+        setVal(0., lev, WhichSlice::This, "rho");
+    }
+    if (Hipace::m_deposit_rho_individual) {
+        for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+            setVal(0., lev, WhichSlice::This, "rho_" + plasma_name);
         }
     }
 }

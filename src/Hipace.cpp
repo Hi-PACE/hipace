@@ -89,11 +89,12 @@ Hipace::Hipace () :
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
-    queryWithParser(pph, "beam_injection_cr", m_beam_injection_cr);
     queryWithParser(pph, "do_beam_jx_jy_deposition", m_do_beam_jx_jy_deposition);
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
     m_deposit_rho = m_diags.needsRho();
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
+    m_deposit_rho_individual = m_diags.needsRhoIndividual();
+    queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
     queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
@@ -436,9 +437,7 @@ Hipace::SolveOneSlice (int islice, int step)
         m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
     }
 
-    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
     m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
-    FillBeamDiagnostics(step);
 
     if (m_N_level > 1) {
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This);
@@ -460,16 +459,16 @@ Hipace::SolveOneSlice (int islice, int step)
 
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
-            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
-                true, false, m_deposit_rho, true, true, m_3D_geom, lev);
+            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This, true, false,
+                m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
                 false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
-            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This,
-                true, true, m_deposit_rho, m_use_laser, true, m_3D_geom, lev);
+            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This, true, true,
+                m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
@@ -529,6 +528,10 @@ Hipace::SolveOneSlice (int islice, int step)
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
                     m_salame_overloaded, current_N_level, step, islice);
     }
+
+    // get beam diagnostics after SALAME but before beam push
+    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
+    FillBeamDiagnostics(step);
 
     // copy fields to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
