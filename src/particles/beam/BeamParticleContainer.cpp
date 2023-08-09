@@ -109,6 +109,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Real zmax = std::numeric_limits<amrex::Real>::infinity();
         std::string profile = "gaussian";
         queryWithParser(pp, "profile", profile);
+        queryWithParser(pp, "radius", m_radius);
         if (profile == "can") {
             can = true;
             getWithParser(pp, "zmin", zmin);
@@ -162,7 +163,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         const GetInitialMomentum get_momentum(m_name);
         InitBeamFixedWeight(m_num_particles, get_momentum, pos_mean_x, pos_mean_y, pos_mean_z,
-                            m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax);
+                            m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax, m_radius);
         m_total_num_particles = getBeamInitSlice().size();
 
     } else if (m_injection_type == "from_file") {

@@ -96,7 +96,8 @@ public:
                               const amrex::Real total_charge,
                               const amrex::Real z_foc,
                               const bool do_symmetrize,
-                              const bool can, const amrex::Real zmin, const amrex::Real zmax);
+                              const bool can, const amrex::Real zmin, const amrex::Real zmax,
+                              const amrex::Real radius);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
@@ -218,7 +219,7 @@ private:
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
     amrex::Real m_zmin; /**< Min longitudinal particle position of the beam */
     amrex::Real m_zmax; /**< Max longitudinal particle position of the beam */
-    amrex::Real m_radius; /**< Radius of the can beam */
+    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< Radius of the beam */
     amrex::RealVect m_position_mean {0., 0., 0.}; /**< mean position of the beam */
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     amrex::IntVect m_random_ppc {0, 0, 0}; /**< if the cell position is random in each direction */
