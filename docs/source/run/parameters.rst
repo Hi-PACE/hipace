@@ -96,13 +96,6 @@ General parameters
 * ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
     If the loop over depos_order is included in the loop over particles.
 
-* ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
-    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
-    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
-    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
-    fail otherwise. As an example, a simulation with `2048 x 2048 x 2048` grid points
-    requires ``hipace.beam_injection_cr = 8``.
-
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
     Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
     ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
