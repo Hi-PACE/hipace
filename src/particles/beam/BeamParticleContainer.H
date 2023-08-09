@@ -17,6 +17,8 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 
+class AdaptiveTimeStep;
+
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
@@ -81,17 +83,8 @@ public:
     amrex::Real InitData (const amrex::Geometry& geom);
 
     /** Initialize a beam with a fix number of particles per cell */
-    void InitBeamFixedPPC (
-        const amrex::IntVect&  a_num_particles_per_cell,
-        const GetInitialDensity& get_density,
-        const GetInitialMomentum& get_momentum,
-        const amrex::Geometry& a_geom,
-        const amrex::Real     a_zmin,
-        const amrex::Real     a_zmax,
-        const amrex::Real     a_radius,
-        const amrex::RealVect a_position_mean,
-        const amrex::Real     a_min_density,
-        const amrex::Vector<int>& random_ppc);
+    void InitBeamFixedPPC3D ();
+    void InitBeamFixedPPCSlice (const int islice, const int which_beam_slice);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
     void InitBeamFixedWeight (int num_to_add,
@@ -189,7 +182,7 @@ public:
 
     void intializeSlice(int slice, int which_slice);
 
-    unsigned long long getTotalNumParticles () const {
+    uint64_t getTotalNumParticles () const {
         return m_total_num_particles;
     }
 
@@ -200,7 +193,7 @@ private:
     std::array<int, WhichBeamSlice::N> m_num_particles_with_slipped {};
     BeamTileInit m_init_slice {};
     BoxSorter m_init_sorter;
-    unsigned long long m_total_num_particles = 0;
+    uint64_t m_total_num_particles = 0;
 public:
     amrex::Real m_charge; /**< charge of each particle of this species */
     amrex::Real m_mass; /**< mass of each particle of this species */
@@ -217,28 +210,42 @@ public:
     int m_insitu_period {0};
 private:
     std::string m_name; /**< name of the species */
+    /** injection type, fixed_width or fixed_ppc */
+    std::string m_injection_type;
+
+    // fixed_ppc:
+
+    amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
     amrex::Real m_zmin; /**< Min longitudinal particle position of the beam */
     amrex::Real m_zmax; /**< Max longitudinal particle position of the beam */
     amrex::Real m_radius; /**< Radius of the can beam */
-    amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
+    amrex::RealVect m_position_mean {0., 0., 0.}; /**< mean position of the beam */
+    amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
+    amrex::IntVect m_random_ppc {0, 0, 0}; /**< if the cell position is random in each direction */
+    GetInitialDensity m_get_density {}; /**< density profile of the beam */
+    GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
+    /** Density parser for fixed-ppc beam. Owns data for m_density_func */
+    amrex::Parser m_density_parser;
+    uint64_t m_id64 = 1; /**< 64 bit ID to initialize many particles without overflowing */
+
+    // fixed_weight:
+
     /** Average x position of the fixed-weight beam depending on z */
     amrex::Parser m_pos_mean_x_parser;
     /** Average y position of the fixed-weight beam depending on z */
     amrex::Parser m_pos_mean_y_parser;
-    /** Density parser for fixed-ppc beam. Owns data for m_density_func */
-    amrex::Parser m_density_parser;
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
     /** Distance at which the beam is focused, starting from its initial position */
     amrex::Real m_z_foc {0.};
     amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
-    /** injection type, fixed_width or fixed_ppc */
-    std::string m_injection_type;
     int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
-    amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
+
+    // from_file:
+
     /** Density of plasma to convert from_file beam to normalized units */
     amrex::Real m_plasma_density = 0;
     std::string m_input_file; /**< Path to bean input file */
@@ -246,6 +253,9 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name; /**< the name of the particle species in the beam file */
+
+    // insitu:
+
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
     int m_insitu_nrp {18};
@@ -276,6 +286,9 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
+
+    // to estimate min uz
+    friend AdaptiveTimeStep;
 };
 
 #endif

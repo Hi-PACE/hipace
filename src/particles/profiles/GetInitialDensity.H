@@ -22,6 +22,7 @@ struct GetInitialDensity
 {
     /** Constructor.
      */
+    GetInitialDensity () = default;
     GetInitialDensity (const std::string& name, amrex::Parser& parser);
 
     /** \brief returns the density for a beam particle at a given position

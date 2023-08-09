@@ -228,9 +228,6 @@ public:
 #else
     inline static bool m_do_tiling = true;
 #endif
-    /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
-     * Otherwise, changing this parameter only will not affect the simulation results. */
-    inline static int m_beam_injection_cr = 1;
     /** Whether the explicit field solver is used */
     inline static bool m_explicit = true;
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
