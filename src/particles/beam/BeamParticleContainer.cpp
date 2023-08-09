@@ -104,22 +104,19 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
     } else if (m_injection_type == "fixed_weight") {
 
-        bool can = false;
-        amrex::Real zmin = -std::numeric_limits<amrex::Real>::infinity();
-        amrex::Real zmax = std::numeric_limits<amrex::Real>::infinity();
         std::string profile = "gaussian";
         queryWithParser(pp, "profile", profile);
         queryWithParser(pp, "radius", m_radius);
         if (profile == "can") {
-            can = true;
-            getWithParser(pp, "zmin", zmin);
-            getWithParser(pp, "zmax", zmax);
+            m_can_profile = true;
+            getWithParser(pp, "zmin", m_zmin);
+            getWithParser(pp, "zmax", m_zmax);
         } else if (profile == "gaussian") {
-            queryWithParser(pp, "zmin", zmin);
-            queryWithParser(pp, "zmax", zmax);
+            queryWithParser(pp, "zmin", m_zmin);
+            queryWithParser(pp, "zmax", m_zmax);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_do_salame ||
-                (zmin != -std::numeric_limits<amrex::Real>::infinity() &&
-                 zmax !=  std::numeric_limits<amrex::Real>::infinity()),
+                (m_zmin != -std::numeric_limits<amrex::Real>::infinity() &&
+                 m_zmax !=  std::numeric_limits<amrex::Real>::infinity()),
                 "For the SALAME algorithm it is mandatory to either use a 'can' profile or "
                 "'zmin' and 'zmax' with a gaussian profile");
         } else {
@@ -129,10 +126,9 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         std::array<std::string, 3> pos_mean_arr{"","",""};
         getWithParser(pp, "position_mean", pos_mean_arr);
         queryWithParser(pp, "z_foc", m_z_foc);
-        auto pos_mean_x = makeFunctionWithParser<1>(pos_mean_arr[0], m_pos_mean_x_parser, {"z"});
-        auto pos_mean_y = makeFunctionWithParser<1>(pos_mean_arr[1], m_pos_mean_y_parser, {"z"});
-        amrex::Real pos_mean_z = 0;
-        Parser::fillWithParser(pos_mean_arr[2], pos_mean_z);
+        m_pos_mean_x_func = makeFunctionWithParser<1>(pos_mean_arr[0], m_pos_mean_x_parser, {"z"});
+        m_pos_mean_y_func = makeFunctionWithParser<1>(pos_mean_arr[1], m_pos_mean_y_parser, {"z"});
+        Parser::fillWithParser(pos_mean_arr[2], m_pos_mean_z);
 
         getWithParser(pp, "position_std", m_position_std);
         getWithParser(pp, "num_particles", m_num_particles);
@@ -161,10 +157,13 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             m_total_charge *= geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
         }
 
-        const GetInitialMomentum get_momentum(m_name);
-        InitBeamFixedWeight(m_num_particles, get_momentum, pos_mean_x, pos_mean_y, pos_mean_z,
-                            m_position_std, m_total_charge, m_z_foc, m_do_symmetrize, can, zmin, zmax, m_radius);
-        m_total_num_particles = getBeamInitSlice().size();
+        m_get_momentum = GetInitialMomentum{m_name};
+        InitBeamFixedWeight3D();
+        m_total_num_particles = m_num_particles;
+        if (Hipace::HeadRank()) {
+            m_init_sorter.sortParticlesByBox(m_z_array.dataPtr(), m_total_num_particles,
+                                             m_initialize_on_cpu, geom);
+        }
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
@@ -182,6 +181,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                                        geom, m_plasma_density, m_num_iteration, m_species_name,
                                        species_specified);
         m_total_num_particles = getBeamInitSlice().size();
+        if (Hipace::HeadRank()) {
+            m_init_sorter.sortParticlesByBox(
+                getBeamInitSlice().GetStructOfArrays().GetRealData(BeamIdx::z).dataPtr(),
+                m_total_num_particles, m_initialize_on_cpu, geom);
+        }
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
@@ -199,10 +203,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
               amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
               amrex::ParallelDescriptor::Communicator());
 #endif
-
-    if (Hipace::HeadRank() && m_injection_type != "fixed_ppc") {
-        m_init_sorter.sortParticlesByBox(*this, geom);
-    }
 
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
@@ -275,6 +275,8 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
 
     if (m_injection_type == "fixed_ppc") {
         InitBeamFixedPPCSlice(slice, which_slice);
+    } else if (m_injection_type == "fixed_weight") {
+        InitBeamFixedWeightSlice(slice, which_slice);
     } else {
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
