@@ -732,7 +732,8 @@ Field diagnostics
     For the explicit solver, the current and charge densities of the beam and
     for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
-    to be available as a diagnostic.
+    to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
+    the charge density of that plasma species will be separately available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
@@ -746,6 +747,11 @@ Field diagnostics
     If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
     Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
     If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
+* ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
+    This option works similar to ``hipace.deposit_rho``,
+    however the charge density from every plasma species will be deposited into individual fields
+    that are accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
