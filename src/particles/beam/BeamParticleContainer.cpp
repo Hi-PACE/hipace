@@ -161,7 +161,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         InitBeamFixedWeight3D();
         m_total_num_particles = m_num_particles;
         if (Hipace::HeadRank()) {
-            m_init_sorter.sortParticlesByBox(m_z_array.dataPtr(), m_total_num_particles,
+            m_init_sorter.sortParticlesByBox(m_z_array.dataPtr(), m_z_array.size(),
                                              m_initialize_on_cpu, geom);
         }
 
@@ -184,7 +184,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         if (Hipace::HeadRank()) {
             m_init_sorter.sortParticlesByBox(
                 getBeamInitSlice().GetStructOfArrays().GetRealData(BeamIdx::z).dataPtr(),
-                m_total_num_particles, m_initialize_on_cpu, geom);
+                getBeamInitSlice().size(), m_initialize_on_cpu, geom);
         }
 #else
         amrex::Abort("beam particle injection via external_file requires openPMD support: "

@@ -96,7 +96,7 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         auto& beam = beams.getBeam(ibeam);
 
-        if (initial && beam.m_injection_type == "fixed_ppc") {
+        if (initial && beam.m_injection_type != "from_file") {
             // estimate values before the beam is initialized
             m_timestep_data[ibeam][WhichDouble::SumWeights] = 1._rt;
             m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] =

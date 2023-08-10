@@ -24,16 +24,10 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
     m_box_offsets_cpu.resize(num_boxes+1);
     m_box_permutations.resize(num_particles);
 
-    amrex::PODVector<index_type, amrex::PolymorphicArenaAllocator<index_type>> local_offsets {};
-    local_offsets.setArena(
-        init_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    local_offsets.resize(num_particles);
-
     amrex::Gpu::DeviceVector<index_type> box_counts (num_boxes+1, 0);
     amrex::Gpu::DeviceVector<index_type> box_offsets (num_boxes+1, 0);
 
     auto p_box_counts = box_counts.dataPtr();
-    auto p_local_offsets = local_offsets.dataPtr();
     auto p_permutations = m_box_permutations.dataPtr();
 
     // Extract box properties
@@ -47,10 +41,12 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
                 // particle has left domain transversely, stick it at the end and invalidate
                 dst_box = num_boxes;
             }
-            p_local_offsets[i] = amrex::Gpu::Atomic::Add(&p_box_counts[dst_box], 1ull);
+            amrex::Gpu::Atomic::Add(&p_box_counts[dst_box], 1ull);
         });
 
     amrex::Gpu::exclusive_scan(box_counts.begin(), box_counts.end(), box_offsets.begin());
+
+    box_counts.assign(num_boxes+1, 0);
 
     auto p_box_offsets = box_offsets.dataPtr();
 
@@ -60,7 +56,8 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
             if (dst_box < 0 || dst_box > num_boxes) {
                 dst_box = num_boxes;
             }
-            p_permutations[p_local_offsets[i] + p_box_offsets[dst_box]] = i;
+            const index_type local_offset = amrex::Gpu::Atomic::Add(&p_box_counts[dst_box], 1ull);
+            p_permutations[local_offset + p_box_offsets[dst_box]] = i;
         });
 
 #ifdef AMREX_USE_GPU
