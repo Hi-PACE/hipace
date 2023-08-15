@@ -106,12 +106,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
                     amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
 
+                    for (int i = 0; i < n_subcycles; i++) {
                     // define field at particle position reals
                     amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                     amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
                     amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
-                    for (int i = 0; i < n_subcycles; i++) {
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
                             Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
