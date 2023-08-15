@@ -66,10 +66,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         const bool can_ionize = plasma.m_can_ionize;
+        const int n_subcycles = plasma.m_n_subcycles;
 
         using PTileType = PlasmaParticleContainer::ParticleTileType;
         const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(gm[0]);
-        const amrex::Real dz = gm[0].CellSize(2);
+        const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
 
         const amrex::Real me_clight_mass_ratio = phys_const.c * phys_const.m_e/plasma.m_mass;
         const amrex::Real clight = phys_const.c;
@@ -110,6 +111,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
                     amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
+                    for (int i = 0; i < n_subcycles; i++) {
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
                             Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
                             bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
@@ -209,6 +211,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     ptd.rdata(PlasmaIdx::ux)[ip] = ux;
                     ptd.rdata(PlasmaIdx::uy)[ip] = uy;
                     ptd.rdata(PlasmaIdx::psi)[ip] = psi;
+                  } // for (int isub=0; isub<nsub; ++isub) {
 #else
                     amrex::Real ux = ptd.rdata(PlasmaIdx::ux_half_step)[ip];
                     amrex::Real uy = ptd.rdata(PlasmaIdx::uy_half_step)[ip];

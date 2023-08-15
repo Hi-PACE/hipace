@@ -49,6 +49,7 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(mass_Da != 0, "Unknown Element");
     }
 
+    queryWithParserAlt(pp, "n_subcycles", m_n_subcycles, pp_alt);
     queryWithParser(pp, "mass_Da", mass_Da);
     if(mass_Da != 0) {
         m_mass = phys_const.m_p * mass_Da / 1.007276466621;
