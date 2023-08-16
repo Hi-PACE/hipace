@@ -58,6 +58,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
         const amrex::Real dy_inv = gm[lev].InvCellSize(1);
 
+        const amrex::Real lo_x_lev = gm[lev].ProbLo(0);
+        const amrex::Real hi_x_lev = gm[lev].ProbHi(0);
+        const amrex::Real lo_y_lev = gm[lev].ProbLo(1);
+        const amrex::Real hi_y_lev = gm[lev].ProbHi(1);
+
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], slice_fab.box());
@@ -103,33 +108,43 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     // only push plasma particles on their according MR level
                     if (ptd.id(ip) < 0 || ptd.cpu(ip) != lev) return;
 
-                    amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
-                    amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
+                    // define field at particle position reals
+                    amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+                    amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                    amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
+
+                    amrex::Real q_mass_clight_ratio = charge_mass_clight_ratio;
+                    if (can_ionize) {
+                        q_mass_clight_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    }
 
                     for (int i = 0; i < n_subcycles; i++) {
-                      // define field at particle position reals
-                      amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
-                      amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
-                      amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
-                      doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
-                              Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
-                              bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                      amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
+                      amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
 
-                      if (use_laser.value) {
-                          doLaserGatherShapeN<depos_order.value>(xp, yp, Aabssqp, AabssqDxp,
-                              AabssqDyp, a_arr, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+
+                      if (lo_x_lev < xp && xp < hi_x_lev && lo_y_lev < yp && yp < hi_y_lev) {
+                          ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
+                          Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+                          Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
+
+                          doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
+                                  Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
+                                  bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                          if (use_laser.value) {
+                              doLaserGatherShapeN<depos_order.value>(xp, yp, Aabssqp, AabssqDxp,
+                                  AabssqDyp, a_arr, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                          }
+
+                          Bxp *= clight;
+                          Byp *= clight;
+                          Aabssqp *= 0.5_rt; // TODO: fix units of Aabssqp
+                          AabssqDxp *= 0.25_rt * me_clight_mass_ratio;
+                          AabssqDyp *= 0.25_rt * me_clight_mass_ratio;
                       }
-
-                      amrex::Real q_mass_clight_ratio = charge_mass_clight_ratio;
-                      if (can_ionize) {
-                          q_mass_clight_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                      }
-                      Bxp *= clight;
-                      Byp *= clight;
-                      Aabssqp *= 0.5_rt; // TODO: fix units of Aabssqp
-                      AabssqDxp *= 0.25_rt * me_clight_mass_ratio;
-                      AabssqDyp *= 0.25_rt * me_clight_mass_ratio;
 
 #ifndef HIPACE_USE_AB5_PUSH
 
@@ -262,7 +277,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                       ptd.rdata(PlasmaIdx::uy)[ip] = uy;
                       ptd.rdata(PlasmaIdx::psi)[ip] = psi;
 #endif
-                    } // end loop over subcycles
+                  } // loop over subcycles
                 });
         }
 
