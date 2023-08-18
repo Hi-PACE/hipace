@@ -376,6 +376,10 @@ When both are specified, the per-species value is used.
     A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
     To disable reordering set this to 0.
 
+* ``<plasma name> or plasmas.n_subcycles`` (`int`) optional (default `1`)
+    Number of sub-cycles within the plasma pusher. Currently only implemented for the leapfrog pusher. Must be larger or equal to 1. Sub-cycling is needed if plasma particles move
+    significantly in the transverse direction during a single longitudinal cell. If they move too many cells such that they do not sample certain small transverse structures in the wakefields, sub-cycling is needed and fixes the issue.
+
 * ``<plasma name> or plasmas.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
     Change if plasma particles are binned to cells (0), nodes (1) or both (2)
     for both x and y direction as part of the reordering.

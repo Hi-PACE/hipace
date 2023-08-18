@@ -49,6 +49,14 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(mass_Da != 0, "Unknown Element");
     }
 
+    queryWithParserAlt(pp, "n_subcycles", m_n_subcycles, pp_alt);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_n_subcycles >= 1,
+                                     "n_subcycles must be larger or equal to 1 sub-cycle (default is 1)");
+#ifdef HIPACE_USE_AB5_PUSH
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_n_subcycles == 1,
+                                 "Plasma subcycling only implemeted for leapfrog pusher!"
+                                 "Please set plasmas.n_subcycles = 1");
+#endif
     queryWithParser(pp, "mass_Da", mass_Da);
     if(mass_Da != 0) {
         m_mass = phys_const.m_p * mass_Da / 1.007276466621;

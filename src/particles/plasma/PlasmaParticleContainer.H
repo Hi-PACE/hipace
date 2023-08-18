@@ -173,6 +173,7 @@ public:
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
+    int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
     bool m_can_ionize = false; /**< whether this plasma can ionize */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
