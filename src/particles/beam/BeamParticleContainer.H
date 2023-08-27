@@ -240,7 +240,7 @@ private:
     /** Distance at which the beam is focused, starting from its initial position */
     amrex::Real m_z_foc {0.};
     amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
-    amrex::Long m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
+    amrex::Long m_num_particles; /**< Number of particles for fixed-weight Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
