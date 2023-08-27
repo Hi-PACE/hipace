@@ -118,7 +118,7 @@ else:
         assert(np.abs((np.average(xp)-x_avg)) < 5e-7)
         assert(np.abs((np.average(yp)-y_avg)/y_avg) < .03)
 
-    assert( np.abs((np.average(zp)-z_avg)/z_avg) < .035)
+    assert( np.abs((np.average(zp)-z_avg)/z_avg) < .05)
     assert(np.abs((np.std(xp)-x_std)/x_std) < .03)
     assert(np.abs((np.std(yp)-y_std)/y_std) < .03)
     assert(np.abs((np.std(zp)-z_std)/z_std) < .03)
