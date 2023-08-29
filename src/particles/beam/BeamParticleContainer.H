@@ -87,17 +87,8 @@ public:
     void InitBeamFixedPPCSlice (const int islice, const int which_beam_slice);
 
     /** Initialize a beam with a fix number of particles, and fixed weight */
-    void InitBeamFixedWeight (int num_to_add,
-                              const GetInitialMomentum& get_momentum,
-                              const amrex::ParserExecutor<1>& pos_mean_x,
-                              const amrex::ParserExecutor<1>& pos_mean_y,
-                              const amrex::Real pos_mean_z,
-                              const amrex::RealVect pos_std,
-                              const amrex::Real total_charge,
-                              const amrex::Real z_foc,
-                              const bool do_symmetrize,
-                              const bool can, const amrex::Real zmin, const amrex::Real zmax,
-                              const amrex::Real radius);
+    void InitBeamFixedWeight3D ();
+    void InitBeamFixedWeightSlice (const int islice, const int which_beam_slice);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
@@ -213,37 +204,48 @@ private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
     std::string m_injection_type;
+    uint64_t m_id64 = 1; /**< 64 bit ID to initialize many particles without overflowing */
+    /** Min longitudinal particle position of the beam */
+    amrex::Real m_zmin = -std::numeric_limits<amrex::Real>::infinity();
+    /** Max longitudinal particle position of the beam */
+    amrex::Real m_zmax = std::numeric_limits<amrex::Real>::infinity();
+    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< Radius of the beam */
+    GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
 
     // fixed_ppc:
 
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
-    amrex::Real m_zmin; /**< Min longitudinal particle position of the beam */
-    amrex::Real m_zmax; /**< Max longitudinal particle position of the beam */
-    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< Radius of the beam */
     amrex::RealVect m_position_mean {0., 0., 0.}; /**< mean position of the beam */
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
     amrex::IntVect m_random_ppc {0, 0, 0}; /**< if the cell position is random in each direction */
     GetInitialDensity m_get_density {}; /**< density profile of the beam */
-    GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
     /** Density parser for fixed-ppc beam. Owns data for m_density_func */
     amrex::Parser m_density_parser;
-    uint64_t m_id64 = 1; /**< 64 bit ID to initialize many particles without overflowing */
 
     // fixed_weight:
 
+    bool m_can_profile = false;
     /** Average x position of the fixed-weight beam depending on z */
     amrex::Parser m_pos_mean_x_parser;
+    /** Average x position of the fixed-weight beam depending on z */
+    amrex::ParserExecutor<1> m_pos_mean_x_func;
     /** Average y position of the fixed-weight beam depending on z */
     amrex::Parser m_pos_mean_y_parser;
+    /* Average y position of the fixed-weight beam depending on z */
+    amrex::ParserExecutor<1> m_pos_mean_y_func;
+    /* Average z position of the fixed-weight beam depending on z */
+    amrex::Real m_pos_mean_z = 0;
     /** Width of the Gaussian beam. Only used for a fixed-weight beam */
     amrex::RealVect m_position_std {0., 0., 0.};
     /** Distance at which the beam is focused, starting from its initial position */
     amrex::Real m_z_foc {0.};
     amrex::Real m_duz_per_uz0_dzeta {0.}; /**< relative energy spread per dzeta */
-    int m_num_particles; /**< Number of particles for fixed-weigth Gaussian beam */
+    amrex::Long m_num_particles; /**< Number of particles for fixed-weight Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
+    /** Array for the z position of all beam particles */
+    amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
 
     // from_file:
 

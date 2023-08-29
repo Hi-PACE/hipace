@@ -18,9 +18,12 @@ class BeamParticleContainer;
 class BoxSorter
 {
 public:
-    using index_type = unsigned int;
+    using index_type = unsigned long long;
 
-    void sortParticlesByBox (BeamParticleContainer& a_beam, const amrex::Geometry& a_geom);
+    void sortParticlesByBox (const amrex::Real * z_array,
+                             const index_type num_particles,
+                             const bool init_on_cpu,
+                             const amrex::Geometry& a_geom);
 
     //! \brief returns the pointer to the permutation array
     index_type* boxCountsPtr () noexcept { return m_box_counts_cpu.dataPtr(); }

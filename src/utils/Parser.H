@@ -138,6 +138,39 @@ namespace Parser
         return result;
     }
 
+    /** \brief return valid Long, asserts if inf or NaN
+     *
+     * \param[in] x value to cast
+     * \param[in] real_name name of value for error message
+     */
+    inline amrex::Long
+    safeCastToLong (const double x, const std::string& real_name) {
+        amrex::Long result = 0;
+        bool error_detected = false;
+        std::string assert_msg;
+        // (2.0*(numeric_limits<amrex::Long>::max()/2+1)) converts
+        // numeric_limits<amrex::Long>::max()+1 to a real
+        // ensuring accuracy to all digits. This accepts x = 2**31-1 but rejects 2**31.
+        if (x < (2.0*(std::numeric_limits<amrex::Long>::max()/2+1))) {
+            if (std::ceil(x) >= std::numeric_limits<amrex::Long>::min()) {
+                result = static_cast<amrex::Long>(x);
+            } else {
+                error_detected = true;
+                assert_msg = "Error: Negative overflow detected when casting " +
+                             real_name + " = " + std::to_string(x) + " to amrex::Long";
+            }
+        } else if (x > 0) {
+            error_detected = true;
+            assert_msg = "Error: Overflow detected when casting " +
+                         real_name + " = " + std::to_string(x) + " to amrex::Long";
+        } else {
+            error_detected = true;
+            assert_msg =  "Error: NaN detected when casting " + real_name + " to amrex::Long";
+        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!error_detected, assert_msg);
+        return result;
+    }
+
     /** \brief init Parser ready to compile
      *
      * \param[in,out] parser Parser that has been defined
@@ -220,6 +253,13 @@ namespace Parser
         amrex::Parser parser(str);
         initParser(parser, {});
         val = safeCastToInt(std::round(parser.compileHost<0>()()),str);
+    }
+
+    inline void
+    fillWithParser (std::string const& str, amrex::Long& val) {
+        amrex::Parser parser(str);
+        initParser(parser, {});
+        val = safeCastToLong(std::round(parser.compileHost<0>()()),str);
     }
 
     inline void
