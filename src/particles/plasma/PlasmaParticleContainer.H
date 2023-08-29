@@ -163,6 +163,8 @@ public:
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
+    /** radius of the plasma insitu diagnostics */
+    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */

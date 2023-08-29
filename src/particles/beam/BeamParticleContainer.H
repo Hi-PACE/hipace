@@ -210,6 +210,8 @@ private:
     /** Max longitudinal particle position of the beam */
     amrex::Real m_zmax = std::numeric_limits<amrex::Real>::infinity();
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< Radius of the beam */
+    /** radius of the beam insitu diagnostics */
+    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
 
     // fixed_ppc:
