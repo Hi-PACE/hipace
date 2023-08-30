@@ -40,7 +40,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
     const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
-    const std::string rho_str = Hipace::m_deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
+    // only deposit rho individual on WhichSlice::This
+    const bool deposit_rho_individual = Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
+    const std::string rho_str = deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
@@ -321,7 +323,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                         << n_qsa_violation << "\n";
     }
 
-    if (Hipace::m_deposit_rho && Hipace::m_deposit_rho_individual) {
+    if (deposit_rho && deposit_rho_individual && Hipace::m_deposit_rho) {
         fields.add(lev, which_slice, {"rho"}, which_slice, {rho_str.c_str()});
     }
 }
