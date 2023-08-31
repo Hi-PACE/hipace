@@ -79,6 +79,41 @@ void interpadd_nd (int i, int j, int n, Array4<T> const& fine, Array4<U> const& 
     }
 }
 
+template <typename T, typename U, typename V>
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+void interp_cc (int i, int j, int n, Array4<T> const& fine_in, Array4<U> const& crse,
+                Array4<V> const& fine_out)
+{
+    int ic = amrex::coarsen(i,2);
+    int jc = amrex::coarsen(j,2);
+    fine_out(i,j,0,n) = fine_in(i,j,0,n) + crse(ic,jc,0,n);
+}
+
+template <typename T, typename U, typename V>
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+void interp_nd (int i, int j, int n, Array4<T> const& fine_in, Array4<U> const& crse,
+                Array4<V> const& fine_out)
+{
+    int ic = amrex::coarsen(i,2);
+    int jc = amrex::coarsen(j,2);
+    bool i_is_odd = (ic*2 != i);
+    bool j_is_odd = (jc*2 != j);
+    if (i_is_odd && j_is_odd) {
+        fine_out(i,j,0,n) = fine_in(i,j,0,n) + (crse(ic  ,jc  ,0,n) +
+                                                crse(ic+1,jc  ,0,n) +
+                                                crse(ic  ,jc+1,0,n) +
+                                                crse(ic+1,jc+1,0,n))*Real(0.25);
+    } else if (i_is_odd) {
+        fine_out(i,j,0,n) = fine_in(i,j,0,n) + (crse(ic  ,jc,0,n) +
+                                                crse(ic+1,jc,0,n))*Real(0.5);
+    } else if (j_is_odd) {
+        fine_out(i,j,0,n) = fine_in(i,j,0,n) + (crse(ic,jc  ,0,n) +
+                                                crse(ic,jc+1,0,n))*Real(0.5);
+    } else {
+        fine_out(i,j,0,n) = fine_in(i,j,0,n) +  crse(ic,jc,0,n);
+    }
+}
+
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
                 Array4<Real> const& phi, Real facx, Real facy)
@@ -256,9 +291,18 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 // old: 38.03
 // 1: 32.42
 // 2: 29.94
-//
-//
-//
+// 2: 22.03
+// ...
+// old: 32.61
+// 4i: 18.76
+// 6i: 24.69
+// 2i: 20.62
+// 3i: 19.66
+// 5i: 21.48
+// ...
+// old: 32.6
+// 1: 18.76
+// 2: 18.76
 
 void gsrb_shared_st1_4_up (Box const& box, Array4<Real> const& phi,
                            Array4<Real const> const& rhs, Array4<Real const> const& acf,
@@ -305,13 +349,14 @@ void gsrb_shared_st1_4_up (Box const& box, Array4<Real> const& phi,
             const int i = iblock_x * final_tilesize + ithread_x - edge_offset + ilo_loop;
             const int j = iblock_y * final_tilesize + ithread_y - edge_offset + jlo_loop;
 
-            const int tile_lo_x = iblock_x * final_tilesize - niter + ilo_loop;
-            const int tile_lo_y = iblock_y * final_tilesize - niter + jlo_loop;
+            const int tile_begin_x = iblock_x * final_tilesize - niter + ilo_loop;
+            const int tile_begin_y = iblock_y * final_tilesize - niter + jlo_loop;
 
-            const int tile_hi_x = iblock_x * final_tilesize - niter + ilo_loop + tilesize_array;
-            const int tile_hi_y = iblock_y * final_tilesize - niter + jlo_loop + tilesize_array;
+            const int tile_end_x = iblock_x * final_tilesize - niter + ilo_loop + tilesize_array;
+            const int tile_end_y = iblock_y * final_tilesize - niter + jlo_loop + tilesize_array;
 
-            Array4<Real> phi_shared(phi_ptr, {tile_lo_x,tile_lo_y,0}, {tile_hi_x,tile_hi_y,1}, 2);
+            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
+                                             {tile_end_x,tile_end_y,1}, 2);
 
             Real rhs0_num = Real(0.);
             Real rhs1_num = Real(0.);
@@ -325,7 +370,9 @@ void gsrb_shared_st1_4_up (Box const& box, Array4<Real> const& phi,
             }
 
             for (int icolor=0; icolor<niter; ++icolor) {
-                if ((i+j+icolor)%2 == 0) {
+                if (ilo_loop <= i && i <= ihi_loop &&
+                    jlo_loop <= j && j <= jhi_loop &&
+                    (i+j+icolor)%2 == 0) {
                     gs1(i, j, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_num, acf_num, facx, facy);
                     gs1(i, j, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_num, acf_num, facx, facy);
                 }
@@ -338,6 +385,103 @@ void gsrb_shared_st1_4_up (Box const& box, Array4<Real> const& phi,
                 edge_offset <= ithread_y && ithread_y < tilesize - edge_offset) {
                 phi(i, j, 0, 0) = phi_shared(i, j, 0, 0);
                 phi(i, j, 0, 1) = phi_shared(i, j, 0, 1);
+            }
+        });
+}
+
+
+void gsrb_shared_st1_4_down (Box const& box, Array4<Real> const& phi_out,
+                             Array4<Real const> const& rhs, Array4<Real const> const& acf,
+                             Array4<Real const> const& phi_in, Real dx, Real dy)
+{
+    constexpr int tilesize = 32;
+    constexpr int tilesize_array = tilesize + 2;
+    constexpr int niter = 4;
+    constexpr int edge_offset = niter - 1;
+    constexpr int final_tilesize = tilesize - 2*edge_offset;
+
+    int const ilo = box.smallEnd(0);
+    int const jlo = box.smallEnd(1);
+    int const ihi = box.bigEnd(0);
+    int const jhi = box.bigEnd(1);
+    Real facx = Real(1.)/(dx*dx);
+    Real facy = Real(1.)/(dy*dy);
+
+    const Box loop_box = valid_domain_box(box);
+    int const ilo_loop = loop_box.smallEnd(0);
+    int const jlo_loop = loop_box.smallEnd(1);
+    int const ihi_loop = loop_box.bigEnd(0);
+    int const jhi_loop = loop_box.bigEnd(1);
+    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
+    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
+
+    amrex::launch<tilesize*tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
+        [=] AMREX_GPU_DEVICE() noexcept
+        {
+            __shared__ Real phi_ptr[tilesize_array*tilesize_array*2];
+
+            const int iblock_y = blockIdx.x / num_blocks_x;
+            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
+
+            const int tile_begin_x = iblock_x * final_tilesize - niter + ilo_loop;
+            const int tile_begin_y = iblock_y * final_tilesize - niter + jlo_loop;
+
+            const int tile_end_x = iblock_x * final_tilesize - niter + ilo_loop + tilesize_array;
+            const int tile_end_y = iblock_y * final_tilesize - niter + jlo_loop + tilesize_array;
+
+            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
+                                             {tile_end_x,tile_end_y,1}, 2);
+
+            for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
+                int sy = s / tilesize_array;
+                int sx = s - sy * tilesize_array;
+                sx += tile_begin_x;
+                sy += tile_begin_y;
+                if (ilo_loop <= sx && sx <= ihi_loop &&
+                    jlo_loop <= sy && sy <= jhi_loop) {
+                    phi_shared(sx, sy, 0, 0) = phi_in(sx, sy, 0, 0);
+                    phi_shared(sx, sy, 0, 1) = phi_in(sx, sy, 0, 1);
+                } else {
+                    phi_shared(sx, sy, 0, 0) = Real(0.);
+                    phi_shared(sx, sy, 0, 1) = Real(0.);
+                }
+            }
+
+            __syncthreads();
+
+            const int ithread_y = threadIdx.x / tilesize;
+            const int ithread_x = threadIdx.x - ithread_y * tilesize;
+
+            const int i = iblock_x * final_tilesize + ithread_x - edge_offset + ilo_loop;
+            const int j = iblock_y * final_tilesize + ithread_y - edge_offset + jlo_loop;
+
+            Real rhs0_num = Real(0.);
+            Real rhs1_num = Real(0.);
+            Real acf_num = Real(0.);
+
+            if (ilo_loop <= i && i <= ihi_loop &&
+                jlo_loop <= j && j <= jhi_loop) {
+                rhs0_num = rhs(i, j, 0, 0);
+                rhs1_num = rhs(i, j, 0, 1);
+                acf_num = acf(i, j, 0);
+            }
+
+            for (int icolor=0; icolor<niter; ++icolor) {
+                if (ilo_loop <= i && i <= ihi_loop &&
+                    jlo_loop <= j && j <= jhi_loop &&
+                    (i+j+icolor)%2 == 0) {
+                    gs1(i, j, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_num, acf_num, facx, facy);
+                    gs1(i, j, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_num, acf_num, facx, facy);
+                }
+                __syncthreads();
+            }
+
+            if (ilo_loop <= i && i <= ihi_loop &&
+                jlo_loop <= j && j <= jhi_loop &&
+                edge_offset <= ithread_x && ithread_x < tilesize - edge_offset &&
+                edge_offset <= ithread_y && ithread_y < tilesize - edge_offset) {
+                phi_out(i, j, 0, 0) = phi_shared(i, j, 0, 0);
+                phi_out(i, j, 0, 1) = phi_shared(i, j, 0, 1);
             }
         });
 }
@@ -371,6 +515,23 @@ void interpolation (Box const& box, Array4<Real> const& fine, Array4<Real const>
         [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
         {
             interpadd_nd(i,j,n,fine,crse);
+        });
+    }
+}
+
+void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in,
+                               Array4<Real const> const& crse, Array4<Real> const& fine_out)
+{
+    if (box.cellCentered()) {
+        hpmg::ParallelFor(box, 2, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        {
+            interp_cc(i,j,n,fine_in,crse,fine_out);
+        });
+    } else {
+        hpmg::ParallelFor(valid_domain_box(box), 2,
+        [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        {
+            interp_nd(i,j,n,fine_in,crse,fine_out);
         });
     }
 }
@@ -900,16 +1061,21 @@ MultiGrid::vcycle ()
 
     for (int ilev = m_single_block_level_begin-1; ilev >= 0; --ilev) {
         // cor[ilev] += I(cor[ilev+1])
-        interpolation(m_domain[ilev], m_cor[ilev].array(), m_cor[ilev+1].const_array());
+        interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
+                                 m_cor[ilev+1].const_array(), m_rescor[ilev].array());
 
         Real fac = static_cast<Real>(1 << ilev);
         Real dx = m_dx * fac;
         Real dy = m_dy * fac;
-        for (int is = 0; is < 4; ++is) {
+        /*for (int is = 0; is < 4; ++is) {
             gsrb(is, m_domain[ilev], m_cor[ilev].array(),
                  m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
                  m_system_type);
-        }
+        }*/
+
+        gsrb_shared_st1_4_down(m_domain[ilev], m_cor[ilev].array(),
+                               m_res[ilev].const_array(), m_acf[ilev].const_array(),
+                               m_rescor[ilev].const_array(), dx, dy);
     }
 
 #if defined(AMREX_USE_CUDA)
