@@ -341,7 +341,8 @@ InitBeamFixedWeight3D ()
     if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
 
     amrex::Long num_to_add = m_num_particles;
-    if (m_do_symmetrize) num_to_add /= 4;
+    if (m_do_symmetrize == 1) num_to_add /= 4;
+    if (m_do_symmetrize == 2) num_to_add /= 16;
 
     m_z_array.setArena(m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     m_z_array.resize(num_to_add);
@@ -375,8 +376,10 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
 
     const int num_to_add = m_init_sorter.m_box_counts_cpu[slice];
-    if (m_do_symmetrize) {
+    if        (m_do_symmetrize == 1) {
         resize(which_slice, 4*num_to_add, 0);
+    } else if (m_do_symmetrize == 2) {
+        resize(which_slice, 16*num_to_add, 0);
     } else {
         resize(which_slice, num_to_add, 0);
     }
@@ -401,7 +404,7 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     m_id64 += num_to_add;
 
     const bool can = m_can_profile;
-    const bool do_symmetrize = m_do_symmetrize;
+    const int do_symmetrize = m_do_symmetrize;
     const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
     const amrex::Real z_min = m_zmin;
     const amrex::Real z_max = m_zmax;
@@ -437,13 +440,8 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
             const amrex::Real cental_x_pos = pos_mean_x(z_central);
             const amrex::Real cental_y_pos = pos_mean_y(z_central);
 
-            if (!do_symmetrize)
+            if        (do_symmetrize == 1)
             {
-                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
-                                        z_central, u[0], u[1], u[2], weight,
-                                        pid, i, clight, is_valid);
-
-            } else {
                 AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
                                         pid, 4*i, clight, is_valid);
@@ -456,7 +454,61 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
                 AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
                                         z_central, -u[0], -u[1], u[2], weight,
                                         pid, 4*i+3, clight, is_valid);
+            } else if (do_symmetrize == 2) {
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, 4*i, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, u[0], -u[1], u[2], weight,
+                                        pid, 4*i+1, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, -u[0], u[1], u[2], weight,
+                                        pid, 4*i+2, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, -u[0], -u[1], u[2], weight,
+                                        pid, 4*i+3, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, 4*i, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
+                                        z_central, u[0], -u[1], u[2], weight,
+                                        pid, 4*i+1, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
+                                        z_central, -u[0], u[1], u[2], weight,
+                                        pid, 4*i+2, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
+                                        z_central, -u[0], -u[1], u[2], weight,
+                                        pid, 4*i+3, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, 4*i, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
+                                        z_central, u[0], -u[1], u[2], weight,
+                                        pid, 4*i+1, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
+                                        z_central, -u[0], u[1], u[2], weight,
+                                        pid, 4*i+2, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
+                                        z_central, -u[0], -u[1], u[2], weight,
+                                        pid, 4*i+3, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, 4*i, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
+                                        z_central, u[0], -u[1], u[2], weight,
+                                        pid, 4*i+1, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
+                                        z_central, -u[0], u[1], u[2], weight,
+                                        pid, 4*i+2, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
+                                        z_central, -u[0], -u[1], u[2], weight,
+                                        pid, 4*i+3, clight, is_valid);
+            } else {
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, i, clight, is_valid);
             }
+
         });
 
     return;

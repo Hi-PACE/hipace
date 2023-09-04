@@ -243,7 +243,7 @@ private:
     amrex::Long m_num_particles; /**< Number of particles for fixed-weight Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
-    bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
+    int m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
 

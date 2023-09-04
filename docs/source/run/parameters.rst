@@ -511,12 +511,13 @@ Option: ``fixed_weight``
     :math:`\zeta` is hereby the particle position relative to the mean
     longitudinal position of the beam.
 
-* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
-    Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+* ``<beam name>.do_symmetrize`` (`int`) optional (default `0`)
+    Symmetrizes the beam in the transverse phase space. If ``<beam name>.do_symmetrize = 1`, for each particle with (`x`, `y`, `ux`,
     `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
     `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
     ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
-    divisible by 4.
+    divisible by 4. If ``<beam name>.do_symmetrize = 2`, the beam is fully symmetrized, such that 15 additional particles are generated.
+    All possible combinations of (`x`, `y`, `ux`, `uy`) are used because then also the product `x*ux` is symmetric. The total number of particles must be divisible by 16.
 
 * ``<beam name>.z_foc`` (`float`) optional (default `0.`)
     Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
