@@ -145,7 +145,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
         if (m_do_symmetrize == 2) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%16 == 0,
             "To fully symmetrize the beam, please specify a beam particle number divisible by 16.");
-                
+
         if (peak_density_is_specified)
         {
             m_total_charge = m_density*m_charge;
