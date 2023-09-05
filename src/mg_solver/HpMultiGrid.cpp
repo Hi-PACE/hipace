@@ -291,8 +291,10 @@ void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
     } else {
         lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
     }
-    const Real c0_inv = Real(1.) / c0;
-    phi(i,j,0,n) = (rhs - lap) * c0_inv;
+    phi(i,j,0,n) = (rhs - lap) / c0;
+    // bit faster version:
+    // const Real c0_inv = Real(1.) / c0;
+    // phi(i,j,0,n) = (rhs - lap) * c0_inv;
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
@@ -408,6 +410,24 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 //28: 14.44
 //29: 14.45
 //30: 14.44
+//31: 14.9
+//32: 14.35
+// ...
+// final 4095:
+// amrex: crash
+// old: 32.64
+// new: 14.91       +120%
+// final 4096:
+// amrex: 50.49
+// old: 28.88
+// new: 13.98       +107%
+//
+// lumi 4095:
+// old: 49.35
+// new: 19.87       +148%
+// 4096:
+// old: 44.79
+// new: 18.87       +137%
 
 void gsrb_shared_st1_4_up (Box const& box, Array4<Real> const& phi,
                            Array4<Real const> const& rhs, Array4<Real const> const& acf,
@@ -1266,7 +1286,7 @@ void gsrb_shared_st1_4_down_v4 (Box const& box, Array4<Real> const& phi_out,
             }
 
             for (int icolor=0; icolor<niter; ++icolor) {
-                const int shift = (i + j + icolor) % 2;
+                const int shift = (i + j + icolor) & 1;
                 const int j_loc = j + shift;
                 const Real rhs0_loc = shift ? rhs0_num[1] : rhs0_num[0];
                 const Real rhs1_loc = shift ? rhs1_num[1] : rhs1_num[0];
@@ -1432,11 +1452,11 @@ void gsrb_shared_st1_4_uni_v1 (Box const& box,
             const int tile_begin_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop;
             const int tile_begin_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop;
 
-            const int tile_end_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop + tilesize_array_x;
-            const int tile_end_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop + tilesize_array_y;
+            const int tile_end_x = tile_begin_x + tilesize_array_x;
+            const int tile_end_y = tile_begin_y + tilesize_array_y;
 
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
+            Array4<Real> phi_shared(phi_ptr, {tile_begin_x, tile_begin_y, 0},
+                                             {tile_end_x, tile_end_y, 1}, 2);
 
             if (zero_init) {
                 for (int s = threadIdx.x; s < tilesize_array_x*tilesize_array_y*2; s+=blockDim.x) {
@@ -1463,8 +1483,8 @@ void gsrb_shared_st1_4_uni_v1 (Box const& box,
             const int ithread_x = threadIdx.x - ithread_y * tilesize_x;
             ithread_y *= 2;
 
-            const int i = iblock_x * final_tilesize_x + ithread_x - edge_offset + ilo_loop;
-            const int j = iblock_y * final_tilesize_y + ithread_y - edge_offset + jlo_loop;
+            const int i = tile_begin_x + 1 + ithread_x;
+            const int j = tile_begin_y + 1 + ithread_y;
 
             Real rhs0_num[2] = {0., 0.};
             Real rhs1_num[2] = {0., 0.};
@@ -1482,7 +1502,7 @@ void gsrb_shared_st1_4_uni_v1 (Box const& box,
             __syncthreads();
 
             for (int icolor=0; icolor<niter; ++icolor) {
-                const int shift = (i + j + icolor) % 2;
+                const int shift = (i + j + icolor) & 1;
                 const int j_loc = j + shift;
                 const Real rhs0_loc = shift ? rhs0_num[1] : rhs0_num[0];
                 const Real rhs1_loc = shift ? rhs1_num[1] : rhs1_num[0];
@@ -1794,10 +1814,10 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain)
     m_cor.reserve(m_num_mg_levels);
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_cor.emplace_back(m_domain[ilev], 2);
+        if (!index_type.cellCentered()) {
+            m_cor[ilev].template setVal<RunOn::Device>(0);
+        }
         if (ilev >= m_single_block_level_begin) {
-            if (!index_type.cellCentered()) {
-                m_cor[ilev].template setVal<RunOn::Device>(0);
-            }
             m_h_array4.push_back(m_cor[ilev].array());
         }
     }
@@ -2078,15 +2098,13 @@ MultiGrid::vcycle ()
                  m_system_type);
         }*/
 
-        //gsrb_shared_st1_4_up_v5(m_domain[ilev], m_cor[ilev].array(),
-        //                        m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
-        //                        m_rescor[ilev].array());
+        //gsrb_shared_st1_4_up(m_domain[ilev], m_cor[ilev].array(),
+        //                        m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy);
 
         if (m_domain[ilev].cellCentered()) {
             gsrb_shared_st1_4_uni_v1<true, true, true>(
                 m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
                 m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
-
         } else {
             gsrb_shared_st1_4_uni_v1<true, true, false>(
                 m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
