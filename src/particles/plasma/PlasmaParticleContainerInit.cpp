@@ -331,10 +331,10 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 const amrex::Real x_mirror = x_mid2 - x;
                 const amrex::Real y_mirror = y_mid2 - y;
 
-                const amrex::Real x_arr[3] = {x, x, x, x, x, x, x, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror};
-                const amrex::Real y_arr[3] = {y, y, y, y_mirror, y_mirror, y_mirror, y_mirror, y, y, y, y, y_mirror, y_mirror, y_mirror, y_mirror};
-                const amrex::Real ux_arr[3] = {1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt};
-                const amrex::Real uy_arr[3] = {-1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt};
+                const amrex::Real x_arr[15] = {x, x, x, x, x, x, x, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror};
+                const amrex::Real y_arr[15] = {y, y, y, y_mirror, y_mirror, y_mirror, y_mirror, y, y, y, y, y_mirror, y_mirror, y_mirror, y_mirror};
+                const amrex::Real ux_arr[15] = {1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt};
+                const amrex::Real uy_arr[15] = {-1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt};
 
 #ifdef AMREX_USE_GPU
 #pragma unroll
