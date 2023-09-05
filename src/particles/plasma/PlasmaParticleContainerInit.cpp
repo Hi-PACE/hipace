@@ -112,9 +112,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 return num_particles_cell;
             });
 
-        if (m_do_symmetrize) {
+        if        (m_do_symmetrize == 1) {
             total_num_particles *= 4;
             scale_fac /= 4.;
+        } else if (m_do_symmetrize == 2) {
+            total_num_particles *= 16;
+            scale_fac /= 16.;
         }
 
         auto& particles = GetParticles(lev);
@@ -263,7 +266,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
             old_size += num_to_add;
         }
-        if (m_do_symmetrize) {
+        if (m_do_symmetrize == 1) {
 
             const amrex::Real x_mid2 = (ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
             const amrex::Real y_mid2 = (ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
@@ -314,9 +317,61 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 #endif
                     int_arrdata[PlasmaIdx::ion_lev][midx] = int_arrdata[PlasmaIdx::ion_lev][pidx];
 
-        }
-    });
-}
+                  }
+              });
+          } else if (m_do_symmetrize == 2) {
+            const amrex::Real x_mid2 = (ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
+            const amrex::Real y_mid2 = (ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
+            const amrex::Long mirror_offset = total_num_particles/16;
+            amrex::ParallelFor(mirror_offset,
+            [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
+            {
+                const amrex::Real x = arrdata[PlasmaIdx::x][pidx];
+                const amrex::Real y = arrdata[PlasmaIdx::y][pidx];
+                const amrex::Real x_mirror = x_mid2 - x;
+                const amrex::Real y_mirror = y_mid2 - y;
+
+                const amrex::Real x_arr[3] = {x, x, x, x, x, x, x, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror, x_mirror};
+                const amrex::Real y_arr[3] = {y, y, y, y_mirror, y_mirror, y_mirror, y_mirror, y, y, y, y, y_mirror, y_mirror, y_mirror, y_mirror};
+                const amrex::Real ux_arr[3] = {1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt, 1._rt, 1._rt, -1._rt, -1._rt};
+                const amrex::Real uy_arr[3] = {-1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt, 1._rt, -1._rt};
+
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int imirror=0; imirror<15; ++imirror) {
+                    const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
+
+                    int_arrdata[PlasmaIdx::id][midx] = pid + int(midx);
+                    int_arrdata[PlasmaIdx::cpu][midx] = 0; // level 0
+                    arrdata[PlasmaIdx::x][midx] = x_arr[imirror];
+                    arrdata[PlasmaIdx::y][midx] = y_arr[imirror];
+
+                    arrdata[PlasmaIdx::w][midx] = arrdata[PlasmaIdx::w][pidx];
+                    arrdata[PlasmaIdx::ux][midx] = arrdata[PlasmaIdx::ux][pidx] * ux_arr[imirror];
+                    arrdata[PlasmaIdx::uy][midx] = arrdata[PlasmaIdx::uy][pidx] * uy_arr[imirror];
+                    arrdata[PlasmaIdx::psi][midx] = arrdata[PlasmaIdx::psi][pidx];
+                    arrdata[PlasmaIdx::x_prev][midx] = x_arr[imirror];
+                    arrdata[PlasmaIdx::y_prev][midx] = y_arr[imirror];
+                    arrdata[PlasmaIdx::ux_half_step][midx] =
+                        arrdata[PlasmaIdx::ux_half_step][pidx] * ux_arr[imirror];
+                    arrdata[PlasmaIdx::uy_half_step][midx] =
+                        arrdata[PlasmaIdx::uy_half_step][pidx] * uy_arr[imirror];
+                    arrdata[PlasmaIdx::psi_half_step][midx] =
+                        arrdata[PlasmaIdx::psi_half_step][pidx];
+#ifdef HIPACE_USE_AB5_PUSH
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                    for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                        arrdata[iforce][midx] = 0._rt;
+                    }
+#endif
+                    int_arrdata[PlasmaIdx::ion_lev][midx] = int_arrdata[PlasmaIdx::ion_lev][pidx];
+
+                  }
+              });
+          }
     }
 }
 
