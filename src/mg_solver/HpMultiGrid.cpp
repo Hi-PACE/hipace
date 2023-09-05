@@ -79,6 +79,8 @@ void interpadd_nd (int i, int j, int n, Array4<T> const& fine, Array4<U> const& 
     }
 }
 
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+
 template <typename T, typename U, typename V>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void interpcpy_cc (int i, int j, int n, Array4<T> const& fine_in, Array4<U> const& crse,
@@ -113,6 +115,8 @@ void interpcpy_nd (int i, int j, int n, Array4<T> const& fine_in, Array4<U> cons
         fine_out(i,j,0,n) = fine_in(i,j,0,n) +  crse(ic,jc,0,n);
     }
 }
+
+#endif
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
@@ -191,79 +195,6 @@ void compute_residual (Box const& box, Array4<Real> const& res,
                                       acf(i,j,0,0), acf(i,j,0,1), facx, facy);
         });
     }
-}
-
-void compute_residual_shared (Box const& box, Array4<Real> const& res,
-                       Array4<Real> const& phi, Array4<Real const> const& rhs,
-                       Array4<Real const> const& acf, Real dx, Real dy,
-                       int)
-{
-    constexpr int tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + tilesize - 1)/tilesize;
-    const int num_blocks_y = (loop_box.length(1) + tilesize - 1)/tilesize;
-
-    amrex::launch<tilesize*tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array*2];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int tile_begin_x = iblock_x * tilesize - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * tilesize - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * tilesize - 1 + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * tilesize - 1 + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
-
-            for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
-                int sy = s / tilesize_array;
-                int sx = s - sy * tilesize_array;
-                sx += tile_begin_x;
-                sy += tile_begin_y;
-                if (ilo_loop <= sx && sx <= ihi_loop &&
-                    jlo_loop <= sy && sy <= jhi_loop) {
-                    phi_shared(sx, sy, 0, 0) = phi(sx, sy, 0, 0);
-                    phi_shared(sx, sy, 0, 1) = phi(sx, sy, 0, 1);
-                } else {
-                    phi_shared(sx, sy, 0, 0) = Real(0.);
-                    phi_shared(sx, sy, 0, 1) = Real(0.);
-                }
-            }
-
-            __syncthreads();
-
-            const int ithread_y = threadIdx.x / tilesize;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize;
-
-            const int i = iblock_x * tilesize + ithread_x + ilo_loop;
-            const int j = iblock_y * tilesize + ithread_y + jlo_loop;
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop) {
-                res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi_shared, rhs(i,j,0,0),
-                                         acf(i,j,0), facx, facy);
-                res(i,j,0,1) = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi_shared, rhs(i,j,0,1),
-                                         acf(i,j,0), facx, facy);
-            }
-        });
 }
 
 template<bool is_cell_centered = true>
@@ -365,1055 +296,11 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
     }
 }
 
-// old: 38.03
-// 1: 32.42
-// 2: 29.94
-// 2: 22.03
-// ...
-// old: 32.61
-// 4i: 18.76
-// 6i: 24.69
-// 2i: 20.62
-// 3i: 19.66
-// 5i: 21.48
-// ...
-// old: 32.6
-// 1: 18.76
-// 2: 18.76
-// 3: 18.74
-// 4: 18.86
-// 5: 18.73
-// 6: 18.97
-// 7: 17.53
-// 8: 17.52
-// 9: 19.09
-//10: 17.45
-//11: 16.29
-//12: 17.24
-//13: 16.29
-//14: 16.66
-//15: 15.77
-//16: 15.9
-//15: 15.76
-//16: 15.47
-//17: 15.46
-//18: 15.07
-//19: 15.29
-//20: 15.12
-//21: 16.71
-//22: 15.1
-//23: 14.89
-//24: 14.93
-//25: 15.56
-//26: 14.94
-//27: 14.94
-//28: 14.44
-//29: 14.45
-//30: 14.44
-//31: 14.9
-//32: 14.35
-// ...
-// final 4095:
-// amrex: crash
-// old: 32.64
-// new: 14.91       +120%
-// final 4096:
-// amrex: 50.49
-// old: 28.88
-// new: 13.98       +107%
-//
-// lumi 4095:
-// old: 49.35
-// new: 19.87       +148%
-// 4096:
-// old: 44.79
-// new: 18.87       +137%
-
-void gsrb_shared_st1_4_up (Box const& box, Array4<Real> const& phi,
-                           Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                           Real dx, Real dy)
-{
-    constexpr int tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter - 1;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<tilesize*tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array*2];
-
-            for (int s = threadIdx.x; s < tilesize_array*tilesize_array*2; s+=blockDim.x) {
-                phi_ptr[s] = Real(0.);
-            }
-
-            __syncthreads();
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int ithread_y = threadIdx.x / tilesize;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize;
-
-            const int i = iblock_x * final_tilesize + ithread_x - edge_offset + ilo_loop;
-            const int j = iblock_y * final_tilesize + ithread_y - edge_offset + jlo_loop;
-
-            const int tile_begin_x = iblock_x * final_tilesize - niter + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - niter + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - niter + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - niter + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
-
-            Real rhs0_num = Real(0.);
-            Real rhs1_num = Real(0.);
-            Real acf_num = Real(0.);
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop) {
-                rhs0_num = rhs(i, j, 0, 0);
-                rhs1_num = rhs(i, j, 0, 1);
-                acf_num = acf(i, j, 0);
-            }
-
-            for (int icolor=0; icolor<niter; ++icolor) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j && j <= jhi_loop &&
-                    (i+j+icolor)%2 == 0) {
-                    gs1(i, j, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_num, acf_num, facx, facy);
-                    gs1(i, j, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_num, acf_num, facx, facy);
-                }
-                __syncthreads();
-            }
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop &&
-                edge_offset <= ithread_x && ithread_x < tilesize - edge_offset &&
-                edge_offset <= ithread_y && ithread_y < tilesize - edge_offset) {
-                phi(i, j, 0, 0) = phi_shared(i, j, 0, 0);
-                phi(i, j, 0, 1) = phi_shared(i, j, 0, 1);
-            }
-        });
-}
-
-void gsrb_shared_st1_4_up_v3 (Box const& box, Array4<Real> const& phi,
-                              Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                              Real dx, Real dy, Array4<Real> const& res)
-{
-    constexpr int tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<tilesize*tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array*2];
-
-            for (int s = threadIdx.x; s < tilesize_array*tilesize_array*2; s+=blockDim.x) {
-                phi_ptr[s] = Real(0.);
-            }
-
-            __syncthreads();
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int ithread_y = threadIdx.x / tilesize;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize;
-
-            const int i = iblock_x * final_tilesize + ithread_x - edge_offset + ilo_loop;
-            const int j = iblock_y * final_tilesize + ithread_y - edge_offset + jlo_loop;
-
-            const int tile_begin_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
-
-            Real rhs0_num = Real(0.);
-            Real rhs1_num = Real(0.);
-            Real acf_num = Real(0.);
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop) {
-                rhs0_num = rhs(i, j, 0, 0);
-                rhs1_num = rhs(i, j, 0, 1);
-                acf_num = acf(i, j, 0);
-            }
-
-            for (int icolor=0; icolor<niter; ++icolor) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j && j <= jhi_loop &&
-                    (i+j+icolor)%2 == 0) {
-                    gs1(i, j, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_num, acf_num, facx, facy);
-                    gs1(i, j, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_num, acf_num, facx, facy);
-                }
-                __syncthreads();
-            }
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop &&
-                edge_offset <= ithread_x && ithread_x < tilesize - edge_offset &&
-                edge_offset <= ithread_y && ithread_y < tilesize - edge_offset) {
-
-                res(i, j, 0, 0) = residual1(i, j, 0, ilo, jlo, ihi, jhi,
-                                            phi_shared, rhs0_num, acf_num, facx, facy);
-                res(i, j, 0, 1) = residual1(i, j, 1, ilo, jlo, ihi, jhi,
-                                            phi_shared, rhs1_num, acf_num, facx, facy);
-
-                phi(i, j, 0, 0) = phi_shared(i, j, 0, 0);
-                phi(i, j, 0, 1) = phi_shared(i, j, 0, 1);
-            }
-        });
-}
-
-void gsrb_shared_st1_4_up_v5 (Box const& box, Array4<Real> const& phi,
-                              Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                              Real dx, Real dy, Array4<Real> const& res)
-{
-    constexpr int tilesize_x = 64;
-    constexpr int tilesize_y = 32;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array_x = tilesize_x + 2;
-    constexpr int tilesize_array_y = tilesize_y + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter;
-    constexpr int final_tilesize_x = tilesize_x - 2*edge_offset;
-    constexpr int final_tilesize_y = tilesize_y - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize_x - 1)/final_tilesize_x;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize_y - 1)/final_tilesize_y;
-
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array_x*tilesize_array_y*2];
-
-            for (int s = threadIdx.x; s < tilesize_array_x*tilesize_array_y*2; s+=blockDim.x) {
-                phi_ptr[s] = Real(0.);
-            }
-
-            __syncthreads();
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            int ithread_y = threadIdx.x / tilesize_x;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize_x;
-            ithread_y *= 2;
-
-            const int i = iblock_x * final_tilesize_x + ithread_x - edge_offset + ilo_loop;
-            const int j = iblock_y * final_tilesize_y + ithread_y - edge_offset + jlo_loop;
-
-            const int tile_begin_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop + tilesize_array_x;
-            const int tile_end_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop + tilesize_array_y;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
-
-            Real rhs0_num[2] = {0., 0.};
-            Real rhs1_num[2] = {0., 0.};
-            Real acf_num[2] = {0., 0.};
-
-            for (int nj=0; nj<=1; ++nj) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j+nj && j+nj <= jhi_loop) {
-                    rhs0_num[nj] = rhs(i, j+nj, 0, 0);
-                    rhs1_num[nj] = rhs(i, j+nj, 0, 1);
-                    acf_num[nj] = acf(i, j+nj, 0);
-                }
-            }
-
-            for (int icolor=0; icolor<niter; ++icolor) {
-                const int shift = (i + j + icolor) % 2;
-                const int j_loc = j + shift;
-                const Real rhs0_loc = shift ? rhs0_num[1] : rhs0_num[0];
-                const Real rhs1_loc = shift ? rhs1_num[1] : rhs1_num[0];
-                const Real acf_loc = shift ? acf_num[1] : acf_num[0];
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j_loc && j_loc <= jhi_loop) {
-                    gs1(i, j_loc, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_loc, acf_loc, facx, facy);
-                    gs1(i, j_loc, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_loc, acf_loc, facx, facy);
-                }
-                __syncthreads();
-            }
-
-            for (int nj=0; nj<=1; ++nj) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j+nj && j+nj <= jhi_loop &&
-                    edge_offset <= ithread_x && ithread_x < tilesize_x - edge_offset &&
-                    edge_offset <= ithread_y+nj && ithread_y+nj < tilesize_y - edge_offset) {
-
-                    res(i, j+nj, 0, 0) = residual1(i, j+nj, 0, ilo, jlo, ihi, jhi,
-                                                phi_shared, rhs0_num[nj], acf_num[nj], facx, facy);
-                    res(i, j+nj, 0, 1) = residual1(i, j+nj, 1, ilo, jlo, ihi, jhi,
-                                                phi_shared, rhs1_num[nj], acf_num[nj], facx, facy);
-
-                    phi(i, j+nj, 0, 0) = phi_shared(i, j+nj, 0, 0);
-                    phi(i, j+nj, 0, 1) = phi_shared(i, j+nj, 0, 1);
-                }
-            }
-        });
-}
-
-void gsrb_shared_st1_4_up_v2 (Box const& box, Array4<Real> const& phi,
-                              Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                              Real dx, Real dy, Array4<Real> const& res)
-{
-    constexpr int tilesize = 64;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int tile_begin_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 1);
-
-            const int ithread_y_0 = threadIdx.x / thread_tilesize;
-            const int ithread_x_0 = threadIdx.x - ithread_y_0 * thread_tilesize;
-
-            const int ithread_x[2] = {ithread_x_0, ithread_x_0 + thread_tilesize};
-            const int ithread_y[2] = {ithread_y_0, ithread_y_0 + thread_tilesize};
-
-            const int i_0 = iblock_x * final_tilesize + ithread_x_0 - edge_offset + ilo_loop;
-            const int j_0 = iblock_y * final_tilesize + ithread_y_0 - edge_offset + jlo_loop;
-
-            const int i[2] = {i_0, i_0 + thread_tilesize};
-            const int j[2] = {j_0, j_0 + thread_tilesize};
-
-            Real acf_num[2][2] = {0., 0., 0., 0.};
-
-            for (int hj=0; hj<=1; ++hj) {
-                for (int hi=0; hi<=1; ++hi) {
-                    if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                        jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                        acf_num[hi][hj] = acf(i[hi], j[hj], 0);
-                    }
-                }
-            }
-
-            for (int n=0; n<=1; ++n) {
-
-                for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
-                    phi_ptr[s] = Real(0.);
-                }
-
-                __syncthreads();
-
-                Real rhs_num[2][2] = {0., 0., 0., 0.};
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                            rhs_num[hi][hj] = rhs(i[hi], j[hj], 0, n);
-                        }
-                    }
-                }
-
-                for (int icolor=0; icolor<niter; ++icolor) {
-                    for (int hj=0; hj<=1; ++hj) {
-                        for (int hi=0; hi<=1; ++hi) {
-                            if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                                jlo_loop <= j[hj] && j[hj] <= jhi_loop &&
-                                (i[hi]+j[hj]+icolor)%2 == 0) {
-                                gs1(i[hi], j[hj], 0, ilo, jlo, ihi, jhi, phi_shared,
-                                    rhs_num[hi][hj], acf_num[hi][hj], facx, facy);
-                            }
-                        }
-                    }
-                    __syncthreads();
-                }
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop &&
-                            edge_offset <= ithread_x[hi] && ithread_x[hi] < tilesize - edge_offset &&
-                            edge_offset <= ithread_y[hj] && ithread_y[hj] < tilesize - edge_offset) {
-
-                            res(i[hi], j[hj], 0, n) = residual1(i[hi], j[hj], 0, ilo, jlo, ihi, jhi,
-                                phi_shared, rhs_num[hi][hj], acf_num[hi][hj], facx, facy);
-
-                            phi(i[hi], j[hj], 0, n) = phi_shared(i[hi], j[hj], 0, 0);
-                        }
-                    }
-                }
-
-                __syncthreads();
-            }
-        });
-}
-
-
-void gsrb_shared_st1_4_up_v4 (Box const& box, Array4<Real> const& phi,
-                              Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                              Real dx, Real dy, Array4<Real> const& res)
-{
-    constexpr int tilesize = 64;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int tile_begin_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 1);
-
-            const int ithread_y_0 = threadIdx.x / thread_tilesize;
-            const int ithread_x_0 = threadIdx.x - ithread_y_0 * thread_tilesize;
-
-            const int ithread_x[2] = {ithread_x_0, ithread_x_0 + thread_tilesize};
-            const int ithread_y[2] = {2*ithread_y_0, 2*ithread_y_0+1};
-
-            const int i_0 = iblock_x * final_tilesize - edge_offset + ilo_loop;
-            const int j_0 = iblock_y * final_tilesize - edge_offset + jlo_loop;
-
-            const int i[2] = {i_0 + ithread_x[0], i_0 + ithread_x[1]};
-            const int j[2] = {j_0 + ithread_y[0], j_0 + ithread_y[1]};
-
-            Real acf_num[2][2] = {0., 0., 0., 0.};
-
-            for (int hj=0; hj<=1; ++hj) {
-                for (int hi=0; hi<=1; ++hi) {
-                    if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                        jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                        acf_num[hi][hj] = acf(i[hi], j[hj], 0);
-                    }
-                }
-            }
-
-            for (int n=0; n<=1; ++n) {
-
-                for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
-                    phi_ptr[s] = Real(0.);
-                }
-
-                __syncthreads();
-
-                Real rhs_num[2][2] = {0., 0., 0., 0.};
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                            rhs_num[hi][hj] = rhs(i[hi], j[hj], 0, n);
-                        }
-                    }
-                }
-
-                for (int icolor=0; icolor<niter; ++icolor) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        const int shift = (i[hi]+j[0]+icolor)%2;
-                        const int j_loc = j[0] + shift;
-                        Real rhs_loc = shift ? rhs_num[hi][1] : rhs_num[hi][0];
-                        Real acf_loc = shift ? acf_num[hi][1] : acf_num[hi][0];
-
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j_loc && j_loc <= jhi_loop) {
-                            gs1(i[hi], j_loc, 0, ilo, jlo, ihi, jhi, phi_shared,
-                                rhs_loc, acf_loc, facx, facy);
-                        }
-                    }
-                    __syncthreads();
-                }
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop &&
-                            edge_offset <= ithread_x[hi] && ithread_x[hi] < tilesize - edge_offset &&
-                            edge_offset <= ithread_y[hj] && ithread_y[hj] < tilesize - edge_offset) {
-
-                            res(i[hi], j[hj], 0, n) = residual1(i[hi], j[hj], 0, ilo, jlo, ihi, jhi,
-                                phi_shared, rhs_num[hi][hj], acf_num[hi][hj], facx, facy);
-
-                            phi(i[hi], j[hj], 0, n) = phi_shared(i[hi], j[hj], 0, 0);
-                        }
-                    }
-                }
-
-                __syncthreads();
-            }
-        });
-}
-
-
-void gsrb_shared_st1_4_down_v2 (Box const& box, Array4<Real> const& phi_out,
-                                Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                                Array4<Real const> const& phi_in, Real dx, Real dy)
-{
-    constexpr int tilesize = 64;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter - 1;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int tile_begin_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 1);
-
-            const int ithread_y_0 = threadIdx.x / thread_tilesize;
-            const int ithread_x_0 = threadIdx.x - ithread_y_0 * thread_tilesize;
-
-            const int ithread_x[2] = {ithread_x_0, ithread_x_0 + thread_tilesize};
-            const int ithread_y[2] = {ithread_y_0, ithread_y_0 + thread_tilesize};
-
-            const int i_0 = iblock_x * final_tilesize + ithread_x_0 - edge_offset + ilo_loop;
-            const int j_0 = iblock_y * final_tilesize + ithread_y_0 - edge_offset + jlo_loop;
-
-            const int i[2] = {i_0, i_0 + thread_tilesize};
-            const int j[2] = {j_0, j_0 + thread_tilesize};
-
-            Real acf_num[2][2] = {0., 0., 0., 0.};
-
-            for (int hj=0; hj<=1; ++hj) {
-                for (int hi=0; hi<=1; ++hi) {
-                    if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                        jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                        acf_num[hi][hj] = acf(i[hi], j[hj], 0);
-                    }
-                }
-            }
-
-            for (int n=0; n<=1; ++n) {
-
-                for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
-                    int sy = s / tilesize_array;
-                    int sx = s - sy * tilesize_array;
-                    sx += tile_begin_x;
-                    sy += tile_begin_y;
-                    if (ilo_loop <= sx && sx <= ihi_loop &&
-                        jlo_loop <= sy && sy <= jhi_loop) {
-                        phi_shared(sx, sy, 0, 0) = phi_in(sx, sy, 0, n);
-                    } else {
-                        phi_shared(sx, sy, 0, 0) = Real(0.);
-                    }
-                }
-
-                __syncthreads();
-
-                Real rhs_num[2][2] = {0., 0., 0., 0.};
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                            rhs_num[hi][hj] = rhs(i[hi], j[hj], 0, n);
-                        }
-                    }
-                }
-
-                for (int icolor=0; icolor<niter; ++icolor) {
-                    for (int hj=0; hj<=1; ++hj) {
-                        for (int hi=0; hi<=1; ++hi) {
-                            if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                                jlo_loop <= j[hj] && j[hj] <= jhi_loop &&
-                                (i[hi]+j[hj]+icolor)%2 == 0) {
-                                gs1(i[hi], j[hj], 0, ilo, jlo, ihi, jhi, phi_shared,
-                                    rhs_num[hi][hj], acf_num[hi][hj], facx, facy);
-                            }
-                        }
-                    }
-                    __syncthreads();
-                }
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop &&
-                            edge_offset <= ithread_x[hi] && ithread_x[hi] < tilesize - edge_offset &&
-                            edge_offset <= ithread_y[hj] && ithread_y[hj] < tilesize - edge_offset) {
-                            phi_out(i[hi], j[hj], 0, n) = phi_shared(i[hi], j[hj], 0, 0);
-                        }
-                    }
-                }
-
-                __syncthreads();
-            }
-        });
-}
-
-void gsrb_shared_st1_4_down_v3 (Box const& box, Array4<Real> const& phi_out,
-                                Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                                Array4<Real const> const& phi_in, Real dx, Real dy)
-{
-    constexpr int tilesize = 64;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter - 1;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int tile_begin_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - edge_offset - 1 + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - edge_offset - 1 + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 1);
-
-            const int ithread_y_0 = threadIdx.x / thread_tilesize;
-            const int ithread_x_0 = threadIdx.x - ithread_y_0 * thread_tilesize;
-
-            const int ithread_x[2] = {ithread_x_0, ithread_x_0 + thread_tilesize};
-            const int ithread_y[2] = {ithread_y_0*2, ithread_y_0*2+1};
-
-            const int i_0 = iblock_x * final_tilesize - edge_offset + ilo_loop;
-            const int j_0 = iblock_y * final_tilesize - edge_offset + jlo_loop;
-
-            const int i[2] = {i_0 + ithread_x[0], i_0 + ithread_x[1]};
-            const int j[2] = {j_0 + ithread_y[0], j_0 + ithread_y[1]};
-
-            Real acf_num[2][2] = {0., 0., 0., 0.};
-
-            for (int hj=0; hj<=1; ++hj) {
-                for (int hi=0; hi<=1; ++hi) {
-                    if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                        jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                        acf_num[hi][hj] = acf(i[hi], j[hj], 0);
-                    }
-                }
-            }
-
-            for (int n=0; n<=1; ++n) {
-
-                for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
-                    int sy = s / tilesize_array;
-                    int sx = s - sy * tilesize_array;
-                    sx += tile_begin_x;
-                    sy += tile_begin_y;
-                    if (ilo_loop <= sx && sx <= ihi_loop &&
-                        jlo_loop <= sy && sy <= jhi_loop) {
-                        phi_shared(sx, sy, 0, 0) = phi_in(sx, sy, 0, n);
-                    } else {
-                        phi_shared(sx, sy, 0, 0) = Real(0.);
-                    }
-                }
-
-                __syncthreads();
-
-                Real rhs_num[2][2] = {0., 0., 0., 0.};
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop) {
-                            rhs_num[hi][hj] = rhs(i[hi], j[hj], 0, n);
-                        }
-                    }
-                }
-
-                for (int icolor=0; icolor<niter; ++icolor) {
-
-                    for (int hi=0; hi<=1; ++hi) {
-                        const int shift = (i[hi]+j[0]+icolor)%2;
-                        const int j_loc = j[0] + shift;
-                        Real rhs_loc = shift ? rhs_num[hi][1] : rhs_num[hi][0];
-                        Real acf_loc = shift ? acf_num[hi][1] : acf_num[hi][0];
-
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j_loc && j_loc <= jhi_loop) {
-                            gs1(i[hi], j_loc, 0, ilo, jlo, ihi, jhi, phi_shared,
-                                rhs_loc, acf_loc, facx, facy);
-                        }
-                    }
-                    __syncthreads();
-                }
-
-                for (int hj=0; hj<=1; ++hj) {
-                    for (int hi=0; hi<=1; ++hi) {
-                        if (ilo_loop <= i[hi] && i[hi] <= ihi_loop &&
-                            jlo_loop <= j[hj] && j[hj] <= jhi_loop &&
-                            edge_offset <= ithread_x[hi] && ithread_x[hi] < tilesize - edge_offset &&
-                            edge_offset <= ithread_y[hj] && ithread_y[hj] < tilesize - edge_offset) {
-                            phi_out(i[hi], j[hj], 0, n) = phi_shared(i[hi], j[hj], 0, 0);
-                        }
-                    }
-                }
-
-                __syncthreads();
-            }
-        });
-}
-
-void gsrb_shared_st1_4_down_v4 (Box const& box, Array4<Real> const& phi_out,
-                                Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                                Array4<Real const> const& phi_in, Real dx, Real dy)
-{
-    constexpr int tilesize_x = 64;
-    constexpr int tilesize_y = 32;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array_x = tilesize_x + 2;
-    constexpr int tilesize_array_y = tilesize_y + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter - 1;
-    constexpr int final_tilesize_x = tilesize_x - 2*edge_offset;
-    constexpr int final_tilesize_y = tilesize_y - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize_x - 1)/final_tilesize_x;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize_y - 1)/final_tilesize_y;
-
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array_x*tilesize_array_y*2];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            int ithread_y = threadIdx.x / tilesize_x;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize_x;
-            ithread_y *= 2;
-
-            const int i = iblock_x * final_tilesize_x + ithread_x - edge_offset + ilo_loop;
-            const int j = iblock_y * final_tilesize_y + ithread_y - edge_offset + jlo_loop;
-
-            const int tile_begin_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop + tilesize_array_x;
-            const int tile_end_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop + tilesize_array_y;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
-
-            for (int s = threadIdx.x; s < tilesize_array_x*tilesize_array_y; s+=blockDim.x) {
-                int sy = s / tilesize_array_x;
-                int sx = s - sy * tilesize_array_x;
-                sx += tile_begin_x;
-                sy += tile_begin_y;
-                if (ilo_loop <= sx && sx <= ihi_loop &&
-                    jlo_loop <= sy && sy <= jhi_loop) {
-                    phi_shared(sx, sy, 0, 0) = phi_in(sx, sy, 0, 0);
-                    phi_shared(sx, sy, 0, 1) = phi_in(sx, sy, 0, 1);
-                } else {
-                    phi_shared(sx, sy, 0, 0) = Real(0.);
-                    phi_shared(sx, sy, 0, 1) = Real(0.);
-                }
-            }
-
-            __syncthreads();
-
-            Real rhs0_num[2] = {0., 0.};
-            Real rhs1_num[2] = {0., 0.};
-            Real acf_num[2] = {0., 0.};
-
-            for (int nj=0; nj<=1; ++nj) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j+nj && j+nj <= jhi_loop) {
-                    rhs0_num[nj] = rhs(i, j+nj, 0, 0);
-                    rhs1_num[nj] = rhs(i, j+nj, 0, 1);
-                    acf_num[nj] = acf(i, j+nj, 0);
-                }
-            }
-
-            for (int icolor=0; icolor<niter; ++icolor) {
-                const int shift = (i + j + icolor) & 1;
-                const int j_loc = j + shift;
-                const Real rhs0_loc = shift ? rhs0_num[1] : rhs0_num[0];
-                const Real rhs1_loc = shift ? rhs1_num[1] : rhs1_num[0];
-                const Real acf_loc = shift ? acf_num[1] : acf_num[0];
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j_loc && j_loc <= jhi_loop) {
-                    gs1(i, j_loc, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_loc, acf_loc, facx, facy);
-                    gs1(i, j_loc, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_loc, acf_loc, facx, facy);
-                }
-                __syncthreads();
-            }
-
-            for (int nj=0; nj<=1; ++nj) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j+nj && j+nj <= jhi_loop &&
-                    edge_offset <= ithread_x && ithread_x < tilesize_x - edge_offset &&
-                    edge_offset <= ithread_y+nj && ithread_y+nj < tilesize_y - edge_offset) {
-                    phi_out(i, j+nj, 0, 0) = phi_shared(i, j+nj, 0, 0);
-                    phi_out(i, j+nj, 0, 1) = phi_shared(i, j+nj, 0, 1);
-                }
-            }
-        });
-}
-
-
-void gsrb_shared_st1_4_down (Box const& box, Array4<Real> const& phi_out,
-                             Array4<Real const> const& rhs, Array4<Real const> const& acf,
-                             Array4<Real const> const& phi_in, Real dx, Real dy)
-{
-    constexpr int tilesize = 32;
-    constexpr int tilesize_array = tilesize + 2;
-    constexpr int niter = 4;
-    constexpr int edge_offset = niter - 1;
-    constexpr int final_tilesize = tilesize - 2*edge_offset;
-
-    int const ilo = box.smallEnd(0);
-    int const jlo = box.smallEnd(1);
-    int const ihi = box.bigEnd(0);
-    int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
-
-    const Box loop_box = valid_domain_box(box);
-    int const ilo_loop = loop_box.smallEnd(0);
-    int const jlo_loop = loop_box.smallEnd(1);
-    int const ihi_loop = loop_box.bigEnd(0);
-    int const jhi_loop = loop_box.bigEnd(1);
-    const int num_blocks_x = (loop_box.length(0) + final_tilesize - 1)/final_tilesize;
-    const int num_blocks_y = (loop_box.length(1) + final_tilesize - 1)/final_tilesize;
-
-    amrex::launch<tilesize*tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
-        {
-            __shared__ Real phi_ptr[tilesize_array*tilesize_array*2];
-
-            const int iblock_y = blockIdx.x / num_blocks_x;
-            const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
-
-            const int tile_begin_x = iblock_x * final_tilesize - niter + ilo_loop;
-            const int tile_begin_y = iblock_y * final_tilesize - niter + jlo_loop;
-
-            const int tile_end_x = iblock_x * final_tilesize - niter + ilo_loop + tilesize_array;
-            const int tile_end_y = iblock_y * final_tilesize - niter + jlo_loop + tilesize_array;
-
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x,tile_begin_y,0},
-                                             {tile_end_x,tile_end_y,1}, 2);
-
-            for (int s = threadIdx.x; s < tilesize_array*tilesize_array; s+=blockDim.x) {
-                int sy = s / tilesize_array;
-                int sx = s - sy * tilesize_array;
-                sx += tile_begin_x;
-                sy += tile_begin_y;
-                if (ilo_loop <= sx && sx <= ihi_loop &&
-                    jlo_loop <= sy && sy <= jhi_loop) {
-                    phi_shared(sx, sy, 0, 0) = phi_in(sx, sy, 0, 0);
-                    phi_shared(sx, sy, 0, 1) = phi_in(sx, sy, 0, 1);
-                } else {
-                    phi_shared(sx, sy, 0, 0) = Real(0.);
-                    phi_shared(sx, sy, 0, 1) = Real(0.);
-                }
-            }
-
-            __syncthreads();
-
-            const int ithread_y = threadIdx.x / tilesize;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize;
-
-            const int i = iblock_x * final_tilesize + ithread_x - edge_offset + ilo_loop;
-            const int j = iblock_y * final_tilesize + ithread_y - edge_offset + jlo_loop;
-
-            Real rhs0_num = Real(0.);
-            Real rhs1_num = Real(0.);
-            Real acf_num = Real(0.);
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop) {
-                rhs0_num = rhs(i, j, 0, 0);
-                rhs1_num = rhs(i, j, 0, 1);
-                acf_num = acf(i, j, 0);
-            }
-
-            for (int icolor=0; icolor<niter; ++icolor) {
-                if (ilo_loop <= i && i <= ihi_loop &&
-                    jlo_loop <= j && j <= jhi_loop &&
-                    (i+j+icolor)%2 == 0) {
-                    gs1(i, j, 0, ilo, jlo, ihi, jhi, phi_shared, rhs0_num, acf_num, facx, facy);
-                    gs1(i, j, 1, ilo, jlo, ihi, jhi, phi_shared, rhs1_num, acf_num, facx, facy);
-                }
-                __syncthreads();
-            }
-
-            if (ilo_loop <= i && i <= ihi_loop &&
-                jlo_loop <= j && j <= jhi_loop &&
-                edge_offset <= ithread_x && ithread_x < tilesize - edge_offset &&
-                edge_offset <= ithread_y && ithread_y < tilesize - edge_offset) {
-                phi_out(i, j, 0, 0) = phi_shared(i, j, 0, 0);
-                phi_out(i, j, 0, 1) = phi_shared(i, j, 0, 1);
-            }
-        });
-}
-
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
 
 template<bool zero_init, bool compute_residual, bool is_cell_centered>
-void gsrb_shared_st1_4_uni_v1 (Box const& box,
-                               Array4<Real> const& phi_out, Array4<Real const> const& rhs,
-                               Array4<Real const> const& acf, Array4<Real> const& res,
-                               Real dx, Real dy)
+void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
+                      Array4<Real const> const& acf, Array4<Real> const& res, Real dx, Real dy)
 {
     constexpr int tilesize_x = 64;
     constexpr int tilesize_y = 32;
@@ -1539,6 +426,7 @@ void gsrb_shared_st1_4_uni_v1 (Box const& box,
         });
 }
 
+#endif
 
 void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine)
 {
@@ -1572,6 +460,8 @@ void interpolation (Box const& box, Array4<Real> const& fine, Array4<Real const>
     }
 }
 
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+
 void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in,
                                Array4<Real const> const& crse, Array4<Real> const& fine_out)
 {
@@ -1588,6 +478,8 @@ void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in
         });
     }
 }
+
+#endif
 
 #if defined(AMREX_USE_GPU)
 
@@ -2085,37 +977,40 @@ MultiGrid::vcycle ()
 #endif
 
     for (int ilev = 0; ilev < m_single_block_level_begin; ++ilev) {
-        //Real * pcor = m_cor[ilev].dataPtr();
-        //hpmg::ParallelFor(m_domain[ilev].numPts()*2,
-        //                  [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor[i] = Real(0.); });
 
         Real fac = static_cast<Real>(1 << ilev);
         Real dx = m_dx * fac;
         Real dy = m_dy * fac;
-        /*for (int is = 0; is < 4; ++is) {
-            gsrb(is, m_domain[ilev], m_cor[ilev].array(),
-                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
-                 m_system_type);
-        }*/
 
-        //gsrb_shared_st1_4_up(m_domain[ilev], m_cor[ilev].array(),
-        //                        m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy);
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+        if (m_system_type == 1) {
+            if (m_domain[ilev].cellCentered()) {
+                gsrb_shared_st1<true, true, true>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            } else {
+                gsrb_shared_st1<true, true, false>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            }
+        } else
+#endif
+        {
+            Real * pcor = m_cor[ilev].dataPtr();
+            hpmg::ParallelFor(m_domain[ilev].numPts()*2,
+                              [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor[i] = Real(0.); });
 
-        if (m_domain[ilev].cellCentered()) {
-            gsrb_shared_st1_4_uni_v1<true, true, true>(
-                m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
-                m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
-        } else {
-            gsrb_shared_st1_4_uni_v1<true, true, false>(
-                m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
-                m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            for (int is = 0; is < 4; ++is) {
+                gsrb(is, m_domain[ilev], m_cor[ilev].array(),
+                    m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
+                    m_system_type);
+            }
+
+            // rescor = res - L(cor)
+            compute_residual(m_domain[ilev], m_rescor[ilev].array(), m_cor[ilev].array(),
+                             m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
+                             m_system_type);
         }
-
-
-        // rescor = res - L(cor)
-        //compute_residual(m_domain[ilev], m_rescor[ilev].array(), m_cor[ilev].array(),
-        //                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
-        //                 m_system_type);
 
         // res[ilev+1] = R(rescor[ilev])
         restriction(m_domain[ilev+1], m_res[ilev+1].array(), m_rescor[ilev].const_array());
@@ -2124,33 +1019,39 @@ MultiGrid::vcycle ()
     bottomsolve();
 
     for (int ilev = m_single_block_level_begin-1; ilev >= 0; --ilev) {
-        // cor[ilev] += I(cor[ilev+1])
-        interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
-                                 m_cor[ilev+1].const_array(), m_rescor[ilev].array());
 
         Real fac = static_cast<Real>(1 << ilev);
         Real dx = m_dx * fac;
         Real dy = m_dy * fac;
-        /*for (int is = 0; is < 4; ++is) {
-            gsrb(is, m_domain[ilev], m_cor[ilev].array(),
-                 m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
-                 m_system_type);
-        }*/
 
-        //gsrb_shared_st1_4_down_v4(m_domain[ilev], m_cor[ilev].array(),
-        //                          m_res[ilev].const_array(), m_acf[ilev].const_array(),
-        //                          m_rescor[ilev].const_array(), dx, dy);
 
-        if (m_domain[ilev].cellCentered()) {
-            gsrb_shared_st1_4_uni_v1<false, false, true>(
-                m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
-                m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
-        } else {
-            gsrb_shared_st1_4_uni_v1<false, false, false>(
-                m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
-                m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+        if (m_system_type == 1) {
+            // cor[ilev] += I(cor[ilev+1])
+            interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
+                                     m_cor[ilev+1].const_array(), m_rescor[ilev].array());
+
+            if (m_domain[ilev].cellCentered()) {
+                gsrb_shared_st1<false, false, true>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            } else {
+                gsrb_shared_st1<false, false, false>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            }
+        } else
+#endif
+        {
+            // cor[ilev] += I(cor[ilev+1])
+            interpolation(m_domain[ilev], m_cor[ilev].array(), m_cor[ilev+1].const_array());
+
+            for (int is = 0; is < 4; ++is) {
+                gsrb(is, m_domain[ilev], m_cor[ilev].array(),
+                    m_res[ilev].const_array(), m_acf[ilev].const_array(), dx, dy,
+                    m_system_type);
+            }
         }
-
     }
 
 #if defined(AMREX_USE_CUDA)
