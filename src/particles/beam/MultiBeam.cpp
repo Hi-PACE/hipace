@@ -68,12 +68,12 @@ MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 
 void
 MultiBeam::AdvanceBeamParticlesSlice (
-    const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-    const amrex::RealVect& extEu, const amrex::RealVect& extBu,
+    const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
+    int const current_N_level, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
     const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, current_N_level,
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level,
                                     extEu, extBu, extEs, extBs);
     }
 }

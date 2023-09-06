@@ -97,6 +97,7 @@ namespace
 
         iarrdata[BeamIdx::id ][ip] = id;
         iarrdata[BeamIdx::cpu][ip] = 0;
+        iarrdata[BeamIdx::nsubcycles][ip] = 0;
     }
 }
 

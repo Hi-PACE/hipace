@@ -34,6 +34,9 @@ struct BeamIdx
         int_nattribs_in_buffer,
         // cpu is not stored or communicated in MultiBuffer, only used temporarily per slice
         cpu=int_nattribs_in_buffer,
+        // nsubcycles: by how many subcycles was this particle pushed already
+        // nsubcycles is not stored or communicated in MultiBuffer
+        nsubcycles,
         int_nattribs
     };
 };
