@@ -851,7 +851,7 @@ Fields::InterpolateDown (amrex::Vector<amrex::Geometry> const& geom, const int l
               GetPosOffset(1, geom[lev_fine], geom[lev_fine].Domain())
             - GetPosOffset(1, geom[lev_coarse], geom[lev_coarse].Domain());
         const amrex::Real factor = geom[lev_fine].CellSize(0) * geom[lev_fine].CellSize(1) /
-            geom[lev_coarse].CellSize(0) * geom[lev_coarse].CellSize(1);
+            (geom[lev_coarse].CellSize(0) * geom[lev_coarse].CellSize(1));
 
         amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
