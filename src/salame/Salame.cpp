@@ -30,9 +30,14 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     for (int lev=0; lev<current_N_level; ++lev) {
         hipace->m_fields.setVal(0., lev, WhichSlice::This, "Sy", "Sx");
+    }
+
+    for (int lev=current_N_level-1; lev>=0; --lev) {
         hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
                                               hipace->m_3D_geom, lev);
+    }
 
+    for (int lev=0; lev<current_N_level; ++lev) {
         // Back up Sx and Sy from the plasma only. This can only be done before the plasma push
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Sy_back", "Sx_back"},
                                         WhichSlice::This, {"Sy", "Sx"});

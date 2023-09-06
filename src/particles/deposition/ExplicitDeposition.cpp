@@ -19,7 +19,7 @@
 void
 ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
                     amrex::Vector<amrex::Geometry> const& gm, const int lev) {
-    HIPACE_PROFILE("ExplicitDeposition()");
+    HIPACE_PROFILE("ExplicitDeposition(" + std::to_string(lev) + ")");
     using namespace amrex::literals;
 
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti) {

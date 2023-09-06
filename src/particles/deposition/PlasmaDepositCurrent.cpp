@@ -27,7 +27,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 amrex::Vector<amrex::Geometry> const& gm, int const lev,
                 const PlasmaBins& bins, int bin_size)
 {
-    HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
+    HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer(" + std::to_string(lev) + ")");
     using namespace amrex::literals;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
