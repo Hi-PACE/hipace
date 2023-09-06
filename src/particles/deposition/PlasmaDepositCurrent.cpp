@@ -90,6 +90,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real charge_invvol = charge * invvol;
         const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
+        const bool only_highest = Hipace::m_mr_current_interpolation;
 
         int n_qsa_violation = 0;
         amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
@@ -188,7 +189,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 const int ox = idx % outer_depos_order_x_1;
 
                 // only deposit plasma currents on or below their according MR level
-                if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
+                if (ptd.id(ip) < 0 || (only_highest ? (ptd.cpu(ip)!=lev) : (ptd.cpu(ip)<lev))) return;
 
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);

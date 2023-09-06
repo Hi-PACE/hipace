@@ -95,6 +95,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    queryWithParser(pph, "mr_current_interpolation", m_mr_current_interpolation);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
     queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
@@ -452,24 +453,28 @@ Hipace::SolveOneSlice (int islice, int step)
         m_fields.InitializeSlices(lev, islice, m_3D_geom);
     }
 
-    // deposit current
-    for (int lev=0; lev<current_N_level; ++lev) {
+    // deposit plasma current
+    for (int lev=current_N_level-1; lev>=0; --lev) {
         // tiling used by plasma current deposition
         if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
-
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This, true, false,
                 m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
-
-            // deposit jz_beam and maybe rhomjz of the beam on This slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
-                false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This, true, true,
                 m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
+        }
+    }
 
+    // deposit remaining current
+    for (int lev=0; lev<current_N_level; ++lev) {
+        if (m_explicit) {
+            // deposit jz_beam and maybe rhomjz of the beam on This slice
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
+        } else {
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
                 m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho,
@@ -499,20 +504,22 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // Bx By solve
     if (m_explicit) {
-        for (int lev=0; lev<current_N_level; ++lev) {
-            // The algorithm used was derived in
-            // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],
-            // it is implemented in the WAND-PIC quasistatic PIC code.
+        // The algorithm used was derived in
+        // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],
+        // it is implemented in the WAND-PIC quasistatic PIC code.
 
+        for (int lev=current_N_level-1; lev>=0; --lev) {
+            // Deposit Sx and Sy for every plasma species
+            m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, m_3D_geom, lev);
+        }
+
+        for (int lev=0; lev<current_N_level; ++lev) {
             // deposit jx_beam and jy_beam in the Next slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
                 m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
 
             // Set Sx and Sy to beam contribution
             InitializeSxSyWithBeam(lev);
-
-            // Deposit Sx and Sy for every plasma species
-            m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, m_3D_geom, lev);
 
             // Solves Bx, By using Sx, Sy and chi
             ExplicitMGSolveBxBy(lev, WhichSlice::This);
@@ -649,9 +656,9 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 
                 // calculate contribution to Sx and Sy by all beams (same as with PC solver)
                 // sy, to compute Bx
-                arr(i,j,Sy) =   mu0 * ( - dy_jzb + dz_jyb);
+                arr(i,j,Sy) +=   mu0 * ( - dy_jzb + dz_jyb);
                 // sx, to compute By
-                arr(i,j,Sx) = - mu0 * ( - dx_jzb + dz_jxb);
+                arr(i,j,Sx) += - mu0 * ( - dx_jzb + dz_jxb);
             });
     }
 }
@@ -822,12 +829,14 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
             m_multi_plasma.TagByLevel(current_N_level, m_3D_geom);
         }
 
-        for (int lev=0; lev<current_N_level; ++lev) {
+        for (int lev=current_N_level-1; lev>=0; --lev) {
             if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
             // plasmas deposit jx jy to next temp slice
             m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::Next,
                 true, false, false, false, false, m_3D_geom, lev);
+        }
 
+        for (int lev=0; lev<current_N_level; ++lev) {
             // beams deposit jx jy to the next slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
                 m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);

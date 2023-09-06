@@ -85,6 +85,21 @@ MultiPlasma::DepositCurrent (
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
     }
+    if (Hipace::m_mr_current_interpolation && lev > 0) {
+        if (deposit_jx_jy) {
+            fields.InterpolateDown(gm, lev, which_slice, "jx");
+            fields.InterpolateDown(gm, lev, which_slice, "jy");
+        }
+        if (deposit_jz) {
+            fields.InterpolateDown(gm, lev, which_slice, "jz");
+        }
+        if (deposit_chi) {
+            fields.InterpolateDown(gm, lev, which_slice, "chi");
+        }
+        if (deposit_rhomjz) {
+            fields.InterpolateDown(gm, lev, which_slice, "rhomjz");
+        }
+    }
 }
 
 void
@@ -93,6 +108,10 @@ MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::ExplicitDeposition(m_all_plasmas[i], fields, multi_laser, gm, lev);
+    }
+    if (Hipace::m_mr_current_interpolation && lev > 0) {
+        fields.InterpolateDown(gm, lev, WhichSlice::This, "Sy");
+        fields.InterpolateDown(gm, lev, WhichSlice::This, "Sx");
     }
 }
 

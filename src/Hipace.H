@@ -222,6 +222,8 @@ public:
     inline static bool m_deposit_rho = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
+    /** Interpolate current to lower MR levels instead of depositing it */
+    inline static bool m_mr_current_interpolation = false;
     /** Whether to use tiling for particle operations */
 #ifdef AMREX_USE_GPU
     inline static bool m_do_tiling = false;

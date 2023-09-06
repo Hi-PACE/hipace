@@ -62,6 +62,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
+        const bool only_highest = Hipace::m_mr_current_interpolation;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -103,7 +104,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
 
                 ip += idx_begin;
 
-                if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
+                if (ptd.id(ip) < 0 || (only_highest ? (ptd.cpu(ip)!=lev) : (ptd.cpu(ip)<lev))) return;
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);

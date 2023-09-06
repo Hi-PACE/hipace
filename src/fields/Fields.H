@@ -213,6 +213,16 @@ public:
     void LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                   const int which_slice, const std::string& component);
 
+    /** \brief Interpolate the full field from the fine grid lev_fine to the coarse grid lev_fine-1
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev_fine fine level
+     * \param[in] which_slice slice of the field to interpolate
+     * \param[in] component which can be jx or jy etc.
+     */
+    void InterpolateDown (amrex::Vector<amrex::Geometry> const& geom, const int lev_fine,
+                          const int which_slice, const std::string& component);
+
     /** \brief Compute Psi, ExmBy, EypBx, Ez and Bz on the slice container from J by solving three
      * poisson equations. ExmBy and EypBx computed from grad(-Psi).
      * This function does all the necessary boundary interpolation between MR levels

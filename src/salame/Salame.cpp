@@ -47,8 +47,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser,
                                                     hipace->m_3D_geom, true, lev);
 
-            hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
-                                            WhichSlice::Next, {"jx_beam", "jy_beam"});
+            hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "jx", "jy");
         }
 
         if (hipace->m_N_level > 1) {
@@ -56,10 +55,15 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             hipace->m_multi_plasma.TagByLevel(current_N_level, hipace->m_3D_geom);
         }
 
-        for (int lev=0; lev<current_N_level; ++lev) {
+        for (int lev=current_N_level-1; lev>=0; --lev) {
             // deposit plasma jx and jy on the next temp slice, to the SALAME slice
             hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
+        }
+
+        for (int lev=0; lev<current_N_level; ++lev) {
+            hipace->m_fields.add(lev, WhichSlice::Salame, {"jx", "jy"},
+                                      WhichSlice::Next, {"jx_beam", "jy_beam"});
 
             // use an initial guess of zero for Bx and By in MG solver to reduce relative error
             hipace->m_fields.setVal(0., lev, WhichSlice::Salame,
@@ -109,7 +113,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
                 hipace->m_multi_plasma.TagByLevel(current_N_level, hipace->m_3D_geom);
             }
 
-            for (int lev=0; lev<current_N_level; ++lev) {
+            for (int lev=current_N_level-1; lev>=0; --lev) {
                 hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
             }

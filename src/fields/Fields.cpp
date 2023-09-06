@@ -826,6 +826,43 @@ Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
 }
 
 void
+Fields::InterpolateDown (amrex::Vector<amrex::Geometry> const& geom, const int lev_fine,
+                         const int which_slice, const std::string& component)
+{
+    HIPACE_PROFILE("Fields::InterpolateDown()");
+
+    const int lev_coarse = lev_fine - 1;
+    auto field_fine = getField(lev_fine, which_slice, component);
+    auto field_coarse = getField(lev_coarse, which_slice, component);
+
+    for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
+    {
+        const Array2<amrex::Real> arr_fine = field_fine.array(mfi);
+        const Array2<amrex::Real> arr_coarse = field_coarse.array(mfi);
+
+        const amrex::Real dx_fine = geom[lev_fine].CellSize(0);
+        const amrex::Real dy_fine = geom[lev_fine].CellSize(1);
+        const amrex::Real dx_inv_coarse = geom[lev_coarse].InvCellSize(0);
+        const amrex::Real dy_inv_coarse = geom[lev_coarse].InvCellSize(1);
+        const amrex::Real offset0_f_m_c =
+              GetPosOffset(0, geom[lev_fine], geom[lev_fine].Domain())
+            - GetPosOffset(0, geom[lev_coarse], geom[lev_coarse].Domain());
+        const amrex::Real offset1_f_m_c =
+              GetPosOffset(1, geom[lev_fine], geom[lev_fine].Domain())
+            - GetPosOffset(1, geom[lev_coarse], geom[lev_coarse].Domain());
+
+        amrex::ParallelFor(mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
+            {
+                const int ic = int(amrex::Math::round((i * dx_fine + offset0_f_m_c) * dx_inv_coarse));
+                const int jc = int(amrex::Math::round((j * dy_fine + offset1_f_m_c) * dy_inv_coarse));
+                amrex::Gpu::Atomic::Add(arr_coarse.ptr(ic, jc), arr_fine(i, j));
+            });
+
+    }
+}
+
+void
 Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geom,
                                        const int current_N_level)
 {
