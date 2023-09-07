@@ -60,6 +60,7 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
+    queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     queryWithParserAlt(pp, "do_reset_id_init", m_do_reset_id_init, pp_alt);
@@ -328,6 +329,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
     AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
+    const amrex::Real insitu_radius = m_insitu_radius;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
@@ -365,7 +367,8 @@ BeamParticleContainer::InSituComputeDiags (int islice)
         getNumParticles(WhichBeamSlice::This), reduce_data,
         [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
         {
-            if (idp[ip] < 0) {
+            if (idp[ip] < 0 ||
+                pos_x[ip]*pos_x[ip] + pos_y[ip]*pos_y[ip] > insitu_radius*insitu_radius) {
                 return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
                     0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
             }

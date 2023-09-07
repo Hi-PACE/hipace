@@ -121,6 +121,7 @@ PlasmaParticleContainer::ReadParameters ()
 
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
+    queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
                                      "The hollow core plasma radius must not be smaller than the "
@@ -448,6 +449,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
     AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
+    const amrex::Real insitu_radius = m_insitu_radius;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
@@ -482,9 +484,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 const amrex::Real uxp  = ptd.rdata(PlasmaIdx::ux )[ip] * clight_inv; // proper velocity to u
                 const amrex::Real uyp  = ptd.rdata(PlasmaIdx::uy )[ip] * clight_inv;
                 const amrex::Real psip = ptd.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real wp   = ptd.rdata(PlasmaIdx::w  )[ip];
 
-                if (ptd.id(ip) < 0) {
+                if (ptd.id(ip) < 0 || xp*xp + yp*yp > insitu_radius*insitu_radius) {
                     return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
                         0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
                 }
@@ -493,6 +494,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 const amrex::Real gamma = (1.0_rt + uxp*uxp*clightsq_inv
                                                   + uyp*uyp*clightsq_inv + psip*psip)/(2.0_rt*psip);
                 amrex::Real uzp = (gamma - psip); // the *c from uz cancels with the /c from the proper velocity conversion
+                const amrex::Real wp   = ptd.rdata(PlasmaIdx::w  )[ip] * gamma/psip; // quasi-static weighting factor
 
                 return {wp,
                         wp*xp,
