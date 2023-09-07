@@ -794,7 +794,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
     Path of the beam in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``<beam name> or beams.insitu_radius`` (`float`) optional (default ``infinity``)
-    Maximum radius ``<beam name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    Maximum radius ``<beam name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within which particles are
     used for the calculation of the insitu diagnostics.
 
 * ``<plasma name> or plasmas.insitu_period`` (`int`) optional (default ``0``)
@@ -804,7 +804,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
     Path of the plasma in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``<plasma name> or plasmas.insitu_radius`` (`float`) optional (default ``infinity``)
-    Maximum radius ``<plasma name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    Maximum radius ``<plasma name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within which particles are
     used for the calculation of the insitu diagnostics.
 
 Additional physics
