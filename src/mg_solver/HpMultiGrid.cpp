@@ -81,6 +81,7 @@ void interpadd_nd (int i, int j, int n, Array4<T> const& fine, Array4<U> const& 
 
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
 
+// out of place version used before shared memory gsrb
 template <typename T, typename U, typename V>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void interpcpy_cc (int i, int j, int n, Array4<T> const& fine_in, Array4<U> const& crse,
@@ -197,6 +198,8 @@ void compute_residual (Box const& box, Array4<Real> const& res,
     }
 }
 
+// is_cell_centered = true: supports both cell centered and node centered solves
+// is_cell_centered = false: only supports node centered solves, with higher performance
 template<bool is_cell_centered = true>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
@@ -223,7 +226,7 @@ void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
         lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
     }
     phi(i,j,0,n) = (rhs - lap) / c0;
-    // bit faster version:
+    // bit faster version with slightly different results:
     // const Real c0_inv = Real(1.) / c0;
     // phi(i,j,0,n) = (rhs - lap) * c0_inv;
 }
@@ -298,6 +301,7 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
 
+// do multiple gsrb iterations in GPU shared memory with many ghost cells
 template<bool zero_init, bool compute_residual, bool is_cell_centered>
 void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
                       Array4<Real const> const& acf, Array4<Real> const& res, Real dx, Real dy)
@@ -311,8 +315,10 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
     constexpr int edge_offset = niter - !compute_residual;
     constexpr int final_tilesize_x = tilesize_x - 2*edge_offset;
     constexpr int final_tilesize_y = tilesize_y - 2*edge_offset;
-    static_assert(zero_init || !compute_residual);
+    static_assert(zero_init || !compute_residual, "Cannot initialize phi from an array "
+        "and compute the residual because the same array is used for both operations.");
 
+    // box for the bounds of the arrays
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
@@ -320,6 +326,7 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
 
+    // box for the bounds of the ParallelFor loop this kernel replaces
     const Box loop_box = valid_domain_box(box);
     int const ilo_loop = loop_box.smallEnd(0);
     int const jlo_loop = loop_box.smallEnd(1);
@@ -331,6 +338,7 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
     amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
         [=] AMREX_GPU_DEVICE() noexcept
         {
+            // allocate static shared memory
             __shared__ Real phi_ptr[tilesize_array_x*tilesize_array_y*2];
 
             const int iblock_y = blockIdx.x / num_blocks_x;
@@ -342,6 +350,7 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
             const int tile_end_x = tile_begin_x + tilesize_array_x;
             const int tile_end_y = tile_begin_y + tilesize_array_y;
 
+            // make Array4 reference shared memory tile
             Array4<Real> phi_shared(phi_ptr, {tile_begin_x, tile_begin_y, 0},
                                              {tile_end_x, tile_end_y, 1}, 2);
 
@@ -380,6 +389,7 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
             for (int nj=0; nj<=1; ++nj) {
                 if (ilo_loop <= i && i <= ihi_loop &&
                     jlo_loop <= j+nj && j+nj <= jhi_loop) {
+                    // load rhs and acf into registers to avoid memory accesses in the gs iterations
                     rhs0_num[nj] = rhs(i, j+nj, 0, 0);
                     rhs1_num[nj] = rhs(i, j+nj, 0, 1);
                     acf_num[nj] = acf(i, j+nj, 0);
@@ -389,6 +399,12 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
             __syncthreads();
 
             for (int icolor=0; icolor<niter; ++icolor) {
+                // Do 4 Gauss–Seidel iterations.
+                // Every thread updates elements (i,j) and (i,j+1). When updating the elements
+                // in the checkerboard pattern every thread can pick the correct element instead
+                // of every second thread doing nothing.
+                // Note that this makes the memory access of phi_shared non coalesced,
+                // this is ok for shared memory.
                 const int shift = (i + j + icolor) & 1;
                 const int j_loc = j + shift;
                 const Real rhs0_loc = shift ? rhs0_num[1] : rhs0_num[0];
@@ -409,8 +425,12 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
                     jlo_loop <= j+nj && j+nj <= jhi_loop &&
                     edge_offset <= ithread_x && ithread_x < tilesize_x - edge_offset &&
                     edge_offset <= ithread_y+nj && ithread_y+nj < tilesize_y - edge_offset) {
+                    // store results in global memory but only in the shrunken box
+                    // where the result is correct
 
                     if (compute_residual) {
+                        // fuse with compute_residual kernel and reuse phi_shared
+                        // at the cost of one extra ghost cell in each direction
                         res(i, j+nj, 0, 0) = residual1(
                                                 i, j+nj, 0, ilo, jlo, ihi, jhi, phi_shared,
                                                 rhs0_num[nj], acf_num[nj], facx, facy);
