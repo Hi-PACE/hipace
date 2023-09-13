@@ -158,6 +158,17 @@ PlasmaParticleContainer::ReadParameters ()
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
+
+
+    /*
+    elec.ppc = 1 1
+    elec.element= electron
+    elec.density(x,y,z) = ne
+    elec.fine_ppc = 16 16
+    elec.fine_patch(x,y) = "x<1 && x>-1 && y<1 && y>-1"
+    elec.fine_transition_cells = 5
+    elec.initialization_level = 0
+    */
 }
 
 void

@@ -166,7 +166,11 @@ public:
     /** radius of the plasma insitu diagnostics */
     amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
+    int m_fine_transition_cells = 5;
+    amrex::Parser m_parser_fine_patch; /**< owns data for m_fine_patch_func */
+    amrex::ParserExecutor<2> m_fine_patch_func;
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
+    amrex::IntVect m_ppc_fine {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */

@@ -33,23 +33,27 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
     const int depos_order_1 = Hipace::m_depos_order_xy + 1;
     const bool outer_depos_loop = Hipace::m_outer_depos_loop;
 
-    const int num_ppc = AMREX_D_TERM( a_num_particles_per_cell[0],
-                                      *a_num_particles_per_cell[1],
-                                      *a_num_particles_per_cell[2]);
-    amrex::Real scale_fac = Hipace::m_normalized_units ? 1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc;
+    const amrex::IntVect ppc_coarse = m_ppc;
+    const int num_ppc_coarse = ppc_coarse[0] * ppc_coarse[1];
+    amrex::Real scale_fac_coarse =
+        Hipace::m_normalized_units ? 1./num_ppc_coarse : dx[0]*dx[1]*dx[2]/num_ppc_coarse;
+    const amrex::IntVect ppc_fine = m_ppc_fine;
+    const int num_ppc_fine = ppc_fine[0] * ppc_fine[1];
+    amrex::Real scale_fac_fine =
+        Hipace::m_normalized_units ? 1./num_ppc_fine : dx[0]*dx[1]*dx[2]/num_ppc_fine;
 
     amrex::IntVect box_nodal{amrex::IndexType::CELL,amrex::IndexType::CELL,amrex::IndexType::CELL};
     amrex::IntVect box_grow{0, 0, 0};
     amrex::Real x_offset = 0._rt;
     amrex::Real y_offset = 0._rt;
 
-    if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && a_num_particles_per_cell[0] % 2 == 1) {
+    if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && ppc_coarse[0] % 2 == 1) {
         box_nodal[0] = amrex::IndexType::NODE;
         box_grow[0] = -1;
         x_offset = -0.5_rt;
     }
 
-    if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && a_num_particles_per_cell[1] % 2 == 1) {
+    if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && ppc_coarse[1] % 2 == 1) {
         box_nodal[1] = amrex::IndexType::NODE;
         box_grow[1] = -1;
         y_offset = -0.5_rt;
@@ -85,6 +89,48 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         const amrex::Real c_t = c_light * Hipace::m_physical_time;
         const amrex::Real min_density = m_min_density;
 
+        amrex::BaseFab<int> fab_fine(tile_box, 2);
+        const Array3<int> arr_fine = fab_fine.array();
+        int comp_a = 0;
+        int comp_b = 1;
+        const int fine_transition_cells = m_fine_transition_cells;
+        auto fine_patch_func = m_fine_patch_func;
+
+        amrex::ParallelFor(tile_box,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+            {
+                const amrex::Real x = plo[0] + (i + 0.5_rt + x_offset)*dx[0];
+                const amrex::Real y = plo[1] + (j + 0.5_rt + y_offset)*dx[1];
+                if (fine_patch_func(x, y) > 0) {
+                    arr_fine(i, j, comp_a) = fine_transition_cells + 1;
+                } else {
+                    arr_fine(i, j, comp_a) = 0;
+                }
+            });
+
+        for (int iter=0; iter<fine_transition_cells; ++iter) {
+            std::swap(comp_a, comp_b);
+
+            amrex::ParallelFor(tile_box,
+                [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+                {
+                    int max_val = arr_fine(i, j, comp_b);
+                    if (i > lo.x) {
+                        max_val = std::max(max_val, arr_fine(i-1, j, comp_b)-1);
+                    }
+                    if (i < hi.x) {
+                        max_val = std::max(max_val, arr_fine(i+1, j, comp_b)-1);
+                    }
+                    if (j > lo.y) {
+                        max_val = std::max(max_val, arr_fine(i, j-1, comp_b)-1);
+                    }
+                    if (j < hi.y) {
+                        max_val = std::max(max_val, arr_fine(i, j+1, comp_b)-1);
+                    }
+                    arr_fine(i, j, comp_a) = max_val;
+                });
+        }
+
         // Count the total number of particles so only one resize is needed
         amrex::Long total_num_particles = amrex::Reduce::Sum<amrex::Long>(tile_box.numPts(),
             [=] AMREX_GPU_DEVICE (amrex::Long idx) noexcept
@@ -92,10 +138,14 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 auto [i,j,k] = tile_box.atOffset3d(idx).arr;
 
                 amrex::Long num_particles_cell = 0;
-                for (int i_part=0; i_part<num_ppc; ++i_part)
+                for (int i_part=0; i_part<num_ppc_fine; ++i_part)
                 {
-                    amrex::Real r[3];
-                    ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                    amrex::Real r[2];
+                    bool do_init = false;
+                    ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
+                        ppc_coarse, ppc_fine, fine_transition_cells, arr_fine(i, j, comp_a));
+
+                    if (!do_init) continue;
 
                     amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
                     amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
@@ -114,7 +164,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
-            scale_fac /= 4.;
+            scale_fac_coarse /= 4.;
+            scale_fac_fine /= 4.;
         }
 
         auto& particles = GetParticles(lev);
@@ -134,7 +185,7 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
         // The loop over particles is outside the loop over cells
         // so that particles in the same cell are far apart.
         // This makes current deposition faster.
-        for (int i_part=0; i_part<num_ppc; ++i_part)
+        for (int i_part=0; i_part<num_ppc_fine; ++i_part)
         {
             amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
             unsigned int* pcount = counts.dataPtr();
@@ -145,9 +196,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
             amrex::ParallelFor(tile_box,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
             {
-                amrex::Real r[3];
+                amrex::Real r[2];
+                bool do_init = false;
+                ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
+                    ppc_coarse, ppc_fine, fine_transition_cells, arr_fine(i, j, comp_a));
 
-                ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                if (!do_init) return;
 
                 amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
@@ -219,9 +273,12 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
 
                 const amrex::Long pidx = poffset[cellid] - poffset[0] + old_size;
 
-                amrex::Real r[3] = {0.,0.,0.};
+                amrex::Real r[2] = {0.,0.};
+                bool do_init = false;
+                ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
+                    ppc_coarse, ppc_fine, fine_transition_cells, arr_fine(i, j, comp_a));
 
-                ParticleUtil::get_position_unit_cell(r, a_num_particles_per_cell, i_part);
+                if (!do_init) return;
 
                 amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
@@ -241,7 +298,8 @@ InitParticles (const amrex::IntVect& a_num_particles_per_cell,
                 arrdata[PlasmaIdx::x      ][pidx] = x;
                 arrdata[PlasmaIdx::y      ][pidx] = y;
 
-                arrdata[PlasmaIdx::w      ][pidx] = scale_fac * density_func(x, y, c_t);
+                arrdata[PlasmaIdx::w      ][pidx] = density_func(x, y, c_t) *
+                    (arr_fine(i, j, comp_a) == 0 ? scale_fac_coarse : scale_fac_fine);
                 arrdata[PlasmaIdx::ux     ][pidx] = u[0] * c_light;
                 arrdata[PlasmaIdx::uy     ][pidx] = u[1] * c_light;
                 arrdata[PlasmaIdx::psi][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
