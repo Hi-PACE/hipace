@@ -22,6 +22,7 @@ struct GetInitialMomentum
 {
     /** Constructor.
      */
+    GetInitialMomentum () = default;
     GetInitialMomentum (const std::string& name);
 
     /** \brief Get the momentum for a beam particle

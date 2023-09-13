@@ -18,7 +18,7 @@
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    int const current_N_level, const amrex::RealVect& extEu,
+    const int slice, int const current_N_level, const amrex::RealVect& extEu,
     const amrex::RealVect& extBu, const amrex::RealVect& extEs, const amrex::RealVect& extBs)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
@@ -100,6 +100,7 @@ AdvanceBeamParticlesSlice (
     const amrex::Real inv_clight_SI = 1.0_rt/PhysConstSI::c;
     const amrex::Real inv_c2 = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
+    const amrex::Real min_z = gm[0].ProbLo(2) + (slice-gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
     const amrex::RealVect external_E_uniform = extEu;
     const amrex::RealVect external_B_uniform = extBu;
     const amrex::RealVect external_E_slope = extEs;
@@ -122,7 +123,7 @@ AdvanceBeamParticlesSlice (
     amrex::ParallelFor(
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
         {Hipace::m_depos_order_xy},
-        beam.getNumParticles(WhichBeamSlice::This),
+        beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This),
         [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
 
             if (ptd.id(ip) < 0) return;
@@ -134,7 +135,14 @@ AdvanceBeamParticlesSlice (
             amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
             amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
-            for (int i = 0; i < n_subcycles; i++) {
+            int i = ptd.idata(BeamIdx::nsubcycles)[ip];
+
+            for (; i < n_subcycles; i++) {
+
+                if (zp < min_z) {
+                    // stop pushing particle if it is not on this slice anymore
+                    break;
+                }
 
                 const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
                     + (ux*ux + uy*uy + uz*uz)*inv_c2 );
@@ -215,9 +223,9 @@ AdvanceBeamParticlesSlice (
                         Exp *= E0;
                         Eyp *= E0;
                         Ezp *= E0;
-                        Bxp *= E0;
-                        Byp *= E0;
-                        Bzp *= E0;
+                        Bxp *= E0*inv_clight_SI;
+                        Byp *= E0*inv_clight_SI;
+                        Bzp *= E0*inv_clight_SI;
                     }
                     const amrex::ParticleReal gamma_intermediate = std::sqrt(
                         1._rt + ( ux_intermediate*ux_intermediate
@@ -283,6 +291,7 @@ AdvanceBeamParticlesSlice (
                 uy = uy_next;
                 uz = uz_next;
             } // end for loop over n_subcycles
+            ptd.idata(BeamIdx::nsubcycles)[ip] = i;
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;
             ptd.rdata(BeamIdx::uz)[ip] = uz;

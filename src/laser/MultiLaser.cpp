@@ -87,7 +87,7 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
 
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
-    int nguards_xy = std::max(1, Hipace::m_depos_order_xy);
+    int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     m_slices.define(
         slice_ba, slice_dm, WhichLaserSlice::N, m_slices_nguards,
@@ -138,6 +138,21 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
             FFTW_BACKWARD, FFTW_ESTIMATE);
 #endif
     }
+
+    if (m_laser_from_file) {
+        if (Hipace::HeadRank()) {
+            m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
+            GetEnvelopeFromFileHelper(m_laser_geom_3D);
+        }
+#ifdef AMREX_USE_MPI
+        // need to communicate m_lambda0 as it is read in from the input file only by the head rank
+        MPI_Bcast(&m_lambda0,
+            1,
+            amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
+            amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+            amrex::ParallelDescriptor::Communicator());
+#endif
+    }
 }
 
 void
@@ -148,11 +163,6 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
     HIPACE_PROFILE("MultiLaser::InitSliceEnvelope()");
 
     if (m_laser_from_file) {
-        if (!m_input_file_is_read) {
-            m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-            GetEnvelopeFromFileHelper(m_laser_geom_3D);
-            m_input_file_is_read = true;
-        }
         amrex::Box src_box = m_slice_box;
         src_box.setSmall(2, islice);
         src_box.setBig(2, islice);
@@ -479,8 +489,9 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step)
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        acoeff_real.resize(bx, 1, amrex::The_Arena());
-        rhs_mg.resize(bx, 2, amrex::The_Arena());
+        // need one ghost cell for 2^n-1 MG solve
+        acoeff_real.resize(mfi.growntilebox(amrex::IntVect{1, 1, 0}), 1, amrex::The_Arena());
+        rhs_mg.resize(mfi.growntilebox(amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
         Array3<amrex::Real> arr = m_slices.array(mfi);
         Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
         Array3<amrex::Real> acoeff_real_arr = acoeff_real.array();
