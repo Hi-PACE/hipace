@@ -96,6 +96,19 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         auto& beam = beams.getBeam(ibeam);
 
+        if (initial && beam.m_injection_type != "from_file") {
+            // estimate values before the beam is initialized
+            m_timestep_data[ibeam][WhichDouble::SumWeights] = 1._rt;
+            m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] =
+                beam.m_get_momentum.m_u_mean[2];
+            m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] =
+                beam.m_get_momentum.m_u_mean[2] * beam.m_get_momentum.m_u_mean[2] +
+                beam.m_get_momentum.m_u_std[2] * beam.m_get_momentum.m_u_std[2];
+            m_timestep_data[ibeam][WhichDouble::MinUz] =
+                beam.m_get_momentum.m_u_mean[2] - 4._rt * beam.m_get_momentum.m_u_std[2];
+            continue;
+        }
+
         unsigned long long num_particles = 0;
         const amrex::Real * uzp = nullptr;
         const amrex::Real * wp = nullptr;

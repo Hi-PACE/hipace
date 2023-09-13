@@ -53,6 +53,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
 
     if (num_invalid == 0 && num_slipped == 0) {
         // nothing to do
+        beam.resize(WhichBeamSlice::This, num_stay, 0);
         return;
     }
 

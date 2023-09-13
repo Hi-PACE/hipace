@@ -75,6 +75,11 @@ You can then create your directory in ``/project/project_<project id>``, where y
     export ROCFFT_RTC_CACHE_PATH=/dev/null
     export OMP_NUM_THREADS=1
 
+    # needed for high nz runs.
+    # if too many mpi messages are send, the hardware counters can overflow, see
+    # https://docs.nersc.gov/performance/network/
+    # export FI_CXI_RX_MATCH_MODE=hybrid
+
     # setting correct CPU binding
     # (see https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/lumig-job/)
     cat << EOF > select_gpu
@@ -86,7 +91,7 @@ You can then create your directory in ``/project/project_<project id>``, where y
 
     chmod +x ./select_gpu
 
-    CPU_BIND="map_cpu:48,56,16,24,1,8,32,40"
+    CPU_BIND="map_cpu:49,57,17,25,1,9,33,41"
 
     srun --cpu-bind=${CPU_BIND} ./select_gpu $HOME/src/hipace/build/bin/hipace inputs
     rm -rf ./select_gpu

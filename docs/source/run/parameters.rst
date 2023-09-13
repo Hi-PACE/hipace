@@ -96,13 +96,6 @@ General parameters
 * ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
     If the loop over depos_order is included in the loop over particles.
 
-* ``hipace.beam_injection_cr`` (`integer`) optional (default `1`)
-    Using a temporary coarsed grid for beam particle injection for a fixed particle-per-cell beam.
-    For very high-resolution simulations, where the number of grid points (`nx*ny*nz`)
-    exceeds the maximum `int (~2e9)`, it enables beam particle injection, which would
-    fail otherwise. As an example, a simulation with `2048 x 2048 x 2048` grid points
-    requires ``hipace.beam_injection_cr = 8``.
-
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
     Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
     ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
@@ -383,6 +376,10 @@ When both are specified, the per-species value is used.
     A good starting point is a period of 4 to reorder plasma particles on every fourth zeta-slice.
     To disable reordering set this to 0.
 
+* ``<plasma name> or plasmas.n_subcycles`` (`int`) optional (default `1`)
+    Number of sub-cycles within the plasma pusher. Currently only implemented for the leapfrog pusher. Must be larger or equal to 1. Sub-cycling is needed if plasma particles move
+    significantly in the transverse direction during a single longitudinal cell. If they move too many cells such that they do not sample certain small transverse structures in the wakefields, sub-cycling is needed and fixes the issue.
+
 * ``<plasma name> or plasmas.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
     Change if plasma particles are binned to cells (0), nodes (1) or both (2)
     for both x and y direction as part of the reordering.
@@ -432,6 +429,10 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name>.zmax`` (`float`) (default `infinity`)
     Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -526,10 +527,6 @@ Option: ``fixed_ppc``
 
 * ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
-
-* ``<beam name>.radius`` (`float`)
-    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
-    injected.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam.
@@ -732,7 +729,8 @@ Field diagnostics
     For the explicit solver, the current and charge densities of the beam and
     for all plasmas are separated: ``jx_beam jy_beam jz_beam`` and ``jx jy rhomjz`` are available.
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
-    to be available as a diagnostic.
+    to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
+    the charge density of that plasma species will be separately available as a diagnostic.
     When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
@@ -746,6 +744,11 @@ Field diagnostics
     If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
     Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
     If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
+* ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
+    This option works similar to ``hipace.deposit_rho``,
+    however the charge density from every plasma species will be deposited into individual fields
+    that are accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
@@ -790,12 +793,19 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"diags/insitu"``)
     Path of the beam in-situ output. Must not be the same as `hipace.file_prefix`.
 
+* ``<beam name> or beams.insitu_radius`` (`float`) optional (default ``infinity``)
+    Maximum radius ``<beam name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within which particles are
+    used for the calculation of the insitu diagnostics.
+
 * ``<plasma name> or plasmas.insitu_period`` (`int`) optional (default ``0``)
     Period of the plasma in-situ diagnostics. `0` means no plasma in-situ diagnostics.
 
 * ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"plasma_diags/insitu"``)
     Path of the plasma in-situ output. Must not be the same as `hipace.file_prefix`.
 
+* ``<plasma name> or plasmas.insitu_radius`` (`float`) optional (default ``infinity``)
+    Maximum radius ``<plasma name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within which particles are
+    used for the calculation of the insitu diagnostics.
 
 Additional physics
 ------------------

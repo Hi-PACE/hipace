@@ -47,6 +47,7 @@ public:
     /** Loop over all beam species and advance slice islice of all beam species
      * \param[in] fields Field object, with 2D slice MultiFabs
      * \param[in] gm Geometry object at level lev
+     * \param[in] slice longitudinal slice
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] extEu uniform external electric field applied to beam particles.
                   The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
@@ -61,8 +62,8 @@ public:
                   For the last component, z represents the zeta coordinate zeta = z - c*t
      */
     void AdvanceBeamParticlesSlice (
-        const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, int const current_N_level,
-        const amrex::RealVect& extEu, const amrex::RealVect& extBu,
+        const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
+        int const current_N_level, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
         const amrex::RealVect& extEs, const amrex::RealVect& extBs);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.

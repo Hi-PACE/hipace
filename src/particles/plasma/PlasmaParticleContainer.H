@@ -163,6 +163,8 @@ public:
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
+    /** radius of the plasma insitu diagnostics */
+    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
     amrex::IntVect m_ppc {0,0,1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
@@ -173,6 +175,7 @@ public:
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
+    int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
     bool m_can_ionize = false; /**< whether this plasma can ionize */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */

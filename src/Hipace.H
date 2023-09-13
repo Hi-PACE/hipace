@@ -218,23 +218,22 @@ public:
     inline static bool m_do_beam_jx_jy_deposition = true;
     /** Whether the jz-c*rho contribution of the beam is computed and used. If not, jz-c*rho=0 is assumed */
     inline static bool m_do_beam_jz_minus_rho = false;
-    /** Whether to deposit  rho (plasma) for diagnostics */
+    /** Whether to deposit rho (plasma) for diagnostics */
     inline static bool m_deposit_rho = false;
+    /** Whether to deposit rho for every individual plasma for diagnostics */
+    inline static bool m_deposit_rho_individual = false;
     /** Whether to use tiling for particle operations */
 #ifdef AMREX_USE_GPU
     inline static bool m_do_tiling = false;
 #else
     inline static bool m_do_tiling = true;
 #endif
-    /** How much the box is coarsened for beam injection, to avoid exceeding max int in cell count.
-     * Otherwise, changing this parameter only will not affect the simulation results. */
-    inline static int m_beam_injection_cr = 1;
     /** Whether the explicit field solver is used */
     inline static bool m_explicit = true;
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
     inline static amrex::Real m_MG_tolerance_rel = 1.e-4;
     /** Absolute tolerance for the multigrid solver, when using the explicit solver */
-    inline static amrex::Real m_MG_tolerance_abs = 0.;
+    inline static amrex::Real m_MG_tolerance_abs = std::numeric_limits<amrex::Real>::min();
     /** Level of verbosity for the MG solver */
     inline static int m_MG_verbose = 0;
     /** Whether to use amrex MLMG solver */
