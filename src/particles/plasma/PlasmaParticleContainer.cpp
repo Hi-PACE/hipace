@@ -155,7 +155,10 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "fine_transition_cells", m_fine_transition_cells, pp_alt);
     m_ppc_fine = m_ppc;
     m_use_fine_patch = queryWithParserAlt(pp, "fine_ppc", m_ppc_fine, pp_alt);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch ||
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||
+        (m_ppc[0] > 0 && m_ppc[1] > 0 && m_ppc_fine[0] > 0 && m_ppc_fine[1] > 0),
+        "must have non zero ppc and fine_ppc to use the fine plasma patch feature");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||
         (m_ppc_fine[0] % m_ppc[0] == 0 && m_ppc_fine[1] % m_ppc[1] == 0),
         "fine_ppc must be divisible by ppc");
     std::string fine_patch_str = "0.";
@@ -164,16 +167,6 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch == fine_patch_specified,
         "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
         "to use the fine plasma patch feature");
-
-    /*
-    elec.ppc = 1 1
-    elec.element= electron
-    elec.density(x,y,z) = ne
-    elec.fine_ppc = 16 16
-    elec.fine_patch(x,y) = "(x<1) && (x>-1) && (y<1) && (y>-1)"
-    elec.fine_transition_cells = 5
-    elec.initialization_level = 0
-    */
 }
 
 void
