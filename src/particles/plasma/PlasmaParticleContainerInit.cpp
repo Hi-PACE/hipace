@@ -35,12 +35,12 @@ InitParticles (const amrex::RealVect& a_u_std,
 
     const amrex::Array<int, 2> ppc_coarse = m_ppc;
     const int num_ppc_coarse = ppc_coarse[0] * ppc_coarse[1];
-    amrex::Real scale_fac_coarse =
-        Hipace::m_normalized_units ? 1./num_ppc_coarse : dx[0]*dx[1]*dx[2]/num_ppc_coarse;
+    amrex::Real scale_fac_coarse = num_ppc_coarse <= 0 ? 0. :
+        (Hipace::m_normalized_units ? 1./num_ppc_coarse : dx[0]*dx[1]*dx[2]/num_ppc_coarse);
     const amrex::Array<int, 2> ppc_fine = m_ppc_fine;
     const int num_ppc_fine = ppc_fine[0] * ppc_fine[1];
-    amrex::Real scale_fac_fine =
-        Hipace::m_normalized_units ? 1./num_ppc_fine : dx[0]*dx[1]*dx[2]/num_ppc_fine;
+    amrex::Real scale_fac_fine = num_ppc_fine <= 0 ? 0. :
+        (Hipace::m_normalized_units ? 1./num_ppc_fine : dx[0]*dx[1]*dx[2]/num_ppc_fine);
 
     amrex::IntVect box_nodal{amrex::IndexType::CELL,amrex::IndexType::CELL,amrex::IndexType::CELL};
     amrex::IntVect box_grow{0, 0, 0};
