@@ -64,8 +64,8 @@ namespace ParticleUtil
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void get_position_unit_cell_fine (amrex::Real* r, bool& do_init, int i_part,
-                                      const amrex::IntVect& nppc_coarse,
-                                      const amrex::IntVect& nppc_fine,
+                                      const amrex::Array<int, 2>& nppc_coarse,
+                                      const amrex::Array<int, 2>& nppc_fine,
                                       const int n_fine_transition_cells,
                                       const int i_fine_transition_cells)
     {

@@ -127,14 +127,7 @@ PlasmaParticleContainer::ReadParameters ()
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
     queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
-    amrex::Vector<amrex::Real> tmp_vector;
-    if (queryWithParserAlt(pp, "ppc", tmp_vector, pp_alt)){
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(tmp_vector.size() == AMREX_SPACEDIM-1,
-        "ppc is only specified in transverse directions for plasma particles, "
-        "it is 1 in the longitudinal direction z. "
-        "Hence, in 3D, plasma.ppc should only contain 2 values");
-        for (int i=0; i<AMREX_SPACEDIM-1; i++) m_ppc[i] = tmp_vector[i];
-    }
+    queryWithParserAlt(pp, "ppc", m_ppc, pp_alt);
     queryWithParser(pp, "u_mean", m_u_mean);
     bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
@@ -159,13 +152,25 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
 
+    queryWithParserAlt(pp, "fine_transition_cells", m_fine_transition_cells, pp_alt);
+    m_ppc_fine = m_ppc;
+    m_use_fine_patch = queryWithParserAlt(pp, "fine_ppc", m_ppc_fine, pp_alt);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch ||
+        (m_ppc_fine[0] % m_ppc[0] == 0 && m_ppc_fine[1] % m_ppc[1] == 0),
+        "fine_ppc must be divisible by ppc");
+    std::string fine_patch_str = "0.";
+    bool fine_patch_specified = queryWithParserAlt(pp, "fine_patch(x,y)", fine_patch_str, pp_alt);
+    m_fine_patch_func = makeFunctionWithParser<2>(fine_patch_str, m_parser_fine_patch, {"x", "y"});
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch == fine_patch_specified,
+        "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
+        "to use the fine plasma patch feature");
 
     /*
     elec.ppc = 1 1
     elec.element= electron
     elec.density(x,y,z) = ne
     elec.fine_ppc = 16 16
-    elec.fine_patch(x,y) = "x<1 && x>-1 && y<1 && y>-1"
+    elec.fine_patch(x,y) = "(x<1) && (x>-1) && (y<1) && (y>-1)"
     elec.fine_transition_cells = 5
     elec.initialization_level = 0
     */
@@ -177,7 +182,7 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     reserveData();
     resizeData();
 
-    InitParticles(m_ppc, m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
 
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
