@@ -80,8 +80,7 @@ private:
 #endif
 
     // round up the capacity of a buffer so there are never any alignment problems
-    static constexpr std::size_t buffer_size_roundup =
-        std::lcm(alignof(amrex::Real), alignof(int)) / std::gcd(alignof(amrex::Real), alignof(int));
+    static constexpr std::size_t buffer_size_roundup = alignof(amrex::Real) / alignof(int);
 
     // 2D array for all metadata
     amrex::Gpu::PinnedVector<std::size_t> m_metadata {};
