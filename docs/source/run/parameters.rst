@@ -392,6 +392,22 @@ When both are specified, the per-species value is used.
     making the opposite index type ideal. Since the normal deposition still requires the original index type,
     the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
 
+* ``<plasma name> or plasmas.fine_patch(x,y)`` (`int`) optional (default `0`)
+    When using mesh refinement it can be helpful to increase the number of particles per cell drastically
+    in a small part of the domain. For this parameter a function of ``x`` and ``y`` needs to be specified
+    that evaluates to ``1`` where the number of particles per cell should be higher and ``0`` everywhere else.
+    For example use ``plasmas.fine_patch(x,y) = "sqrt(x^2+y^2) < 10"`` to specify a circle around ``x=0, y=0``
+    with a radius of ``10``. Note that the function is evaluated at the cell centers of the level zero grid.
+
+* ``<plasma name> or plasmas.fine_ppc`` (2 `int`) optional (default `0 0`)
+    The number of plasma particles per cell in x and y inside the fine plasma patch. This must be
+    divisible by the ppc outside the fine patch in both directions.
+
+* ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
+    Number of cells that are used just outside of the fine plasma patch to smoothly transition
+    between the low and high ppc regions. More transition cells produce less noise but
+    require more particles.
+
 Beam parameters
 ---------------
 
