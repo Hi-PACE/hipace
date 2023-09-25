@@ -405,7 +405,7 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
     Number of cells that are used just outside of the fine plasma patch to smoothly transition
-    between the low and high ppc regions. More transition cells preduce less noise but
+    between the low and high ppc regions. More transition cells produce less noise but
     require more particles.
 
 Beam parameters
