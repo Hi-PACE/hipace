@@ -726,11 +726,13 @@ Field diagnostics
     If ``diagnostic.output_period`` is defined, that value is used as the default for this.
 
 * ``<diag name> or diagnostic.diag_type`` (`string`)
-    Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
-    output. Use 3D output with parsimony, it may increase disk Space usage and simulation time
-    significantly. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
+    Type of field output. Available options are `xyz`, `xz`, `yz` and `xy_integrated`.
+    `xyz` generates a 3D field output.
+    Use 3D output with parsimony, it may increase disk Space usage and simulation time significantly.
+    `xz` and `yz` generate 2D field outputs at the center of the y-axis and
     x-axis, respectively. In case of an even number of grid points, the value is averaged
     between the two inner grid points.
+    `xy_integrated` generates 2D field output that has been integrated along the `z` axis.
 
 * ``<diag name> or diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
     Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is
