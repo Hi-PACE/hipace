@@ -95,6 +95,8 @@ Hipace::Hipace () :
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    queryWithParser(pph, "interpolate_neutralizing_background",
+        m_interpolate_neutralizing_background);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
     queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
@@ -363,18 +365,30 @@ Hipace::Evolve ()
         // Only reset plasma after receiving time step, to use proper density
         m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
 
-        // deposit neutralizing background on every MR level
-        if (m_N_level > 1) {
-            m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
-        }
-
-        for (int lev=0; lev<m_N_level; ++lev) {
+        // deposit neutralizing background
+        if (m_interpolate_neutralizing_background) {
             if (m_do_tiling) {
-                m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
+                m_multi_plasma.TileSort(m_slice_geom[0].Domain(), m_slice_geom[0]);
             }
-            // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
+            // Store charge density of (immobile) ions into WhichSlice::RhomJzIons of level 0
             m_multi_plasma.DepositNeutralizingBackground(
-                m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
+                m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, 0);
+            // interpolate neutralizing background to other levels
+            for (int lev=1; lev<m_N_level; ++lev) {
+                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::RhomJzIons, "rhomjz");
+            }
+        } else {
+            if (m_N_level > 1) {
+                m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
+            }
+            for (int lev=0; lev<m_N_level; ++lev) {
+                if (m_do_tiling) {
+                    m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
+                }
+                // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
+                m_multi_plasma.DepositNeutralizingBackground(
+                    m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
+            }
         }
 
         // need correct physical time for this
