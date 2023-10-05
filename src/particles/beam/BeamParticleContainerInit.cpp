@@ -463,6 +463,181 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     return;
 }
 
+void
+BeamParticleContainer::
+InitBeamFixedWeightPDF3D ()
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedWeightPDF3D()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
+
+    amrex::Long num_to_add = m_num_particles;
+    if (m_do_symmetrize) num_to_add /= 4;
+
+    const amrex::Geometry geom = Hipace::GetInstance().m_3D_geom[0];
+    const amrex::Box domain = geom.Domain();
+
+    m_num_particles_slice.resize(domain.length(2));
+
+    const amrex::Real zoffset = geom.ProbLo(2);
+    const amrex::Real zscale = geom.CellSize(2);
+
+    amrex::Real integral = 0._rt;
+
+    for (int slice=domain.bigEnd(2); slice >=domain.smallEnd(2); --slice) {
+        const amrex::Real zmin = zoffset + slice+zscale;
+        const amrex::Real zmax = zoffset + (slice+1)*zscale;
+
+        const amrex::Real pdf_zmin = m_pdf_func(zmin);
+        const amrex::Real pdf_zmax = m_pdf_func(zmax);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_pdf_func(zmin) >= 0._rt &&  m_pdf_func(zmax) >= 0._rt,
+            "PDF must be >= 0");
+
+        integral += 0.5_rt*(pdf_zmin+pdf_zmax);
+
+        m_num_particles_slice[slice] = 0;
+    }
+
+    amrex::Long num_added = 0;
+
+    while (num_added != num_to_add) {
+
+        const amrex::Long num_to_add_now = num_to_add - num_added;
+
+        std::cout << "PDF iter num_to_add " << num_to_add << " num_to_add_now " << num_to_add_now << std::endl;
+
+        for (int slice=domain.bigEnd(2); slice >=domain.smallEnd(2); --slice) {
+            const amrex::Real zmin = zoffset + slice+zscale;
+            const amrex::Real zmax = zoffset + (slice+1)*zscale;
+
+            const amrex::Real pdf_zmin = m_pdf_func(zmin);
+            const amrex::Real pdf_zmax = m_pdf_func(zmax);
+
+            const amrex::Real mean_particles = num_to_add_now*0.5_rt*(pdf_zmin+pdf_zmax)/integral;
+
+            if (mean_particles >= 0) {
+                const unsigned int n = amrex::RandomPoisson(mean_particles);
+                m_num_particles_slice[slice] += n;
+                num_added += n;
+            } else {
+                const unsigned int n = std::min(amrex::RandomPoisson(-mean_particles),
+                                                m_num_particles_slice[slice]);
+                m_num_particles_slice[slice] -= n;
+                num_added -= n;
+            }
+        }
+    }
+}
+
+void
+BeamParticleContainer::
+InitBeamFixedWeightPDFSlice (int slice, int which_slice)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedWeightPDFSlice()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
+
+    const unsigned int num_to_add = m_num_particles_slice[slice];
+    if (m_do_symmetrize) {
+        resize(which_slice, 4*num_to_add, 0);
+    } else {
+        resize(which_slice, num_to_add, 0);
+    }
+
+    if (num_to_add == 0) return;
+
+    const amrex::Real clight = get_phys_const().c;
+
+    auto& particle_tile = getBeamSlice(which_slice);
+
+    // Access particles' SoA
+    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+        particle_tile.GetStructOfArrays().realarray();
+    amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+        particle_tile.GetStructOfArrays().intarray();
+
+    const uint64_t pid = m_id64;
+    m_id64 += num_to_add;
+
+    const bool do_symmetrize = m_do_symmetrize;
+    const amrex::Real duz_per_uz0_dzeta = m_duz_per_uz0_dzeta;
+    const amrex::RealVect pos_std = m_position_std;
+    const amrex::Real z_foc = m_z_foc;
+    const amrex::Real radius = m_radius;
+    auto pos_mean_x = m_pos_mean_x_func;
+    auto pos_mean_y = m_pos_mean_y_func;
+    const amrex::Real weight = m_total_charge / (m_num_particles * m_charge);
+    const GetInitialMomentum get_momentum = m_get_momentum;
+    const amrex::Geometry& geom = Hipace::GetInstance().m_3D_geom[0];
+    const amrex::Real dz = geom.CellSize(2);
+    const amrex::Real zmin = geom.ProbLo(2) + slice+dz;
+    const amrex::Real zmax = geom.ProbLo(2) + (slice+1)*dz;
+    const amrex::Real lo_weight = m_pdf_func(zmin);
+    const amrex::Real hi_weight = m_pdf_func(zmax);
+    AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);
+    const bool use_taylor = std::min(lo_weight, hi_weight) * 1.1 > std::max(lo_weight, hi_weight);
+    const amrex::Real lo_hi_weight_inv = use_taylor ?
+        1._rt/(hi_weight-lo_weight) : 1._rt/(lo_weight+hi_weight);
+
+    amrex::ParallelForRNG(
+        num_to_add,
+        [=] AMREX_GPU_DEVICE (amrex::Long i, const amrex::RandomEngine& engine) noexcept
+        {
+            const amrex::Real w = amrex::Random(engine);
+            amrex::Real z_central = zmin;
+            if (use_taylor) {
+                z_central += dz*(w - w*(w-1._rt)*(hi_weight-lo_weight)*lo_hi_weight_inv);
+            } else {
+                z_central += dz*((std::sqrt(lo_weight*lo_weight
+                    +w*(hi_weight*hi_weight-lo_weight*lo_weight))-lo_weight)*lo_hi_weight_inv);
+            }
+
+            amrex::Real x = amrex::RandomNormal(0, pos_std[0], engine);
+            amrex::Real y = amrex::RandomNormal(0, pos_std[1], engine);
+
+            amrex::Real u[3] = {0.,0.,0.};
+            get_momentum(u[0], u[1], u[2], engine, z_central - z_mean, duz_per_uz0_dzeta);
+
+            bool is_valid = true;
+            if (x*x + y*y > radius*radius) {
+                is_valid = false;
+            }
+
+            // Propagate each electron ballistically for z_foc
+            x -= z_foc*u[0]/u[2];
+            y -= z_foc*u[1]/u[2];
+
+            const amrex::Real cental_x_pos = pos_mean_x(z_central);
+            const amrex::Real cental_y_pos = pos_mean_y(z_central);
+
+            if (!do_symmetrize)
+            {
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, i, clight, is_valid);
+
+            } else {
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                                        z_central, u[0], u[1], u[2], weight,
+                                        pid, 4*i, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
+                                        z_central, -u[0], u[1], u[2], weight,
+                                        pid, 4*i+1, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
+                                        z_central, u[0], -u[1], u[2], weight,
+                                        pid, 4*i+2, clight, is_valid);
+                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
+                                        z_central, -u[0], -u[1], u[2], weight,
+                                        pid, 4*i+3, clight, is_valid);
+            }
+        });
+
+    return;
+}
+
 #ifdef HIPACE_USE_OPENPMD
 amrex::Real
 BeamParticleContainer::
