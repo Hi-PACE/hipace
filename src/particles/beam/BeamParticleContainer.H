@@ -93,6 +93,9 @@ public:
     void InitBeamFixedWeight3D ();
     void InitBeamFixedWeightSlice (const int islice, const int which_beam_slice);
 
+    void InitBeamFixedWeightPDF3D ();
+    void InitBeamFixedWeightPDFSlice (int slice, int which_slice);
+
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
      * \return physical time at which the simulation will start
@@ -251,6 +254,19 @@ private:
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
+
+    // fixed_weight_pdf:
+
+    bool m_peak_density_is_specified = false;
+    int m_pdf_ref_ratio = 4;
+    amrex::Real m_total_weight = 0;
+    amrex::ParserExecutor<1> m_pdf_func;
+    amrex::Vector<unsigned int> m_num_particles_slice;
+
+    amrex::Array<amrex::ParserExecutor<1>, 4> m_pdf_pos_func;
+    amrex::Array<amrex::ParserExecutor<1>, 6> m_pdf_u_func;
+
+    amrex::Vector<amrex::Parser> m_pdf_parsers;
 
     // from_file:
 

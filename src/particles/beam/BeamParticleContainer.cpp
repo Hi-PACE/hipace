@@ -166,6 +166,58 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                                              m_initialize_on_cpu, geom);
         }
 
+    } else if (m_injection_type == "fixed_weight_pdf") {
+
+        std::string pdf_func_str = "";
+        getWithParser(pp, "pdf", pdf_func_str);
+        m_pdf_parsers.emplace_back();
+        m_pdf_func = makeFunctionWithParser<1>(pdf_func_str, m_pdf_parsers.back(), {"z"});
+
+        std::array<std::string, 2> pos_mean_arr{"",""};
+        std::array<std::string, 2> pos_std_arr{"",""};
+        getWithParser(pp, "position_mean", pos_mean_arr);
+        getWithParser(pp, "position_std", pos_std_arr);
+        for (int i=0; i<2; ++i) {
+            m_pdf_parsers.emplace_back();
+            m_pdf_pos_func[i] = makeFunctionWithParser<1>(pos_mean_arr[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_pdf_pos_func[i+2] = makeFunctionWithParser<1>(pos_std_arr[i], m_pdf_parsers.back(), {"z"});
+        }
+
+        std::array<std::string, 3> u_mean_arr{"","",""};
+        std::array<std::string, 3> u_std_arr{"","",""};
+        getWithParser(pp, "u_mean", u_mean_arr);
+        getWithParser(pp, "u_std", u_std_arr);
+        for (int i=0; i<3; ++i) {
+            m_pdf_parsers.emplace_back();
+            m_pdf_u_func[i] = makeFunctionWithParser<1>(u_mean_arr[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_pdf_u_func[i+3] = makeFunctionWithParser<1>(u_std_arr[i], m_pdf_parsers.back(), {"z"});
+        }
+
+        getWithParser(pp, "num_particles", m_num_particles);
+        queryWithParser(pp, "radius", m_radius);
+        queryWithParser(pp, "z_foc", m_z_foc);
+        queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
+        queryWithParser(pp, "pdf_ref_ratio", m_pdf_ref_ratio);
+        if (m_do_symmetrize) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
+                "To symmetrize the beam, please specify a beam particle number divisible by 4.");
+        }
+
+        bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
+        m_peak_density_is_specified = queryWithParser(pp, "density", m_density);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !charge_is_specified || !Hipace::m_normalized_units,
+            "The option 'beam.total_charge' is only valid in SI units."
+            "Please either specify the peak density with '<beam name>.density', "
+            "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + m_peak_density_is_specified == 1,
+            "Please specify exlusively either total_charge or density of the beam");
+
+        InitBeamFixedWeightPDF3D();
+        m_total_num_particles = m_num_particles;
+
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
         getWithParserAlt(pp, "input_file", m_input_file, pp_alt);
@@ -278,6 +330,8 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
         InitBeamFixedPPCSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight") {
         InitBeamFixedWeightSlice(slice, which_slice);
+    } else if (m_injection_type == "fixed_weight_pdf") {
+        InitBeamFixedWeightPDFSlice(slice, which_slice);
     } else {
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
