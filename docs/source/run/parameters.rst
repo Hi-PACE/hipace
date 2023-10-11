@@ -81,6 +81,18 @@ General parameters
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
 
+* ``hipace.comms_buffer_max_leading_slices`` (`int`) optional (default `inf`)
+    How many slices of beam particles can be received and stored in advance.
+
+* ``hipace.comms_buffer_max_trailing_slices`` (`int`) optional (default `inf`)
+    How many slices of beam particles can be stored before being sent. Using
+    ``comms_buffer_max_leading_slices`` and ``comms_buffer_max_trailing_slices`` will in principle
+    limit the amount of asynchronousness in the parallel communication and may thus reduce performance.
+    However it may be necessary to set these parameters to avoid all slices accumulating on a single
+    rank that would run out of memory.
+    If there are more time steps than ranks, these parameters must be chosen such that between all
+    ranks there is enoth capacity to store every slice to avoid a deadlock.
+
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).

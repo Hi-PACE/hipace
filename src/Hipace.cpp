@@ -138,8 +138,17 @@ Hipace::Hipace () :
 
     queryWithParser(pph, "background_density_SI", m_background_density_SI);
     queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
+    queryWithParser(pph, "comms_buffer_max_leading_slices", m_comms_buffer_max_leading_slices);
+    queryWithParser(pph, "comms_buffer_max_trailing_slices", m_comms_buffer_max_trailing_slices);
 
     MakeGeometry();
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        (((m_comms_buffer_max_leading_slices + m_comms_buffer_max_trailing_slices)
+        * amrex::ParallelDescriptor::NProcs()) > m_3D_geom[0].Domain().length(2))
+        || (m_max_step <= amrex::ParallelDescriptor::NProcs()),
+        "comms_buffer_max_leading_slices and comms_buffer_max_trailing_slices must be large enough"
+        " to distribute all slices between all ranks if there are more timesteps than ranks");
 
     m_use_laser = m_multi_laser.m_use_laser;
 
@@ -201,7 +210,9 @@ Hipace::InitData ()
                               m_multi_beam.get_nbeams(),
                               !m_comms_buffer_on_gpu,
                               m_use_laser,
-                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
+                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{},
+                              m_comms_buffer_max_leading_slices,
+                              m_comms_buffer_max_trailing_slices);
 
     amrex::ParmParse pph("hipace");
     bool do_output_input = false;

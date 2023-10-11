@@ -19,7 +19,7 @@ public:
 
     // initialize MultiBuffer and open initial receive requests
     void initialize (int nslices, int nbeams, bool buffer_on_host, bool use_laser,
-                     amrex::Box laser_box);
+                     amrex::Box laser_box, int max_leading_slices, int max_trailing_slices);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
     void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
@@ -104,6 +104,8 @@ private:
     bool m_use_laser = false;
     int m_laser_ncomp = 4;
     amrex::Box m_laser_slice_box {};
+    int m_max_leading_slices = std::numeric_limits<int>::max();
+    int m_max_trailing_slices = std::numeric_limits<int>::max();
 
     // parameters to send physical time
     amrex::Real m_time_send_buffer = 0.;
@@ -123,7 +125,7 @@ private:
     void free_buffer (int slice);
 
     // function containing main progress loop to deal with asynchronous MPI requests
-    void make_progress (int slice, bool is_blocking);
+    void make_progress (int slice, bool is_blocking, int current_slice);
 
     // write MultiBeam sizes into the metadata array
     void write_metadata (int slice, MultiBeam& beams, int beam_slice);
