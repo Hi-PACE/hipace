@@ -51,6 +51,8 @@ Diagnostic::Diagnostic (int nlev)
             fd.m_slice_dir = 1;
         } else if (str_type == "yz") {
             fd.m_slice_dir = 0;
+        } else if (str_type == "xy_integrated") {
+            fd.m_slice_dir = 2;
         } else {
             amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
         }
@@ -62,7 +64,7 @@ Diagnostic::Diagnostic (int nlev)
 
         amrex::Array<int,3> diag_coarsen_arr{1,1,1};
         queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
-        if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1) {
+        if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1 || fd.m_slice_dir == 2) {
             diag_coarsen_arr[fd.m_slice_dir] = 1;
         }
         fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
@@ -286,7 +288,9 @@ Diagnostic::TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbo
         // Flatten the box down to 1 cell in the approprate direction.
         domain_3d.setSmall(slice_dir, 0);
         domain_3d.setBig  (slice_dir, 0);
-        rbox_3d.setLo(slice_dir, mid - half_cell_size);
-        rbox_3d.setHi(slice_dir, mid + half_cell_size);
+        if (slice_dir < 2) {
+            rbox_3d.setLo(slice_dir, mid - half_cell_size);
+            rbox_3d.setHi(slice_dir, mid + half_cell_size);
+        }
     }
 }

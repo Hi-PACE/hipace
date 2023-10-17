@@ -407,7 +407,7 @@ void
 Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
               amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
               const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-              bool do_laser, MultiLaser& multi_laser)
+              bool do_laser, MultiLaser& multi_laser, const int slice_dir)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
@@ -425,40 +425,52 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     const int i_slice_max = i_slice + depos_order_offset;
     const amrex::Real pos_slice_min = i_slice_min * calc_geom.CellSize(2) + poff_calc_z;
     const amrex::Real pos_slice_max = i_slice_max * calc_geom.CellSize(2) + poff_calc_z;
-    const int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
+    int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
                                                           * diag_geom.InvCellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
                                                           * diag_geom.InvCellSize(2)));
 
-    // Put contributions from i_slice to different diag_fab slices in GPU vector
-    m_rel_z_vec.resize(k_max+1-k_min);
-    m_rel_z_vec_cpu.resize(k_max+1-k_min);
-    for (int k=k_min; k<=k_max; ++k) {
-        const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
-        const amrex::Real mid_i_slice = (pos - poff_calc_z)*calc_geom.InvCellSize(2);
-        amrex::Real sz_cell[depos_order_z + 1];
-        const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
-        m_rel_z_vec_cpu[k-k_min] = 0;
-        for (int i=0; i<=depos_order_z; ++i) {
-            if (k_cell+i == i_slice) {
-                m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
+    if (slice_dir != 2) {
+        // Put contributions from i_slice to different diag_fab slices in GPU vector
+        m_rel_z_vec.resize(k_max+1-k_min);
+        m_rel_z_vec_cpu.resize(k_max+1-k_min);
+        for (int k=k_min; k<=k_max; ++k) {
+            const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
+            const amrex::Real mid_i_slice = (pos - poff_calc_z)*calc_geom.InvCellSize(2);
+            amrex::Real sz_cell[depos_order_z + 1];
+            const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
+            m_rel_z_vec_cpu[k-k_min] = 0;
+            for (int i=0; i<=depos_order_z; ++i) {
+                if (k_cell+i == i_slice) {
+                    m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
+                }
             }
         }
-    }
 
-    // Optimization: don’t loop over diag_fab slices with 0 contribution
-    int k_start = k_min;
-    int k_stop = k_max;
-    for (int k=k_min; k<=k_max; ++k) {
-        if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
-        else break;
+        // Optimization: don’t loop over diag_fab slices with 0 contribution
+        int k_start = k_min;
+        int k_stop = k_max;
+        for (int k=k_min; k<=k_max; ++k) {
+            if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
+            else break;
+        }
+        for (int k=k_max; k>=k_min; --k) {
+            if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
+            else break;
+        }
+        diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
+        diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
+    } else {
+        m_rel_z_vec.resize(1);
+        m_rel_z_vec_cpu.resize(1);
+        const amrex::Real pos_z = i_slice * calc_geom.CellSize(2) + poff_calc_z;
+        if (diag_geom.ProbLo(2) <= pos_z && pos_z <= diag_geom.ProbHi(2)) {
+            m_rel_z_vec_cpu[0] = calc_geom.CellSize(2);
+            k_min = 0;
+        } else {
+            return;
+        }
     }
-    for (int k=k_max; k>=k_min; --k) {
-        if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
-        else break;
-    }
-    diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
-    diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     if (diag_box.isEmpty()) return;
     auto& slice_mf = m_slices[lev];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
