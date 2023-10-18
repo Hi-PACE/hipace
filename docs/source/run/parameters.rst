@@ -436,7 +436,7 @@ which are valid only for certain beam types, are introduced further below under
     ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
     the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
     user-specified probability density function. Although it is more general it is faster and uses
-    less memory than ``fixed_weight``.
+    less memory than ``fixed_weight``,
     ``from_file`` reads a beam from openPMD files.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
@@ -490,9 +490,9 @@ Option: ``fixed_weight_pdf``
 
 * ``<beam name>.pdf`` (`float`)
     Probability density function to define the longitudinal profile of the beam.
-    The transverse profile will be Gaussian. This is a parser function of z
+    The transverse profile is Gaussian. This is a parser function of z
     that should return the total amount of charge present on each transverse beam slice.
-    This will also be propartinal to the per-slice peak density if ``<beam name>.position_mean`` is constant along z,
+    This will also be proportional to the per-slice peak density if ``<beam name>.position_mean`` is constant along z,
     if not the pdf can be calculated from the desired peak density using ``<beam name>.pdf = <peak_density(z)> * <position_std_x(z)> * <position_std_y(z)>``.
     The probability density function is automatically normalized so that all constant pre factors
     can be omitted when specifying the function.
