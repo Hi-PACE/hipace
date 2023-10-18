@@ -489,14 +489,14 @@ Option: ``fixed_weight_pdf``
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.pdf`` (`float`)
-    Probability density function to define the longitudinal profile of the beam.
-    The transverse profile is Gaussian. This is a parser function of z
+    Probability density function to define the longitudinal profile of the beam
+    (the transverse profile is Gaussian). This is a parser function of z
     that should return the total amount of charge present on each transverse beam slice.
     This will also be proportional to the per-slice peak density if ``<beam name>.position_mean`` is constant along z,
     if not the pdf can be calculated from the desired peak density using ``<beam name>.pdf = <peak_density(z)> * <position_std_x(z)> * <position_std_y(z)>``.
     The probability density function is automatically normalized so that all constant pre factors
     can be omitted when specifying the function.
-    Examples (relpace `z_center`, `z_std`, `z_length`, `z_slope`, `z_min` and `z_max`):
+    Examples (replace `z_center`, `z_std`, `z_length`, `z_slope`, `z_min` and `z_max`):
     Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
     Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
     Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
