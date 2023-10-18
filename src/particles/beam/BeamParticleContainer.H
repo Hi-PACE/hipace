@@ -257,15 +257,17 @@ private:
 
     // fixed_weight_pdf:
 
-    bool m_peak_density_is_specified = false;
-    int m_pdf_ref_ratio = 4;
-    amrex::Real m_total_weight = 0;
-    amrex::ParserExecutor<1> m_pdf_func;
+    bool m_peak_density_is_specified = false; /**< if the peak density is specified */
+    int m_pdf_ref_ratio = 4; /**< number of subcycles per slice for the pdf evaluation */
+    amrex::Real m_total_weight = 0; /**< sum of the weights of all particles */
+    amrex::ParserExecutor<1> m_pdf_func; /**< probability density function */
+    /** number of particles that need to be initialized per slice */
     amrex::Vector<unsigned int> m_num_particles_slice;
-
+    /** functions for x_mean, y_mean, x_std, y_std */
     amrex::Array<amrex::ParserExecutor<1>, 4> m_pdf_pos_func;
+    /** functions for ux_mean, uy_mean, uz_mean, ux_std, uy_std, uz_std */
     amrex::Array<amrex::ParserExecutor<1>, 6> m_pdf_u_func;
-
+    /** Owns data for all 11 Parser functions of fixed_weight_pdf */
     amrex::Vector<amrex::Parser> m_pdf_parsers;
 
     // from_file:
