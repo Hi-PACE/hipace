@@ -536,7 +536,7 @@ InitBeamFixedWeightPDF3D ()
 
         // It is very unlikely that the correct amount of particles will be initialized in the first
         // iteration. Another iteration is done with remaining particles (or subtracting extra
-        // particles). This converges quickly as the expected deviation is  sqrt(num_to_add_now),
+        // particles). This converges quickly as the expected deviation is sqrt(num_to_add_now),
         // resulting in a time complexity of O(num_slices*log(log(num_to_add)))
         const amrex::Long num_to_add_now = num_to_add - num_added;
 

@@ -93,6 +93,7 @@ public:
     void InitBeamFixedWeight3D ();
     void InitBeamFixedWeightSlice (const int islice, const int which_beam_slice);
 
+    /** Initialize a beam with a fix number of particles, and fixed weight using a pdf */
     void InitBeamFixedWeightPDF3D ();
     void InitBeamFixedWeightPDFSlice (int slice, int which_slice);
 
