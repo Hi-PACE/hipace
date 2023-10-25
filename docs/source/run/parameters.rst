@@ -428,29 +428,16 @@ which are valid only for certain beam types, are introduced further below under
 
 
 * ``<beam name>.injection_type`` (`string`)
-    The injection type for the particle beam. Currently available are ``fixed_ppc``, ``fixed_weight``,
-    and ``from_file``. ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
-    varying weights. It can be either a Gaussian or a flattop beam. ``fixed_weight`` generates a
-    Gaussian beam with a fixed number of particles with a constant weight.
+    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
+    and ``from_file``.
+    ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
+    the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
+    user-specified probability density function. It is more general and faster, and uses
+    less memory than ``fixed_weight``.
+    ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
+    ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
+    varying weights. It can be either a Gaussian or a flattop beam.
     ``from_file`` reads a beam from openPMD files.
-
-* ``<beam name>.position_mean`` (3 `float`)
-    The mean position of the beam in ``x, y, z``, separated by a space. For fixed_weight beams the
-    x and y directions can be functions of ``z``. To generate a tilted beam use
-    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta" "z_center"``.
-
-* ``<beam name>.position_std`` (3 `float`)
-    The rms size of the of the beam in `x, y, z`, separated by a space.
-
-* ``<beam name>.zmin`` (`float`) (default `-infinity`)
-    Minimum in `z` at which particles are injected.
-
-* ``<beam name>.zmax`` (`float`) (default `infinity`)
-    Maximum in `z` at which particles are injected.
-
-* ``<beam name>.radius`` (`float`)
-    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
-    injected.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -462,15 +449,6 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
     The charge of a beam particle. Can also be set with ``<beam name>.element``.
-
-* ``<beam name>.profile`` (`string`)
-    Beam profile.
-    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
-    (flat-top radially and longitudinally), ``gaussian`` (Gaussian in all directions),
-    or ``parsed`` (arbitrary analytic function provided by the user).
-    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
-    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
-    (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
 
 * ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
@@ -496,9 +474,77 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
     Whether to reset the ID incrementor to 1 before initializing beam particles.
 
-* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
-    Whether to initialize the beam on the CPU instead of the GPU.
-    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
+Option: ``fixed_weight_pdf``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.num_particles`` (`int`)
+    Number of constant weight particles to generate the beam.
+
+* ``<beam name>.pdf`` (`float`)
+    Longitudinal density profile of the beam, given as a probability density function
+    (the transverse profile is Gaussian). This is a parser function of z, giving the charge density
+    integrated in both transverse directions `x` and `y` (this is proportional to the beam current
+    profile in the limit :math:`v_z \simeq c`). The probability density function is automatically
+    normalized, and combined with ``<beam name>.total_charge`` or ``<beam name>.density`` within
+    the code to generate the absolute beam profile.
+    Examples (assuming ``z_center``, ``z_std``, ``z_length``, ``z_slope``, ``z_min`` and ``z_max``
+    are defined with ``my_constants``):
+    - Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
+    - Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
+    - Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
+
+* ``<beam name>.total_charge`` (`float`)
+    Total charge of the beam (either ``total_charge`` or ``density`` must be specified).
+    Only available when running in SI units.
+    The absolute value of this parameter is used when initializing the beam.
+    Note that in contrast to the ``fixed_weight`` injection type, using ``<beam name>.radius`` or
+    a special pdf to emulate ``z_min`` and ``z_max`` will result in beam particles being redistributed to
+    other locations rather than being deleted. Therefore, the resulting beam will have exactly the
+    specified total charge, but cutting a significant fraction of the charge is not recommended.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam (either ``total_charge`` or ``density`` must be specified).
+    The absolute value of this parameter is used when initializing the beam.
+    Note that this is the peak density of the analytical profile specified by `pdf`, `position_mean` and
+    `position_std`, within the limits of the resolution of the numerical evaluation of the pdf. The actual
+    resulting beam profile consists of randomly distributed particles and will likely feature density
+    fluctuations exceeding the specified peak density.
+
+* ``<beam name>.position_mean`` (2 `float`)
+    The mean position of the beam in ``x, y``, separated by a space. Both values can be a function of z.
+    To generate a tilted beam use
+    ``<beam name>.position_mean = "x_center+(z-z_center)*dx_per_dzeta" "y_center+(z-z_center)*dy_per_dzeta"``.
+
+* ``<beam name>.position_std`` (2 `float`)
+    The rms size of the of the beam in ``x, y``, separated by a space. Both values can be a function of z.
+
+* ``<beam name>.u_mean`` (3 `float`)
+    The mean normalized momentum of the beam in ``x, y, z``, separated by a space. All values can be a function of z.
+    Normalized momentum is equal to :math:`= \gamma \beta = \frac{p}{m c}`. An electron beam with a momentum of 1 GeV/c
+    has a u_mean of ``0 0 1956.951198`` while a proton beam with the same momentum has a u_mean of ``0 0 1.065788933``.
+
+* ``<beam name>.u_std`` (3 `float`)
+    The rms normalized momentum of the beam in ``x, y, z``, separated by a space. All values can be a function of z.
+
+* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
+    ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
+    divisible by 4.
+
+* ``<beam name>.z_foc`` (`float`) optional (default `0.`)
+    Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
+    The beam is assumed to propagate ballistically in-between.
+
+* ``<beam name>.radius`` (`float`) optional (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected. If ``<beam name>.density`` is specified, beam particles outside of the radius get
+    deleted. If ``<beam name>.total_charge`` is specified, beam particles outside of the radius get
+    new random transverse positions to conserve the total charge.
+
+* ``<beam name>.pdf_ref_ratio`` (`int`) optional (default `4`)
+    Into how many segments the pdf is divided per zeta slice for its first-order numerical evaluation.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -506,14 +552,35 @@ Option: ``fixed_weight``
 * ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
+* ``<beam name>.profile`` (`string`) optional (default `gaussian`)
+    Beam profile.
+    Possible options are ``can`` (uniform longitudinally, Gaussian transversally)
+    and ``gaussian`` (Gaussian in all directions).
+
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
-    Note that ``<beam name>.zmin`` and ``<beam name>.zmax`` can reduce the total charge.
+    Note that ``<beam name>.zmin``, ``<beam name>.zmax`` and ``<beam name>.radius`` can reduce the total charge.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
+
+* ``<beam name>.position_mean`` (3 `float`)
+    The mean position of the beam in ``x, y, z``, separated by a space.
+    The x and y directions can be functions of ``z``. To generate a tilted beam use
+    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta" "z_center"``.
+
+* ``<beam name>.position_std`` (3 `float`)
+    The rms size of the of the beam in ``x, y, z``, separated by a space.
+
+* ``<beam name>.u_mean`` (3 `float`)
+    The mean normalized momentum of the beam in ``x, y, z``, separated by a space.
+    Normalized momentum is equal to :math:`= \gamma \beta = \frac{p}{m c}`. An electron beam with a momentum of 1 GeV/c
+    has a u_mean of ``0 0 1956.951198`` while a proton beam with the same momentum has a u_mean of ``0 0 1.065788933``.
+
+* ``<beam name>.u_std`` (3 `float`)
+    The rms normalized momentum of the beam in ``x, y, z``, separated by a space.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
@@ -532,11 +599,32 @@ Option: ``fixed_weight``
     Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
     The beam is assumed to propagate ballistically in-between.
 
+* ``<beam name>.zmin`` (`float`) (default `-infinity`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`) (default `infinity`)
+    Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`) (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
+
+* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
+    Whether to initialize the beam on the CPU instead of the GPU.
+    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
+
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^
 
 * ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
+
+* ``<beam name>.profile`` (`string`)
+    Beam profile.
+    Possible options are ``flattop`` (flat-top radially and longitudinally),
+    ``gaussian`` (Gaussian in all directions),
+    or ``parsed`` (arbitrary analytic function provided by the user).
+    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam.
@@ -545,14 +633,37 @@ Option: ``fixed_ppc``
 * ``<beam name>.density(x,y,z)`` (`float`)
     The density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
     This function uses the parser, see above.
-    Only used when ``<beam name>.profile == parsed``.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
     The absolute value of this parameter is used when initializing the beam.
 
+* ``<beam name>.position_mean`` (3 `float`)
+    The mean position of the beam in ``x, y, z``, separated by a space.
+
+* ``<beam name>.position_std`` (3 `float`)
+    The rms size of the of the beam in ``x, y, z``, separated by a space.
+
+* ``<beam name>.u_mean`` (3 `float`)
+    The mean normalized momentum of the beam in ``x, y, z``, separated by a space.
+    Normalized momentum is equal to :math:`= \gamma \beta = \frac{p}{m c}`. An electron beam with a momentum of 1 GeV/c
+    has a u_mean of ``0 0 1956.951198`` while a proton beam with the same momentum has a u_mean of ``0 0 1.065788933``.
+
+* ``<beam name>.u_std`` (3 `float`)
+    The rms normalized momentum of the beam in ``x, y, z``, separated by a space.
+
 * ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
     Whether the position in `(x y z)` of the particles is randomized within the cell.
+
+* ``<beam name>.zmin`` (`float`) (default `-infinity`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`) (default `infinity`)
+    Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`) (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
 
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
@@ -570,6 +681,10 @@ Option: ``from_file``
 * ``<beam name>.openPMD_species_name`` (`string`) optional (default `<beam name>`)
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
+
+* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
+    Whether to initialize the beam on the CPU instead of the GPU.
+    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
 SALAME algorithm
 ^^^^^^^^^^^^^^^^
