@@ -157,21 +157,6 @@ public:
     amrex::Vector<amrex::DistributionMapping> m_slice_dm;
     /** xy slice BoxArray, vector over MR levels. Contains only one box */
     amrex::Vector<amrex::BoxArray> m_slice_ba;
-    /** Uniform external electric field applied to beam particles.
-        The components represent Ex-c*By, Ey+c*Bx and Ez respectively. */
-    amrex::RealVect m_external_E_uniform {0., 0., 0.};
-    /** Uniform external magnetic field applied to beam particles.
-        The components represent Bx, By and Bz, respectively. */
-    amrex::RealVect m_external_B_uniform {0., 0., 0.};
-    /** Slope of a linear external electric field applied to beam particles.
-        The components represent d(Ex-c*By)/dx, d(Ey+c*Bx)/dy and d(Ez)/dz respectively.
-        For the last component, z represents the zeta coordinate zeta = z - c*t */
-    amrex::RealVect m_external_E_slope {0., 0., 0.};
-    /** Slope of a linear external magnetic field applied to beam particles.
-        The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
-        Note the order of derivatives for the transverse components!
-        For the last component, z represents the zeta coordinate zeta = z - c*t */
-    amrex::RealVect m_external_B_slope {0., 0., 0.};
     /** Pointer to current (and only) instance of class Hipace */
     inline static Hipace* m_instance = nullptr;
     /** Whether to use normalized units */

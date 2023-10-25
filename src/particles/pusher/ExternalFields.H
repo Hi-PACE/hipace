@@ -15,47 +15,44 @@
  * \param[in] xp particle position x
  * \param[in] yp particle position y
  * \param[in] zp particle position x
+ * \param[in] time time of the current step
+ * \param[in] clight speed of light
  * \param[in,out] ExmByp Ex-By Field on particle
  * \param[in,out] EypBxp Ey+Bx Field on particle
  * \param[in,out] Ezp Electric field on particle, z component
  * \param[in,out] Bxp Magnetic field on particle, x component
  * \param[in,out] Byp Magnetic field on particle, y component
  * \param[in,out] Bzp Magnetic field on particle, z component
- * \param[in] ext_E_uniform Uniform electric field Ex-c*By, Ey+c*Bx, Ez to be applied
- * \param[in] ext_B_uniform Uniform magnetic field Bx, B, Bz to be applied
- * \param[in] ext_E_slope strength of external electric field d(Ex-c*By)/dx, d(Ey+c*Bx)/dy, d(Ez)/dz
- * \param[in] ext_B_slope strength of external magnetic field d(Bx)/dy, d(By)/dx, d(Bz)/dz
+ * \param[in] external_fields External field functions for Ex Ey Ez Bx By Bz
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void ApplyExternalField(
     const amrex::ParticleReal xp,
     const amrex::ParticleReal yp,
     const amrex::ParticleReal zp,
+    const amrex::ParticleReal time,
+    const amrex::ParticleReal clight,
     amrex::ParticleReal& ExmByp,
     amrex::ParticleReal& EypBxp,
     amrex::ParticleReal& Ezp,
     amrex::ParticleReal& Bxp,
     amrex::ParticleReal& Byp,
     amrex::ParticleReal& Bzp,
-    const amrex::RealVect& ext_E_uniform,
-    const amrex::RealVect& ext_B_uniform,
-    const amrex::RealVect& ext_E_slope,
-    const amrex::RealVect& ext_B_slope)
+    amrex::GpuArray<amrex::ParserExecutor<4>, 6> external_fields)
 {
+    const amrex::Real Ex = external_fields[0](xp, yp, zp, time);
+    const amrex::Real Ey = external_fields[1](xp, yp, zp, time);
+    const amrex::Real Ez = external_fields[2](xp, yp, zp, time);
+    const amrex::Real Bx = external_fields[3](xp, yp, zp, time);
+    const amrex::Real By = external_fields[4](xp, yp, zp, time);
+    const amrex::Real Bz = external_fields[5](xp, yp, zp, time);
 
-    if ((ext_E_uniform == amrex::RealVect(0.,0.,0.)) &&
-        (ext_B_uniform == amrex::RealVect(0.,0.,0.)) &&
-        (ext_E_slope == amrex::RealVect(0.,0.,0.)) &&
-        (ext_B_slope == amrex::RealVect(0.,0.,0.)) ) return;
-
-    ExmByp += ext_E_uniform[0] + ext_E_slope[0] * xp;
-    EypBxp += ext_E_uniform[1] + ext_E_slope[1] * yp;
-    Ezp    += ext_E_uniform[2] + ext_E_slope[2] * zp;
-    Bxp    += ext_B_uniform[0] + ext_B_slope[0] * yp;
-    Byp    += ext_B_uniform[1] + ext_B_slope[1] * xp;
-    Bzp    += ext_B_uniform[2] + ext_B_slope[2] * zp;
-
-    return;
+    ExmByp += Ex - clight * By;
+    EypBxp += Ey + clight * Bx;
+    Ezp    += Ez;
+    Bxp    += Bx;
+    Byp    += By;
+    Bzp    += Bz;
 }
 
 #endif // EXTERNALFIELDS_H_

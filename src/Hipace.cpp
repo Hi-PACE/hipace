@@ -103,13 +103,14 @@ Hipace::Hipace () :
     if (amrex::TilingIfNotGPU()) {
         DfltMfiTlng.EnableTiling();
     }
-    DeprecatedInput("hipace", "external_ExmBy_slope", "external_E_slope");
-    DeprecatedInput("hipace", "external_Ez_slope", "external_E_slope");
-    DeprecatedInput("hipace", "external_Ez_uniform", "external_E_uniform");
-    queryWithParser(pph, "external_E_uniform", m_external_E_uniform);
-    queryWithParser(pph, "external_B_uniform", m_external_B_uniform);
-    queryWithParser(pph, "external_E_slope", m_external_E_slope);
-    queryWithParser(pph, "external_B_slope", m_external_B_slope);
+
+    DeprecatedInput("hipace", "external_ExmBy_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_Ez_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_Ez_uniform", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_E_uniform", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_B_uniform","beams.external_B(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_E_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_B_slope", "beams.external_B(x,y,z,t)", "", true);
 
     queryWithParser(pph, "salame_n_iter", m_salame_n_iter);
     queryWithParser(pph, "salame_do_advance", m_salame_do_advance);
@@ -552,9 +553,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level,
-                                           m_external_E_uniform, m_external_B_uniform,
-                                           m_external_E_slope, m_external_B_slope);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
