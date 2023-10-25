@@ -617,9 +617,9 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         const amrex::Real lo_weight = m_pdf_func(zmin);
         const amrex::Real hi_weight = m_pdf_func(zmax);
         AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);
-        // the proper formular is not defined for hi_weight == lo_weight and may
-        // have prcission issues around that point so we use a taylor expansion instead
-        // if the hi_weight and lo_weight are within 10% of each other
+        // the proper formula is not defined for hi_weight == lo_weight and may
+        // have precision issues around that point, so we use a Taylor expansion instead
+        // if the hi_weight and lo_weight are within 10% of each other.
         const bool use_taylor = std::min(lo_weight, hi_weight)*1.1 > std::max(lo_weight, hi_weight);
         const amrex::Real lo_hi_weight_inv = use_taylor ?
             1._rt/(hi_weight+lo_weight) : 1._rt/(hi_weight-lo_weight);

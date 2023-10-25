@@ -85,15 +85,16 @@ public:
      */
     amrex::Real InitData (const amrex::Geometry& geom);
 
-    /** Initialize a beam with a fix number of particles per cell */
+    /** Initialize a beam with a fixed number of particles per cell */
     void InitBeamFixedPPC3D ();
     void InitBeamFixedPPCSlice (const int islice, const int which_beam_slice);
 
-    /** Initialize a beam with a fix number of particles, and fixed weight */
+    /** Initialize a beam with a fixed number of particles, and fixed weight */
     void InitBeamFixedWeight3D ();
     void InitBeamFixedWeightSlice (const int islice, const int which_beam_slice);
 
-    /** Initialize a beam with a fix number of particles, and fixed weight using a pdf */
+    /** Initialize a beam with a fixed number of particles,
+     * and fixed weight using a probability density function (PDF) */
     void InitBeamFixedWeightPDF3D ();
     void InitBeamFixedWeightPDFSlice (int slice, int which_slice);
 

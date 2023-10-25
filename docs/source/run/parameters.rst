@@ -428,15 +428,15 @@ which are valid only for certain beam types, are introduced further below under
 
 
 * ``<beam name>.injection_type`` (`string`)
-    The injection type for the particle beam. Currently available are ``fixed_ppc``, ``fixed_weight``, ``fixed_weight_pdf``,
+    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
     and ``from_file``.
-    ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
-    varying weights. It can be either a Gaussian or a flattop beam.
-    ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
     ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
     the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
-    user-specified probability density function. Although it is more general it is faster and uses
-    less memory than ``fixed_weight``,
+    user-specified probability density function. It is more general and faster, and uses
+    less memory than ``fixed_weight``.
+    ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
+    ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
+    varying weights. It can be either a Gaussian or a flattop beam.
     ``from_file`` reads a beam from openPMD files.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
@@ -489,31 +489,31 @@ Option: ``fixed_weight_pdf``
     Number of constant weight particles to generate the beam.
 
 * ``<beam name>.pdf`` (`float`)
-    Probability density function to define the longitudinal profile of the beam
-    (the transverse profile is Gaussian). This is a parser function of z
-    that should return the total amount of charge present on each transverse beam slice.
-    This will also be proportional to the per-slice peak density if ``<beam name>.position_mean`` is constant along z,
-    if not the pdf can be calculated from the desired peak density using ``<beam name>.pdf = <peak_density(z)> * <position_std_x(z)> * <position_std_y(z)>``.
-    The probability density function is automatically normalized so that all constant pre factors
-    can be omitted when specifying the function.
-    Examples (replace `z_center`, `z_std`, `z_length`, `z_slope`, `z_min` and `z_max`):
-    Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
-    Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
-    Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
+    Longitudinal density profile of the beam, given as a probability density function
+    (the transverse profile is Gaussian). This is a parser function of z, giving the charge density
+    integrated in both transverse directions `x` and `y` (this is proportional to the beam current
+    profile in the limit :math:`v_z \simeq c`). The probability density function is automatically
+    normalized, and combined with ``<beam name>.total_charge`` or ``<beam name>.density`` within
+    the code to generate the absolute beam profile.
+    Examples (assuming ``z_center``, ``z_std``, ``z_length``, ``z_slope``, ``z_min`` and ``z_max``
+    are defined with ``my_constants``):
+    - Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
+    - Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
+    - Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
 
 * ``<beam name>.total_charge`` (`float`)
-    Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
+    Total charge of the beam (either ``total_charge`` or ``density`` must be specified).
     Only available when running in SI units.
     The absolute value of this parameter is used when initializing the beam.
     Note that in contrast to the ``fixed_weight`` injection type, using ``<beam name>.radius`` or
-    a special pdf to emulate `z_min` and `z_max` will result in beam particles being redistributed to
-    other locations and not in them being deleted in the injection, meaning that the resulting beam will
-    have exactly the total charge that is specified here.
+    a special pdf to emulate ``z_min`` and ``z_max`` will result in beam particles being redistributed to
+    other locations rather than being deleted. Therefore, the resulting beam will have exactly the
+    specified total charge, but cutting a significant fraction of the charge is not recommended.
 
 * ``<beam name>.density`` (`float`)
-    Peak density of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
+    Peak density of the beam (either ``total_charge`` or ``density`` must be specified).
     The absolute value of this parameter is used when initializing the beam.
-    Note that this is the peak density of the analytical profile specified by the `pdf`, `position_mean` and
+    Note that this is the peak density of the analytical profile specified by `pdf`, `position_mean` and
     `position_std`, within the limits of the resolution of the numerical evaluation of the pdf. The actual
     resulting beam profile consists of randomly distributed particles and will likely feature density
     fluctuations exceeding the specified peak density.
@@ -521,7 +521,7 @@ Option: ``fixed_weight_pdf``
 * ``<beam name>.position_mean`` (2 `float`)
     The mean position of the beam in ``x, y``, separated by a space. Both values can be a function of z.
     To generate a tilted beam use
-    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta"``.
+    ``<beam name>.position_mean = "x_center+(z-z_center)*dx_per_dzeta" "y_center+(z-z_center)*dy_per_dzeta"``.
 
 * ``<beam name>.position_std`` (2 `float`)
     The rms size of the of the beam in ``x, y``, separated by a space. Both values can be a function of z.
