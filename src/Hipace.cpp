@@ -950,7 +950,7 @@ Hipace::FillFieldDiagnostics (const int lev, int islice)
             m_fields.Copy(lev, islice, fd.m_geom_io, fd.m_F,
                 fd.m_F.box(), m_3D_geom[lev],
                 fd.m_comps_output_idx, fd.m_nfields,
-                fd.m_do_laser, m_multi_laser);
+                fd.m_do_laser, m_multi_laser, fd.m_slice_dir);
         }
     }
 }

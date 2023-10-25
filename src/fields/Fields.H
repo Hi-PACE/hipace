@@ -148,11 +148,12 @@ public:
      * \param[in] ncomp number of components to copy
      * \param[in] do_laser if to copy the laser
      * \param[in] multi_laser MultiLaser object
+     * \param[in] slice_dir slicing direction
      */
      void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
                 amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
                 const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-                bool do_laser, MultiLaser& multi_laser);
+                bool do_laser, MultiLaser& multi_laser, const int slice_dir);
 
      /** \brief Initialize all required fields to zero and interpolate from lev-1 to lev if needed
      *

@@ -534,6 +534,10 @@ InitBeamFixedWeightPDF3D ()
 
     while (num_added != num_to_add) {
 
+        // It is very unlikely that the correct amount of particles will be initialized in the first
+        // iteration. Another iteration is done with remaining particles (or subtracting extra
+        // particles). This converges quickly as the expected deviation is sqrt(num_to_add_now),
+        // resulting in a time complexity of O(num_slices*log(log(num_to_add)))
         const amrex::Long num_to_add_now = num_to_add - num_added;
 
         for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice >=0; --slice) {
@@ -547,10 +551,14 @@ InitBeamFixedWeightPDF3D ()
             const amrex::Real mean_particles = num_to_add_now*local_weight/integral;
 
             if (mean_particles >= 0) {
+                // use a Poisson distribution to mimic how many independent particles would be
+                // initialized according to the full PDF
                 const unsigned int n = amrex::RandomPoisson(mean_particles);
                 m_num_particles_slice[slice] += n;
                 num_added += n;
             } else {
+                // if there were too many particles initialized in an earlier iteration we need to
+                // remove some but also avoid having less than zero particles per slice
                 const unsigned int n = std::min(amrex::RandomPoisson(-mean_particles),
                                                 m_num_particles_slice[slice]);
                 m_num_particles_slice[slice] -= n;
@@ -609,6 +617,9 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         const amrex::Real lo_weight = m_pdf_func(zmin);
         const amrex::Real hi_weight = m_pdf_func(zmax);
         AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);
+        // the proper formula is not defined for hi_weight == lo_weight and may
+        // have precision issues around that point, so we use a Taylor expansion instead
+        // if the hi_weight and lo_weight are within 10% of each other.
         const bool use_taylor = std::min(lo_weight, hi_weight)*1.1 > std::max(lo_weight, hi_weight);
         const amrex::Real lo_hi_weight_inv = use_taylor ?
             1._rt/(hi_weight+lo_weight) : 1._rt/(hi_weight-lo_weight);
@@ -617,6 +628,9 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
             num_to_add,
             [=] AMREX_GPU_DEVICE (unsigned int i, const amrex::RandomEngine& engine) noexcept
             {
+                // if m_pdf_ref_ratio is greater than one, a single slice of beam particles
+                // needs to be initialized by multiple kernels so we need to keep track of the
+                // local index offset for each kernel
                 i += loc_index;
 
                 const amrex::Real w = amrex::Random(engine);
