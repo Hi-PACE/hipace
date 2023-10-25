@@ -16,7 +16,7 @@ my_constants.sigma_ux = emittance_x / sigma_x
 my_constants.uz = sqrt(gamma0^2 - 1 - sigma_ux^2)
 my_constants.w_beta = K*clight/sqrt(gamma0)
 
-hipace.external_E_slope = 1/2*kp*E0 1/2*kp*E0 0.
+hipace.external_E(x,y,z,t) = 1/2*kp*E0*x 1/2*kp*E0*y 0.
 
 hipace.dt = 30 /w_beta
 hipace.verbose = 1
