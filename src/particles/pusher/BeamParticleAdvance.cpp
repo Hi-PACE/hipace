@@ -119,10 +119,15 @@ AdvanceBeamParticlesSlice (
                            PhysConstSI::m_e * PhysConstSI::c / wp_inv / PhysConstSI::q_e : 1;
 
     amrex::ParallelFor(
-        amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
-        {Hipace::m_depos_order_xy},
+        amrex::TypeList<
+            amrex::CompileTimeOptions<0, 1, 2, 3>,
+            amrex::CompileTimeOptions<false, true>
+        >{}, {
+            Hipace::m_depos_order_xy,
+            use_external_fields
+        },
         beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This),
-        [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
+        [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto c_use_external_fields) {
 
             if (ptd.id(ip) < 0) return;
 
@@ -187,7 +192,7 @@ AdvanceBeamParticlesSlice (
                     slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                if (use_external_fields) {
+                if (c_use_external_fields.value) {
                     ApplyExternalField(xp, yp, zp, time, clight, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                         external_fields);
                 }
