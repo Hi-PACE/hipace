@@ -463,6 +463,228 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     return;
 }
 
+void
+BeamParticleContainer::
+InitBeamFixedWeightPDF3D ()
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedWeightPDF3D()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
+
+    amrex::Long num_to_add = m_num_particles;
+    if (m_do_symmetrize) num_to_add /= 4;
+
+    const amrex::Geometry geom = Hipace::GetInstance().m_3D_geom[0];
+    const amrex::Box domain = geom.Domain();
+
+    m_num_particles_slice.resize(domain.length(2) * m_pdf_ref_ratio);
+
+    const amrex::Real zoffset = geom.ProbLo(2);
+    const amrex::Real zscale = geom.CellSize(2) / m_pdf_ref_ratio;
+
+    amrex::Real integral = 0._rt;
+    amrex::Real max_density = 0._rt;
+    amrex::Real avg_uz = 0._rt;
+    amrex::Real avg_uz_sq = 0._rt;
+
+    for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice>=0; --slice) {
+        const amrex::Real zmin = zoffset + slice*zscale;
+        const amrex::Real zmax = zoffset + (slice+1)*zscale;
+        const amrex::Real zmid = 0.5_rt*(zmin + zmax);
+
+        const amrex::Real pdf_zmin = m_pdf_func(zmin);
+        const amrex::Real pdf_zmax = m_pdf_func(zmax);
+        const amrex::Real local_weight = 0.5_rt*(pdf_zmin+pdf_zmax);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(pdf_zmin >= 0._rt &&  pdf_zmax >= 0._rt,
+            "PDF must be >= 0 everywhere");
+
+        if (m_peak_density_is_specified) {
+            max_density = std::max(max_density, local_weight
+                / (zscale * m_pdf_pos_func[2](zmid) * m_pdf_pos_func[3](zmid) * 2._rt*MathConst::pi)
+            );
+        }
+
+        // calculate uz and uz_std for AdaptiveTimeStep
+        amrex::Real uz_mean_local = m_pdf_u_func[2](zmid);
+        amrex::Real uz_std_local = m_pdf_u_func[5](zmid);
+        avg_uz += local_weight * uz_mean_local;
+        avg_uz_sq += local_weight * (uz_mean_local*uz_mean_local + uz_std_local*uz_std_local);
+
+        integral += local_weight;
+        m_num_particles_slice[slice] = 0;
+    }
+
+    if (m_peak_density_is_specified) {
+        m_total_weight = m_density * integral / max_density;
+    } else {
+        m_total_weight = m_total_charge / m_charge;
+    }
+
+    // calculate uz and uz_std for AdaptiveTimeStep
+    m_get_momentum.m_u_mean[2] = avg_uz/integral;
+    m_get_momentum.m_u_std[2] = std::sqrt(avg_uz_sq/integral - (avg_uz/integral)*(avg_uz/integral));
+
+    if (Hipace::m_normalized_units) {
+        m_total_weight *= geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
+    }
+
+    amrex::Long num_added = 0;
+
+    while (num_added != num_to_add) {
+
+        // It is very unlikely that the correct amount of particles will be initialized in the first
+        // iteration. Another iteration is done with remaining particles (or subtracting extra
+        // particles). This converges quickly as the expected deviation is sqrt(num_to_add_now),
+        // resulting in a time complexity of O(num_slices*log(log(num_to_add)))
+        const amrex::Long num_to_add_now = num_to_add - num_added;
+
+        for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice >=0; --slice) {
+            const amrex::Real zmin = zoffset + slice*zscale;
+            const amrex::Real zmax = zoffset + (slice+1)*zscale;
+
+            const amrex::Real pdf_zmin = m_pdf_func(zmin);
+            const amrex::Real pdf_zmax = m_pdf_func(zmax);
+            const amrex::Real local_weight = 0.5_rt*(pdf_zmin+pdf_zmax);
+
+            const amrex::Real mean_particles = num_to_add_now*local_weight/integral;
+
+            if (mean_particles >= 0) {
+                // use a Poisson distribution to mimic how many independent particles would be
+                // initialized according to the full PDF
+                const unsigned int n = amrex::RandomPoisson(mean_particles);
+                m_num_particles_slice[slice] += n;
+                num_added += n;
+            } else {
+                // if there were too many particles initialized in an earlier iteration we need to
+                // remove some but also avoid having less than zero particles per slice
+                const unsigned int n = std::min(amrex::RandomPoisson(-mean_particles),
+                                                m_num_particles_slice[slice]);
+                m_num_particles_slice[slice] -= n;
+                num_added -= n;
+            }
+        }
+    }
+}
+
+void
+BeamParticleContainer::
+InitBeamFixedWeightPDFSlice (int slice, int which_slice)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedWeightPDFSlice()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
+
+    unsigned int num_to_add_full = 0;
+    for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
+        num_to_add_full += m_num_particles_slice[slice*m_pdf_ref_ratio+r];
+    }
+    if (m_do_symmetrize) {
+        resize(which_slice, 4*num_to_add_full, 0);
+    } else {
+        resize(which_slice, num_to_add_full, 0);
+    }
+
+    unsigned int loc_index = 0;
+    for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
+        const unsigned int num_to_add = m_num_particles_slice[slice*m_pdf_ref_ratio+r];
+        if (num_to_add == 0) continue;
+
+        auto& particle_tile = getBeamSlice(which_slice);
+        // Access particles' SoA
+        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
+            particle_tile.GetStructOfArrays().realarray();
+        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
+            particle_tile.GetStructOfArrays().intarray();
+
+        const uint64_t pid = m_id64;
+        m_id64 += num_to_add;
+
+        const amrex::Real clight = get_phys_const().c;
+        const bool do_symmetrize = m_do_symmetrize;
+        const bool peak_density_is_specified = m_peak_density_is_specified;
+        const amrex::Real z_foc = m_z_foc;
+        const amrex::Real radius = m_radius;
+        const amrex::Real weight = m_total_weight / m_num_particles;
+        const auto pos_func = m_pdf_pos_func;
+        const auto u_func = m_pdf_u_func;
+        const amrex::Geometry& geom = Hipace::GetInstance().m_3D_geom[0];
+        const amrex::Real dz = geom.CellSize(2) / m_pdf_ref_ratio;
+        const amrex::Real zmin = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r)*dz;
+        const amrex::Real zmax = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r+1)*dz;
+        const amrex::Real lo_weight = m_pdf_func(zmin);
+        const amrex::Real hi_weight = m_pdf_func(zmax);
+        AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);
+        // the proper formula is not defined for hi_weight == lo_weight and may
+        // have precision issues around that point, so we use a Taylor expansion instead
+        // if the hi_weight and lo_weight are within 10% of each other.
+        const bool use_taylor = std::min(lo_weight, hi_weight)*1.1 > std::max(lo_weight, hi_weight);
+        const amrex::Real lo_hi_weight_inv = use_taylor ?
+            1._rt/(hi_weight+lo_weight) : 1._rt/(hi_weight-lo_weight);
+
+        amrex::ParallelForRNG(
+            num_to_add,
+            [=] AMREX_GPU_DEVICE (unsigned int i, const amrex::RandomEngine& engine) noexcept
+            {
+                // if m_pdf_ref_ratio is greater than one, a single slice of beam particles
+                // needs to be initialized by multiple kernels so we need to keep track of the
+                // local index offset for each kernel
+                i += loc_index;
+
+                const amrex::Real w = amrex::Random(engine);
+                amrex::Real z = zmin;
+                if (use_taylor) {
+                    z += dz*(w - w*(w-1._rt)*(hi_weight-lo_weight)*lo_hi_weight_inv);
+                } else {
+                    z += dz*((std::sqrt(lo_weight*lo_weight
+                        +w*(hi_weight*hi_weight-lo_weight*lo_weight))-lo_weight)*lo_hi_weight_inv);
+                }
+
+                const amrex::Real x_mean = pos_func[0](z);
+                const amrex::Real y_mean = pos_func[1](z);
+                const amrex::Real x_std = pos_func[2](z);
+                const amrex::Real y_std = pos_func[3](z);
+
+                amrex::Real x = 0._rt;
+                amrex::Real y = 0._rt;
+                bool is_valid = false;
+                do {
+                    x = amrex::RandomNormal(0, x_std, engine);
+                    y = amrex::RandomNormal(0, y_std, engine);
+                    is_valid = x*x + y*y <= radius*radius;
+                } while (!peak_density_is_specified && !is_valid);
+
+                const amrex::Real ux = amrex::RandomNormal(u_func[0](z), u_func[3](z), engine);
+                const amrex::Real uy = amrex::RandomNormal(u_func[1](z), u_func[4](z), engine);
+                const amrex::Real uz = amrex::RandomNormal(u_func[2](z), u_func[5](z), engine);
+
+                // Propagate each electron ballistically for z_foc
+                x -= z_foc*ux/uz;
+                y -= z_foc*uy/uz;
+
+                if (!do_symmetrize)
+                {
+                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean+x, y_mean+y,
+                                            z, ux, uy, uz, weight, pid, i, clight, is_valid);
+
+                } else {
+                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean+x, y_mean+y,
+                                            z, ux, uy, uz, weight, pid, 4*i, clight, is_valid);
+                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean-x, y_mean+y,
+                                            z, -ux, uy, uz, weight, pid, 4*i+1, clight, is_valid);
+                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean+x, y_mean-y,
+                                            z, ux, -uy, uz, weight, pid, 4*i+2, clight, is_valid);
+                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean-x, y_mean-y,
+                                            z, -ux, -uy, uz, weight, pid, 4*i+3, clight, is_valid);
+                }
+            });
+
+        loc_index += num_to_add;
+    }
+}
+
 #ifdef HIPACE_USE_OPENPMD
 amrex::Real
 BeamParticleContainer::

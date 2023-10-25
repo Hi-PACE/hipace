@@ -85,13 +85,18 @@ public:
      */
     amrex::Real InitData (const amrex::Geometry& geom);
 
-    /** Initialize a beam with a fix number of particles per cell */
+    /** Initialize a beam with a fixed number of particles per cell */
     void InitBeamFixedPPC3D ();
     void InitBeamFixedPPCSlice (const int islice, const int which_beam_slice);
 
-    /** Initialize a beam with a fix number of particles, and fixed weight */
+    /** Initialize a beam with a fixed number of particles, and fixed weight */
     void InitBeamFixedWeight3D ();
     void InitBeamFixedWeightSlice (const int islice, const int which_beam_slice);
+
+    /** Initialize a beam with a fixed number of particles,
+     * and fixed weight using a probability density function (PDF) */
+    void InitBeamFixedWeightPDF3D ();
+    void InitBeamFixedWeightPDFSlice (int slice, int which_slice);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
@@ -251,6 +256,21 @@ private:
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
+
+    // fixed_weight_pdf:
+
+    bool m_peak_density_is_specified = false; /**< if the peak density is specified */
+    int m_pdf_ref_ratio = 4; /**< number of subcycles per slice for the pdf evaluation */
+    amrex::Real m_total_weight = 0; /**< sum of the weights of all particles */
+    amrex::ParserExecutor<1> m_pdf_func; /**< probability density function */
+    /** number of particles that need to be initialized per slice */
+    amrex::Vector<unsigned int> m_num_particles_slice;
+    /** functions for x_mean, y_mean, x_std, y_std */
+    amrex::Array<amrex::ParserExecutor<1>, 4> m_pdf_pos_func;
+    /** functions for ux_mean, uy_mean, uz_mean, ux_std, uy_std, uz_std */
+    amrex::Array<amrex::ParserExecutor<1>, 6> m_pdf_u_func;
+    /** Owns data for all 11 Parser functions of fixed_weight_pdf */
+    amrex::Vector<amrex::Parser> m_pdf_parsers;
 
     // from_file:
 
