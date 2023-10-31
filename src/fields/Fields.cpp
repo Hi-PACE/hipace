@@ -14,7 +14,11 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
+#include "utils/InsituUtil.H"
 #include "particles/particles_utils/ShapeFactors.H"
+#ifdef HIPACE_USE_OPENPMD
+#   include <openPMD/auxiliary/Filesystem.hpp>
+#endif
 
 using namespace amrex::literals;
 
@@ -25,6 +29,8 @@ Fields::Fields (const int nlev)
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
     queryWithParser(ppf, "extended_solve", m_extended_solve);
     queryWithParser(ppf, "open_boundary", m_open_boundary);
+    queryWithParser(ppf, "insitu_period", m_insitu_period);
+    queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
 }
 
 void
@@ -189,6 +195,17 @@ Fields::AllocData (
             // jx jy jz rho chi rhomjz
             m_tmp_densities[i].resize(bx, 6);
         }
+    }
+
+    if (lev == 0 && m_insitu_period > 0) {
+#ifdef HIPACE_USE_OPENPMD
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
+            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            "Must choose a different field insitu file prefix compared to the full diagnostics");
+#endif
+        // Allocate memory for in-situ diagnostics
+        m_insitu_rdata.resize(geom.Domain().length(2)*8, 0.);
+        m_insitu_sum_rdata.resize(8, 0.);
     }
 }
 
@@ -1188,87 +1205,85 @@ Fields::ComputeRelBFieldError (const int which_slice, const int which_slice_iter
 }
 
 void
-Fields::InSituComputeDiags (int islice)
+Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+                            int max_step, amrex::Real max_time)
 {
+    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
     HIPACE_PROFILE("Fields::InSituComputeDiags()");
 
     using namespace amrex::literals;
 
-    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
-                        m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
+    constexpr int lev = 0;
 
-    const amrex::Real insitu_radius = m_insitu_radius;
-    const PhysConst phys_const = get_phys_const();
-    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
-    const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
+    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_sum_rdata.size()>0 );
 
+    const amrex::Real clight = get_phys_const().c;
+    const amrex::Real dxdy = geom3D.CellSize(0) *  geom3D.CellSize(1);
+    const int nslices = geom3D.Domain().length(2);
+    const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
+    const int EypBx = Comps[WhichSlice::This]["EypBx"];
+    const int Ez = Comps[WhichSlice::This]["Ez"];
+    const int Bx = Comps[WhichSlice::This]["Bx"];
+    const int By = Comps[WhichSlice::This]["By"];
+    const int Bz = Comps[WhichSlice::This]["Bz"];
+
+    amrex::MultiFab& slicemf = getSlices(lev);
 
     // Tuple contains:
-    //      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
-    // sum(w), <x>, <x^2>, <y>, <y^2>, <z>, <z^2>, <ux>, <ux^2>, <uy>, <uy^2>, <uz>, <uz^2>,
-    //
-    //     13,     14,     15,   16,     17, 18
-    // <x*ux>, <y*uy>, <z*uz>, <ga>, <ga^2>, np
+    //      0,       1,      2,      3,      4,      5,         6,         7
+    //  <Ex^2>, <Ey^2>, <Ez^2>, <Bx^2>, <By^2>, <Bz^2>, <ExmBy^2>, <EypBx^2>
     amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-    amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
+                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
+                     amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+    amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real, amrex::Real,
+                      amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
-    reduce_op.eval(
-        getNumParticles(WhichBeamSlice::This), reduce_data,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
-        {
-            return {0,0,0,0,0,0};
-        });
+
+    for ( amrex::MFIter mfi(slicemf, DfltMfi); mfi.isValid(); ++mfi ) {
+        Array3<amrex::Real const> const arr = slicemf.const_array(mfi);
+        reduce_op.eval(
+            mfi.tilebox(), reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            {
+                return {
+                    pow<2>(arr(i,j,ExmBy) + arr(i,j,By) * clight),
+                    pow<2>(arr(i,j,EypBx) - arr(i,j,Bx) * clight),
+                    pow<2>(arr(i,j,Ez)),
+                    pow<2>(arr(i,j,Bx)),
+                    pow<2>(arr(i,j,By)),
+                    pow<2>(arr(i,j,Bz)),
+                    pow<2>(arr(i,j,ExmBy)),
+                    pow<2>(arr(i,j,EypBx))
+                };
+            });
+    }
 
     ReduceTuple a = reduce_data.value();
-    const amrex::Real sum_w0 = amrex::get< 0>(a);
-    const amrex::Real sum_w_inv = sum_w0<=0._rt ? 0._rt : 1._rt/sum_w0;
 
-    m_insitu_rdata[islice             ] = sum_w0;
-    m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
-    m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
-    m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
-    m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
-    m_insitu_rdata[islice+13*m_nslices] = amrex::get<13>(a)*sum_w_inv;
-    m_insitu_rdata[islice+14*m_nslices] = amrex::get<14>(a)*sum_w_inv;
-    m_insitu_rdata[islice+15*m_nslices] = amrex::get<15>(a)*sum_w_inv;
-    m_insitu_rdata[islice+16*m_nslices] = amrex::get<16>(a)*sum_w_inv;
-    m_insitu_rdata[islice+17*m_nslices] = amrex::get<17>(a)*sum_w_inv;
-    m_insitu_idata[islice             ] = amrex::get<18>(a);
+    m_insitu_rdata[islice          ] = amrex::get<0>(a)*dxdy;
+    m_insitu_rdata[islice+1*nslices] = amrex::get<1>(a)*dxdy;
+    m_insitu_rdata[islice+2*nslices] = amrex::get<2>(a)*dxdy;
+    m_insitu_rdata[islice+3*nslices] = amrex::get<3>(a)*dxdy;
+    m_insitu_rdata[islice+4*nslices] = amrex::get<4>(a)*dxdy;
+    m_insitu_rdata[islice+5*nslices] = amrex::get<5>(a)*dxdy;
+    m_insitu_rdata[islice+6*nslices] = amrex::get<6>(a)*dxdy;
+    m_insitu_rdata[islice+7*nslices] = amrex::get<7>(a)*dxdy;
 
-    m_insitu_sum_rdata[ 0] += sum_w0;
-    m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
-    m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
-    m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
-    m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
-    m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
-    m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
-    m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
-    m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
-    m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
-    m_insitu_sum_rdata[10] += amrex::get<10>(a);
-    m_insitu_sum_rdata[11] += amrex::get<11>(a);
-    m_insitu_sum_rdata[12] += amrex::get<12>(a);
-    m_insitu_sum_rdata[13] += amrex::get<13>(a);
-    m_insitu_sum_rdata[14] += amrex::get<14>(a);
-    m_insitu_sum_rdata[15] += amrex::get<15>(a);
-    m_insitu_sum_rdata[16] += amrex::get<16>(a);
-    m_insitu_sum_rdata[17] += amrex::get<17>(a);
-    m_insitu_sum_idata[ 0] += amrex::get<18>(a);
+    m_insitu_sum_rdata[0] += amrex::get<0>(a)*dxdy;
+    m_insitu_sum_rdata[1] += amrex::get<1>(a)*dxdy;
+    m_insitu_sum_rdata[2] += amrex::get<2>(a)*dxdy;
+    m_insitu_sum_rdata[3] += amrex::get<3>(a)*dxdy;
+    m_insitu_sum_rdata[4] += amrex::get<4>(a)*dxdy;
+    m_insitu_sum_rdata[5] += amrex::get<5>(a)*dxdy;
+    m_insitu_sum_rdata[6] += amrex::get<6>(a)*dxdy;
+    m_insitu_sum_rdata[7] += amrex::get<7>(a)*dxdy;
 }
 
 void
-Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom)
+Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
+                           int max_step, amrex::Real max_time)
 {
+    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
     HIPACE_PROFILE("Fields::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD
@@ -1282,68 +1297,41 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
     std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
 
     // open file
-    std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_fields." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
-    const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
-    const std::size_t nslices = static_cast<std::size_t>(m_nslices);
-    const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
-        geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
+    const amrex::Real dzeta = geom3D.CellSize(2);
+    const int nslices_int = geom3D.Domain().length(2);
+    const std::size_t nslices = static_cast<std::size_t>(nslices_int);
     const int is_normalized_units = Hipace::m_normalized_units;
 
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
     const amrex::Vector<insitu_utils::DataNode> all_data{
-        {"time"    , &time},
-        {"step"    , &step},
-        {"n_slices", &m_nslices},
-        {"charge"  , &m_charge},
-        {"mass"    , &m_mass},
-        {"z_lo"    , &geom.ProbLo()[2]},
-        {"z_hi"    , &geom.ProbHi()[2]},
-        {"normalized_density_factor", &normalized_density_factor},
+        {"time"     , &time},
+        {"step"     , &step},
+        {"n_slices" , &nslices_int},
+        {"z_lo"     , &geom3D.ProbLo()[2]},
+        {"z_hi"     , &geom3D.ProbHi()[2]},
+        {"dzeta"    , &dzeta},
         {"is_normalized_units", &is_normalized_units},
-        {"[x]"     , &m_insitu_rdata[1*nslices], nslices},
-        {"[x^2]"   , &m_insitu_rdata[2*nslices], nslices},
-        {"[y]"     , &m_insitu_rdata[3*nslices], nslices},
-        {"[y^2]"   , &m_insitu_rdata[4*nslices], nslices},
-        {"[z]"     , &m_insitu_rdata[5*nslices], nslices},
-        {"[z^2]"   , &m_insitu_rdata[6*nslices], nslices},
-        {"[ux]"    , &m_insitu_rdata[7*nslices], nslices},
-        {"[ux^2]"  , &m_insitu_rdata[8*nslices], nslices},
-        {"[uy]"    , &m_insitu_rdata[9*nslices], nslices},
-        {"[uy^2]"  , &m_insitu_rdata[10*nslices], nslices},
-        {"[uz]"    , &m_insitu_rdata[11*nslices], nslices},
-        {"[uz^2]"  , &m_insitu_rdata[12*nslices], nslices},
-        {"[x*ux]"  , &m_insitu_rdata[13*nslices], nslices},
-        {"[y*uy]"  , &m_insitu_rdata[14*nslices], nslices},
-        {"[z*uz]"  , &m_insitu_rdata[15*nslices], nslices},
-        {"[ga]"    , &m_insitu_rdata[16*nslices], nslices},
-        {"[ga^2]"  , &m_insitu_rdata[17*nslices], nslices},
-        {"sum(w)"  , &m_insitu_rdata[0], nslices},
-        {"Np"      , &m_insitu_idata[0], nslices},
-        {"average" , {
-            {"[x]"   , &(m_insitu_sum_rdata[ 1] /= sum_w0)},
-            {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
-            {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
-            {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
-            {"[z]"   , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
-            {"[z^2]" , &(m_insitu_sum_rdata[ 6] /= sum_w0)},
-            {"[ux]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
-            {"[ux^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
-            {"[uy]"  , &(m_insitu_sum_rdata[ 9] /= sum_w0)},
-            {"[uy^2]", &(m_insitu_sum_rdata[10] /= sum_w0)},
-            {"[uz]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
-            {"[uz^2]", &(m_insitu_sum_rdata[12] /= sum_w0)},
-            {"[x*ux]", &(m_insitu_sum_rdata[13] /= sum_w0)},
-            {"[y*uy]", &(m_insitu_sum_rdata[14] /= sum_w0)},
-            {"[z*uz]", &(m_insitu_sum_rdata[15] /= sum_w0)},
-            {"[ga]"  , &(m_insitu_sum_rdata[16] /= sum_w0)},
-            {"[ga^2]", &(m_insitu_sum_rdata[17] /= sum_w0)}
-        }},
-        {"total"   , {
-            {"sum(w)", &m_insitu_sum_rdata[0]},
-            {"Np"    , &m_insitu_sum_idata[0]}
+        {"[Ex^2]"   , &m_insitu_rdata[0], nslices},
+        {"[Ey^2]"   , &m_insitu_rdata[1*nslices], nslices},
+        {"[Ez^2]"   , &m_insitu_rdata[2*nslices], nslices},
+        {"[Bx^2]"   , &m_insitu_rdata[3*nslices], nslices},
+        {"[By^2]"   , &m_insitu_rdata[4*nslices], nslices},
+        {"[Bz^2]"   , &m_insitu_rdata[5*nslices], nslices},
+        {"[ExmBy^2]", &m_insitu_rdata[6*nslices], nslices},
+        {"[EypBx^2]", &m_insitu_rdata[7*nslices], nslices},
+        {"integrated", {
+            {"[Ex^2]"   , &(m_insitu_sum_rdata[0] *= dzeta)},
+            {"[Ey^2]"   , &(m_insitu_sum_rdata[1] *= dzeta)},
+            {"[Ez^2]"   , &(m_insitu_sum_rdata[2] *= dzeta)},
+            {"[Bx^2]"   , &(m_insitu_sum_rdata[3] *= dzeta)},
+            {"[By^2]"   , &(m_insitu_sum_rdata[4] *= dzeta)},
+            {"[Bz^2]"   , &(m_insitu_sum_rdata[5] *= dzeta)},
+            {"[ExmBy^2]", &(m_insitu_sum_rdata[6] *= dzeta)},
+            {"[EypBx^2]", &(m_insitu_sum_rdata[7] *= dzeta)}
         }}
     };
 
@@ -1367,7 +1355,5 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
 
     // reset arrays for insitu data
     for (auto& x : m_insitu_rdata) x = 0.;
-    for (auto& x : m_insitu_idata) x = 0;
     for (auto& x : m_insitu_sum_rdata) x = 0.;
-    for (auto& x : m_insitu_sum_idata) x = 0;
 }
