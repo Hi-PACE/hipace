@@ -204,8 +204,8 @@ Fields::AllocData (
             "Must choose a different field insitu file prefix compared to the full diagnostics");
 #endif
         // Allocate memory for in-situ diagnostics
-        m_insitu_rdata.resize(geom.Domain().length(2)*8, 0.);
-        m_insitu_sum_rdata.resize(8, 0.);
+        m_insitu_rdata.resize(geom.Domain().length(2)*9, 0.);
+        m_insitu_sum_rdata.resize(9, 0.);
     }
 }
 
@@ -1218,7 +1218,7 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
     AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_sum_rdata.size()>0 );
 
     const amrex::Real clight = get_phys_const().c;
-    const amrex::Real dxdy = geom3D.CellSize(0) *  geom3D.CellSize(1);
+    const amrex::Real dxdydz = geom3D.CellSize(0) * geom3D.CellSize(1) * geom3D.CellSize(2);
     const int nslices = geom3D.Domain().length(2);
     const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
     const int EypBx = Comps[WhichSlice::This]["EypBx"];
@@ -1226,17 +1226,20 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
     const int Bx = Comps[WhichSlice::This]["Bx"];
     const int By = Comps[WhichSlice::This]["By"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Comps[WhichSlice::This].count("jz_beam") > 0,
+        "Must use explicit solver for field insitu diagnostic");
+    const int jz_beam = Comps[WhichSlice::This]["jz_beam"];
 
     amrex::MultiFab& slicemf = getSlices(lev);
 
     // Tuple contains:
-    //      0,       1,      2,      3,      4,      5,         6,         7
-    //  <Ex^2>, <Ey^2>, <Ez^2>, <Bx^2>, <By^2>, <Bz^2>, <ExmBy^2>, <EypBx^2>
+    //      0,       1,      2,      3,      4,      5,         6,         7             8
+    //  <Ex^2>, <Ey^2>, <Ez^2>, <Bx^2>, <By^2>, <Bz^2>, <ExmBy^2>, <EypBx^2>, <Ez*jz_beam>
     amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                      amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
     amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
+                      amrex::Real, amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
     for ( amrex::MFIter mfi(slicemf, DfltMfi); mfi.isValid(); ++mfi ) {
@@ -1253,30 +1256,32 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
                     pow<2>(arr(i,j,By)),
                     pow<2>(arr(i,j,Bz)),
                     pow<2>(arr(i,j,ExmBy)),
-                    pow<2>(arr(i,j,EypBx))
+                    pow<2>(arr(i,j,EypBx)),
+                    arr(i,j,Ez)*arr(i,j,jz_beam)
                 };
             });
     }
 
     ReduceTuple a = reduce_data.value();
 
-    m_insitu_rdata[islice          ] = amrex::get<0>(a)*dxdy;
-    m_insitu_rdata[islice+1*nslices] = amrex::get<1>(a)*dxdy;
-    m_insitu_rdata[islice+2*nslices] = amrex::get<2>(a)*dxdy;
-    m_insitu_rdata[islice+3*nslices] = amrex::get<3>(a)*dxdy;
-    m_insitu_rdata[islice+4*nslices] = amrex::get<4>(a)*dxdy;
-    m_insitu_rdata[islice+5*nslices] = amrex::get<5>(a)*dxdy;
-    m_insitu_rdata[islice+6*nslices] = amrex::get<6>(a)*dxdy;
-    m_insitu_rdata[islice+7*nslices] = amrex::get<7>(a)*dxdy;
-
-    m_insitu_sum_rdata[0] += amrex::get<0>(a)*dxdy;
-    m_insitu_sum_rdata[1] += amrex::get<1>(a)*dxdy;
-    m_insitu_sum_rdata[2] += amrex::get<2>(a)*dxdy;
-    m_insitu_sum_rdata[3] += amrex::get<3>(a)*dxdy;
-    m_insitu_sum_rdata[4] += amrex::get<4>(a)*dxdy;
-    m_insitu_sum_rdata[5] += amrex::get<5>(a)*dxdy;
-    m_insitu_sum_rdata[6] += amrex::get<6>(a)*dxdy;
-    m_insitu_sum_rdata[7] += amrex::get<7>(a)*dxdy;
+    m_insitu_rdata[islice          ] = amrex::get<0>(a)*dxdydz;
+    m_insitu_rdata[islice+1*nslices] = amrex::get<1>(a)*dxdydz;
+    m_insitu_rdata[islice+2*nslices] = amrex::get<2>(a)*dxdydz;
+    m_insitu_rdata[islice+3*nslices] = amrex::get<3>(a)*dxdydz;
+    m_insitu_rdata[islice+4*nslices] = amrex::get<4>(a)*dxdydz;
+    m_insitu_rdata[islice+5*nslices] = amrex::get<5>(a)*dxdydz;
+    m_insitu_rdata[islice+6*nslices] = amrex::get<6>(a)*dxdydz;
+    m_insitu_rdata[islice+7*nslices] = amrex::get<7>(a)*dxdydz;
+    m_insitu_rdata[islice+8*nslices] = amrex::get<8>(a)*dxdydz;
+    m_insitu_sum_rdata[0] += amrex::get<0>(a)*dxdydz;
+    m_insitu_sum_rdata[1] += amrex::get<1>(a)*dxdydz;
+    m_insitu_sum_rdata[2] += amrex::get<2>(a)*dxdydz;
+    m_insitu_sum_rdata[3] += amrex::get<3>(a)*dxdydz;
+    m_insitu_sum_rdata[4] += amrex::get<4>(a)*dxdydz;
+    m_insitu_sum_rdata[5] += amrex::get<5>(a)*dxdydz;
+    m_insitu_sum_rdata[6] += amrex::get<6>(a)*dxdydz;
+    m_insitu_sum_rdata[7] += amrex::get<7>(a)*dxdydz;
+    m_insitu_sum_rdata[8] += amrex::get<8>(a)*dxdydz;
 }
 
 void
@@ -1300,7 +1305,6 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_fields." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
-    const amrex::Real dzeta = geom3D.CellSize(2);
     const int nslices_int = geom3D.Domain().length(2);
     const std::size_t nslices = static_cast<std::size_t>(nslices_int);
     const int is_normalized_units = Hipace::m_normalized_units;
@@ -1313,7 +1317,6 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
         {"n_slices" , &nslices_int},
         {"z_lo"     , &geom3D.ProbLo()[2]},
         {"z_hi"     , &geom3D.ProbHi()[2]},
-        {"dzeta"    , &dzeta},
         {"is_normalized_units", &is_normalized_units},
         {"[Ex^2]"   , &m_insitu_rdata[0], nslices},
         {"[Ey^2]"   , &m_insitu_rdata[1*nslices], nslices},
@@ -1323,15 +1326,17 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
         {"[Bz^2]"   , &m_insitu_rdata[5*nslices], nslices},
         {"[ExmBy^2]", &m_insitu_rdata[6*nslices], nslices},
         {"[EypBx^2]", &m_insitu_rdata[7*nslices], nslices},
+        {"[Ez*jz_beam]", &m_insitu_rdata[8*nslices], nslices},
         {"integrated", {
-            {"[Ex^2]"   , &(m_insitu_sum_rdata[0] *= dzeta)},
-            {"[Ey^2]"   , &(m_insitu_sum_rdata[1] *= dzeta)},
-            {"[Ez^2]"   , &(m_insitu_sum_rdata[2] *= dzeta)},
-            {"[Bx^2]"   , &(m_insitu_sum_rdata[3] *= dzeta)},
-            {"[By^2]"   , &(m_insitu_sum_rdata[4] *= dzeta)},
-            {"[Bz^2]"   , &(m_insitu_sum_rdata[5] *= dzeta)},
-            {"[ExmBy^2]", &(m_insitu_sum_rdata[6] *= dzeta)},
-            {"[EypBx^2]", &(m_insitu_sum_rdata[7] *= dzeta)}
+            {"[Ex^2]"   , &m_insitu_sum_rdata[0]},
+            {"[Ey^2]"   , &m_insitu_sum_rdata[1]},
+            {"[Ez^2]"   , &m_insitu_sum_rdata[2]},
+            {"[Bx^2]"   , &m_insitu_sum_rdata[3]},
+            {"[By^2]"   , &m_insitu_sum_rdata[4]},
+            {"[Bz^2]"   , &m_insitu_sum_rdata[5]},
+            {"[ExmBy^2]", &m_insitu_sum_rdata[6]},
+            {"[EypBx^2]", &m_insitu_sum_rdata[7]}
+            {"[Ez*jz_beam]", &m_insitu_sum_rdata[8]},
         }}
     };
 
