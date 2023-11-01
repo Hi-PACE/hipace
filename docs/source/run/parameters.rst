@@ -472,25 +472,17 @@ which are valid only for certain beam types, are introduced further below under
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
 
-* ``hipace.external_E_uniform`` (3 `float`) optional (default `0. 0. 0.`)
-    Uniform external electric field applied to beam particles.
-    The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
+* ``<beam name> or beams.external_E(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External electric field applied to beam particles as functions of x, y, z and t.
+    The components represent Ex, Ey and Ez respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current timestep.
 
-* ``hipace.external_B_uniform`` (3 `float`) optional (default `0. 0. 0.`)
-    Uniform external magnetic field applied to beam particles.
-    The components represent Bx, By and Bz, respectively.
-
-* ``hipace.external_E_slope`` (3 `float`) optional (default `0. 0. 0.`)
-    Slope of a linear external electric field applied to beam particles.
-    The components represent d(Ex-c*By)/dx, d(Ey+c*Bx)/dy and d(Ez)/dz respectively.
-    For the last component, z actually represents the zeta coordinate zeta = z - c*t.
-
-* ``hipace.external_B_slope`` (3 `float`) optional (default `0. 0. 0.`)
-    Slope of a linear external electric field applied to beam particles.
-    The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
-    Note the order of derivatives for the transverse components!
-    For the last component, z actually represents the zeta coordinate zeta = z - c*t.
-    For instance, ``hipace.external_B_slope = -1. 1. 0.`` creates an axisymmetric focusing lens of strength 1 T/m.
+* ``<beam name> or beams.external_B(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External magnetic field applied to beam particles as functions of x, y, z and t.
+    The components represent Bx, By and Bz respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current timestep.
 
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
