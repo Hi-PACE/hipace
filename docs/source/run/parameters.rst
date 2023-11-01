@@ -89,9 +89,10 @@ General parameters
     ``comms_buffer_max_leading_slices`` and ``comms_buffer_max_trailing_slices`` will in principle
     limit the amount of asynchronousness in the parallel communication and may thus reduce performance.
     However it may be necessary to set these parameters to avoid all slices accumulating on a single
-    rank that would run out of memory.
+    rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
     If there are more time steps than ranks, these parameters must be chosen such that between all
-    ranks there is enoth capacity to store every slice to avoid a deadlock.
+    ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
+    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
