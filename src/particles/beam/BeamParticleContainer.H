@@ -208,7 +208,7 @@ public:
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */
     int m_insitu_period {0};
-    /** If external fields should be used for this beam */
+    /** Whether external fields should be used for this beam */
     bool m_use_external_fields = false;
     /** External field functions for Ex Ey Ez Bx By Bz */
     amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_external_fields;
