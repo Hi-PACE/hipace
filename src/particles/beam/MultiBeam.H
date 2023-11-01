@@ -115,6 +115,8 @@ public:
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
                      const int which_slice);
 
+    void ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom);
+
     /** \brief returns if the SALAME algorithm should be used on this slice
      * \param[in] step time step of simulation
      */

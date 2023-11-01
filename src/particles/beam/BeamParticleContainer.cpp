@@ -65,6 +65,11 @@ BeamParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     queryWithParserAlt(pp, "do_reset_id_init", m_do_reset_id_init, pp_alt);
     queryWithParser(pp, "do_salame", m_do_salame);
+    queryWithParserAlt(pp, "reorder_period", m_reorder_period, pp_alt);
+    amrex::Array<int, 2> idx_array
+        {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
+    queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
+    m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
@@ -371,6 +376,49 @@ BeamParticleContainer::resize (int which_slice, int num_particles, int num_slipp
     m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
         num_particles + num_slipped_particles;
     getBeamSlice(which_slice).resize(num_particles + num_slipped_particles);
+}
+
+void
+BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom) {
+    HIPACE_PROFILE("BeamParticleContainer::ReorderParticles()");
+    if (m_reorder_period > 0 && step % m_reorder_period == 0) {
+
+        const int np = getNumParticles(beam_slice);
+        const int np_total = getNumParticlesIncludingSlipped(beam_slice);
+        auto& ptile = getBeamSlice(beam_slice);
+        amrex::Gpu::DeviceVector<unsigned int> perm;
+        amrex::PermutationForDeposition<unsigned int>(perm, np, ptile, slice_geom.Domain(),
+                                                      slice_geom, m_reorder_idx_type);
+        const unsigned int* permutations = perm.dataPtr();
+
+        { // Create a scope for the temporary vector below
+            BeamTile::RealVector tmp_real(np_total);
+            for (int comp = 0; comp < BeamIdx::real_nattribs; ++comp) {
+                auto src = ptile.GetStructOfArrays().GetRealData(comp).data();
+                amrex::ParticleReal* dst = tmp_real.data();
+                amrex::ParallelFor(np_total,
+                    [=] AMREX_GPU_DEVICE (int i) {
+                        dst[i] = i < np ? src[permutations[i]] : src[i];
+                    });
+
+                amrex::Gpu::streamSynchronize();
+                ptile.GetStructOfArrays().GetRealData(comp).swap(tmp_real);
+            }
+        }
+
+        BeamTile::IntVector tmp_int(np_total);
+        for (int comp = 0; comp < BeamIdx::int_nattribs; ++comp) {
+            auto src = ptile.GetStructOfArrays().GetIntData(comp).data();
+            int* dst = tmp_int.data();
+            amrex::ParallelFor(np_total,
+                [=] AMREX_GPU_DEVICE (int i) {
+                    dst[i] = i < np ? src[permutations[i]] : src[i];
+                });
+
+            amrex::Gpu::streamSynchronize();
+            ptile.GetStructOfArrays().GetIntData(comp).swap(tmp_int);
+        }
+    }
 }
 
 void

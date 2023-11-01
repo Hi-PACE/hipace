@@ -449,6 +449,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
         m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
+        m_multi_beam.ReorderParticles( WhichBeamSlice::This, step, m_slice_geom[0]);
     }
 
     m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
@@ -505,6 +506,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
+        m_multi_beam.ReorderParticles( WhichBeamSlice::Next, step, m_slice_geom[0]);
     }
 
     if (m_N_level > 1) {
