@@ -1335,8 +1335,8 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
             {"[By^2]"   , &m_insitu_sum_rdata[4]},
             {"[Bz^2]"   , &m_insitu_sum_rdata[5]},
             {"[ExmBy^2]", &m_insitu_sum_rdata[6]},
-            {"[EypBx^2]", &m_insitu_sum_rdata[7]}
-            {"[Ez*jz_beam]", &m_insitu_sum_rdata[8]},
+            {"[EypBx^2]", &m_insitu_sum_rdata[7]},
+            {"[Ez*jz_beam]", &m_insitu_sum_rdata[8]}
         }}
     };
 
