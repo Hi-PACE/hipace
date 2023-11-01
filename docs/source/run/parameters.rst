@@ -106,6 +106,10 @@ General parameters
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
 
+* ``hipace.interpolate_neutralizing_background`` (`bool`) optional (default `0`)
+    Whether the neutralizing background from plasmas should be interpolated from level 0
+    to higher MR levels instead of depositing it on all levels.
+
 * ``hipace.output_input`` (`bool`) optional (default `0`)
     Print all input parameters before running the simulation.
     If a parameter is present multiple times then the last occurrence will be used.
