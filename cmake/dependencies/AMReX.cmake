@@ -143,7 +143,12 @@ macro(find_amrex)
     else()
         message(STATUS "Searching for pre-installed AMReX ...")
         set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
-        find_package(AMReX 21.08 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES TINYP)
+        find_package(AMReX 21.08 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES)
+        # note: TINYP skipped because user-configured and optional
+
+        # AMReX CMake helper scripts
+        list(APPEND CMAKE_MODULE_PATH "${AMReX_DIR}/AMReXCMakeModules")
+
         message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
     endif()
 endmacro()
