@@ -81,6 +81,19 @@ General parameters
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
 
+* ``hipace.comms_buffer_max_leading_slices`` (`int`) optional (default `inf`)
+    How many slices of beam particles can be received and stored in advance.
+
+* ``hipace.comms_buffer_max_trailing_slices`` (`int`) optional (default `inf`)
+    How many slices of beam particles can be stored before being sent. Using
+    ``comms_buffer_max_leading_slices`` and ``comms_buffer_max_trailing_slices`` will in principle
+    limit the amount of asynchronousness in the parallel communication and may thus reduce performance.
+    However it may be necessary to set these parameters to avoid all slices accumulating on a single
+    rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
+    If there are more time steps than ranks, these parameters must be chosen such that between all
+    ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
+    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
+
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
@@ -105,6 +118,10 @@ General parameters
 * ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
+
+* ``hipace.interpolate_neutralizing_background`` (`bool`) optional (default `0`)
+    Whether the neutralizing background from plasmas should be interpolated from level 0
+    to higher MR levels instead of depositing it on all levels.
 
 * ``hipace.output_input`` (`bool`) optional (default `0`)
     Print all input parameters before running the simulation.

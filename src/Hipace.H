@@ -207,6 +207,8 @@ public:
     inline static bool m_deposit_rho = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
+    /** Whether to interpolate the neutralizing background to MR levels 1 and 2 instead of depositing it */
+    inline static bool m_interpolate_neutralizing_background = false;
     /** Whether to use tiling for particle operations */
 #ifdef AMREX_USE_GPU
     inline static bool m_do_tiling = false;
@@ -258,6 +260,10 @@ public:
     amrex::ParserExecutor<3> m_salame_target_func;
     /** Whether MPI communication buffers should be allocated in device memory */
     bool m_comms_buffer_on_gpu = false;
+    /** How many slices of beam particles can be received in advance */
+    int m_comms_buffer_max_leading_slices = std::numeric_limits<int>::max();
+    /** How many slices of beam particles can be stored before being sent */
+    int m_comms_buffer_max_trailing_slices = std::numeric_limits<int>::max();
 
 private:
 
