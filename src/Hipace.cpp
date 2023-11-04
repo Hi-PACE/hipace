@@ -105,13 +105,14 @@ Hipace::Hipace () :
     if (amrex::TilingIfNotGPU()) {
         DfltMfiTlng.EnableTiling();
     }
-    DeprecatedInput("hipace", "external_ExmBy_slope", "external_E_slope");
-    DeprecatedInput("hipace", "external_Ez_slope", "external_E_slope");
-    DeprecatedInput("hipace", "external_Ez_uniform", "external_E_uniform");
-    queryWithParser(pph, "external_E_uniform", m_external_E_uniform);
-    queryWithParser(pph, "external_B_uniform", m_external_B_uniform);
-    queryWithParser(pph, "external_E_slope", m_external_E_slope);
-    queryWithParser(pph, "external_B_slope", m_external_B_slope);
+
+    DeprecatedInput("hipace", "external_ExmBy_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_Ez_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_Ez_uniform", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_E_uniform", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_B_uniform","beams.external_B(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_E_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_B_slope", "beams.external_B(x,y,z,t)", "", true);
 
     queryWithParser(pph, "salame_n_iter", m_salame_n_iter);
     queryWithParser(pph, "salame_do_advance", m_salame_do_advance);
@@ -140,8 +141,17 @@ Hipace::Hipace () :
 
     queryWithParser(pph, "background_density_SI", m_background_density_SI);
     queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
+    queryWithParser(pph, "comms_buffer_max_leading_slices", m_comms_buffer_max_leading_slices);
+    queryWithParser(pph, "comms_buffer_max_trailing_slices", m_comms_buffer_max_trailing_slices);
 
     MakeGeometry();
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        (((double(m_comms_buffer_max_leading_slices) + m_comms_buffer_max_trailing_slices)
+        * amrex::ParallelDescriptor::NProcs()) > m_3D_geom[0].Domain().length(2))
+        || (m_max_step <= amrex::ParallelDescriptor::NProcs()),
+        "comms_buffer_max_leading_slices and comms_buffer_max_trailing_slices must be large enough"
+        " to distribute all slices between all ranks if there are more timesteps than ranks");
 
     m_use_laser = m_multi_laser.m_use_laser;
 
@@ -203,7 +213,9 @@ Hipace::InitData ()
                               m_multi_beam.get_nbeams(),
                               !m_comms_buffer_on_gpu,
                               m_use_laser,
-                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
+                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{},
+                              m_comms_buffer_max_leading_slices,
+                              m_comms_buffer_max_trailing_slices);
 
     amrex::ParmParse pph("hipace");
     bool do_output_input = false;
@@ -568,9 +580,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level,
-                                           m_external_E_uniform, m_external_B_uniform,
-                                           m_external_E_slope, m_external_B_slope);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 

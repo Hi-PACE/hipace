@@ -143,7 +143,12 @@ macro(find_amrex)
     else()
         message(STATUS "Searching for pre-installed AMReX ...")
         set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
-        find_package(AMReX 21.08 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES TINYP)
+        find_package(AMReX 23.11 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES)
+        # note: TINYP skipped because user-configured and optional
+
+        # AMReX CMake helper scripts
+        list(APPEND CMAKE_MODULE_PATH "${AMReX_DIR}/AMReXCMakeModules")
+
         message(STATUS "AMReX: Found version '${AMReX_VERSION}'")
     endif()
 endmacro()
@@ -157,7 +162,7 @@ set(HiPACE_amrex_src ""
 set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "23.10"
+set(HiPACE_amrex_branch "23.11"
     CACHE STRING
     "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 

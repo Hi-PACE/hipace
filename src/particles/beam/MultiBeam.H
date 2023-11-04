@@ -49,22 +49,10 @@ public:
      * \param[in] gm Geometry object at level lev
      * \param[in] slice longitudinal slice
      * \param[in] current_N_level number of MR levels active on the current slice
-     * \param[in] extEu uniform external electric field applied to beam particles.
-                  The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
-     * \param[in] extBu Uniform external magnetic field applied to beam particles.
-                  The components represent Bx, By and Bz, respectively.
-     * \param[in] extEs Slope of a linear external electric field applied to beam particles.
-                  The components represent d(Ex-c*By)/dx, d(Ey+c*Bx)/dy and d(Ez)/dz respectively.
-                  For the last component, z represents the zeta coordinate zeta = z - c*t.
-     * \param[in] extBs Slope of a linear external magnetic field applied to beam particles.
-                  The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
-                  Note the order of derivatives for the transverse components!
-                  For the last component, z represents the zeta coordinate zeta = z - c*t
      */
     void AdvanceBeamParticlesSlice (
         const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
-        int const current_N_level, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
-        const amrex::RealVect& extEs, const amrex::RealVect& extBs);
+        int const current_N_level);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation

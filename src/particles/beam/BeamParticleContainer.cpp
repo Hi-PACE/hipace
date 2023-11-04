@@ -70,6 +70,23 @@ BeamParticleContainer::ReadParameters ()
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
+    amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
+    m_use_external_fields = queryWithParserAlt(pp, "external_E(x,y,z,t)", field_str, pp_alt);
+    m_external_fields[0] = makeFunctionWithParser<4>(field_str[0], m_external_fields_parser[0],
+        {"x", "y", "z", "t"});
+    m_external_fields[1] = makeFunctionWithParser<4>(field_str[1], m_external_fields_parser[1],
+        {"x", "y", "z", "t"});
+    m_external_fields[2] = makeFunctionWithParser<4>(field_str[2], m_external_fields_parser[2],
+        {"x", "y", "z", "t"});
+    field_str = {"0", "0", "0"};
+    m_use_external_fields = queryWithParserAlt(pp, "external_B(x,y,z,t)", field_str, pp_alt)
+        || m_use_external_fields;
+    m_external_fields[3] = makeFunctionWithParser<4>(field_str[0], m_external_fields_parser[3],
+        {"x", "y", "z", "t"});
+    m_external_fields[4] = makeFunctionWithParser<4>(field_str[1], m_external_fields_parser[4],
+        {"x", "y", "z", "t"});
+    m_external_fields[5] = makeFunctionWithParser<4>(field_str[2], m_external_fields_parser[5],
+        {"x", "y", "z", "t"});
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
