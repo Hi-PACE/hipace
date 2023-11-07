@@ -25,6 +25,7 @@ Fields::Fields (const int nlev)
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
     queryWithParser(ppf, "extended_solve", m_extended_solve);
     queryWithParser(ppf, "open_boundary", m_open_boundary);
+    queryWithParser(ppf, "do_symmetrize", m_do_symmetrize);
 }
 
 void
@@ -863,6 +864,12 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             m_slices_nguards, -m_slices_nguards);
         LevelUpBoundary(geom, lev, WhichSlice::This, "jy",
             m_slices_nguards, -m_slices_nguards);
+
+        if (m_do_symmetrize) {
+            SymmetrizeFields(Comps[WhichSlice::This]["rhomjz"], lev, 1, 1);
+            SymmetrizeFields(Comps[WhichSlice::This]["jx"], lev, -1, 1);
+            SymmetrizeFields(Comps[WhichSlice::This]["jy"], lev, 1, -1);
+        }
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -958,6 +965,11 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, which_slice, "jx", m_slices_nguards, -m_slices_nguards);
         LevelUpBoundary(geom, lev, which_slice, "jy", m_slices_nguards, -m_slices_nguards);
+
+        if (m_do_symmetrize) {
+            SymmetrizeFields(Comps[which_slice]["jx"], lev, -1, 1);
+            SymmetrizeFields(Comps[which_slice]["jy"], lev, 1, -1);
+        }
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -1006,6 +1018,12 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, WhichSlice::This, "jz", m_slices_nguards, -m_slices_nguards);
         // jx and jy on WhichSlice::Previous was already leveled up on previous slice
+
+        if (m_do_symmetrize) {
+            SymmetrizeFields(Comps[WhichSlice::This]["jz"], lev, 1, 1);
+            SymmetrizeFields(Comps[WhichSlice::Next]["jx"], lev, -1, 1);
+            SymmetrizeFields(Comps[WhichSlice::Next]["jy"], lev, 1, -1);
+        }
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -1045,6 +1063,42 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
         // interpolate Bx and By to lev from lev-1 in the ghost cells
         LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, m_poisson_nguards);
         LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, m_poisson_nguards);
+    }
+}
+
+void
+Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const int symm_y)
+{
+    HIPACE_PROFILE("Fields::SymmetrizeFields()");
+
+    AMREX_ALWAYS_ASSERT(symm_x*symm_x == 1 && symm_y*symm_y == 1);
+
+    amrex::MultiFab& slicemf = getSlices(lev);
+
+    for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ) {
+        const Array2<amrex::Real> arr = slicemf.array(mfi, field_comp);
+
+        const amrex::Box full_box = mfi.growntilebox();
+
+        const int upper_x = full_box.smallEnd(0) + full_box.bigEnd(0);
+        const int upper_y = full_box.smallEnd(1) + full_box.bigEnd(1);
+
+        amrex::Box quarter_box = full_box;
+        quarter_box.setBig(0, full_box.smallEnd(0) + (full_box.length(0)+1)/2 - 1);
+        quarter_box.setBig(1, full_box.smallEnd(1) + (full_box.length(1)+1)/2 - 1);
+
+        amrex::ParallelFor(quarter_box,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+            {
+                const amrex::Real avg = 0.25_rt*(arr(i, j) + arr(upper_x - i, j)*symm_x
+                    + arr(i, upper_y - j)*symm_y + arr(upper_x - i, upper_y - j)*symm_x*symm_y);
+
+                // Note: this may write to the same cell multiple times in the center.
+                arr(i, j) = avg;
+                arr(upper_x - i, j) = avg*symm_x;
+                arr(i, upper_y - j) = avg*symm_y;
+                arr(upper_x - i, upper_y - j) = avg*symm_x*symm_y;
+            });
     }
 }
 

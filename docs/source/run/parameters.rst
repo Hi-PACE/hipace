@@ -247,6 +247,10 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
     Only available with the predictor-corrector solver.
 
+* ``fields.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes current and charge densities transversely before the field solve.
+    Each cell at (`x`, `y`) is averaged with cells at (`-x`, `y`), (`x`, `-y`) and (`-x`, `-y`).
+
 Explicit solver parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

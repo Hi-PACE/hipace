@@ -241,6 +241,15 @@ public:
      */
     void SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom, const int current_N_level,
                            const int which_slice);
+    /** \brief Symmetrize fields by averaging over (x,y), symm_x*(-x,y),
+     * symm_y*(x,-y) and symm_x*symm_y*(-x,-y) where symm_x and symm_y can be 1 or -1.
+     *
+     * \param[in] field_comp component index of the filed
+     * \param[in] lev current level
+     * \param[in] symm_x type of reflection in x direction
+     * \param[in] symm_y type of reflection in y direction
+     */
+    void SymmetrizeFields (int field_comp, const int lev, const int symm_x, const int symm_y);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
@@ -474,6 +483,8 @@ public:
     inline static amrex::IntVect m_poisson_nguards {-1, -1, -1};
     /** If the poisson solver should include the guard cells */
     bool m_extended_solve = false;
+    /** Whether the currents should be symmetrized for the field solve */
+    bool m_do_symmetrize = false;
 
 private:
     /** Vector over levels of all required fields to compute current slice */
