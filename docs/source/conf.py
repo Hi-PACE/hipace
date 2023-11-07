@@ -34,7 +34,9 @@ release = u'23.11'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['breathe'
+extensions = [
+    "breathe",
+    "sphinx_copybutton",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
