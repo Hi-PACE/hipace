@@ -911,7 +911,7 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
             const auto& laser = m_all_lasers[ilaser];
             const amrex::Real a0 = laser.m_a0;
             const amrex::Real w0 = laser.m_w0;
-            const bool infinite_y = laser.m_infinite_y;
+            const bool infinite_x = laser.m_infinite_x;
             const amrex::Real x0 = laser.m_position_mean[0];
             const amrex::Real y0 = laser.m_position_mean[1];
             const amrex::Real z0 = laser.m_position_mean[2];
@@ -922,7 +922,7 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
                     amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
-                    const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
+                    const amrex::Real x = infinite_x ? 0._rt : (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
 
                     // For first laser, setval to 0.
@@ -932,12 +932,12 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                     }
 
                     // Compute envelope for time step 0
-                    Complex diffract_factor = infinite_y ? 1._rt + I * z * 2._rt/( k0 * w0 ) : 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
-                    Complex inv_complex_waist_2 = infinite_y ? 1._rt /( w0 * diffract_factor ) : 1._rt /( w0 * w0 * diffract_factor );
+                    Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
+                    Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                     Complex prefactor = a0/diffract_factor;
                     Complex time_exponent = (z-z0+zfoc)*(z-z0+zfoc)/(L0*L0);
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
-                    Complex exp_argument = infinite_y ? - ( y*y ) * inv_complex_waist_2 : - ( x*x + y*y ) * inv_complex_waist_2;
+                    Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument );
                     arr(i, j, k, comp ) += envelope.real();
                     arr(i, j, k, comp + 1 ) += envelope.imag();
