@@ -472,17 +472,19 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         amrex::Long const num_particles = pti.numParticles();
 
         // Tuple contains:
-        //      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,    11,    12,   13
-        // sum(w), <x>, <x^2>, <y>, <y^2>, <ux>,   <ux^2>, <uy>, <uy^2>,  <uz>,  <uz^2>, <ga>, <ga^2>, np
+        //      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,    11,
+        // sum(w), <x>, <x^2>, <y>, <y^2>, <ux>,   <ux^2>, <uy>, <uy^2>,  <uz>,  <uz^2>, <ga>,
+        //      12,              13, 14
+        //  <ga^2>, <(ga-1)*(1-vz)>, np
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
                          amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                         amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+                         amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
         amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real,
                           amrex::Real, amrex::Real, amrex::Real, amrex::Real,
                           amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                          amrex::Real, int> reduce_data(reduce_op);
+                          amrex::Real, amrex::Real, int> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(
             num_particles, reduce_data,
@@ -496,14 +498,16 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
                 if (ptd.id(ip) < 0 || xp*xp + yp*yp > insitu_radius*insitu_radius) {
                     return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
-                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
+                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
                 }
 
                 // particle's Lorentz factor
                 const amrex::Real gamma = (1.0_rt + uxp*uxp*clightsq_inv
                                                   + uyp*uyp*clightsq_inv + psip*psip)/(2.0_rt*psip);
                 amrex::Real uzp = (gamma - psip); // the *c from uz cancels with the /c from the proper velocity conversion
-                const amrex::Real wp   = ptd.rdata(PlasmaIdx::w  )[ip] * gamma/psip; // quasi-static weighting factor
+                const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma/psip; // quasi-static weighting factor
+                // no quasi-static weighting factor to calculate quasi-static energy
+                const amrex::Real energy = ptd.rdata(PlasmaIdx::w)[ip] * (gamma - 1._rt);
 
                 return {wp,
                         wp*xp,
@@ -518,6 +522,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                         wp*uzp*uzp,
                         wp*gamma,
                         wp*gamma*gamma,
+                        energy,
                         1};
             });
 
@@ -538,7 +543,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
         m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
         m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
-        m_insitu_idata[islice             ] = amrex::get<13>(a);
+        m_insitu_rdata[islice+13*m_nslices] = amrex::get<13>(a);
+        m_insitu_idata[islice             ] = amrex::get<14>(a);
 
         m_insitu_sum_rdata[ 0] += sum_w0;
         m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
@@ -553,7 +559,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         m_insitu_sum_rdata[10] += amrex::get<10>(a);
         m_insitu_sum_rdata[11] += amrex::get<11>(a);
         m_insitu_sum_rdata[12] += amrex::get<12>(a);
-        m_insitu_sum_idata[ 0] += amrex::get<13>(a);
+        m_insitu_sum_rdata[13] += amrex::get<13>(a);
+        m_insitu_sum_idata[ 0] += amrex::get<14>(a);
     }
 }
 
@@ -606,6 +613,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         {"[uz^2]"  , &m_insitu_rdata[10*nslices], nslices},
         {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
         {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
+        {"[(ga-1)*(1-vz)]", &m_insitu_rdata[13*nslices], nslices},
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
@@ -624,6 +632,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         }},
         {"total"   , {
             {"sum(w)", &m_insitu_sum_rdata[0]},
+            {"[(ga-1)*(1-vz)]",&m_insitu_sum_rdata[13]},
             {"Np"    , &m_insitu_sum_idata[0]}
         }}
     };
