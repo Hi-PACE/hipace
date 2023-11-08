@@ -120,6 +120,10 @@ PlasmaParticleContainer::ReadParameters ()
     }
 
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
+    queryWithParserAlt(pp, "xmin", m_xmin, pp_alt);
+    queryWithParserAlt(pp, "xmax", m_xmax, pp_alt);
+    queryWithParserAlt(pp, "ymin", m_ymin, pp_alt);
+    queryWithParserAlt(pp, "ymax", m_ymax, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
     queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
@@ -175,7 +179,8 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
     reserveData();
     resizeData();
 
-    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+    InitParticles(m_u_std, m_u_mean, m_radius, m_xmin, m_xmax,
+                  m_ymin, m_ymax, m_hollow_core_radius);
 
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD

@@ -19,6 +19,10 @@ PlasmaParticleContainer::
 InitParticles (const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
                const amrex::Real a_radius,
+               const amrex::Real a_xmin,
+               const amrex::Real a_xmax,
+               const amrex::Real a_ymin,
+               const amrex::Real a_ymax,
                const amrex::Real a_hollow_core_radius)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
@@ -158,7 +162,9 @@ InitParticles (const amrex::RealVect& a_u_std,
                     amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                     const amrex::Real rsq = x*x + y*y;
-                    if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
+                    if (x >= a_xmax || x < a_xmin ||
+                        y >= a_ymax || y < a_ymin ||
+                        x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                         y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                         rsq > a_radius*a_radius ||
                         rsq < a_hollow_core_radius*a_hollow_core_radius ||
@@ -215,7 +221,9 @@ InitParticles (const amrex::RealVect& a_u_std,
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                 const amrex::Real rsq = x*x + y*y;
-                if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
+                if (x >= a_xmax || x < a_xmin ||
+                    y >= a_ymax || y < a_ymin ||
+                    x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > a_radius*a_radius ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
@@ -293,7 +301,9 @@ InitParticles (const amrex::RealVect& a_u_std,
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                 const amrex::Real rsq = x*x + y*y;
-                if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
+                if (x >= a_xmax || x < a_xmin ||
+                    y >= a_ymax || y < a_ymin ||
+                    x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > a_radius*a_radius ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||

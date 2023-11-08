@@ -80,6 +80,10 @@ public:
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_radius,
+        const amrex::Real a_xmin,
+        const amrex::Real a_xmax,
+        const amrex::Real a_ymin,
+        const amrex::Real a_ymax,
         const amrex::Real a_hollow_core_radius);
 
     /** Initialize ADK prefactors of ionizable plasmas
@@ -161,6 +165,10 @@ public:
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
     amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
+    amrex::Real m_xmin {-std::numeric_limits<amrex::Real>::infinity()}; /**< min x of the plasma */
+    amrex::Real m_xmax {std::numeric_limits<amrex::Real>::infinity()}; /**< max x of the plasma */
+    amrex::Real m_ymin {-std::numeric_limits<amrex::Real>::infinity()}; /**< min y of the plasma */
+    amrex::Real m_ymax {std::numeric_limits<amrex::Real>::infinity()}; /**< max y of the plasma */
     /** radius of the plasma insitu diagnostics */
     amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
