@@ -491,6 +491,18 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
     Whether to reset the ID incrementor to 1 before initializing beam particles.
 
+* ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
+    Reorder particles periodically to speed-up current deposition and particle push on GPU.
+    A good starting point is a period of 1 to reorder beam particles on every timestep.
+    To disable reordering set this to 0. For very narrow beams the sorting may take longer than
+    the time saved in the beam push and deposition.
+
+* ``<beam name> or beams.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if beam particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+    The ideal index type is different for beam push and beam deposition so some experimentation
+    may be required to find the overall fastest setting for a specific simulation.
+
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
