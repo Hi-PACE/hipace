@@ -42,9 +42,6 @@ MultiLaser::ReadParameters ()
     m_use_laser = m_names[0] != "no_laser";
 
     if (!m_use_laser) return;
-#if defined(AMREX_USE_HIP)
-    amrex::Abort("Laser solver not implemented with HIP");
-#endif
 
     m_laser_from_file = queryWithParser(pp, "input_file", m_input_file_path);
 
