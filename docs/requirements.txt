@@ -6,6 +6,7 @@
 # License: BSD-3-Clause-LBNL
 
 sphinx>=5.3
+sphinx-copybutton
 sphinx_rtd_theme>=1.1.1
 recommonmark
 # docutils 0.17 breaks HTML tags & RTD theme
