@@ -101,10 +101,14 @@ namespace Parser
     inline void
     setDefaultParams () {
         amrex::ParmParse pp_amrex("amrex");
-        if (!pp_amrex.contains("the_arena_is_managed")) {
-            // set default to false
-            pp_amrex.add("the_arena_is_managed", 0);
-        }
+
+        // https://amrex-codes.github.io/amrex/docs_html/GPU.html#inputs-parameters
+        bool the_arena_is_managed = false;  // AMReX' default: true
+        pp_amrex.queryAdd("the_arena_is_managed", the_arena_is_managed);
+
+        // https://amrex-codes.github.io/amrex/docs_html/InputsComputeBackends.html
+        std::string omp_threads = "nosmt";  // AMReX' default: system
+        pp_amrex.queryAdd("omp_threads", omp_threads);
     }
 
     /** \brief return valid int, asserts if inf or NaN
