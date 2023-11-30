@@ -223,8 +223,6 @@ private:
     /** Geometry of the laser file, 'rt' or 'xyt' */
     std::string m_file_geometry = "";
 
-    /** Nb fields in 3D array: new_real, new_imag, old_real, old_imag */
-    int m_nfields_3d {4};
     /** Array of N slices required to compute current slice */
     amrex::MultiFab m_slices;
     amrex::Real m_MG_tolerance_rel = 1.e-4;
