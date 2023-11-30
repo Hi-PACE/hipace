@@ -75,6 +75,11 @@ General parameters
     Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
     but generally it is recommended to not use it.
 
+* ``amrex.omp_threads``  (``system``, ``nosmt`` or positive integer; default is ``nosmt``)
+    An integer number can be set in lieu of the ``OMP_NUM_THREADS`` environment variable to control the number of OpenMP threads to use for the ``OMP`` compute backend on CPUs.
+    By default, we use the ``nosmt`` option, which overwrites the OpenMP default of spawning one thread per logical CPU core, and instead only spawns a number of threads equal to the number of physical CPU cores on the machine.
+    If set, the environment variable ``OMP_NUM_THREADS`` takes precedence over ``system`` and ``nosmt``, but not over integer numbers set in this option.
+
 * ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
     Whether the buffers that hold the beam and the 3D laser envelope should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
