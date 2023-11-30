@@ -731,6 +731,12 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 
+    if (m_fields.m_do_symmetrize) {
+        m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
+    }
+
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
         // Copy chi to chi2
