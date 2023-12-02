@@ -145,6 +145,13 @@ public:
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
                      const int which_slice);
 
+    /** \brief Reorder beam particles to speed-up push and current deposition
+     * \param[in] beam_slice beam slice to reorder, WhichBeamSlice::This WhichBeamSlice::Next
+     * \param[in] step current time step
+     * \param[in] slice_geom Geometry object for one xy slice
+     */
+    void ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom);
+
     /** Returns elementary charge q_e (or -q_e for electrons). */
     amrex::Real GetCharge () const {return m_charge;}
 
@@ -227,6 +234,10 @@ private:
     /** radius of the beam insitu diagnostics */
     amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
+    /** After how many slices the particles are reordered. 0: off */
+    int m_reorder_period = 0;
+    /** 2D reordering index type. 0: cell, 1: node, 2: both */
+    amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
     // fixed_ppc:
 

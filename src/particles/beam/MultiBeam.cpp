@@ -108,6 +108,14 @@ MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry&
     }
 }
 
+void
+MultiBeam::ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom)
+{
+    for (auto& beam : m_all_beams) {
+        beam.ReorderParticles(beam_slice, step, slice_geom);
+    }
+}
+
 bool MultiBeam::AnySpeciesSalame () {
     for (int i = 0; i < m_nbeams; ++i) {
         if (m_all_beams[i].m_do_salame) {

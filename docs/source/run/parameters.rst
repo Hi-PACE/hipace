@@ -75,6 +75,11 @@ General parameters
     Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
     but generally it is recommended to not use it.
 
+* ``amrex.omp_threads``  (``system``, ``nosmt`` or positive integer; default is ``nosmt``)
+    An integer number can be set in lieu of the ``OMP_NUM_THREADS`` environment variable to control the number of OpenMP threads to use for the ``OMP`` compute backend on CPUs.
+    By default, we use the ``nosmt`` option, which overwrites the OpenMP default of spawning one thread per logical CPU core, and instead only spawns a number of threads equal to the number of physical CPU cores on the machine.
+    If set, the environment variable ``OMP_NUM_THREADS`` takes precedence over ``system`` and ``nosmt``, but not over integer numbers set in this option.
+
 * ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
     Whether the buffers that hold the beam and the 3D laser envelope should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
@@ -246,6 +251,10 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     open boundary conditions. It's recommended to use this together with
     ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
     Only available with the predictor-corrector solver.
+
+* ``fields.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes current and charge densities transversely before the field solve.
+    Each cell at (`x`, `y`) is averaged with cells at (`-x`, `y`), (`x`, `-y`) and (`-x`, `-y`).
 
 Explicit solver parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -490,6 +499,18 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
     Whether to reset the ID incrementor to 1 before initializing beam particles.
+
+* ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
+    Reorder particles periodically to speed-up current deposition and particle push on GPU.
+    A good starting point is a period of 1 to reorder beam particles on every timestep.
+    To disable reordering set this to 0. For very narrow beams the sorting may take longer than
+    the time saved in the beam push and deposition.
+
+* ``<beam name> or beams.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if beam particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+    The ideal index type is different for beam push and beam deposition so some experimentation
+    may be required to find the overall fastest setting for a specific simulation.
 
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
