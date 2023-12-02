@@ -502,8 +502,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 }
 
                 // particle's Lorentz factor
-                const amrex::Real gamma = (1.0_rt + uxp*uxp*clightsq_inv
-                                                  + uyp*uyp*clightsq_inv + psip*psip)/(2.0_rt*psip);
+                const amrex::Real gamma = (1.0_rt + uxp*uxp + uyp*uyp + psip*psip)/(2.0_rt*psip);
                 amrex::Real uzp = (gamma - psip); // the *c from uz cancels with the /c from the proper velocity conversion
                 const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma/psip; // quasi-static weighting factor
                 // no quasi-static weighting factor to calculate quasi-static energy
