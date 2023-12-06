@@ -25,6 +25,7 @@ Fields::Fields (const int nlev)
     queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
     queryWithParser(ppf, "extended_solve", m_extended_solve);
     queryWithParser(ppf, "open_boundary", m_open_boundary);
+    queryWithParser(ppf, "do_symmetrize", m_do_symmetrize);
 }
 
 void
@@ -407,7 +408,7 @@ void
 Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
               amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
               const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-              bool do_laser, MultiLaser& multi_laser)
+              bool do_laser, MultiLaser& multi_laser, const int slice_dir)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
@@ -425,40 +426,52 @@ Fields::Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom
     const int i_slice_max = i_slice + depos_order_offset;
     const amrex::Real pos_slice_min = i_slice_min * calc_geom.CellSize(2) + poff_calc_z;
     const amrex::Real pos_slice_max = i_slice_max * calc_geom.CellSize(2) + poff_calc_z;
-    const int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
+    int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
                                                           * diag_geom.InvCellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
                                                           * diag_geom.InvCellSize(2)));
 
-    // Put contributions from i_slice to different diag_fab slices in GPU vector
-    m_rel_z_vec.resize(k_max+1-k_min);
-    m_rel_z_vec_cpu.resize(k_max+1-k_min);
-    for (int k=k_min; k<=k_max; ++k) {
-        const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
-        const amrex::Real mid_i_slice = (pos - poff_calc_z)*calc_geom.InvCellSize(2);
-        amrex::Real sz_cell[depos_order_z + 1];
-        const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
-        m_rel_z_vec_cpu[k-k_min] = 0;
-        for (int i=0; i<=depos_order_z; ++i) {
-            if (k_cell+i == i_slice) {
-                m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
+    if (slice_dir != 2) {
+        // Put contributions from i_slice to different diag_fab slices in GPU vector
+        m_rel_z_vec.resize(k_max+1-k_min);
+        m_rel_z_vec_cpu.resize(k_max+1-k_min);
+        for (int k=k_min; k<=k_max; ++k) {
+            const amrex::Real pos = k * diag_geom.CellSize(2) + poff_diag_z;
+            const amrex::Real mid_i_slice = (pos - poff_calc_z)*calc_geom.InvCellSize(2);
+            amrex::Real sz_cell[depos_order_z + 1];
+            const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
+            m_rel_z_vec_cpu[k-k_min] = 0;
+            for (int i=0; i<=depos_order_z; ++i) {
+                if (k_cell+i == i_slice) {
+                    m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
+                }
             }
         }
-    }
 
-    // Optimization: don’t loop over diag_fab slices with 0 contribution
-    int k_start = k_min;
-    int k_stop = k_max;
-    for (int k=k_min; k<=k_max; ++k) {
-        if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
-        else break;
+        // Optimization: don’t loop over diag_fab slices with 0 contribution
+        int k_start = k_min;
+        int k_stop = k_max;
+        for (int k=k_min; k<=k_max; ++k) {
+            if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
+            else break;
+        }
+        for (int k=k_max; k>=k_min; --k) {
+            if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
+            else break;
+        }
+        diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
+        diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
+    } else {
+        m_rel_z_vec.resize(1);
+        m_rel_z_vec_cpu.resize(1);
+        const amrex::Real pos_z = i_slice * calc_geom.CellSize(2) + poff_calc_z;
+        if (diag_geom.ProbLo(2) <= pos_z && pos_z <= diag_geom.ProbHi(2)) {
+            m_rel_z_vec_cpu[0] = calc_geom.CellSize(2);
+            k_min = 0;
+        } else {
+            return;
+        }
     }
-    for (int k=k_max; k>=k_min; --k) {
-        if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
-        else break;
-    }
-    diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
-    diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     if (diag_box.isEmpty()) return;
     auto& slice_mf = m_slices[lev];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
@@ -851,6 +864,12 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             m_slices_nguards, -m_slices_nguards);
         LevelUpBoundary(geom, lev, WhichSlice::This, "jy",
             m_slices_nguards, -m_slices_nguards);
+
+        if (m_do_symmetrize) {
+            SymmetrizeFields(Comps[WhichSlice::This]["rhomjz"], lev, 1, 1);
+            SymmetrizeFields(Comps[WhichSlice::This]["jx"], lev, -1, 1);
+            SymmetrizeFields(Comps[WhichSlice::This]["jy"], lev, 1, -1);
+        }
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -946,6 +965,11 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, which_slice, "jx", m_slices_nguards, -m_slices_nguards);
         LevelUpBoundary(geom, lev, which_slice, "jy", m_slices_nguards, -m_slices_nguards);
+
+        if (m_do_symmetrize) {
+            SymmetrizeFields(Comps[which_slice]["jx"], lev, -1, 1);
+            SymmetrizeFields(Comps[which_slice]["jy"], lev, 1, -1);
+        }
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -994,6 +1018,12 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, WhichSlice::This, "jz", m_slices_nguards, -m_slices_nguards);
         // jx and jy on WhichSlice::Previous was already leveled up on previous slice
+
+        if (m_do_symmetrize) {
+            SymmetrizeFields(Comps[WhichSlice::This]["jz"], lev, 1, 1);
+            SymmetrizeFields(Comps[WhichSlice::Next]["jx"], lev, -1, 1);
+            SymmetrizeFields(Comps[WhichSlice::Next]["jy"], lev, 1, -1);
+        }
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -1033,6 +1063,42 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
         // interpolate Bx and By to lev from lev-1 in the ghost cells
         LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, m_poisson_nguards);
         LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, m_poisson_nguards);
+    }
+}
+
+void
+Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const int symm_y)
+{
+    HIPACE_PROFILE("Fields::SymmetrizeFields()");
+
+    AMREX_ALWAYS_ASSERT(symm_x*symm_x == 1 && symm_y*symm_y == 1);
+
+    amrex::MultiFab& slicemf = getSlices(lev);
+
+    for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ) {
+        const Array2<amrex::Real> arr = slicemf.array(mfi, field_comp);
+
+        const amrex::Box full_box = mfi.growntilebox();
+
+        const int upper_x = full_box.smallEnd(0) + full_box.bigEnd(0);
+        const int upper_y = full_box.smallEnd(1) + full_box.bigEnd(1);
+
+        amrex::Box quarter_box = full_box;
+        quarter_box.setBig(0, full_box.smallEnd(0) + (full_box.length(0)+1)/2 - 1);
+        quarter_box.setBig(1, full_box.smallEnd(1) + (full_box.length(1)+1)/2 - 1);
+
+        amrex::ParallelFor(quarter_box,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+            {
+                const amrex::Real avg = 0.25_rt*(arr(i, j) + arr(upper_x - i, j)*symm_x
+                    + arr(i, upper_y - j)*symm_y + arr(upper_x - i, upper_y - j)*symm_x*symm_y);
+
+                // Note: this may write to the same cell multiple times in the center.
+                arr(i, j) = avg;
+                arr(upper_x - i, j) = avg*symm_x;
+                arr(i, upper_y - j) = avg*symm_y;
+                arr(upper_x - i, upper_y - j) = avg*symm_x*symm_y;
+            });
     }
 }
 

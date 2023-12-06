@@ -65,6 +65,28 @@ BeamParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
     queryWithParserAlt(pp, "do_reset_id_init", m_do_reset_id_init, pp_alt);
     queryWithParser(pp, "do_salame", m_do_salame);
+    queryWithParserAlt(pp, "reorder_period", m_reorder_period, pp_alt);
+    amrex::Array<int, 2> idx_array
+        {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
+    queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
+    m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
+    amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
+    m_use_external_fields = queryWithParserAlt(pp, "external_E(x,y,z,t)", field_str, pp_alt);
+    m_external_fields[0] = makeFunctionWithParser<4>(field_str[0], m_external_fields_parser[0],
+        {"x", "y", "z", "t"});
+    m_external_fields[1] = makeFunctionWithParser<4>(field_str[1], m_external_fields_parser[1],
+        {"x", "y", "z", "t"});
+    m_external_fields[2] = makeFunctionWithParser<4>(field_str[2], m_external_fields_parser[2],
+        {"x", "y", "z", "t"});
+    field_str = {"0", "0", "0"};
+    m_use_external_fields = queryWithParserAlt(pp, "external_B(x,y,z,t)", field_str, pp_alt)
+        || m_use_external_fields;
+    m_external_fields[3] = makeFunctionWithParser<4>(field_str[0], m_external_fields_parser[3],
+        {"x", "y", "z", "t"});
+    m_external_fields[4] = makeFunctionWithParser<4>(field_str[1], m_external_fields_parser[4],
+        {"x", "y", "z", "t"});
+    m_external_fields[5] = makeFunctionWithParser<4>(field_str[2], m_external_fields_parser[5],
+        {"x", "y", "z", "t"});
     if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
@@ -165,6 +187,58 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             m_init_sorter.sortParticlesByBox(m_z_array.dataPtr(), m_z_array.size(),
                                              m_initialize_on_cpu, geom);
         }
+
+    } else if (m_injection_type == "fixed_weight_pdf") {
+
+        std::string pdf_func_str = "";
+        getWithParser(pp, "pdf", pdf_func_str);
+        m_pdf_parsers.emplace_back();
+        m_pdf_func = makeFunctionWithParser<1>(pdf_func_str, m_pdf_parsers.back(), {"z"});
+
+        std::array<std::string, 2> pos_mean_arr{"",""};
+        std::array<std::string, 2> pos_std_arr{"",""};
+        getWithParser(pp, "position_mean", pos_mean_arr);
+        getWithParser(pp, "position_std", pos_std_arr);
+        for (int i=0; i<2; ++i) {
+            m_pdf_parsers.emplace_back();
+            m_pdf_pos_func[i] = makeFunctionWithParser<1>(pos_mean_arr[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_pdf_pos_func[i+2] = makeFunctionWithParser<1>(pos_std_arr[i], m_pdf_parsers.back(), {"z"});
+        }
+
+        std::array<std::string, 3> u_mean_arr{"","",""};
+        std::array<std::string, 3> u_std_arr{"","",""};
+        getWithParser(pp, "u_mean", u_mean_arr);
+        getWithParser(pp, "u_std", u_std_arr);
+        for (int i=0; i<3; ++i) {
+            m_pdf_parsers.emplace_back();
+            m_pdf_u_func[i] = makeFunctionWithParser<1>(u_mean_arr[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_pdf_u_func[i+3] = makeFunctionWithParser<1>(u_std_arr[i], m_pdf_parsers.back(), {"z"});
+        }
+
+        getWithParser(pp, "num_particles", m_num_particles);
+        queryWithParser(pp, "radius", m_radius);
+        queryWithParser(pp, "z_foc", m_z_foc);
+        queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
+        queryWithParser(pp, "pdf_ref_ratio", m_pdf_ref_ratio);
+        if (m_do_symmetrize) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
+                "To symmetrize the beam, please specify a beam particle number divisible by 4.");
+        }
+
+        bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
+        m_peak_density_is_specified = queryWithParser(pp, "density", m_density);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !charge_is_specified || !Hipace::m_normalized_units,
+            "The option 'beam.total_charge' is only valid in SI units."
+            "Please either specify the peak density with '<beam name>.density', "
+            "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + m_peak_density_is_specified == 1,
+            "Please specify exlusively either total_charge or density of the beam");
+
+        InitBeamFixedWeightPDF3D();
+        m_total_num_particles = m_num_particles;
 
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
@@ -278,6 +352,8 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
         InitBeamFixedPPCSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight") {
         InitBeamFixedWeightSlice(slice, which_slice);
+    } else if (m_injection_type == "fixed_weight_pdf") {
+        InitBeamFixedWeightPDFSlice(slice, which_slice);
     } else {
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
@@ -317,6 +393,49 @@ BeamParticleContainer::resize (int which_slice, int num_particles, int num_slipp
     m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N] =
         num_particles + num_slipped_particles;
     getBeamSlice(which_slice).resize(num_particles + num_slipped_particles);
+}
+
+void
+BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom) {
+    HIPACE_PROFILE("BeamParticleContainer::ReorderParticles()");
+    if (m_reorder_period > 0 && step % m_reorder_period == 0) {
+
+        const int np = getNumParticles(beam_slice);
+        const int np_total = getNumParticlesIncludingSlipped(beam_slice);
+        auto& ptile = getBeamSlice(beam_slice);
+        amrex::Gpu::DeviceVector<unsigned int> perm;
+        amrex::PermutationForDeposition<unsigned int>(perm, np, ptile, slice_geom.Domain(),
+                                                      slice_geom, m_reorder_idx_type);
+        const unsigned int* permutations = perm.dataPtr();
+
+        { // Create a scope for the temporary vector below
+            BeamTile::RealVector tmp_real(np_total);
+            for (int comp = 0; comp < BeamIdx::real_nattribs; ++comp) {
+                auto src = ptile.GetStructOfArrays().GetRealData(comp).data();
+                amrex::ParticleReal* dst = tmp_real.data();
+                amrex::ParallelFor(np_total,
+                    [=] AMREX_GPU_DEVICE (int i) {
+                        dst[i] = i < np ? src[permutations[i]] : src[i];
+                    });
+
+                amrex::Gpu::streamSynchronize();
+                ptile.GetStructOfArrays().GetRealData(comp).swap(tmp_real);
+            }
+        }
+
+        BeamTile::IntVector tmp_int(np_total);
+        for (int comp = 0; comp < BeamIdx::int_nattribs; ++comp) {
+            auto src = ptile.GetStructOfArrays().GetIntData(comp).data();
+            int* dst = tmp_int.data();
+            amrex::ParallelFor(np_total,
+                [=] AMREX_GPU_DEVICE (int i) {
+                    dst[i] = i < np ? src[permutations[i]] : src[i];
+                });
+
+            amrex::Gpu::streamSynchronize();
+            ptile.GetStructOfArrays().GetIntData(comp).swap(tmp_int);
+        }
+    }
 }
 
 void

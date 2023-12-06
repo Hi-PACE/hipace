@@ -50,7 +50,8 @@ void MultiBuffer::free_buffer (int slice) {
 }
 
 void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host, bool use_laser,
-                              amrex::Box laser_box) {
+                              amrex::Box laser_box, int max_leading_slices,
+                              int max_trailing_slices) {
 
     m_comm = amrex::ParallelDescriptor::Communicator();
     const int rank_id = amrex::ParallelDescriptor::MyProc();
@@ -71,6 +72,9 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host, bool
     m_tag_time_start = 0;
     m_tag_buffer_start = 1;
     m_tag_metadata_start = m_tag_buffer_start + m_nslices;
+
+    m_max_leading_slices = max_leading_slices;
+    m_max_trailing_slices = max_trailing_slices;
 
     for (int p = 0; p < comm_progress::nprogress; ++p) {
         m_async_metadata_slice[p] = m_nslices - 1;
@@ -96,7 +100,7 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host, bool
 
     // open initial receives
     for (int i = m_nslices-1; i >= 0; --i) {
-        make_progress(i, false);
+        make_progress(i, false, m_nslices-1);
     }
 }
 
@@ -168,7 +172,13 @@ MultiBuffer::~MultiBuffer() {
 #endif
 }
 
-void MultiBuffer::make_progress (int slice, bool is_blocking) {
+void MultiBuffer::make_progress (int slice, bool is_blocking, int current_slice) {
+
+    const bool is_blocking_send = is_blocking ||
+        (m_nslices + slice - current_slice) % m_nslices > m_max_trailing_slices;
+    const bool is_blocking_recv = is_blocking;
+    const bool skip_recv = !is_blocking_recv &&
+        (m_nslices - slice + current_slice) % m_nslices > m_max_leading_slices;
 
     if (m_is_serial) {
         if (is_blocking) {
@@ -213,7 +223,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
     }
 
     if (m_datanodes[slice].m_metadata_progress == comm_progress::send_started) {
-        if (is_blocking) {
+        if (is_blocking_send) {
             MPI_Wait(&(m_datanodes[slice].m_metadata_request), MPI_STATUS_IGNORE);
             m_datanodes[slice].m_metadata_progress = comm_progress::sent;
         } else {
@@ -225,7 +235,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
         }
     }
 
-    if (m_datanodes[slice].m_metadata_progress == comm_progress::sent) {
+    if (m_datanodes[slice].m_metadata_progress == comm_progress::sent && !skip_recv) {
         MPI_Irecv(
             get_metadata_location(slice),
             get_metadata_size(),
@@ -238,7 +248,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
     }
 
     if (m_datanodes[slice].m_metadata_progress == comm_progress::receive_started) {
-        if (is_blocking) {
+        if (is_blocking_recv) {
             MPI_Wait(&(m_datanodes[slice].m_metadata_request), MPI_STATUS_IGNORE);
             m_datanodes[slice].m_metadata_progress = comm_progress::received;
         } else {
@@ -251,7 +261,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
     }
 
     if (m_datanodes[slice].m_progress == comm_progress::send_started) {
-        if (is_blocking) {
+        if (is_blocking_send) {
             MPI_Wait(&(m_datanodes[slice].m_request), MPI_STATUS_IGNORE);
             free_buffer(slice);
             m_datanodes[slice].m_progress = comm_progress::sent;
@@ -290,7 +300,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
     }
 
     if (m_datanodes[slice].m_progress == comm_progress::receive_started) {
-        if (is_blocking) {
+        if (is_blocking_recv) {
             MPI_Wait(&(m_datanodes[slice].m_request), MPI_STATUS_IGNORE);
             m_datanodes[slice].m_progress = comm_progress::received;
         } else {
@@ -302,7 +312,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking) {
         }
     }
 
-    if (is_blocking) {
+    if (is_blocking_recv) {
         AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_metadata_progress == comm_progress::received);
         AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_progress == comm_progress::received);
     }
@@ -324,7 +334,7 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         }
     } else {
         // receive and unpack buffer
-        make_progress(slice, true);
+        make_progress(slice, true, slice);
         if (m_datanodes[slice].m_buffer_size != 0) {
             unpack_data(slice, beams, laser, beam_slice);
             free_buffer(slice);
@@ -352,7 +362,7 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         m_datanodes[slice].m_metadata_progress = comm_progress::ready_to_send;
     }
 
-    make_progress(slice, false);
+    make_progress(slice, false, slice);
 
     // make asynchronous progress for metadata
     // only check slices that have a chance of making progress
@@ -382,7 +392,7 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         for (int i = m_async_metadata_slice[p]; i!=slice; (i==0) ? i=m_nslices-1 : --i) {
             m_async_metadata_slice[p] = i;
             if (m_datanodes[i].m_metadata_progress < p) {
-                make_progress(i, false);
+                make_progress(i, false, slice);
             }
             if (m_datanodes[i].m_metadata_progress < p) {
                 break;
@@ -418,7 +428,7 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         for (int i = m_async_data_slice[p]; i!=slice; (i==0) ? i=m_nslices-1 : --i) {
             m_async_data_slice[p] = i;
             if (m_datanodes[i].m_progress < p) {
-                make_progress(i, false);
+                make_progress(i, false, slice);
             }
             if (m_datanodes[i].m_progress < p) {
                 break;

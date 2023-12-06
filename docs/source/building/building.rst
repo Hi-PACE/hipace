@@ -208,7 +208,7 @@ CMake Option                 Default & Values                                   
 ``HiPACE_openpmd_mpi``       ON/OFF (default is set to value of ``HiPACE_MPI``)  Build openPMD with MPI support, although I/O is always serial
 ``HiPACE_openpmd_src``       *None*                                              Path to openPMD-api source directory (preferred if set)
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``      Repository URI to pull and build openPMD-api from
-``HiPACE_openpmd_branch``    ``0.15.1``                                          Repository branch for ``HiPACE_openpmd_repo``
+``HiPACE_openpmd_branch``    ``0.15.2``                                          Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                          Needs a pre-installed openPMD-api library if set to ``OFF``
 ``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver.
 ===========================  ==================================================  =============================================================

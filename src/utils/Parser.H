@@ -23,6 +23,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <sstream>
 
 
 template<class T>
@@ -100,10 +101,14 @@ namespace Parser
     inline void
     setDefaultParams () {
         amrex::ParmParse pp_amrex("amrex");
-        if (!pp_amrex.contains("the_arena_is_managed")) {
-            // set default to false
-            pp_amrex.add("the_arena_is_managed", 0);
-        }
+
+        // https://amrex-codes.github.io/amrex/docs_html/GPU.html#inputs-parameters
+        bool the_arena_is_managed = false;  // AMReX' default: true
+        pp_amrex.queryAdd("the_arena_is_managed", the_arena_is_managed);
+
+        // https://amrex-codes.github.io/amrex/docs_html/InputsComputeBackends.html
+        std::string omp_threads = "nosmt";  // AMReX' default: system
+        pp_amrex.queryAdd("omp_threads", omp_threads);
     }
 
     /** \brief return valid int, asserts if inf or NaN
@@ -270,8 +275,82 @@ namespace Parser
     }
 
     inline void
-    fillWithParser (std::string const& str, std::string& val) {
-        val = str;
+    fillWithParser (std::string const& str, std::string& val, bool do_escape_backtransform=true) {
+        std::string loc_str = str;
+
+        // replace {{ and }} with 1 and 2
+        std::string::size_type pos = 0;
+        while ( (pos=loc_str.find("{{")) != std::string::npos) {
+            loc_str.replace(pos, 2, std::string{char(1)});
+        }
+        while ( (pos=loc_str.rfind("}}")) != std::string::npos) {
+            loc_str.replace(pos, 2, std::string{char(2)});
+        }
+
+        // replace {expression} with to_string(parser(expression))
+        static std::set<std::string> recursive_symbols{};
+        while ( (pos=loc_str.rfind("{")) != std::string::npos) {
+            const auto pos_end = loc_str.find("}", pos);
+            if (pos_end == std::string::npos) {
+                amrex::ErrorStream() << "Bad format for input '"
+                                     << str
+                                     << "', unclosed brace!\n";
+                AMREX_ALWAYS_ASSERT(pos_end != std::string::npos);
+            }
+            auto pos_start_trim = pos + 1;
+            auto pos_count_trim = pos_end - pos - 1;
+            // remove leading and trailing spaces
+            while (loc_str.at(pos_start_trim) == ' ' && pos_count_trim > 0) {
+                ++pos_start_trim;
+                --pos_count_trim;
+            }
+            while (loc_str.at(pos_start_trim + pos_count_trim - 1) == ' ' && pos_count_trim > 0) {
+                --pos_count_trim;
+            }
+            const std::string parse_string = loc_str.substr(pos_start_trim, pos_count_trim);
+
+            amrex::ParmParse pp_my_constants("my_constants");
+            if (pos_count_trim == 0) {
+                loc_str.replace(pos, pos_end-pos+1, "");
+            } else if (pp_my_constants.contains(parse_string.c_str())) {
+                // use my_constants directly (with recursive string parsing) if available
+                if (recursive_symbols.count(parse_string) != 0) {
+                    amrex::ErrorStream() << "Expression '"
+                                         << str
+                                         << "' contains recursive symbol '"
+                                         << parse_string
+                                         << "'!\n";
+                    AMREX_ALWAYS_ASSERT(recursive_symbols.count(parse_string) == 0);
+                }
+                std::string replacer;
+                pp_my_constants.get(parse_string.c_str(), replacer);
+                std::string parse_val;
+                recursive_symbols.insert(parse_string);
+                // for proper escape handling
+                fillWithParser(replacer, parse_val, false);
+                recursive_symbols.erase(parse_string);
+                loc_str.replace(pos, pos_end-pos+1, parse_val);
+            } else {
+                // else parse as number
+                double parse_val = 0.;
+                fillWithParser(parse_string, parse_val);
+                std::stringstream ss{};
+                ss << parse_val;
+                loc_str.replace(pos, pos_end-pos+1, ss.str());
+            }
+        }
+
+        if (do_escape_backtransform) {
+            // replace 1 and 2 with { and }
+            while ( (pos=loc_str.find(char(1))) != std::string::npos) {
+                loc_str.replace(pos, 1, "{");
+            }
+            while ( (pos=loc_str.rfind(char(2))) != std::string::npos) {
+                loc_str.replace(pos, 1, "}");
+            }
+        }
+
+        val = loc_str;
     }
 
     /** \brief fill second argument val of array type with a value obtained through Parsing str_arr

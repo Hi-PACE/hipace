@@ -26,15 +26,17 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 project = 'HiPACE++'
 copyright = '2021, Severin Diederichs, Axel Huebl, Remi Lehe, Andrew Myers, Alexander Sinn, Maxence Thevenet, Weiqun Zhang'
 author = 'Severin Diederichs, Axel Huebl, Remi Lehe, Andrew Myers, Alexander Sinn, Maxence Thevenet, Weiqun Zhang'
-version = u'23.07'
-release = u'23.07'
+version = u'23.11'
+release = u'23.11'
 
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['breathe'
+extensions = [
+    "breathe",
+    "sphinx_copybutton",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

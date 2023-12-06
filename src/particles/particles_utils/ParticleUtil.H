@@ -62,6 +62,47 @@ namespace ParticleUtil
         r[2] = (0.5_rt + iz_part)/nz;
     }
 
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void get_position_unit_cell_fine (amrex::Real* r, bool& do_init, int i_part,
+                                      const amrex::Array<int, 2>& nppc_coarse,
+                                      const amrex::Array<int, 2>& nppc_fine,
+                                      const int n_fine_transition_cells,
+                                      const int i_fine_transition_cells)
+    {
+        if (i_fine_transition_cells == 0) {
+            int nx = nppc_coarse[0];
+            int ny = nppc_coarse[1];
+            if (i_part < nx * ny) {
+                do_init = true;
+                int ix_part = i_part % nx;
+                int iy_part = i_part / nx;
+                r[0] = (0.5_rt + ix_part)/nx;
+                r[1] = (0.5_rt + iy_part)/ny;
+            } else {
+                do_init = false;
+            }
+        } else {
+            do_init = true;
+            int nx_fine = nppc_fine[0];
+            int ny_fine = nppc_fine[1];
+            int ix_part_fine = i_part % nx_fine;
+            int iy_part_fine = i_part / nx_fine;
+
+            int nx_coarse = nppc_coarse[0];
+            int ny_coarse = nppc_coarse[1];
+            int ix_part_coarse = (ix_part_fine * nx_coarse) / nx_fine;
+            int iy_part_coarse = (iy_part_fine * ny_coarse) / ny_fine;
+
+            amrex::Real s = amrex::Real(i_fine_transition_cells) / (n_fine_transition_cells + 1);
+            s = 1.5_rt*s - 0.5_rt*s*s*s;
+
+            r[0] = ((0.5_rt + ix_part_coarse) / nx_coarse) * (1._rt - s) +
+                   ((0.5_rt + ix_part_fine) / nx_fine) * s;
+            r[1] = ((0.5_rt + iy_part_coarse) / ny_coarse) * (1._rt - s) +
+                   ((0.5_rt + iy_part_fine) / ny_fine) * s;
+        }
+    }
+
     /** Return momentum of 1 particle from a Gaussian random draw.
      * \param[in,out] u 3D momentum of 1 particle, modified by this function
      * \param[in] u_mean Mean value of the random distribution in each dimension

@@ -69,12 +69,10 @@ MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
-    int const current_N_level, const amrex::RealVect& extEu, const amrex::RealVect& extBu,
-    const amrex::RealVect& extEs, const amrex::RealVect& extBs)
+    int const current_N_level)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level,
-                                    extEu, extBu, extEs, extBs);
+        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
     }
 }
 
@@ -107,6 +105,14 @@ MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry&
         if (utils::doDiagnostics(beam.m_insitu_period, step, max_step, time, max_time)) {
             beam.InSituWriteToFile(step, time, geom);
         }
+    }
+}
+
+void
+MultiBeam::ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom)
+{
+    for (auto& beam : m_all_beams) {
+        beam.ReorderParticles(beam_slice, step, slice_geom);
     }
 }
 

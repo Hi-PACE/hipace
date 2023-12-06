@@ -95,6 +95,8 @@ Hipace::Hipace () :
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    queryWithParser(pph, "interpolate_neutralizing_background",
+        m_interpolate_neutralizing_background);
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
     queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
@@ -103,13 +105,14 @@ Hipace::Hipace () :
     if (amrex::TilingIfNotGPU()) {
         DfltMfiTlng.EnableTiling();
     }
-    DeprecatedInput("hipace", "external_ExmBy_slope", "external_E_slope");
-    DeprecatedInput("hipace", "external_Ez_slope", "external_E_slope");
-    DeprecatedInput("hipace", "external_Ez_uniform", "external_E_uniform");
-    queryWithParser(pph, "external_E_uniform", m_external_E_uniform);
-    queryWithParser(pph, "external_B_uniform", m_external_B_uniform);
-    queryWithParser(pph, "external_E_slope", m_external_E_slope);
-    queryWithParser(pph, "external_B_slope", m_external_B_slope);
+
+    DeprecatedInput("hipace", "external_ExmBy_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_Ez_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_Ez_uniform", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_E_uniform", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_B_uniform","beams.external_B(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_E_slope", "beams.external_E(x,y,z,t)", "", true);
+    DeprecatedInput("hipace", "external_B_slope", "beams.external_B(x,y,z,t)", "", true);
 
     queryWithParser(pph, "salame_n_iter", m_salame_n_iter);
     queryWithParser(pph, "salame_do_advance", m_salame_do_advance);
@@ -138,8 +141,17 @@ Hipace::Hipace () :
 
     queryWithParser(pph, "background_density_SI", m_background_density_SI);
     queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
+    queryWithParser(pph, "comms_buffer_max_leading_slices", m_comms_buffer_max_leading_slices);
+    queryWithParser(pph, "comms_buffer_max_trailing_slices", m_comms_buffer_max_trailing_slices);
 
     MakeGeometry();
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        (((double(m_comms_buffer_max_leading_slices) + m_comms_buffer_max_trailing_slices)
+        * amrex::ParallelDescriptor::NProcs()) > m_3D_geom[0].Domain().length(2))
+        || (m_max_step < amrex::ParallelDescriptor::NProcs()),
+        "comms_buffer_max_leading_slices and comms_buffer_max_trailing_slices must be large enough"
+        " to distribute all slices between all ranks if there are more timesteps than ranks");
 
     m_use_laser = m_multi_laser.m_use_laser;
 
@@ -201,7 +213,9 @@ Hipace::InitData ()
                               m_multi_beam.get_nbeams(),
                               !m_comms_buffer_on_gpu,
                               m_use_laser,
-                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
+                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{},
+                              m_comms_buffer_max_leading_slices,
+                              m_comms_buffer_max_trailing_slices);
 
     amrex::ParmParse pph("hipace");
     bool do_output_input = false;
@@ -362,18 +376,30 @@ Hipace::Evolve ()
         // Only reset plasma after receiving time step, to use proper density
         m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
 
-        // deposit neutralizing background on every MR level
-        if (m_N_level > 1) {
-            m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
-        }
-
-        for (int lev=0; lev<m_N_level; ++lev) {
+        // deposit neutralizing background
+        if (m_interpolate_neutralizing_background) {
             if (m_do_tiling) {
-                m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
+                m_multi_plasma.TileSort(m_slice_geom[0].Domain(), m_slice_geom[0]);
             }
-            // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
+            // Store charge density of (immobile) ions into WhichSlice::RhomJzIons of level 0
             m_multi_plasma.DepositNeutralizingBackground(
-                m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
+                m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, 0);
+            // interpolate neutralizing background to other levels
+            for (int lev=1; lev<m_N_level; ++lev) {
+                m_fields.LevelUp(m_3D_geom, lev, WhichSlice::RhomJzIons, "rhomjz");
+            }
+        } else {
+            if (m_N_level > 1) {
+                m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
+            }
+            for (int lev=0; lev<m_N_level; ++lev) {
+                if (m_do_tiling) {
+                    m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
+                }
+                // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
+                m_multi_plasma.DepositNeutralizingBackground(
+                    m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
+            }
         }
 
         // need correct physical time for this
@@ -434,6 +460,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
         m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
+        m_multi_beam.ReorderParticles( WhichBeamSlice::This, step, m_slice_geom[0]);
     }
 
     m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
@@ -490,6 +517,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
+        m_multi_beam.ReorderParticles( WhichBeamSlice::Next, step, m_slice_geom[0]);
     }
 
     if (m_N_level > 1) {
@@ -551,9 +579,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level,
-                                           m_external_E_uniform, m_external_B_uniform,
-                                           m_external_E_slope, m_external_B_slope);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
@@ -703,6 +729,12 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+
+    if (m_fields.m_do_symmetrize) {
+        m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
+    }
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {
@@ -938,7 +970,7 @@ Hipace::FillFieldDiagnostics (const int lev, int islice)
             m_fields.Copy(lev, islice, fd.m_geom_io, fd.m_F,
                 fd.m_F.box(), m_3D_geom[lev],
                 fd.m_comps_output_idx, fd.m_nfields,
-                fd.m_do_laser, m_multi_laser);
+                fd.m_do_laser, m_multi_laser, fd.m_slice_dir);
         }
     }
 }

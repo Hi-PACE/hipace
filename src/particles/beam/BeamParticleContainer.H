@@ -85,13 +85,18 @@ public:
      */
     amrex::Real InitData (const amrex::Geometry& geom);
 
-    /** Initialize a beam with a fix number of particles per cell */
+    /** Initialize a beam with a fixed number of particles per cell */
     void InitBeamFixedPPC3D ();
     void InitBeamFixedPPCSlice (const int islice, const int which_beam_slice);
 
-    /** Initialize a beam with a fix number of particles, and fixed weight */
+    /** Initialize a beam with a fixed number of particles, and fixed weight */
     void InitBeamFixedWeight3D ();
     void InitBeamFixedWeightSlice (const int islice, const int which_beam_slice);
+
+    /** Initialize a beam with a fixed number of particles,
+     * and fixed weight using a probability density function (PDF) */
+    void InitBeamFixedWeightPDF3D ();
+    void InitBeamFixedWeightPDFSlice (int slice, int which_slice);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
@@ -139,6 +144,13 @@ public:
      */
     void TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometry> const& geom3D,
                      const int which_slice);
+
+    /** \brief Reorder beam particles to speed-up push and current deposition
+     * \param[in] beam_slice beam slice to reorder, WhichBeamSlice::This WhichBeamSlice::Next
+     * \param[in] step current time step
+     * \param[in] slice_geom Geometry object for one xy slice
+     */
+    void ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom);
 
     /** Returns elementary charge q_e (or -q_e for electrons). */
     amrex::Real GetCharge () const {return m_charge;}
@@ -203,6 +215,12 @@ public:
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */
     int m_insitu_period {0};
+    /** Whether external fields should be used for this beam */
+    bool m_use_external_fields = false;
+    /** External field functions for Ex Ey Ez Bx By Bz */
+    amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_external_fields;
+    /** Owns data for m_external_fields */
+    amrex::Array<amrex::Parser, 6> m_external_fields_parser;
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
@@ -216,6 +234,10 @@ private:
     /** radius of the beam insitu diagnostics */
     amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
     GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
+    /** After how many slices the particles are reordered. 0: off */
+    int m_reorder_period = 0;
+    /** 2D reordering index type. 0: cell, 1: node, 2: both */
+    amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
     // fixed_ppc:
 
@@ -251,6 +273,21 @@ private:
     bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
+
+    // fixed_weight_pdf:
+
+    bool m_peak_density_is_specified = false; /**< if the peak density is specified */
+    int m_pdf_ref_ratio = 4; /**< number of subcycles per slice for the pdf evaluation */
+    amrex::Real m_total_weight = 0; /**< sum of the weights of all particles */
+    amrex::ParserExecutor<1> m_pdf_func; /**< probability density function */
+    /** number of particles that need to be initialized per slice */
+    amrex::Vector<unsigned int> m_num_particles_slice;
+    /** functions for x_mean, y_mean, x_std, y_std */
+    amrex::Array<amrex::ParserExecutor<1>, 4> m_pdf_pos_func;
+    /** functions for ux_mean, uy_mean, uz_mean, ux_std, uy_std, uz_std */
+    amrex::Array<amrex::ParserExecutor<1>, 6> m_pdf_u_func;
+    /** Owns data for all 11 Parser functions of fixed_weight_pdf */
+    amrex::Vector<amrex::Parser> m_pdf_parsers;
 
     // from_file:
 

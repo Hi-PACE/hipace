@@ -34,6 +34,8 @@ For a list of supported functions see the
 `AMReX documentation <https://amrex-codes.github.io/amrex/docs_html/Basics.html#parser>`__.
 Sometimes it is necessary to use double-quotes around expressions, especially when providing them
 as command line parameters. Multi-line expressions are allowed if surrounded by double-quotes.
+For input parameters of type ``string``, ``my_constants`` can be putinside curly braces ``{...}`` to directly paste them into the input parameter.
+If what is inside the braces is not a ``my_constants`` it will be evaluated as an expression using the parser.
 
 General parameters
 ------------------
@@ -73,11 +75,29 @@ General parameters
     Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
     but generally it is recommended to not use it.
 
+* ``amrex.omp_threads``  (``system``, ``nosmt`` or positive integer; default is ``nosmt``)
+    An integer number can be set in lieu of the ``OMP_NUM_THREADS`` environment variable to control the number of OpenMP threads to use for the ``OMP`` compute backend on CPUs.
+    By default, we use the ``nosmt`` option, which overwrites the OpenMP default of spawning one thread per logical CPU core, and instead only spawns a number of threads equal to the number of physical CPU cores on the machine.
+    If set, the environment variable ``OMP_NUM_THREADS`` takes precedence over ``system`` and ``nosmt``, but not over integer numbers set in this option.
+
 * ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
     Whether the buffers that hold the beam and the 3D laser envelope should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
+
+* ``hipace.comms_buffer_max_leading_slices`` (`int`) optional (default `inf`)
+    How many slices of beam particles can be received and stored in advance.
+
+* ``hipace.comms_buffer_max_trailing_slices`` (`int`) optional (default `inf`)
+    How many slices of beam particles can be stored before being sent. Using
+    ``comms_buffer_max_leading_slices`` and ``comms_buffer_max_trailing_slices`` will in principle
+    limit the amount of asynchronousness in the parallel communication and may thus reduce performance.
+    However it may be necessary to set these parameters to avoid all slices accumulating on a single
+    rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
+    If there are more time steps than ranks, these parameters must be chosen such that between all
+    ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
+    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
@@ -103,6 +123,10 @@ General parameters
 * ``hipace.do_beam_jz_minus_rho`` (`bool`) optional (default `0`)
     Whether the beam contribution to :math:`j_z-c\rho` is calculated and used when solving for Psi (used to caculate the transverse fields Ex-By and Ey+Bx).
     if 0, this term is assumed to be 0 (a good approximation for an ultra-relativistic beam in the z direction with small transverse momentum).
+
+* ``hipace.interpolate_neutralizing_background`` (`bool`) optional (default `0`)
+    Whether the neutralizing background from plasmas should be interpolated from level 0
+    to higher MR levels instead of depositing it on all levels.
 
 * ``hipace.output_input`` (`bool`) optional (default `0`)
     Print all input parameters before running the simulation.
@@ -227,6 +251,10 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     open boundary conditions. It's recommended to use this together with
     ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
     Only available with the predictor-corrector solver.
+
+* ``fields.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes current and charge densities transversely before the field solve.
+    Each cell at (`x`, `y`) is averaged with cells at (`-x`, `y`), (`x`, `-y`) and (`-x`, `-y`).
 
 Explicit solver parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -392,6 +420,22 @@ When both are specified, the per-species value is used.
     making the opposite index type ideal. Since the normal deposition still requires the original index type,
     the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
 
+* ``<plasma name> or plasmas.fine_patch(x,y)`` (`int`) optional (default `0`)
+    When using mesh refinement it can be helpful to increase the number of particles per cell drastically
+    in a small part of the domain. For this parameter a function of ``x`` and ``y`` needs to be specified
+    that evaluates to ``1`` where the number of particles per cell should be higher and ``0`` everywhere else.
+    For example use ``plasmas.fine_patch(x,y) = "sqrt(x^2+y^2) < 10"`` to specify a circle around ``x=0, y=0``
+    with a radius of ``10``. Note that the function is evaluated at the cell centers of the level zero grid.
+
+* ``<plasma name> or plasmas.fine_ppc`` (2 `int`) optional (default `0 0`)
+    The number of plasma particles per cell in x and y inside the fine plasma patch. This must be
+    divisible by the ppc outside the fine patch in both directions.
+
+* ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
+    Number of cells that are used just outside of the fine plasma patch to smoothly transition
+    between the low and high ppc regions. More transition cells produce less noise but
+    require more particles.
+
 Beam parameters
 ---------------
 
@@ -410,29 +454,16 @@ which are valid only for certain beam types, are introduced further below under
 
 
 * ``<beam name>.injection_type`` (`string`)
-    The injection type for the particle beam. Currently available are ``fixed_ppc``, ``fixed_weight``,
-    and ``from_file``. ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
-    varying weights. It can be either a Gaussian or a flattop beam. ``fixed_weight`` generates a
-    Gaussian beam with a fixed number of particles with a constant weight.
+    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
+    and ``from_file``.
+    ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
+    the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
+    user-specified probability density function. It is more general and faster, and uses
+    less memory than ``fixed_weight``.
+    ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
+    ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
+    varying weights. It can be either a Gaussian or a flattop beam.
     ``from_file`` reads a beam from openPMD files.
-
-* ``<beam name>.position_mean`` (3 `float`)
-    The mean position of the beam in ``x, y, z``, separated by a space. For fixed_weight beams the
-    x and y directions can be functions of ``z``. To generate a tilted beam use
-    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta" "z_center"``.
-
-* ``<beam name>.position_std`` (3 `float`)
-    The rms size of the of the beam in `x, y, z`, separated by a space.
-
-* ``<beam name>.zmin`` (`float`) (default `-infinity`)
-    Minimum in `z` at which particles are injected.
-
-* ``<beam name>.zmax`` (`float`) (default `infinity`)
-    Maximum in `z` at which particles are injected.
-
-* ``<beam name>.radius`` (`float`)
-    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
-    injected.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -445,39 +476,22 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.charge`` (`float`) optional (default `-q_e`)
     The charge of a beam particle. Can also be set with ``<beam name>.element``.
 
-* ``<beam name>.profile`` (`string`)
-    Beam profile.
-    When ``<beam name>.injection_type == fixed_ppc``, possible options are ``flattop``
-    (flat-top radially and longitudinally), ``gaussian`` (Gaussian in all directions),
-    or ``parsed`` (arbitrary analytic function provided by the user).
-    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
-    When ``<beam name>.injection_type == fixed_weight``, possible options are ``can``
-    (uniform longitudinally, Gaussian transversally) and ``gaussian`` (Gaussian in all directions).
-
 * ``<beam name>.n_subcycles`` (`int`) optional (default `10`)
     Number of sub-cycles performed in the beam particle pusher. The particles will be pushed
     ``n_subcycles`` times with a time step of `dt/n_subcycles`. This can be used to improve accuracy
     in highly non-linear focusing fields.
 
-* ``hipace.external_E_uniform`` (3 `float`) optional (default `0. 0. 0.`)
-    Uniform external electric field applied to beam particles.
-    The components represent Ex-c*By, Ey+c*Bx and Ez respectively.
+* ``<beam name> or beams.external_E(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External electric field applied to beam particles as functions of x, y, z and t.
+    The components represent Ex, Ey and Ez respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current timestep.
 
-* ``hipace.external_B_uniform`` (3 `float`) optional (default `0. 0. 0.`)
-    Uniform external magnetic field applied to beam particles.
-    The components represent Bx, By and Bz, respectively.
-
-* ``hipace.external_E_slope`` (3 `float`) optional (default `0. 0. 0.`)
-    Slope of a linear external electric field applied to beam particles.
-    The components represent d(Ex-c*By)/dx, d(Ey+c*Bx)/dy and d(Ez)/dz respectively.
-    For the last component, z actually represents the zeta coordinate zeta = z - c*t.
-
-* ``hipace.external_B_slope`` (3 `float`) optional (default `0. 0. 0.`)
-    Slope of a linear external electric field applied to beam particles.
-    The components represent d(Bx)/dy, d(By)/dx and d(Bz)/dz respectively.
-    Note the order of derivatives for the transverse components!
-    For the last component, z actually represents the zeta coordinate zeta = z - c*t.
-    For instance, ``hipace.external_B_slope = -1. 1. 0.`` creates an axisymmetric focusing lens of strength 1 T/m.
+* ``<beam name> or beams.external_B(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External magnetic field applied to beam particles as functions of x, y, z and t.
+    The components represent Bx, By and Bz respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current timestep.
 
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
@@ -486,9 +500,89 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
     Whether to reset the ID incrementor to 1 before initializing beam particles.
 
-* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
-    Whether to initialize the beam on the CPU instead of the GPU.
-    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
+* ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
+    Reorder particles periodically to speed-up current deposition and particle push on GPU.
+    A good starting point is a period of 1 to reorder beam particles on every timestep.
+    To disable reordering set this to 0. For very narrow beams the sorting may take longer than
+    the time saved in the beam push and deposition.
+
+* ``<beam name> or beams.reorder_idx_type`` (2 `int`) optional (default `0 0` or `1 1`)
+    Change if beam particles are binned to cells (0), nodes (1) or both (2)
+    for both x and y direction as part of the reordering.
+    The ideal index type is different for beam push and beam deposition so some experimentation
+    may be required to find the overall fastest setting for a specific simulation.
+
+Option: ``fixed_weight_pdf``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.num_particles`` (`int`)
+    Number of constant weight particles to generate the beam.
+
+* ``<beam name>.pdf`` (`float`)
+    Longitudinal density profile of the beam, given as a probability density function
+    (the transverse profile is Gaussian). This is a parser function of z, giving the charge density
+    integrated in both transverse directions `x` and `y` (this is proportional to the beam current
+    profile in the limit :math:`v_z \simeq c`). The probability density function is automatically
+    normalized, and combined with ``<beam name>.total_charge`` or ``<beam name>.density`` within
+    the code to generate the absolute beam profile.
+    Examples (assuming ``z_center``, ``z_std``, ``z_length``, ``z_slope``, ``z_min`` and ``z_max``
+    are defined with ``my_constants``):
+    - Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
+    - Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
+    - Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
+
+* ``<beam name>.total_charge`` (`float`)
+    Total charge of the beam (either ``total_charge`` or ``density`` must be specified).
+    Only available when running in SI units.
+    The absolute value of this parameter is used when initializing the beam.
+    Note that in contrast to the ``fixed_weight`` injection type, using ``<beam name>.radius`` or
+    a special pdf to emulate ``z_min`` and ``z_max`` will result in beam particles being redistributed to
+    other locations rather than being deleted. Therefore, the resulting beam will have exactly the
+    specified total charge, but cutting a significant fraction of the charge is not recommended.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam (either ``total_charge`` or ``density`` must be specified).
+    The absolute value of this parameter is used when initializing the beam.
+    Note that this is the peak density of the analytical profile specified by `pdf`, `position_mean` and
+    `position_std`, within the limits of the resolution of the numerical evaluation of the pdf. The actual
+    resulting beam profile consists of randomly distributed particles and will likely feature density
+    fluctuations exceeding the specified peak density.
+
+* ``<beam name>.position_mean`` (2 `float`)
+    The mean position of the beam in ``x, y``, separated by a space. Both values can be a function of z.
+    To generate a tilted beam use
+    ``<beam name>.position_mean = "x_center+(z-z_center)*dx_per_dzeta" "y_center+(z-z_center)*dy_per_dzeta"``.
+
+* ``<beam name>.position_std`` (2 `float`)
+    The rms size of the of the beam in ``x, y``, separated by a space. Both values can be a function of z.
+
+* ``<beam name>.u_mean`` (3 `float`)
+    The mean normalized momentum of the beam in ``x, y, z``, separated by a space. All values can be a function of z.
+    Normalized momentum is equal to :math:`= \gamma \beta = \frac{p}{m c}`. An electron beam with a momentum of 1 GeV/c
+    has a u_mean of ``0 0 1956.951198`` while a proton beam with the same momentum has a u_mean of ``0 0 1.065788933``.
+
+* ``<beam name>.u_std`` (3 `float`)
+    The rms normalized momentum of the beam in ``x, y, z``, separated by a space. All values can be a function of z.
+
+* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
+    ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
+    divisible by 4.
+
+* ``<beam name>.z_foc`` (`float`) optional (default `0.`)
+    Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
+    The beam is assumed to propagate ballistically in-between.
+
+* ``<beam name>.radius`` (`float`) optional (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected. If ``<beam name>.density`` is specified, beam particles outside of the radius get
+    deleted. If ``<beam name>.total_charge`` is specified, beam particles outside of the radius get
+    new random transverse positions to conserve the total charge.
+
+* ``<beam name>.pdf_ref_ratio`` (`int`) optional (default `4`)
+    Into how many segments the pdf is divided per zeta slice for its first-order numerical evaluation.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -496,14 +590,35 @@ Option: ``fixed_weight``
 * ``<beam name>.num_particles`` (`int`)
     Number of constant weight particles to generate the beam.
 
+* ``<beam name>.profile`` (`string`) optional (default `gaussian`)
+    Beam profile.
+    Possible options are ``can`` (uniform longitudinally, Gaussian transversally)
+    and ``gaussian`` (Gaussian in all directions).
+
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
-    Note that ``<beam name>.zmin`` and ``<beam name>.zmax`` can reduce the total charge.
+    Note that ``<beam name>.zmin``, ``<beam name>.zmax`` and ``<beam name>.radius`` can reduce the total charge.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam. Note: Either ``total_charge`` or ``density`` must be specified.
     The absolute value of this parameter is used when initializing the beam.
+
+* ``<beam name>.position_mean`` (3 `float`)
+    The mean position of the beam in ``x, y, z``, separated by a space.
+    The x and y directions can be functions of ``z``. To generate a tilted beam use
+    ``<beam name>.position_mean = "x_center+(z-z_ center)*dx_per_dzeta" "y_center+(z-z_ center)*dy_per_dzeta" "z_center"``.
+
+* ``<beam name>.position_std`` (3 `float`)
+    The rms size of the of the beam in ``x, y, z``, separated by a space.
+
+* ``<beam name>.u_mean`` (3 `float`)
+    The mean normalized momentum of the beam in ``x, y, z``, separated by a space.
+    Normalized momentum is equal to :math:`= \gamma \beta = \frac{p}{m c}`. An electron beam with a momentum of 1 GeV/c
+    has a u_mean of ``0 0 1956.951198`` while a proton beam with the same momentum has a u_mean of ``0 0 1.065788933``.
+
+* ``<beam name>.u_std`` (3 `float`)
+    The rms normalized momentum of the beam in ``x, y, z``, separated by a space.
 
 * ``<beam name>.duz_per_uz0_dzeta`` (`float`) optional (default `0.`)
     Relative correlated energy spread per :math:`\zeta`.
@@ -522,11 +637,32 @@ Option: ``fixed_weight``
     Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
     The beam is assumed to propagate ballistically in-between.
 
+* ``<beam name>.zmin`` (`float`) (default `-infinity`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`) (default `infinity`)
+    Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`) (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
+
+* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
+    Whether to initialize the beam on the CPU instead of the GPU.
+    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
+
 Option: ``fixed_ppc``
 ^^^^^^^^^^^^^^^^^^^^^
 
 * ``<beam name>.ppc`` (3 `int`) (default `1 1 1`)
     Number of particles per cell in `x`-, `y`-, and `z`-direction to generate the beam.
+
+* ``<beam name>.profile`` (`string`)
+    Beam profile.
+    Possible options are ``flattop`` (flat-top radially and longitudinally),
+    ``gaussian`` (Gaussian in all directions),
+    or ``parsed`` (arbitrary analytic function provided by the user).
+    When ``parsed``, ``<beam name>.density(x,y,z)`` must be specified.
 
 * ``<beam name>.density`` (`float`)
     Peak density of the beam.
@@ -535,14 +671,37 @@ Option: ``fixed_ppc``
 * ``<beam name>.density(x,y,z)`` (`float`)
     The density profile of the beam, as a function of spatial dimensions `x`, `y` and `z`.
     This function uses the parser, see above.
-    Only used when ``<beam name>.profile == parsed``.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
     Minimum density. Particles with a lower density are not injected.
     The absolute value of this parameter is used when initializing the beam.
 
+* ``<beam name>.position_mean`` (3 `float`)
+    The mean position of the beam in ``x, y, z``, separated by a space.
+
+* ``<beam name>.position_std`` (3 `float`)
+    The rms size of the of the beam in ``x, y, z``, separated by a space.
+
+* ``<beam name>.u_mean`` (3 `float`)
+    The mean normalized momentum of the beam in ``x, y, z``, separated by a space.
+    Normalized momentum is equal to :math:`= \gamma \beta = \frac{p}{m c}`. An electron beam with a momentum of 1 GeV/c
+    has a u_mean of ``0 0 1956.951198`` while a proton beam with the same momentum has a u_mean of ``0 0 1.065788933``.
+
+* ``<beam name>.u_std`` (3 `float`)
+    The rms normalized momentum of the beam in ``x, y, z``, separated by a space.
+
 * ``<beam name>.random_ppc`` (3 `bool`) optional (default `0 0 0`)
     Whether the position in `(x y z)` of the particles is randomized within the cell.
+
+* ``<beam name>.zmin`` (`float`) (default `-infinity`)
+    Minimum in `z` at which particles are injected.
+
+* ``<beam name>.zmax`` (`float`) (default `infinity`)
+    Maximum in `z` at which particles are injected.
+
+* ``<beam name>.radius`` (`float`) (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected.
 
 Option: ``from_file``
 ^^^^^^^^^^^^^^^^^^^^^
@@ -560,6 +719,10 @@ Option: ``from_file``
 * ``<beam name>.openPMD_species_name`` (`string`) optional (default `<beam name>`)
     Name of the beam to be read in. If an openPMD file contains multiple beams, the name of the beam
     needs to be specified.
+
+* ``<beam name> or beams.initialize_on_cpu`` (`bool`) optional (default `0`)
+    Whether to initialize the beam on the CPU instead of the GPU.
+    Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
 SALAME algorithm
 ^^^^^^^^^^^^^^^^
@@ -655,7 +818,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     The laser pulse length in `z`. Use either the pulse length or the pulse duration ``<laser name>.tau``.
 
 * ``<laser name>.tau`` (`float`) optional (default `0`)
-    The laser pulse duration. The pulse length is set to `laser.tau`:math:`/c_0`.
+    The laser pulse duration. The pulse length is set to `laser.tau`:math:`*c_0`.
     Use either the pulse length or the pulse duration.
 
 * ``<laser name>.focal_distance`` (`float`)
@@ -708,11 +871,14 @@ Field diagnostics
     If ``diagnostic.output_period`` is defined, that value is used as the default for this.
 
 * ``<diag name> or diagnostic.diag_type`` (`string`)
-    Type of field output. Available options are `xyz`, `xz`, `yz`. `xyz` generates a 3D field
-    output. Use 3D output with parsimony, it may increase disk Space usage and simulation time
-    significantly. `xz` and `yz` generate 2D field outputs at the center of the y-axis and
+    Type of field output. Available options are `xyz`, `xz`, `yz` and `xy_integrated`.
+    `xyz` generates a 3D field output.
+    Use 3D output with parsimony, it may increase disk Space usage and simulation time significantly.
+    `xz` and `yz` generate 2D field outputs at the center of the y-axis and
     x-axis, respectively. In case of an even number of grid points, the value is averaged
     between the two inner grid points.
+    `xy_integrated` generates 2D field output that has been integrated along the `z` axis, i.e.,
+    it is the sum of the 2D field output over all slices multiplied with `dz`.
 
 * ``<diag name> or diagnostic.coarsening`` (3 `int`) optional (default `1 1 1`)
     Coarsening ratio of field output in x, y and z direction respectively. The coarsened output is

@@ -18,8 +18,7 @@
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    const int slice, int const current_N_level, const amrex::RealVect& extEu,
-    const amrex::RealVect& extBu, const amrex::RealVect& extEs, const amrex::RealVect& extBs)
+    const int slice, int const current_N_level)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -29,6 +28,7 @@ AdvanceBeamParticlesSlice (
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
+    const amrex::Real time = Hipace::GetInstance().m_physical_time;
     const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
     const amrex::Real background_density_SI = Hipace::m_background_density_SI;
     const bool normalized_units = Hipace::m_normalized_units;
@@ -101,10 +101,8 @@ AdvanceBeamParticlesSlice (
     const amrex::Real inv_c2 = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
     const amrex::Real min_z = gm[0].ProbLo(2) + (slice-gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
-    const amrex::RealVect external_E_uniform = extEu;
-    const amrex::RealVect external_B_uniform = extBu;
-    const amrex::RealVect external_E_slope = extEs;
-    const amrex::RealVect external_B_slope = extBs;
+    bool use_external_fields = beam.m_use_external_fields;
+    auto external_fields = beam.m_external_fields;
 
     // Radiation reaction constant
     const amrex::ParticleReal q_over_mc = normalized_units ?
@@ -121,10 +119,15 @@ AdvanceBeamParticlesSlice (
                            PhysConstSI::m_e * PhysConstSI::c / wp_inv / PhysConstSI::q_e : 1;
 
     amrex::ParallelFor(
-        amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
-        {Hipace::m_depos_order_xy},
+        amrex::TypeList<
+            amrex::CompileTimeOptions<0, 1, 2, 3>,
+            amrex::CompileTimeOptions<false, true>
+        >{}, {
+            Hipace::m_depos_order_xy,
+            use_external_fields
+        },
         beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This),
-        [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
+        [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto c_use_external_fields) {
 
             if (ptd.id(ip) < 0) return;
 
@@ -189,8 +192,10 @@ AdvanceBeamParticlesSlice (
                     slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                ApplyExternalField(xp, yp, zp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                    external_E_uniform, external_B_uniform, external_E_slope, external_B_slope);
+                if (c_use_external_fields.value) {
+                    ApplyExternalField(xp, yp, zp, time, clight, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
+                        external_fields);
+                }
 
                 // use intermediate fields to calculate next (n+1) transverse momenta
                 amrex::ParticleReal ux_next = ux + dt * charge_mass_ratio
