@@ -973,6 +973,12 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
     Maximum radius ``<plasma name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within which particles are
     used for the calculation of the insitu diagnostics.
 
+* ``fields.insitu_period`` (`int`) optional (default ``0``)
+    Period of the field in-situ diagnostics. `0` means no field in-situ diagnostics.
+
+* ``fields.insitu_file_prefix`` (`string`) optional (default ``"diags/field_insitu"``)
+    Path of the field in-situ output. Must not be the same as `hipace.file_prefix`.
+
 Additional physics
 ------------------
 

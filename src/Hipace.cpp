@@ -416,6 +416,7 @@ Hipace::Evolve ()
 
         WriteDiagnostics(step);
 
+        m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
 
@@ -560,6 +561,9 @@ Hipace::SolveOneSlice (int islice, int step)
     // get beam diagnostics after SALAME but before beam push
     m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
     FillBeamDiagnostics(step);
+
+    // get field insitu diagnostics after all fields are computed & SALAME
+    m_fields.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
 
     // copy fields to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
