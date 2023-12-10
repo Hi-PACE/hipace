@@ -125,19 +125,20 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
     for (auto& fd : m_field_data) {
         amrex::ParmParse pp(fd.m_diag_name);
 
-        fd.m_do_laser = do_laser;
-
         queryWithParserAlt(pp, "field_data", fd.m_comps_output, ppd);
 
         amrex::Vector<std::string> all_field_comps{};
-        all_field_comps.reserve(Comps[WhichSlice::This].size());
+        all_field_comps.reserve(Comps[WhichSlice::This].size() + (do_laser ? 1 : 0));
         for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
             all_field_comps.push_back(comp);
         }
+        if (do_laser) {
+            all_field_comps.push_back("laser");
+        }
+
         if(fd.m_comps_output.empty()) {
             fd.m_comps_output = all_field_comps;
-        }
-        else {
+        } else {
             for(const std::string& comp_name : fd.m_comps_output) {
                 if(comp_name == "all" || comp_name == "All") {
                     fd.m_comps_output = all_field_comps;
@@ -145,7 +146,6 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
                 }
                 if(comp_name == "none" || comp_name == "None") {
                     fd.m_comps_output.clear();
-                    fd.m_do_laser = false;
                     break;
                 }
                 if(Comps[WhichSlice::This].count(comp_name) == 0) {
@@ -160,6 +160,16 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
             }
         }
 
+        // remove laser from m_comps_output because it is output separately
+        for (auto it = fd.m_comps_output.begin(); it != fd.m_comps_output.end();) {
+            if (*it == "laser") {
+                it = fd.m_comps_output.erase(it);
+                fd.m_do_laser = true;
+            } else {
+                ++it;
+            }
+        }
+
         fd.m_nfields = fd.m_comps_output.size();
 
         amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
@@ -167,14 +177,6 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
             local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
         }
         fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
-
-        fd.m_nfields_with_laser = fd.m_nfields;
-
-        if (fd.m_do_laser) {
-            fd.m_nfields_with_laser += 2;
-            fd.m_comps_output.push_back("laser_real");
-            fd.m_comps_output.push_back("laser_imag");
-        }
 
         if (m_field_data.size() != 1) {
             for (auto& comp_name : fd.m_comps_output) {
@@ -272,8 +274,13 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
                          && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
         if(fd.m_has_field) {
-            fd.m_F.resize(domain, fd.m_nfields_with_laser, amrex::The_Pinned_Arena());
+            fd.m_F.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
             fd.m_F.setVal<amrex::RunOn::Host>(0);
+
+            if (fd.m_do_laser) {
+                fd.m_F_laser.resize(domain, 1, amrex::The_Pinned_Arena());
+                fd.m_F_laser.setVal<amrex::RunOn::Host>(0);
+            }
         }
     }
 }

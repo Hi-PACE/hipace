@@ -140,20 +140,12 @@ public:
      *
      * \param[in] lev MR level
      * \param[in] i_slice z slice in which to write the data
-     * \param[in] diag_geom diagnostics geometry
-     * \param[in,out] diag_fab full FArrayBox of diagnostics
-     * \param[in] diag_box box on which diag_fab is defined
+     * \param[in,out] fd data for field diagnostics
      * \param[in] calc_geom main geometry
-     * \param[in] diag_comps_vect the field components to copy
-     * \param[in] ncomp number of components to copy
-     * \param[in] do_laser if to copy the laser
      * \param[in] multi_laser MultiLaser object
-     * \param[in] slice_dir slicing direction
      */
-     void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
-                amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
-                const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-                bool do_laser, MultiLaser& multi_laser, const int slice_dir);
+     void Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
+                const amrex::Geometry& calc_geom, MultiLaser& multi_laser);
 
      /** \brief Initialize all required fields to zero and interpolate from lev-1 to lev if needed
      *
