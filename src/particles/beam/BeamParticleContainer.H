@@ -30,7 +30,7 @@ struct BeamIdx
         real_nattribs=real_nattribs_in_buffer
     };
     enum {
-        id=0,        // id
+        id=0,        // id TODO: remove this
         int_nattribs_in_buffer,
         // cpu is not stored or communicated in MultiBuffer, only used temporarily per slice
         cpu=int_nattribs_in_buffer,

@@ -40,7 +40,7 @@ struct PlasmaIdx
         real_nattribs
     };
     enum {
-        id=0, cpu,          // cpu used for MR level
+        id=0, cpu,          // cpu used for MR level TODO: remove this
         ion_lev,            // ionization level
         int_nattribs
     };
