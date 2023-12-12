@@ -131,6 +131,7 @@ private:
     void write_metadata (int slice, MultiBeam& beams, int beam_slice);
 
     // helper functions to get location of individual arrays inside a buffer
+    std::size_t get_buffer_offset_idcpu (int slice, int ibeam);
     std::size_t get_buffer_offset_real (int slice, int ibeam, int rcomp);
     std::size_t get_buffer_offset_int (int slice, int ibeam, int icomp);
     std::size_t get_buffer_offset_laser (int slice, int icomp);
