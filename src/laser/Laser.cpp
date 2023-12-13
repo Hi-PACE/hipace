@@ -21,7 +21,8 @@ Laser::Laser (std::string name, bool laser_from_file)
     amrex::ParmParse pp(m_name);
     queryWithParser(pp, "a0", m_a0);
     queryWithParser(pp, "w0", m_w0);
-    bool length_is_specified = queryWithParser(pp, "L0", m_L0);;
+    queryWithParser(pp, "thetayz0", m_thetayz0)
+    bool length_is_specified = queryWithParser(pp, "L0", m_L0);
     bool duration_is_specified = queryWithParser(pp, "tau", m_tau);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
         "Please specify exlusively either the pulse length L0 or the duration tau of the laser");

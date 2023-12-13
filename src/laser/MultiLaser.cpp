@@ -911,6 +911,7 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
             const auto& laser = m_all_lasers[ilaser];
             const amrex::Real a0 = laser.m_a0;
             const amrex::Real w0 = laser.m_w0;
+            const amrex::Real thetayz0 = laser.m_thetayz0;
             const amrex::Real x0 = laser.m_position_mean[0];
             const amrex::Real y0 = laser.m_position_mean[1];
             const amrex::Real z0 = laser.m_position_mean[2];
@@ -921,9 +922,15 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
                     amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
+                    
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
-
+                    if (thetayz0 != 0._rt) {
+                        const amrex::Real xp=std::cos(thetayz0)*x+std::sin(thetayz0)*y;
+                        const amrex::Real yp=-std::sin(thetayz0)*x+std::cos(thetayz0)*y;
+                        x=xp;
+                        y=yp;
+                    }
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
