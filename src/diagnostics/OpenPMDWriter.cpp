@@ -236,7 +236,8 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
 
             for (uint64_t i=0; i<np_total; ++i) {
-                uint64_data[i] = amrex::ConstParticleIDWrapper(uint64_data[i]);
+                amrex::Long id = amrex::ConstParticleIDWrapper(uint64_data[i]);
+                uint64_data[i] = id;
             }
 
             // handle scalar and non-scalar records by name

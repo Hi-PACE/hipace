@@ -385,9 +385,9 @@ InitParticles (const amrex::RealVect& a_u_std,
 #endif
                     ptd.idata(PlasmaIdx::ion_lev)[midx] = ptd.idata(PlasmaIdx::ion_lev)[pidx];
 
+                }
+            });
         }
-    });
-}
     }
 }
 
