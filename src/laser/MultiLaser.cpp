@@ -926,10 +926,10 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
                     if (thetayz0 != 0._rt) {
-                        const amrex::Real xp=std::cos(thetayz0)*x+std::sin(thetayz0)*y;
-                        const amrex::Real yp=-std::sin(thetayz0)*x+std::cos(thetayz0)*y;
-                        x=xp;
+                        const amrex::Real yp=std::cos(thetayz0)*y+std::sin(thetayz0)*z;
+                        const amrex::Real zp=-std::sin(thetayz0)*y+std::cos(thetayz0)*z;
                         y=yp;
+                        z=zp;
                     }
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
