@@ -494,6 +494,9 @@ void MultiBuffer::write_metadata (int slice, MultiBeam& beams, int beam_slice) {
         get_metadata_location(slice)[b + 1] = num_particles;
         offset += ((num_particles + buffer_size_roundup - 1)
                     / buffer_size_roundup * buffer_size_roundup)
+                    * sizeof(std::uint64_t);
+        offset += ((num_particles + buffer_size_roundup - 1)
+                    / buffer_size_roundup * buffer_size_roundup)
                     * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
         offset += ((num_particles + buffer_size_roundup - 1)
                     / buffer_size_roundup * buffer_size_roundup)
@@ -510,9 +513,12 @@ void MultiBuffer::write_metadata (int slice, MultiBeam& beams, int beam_slice) {
     AMREX_ALWAYS_ASSERT(get_metadata_location(slice)[0] < std::numeric_limits<int>::max());
 }
 
-std::size_t MultiBuffer::get_buffer_offset_real (int slice, int ibeam, int rcomp) {
+std::size_t MultiBuffer::get_buffer_offset_idcpu (int slice, int ibeam) {
     std::size_t offset = 0;
     for (int b = 0; b < ibeam; ++b) {
+        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
+                    / buffer_size_roundup * buffer_size_roundup)
+                    * sizeof(std::uint64_t);
         offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
                     / buffer_size_roundup * buffer_size_roundup)
                     * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
@@ -520,6 +526,14 @@ std::size_t MultiBuffer::get_buffer_offset_real (int slice, int ibeam, int rcomp
                     / buffer_size_roundup * buffer_size_roundup)
                     * BeamIdx::int_nattribs_in_buffer * sizeof(int);
     }
+    return offset;
+}
+
+std::size_t MultiBuffer::get_buffer_offset_real (int slice, int ibeam, int rcomp) {
+    std::size_t offset = get_buffer_offset_idcpu(slice, ibeam);
+    offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
+                / buffer_size_roundup * buffer_size_roundup)
+                * sizeof(std::uint64_t);
     offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
                 / buffer_size_roundup * buffer_size_roundup)
                 * rcomp * sizeof(amrex::Real);
@@ -527,15 +541,10 @@ std::size_t MultiBuffer::get_buffer_offset_real (int slice, int ibeam, int rcomp
 }
 
 std::size_t MultiBuffer::get_buffer_offset_int (int slice, int ibeam, int icomp) {
-    std::size_t offset = 0;
-    for (int b = 0; b < ibeam; ++b) {
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::int_nattribs_in_buffer * sizeof(int);
-    }
+    std::size_t offset = get_buffer_offset_idcpu(slice, ibeam);
+    offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
+                / buffer_size_roundup * buffer_size_roundup)
+                * sizeof(std::uint64_t);
     offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
                 / buffer_size_roundup * buffer_size_roundup)
                 * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
@@ -547,15 +556,7 @@ std::size_t MultiBuffer::get_buffer_offset_int (int slice, int ibeam, int icomp)
 
 std::size_t MultiBuffer::get_buffer_offset_laser (int slice, int icomp) {
     AMREX_ALWAYS_ASSERT(m_use_laser);
-    std::size_t offset = 0;
-    for (int b = 0; b < m_nbeams; ++b) {
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::int_nattribs_in_buffer * sizeof(int);
-    }
+    std::size_t offset = get_buffer_offset_idcpu(slice, m_nbeams);
     offset += (m_laser_slice_box.numPts() * icomp) * sizeof(amrex::Real);
     return offset;
 }
@@ -594,6 +595,9 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
     for (int b = 0; b < m_nbeams; ++b) {
         const int num_particles = beams.getBeam(b).getNumParticles(beam_slice);
         auto& soa = beams.getBeam(b).getBeamSlice(beam_slice).GetStructOfArrays();
+        memcpy_to_buffer(slice, get_buffer_offset_idcpu(slice, b),
+                         soa.GetIdCPUData().dataPtr(),
+                         num_particles * sizeof(std::uint64_t));
         for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
             memcpy_to_buffer(slice, get_buffer_offset_real(slice, b, rcomp),
                              soa.GetRealData(rcomp).dataPtr(),
@@ -628,6 +632,9 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
         const int num_particles = get_metadata_location(slice)[b + 1];
         beams.getBeam(b).resize(beam_slice, num_particles, 0);
         auto& soa = beams.getBeam(b).getBeamSlice(beam_slice).GetStructOfArrays();
+        memcpy_from_buffer(slice, get_buffer_offset_idcpu(slice, b),
+                           soa.GetIdCPUData().dataPtr(),
+                           num_particles * sizeof(std::uint64_t));
         for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
             memcpy_from_buffer(slice, get_buffer_offset_real(slice, b, rcomp),
                                soa.GetRealData(rcomp).dataPtr(),

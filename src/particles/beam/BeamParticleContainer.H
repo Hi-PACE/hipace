@@ -30,13 +30,11 @@ struct BeamIdx
         real_nattribs=real_nattribs_in_buffer
     };
     enum {
-        id=0,        // id
+        // no extra components stored in MultiBuffer, besides 64bit idcpu
         int_nattribs_in_buffer,
-        // cpu is not stored or communicated in MultiBuffer, only used temporarily per slice
-        cpu=int_nattribs_in_buffer,
         // nsubcycles: by how many subcycles was this particle pushed already
         // nsubcycles is not stored or communicated in MultiBuffer
-        nsubcycles,
+        nsubcycles=int_nattribs_in_buffer,
         int_nattribs
     };
 };
