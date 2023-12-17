@@ -66,15 +66,10 @@ private:
 
     /** \brief writing openPMD field data
      *
-     * \param[in] fab the FArrayBox to dump
-     * \param[in] geom Geometry of the simulation, to get the cell size etc.
-     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
-     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in] fd field diagnostic data
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
-    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
-                         const int slice_dir, const amrex::Vector< std::string > varnames,
-                         openPMD::Iteration iteration);
+    void WriteFieldData (const FieldDiagnosticData& fd, openPMD::Iteration iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
