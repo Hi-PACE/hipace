@@ -58,6 +58,9 @@ jobs:
         brew --cache
         set +e
 
+        brew install --overwrite python@3.12
+        brew link python@3.12 --force --overwrite
+
         brew install fftw --only-dependencies --force --overwrite
         brew install fftw
         brew link fftw
@@ -82,8 +85,6 @@ jobs:
         brew install openpmd-api --only-dependencies --force --overwrite
         brew install openpmd-api
         brew link openpmd-api
-
-        brew install --overwrite python
 
         python3 -m pip install matplotlib
         python3 -m pip install numpy
