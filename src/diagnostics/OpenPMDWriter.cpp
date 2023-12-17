@@ -64,7 +64,7 @@ OpenPMDWriter::InitDiagnostics ()
 void
 OpenPMDWriter::WriteDiagnostics (
     const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
-    const amrex::Real physical_time, const int output_step,
+    const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step,
     const amrex::Vector< std::string > beamnames,
     amrex::Vector<amrex::Geometry> const& geom3D,
     const OpenPMDWriterCallType call_type)
@@ -77,14 +77,15 @@ OpenPMDWriter::WriteDiagnostics (
     } else if (call_type == OpenPMDWriterCallType::fields) {
         for (const auto& fd : field_diag) {
             if (fd.m_has_field) {
-                WriteFieldData(fd.m_F, fd.m_geom_io, fd.m_slice_dir, fd.m_comps_output, iteration);
+                WriteFieldData(fd, a_multi_laser, iteration);
             }
         }
     }
 }
 
 void
-OpenPMDWriter::WriteFieldData (const FieldDiagnosticData& fd, openPMD::Iteration iteration)
+OpenPMDWriter::WriteFieldData (
+    const FieldDiagnosticData& fd, const MultiLaser& a_multi_laser, openPMD::Iteration iteration)
 {
     HIPACE_PROFILE("OpenPMDWriter::WriteFieldData()");
 
@@ -94,13 +95,13 @@ OpenPMDWriter::WriteFieldData (const FieldDiagnosticData& fd, openPMD::Iteration
     amrex::Vector<std::string> varnames = fd.m_comps_output;
 
     if (fd.m_do_laser) {
-        varnames.push_back("laser_envelope");
+        varnames.push_back("laserEnvelope");
     }
 
     // loop over field components
     for ( int icomp = 0; icomp < varnames.size(); ++icomp )
     {
-        const bool is_laser_comp = varnames[icomp] == "laser_envelope";
+        const bool is_laser_comp = varnames[icomp] == "laserEnvelope";
 
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
@@ -123,8 +124,8 @@ OpenPMDWriter::WriteFieldData (const FieldDiagnosticData& fd, openPMD::Iteration
         const amrex::IntVect box_offset {0, 0, data_box.smallEnd(2) - geom.Domain().smallEnd(2)};
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
         openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
-        if (d.m_slice_dir >= 0) {
-            const int remove_dir = 2 - d.m_slice_dir;
+        if (fd.m_slice_dir >= 0) {
+            const int remove_dir = 2 - fd.m_slice_dir;
             // User requested slice IO
             // remove the slicing direction in position, label, resolution, offset
             relative_cell_pos.erase(relative_cell_pos.begin() + remove_dir);
@@ -141,14 +142,20 @@ OpenPMDWriter::WriteFieldData (const FieldDiagnosticData& fd, openPMD::Iteration
         field.setGridGlobalOffset(offWindow);
 
         openPMD::Datatype datatype = is_laser_comp ?
-            openPMD::determineDatatype< amrex::GpuComplex<amrex::Real> >() :
+            openPMD::determineDatatype< std::complex<amrex::Real> >() :
             openPMD::determineDatatype< amrex::Real >();
         // set data type and global size of the simulation
         openPMD::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
 
         if (is_laser_comp) {
-            field_comp.storeChunkRaw(fd.m_F_laser.dataPtr(icomp), chunk_offset, chunk_size);
+            // set laser attributes and store laser
+            field.setAttribute("envelopeField", "normalized_vector_potential");
+            field.setAttribute("angularFrequency",
+                double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
+            std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
+            field.setAttribute("polarization", polarization);
+            field_comp.storeChunkRaw(fd.m_F_laser.dataPtr(), chunk_offset, chunk_size);
         } else {
             field_comp.storeChunkRaw(fd.m_F.dataPtr(icomp), chunk_offset, chunk_size);
         }

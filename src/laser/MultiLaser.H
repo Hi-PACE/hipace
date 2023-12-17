@@ -192,6 +192,9 @@ public:
      */
     void InitLaserSlice (const amrex::Geometry& geom, const int islice, const int comp);
 
+    /** Get the central wavelength */
+    amrex::Real GetLambda0 () const { return m_lambda0; }
+
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
 private:

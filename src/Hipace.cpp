@@ -995,13 +995,13 @@ Hipace::WriteDiagnostics (const int step)
 #ifdef HIPACE_USE_OPENPMD
     if (m_diags.hasAnyFieldOutput(step, m_max_step, m_physical_time, m_max_time)) {
         m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
-                        m_physical_time, step, getDiagBeamNames(),
+                        m_multi_laser, m_physical_time, step, getDiagBeamNames(),
                         m_3D_geom, OpenPMDWriterCallType::fields);
     }
 
     if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
         m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
-                        m_physical_time, step, getDiagBeamNames(),
+                        m_multi_laser, m_physical_time, step, getDiagBeamNames(),
                         m_3D_geom, OpenPMDWriterCallType::beams);
     }
 #else
