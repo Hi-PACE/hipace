@@ -40,7 +40,7 @@ jobs:
         set +e
         brew unlink gcc
         brew update
-        brew install ccache --only-dependencies --force
+        brew install ccache --only-dependencies --force --overwrite
         brew install ccache
         brew link ccache
     - name: CCache Cache
@@ -59,19 +59,19 @@ jobs:
         set +e
         brew install --overwrite python
 
-        brew install fftw --only-dependencies --force
+        brew install fftw --only-dependencies --force --overwrite
         brew install fftw
         brew link fftw
 
-        brew install libomp --only-dependencies --force
+        brew install libomp --only-dependencies --force --overwrite
         brew install libomp
         brew link --force libomp
 
-        brew install ninja --only-dependencies --force
+        brew install ninja --only-dependencies --force --overwrite
         brew install ninja
         brew link ninja
 
-        brew install open-mpi --only-dependencies --force
+        brew install open-mpi --only-dependencies --force --overwrite
         brew install open-mpi
         brew link open-mpi
 
@@ -80,7 +80,7 @@ jobs:
         set -e
 
         brew tap openpmd/openpmd
-        brew install openpmd-api --only-dependencies --force
+        brew install openpmd-api --only-dependencies --force --overwrite
         brew install openpmd-api
         brew link openpmd-api
 
