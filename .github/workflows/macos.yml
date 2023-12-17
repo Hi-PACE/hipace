@@ -58,8 +58,9 @@ jobs:
         brew --cache
         set +e
 
-        brew install --overwrite python@3.y
-        brew link python@3.y --force --overwrite
+        brew install --overwrite python
+        brew upgrade --force python
+        brew link python --force --overwrite
 
         brew install fftw --only-dependencies --force --overwrite
         brew install fftw
