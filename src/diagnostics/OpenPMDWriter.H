@@ -11,6 +11,7 @@
 #include "diagnostics/Diagnostic.H"
 #include "particles/beam/MultiBeam.H"
 #include "particles/beam/BeamParticleContainer.H"
+#include "laser/MultiLaser.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_IntVect.H>

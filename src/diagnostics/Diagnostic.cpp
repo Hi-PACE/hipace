@@ -133,7 +133,7 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
             all_field_comps.push_back(comp);
         }
         if (do_laser) {
-            all_field_comps.push_back("laser");
+            all_field_comps.push_back(FieldDiagnosticData::m_laser_io_name);
         }
 
         if(fd.m_comps_output.empty()) {
@@ -162,7 +162,7 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
 
         // remove laser from m_comps_output because it is output separately
         for (auto it = fd.m_comps_output.begin(); it != fd.m_comps_output.end();) {
-            if (*it == "laser") {
+            if (*it == FieldDiagnosticData::m_laser_io_name) {
                 it = fd.m_comps_output.erase(it);
                 fd.m_do_laser = true;
             } else {
