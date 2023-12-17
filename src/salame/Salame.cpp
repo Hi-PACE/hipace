@@ -408,17 +408,18 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
         // For id and weights
         auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
-        int * const idp = soa.GetIntData(BeamIdx::id).data();
+        auto * const idcpup = soa.GetIdCPUData().data();
 
         amrex::ParallelFor(
             beam.getNumParticles(WhichBeamSlice::This),
             [=] AMREX_GPU_DEVICE (long ip) {
                 // Skip invalid particles and ghost particles not in the last slice
-                if (idp[ip] < 0) return;
+                auto id = amrex::ParticleIDWrapper(idcpup[ip]);
+                if (id < 0) return;
 
                 // invalidate particles with a weight of zero
                 if (W == 0) {
-                    idp[ip] = -idp[ip];
+                    id = -id;
                     return;
                 }
 

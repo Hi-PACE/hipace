@@ -93,6 +93,8 @@ BeamParticleContainer::ReadParameters ()
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
     auto& soa = getBeamInitSlice().GetStructOfArrays();
+    soa.GetIdCPUData().setArena(
+        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
         soa.GetRealData()[rcomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
@@ -304,7 +306,7 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     auto& soa = getBeamSlice(which_slice).GetStructOfArrays();
     const amrex::Real * const pos_x = soa.GetRealData(BeamIdx::x).data();
     const amrex::Real * const pos_y = soa.GetRealData(BeamIdx::y).data();
-    int * const cpup = soa.GetIntData(BeamIdx::cpu).data();
+    auto * const idcpup = soa.GetIdCPUData().data();
 
     const int lev1_idx = std::min(1, current_N_level-1);
     const int lev2_idx = std::min(2, current_N_level-1);
@@ -330,15 +332,15 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
                 lo_x_lev2 < xp && xp < hi_x_lev2 &&
                 lo_y_lev2 < yp && yp < hi_y_lev2) {
                 // level 2
-                cpup[ip] = 2;
+                amrex::ParticleCPUWrapper{idcpup[ip]} = 2;
             } else if (current_N_level > 1 &&
                 lo_x_lev1 < xp && xp < hi_x_lev1 &&
                 lo_y_lev1 < yp && yp < hi_y_lev1) {
                 // level 1
-                cpup[ip] = 1;
+                amrex::ParticleCPUWrapper{idcpup[ip]} = 1;
             } else {
                 // level 0
-                cpup[ip] = 0;
+                amrex::ParticleCPUWrapper{idcpup[ip]} = 0;
             }
         }
     );
@@ -376,8 +378,8 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
 
-                ptd.idata(BeamIdx::id)[ip] = ptd_init.idata(BeamIdx::id)[idx_src];
-                ptd.idata(BeamIdx::cpu)[ip] = 0;
+                ptd.id(ip) = ptd_init.id(idx_src);
+                ptd.cpu(ip) = 0;
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
             }
         );
@@ -461,7 +463,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
     const auto uxp = soa.GetRealData(BeamIdx::ux).data();
     const auto uyp = soa.GetRealData(BeamIdx::uy).data();
     const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-    auto idp = soa.GetIntData(BeamIdx::id).data();
+    auto idcpup = soa.GetIdCPUData().data();
 
     // Tuple contains:
     //      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
@@ -486,7 +488,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
         getNumParticles(WhichBeamSlice::This), reduce_data,
         [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
         {
-            if (idp[ip] < 0 ||
+            if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
                 pos_x[ip]*pos_x[ip] + pos_y[ip]*pos_y[ip] > insitu_radius*insitu_radius) {
                 return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
                     0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};

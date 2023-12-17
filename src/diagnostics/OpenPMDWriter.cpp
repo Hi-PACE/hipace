@@ -239,7 +239,6 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
 
     const int nbeams = beams.get_nbeams();
     m_offset.resize(nbeams);
-    m_int_beam_data.resize(nbeams);
     m_uint64_beam_data.resize(nbeams);
     m_real_beam_data.resize(nbeams);
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
@@ -250,27 +249,15 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
         // initialize beam IO on first slice
         const uint64_t np_total = beams.getBeam(ibeam).getTotalNumParticles();
 
-        m_int_beam_data[ibeam].resize(m_int_names.size());
-
-        for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
-            m_int_beam_data[ibeam][idx].reset(
-                reinterpret_cast<int*>(
-                    amrex::The_Pinned_Arena()->alloc(sizeof(int)*np_total)
-                ),
-                [](int *p){
-                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
-                });
-        }
-
         m_uint64_beam_data[ibeam].resize(m_int_names.size());
 
         for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             m_uint64_beam_data[ibeam][idx].reset(
                 reinterpret_cast<uint64_t*>(
-                    amrex::The_Cpu_Arena()->alloc(sizeof(uint64_t)*np_total)
+                    amrex::The_Pinned_Arena()->alloc(sizeof(uint64_t)*np_total)
                 ),
                 [](uint64_t *p){
-                    amrex::The_Cpu_Arena()->free(reinterpret_cast<void*>(p));
+                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
                 });
         }
 
@@ -318,12 +305,12 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         SetupPos(beam_species, beam, np_total, geom);
         SetupRealProperties(beam_species, m_real_names, np_total);
 
-        for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
-            const int * const int_data = m_int_beam_data[ibeam][idx].get();
+        for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
 
             for (uint64_t i=0; i<np_total; ++i) {
-                uint64_data[i] = static_cast<uint64_t>(int_data[i]);
+                amrex::Long id = amrex::ConstParticleIDWrapper(uint64_data[i]);
+                uint64_data[i] = id;
             }
 
             // handle scalar and non-scalar records by name
@@ -364,11 +351,11 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
             // copy data from GPU to IO buffer
             auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
 
-            for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
+            for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
-                    soa.GetIntData(idx).begin(),
-                    soa.GetIntData(idx).begin() + np,
-                    m_int_beam_data[ibeam][idx].get() + m_offset[ibeam]);
+                    soa.GetIdCPUData().begin(),
+                    soa.GetIdCPUData().begin() + np,
+                    m_uint64_beam_data[ibeam][idx].get() + m_offset[ibeam]);
             }
 
             for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
@@ -494,7 +481,6 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
 void OpenPMDWriter::flush ()
 {
     amrex::Gpu::streamSynchronize();
-    m_int_beam_data.resize(0);
     m_uint64_beam_data.resize(0);
     m_real_beam_data.resize(0);
     if (m_outputSeries) {
