@@ -15,6 +15,7 @@
 
 #include <vector>
 
+// 16-byte alignment enables coalesced memory access which is significantly faster
 struct alignas(2*sizeof(amrex::Real)) AlignedComplex {
     amrex::Real real;
     amrex::Real imag;
