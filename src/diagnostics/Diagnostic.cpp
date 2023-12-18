@@ -7,6 +7,7 @@
  */
 #include "Diagnostic.H"
 #include "Hipace.H"
+#include "utils/HipaceProfilerWrapper.H"
 #include <AMReX_ParmParse.H>
 
 Diagnostic::Diagnostic (int nlev)
@@ -160,21 +161,23 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
             }
         }
 
-        // remove laser from m_comps_output because it is output separately
-        for (auto it = fd.m_comps_output.begin(); it != fd.m_comps_output.end();) {
+        amrex::Vector<std::string> comps_output_no_laser = fd.m_comps_output;
+
+        // remove laser from comps_output_no_laser because it is output separately
+        for (auto it = comps_output_no_laser.begin(); it != comps_output_no_laser.end();) {
             if (*it == FieldDiagnosticData::m_laser_io_name) {
-                it = fd.m_comps_output.erase(it);
+                it = comps_output_no_laser.erase(it);
                 fd.m_do_laser = true;
             } else {
                 ++it;
             }
         }
 
-        fd.m_nfields = fd.m_comps_output.size();
+        fd.m_nfields = comps_output_no_laser.size();
 
         amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
         for(int i = 0; i < fd.m_nfields; ++i) {
-            local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
+            local_comps_output_idx[i] = Comps[WhichSlice::This][comps_output_no_laser[i]];
         }
         fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
 
@@ -219,6 +222,8 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
                             amrex::Geometry const& geom, int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time)
 {
+    HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
+
     AMREX_ALWAYS_ASSERT(m_initialized);
 
     for (auto& fd : m_field_data) {
@@ -279,7 +284,7 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
 
             if (fd.m_do_laser) {
                 fd.m_F_laser.resize(domain, 1, amrex::The_Pinned_Arena());
-                fd.m_F_laser.setVal<amrex::RunOn::Host>(0);
+                fd.m_F_laser.setVal<amrex::RunOn::Host>({0,0});
             }
         }
     }

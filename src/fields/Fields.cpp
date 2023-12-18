@@ -526,13 +526,13 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
 
         if (fd.m_do_laser) {
             auto laser_array = laser_func.array(mfi);
-            amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_laser.array();
+            amrex::Array4<FieldDiagnosticData::complex_type> diag_array_laser = fd.m_F_laser.array();
             amrex::ParallelFor(diag_box,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                 {
                     const amrex::Real x = i * dx + poff_diag_x;
                     const amrex::Real y = j * dy + poff_diag_y;
-                    diag_array_laser(i,j,k) += amrex::GpuComplex<amrex::Real>{
+                    diag_array_laser(i,j,k) += FieldDiagnosticData::complex_type {
                         rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_r),
                         rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_i)
                     };

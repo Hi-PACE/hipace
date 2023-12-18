@@ -15,6 +15,18 @@
 
 #include <vector>
 
+struct alignas(2*sizeof(amrex::Real)) AlignedComplex {
+    amrex::Real real;
+    amrex::Real imag;
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE constexpr
+    AlignedComplex& operator+= (const AlignedComplex& rhs) {
+        real += rhs.real;
+        imag += rhs.imag;
+        return *this;
+    }
+};
+
 
 /** \brief This struct holds data for one field diagnostic on one MR level */
 struct FieldDiagnosticData
@@ -37,8 +49,9 @@ struct FieldDiagnosticData
     amrex::Gpu::DeviceVector<int> m_comps_output_idx;
     /** Vector over levels, all fields */
     amrex::FArrayBox m_F;
+    using complex_type = AlignedComplex;
     /** FAB for laser */
-    amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_F_laser;
+    amrex::BaseFab<complex_type> m_F_laser;
     amrex::Geometry m_geom_io; /**< Diagnostics geometry */
     bool m_has_field; /**< if there is field output to write */
     /** Number of iterations between consecutive output dumps.
