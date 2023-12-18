@@ -79,7 +79,7 @@ public:
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
-        return  fd.m_nfields > 0 &&
+        return  (fd.m_nfields > 0 || fd.m_do_laser) &&
             utils::doDiagnostics(fd.m_output_period, output_step, max_step,
                             output_time, max_time);
     }
