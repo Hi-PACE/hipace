@@ -97,7 +97,7 @@ General parameters
     rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
     If there are more time steps than ranks, these parameters must be chosen such that between all
     ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
-    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
+    ``(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices``.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
