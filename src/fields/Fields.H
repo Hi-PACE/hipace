@@ -529,6 +529,8 @@ private:
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */
     bool m_any_neutral_background = false;
+    /** Number of real field properties for in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_nrp = 9;
     /** How often the insitu field diagnostics should be computed and written
      * Default is 0, meaning no output */
     int m_insitu_period {0};
