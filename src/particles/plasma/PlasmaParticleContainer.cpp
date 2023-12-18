@@ -127,7 +127,7 @@ PlasmaParticleContainer::ReadParameters ()
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
     queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
-    queryWithParserAlt(pp, "ppc", m_ppc, pp_alt);
+    getWithParserAlt(pp, "ppc", m_ppc, pp_alt);
     queryWithParser(pp, "u_mean", m_u_mean);
     bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
