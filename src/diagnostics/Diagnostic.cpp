@@ -139,16 +139,16 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
         if(fd.m_comps_output.empty()) {
             fd.m_comps_output = all_field_comps;
         } else {
-            for(const std::string& comp_name : fd.m_comps_output) {
-                if(comp_name == "all" || comp_name == "All") {
+            for (const std::string& comp_name : fd.m_comps_output) {
+                if (comp_name == "all" || comp_name == "All") {
                     fd.m_comps_output = all_field_comps;
                     break;
                 }
-                if(comp_name == "none" || comp_name == "None") {
+                if (comp_name == "none" || comp_name == "None") {
                     fd.m_comps_output.clear();
                     break;
                 }
-                if(Comps[WhichSlice::This].count(comp_name) == 0) {
+                if (std::find(all_field_comps.begin(), all_field_comps.end(), comp_name) ==  all_field_comps.end()) {
                     std::stringstream error_str{};
                     error_str << "Unknown field diagnostics component: " << comp_name <<"\nmust be "
                         << "'all', 'none' or a subset of:";
