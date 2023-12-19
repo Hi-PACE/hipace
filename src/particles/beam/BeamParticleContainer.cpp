@@ -501,7 +501,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
     ReduceTuple a = reduce_data.value();
     const amrex::Real sum_w_inv = amrex::get<0>(a) <= 0._rt ? 0._rt : 1._rt / amrex::get<0>(a);
 
-    constexpr_for<0, m_insitu_nrp>(
+    amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
             m_insitu_rdata[islice + idx.value * m_nslices] = amrex::get<idx.value>(a) *
                 // sum(w) is not multiplied by sum_w_inv
@@ -510,7 +510,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
         }
     );
 
-    constexpr_for<0, m_insitu_nip>(
+    amrex::constexpr_for<0, m_insitu_nip>(
         [&] (auto idx) {
             m_insitu_idata[islice + idx.value * m_nslices] = amrex::get<m_insitu_nrp+idx.value>(a);
             m_insitu_sum_idata[idx.value] += amrex::get<m_insitu_nrp+idx.value>(a);

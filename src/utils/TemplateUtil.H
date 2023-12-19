@@ -56,14 +56,4 @@ using TypeMultiplier = amrex::TypeAt<0, decltype(detail::TApply<TParam>(
     (amrex::TypeList<>{} + ... + detail::SingleTypeMultiplier(Types{}))
 ))>;
 
-
-template<auto I, auto N, class F>
-constexpr void constexpr_for (F&& f) // TODO: use amrex version
-{
-    if constexpr (I < N) {
-        f(std::integral_constant<decltype(I), I>());
-        constexpr_for<I+1, N>(f);
-    }
-}
-
 #endif
