@@ -94,10 +94,15 @@ OpenPMDWriter::WriteFieldData (
 
     amrex::Vector<std::string> varnames = fd.m_comps_output;
 
+    if (fd.m_do_laser) {
+        // laser must be at the end of varnames
+        varnames.push_back(fd.m_laser_io_name);
+    }
+
     // loop over field components
     for ( int icomp = 0; icomp < varnames.size(); ++icomp )
     {
-        const bool is_laser_comp = varnames[icomp].find(FieldDiagnosticData::m_laser_io_name) == 0;
+        const bool is_laser_comp = varnames[icomp].find("laserEnvelope") == 0;
 
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)

@@ -134,7 +134,7 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
             all_field_comps.push_back(comp);
         }
         if (do_laser) {
-            all_field_comps.push_back(FieldDiagnosticData::m_laser_io_name);
+            all_field_comps.push_back(fd.m_laser_io_name);
         }
 
         if(fd.m_comps_output.empty()) {
@@ -161,29 +161,30 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
             }
         }
 
-        amrex::Vector<std::string> comps_output_no_laser = fd.m_comps_output;
-
-        // remove laser from comps_output_no_laser because it is output separately
-        for (auto it = comps_output_no_laser.begin(); it != comps_output_no_laser.end();) {
-            if (*it == FieldDiagnosticData::m_laser_io_name) {
-                it = comps_output_no_laser.erase(it);
+        // remove laser from fd.m_comps_output because it is output separately
+        for (auto it = fd.m_comps_output.begin(); it != fd.m_comps_output.end();) {
+            if (*it == fd.m_laser_io_name) {
+                it = fd.m_comps_output.erase(it);
                 fd.m_do_laser = true;
             } else {
                 ++it;
             }
         }
 
-        fd.m_nfields = comps_output_no_laser.size();
+        fd.m_nfields = fd.m_comps_output.size();
 
         amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
         for(int i = 0; i < fd.m_nfields; ++i) {
-            local_comps_output_idx[i] = Comps[WhichSlice::This][comps_output_no_laser[i]];
+            local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
         }
         fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
 
         if (m_field_data.size() != 1) {
             for (auto& comp_name : fd.m_comps_output) {
                 comp_name += "_" + fd.m_diag_name;
+            }
+            if (fd.m_do_laser) {
+                fd.m_laser_io_name += "_" + fd.m_diag_name;
             }
         }
     }

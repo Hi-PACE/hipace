@@ -59,7 +59,7 @@ struct FieldDiagnosticData
      * Default is 0, meaning no output */
     int m_output_period = 0;
     /** Name of the laser in input and output files */
-    inline static std::string m_laser_io_name = "laserEnvelope";
+    std::string m_laser_io_name = "laserEnvelope";
 };
 
 
