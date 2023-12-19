@@ -97,7 +97,7 @@ General parameters
     rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
     If there are more time steps than ranks, these parameters must be chosen such that between all
     ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
-    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
+    ``(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices``.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
@@ -333,7 +333,7 @@ When both are specified, the per-species value is used.
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
-* ``<plasma name> or plasmas.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
