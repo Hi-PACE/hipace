@@ -335,7 +335,6 @@ Hipace::Evolve ()
 
         if (m_multi_laser.m_use_laser) {
             AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
-            AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
         }
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();

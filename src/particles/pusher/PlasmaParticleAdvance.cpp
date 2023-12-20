@@ -77,7 +77,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(gm[0]);
         const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
 
-        const amrex::Real me_clight_mass_ratio = phys_const.c * phys_const.m_e/plasma.m_mass;
+        const amrex::Real laser_norm = (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass)
+            * (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass);
         const amrex::Real clight = phys_const.c;
         const amrex::Real clight_inv = 1._rt/phys_const.c;
         const amrex::Real charge_mass_clight_ratio = plasma.m_charge/(plasma.m_mass * phys_const.c);
@@ -114,8 +115,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
                     amrex::Real q_mass_clight_ratio = charge_mass_clight_ratio;
+                    amrex::Real laser_norm_ion = laser_norm;
                     if (can_ionize) {
                         q_mass_clight_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                        laser_norm_ion *=
+                            ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
                     }
 
                     for (int i = 0; i < n_subcycles; i++) {
@@ -141,9 +145,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                           Bxp *= clight;
                           Byp *= clight;
-                          Aabssqp *= 0.5_rt; // TODO: fix units of Aabssqp
-                          AabssqDxp *= 0.25_rt * me_clight_mass_ratio;
-                          AabssqDyp *= 0.25_rt * me_clight_mass_ratio;
+                          Aabssqp *= 0.5_rt * laser_norm_ion;
+                          AabssqDxp *= 0.25_rt * clight * laser_norm_ion;
+                          AabssqDyp *= 0.25_rt * clight * laser_norm_ion;
                       }
 
 #ifndef HIPACE_USE_AB5_PUSH
