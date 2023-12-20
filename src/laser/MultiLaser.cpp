@@ -273,10 +273,12 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     const std::vector<std::string> axis_labels = laser.axisLabels();
     if (axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
         m_file_geometry = "xyt";
+    } else if (axis_labels[0] == "z" && axis_labels[1] == "y" && axis_labels[2] == "x") {
+        m_file_geometry = "xyz";
     } else if (axis_labels[0] == "t" && axis_labels[1] == "r") {
         m_file_geometry = "rt";
     } else {
-        amrex::Abort("Incorrect axis labels in laser file, must be either t, y, x or t, r");
+        amrex::Abort("Incorrect axis labels in laser file, must be either tyx, zyx or tr");
     }
 
     const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
@@ -352,6 +354,56 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                                     laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
                                         static_cast<amrex::Real>(
                                             input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() * unitSI
+                                        );
+                                }
+                            }
+                        }
+                    } // End of 3 loops (1 per dimension) over laser array from file
+                }
+            }
+        } // End of 3 loops (1 per dimension) over laser array from simulation
+    } else if (m_file_geometry == "xyz") {
+        // Calculate the min and max of the grid from laser file
+        amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
+        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
+        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+        AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
+
+
+        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
+            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
+                for (int i = imin; i <= domain.bigEnd(0); ++i) {
+
+                    const amrex::Real x = (i-imin)*dx + xmin;
+                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
+                    amrex::Real sx_cell[interp_order_xy+1];
+                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
+
+                    const amrex::Real y = (j-jmin)*dy + ymin;
+                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
+                    amrex::Real sy_cell[interp_order_xy+1];
+                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
+
+                    const amrex::Real z = (k-kmin)*dz + zmin;
+                    const amrex::Real zmid = (z - zmin_laser)/spacing[0];
+                    amrex::Real sz_cell[interp_order_xy+1];
+                    const int k_cell = compute_shape_factor<interp_order_xy>(sz_cell, zmid);
+
+                    laser_arr(i, j, k, 0) = 0._rt;
+                    laser_arr(i, j, k, 1) = 0._rt;
+                    for (int iz=0; iz<=interp_order_xy; iz++){
+                        for (int iy=0; iy<=interp_order_xy; iy++){
+                            for (int ix=0; ix<=interp_order_xy; ix++){
+                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
+                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
+                                    k_cell+iz >= 0 && k_cell+iz < static_cast<int>(extent[0])) {
+                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
+                                        static_cast<amrex::Real>(
+                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).real() * unitSI
+                                        );
+                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
+                                        static_cast<amrex::Real>(
+                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).imag() * unitSI
                                         );
                                 }
                             }
