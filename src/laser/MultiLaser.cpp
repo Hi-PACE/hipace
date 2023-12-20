@@ -367,8 +367,6 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
         amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
         amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
         amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
-        AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
-
 
         for (int k = kmin; k <= domain.bigEnd(2); ++k) {
             for (int j = jmin; j <= domain.bigEnd(1); ++j) {
