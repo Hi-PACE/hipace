@@ -241,6 +241,15 @@ public:
      */
     void SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom, const int current_N_level,
                            const int which_slice);
+    /** \brief Symmetrize fields by averaging over (x,y), symm_x*(-x,y),
+     * symm_y*(x,-y) and symm_x*symm_y*(-x,-y) where symm_x and symm_y can be 1 or -1.
+     *
+     * \param[in] field_comp component index of the filed
+     * \param[in] lev current level
+     * \param[in] symm_x type of reflection in x direction
+     * \param[in] symm_y type of reflection in y direction
+     */
+    void SymmetrizeFields (int field_comp, const int lev, const int symm_x, const int symm_y);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
@@ -274,6 +283,28 @@ public:
      */
     amrex::Real ComputeRelBFieldError (const int which_slice, const int which_slice_iter,
         const amrex::Vector<amrex::Geometry>& geom, const int current_N_level);
+
+
+    /** Compute in-situ field diagnostics of current slice, store in member variable
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] islice current slice, on which diags are computed.
+     * \param[in] geom3D Geometry of the problem
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
+    void InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+                             int max_step, amrex::Real max_time);
+
+    /** Dump in-situ reduced diagnostics to file.
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
+                            int max_step, amrex::Real max_time);
 
     /** \brief set all selected fields to a value
      *
@@ -474,6 +505,8 @@ public:
     inline static amrex::IntVect m_poisson_nguards {-1, -1, -1};
     /** If the poisson solver should include the guard cells */
     bool m_extended_solve = false;
+    /** Whether the currents should be symmetrized for the field solve */
+    bool m_do_symmetrize = false;
 
 private:
     /** Vector over levels of all required fields to compute current slice */
@@ -496,6 +529,15 @@ private:
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */
     bool m_any_neutral_background = false;
+    /** How often the insitu field diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
+    /** All per-slice real field properties */
+    amrex::Vector<amrex::Real> m_insitu_rdata;
+    /** Sum of all per-slice real field properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_rdata;
+    /** Prefix/path for the output files */
+    std::string m_insitu_file_prefix = "diags/field_insitu";
 };
 
 #endif

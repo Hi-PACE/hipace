@@ -416,6 +416,7 @@ Hipace::Evolve ()
 
         WriteDiagnostics(step);
 
+        m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
 
@@ -461,6 +462,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
         m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
+        m_multi_beam.ReorderParticles( WhichBeamSlice::This, step, m_slice_geom[0]);
     }
 
     m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
@@ -517,6 +519,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
+        m_multi_beam.ReorderParticles( WhichBeamSlice::Next, step, m_slice_geom[0]);
     }
 
     if (m_N_level > 1) {
@@ -558,6 +561,9 @@ Hipace::SolveOneSlice (int islice, int step)
     // get beam diagnostics after SALAME but before beam push
     m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
     FillBeamDiagnostics(step);
+
+    // get field insitu diagnostics after all fields are computed & SALAME
+    m_fields.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
 
     // copy fields to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -728,6 +734,12 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
         m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+
+    if (m_fields.m_do_symmetrize) {
+        m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
+    }
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
     if (m_use_amrex_mlmg) {

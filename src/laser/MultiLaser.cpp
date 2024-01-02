@@ -14,6 +14,8 @@
 #include "utils/DeprecatedInput.H"
 #ifdef AMREX_USE_CUDA
 #  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
+#elif defined(AMREX_USE_HIP)
+#  include "fields/fft_poisson_solver/fft/RocFFTUtils.H"
 #endif
 #include "particles/particles_utils/ShapeFactors.H"
 
@@ -40,9 +42,6 @@ MultiLaser::ReadParameters ()
     m_use_laser = m_names[0] != "no_laser";
 
     if (!m_use_laser) return;
-#if defined(AMREX_USE_HIP)
-    amrex::Abort("Laser solver not implemented with HIP");
-#endif
 
     m_laser_from_file = queryWithParser(pp, "input_file", m_input_file_path);
 
@@ -122,7 +121,31 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
                 CuFFTUtils::cufftErrorToString(result) << "\n";
         }
 #elif defined(AMREX_USE_HIP)
-        amrex::ignore_unused(fft_size); // TODO: fft solver on AMD
+        const std::size_t lengths[] = {
+            static_cast<std::size_t>(fft_size[0]), static_cast<std::size_t>(fft_size[1])
+        };
+
+        rocfft_status result;
+        // Forward FFT plan
+        result = rocfft_plan_create(&(m_plan_fwd), rocfft_placement_notinplace,
+            rocfft_transform_type_complex_forward,
+#ifdef AMREX_USE_FLOAT
+            rocfft_precision_single,
+#else
+            rocfft_precision_double,
+#endif
+            2, lengths, 1, nullptr);
+        RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
+        // Backward FFT plan
+        result = rocfft_plan_create(&(m_plan_bkw), rocfft_placement_notinplace,
+            rocfft_transform_type_complex_inverse,
+#ifdef AMREX_USE_FLOAT
+            rocfft_precision_single,
+#else
+            rocfft_precision_double,
+#endif
+            2, lengths, 1, nullptr);
+        RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
 #else
         // Forward FFT plan
         m_plan_fwd = LaserFFT::VendorCreate(
@@ -818,7 +841,19 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Real dt, int ste
                 CuFFTUtils::cufftErrorToString(result) << "\n";
         }
 #elif defined(AMREX_USE_HIP)
-        amrex::Abort("Not implemented");
+        rocfft_execution_info execinfo_fwd = nullptr;
+        rocfft_status result = rocfft_execution_info_create(&execinfo_fwd);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
+        result = rocfft_execution_info_set_stream(execinfo_fwd, amrex::Gpu::gpuStream());
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
+
+        void* in_buffer_fwd[2] = {(void*)m_rhs.dataPtr(), nullptr};
+        void* out_bufferfwd[2] = {(void*)m_rhs_fourier.dataPtr(), nullptr};
+
+        result = rocfft_execute(m_plan_fwd, in_buffer_fwd, out_bufferfwd, execinfo_fwd);
+        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
+        result = rocfft_execution_info_destroy(execinfo_fwd);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
 #else
         LaserFFT::VendorExecute( m_plan_fwd );
 #endif
@@ -856,7 +891,19 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Real dt, int ste
                 CuFFTUtils::cufftErrorToString(result) << "\n";
         }
 #elif defined(AMREX_USE_HIP)
-        amrex::Abort("Not implemented");
+        rocfft_execution_info execinfo_bkw = nullptr;
+        result = rocfft_execution_info_create(&execinfo_bkw);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
+        result = rocfft_execution_info_set_stream(execinfo_bkw, amrex::Gpu::gpuStream());
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
+
+        void* in_buffer_bkw[2] = {(void*)m_rhs_fourier.dataPtr(), nullptr};
+        void* out_buffer_bkw[2] = {(void*)m_sol.dataPtr(), nullptr};
+
+        result = rocfft_execute(m_plan_bkw, in_buffer_bkw, out_buffer_bkw, execinfo_bkw);
+        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
+        result = rocfft_execution_info_destroy(execinfo_bkw);
+        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
 #else
         LaserFFT::VendorExecute( m_plan_bkw );
 #endif
