@@ -1,4 +1,4 @@
-/* Copyright 2023
+/* Copyright 2024
  *
  * This file is part of HiPACE++.
  *
@@ -21,6 +21,7 @@ constexpr auto MakeZeroTuple(amrex::GpuTuple<Args...>) {
 
 namespace detail {
 
+    // return TypeList<T, T, T, T, ... (N times)> by using the fast power algorithm
     template <class T, std::size_t N>
     constexpr auto SingleTypeMultiplier_imp() {
         if constexpr (N == 0) {
@@ -34,16 +35,20 @@ namespace detail {
         }
     }
 
+    // overload of SingleTypeMultiplier for multiple types:
+    // convert T[N] to  T, T, T, T, ... (N times with N >= 1)
     template <class T, std::size_t N>
     constexpr auto SingleTypeMultiplier(const T (&)[N]) {
         return SingleTypeMultiplier_imp<T, N>();
     }
 
+    // overload of SingleTypeMultiplier for one regular type
     template <class T>
     constexpr auto SingleTypeMultiplier(T) {
         return amrex::TypeList<T>{};
     }
 
+    // apply the types of the input TypeList as template arguments to TParam
     template <template <class...> class TParam, class... Args>
     constexpr auto TApply(amrex::TypeList<Args...>) {
         return amrex::TypeList<TParam<Args...>>{};
@@ -51,6 +56,8 @@ namespace detail {
 
 }
 
+// Return the first template argument with the later arguments applied to it.
+// Types of the form T[N] are expanded to T, T, T, T, ... (N times with N >= 1).
 template <template <class...> class TParam, class... Types>
 using TypeMultiplier = amrex::TypeAt<0, decltype(detail::TApply<TParam>(
     (amrex::TypeList<>{} + ... + detail::SingleTypeMultiplier(Types{}))
