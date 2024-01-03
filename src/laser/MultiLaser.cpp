@@ -968,7 +968,7 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
+                    amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
                     
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
@@ -981,10 +981,10 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * zp * 2._rt/( k0 * w0 * w0 );
+                    Complex diffract_factor = 1._rt + I * (zp-zfoc*std::cos(thetayz0)) * 2._rt/( k0 * w0 * w0 );
                     Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                     Complex prefactor = a0/diffract_factor;
-                    Complex time_exponent = (zp-z0+std::cos(thetayz0)*zfoc)*(zp-z0+std::cos(thetayz0)*zfoc)/(L0*L0);
+                    Complex time_exponent = zp*zp/(L0*L0);
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x*x + yp*yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * amrex::exp(I * yp * k0 * thetayz0);
