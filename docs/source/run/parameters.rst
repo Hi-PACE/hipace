@@ -761,7 +761,7 @@ Laser parameters
 The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
 The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
 Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
-which you can find in the output openPMD file as `laser_real` (for the real part of the envelope) and `laser_imag` for its imaginary part.
+which you can find in the output openPMD file as a complex array named `laserEnvelope`.
 Parameters starting with ``lasers.`` apply to all laser pulses, parameters starting with ``<laser name>`` apply to a single laser pulse.
 
 * ``lasers.names`` (list of `string`) optional (default `no_laser`)
@@ -897,7 +897,7 @@ Field diagnostics
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
     to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
     the charge density of that plasma species will be separately available as a diagnostic.
-    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)

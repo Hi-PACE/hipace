@@ -11,8 +11,6 @@ my_constants.Lramp = 6.e-3
 hipace.verbose = 1
 hipace.dt = 10.*kp_inv/clight
 diagnostic.output_period = 10
-hipace.numprocs_x = 1
-hipace.numprocs_y = 1
 
 amr.max_level = 0
 

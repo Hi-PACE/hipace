@@ -15,8 +15,7 @@
     "jy": 0.0,
     "jy_beam": 0.0,
     "jz_beam": 0.0,
-    "laser_imag": 204.838484522,
-    "laser_real": 418.9842197546,
+    "laserEnvelope": 478.81013980668,
     "rhomjz": 0.0
   }
 }

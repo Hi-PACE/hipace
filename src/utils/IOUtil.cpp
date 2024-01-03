@@ -14,9 +14,8 @@
 
 
 std::vector< double >
-utils::getRelativeCellPosition (amrex::FArrayBox const& fab)
+utils::getRelativeCellPosition (amrex::Box const& box)
 {
-    amrex::Box const box = fab.box();
     amrex::IndexType const idx_type = box.ixType();
     std::vector< double > relative_position(AMREX_SPACEDIM, 0.0);
     // amrex::CellIndex::CELL means: 0.5 from lower corner for that index/direction
@@ -27,6 +26,8 @@ utils::getRelativeCellPosition (amrex::FArrayBox const& fab)
         if (idx_type.cellCentered(d))
             relative_position.at(d) = 0.5;
     }
+    // convert to C order
+    std::reverse(relative_position.begin(), relative_position.end());
     return relative_position;
 }
 
