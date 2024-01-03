@@ -952,7 +952,6 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
     for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
-
         // Initialize a Gaussian laser envelope on slice islice
         for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
             const auto& laser = m_all_lasers[ilaser];
@@ -969,7 +968,6 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
                     amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
-                    
                     amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
                     const amrex::Real yp=std::cos(init_angle_yz)*y+std::sin(init_angle_yz)*z;
