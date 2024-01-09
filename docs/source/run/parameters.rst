@@ -924,7 +924,7 @@ In-situ diagnostics compute slice quantities (1 number per quantity per longitud
 For particle beams, they can be used to calculate the main characterizing beam parameters (width, energy spread, emittance, etc.), from which most common beam parameters (e.g. slice and projected emittance, etc.) can be computed. Additionally, the plasma particle properties (e.g, the temperature) can be calculated.
 
 For particle beams, the following quantities are calculated per slice and stored:
-``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [ga], [ga^2], np``.
+``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [x*uy], [y*ux], [ux/uz], [uy/uz], [ga], [ga^2], np``.
 For plasma particles, the following quantities are calculated per slice and stored:
 ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [ga], [ga^2], np``.
 Thereby, "[]" stands for averaging over all particles in the current slice,
