@@ -1301,7 +1301,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
                     pow<2>(arr(i,j,Bz)),                            // 5    [Bz^2]
                     pow<2>(arr(i,j,ExmBy)),                         // 6    [ExmBy^2]
                     pow<2>(arr(i,j,EypBx)),                         // 7    [EypBx^2]
-                    arr(i,j,Ez)*arr(i,j,jz_beam)                    // 8    [Ez*jz_beam]
+                    arr(i,j,jz_beam),                               // 8    [jz_beam]
+                    arr(i,j,Ez)*arr(i,j,jz_beam)                    // 9    [Ez*jz_beam]
                 };
             });
     }
@@ -1358,7 +1359,8 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
         {"[Bz^2]"   , &m_insitu_rdata[5*nslices], nslices},
         {"[ExmBy^2]", &m_insitu_rdata[6*nslices], nslices},
         {"[EypBx^2]", &m_insitu_rdata[7*nslices], nslices},
-        {"[Ez*jz_beam]", &m_insitu_rdata[8*nslices], nslices},
+        {"[jz_beam]", &m_insitu_rdata[8*nslices], nslices},
+        {"[Ez*jz_beam]", &m_insitu_rdata[9*nslices], nslices},
         {"integrated", {
             {"[Ex^2]"   , &m_insitu_sum_rdata[0]},
             {"[Ey^2]"   , &m_insitu_sum_rdata[1]},
@@ -1368,7 +1370,8 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
             {"[Bz^2]"   , &m_insitu_sum_rdata[5]},
             {"[ExmBy^2]", &m_insitu_sum_rdata[6]},
             {"[EypBx^2]", &m_insitu_sum_rdata[7]},
-            {"[Ez*jz_beam]", &m_insitu_sum_rdata[8]}
+            {"[jz_beam]", &m_insitu_sum_rdata[8]},
+            {"[Ez*jz_beam]", &m_insitu_sum_rdata[9]}
         }}
     };
 
