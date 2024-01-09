@@ -127,7 +127,7 @@ PlasmaParticleContainer::ReadParameters ()
                                      "The hollow core plasma radius must not be smaller than the "
                                      "plasma radius itself");
     queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
-    queryWithParserAlt(pp, "ppc", m_ppc, pp_alt);
+    getWithParserAlt(pp, "ppc", m_ppc, pp_alt);
     queryWithParser(pp, "u_mean", m_u_mean);
     bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
@@ -224,7 +224,7 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
             soa.GetRealData(PlasmaIdx::x_prev).data() : soa.GetRealData(PlasmaIdx::x).data();
         const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
             soa.GetRealData(PlasmaIdx::y_prev).data() : soa.GetRealData(PlasmaIdx::y).data();
-        int * const AMREX_RESTRICT cpup = soa.GetIntData(PlasmaIdx::cpu).data();
+        auto * AMREX_RESTRICT idcpup = soa.GetIdCPUData().data();
 
         const int lev1_idx = std::min(1, current_N_level-1);
         const int lev2_idx = std::min(2, current_N_level-1);
@@ -250,15 +250,15 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
                     lo_x_lev2 < xp && xp < hi_x_lev2 &&
                     lo_y_lev2 < yp && yp < hi_y_lev2) {
                     // level 2
-                    cpup[ip] = 2;
+                    amrex::ParticleCPUWrapper{idcpup[ip]} = 2;
                 } else if (current_N_level > 1 &&
                     lo_x_lev1 < xp && xp < hi_x_lev1 &&
                     lo_y_lev1 < yp && yp < hi_y_lev1) {
                     // level 1
-                    cpup[ip] = 1;
+                    amrex::ParticleCPUWrapper{idcpup[ip]} = 1;
                 } else {
                     // level 0
-                    cpup[ip] = 0;
+                    amrex::ParticleCPUWrapper{idcpup[ip]} = 0;
                 }
             }
         );
@@ -324,8 +324,7 @@ IonizationModule (const int lev,
         const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
         const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
         const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
-        const int * const idp = soa_ion.GetIntData(PlasmaIdx::id).data();
-        const int * const cpup = soa_ion.GetIntData(PlasmaIdx::cpu).data();
+        const auto * idcpup = soa_ion.GetIdCPUData().data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -342,7 +341,8 @@ IonizationModule (const int lev,
         amrex::ParallelForRNG(num_ions,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
 
-            if (idp[ip] < 0 || cpup[ip] != lev) return;
+            if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
+                amrex::ConstParticleCPUWrapper(idcpup[ip]) != lev) return;
 
             // avoid temp slice
             const amrex::Real xp = x_prev[ip];
@@ -402,6 +402,7 @@ IonizationModule (const int lev,
         auto arrdata_ion = ptile_ion.GetStructOfArrays().realarray();
         auto arrdata_elec = ptile_elec.GetStructOfArrays().realarray();
         auto int_arrdata_elec = ptile_elec.GetStructOfArrays().intarray();
+        auto idcpu_elec = ptile_elec.GetStructOfArrays().GetIdCPUData().data();
 
         const int init_ion_lev = m_product_pc->m_init_ion_lev;
 
@@ -416,8 +417,8 @@ IonizationModule (const int lev,
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                int_arrdata_elec[PlasmaIdx::id ][pidx] = pid_start + pid;
-                int_arrdata_elec[PlasmaIdx::cpu][pidx] = lev; // current level
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = pid_start + pid;
+                amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
 
@@ -461,7 +462,6 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
     const amrex::Real insitu_radius = m_insitu_radius;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
-    const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)

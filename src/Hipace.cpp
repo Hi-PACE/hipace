@@ -335,7 +335,6 @@ Hipace::Evolve ()
 
         if (m_multi_laser.m_use_laser) {
             AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
-            AMREX_ALWAYS_ASSERT(m_multi_plasma.GetNPlasmas() <= 1);
         }
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
@@ -972,10 +971,7 @@ Hipace::FillFieldDiagnostics (const int lev, int islice)
 {
     for (auto& fd : m_diags.getFieldData()) {
         if (fd.m_level == lev && fd.m_has_field) {
-            m_fields.Copy(lev, islice, fd.m_geom_io, fd.m_F,
-                fd.m_F.box(), m_3D_geom[lev],
-                fd.m_comps_output_idx, fd.m_nfields,
-                fd.m_do_laser, m_multi_laser, fd.m_slice_dir);
+            m_fields.Copy(lev, islice, fd, m_3D_geom[lev], m_multi_laser);
         }
     }
 }
@@ -998,13 +994,13 @@ Hipace::WriteDiagnostics (const int step)
 #ifdef HIPACE_USE_OPENPMD
     if (m_diags.hasAnyFieldOutput(step, m_max_step, m_physical_time, m_max_time)) {
         m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
-                        m_physical_time, step, getDiagBeamNames(),
+                        m_multi_laser, m_physical_time, step, getDiagBeamNames(),
                         m_3D_geom, OpenPMDWriterCallType::fields);
     }
 
     if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
         m_openpmd_writer.WriteDiagnostics(m_diags.getFieldData(), m_multi_beam,
-                        m_physical_time, step, getDiagBeamNames(),
+                        m_multi_laser, m_physical_time, step, getDiagBeamNames(),
                         m_3D_geom, OpenPMDWriterCallType::beams);
     }
 #else

@@ -78,6 +78,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
         [=] AMREX_GPU_DEVICE (const int ip, const int s)
         {
             if (ptd.id(ip) >= 0 && ptd.pos(2, ip) >= min_z) {
+                ptd_tmp.idcpu(s) = ptd.idcpu(ip);
                 for (int j=0; j<ptd_tmp.NAR; ++j) {
                     ptd_tmp.rdata(j)[s] = ptd.rdata(j)[ip];
                 }
@@ -101,6 +102,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
         [=] AMREX_GPU_DEVICE (const int ip, const int s)
         {
             if (ptd.id(ip) >= 0 && ptd.pos(2, ip) < min_z) {
+                ptd_next.idcpu(s+next_size) = ptd.idcpu(ip);
                 for (int j=0; j<ptd_next.NAR; ++j) {
                     ptd_next.rdata(j)[s+next_size] = ptd.rdata(j)[ip];
                 }

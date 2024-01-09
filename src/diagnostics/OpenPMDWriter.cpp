@@ -64,7 +64,7 @@ OpenPMDWriter::InitDiagnostics ()
 void
 OpenPMDWriter::WriteDiagnostics (
     const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
-    const amrex::Real physical_time, const int output_step,
+    const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step,
     const amrex::Vector< std::string > beamnames,
     amrex::Vector<amrex::Geometry> const& geom3D,
     const OpenPMDWriterCallType call_type)
@@ -77,7 +77,7 @@ OpenPMDWriter::WriteDiagnostics (
     } else if (call_type == OpenPMDWriterCallType::fields) {
         for (const auto& fd : field_diag) {
             if (fd.m_has_field) {
-                WriteFieldData(fd.m_F, fd.m_geom_io, fd.m_slice_dir, fd.m_comps_output, iteration);
+                WriteFieldData(fd, a_multi_laser, iteration);
             }
         }
     }
@@ -85,18 +85,25 @@ OpenPMDWriter::WriteDiagnostics (
 
 void
 OpenPMDWriter::WriteFieldData (
-    amrex::FArrayBox const& fab, amrex::Geometry const& geom,
-    const int slice_dir, const amrex::Vector< std::string > varnames,
-    openPMD::Iteration iteration)
+    const FieldDiagnosticData& fd, const MultiLaser& a_multi_laser, openPMD::Iteration iteration)
 {
     HIPACE_PROFILE("OpenPMDWriter::WriteFieldData()");
 
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
 
+    amrex::Vector<std::string> varnames = fd.m_comps_output;
+
+    if (fd.m_do_laser) {
+        // laser must be at the end of varnames
+        varnames.push_back(fd.m_laser_io_name);
+    }
+
     // loop over field components
     for ( int icomp = 0; icomp < varnames.size(); ++icomp )
     {
+        const bool is_laser_comp = varnames[icomp].find("laserEnvelope") == 0;
+
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
         openPMD::Mesh field = meshes[varnames[icomp]];
@@ -104,58 +111,57 @@ OpenPMDWriter::WriteFieldData (
 
         // meta-data
         field.setDataOrder(openPMD::Mesh::DataOrder::C);
-        //   node staggering
-        auto relative_cell_pos = utils::getRelativeCellPosition(fab);      // AMReX Fortran index order
-        std::reverse(relative_cell_pos.begin(), relative_cell_pos.end()); // now in C order
 
-        amrex::Box const data_box = fab.box();
+        const amrex::Geometry& geom = fd.m_geom_io;
+        const amrex::Box data_box = is_laser_comp ? fd.m_F_laser.box() : fd.m_F.box();
 
-        //   labels, spacing and offsets
+        // node staggering, labels, spacing and offsets
+        // convert AMReX Fortran index order to C order
+        auto relative_cell_pos = utils::getRelativeCellPosition(data_box);
         std::vector< std::string > axisLabels {"z", "y", "x"};
-        auto dCells = utils::getReversedVec(geom.CellSize()); // dx, dy, dz
-        amrex::Vector<double> finalproblo = {AMREX_D_DECL(
-                     static_cast<double>(geom.ProbLo()[2]),
-                     static_cast<double>(geom.ProbLo()[1]),
-                     static_cast<double>(geom.ProbLo()[0])
-                      )};
-        auto offWindow = finalproblo;
-        if (slice_dir >= 0) {
+        auto dCells = utils::getReversedVec(geom.CellSize()); // dz, dy, dx
+        auto offWindow = utils::getReversedVec(geom.ProbLo());
+        openPMD::Extent global_size = utils::getReversedVec(geom.Domain().size());
+        const amrex::IntVect box_offset {0, 0, data_box.smallEnd(2) - geom.Domain().smallEnd(2)};
+        openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
+        openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
+        if (fd.m_slice_dir >= 0) {
+            const int remove_dir = 2 - fd.m_slice_dir;
             // User requested slice IO
             // remove the slicing direction in position, label, resolution, offset
-            relative_cell_pos.erase(relative_cell_pos.begin() + 2-slice_dir);
-            axisLabels.erase(axisLabels.begin() + 2-slice_dir);
-            dCells.erase(dCells.begin() + 2-slice_dir);
-            offWindow.erase(offWindow.begin() + 2-slice_dir);
+            relative_cell_pos.erase(relative_cell_pos.begin() + remove_dir);
+            axisLabels.erase(axisLabels.begin() + remove_dir);
+            dCells.erase(dCells.begin() + remove_dir);
+            offWindow.erase(offWindow.begin() + remove_dir);
+            global_size.erase(global_size.begin() + remove_dir);
+            chunk_offset.erase(chunk_offset.begin() + remove_dir);
+            chunk_size.erase(chunk_size.begin() + remove_dir);
         }
         field_comp.setPosition(relative_cell_pos);
         field.setAxisLabels(axisLabels);
         field.setGridSpacing(dCells);
         field.setGridGlobalOffset(offWindow);
 
-        // data type and global size of the simulation
-        openPMD::Datatype datatype = openPMD::determineDatatype< amrex::Real >();
-        amrex::Vector<std::uint64_t> probsize_reformat = {AMREX_D_DECL(
-                     static_cast<std::uint64_t>(geom.Domain().size()[2]),
-                     static_cast<std::uint64_t>(geom.Domain().size()[1]),
-                     static_cast<std::uint64_t>(geom.Domain().size()[0]))};
-        openPMD::Extent global_size = probsize_reformat;
-        // If slicing requested, remove number of points for the slicing direction
-        if (slice_dir >= 0) global_size.erase(global_size.begin() + 2-slice_dir);
-
+        openPMD::Datatype datatype = is_laser_comp ?
+            openPMD::determineDatatype< std::complex<amrex::Real> >() :
+            openPMD::determineDatatype< amrex::Real >();
+        // set data type and global size of the simulation
         openPMD::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
 
-        // Determine the offset and size of this data chunk in the global output
-        amrex::IntVect const box_offset =
-            {0, 0, data_box.smallEnd(2) - geom.Domain().smallEnd(2)};
-        openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
-        openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
-        if (slice_dir >= 0) { // remove Ny components
-            chunk_offset.erase(chunk_offset.begin() + 2-slice_dir);
-            chunk_size.erase(chunk_size.begin() + 2-slice_dir);
+        if (is_laser_comp) {
+            // set laser attributes and store laser
+            field.setAttribute("envelopeField", "normalized_vector_potential");
+            field.setAttribute("angularFrequency",
+                double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
+            std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
+            field.setAttribute("polarization", polarization);
+            field_comp.storeChunkRaw(
+                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr()),
+                chunk_offset, chunk_size);
+        } else {
+            field_comp.storeChunkRaw(fd.m_F.dataPtr(icomp), chunk_offset, chunk_size);
         }
-
-        field_comp.storeChunkRaw(fab.dataPtr(icomp), chunk_offset, chunk_size);
     }
 }
 
@@ -166,7 +172,6 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
 
     const int nbeams = beams.get_nbeams();
     m_offset.resize(nbeams);
-    m_int_beam_data.resize(nbeams);
     m_uint64_beam_data.resize(nbeams);
     m_real_beam_data.resize(nbeams);
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
@@ -177,27 +182,15 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
         // initialize beam IO on first slice
         const uint64_t np_total = beams.getBeam(ibeam).getTotalNumParticles();
 
-        m_int_beam_data[ibeam].resize(m_int_names.size());
-
-        for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
-            m_int_beam_data[ibeam][idx].reset(
-                reinterpret_cast<int*>(
-                    amrex::The_Pinned_Arena()->alloc(sizeof(int)*np_total)
-                ),
-                [](int *p){
-                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
-                });
-        }
-
         m_uint64_beam_data[ibeam].resize(m_int_names.size());
 
         for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             m_uint64_beam_data[ibeam][idx].reset(
                 reinterpret_cast<uint64_t*>(
-                    amrex::The_Cpu_Arena()->alloc(sizeof(uint64_t)*np_total)
+                    amrex::The_Pinned_Arena()->alloc(sizeof(uint64_t)*np_total)
                 ),
                 [](uint64_t *p){
-                    amrex::The_Cpu_Arena()->free(reinterpret_cast<void*>(p));
+                    amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p));
                 });
         }
 
@@ -245,12 +238,12 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         SetupPos(beam_species, beam, np_total, geom);
         SetupRealProperties(beam_species, m_real_names, np_total);
 
-        for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
-            const int * const int_data = m_int_beam_data[ibeam][idx].get();
+        for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
 
             for (uint64_t i=0; i<np_total; ++i) {
-                uint64_data[i] = static_cast<uint64_t>(int_data[i]);
+                amrex::Long id = amrex::ConstParticleIDWrapper(uint64_data[i]);
+                uint64_data[i] = id;
             }
 
             // handle scalar and non-scalar records by name
@@ -291,11 +284,11 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
             // copy data from GPU to IO buffer
             auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
 
-            for (std::size_t idx=0; idx<m_int_beam_data[ibeam].size(); idx++) {
+            for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
-                    soa.GetIntData(idx).begin(),
-                    soa.GetIntData(idx).begin() + np,
-                    m_int_beam_data[ibeam][idx].get() + m_offset[ibeam]);
+                    soa.GetIdCPUData().begin(),
+                    soa.GetIdCPUData().begin() + np,
+                    m_uint64_beam_data[ibeam][idx].get() + m_offset[ibeam]);
             }
 
             for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
@@ -421,7 +414,6 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
 void OpenPMDWriter::flush ()
 {
     amrex::Gpu::streamSynchronize();
-    m_int_beam_data.resize(0);
     m_uint64_beam_data.resize(0);
     m_real_beam_data.resize(0);
     if (m_outputSeries) {

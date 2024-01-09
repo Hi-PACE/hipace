@@ -25,8 +25,7 @@ namespace
 {
     /** \brief Adds a single beam particle
      *
-     * \param[in,out] rarrdata real array with SoA beam data
-     * \param[in,out] iarrdata int array with SoA beam data
+     * \param[in,out] ptd real and int beam data
      * \param[in] x position in x
      * \param[in] y position in y
      * \param[in] z position in z
@@ -40,27 +39,25 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata,
-        amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata, const amrex::Real& x,
+        const BeamTileInit::ParticleTileDataType& ptd, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
         const amrex::Real& uz, const amrex::Real& weight, const int& pid,
         const int& ip, const amrex::Real& speed_of_light) noexcept
     {
-        rarrdata[BeamIdx::x  ][ip] = x;
-        rarrdata[BeamIdx::y  ][ip] = y;
-        rarrdata[BeamIdx::z  ][ip] = z;
-        rarrdata[BeamIdx::ux ][ip] = ux * speed_of_light;
-        rarrdata[BeamIdx::uy ][ip] = uy * speed_of_light;
-        rarrdata[BeamIdx::uz ][ip] = uz * speed_of_light;
-        rarrdata[BeamIdx::w  ][ip] = std::abs(weight);
+        ptd.rdata(BeamIdx::x  )[ip] = x;
+        ptd.rdata(BeamIdx::y  )[ip] = y;
+        ptd.rdata(BeamIdx::z  )[ip] = z;
+        ptd.rdata(BeamIdx::ux )[ip] = ux * speed_of_light;
+        ptd.rdata(BeamIdx::uy )[ip] = uy * speed_of_light;
+        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
+        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
-        iarrdata[BeamIdx::id ][ip] = pid > 0 ? pid + ip : pid;
+        ptd.id(ip) = pid > 0 ? pid + ip : pid;
     }
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
      *
-     * \param[in,out] rarrdata real array with SoA beam data
-     * \param[in,out] iarrdata int array with SoA beam data
+     * \param[in,out] ptd real and int beam data
      * \param[in] x position in x
      * \param[in] y position in y
      * \param[in] z position in z
@@ -75,19 +72,18 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticleSlice (
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata,
-        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata,const amrex::Real x,
+        const BeamTile::ParticleTileDataType& ptd, const amrex::Real x,
         const amrex::Real y, const amrex::Real z, const amrex::Real ux, const amrex::Real uy,
         const amrex::Real uz, const amrex::Real weight, const amrex::Long pid,
         const amrex::Long ip, const amrex::Real speed_of_light, const bool is_valid=true) noexcept
     {
-        rarrdata[BeamIdx::x  ][ip] = x;
-        rarrdata[BeamIdx::y  ][ip] = y;
-        rarrdata[BeamIdx::z  ][ip] = z;
-        rarrdata[BeamIdx::ux ][ip] = ux * speed_of_light;
-        rarrdata[BeamIdx::uy ][ip] = uy * speed_of_light;
-        rarrdata[BeamIdx::uz ][ip] = uz * speed_of_light;
-        rarrdata[BeamIdx::w  ][ip] = std::abs(weight);
+        ptd.rdata(BeamIdx::x  )[ip] = x;
+        ptd.rdata(BeamIdx::y  )[ip] = y;
+        ptd.rdata(BeamIdx::z  )[ip] = z;
+        ptd.rdata(BeamIdx::ux )[ip] = ux * speed_of_light;
+        ptd.rdata(BeamIdx::uy )[ip] = uy * speed_of_light;
+        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
+        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
         // ensure id is always valid
         // it will repeat if there are more than 2^31-1 particles
@@ -95,9 +91,9 @@ namespace
         if (id == 0) id = 1;
         if (!is_valid) id = -1;
 
-        iarrdata[BeamIdx::id ][ip] = id;
-        iarrdata[BeamIdx::cpu][ip] = 0;
-        iarrdata[BeamIdx::nsubcycles][ip] = 0;
+        ptd.id(ip) = id;
+        ptd.cpu(ip) = 0;
+        ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
     }
 }
 
@@ -271,11 +267,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
     if (num_to_add == 0) return;
     auto& particle_tile = getBeamSlice(which_beam_slice);
 
-    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
-        particle_tile.GetStructOfArrays().realarray();
-
-    amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
-        particle_tile.GetStructOfArrays().intarray();
+    const auto ptd = particle_tile.getParticleTileData();
 
     const uint64_t pid = m_id64;
     m_id64 += num_to_add;
@@ -324,7 +316,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
 
                 const amrex::Real weight = density * scale_fac;
 
-                AddOneBeamParticleSlice(rarrdata, iarrdata, x, y, z, u[0], u[1], u[2], weight,
+                AddOneBeamParticleSlice(ptd, x, y, z, u[0], u[1], u[2], weight,
                                         pid, pidx, speed_of_light, true);
 
                 ++pidx;
@@ -389,10 +381,7 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     auto& particle_tile = getBeamSlice(which_slice);
 
     // Access particles' SoA
-    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
-        particle_tile.GetStructOfArrays().realarray();
-    amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
-        particle_tile.GetStructOfArrays().intarray();
+    const auto ptd = particle_tile.getParticleTileData();
 
     const amrex::Long slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
     const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
@@ -440,21 +429,21 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
 
             if (!do_symmetrize)
             {
-                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
                                         pid, i, clight, is_valid);
 
             } else {
-                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos+y,
+                AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
                                         pid, 4*i, clight, is_valid);
-                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos+y,
+                AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos+y,
                                         z_central, -u[0], u[1], u[2], weight,
                                         pid, 4*i+1, clight, is_valid);
-                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos+x, cental_y_pos-y,
+                AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos-y,
                                         z_central, u[0], -u[1], u[2], weight,
                                         pid, 4*i+2, clight, is_valid);
-                AddOneBeamParticleSlice(rarrdata, iarrdata, cental_x_pos-x, cental_y_pos-y,
+                AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos-y,
                                         z_central, -u[0], -u[1], u[2], weight,
                                         pid, 4*i+3, clight, is_valid);
             }
@@ -594,10 +583,7 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
 
         auto& particle_tile = getBeamSlice(which_slice);
         // Access particles' SoA
-        amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs> rarrdata =
-            particle_tile.GetStructOfArrays().realarray();
-        amrex::GpuArray<int*, BeamIdx::int_nattribs> iarrdata =
-            particle_tile.GetStructOfArrays().intarray();
+        const auto ptd = particle_tile.getParticleTileData();
 
         const uint64_t pid = m_id64;
         m_id64 += num_to_add;
@@ -666,17 +652,17 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
 
                 if (!do_symmetrize)
                 {
-                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean+x, y_mean+y,
+                    AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
                                             z, ux, uy, uz, weight, pid, i, clight, is_valid);
 
                 } else {
-                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean+x, y_mean+y,
+                    AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
                                             z, ux, uy, uz, weight, pid, 4*i, clight, is_valid);
-                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean-x, y_mean+y,
+                    AddOneBeamParticleSlice(ptd, x_mean-x, y_mean+y,
                                             z, -ux, uy, uz, weight, pid, 4*i+1, clight, is_valid);
-                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean+x, y_mean-y,
+                    AddOneBeamParticleSlice(ptd, x_mean+x, y_mean-y,
                                             z, ux, -uy, uz, weight, pid, 4*i+2, clight, is_valid);
-                    AddOneBeamParticleSlice(rarrdata, iarrdata, x_mean-x, y_mean-y,
+                    AddOneBeamParticleSlice(ptd, x_mean-x, y_mean-y,
                                             z, -ux, -uy, uz, weight, pid, 4*i+3, clight, is_valid);
                 }
             });
@@ -1043,10 +1029,7 @@ InitBeamFromFile (const std::string input_file,
     auto old_size = particle_tile.size();
     auto new_size = old_size + num_to_add;
     particle_tile.resize(new_size);
-    amrex::GpuArray<amrex::ParticleReal*, BeamIdx::real_nattribs_in_buffer> rarrdata =
-        particle_tile.GetStructOfArrays().realarray();
-    amrex::GpuArray<int*, BeamIdx::int_nattribs_in_buffer> iarrdata =
-        particle_tile.GetStructOfArrays().intarray();
+    const auto ptd = particle_tile.getParticleTileData();
     const int pid = BeamTileInit::ParticleType::NextID();
     BeamTileInit::ParticleType::NextID(pid + num_to_add);
 
@@ -1060,7 +1043,7 @@ InitBeamFromFile (const std::string input_file,
 
     amrex::ParallelFor(int(num_to_add),
         [=] AMREX_GPU_DEVICE (const int i) {
-            AddOneBeamParticle(rarrdata, iarrdata,
+            AddOneBeamParticle(ptd,
                 static_cast<amrex::Real>(r_x_ptr[i] * unit_rx),
                 static_cast<amrex::Real>(r_y_ptr[i] * unit_ry),
                 static_cast<amrex::Real>(r_z_ptr[i] * unit_rz),

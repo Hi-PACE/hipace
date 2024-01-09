@@ -11,6 +11,7 @@
 #include "diagnostics/Diagnostic.H"
 #include "particles/beam/MultiBeam.H"
 #include "particles/beam/BeamParticleContainer.H"
+#include "laser/MultiLaser.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_IntVect.H>
@@ -66,14 +67,11 @@ private:
 
     /** \brief writing openPMD field data
      *
-     * \param[in] fab the FArrayBox to dump
-     * \param[in] geom Geometry of the simulation, to get the cell size etc.
-     * \param[in] slice_dir direction of slicing. 0=x, 1=y, -1=no slicing (3D array)
-     * \param[in] varnames list of variable names for the fields (ExmBy, EypBx, Ey, ...)
+     * \param[in] fd field diagnostic data
+     * \param[in] a_multi_laser multi laser to get the central wavelength
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
-    void WriteFieldData (amrex::FArrayBox const& fab, amrex::Geometry const& geom,
-                         const int slice_dir, const amrex::Vector< std::string > varnames,
+    void WriteFieldData (const FieldDiagnosticData& fd, const MultiLaser& a_multi_laser,
                          openPMD::Iteration iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
@@ -99,7 +97,6 @@ private:
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
 
-    std::vector<std::vector<std::shared_ptr<int>>> m_int_beam_data {};
     std::vector<std::vector<std::shared_ptr<uint64_t>>> m_uint64_beam_data {};
     std::vector<std::vector<std::shared_ptr<amrex::ParticleReal>>> m_real_beam_data {};
 
@@ -130,7 +127,7 @@ public:
      */
     void WriteDiagnostics (
         const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
-        const amrex::Real physical_time, const int output_step,
+        const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step,
         const amrex::Vector< std::string > beamnames,
         amrex::Vector<amrex::Geometry> const& geom3D,
         const OpenPMDWriterCallType call_type);
