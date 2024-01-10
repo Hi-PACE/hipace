@@ -97,7 +97,7 @@ General parameters
     rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
     If there are more time steps than ranks, these parameters must be chosen such that between all
     ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
-    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
+    ``(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices``.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
@@ -333,7 +333,7 @@ When both are specified, the per-species value is used.
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
-* ``<plasma name> or plasmas.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
@@ -761,7 +761,7 @@ Laser parameters
 The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
 The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
 Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
-which you can find in the output openPMD file as `laser_real` (for the real part of the envelope) and `laser_imag` for its imaginary part.
+which you can find in the output openPMD file as a complex array named `laserEnvelope`.
 Parameters starting with ``lasers.`` apply to all laser pulses, parameters starting with ``<laser name>`` apply to a single laser pulse.
 
 * ``lasers.names`` (list of `string`) optional (default `no_laser`)
@@ -897,7 +897,7 @@ Field diagnostics
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
     to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
     the charge density of that plasma species will be separately available as a diagnostic.
-    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
