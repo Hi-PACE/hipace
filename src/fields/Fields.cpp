@@ -15,6 +15,7 @@
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "utils/InsituUtil.H"
+#include "utils/TemplateUtil.H"
 #include "particles/particles_utils/ShapeFactors.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
@@ -205,8 +206,8 @@ Fields::AllocData (
             "Must choose a different field insitu file prefix compared to the full diagnostics");
 #endif
         // Allocate memory for in-situ diagnostics
-        m_insitu_rdata.resize(geom.Domain().length(2)*9, 0.);
-        m_insitu_sum_rdata.resize(9, 0.);
+        m_insitu_rdata.resize(geom.Domain().length(2)*m_insitu_nrp, 0.);
+        m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
     }
 }
 
@@ -725,12 +726,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                 const amrex::Real x = (i * dx + poff_x) * scale;
                 const amrex::Real y = (j * dy + poff_y) * scale;
                 if (x*x + y*y > cutoff_sq)  {
-                    return MultipoleTuple{0._rt,
-                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
-                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
-                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
-                        0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt
-                    };
+                    return MakeZeroTuple(MultipoleTuple{});
                 }
                 amrex::Real s_v = arr_staging_area(i, j);
                 return GetMultipoleCoeffs(s_v, x, y);
@@ -1288,14 +1284,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
 
     amrex::MultiFab& slicemf = getSlices(lev);
 
-    // Tuple contains:
-    //      0,       1,      2,      3,      4,      5,         6,         7             8
-    //  <Ex^2>, <Ey^2>, <Ez^2>, <Bx^2>, <By^2>, <Bz^2>, <ExmBy^2>, <EypBx^2>, <Ez*jz_beam>
-    amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
-    amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
+    TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp]> reduce_op;
+    TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp]> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
     for ( amrex::MFIter mfi(slicemf, DfltMfi); mfi.isValid(); ++mfi ) {
@@ -1304,40 +1294,28 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
             mfi.tilebox(), reduce_data,
             [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
             {
-                return {
-                    pow<2>(arr(i,j,ExmBy) + arr(i,j,By) * clight),
-                    pow<2>(arr(i,j,EypBx) - arr(i,j,Bx) * clight),
-                    pow<2>(arr(i,j,Ez)),
-                    pow<2>(arr(i,j,Bx)),
-                    pow<2>(arr(i,j,By)),
-                    pow<2>(arr(i,j,Bz)),
-                    pow<2>(arr(i,j,ExmBy)),
-                    pow<2>(arr(i,j,EypBx)),
-                    arr(i,j,Ez)*arr(i,j,jz_beam)
+                return {                                            // Tuple contains:
+                    pow<2>(arr(i,j,ExmBy) + arr(i,j,By) * clight),  // 0    [Ex^2]
+                    pow<2>(arr(i,j,EypBx) - arr(i,j,Bx) * clight),  // 1    [Ey^2]
+                    pow<2>(arr(i,j,Ez)),                            // 2    [Ez^2]
+                    pow<2>(arr(i,j,Bx)),                            // 3    [Bx^2]
+                    pow<2>(arr(i,j,By)),                            // 4    [By^2]
+                    pow<2>(arr(i,j,Bz)),                            // 5    [Bz^2]
+                    pow<2>(arr(i,j,ExmBy)),                         // 6    [ExmBy^2]
+                    pow<2>(arr(i,j,EypBx)),                         // 7    [EypBx^2]
+                    arr(i,j,Ez)*arr(i,j,jz_beam)                    // 8    [Ez*jz_beam]
                 };
             });
     }
 
     ReduceTuple a = reduce_data.value();
 
-    m_insitu_rdata[islice          ] = amrex::get<0>(a)*dxdydz;
-    m_insitu_rdata[islice+1*nslices] = amrex::get<1>(a)*dxdydz;
-    m_insitu_rdata[islice+2*nslices] = amrex::get<2>(a)*dxdydz;
-    m_insitu_rdata[islice+3*nslices] = amrex::get<3>(a)*dxdydz;
-    m_insitu_rdata[islice+4*nslices] = amrex::get<4>(a)*dxdydz;
-    m_insitu_rdata[islice+5*nslices] = amrex::get<5>(a)*dxdydz;
-    m_insitu_rdata[islice+6*nslices] = amrex::get<6>(a)*dxdydz;
-    m_insitu_rdata[islice+7*nslices] = amrex::get<7>(a)*dxdydz;
-    m_insitu_rdata[islice+8*nslices] = amrex::get<8>(a)*dxdydz;
-    m_insitu_sum_rdata[0] += amrex::get<0>(a)*dxdydz;
-    m_insitu_sum_rdata[1] += amrex::get<1>(a)*dxdydz;
-    m_insitu_sum_rdata[2] += amrex::get<2>(a)*dxdydz;
-    m_insitu_sum_rdata[3] += amrex::get<3>(a)*dxdydz;
-    m_insitu_sum_rdata[4] += amrex::get<4>(a)*dxdydz;
-    m_insitu_sum_rdata[5] += amrex::get<5>(a)*dxdydz;
-    m_insitu_sum_rdata[6] += amrex::get<6>(a)*dxdydz;
-    m_insitu_sum_rdata[7] += amrex::get<7>(a)*dxdydz;
-    m_insitu_sum_rdata[8] += amrex::get<8>(a)*dxdydz;
+    amrex::constexpr_for<0, m_insitu_nrp>(
+        [&] (auto idx) {
+            m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
+            m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+        }
+    );
 }
 
 void

@@ -12,6 +12,7 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/InsituUtil.H"
+#include "utils/TemplateUtil.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
@@ -450,116 +451,71 @@ BeamParticleContainer::InSituComputeDiags (int islice)
     AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_idata.size()>0 &&
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
-    const amrex::Real insitu_radius = m_insitu_radius;
+    const amrex::Real insitu_radius_sq = m_insitu_radius * m_insitu_radius;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
-    const amrex::Real clightsq_inv = 1.0_rt/(phys_const.c*phys_const.c);
+    const auto ptd = getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-    auto const& soa = getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-    const auto pos_x = soa.GetRealData(BeamIdx::x).data();
-    const auto pos_y = soa.GetRealData(BeamIdx::y).data();
-    const auto pos_z = soa.GetRealData(BeamIdx::z).data();
-    const auto  wp = soa.GetRealData(BeamIdx::w).data();
-    const auto uxp = soa.GetRealData(BeamIdx::ux).data();
-    const auto uyp = soa.GetRealData(BeamIdx::uy).data();
-    const auto uzp = soa.GetRealData(BeamIdx::uz).data();
-    auto idcpup = soa.GetIdCPUData().data();
-
-    // Tuple contains:
-    //      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
-    // sum(w), <x>, <x^2>, <y>, <y^2>, <z>, <z^2>, <ux>, <ux^2>, <uy>, <uy^2>, <uz>, <uz^2>,
-    //
-    //     13,     14,     15,   16,     17, 18
-    // <x*ux>, <y*uy>, <z*uz>, <ga>, <ga^2>, np
-    amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-                     amrex::ReduceOpSum> reduce_op;
-    amrex::ReduceData<amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, amrex::Real, amrex::Real,
-                      amrex::Real, amrex::Real, int> reduce_data(reduce_op);
+    TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
+    TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
     reduce_op.eval(
         getNumParticles(WhichBeamSlice::This), reduce_data,
         [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
         {
-            if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
-                pos_x[ip]*pos_x[ip] + pos_y[ip]*pos_y[ip] > insitu_radius*insitu_radius) {
-                return{0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt,
-                    0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0._rt, 0};
+            const amrex::Real x = ptd.pos(0, ip);
+            const amrex::Real y = ptd.pos(1, ip);
+            const amrex::Real z = ptd.pos(2, ip);
+            const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip] * clight_inv; // proper velocity to u
+            const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip] * clight_inv;
+            const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip] * clight_inv;
+            const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
+
+            if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
+                return MakeZeroTuple(ReduceTuple{});
             }
-            const amrex::Real gamma = std::sqrt(1.0_rt + uxp[ip]*uxp[ip]*clightsq_inv
-                                                       + uyp[ip]*uyp[ip]*clightsq_inv
-                                                       + uzp[ip]*uzp[ip]*clightsq_inv);
-            return {wp[ip],
-                    wp[ip]*pos_x[ip],
-                    wp[ip]*pos_x[ip]*pos_x[ip],
-                    wp[ip]*pos_y[ip],
-                    wp[ip]*pos_y[ip]*pos_y[ip],
-                    wp[ip]*pos_z[ip],
-                    wp[ip]*pos_z[ip]*pos_z[ip],
-                    wp[ip]*uxp[ip]*clight_inv,
-                    wp[ip]*uxp[ip]*uxp[ip]*clightsq_inv,
-                    wp[ip]*uyp[ip]*clight_inv,
-                    wp[ip]*uyp[ip]*uyp[ip]*clightsq_inv,
-                    wp[ip]*uzp[ip]*clight_inv,
-                    wp[ip]*uzp[ip]*uzp[ip]*clightsq_inv,
-                    wp[ip]*pos_x[ip]*uxp[ip]*clight_inv,
-                    wp[ip]*pos_y[ip]*uyp[ip]*clight_inv,
-                    wp[ip]*pos_z[ip]*uzp[ip]*clight_inv,
-                    wp[ip]*gamma,
-                    wp[ip]*gamma*gamma,
-                    1};
+            const amrex::Real gamma = std::sqrt(1.0_rt + ux*ux + uy*uy + uz*uz);
+            return {            // Tuple contains:
+                w,              // 0    sum(w)
+                w*x,            // 1    [x]
+                w*x*x,          // 2    [x^2]
+                w*y,            // 3    [y]
+                w*y*y,          // 4    [y^2]
+                w*z,            // 5    [z]
+                w*z*z,          // 6    [z^2]
+                w*ux,           // 7    [ux]
+                w*ux*ux,        // 8    [ux^2]
+                w*uy,           // 9    [uy]
+                w*uy*uy,        // 10   [uy^2]
+                w*uz,           // 11   [uz]
+                w*uz*uz,        // 12   [uz^2]
+                w*x*ux,         // 13   [x*ux]
+                w*y*uy,         // 14   [y*uy]
+                w*z*uz,         // 15   [z*uz]
+                w*gamma,        // 16   [ga]
+                w*gamma*gamma,  // 17   [ga^2]
+                1               // 18   Np
+            };
         });
 
     ReduceTuple a = reduce_data.value();
-    const amrex::Real sum_w0 = amrex::get< 0>(a);
-    const amrex::Real sum_w_inv = sum_w0<=0._rt ? 0._rt : 1._rt/sum_w0;
+    const amrex::Real sum_w_inv = amrex::get<0>(a) <= 0._rt ? 0._rt : 1._rt / amrex::get<0>(a);
 
-    m_insitu_rdata[islice             ] = sum_w0;
-    m_insitu_rdata[islice+ 1*m_nslices] = amrex::get< 1>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 2*m_nslices] = amrex::get< 2>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 3*m_nslices] = amrex::get< 3>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 4*m_nslices] = amrex::get< 4>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 5*m_nslices] = amrex::get< 5>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 6*m_nslices] = amrex::get< 6>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 7*m_nslices] = amrex::get< 7>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 8*m_nslices] = amrex::get< 8>(a)*sum_w_inv;
-    m_insitu_rdata[islice+ 9*m_nslices] = amrex::get< 9>(a)*sum_w_inv;
-    m_insitu_rdata[islice+10*m_nslices] = amrex::get<10>(a)*sum_w_inv;
-    m_insitu_rdata[islice+11*m_nslices] = amrex::get<11>(a)*sum_w_inv;
-    m_insitu_rdata[islice+12*m_nslices] = amrex::get<12>(a)*sum_w_inv;
-    m_insitu_rdata[islice+13*m_nslices] = amrex::get<13>(a)*sum_w_inv;
-    m_insitu_rdata[islice+14*m_nslices] = amrex::get<14>(a)*sum_w_inv;
-    m_insitu_rdata[islice+15*m_nslices] = amrex::get<15>(a)*sum_w_inv;
-    m_insitu_rdata[islice+16*m_nslices] = amrex::get<16>(a)*sum_w_inv;
-    m_insitu_rdata[islice+17*m_nslices] = amrex::get<17>(a)*sum_w_inv;
-    m_insitu_idata[islice             ] = amrex::get<18>(a);
+    amrex::constexpr_for<0, m_insitu_nrp>(
+        [&] (auto idx) {
+            m_insitu_rdata[islice + idx.value * m_nslices] = amrex::get<idx.value>(a) *
+                // sum(w) is not multiplied by sum_w_inv
+                ( idx.value == 0 ? 1 : sum_w_inv );
+            m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a);
+        }
+    );
 
-    m_insitu_sum_rdata[ 0] += sum_w0;
-    m_insitu_sum_rdata[ 1] += amrex::get< 1>(a);
-    m_insitu_sum_rdata[ 2] += amrex::get< 2>(a);
-    m_insitu_sum_rdata[ 3] += amrex::get< 3>(a);
-    m_insitu_sum_rdata[ 4] += amrex::get< 4>(a);
-    m_insitu_sum_rdata[ 5] += amrex::get< 5>(a);
-    m_insitu_sum_rdata[ 6] += amrex::get< 6>(a);
-    m_insitu_sum_rdata[ 7] += amrex::get< 7>(a);
-    m_insitu_sum_rdata[ 8] += amrex::get< 8>(a);
-    m_insitu_sum_rdata[ 9] += amrex::get< 9>(a);
-    m_insitu_sum_rdata[10] += amrex::get<10>(a);
-    m_insitu_sum_rdata[11] += amrex::get<11>(a);
-    m_insitu_sum_rdata[12] += amrex::get<12>(a);
-    m_insitu_sum_rdata[13] += amrex::get<13>(a);
-    m_insitu_sum_rdata[14] += amrex::get<14>(a);
-    m_insitu_sum_rdata[15] += amrex::get<15>(a);
-    m_insitu_sum_rdata[16] += amrex::get<16>(a);
-    m_insitu_sum_rdata[17] += amrex::get<17>(a);
-    m_insitu_sum_idata[ 0] += amrex::get<18>(a);
+    amrex::constexpr_for<0, m_insitu_nip>(
+        [&] (auto idx) {
+            m_insitu_idata[islice + idx.value * m_nslices] = amrex::get<m_insitu_nrp+idx.value>(a);
+            m_insitu_sum_idata[idx.value] += amrex::get<m_insitu_nrp+idx.value>(a);
+        }
+    );
 }
 
 void

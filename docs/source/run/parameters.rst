@@ -932,6 +932,11 @@ Thereby, "[]" stands for averaging over all particles in the current slice,
 Averages and totals over all slices are also provided for convenience under the
 respective ``average`` and ``total`` subcategories.
 
+For the field in-situ diagnostics, the following quantities are calculated per slice and stored:
+``[Ex^2], [Ey^2], [Ez^2], [Bx^2], [By^2], [Bz^2], [ExmBy^2], [EypBx^2], [Ez*jz_beam]``.
+Thereby, "[]" stands for averaging over all cells in the current slice.
+These quantities can be used to calculate the energy stored in the fields.
+
 Additionally, some metadata is also available:
 ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
 ``time`` and ``step`` refers to the physical time of the simulation and step number of the
