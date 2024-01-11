@@ -22,7 +22,7 @@ public:
     std::string m_name {""};
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::Real m_w0 {0.}; /**< Laser waist */
-    amrex::Real m_init_angle_yz {0.}; /**< initial angle of laser pulse fron tilt on yoz */
+    amrex::Real m_propagation_angle_yz {0.};/**< Propagation angle of the pulse in the yz plane (0 is the along the z axis) */
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
     /** Focal distance of the laser pulse */
