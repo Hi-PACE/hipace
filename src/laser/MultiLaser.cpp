@@ -1030,7 +1030,7 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * (z-zfoc*std::cos(propagation_angle_yz)+z0) * 2._rt/( k0 * w0 * w0 );
+                    Complex diffract_factor = 1._rt + I * (z-zfoc*std::cos(propagation_angle_yz)+z0*std::cos(propagation_angle_yz)) * 2._rt/( k0 * w0 * w0 );
                     Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                     Complex prefactor = a0/diffract_factor;
                     Complex time_exponent = z*z/(L0*L0);
