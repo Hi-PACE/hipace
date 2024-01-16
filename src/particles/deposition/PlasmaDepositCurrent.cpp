@@ -301,20 +301,20 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 amrex::Box srcbx = dstbx;
                 srcbx -= amrex::IntVect(a_itilex_bs, a_itiley_bs, srcbx.smallEnd(2));
                 if (jx_cmp != -1) {
-                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 0, jx_cmp, 1);
-                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 1, jy_cmp, 1);
+                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 0, jx_cmp, 1);
+                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 1, jy_cmp, 1);
                 }
                 if (jz_cmp != -1) {
-                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 2, jz_cmp, 1);
+                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 2, jz_cmp, 1);
                 }
                 if (rho_cmp != -1) {
-                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 3, rho_cmp, 1);
+                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 3, rho_cmp, 1);
                 }
                 if (chi_cmp != -1) {
-                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 4, chi_cmp, 1);
+                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 4, chi_cmp, 1);
                 }
                 if (rhomjz_cmp != -1) {
-                    isl_fab.atomicAdd(tmp_dens[ithread], srcbx, dstbx, 5, rhomjz_cmp, 1);
+                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 5, rhomjz_cmp, 1);
                 }
             }
 #endif
