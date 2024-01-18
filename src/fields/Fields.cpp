@@ -1386,9 +1386,9 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
     ofs.close();
     // assert no file errors
 #ifdef HIPACE_USE_OPENPMD
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu field diagnostics");
 #else
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics. "
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu field diagnostics. "
         "Maybe the specified subdirectory does not exist");
 #endif
 

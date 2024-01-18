@@ -33,6 +33,7 @@ struct DataNode {
         std::string type_letter = "";
         if (std::is_integral_v<T> && std::is_signed_v<T>) type_letter = "i"; // int
         else if (std::is_integral_v<T> && std::is_unsigned_v<T>) type_letter = "u"; // unsiged int
+        else if (std::is_same_v<T, amrex::GpuComplex<amrex::Real>>) type_letter = "c"; // complex
         else if (std::is_floating_point_v<T>) type_letter = "f"; // float, double
         else amrex::Abort("DataNode (): unknown type T");
 

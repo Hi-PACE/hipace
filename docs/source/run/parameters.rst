@@ -934,8 +934,14 @@ respective ``average`` and ``total`` subcategories.
 
 For the field in-situ diagnostics, the following quantities are calculated per slice and stored:
 ``[Ex^2], [Ey^2], [Ez^2], [Bx^2], [By^2], [Bz^2], [ExmBy^2], [EypBx^2], [Ez*jz_beam]``.
-Thereby, "[]" stands for averaging over all cells in the current slice.
+Thereby, "[]" stands for integrating over all cells in the current slice.
 These quantities can be used to calculate the energy stored in the fields.
+
+For the laser in-situ diagnostics, the following quantities are calculated per slice and stored:
+``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a)``.
+Thereby, "[]" stands for integrating over all cells in the current slice, ``max(|a|^2)`` is the highest
+value of ``|a|^2`` in the current slice and ``axis(a)`` gives the complex value of the laser envelope,
+in the center of every slice.
 
 Additionally, some metadata is also available:
 ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
@@ -983,6 +989,12 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 
 * ``fields.insitu_file_prefix`` (`string`) optional (default ``"diags/field_insitu"``)
     Path of the field in-situ output. Must not be the same as `hipace.file_prefix`.
+
+* ``lasers.insitu_period`` (`int`) optional (default ``0``)
+    Period of the laser in-situ diagnostics. `0` means no field in-situ diagnostics.
+
+* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"diags/laser_insitu"``)
+    Path of the laser in-situ output. Must not be the same as `hipace.file_prefix`.
 
 Additional physics
 ------------------

@@ -12,12 +12,17 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"
+#include "utils/InsituUtil.H"
+#include "utils/TemplateUtil.H"
 #ifdef AMREX_USE_CUDA
 #  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
 #elif defined(AMREX_USE_HIP)
 #  include "fields/fft_poisson_solver/fft/RocFFTUtils.H"
 #endif
 #include "particles/particles_utils/ShapeFactors.H"
+#ifdef HIPACE_USE_OPENPMD
+#   include <openPMD/auxiliary/Filesystem.hpp>
+#endif
 
 #include <AMReX_GpuComplex.H>
 
@@ -72,6 +77,9 @@ MultiLaser::ReadParameters ()
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
     }
+
+    queryWithParser(pp, "insitu_period", m_insitu_period);
+    queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
 }
 
 
@@ -175,6 +183,18 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
             amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
             amrex::ParallelDescriptor::Communicator());
 #endif
+    }
+
+    if (m_insitu_period > 0) {
+#ifdef HIPACE_USE_OPENPMD
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
+            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            "Must choose a different field insitu file prefix compared to the full diagnostics");
+#endif
+        // Allocate memory for in-situ diagnostics
+        m_insitu_rdata.resize(m_laser_geom_3D.Domain().length(2)*m_insitu_nrp, 0.);
+        m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
+        m_insitu_cdata.resize(m_laser_geom_3D.Domain().length(2)*m_insitu_ncp, 0.);
     }
 }
 
@@ -1041,4 +1061,162 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 );
         }
     }
+}
+
+void
+MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+                                int max_step, amrex::Real max_time)
+{
+    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    HIPACE_PROFILE("MultiLaser::InSituComputeDiags()");
+
+    using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
+
+    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_sum_rdata.size()>0 &&
+                        m_insitu_cdata.size()>0);
+
+    const int nslices = geom3D.Domain().length(2);
+    const amrex::Real poff_x = GetPosOffset(0, geom3D, geom3D.Domain());
+    const amrex::Real poff_y = GetPosOffset(1, geom3D, geom3D.Domain());
+    const amrex::Real dx = geom3D.CellSize(0);
+    const amrex::Real dy = geom3D.CellSize(1);
+    const amrex::Real dxdydz = dx * dy * geom3D.CellSize(2);
+
+    const int xmid_lo = geom3D.Domain().smallEnd(0) + (geom3D.Domain().length(0) - 1) / 2;
+    const int xmid_hi = geom3D.Domain().smallEnd(0) + (geom3D.Domain().length(0)) / 2;
+    const int ymid_lo = geom3D.Domain().smallEnd(1) + (geom3D.Domain().length(1) - 1) / 2;
+    const int ymid_hi = geom3D.Domain().smallEnd(1) + (geom3D.Domain().length(1)) / 2;
+    const amrex::Real mid_factor = (xmid_lo == xmid_hi ? 1._rt : 0.5_rt)
+                                 * (ymid_lo == ymid_hi ? 1._rt : 0.5_rt);
+
+    TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpMax, amrex::ReduceOpSum[m_insitu_nrp-1+m_insitu_ncp]> reduce_op;
+    TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], Complex[m_insitu_ncp]> reduce_data(reduce_op);
+    using ReduceTuple = typename decltype(reduce_data)::Type;
+
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ) {
+        Array3<amrex::Real const> const arr = m_slices.const_array(mfi);
+        reduce_op.eval(
+            mfi.tilebox(), reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            {
+                using namespace WhichLaserSlice;
+                const amrex::Real areal = arr(i,j, n00j00_r);
+                const amrex::Real aimag = arr(i,j, n00j00_i);
+                const amrex::Real aabssq = abssq(areal, aimag);
+
+                const amrex::Real x = i * dx + poff_x;
+                const amrex::Real y = j * dy + poff_y;
+
+                const bool is_on_axis = (i==xmid_lo || i==xmid_hi) && (j==ymid_lo || j==ymid_hi);
+                const Complex aaxis{is_on_axis ? areal : 0._rt, is_on_axis ? aimag : 0._rt};
+
+                return {            // Tuple contains:
+                    aabssq,         // 0    max(|a|^2)
+                    aabssq,         // 1    [|a|^2]
+                    aabssq*x,       // 2    [|a|^2*x]
+                    aabssq*x*x,     // 3    [|a|^2*x*x]
+                    aabssq*y,       // 4    [|a|^2*y]
+                    aabssq*y*y,     // 5    [|a|^2*y*y]
+                    aaxis           // 6    axis(a)
+                };
+            });
+    }
+
+    ReduceTuple a = reduce_data.value();
+
+    amrex::constexpr_for<0, m_insitu_nrp>(
+        [&] (auto idx) {
+            if (idx.value == 0) {
+                m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a);
+                m_insitu_sum_rdata[idx.value] =
+                    std::max(m_insitu_sum_rdata[idx.value], amrex::get<idx.value>(a));
+            } else {
+                m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
+                m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+            }
+        }
+    );
+
+    amrex::constexpr_for<0, m_insitu_ncp>(
+        [&] (auto idx) {
+            m_insitu_cdata[islice + idx.value * nslices] =
+                amrex::get<m_insitu_nrp+idx.value>(a) * mid_factor;
+        }
+    );
+}
+
+void
+MultiLaser::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
+                               int max_step, amrex::Real max_time)
+{
+    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    HIPACE_PROFILE("MultiLaser::InSituWriteToFile()");
+
+#ifdef HIPACE_USE_OPENPMD
+    // create subdirectory
+    openPMD::auxiliary::create_directories(m_insitu_file_prefix);
+#endif
+
+    // zero pad the rank number;
+    std::string::size_type n_zeros = 4;
+    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+
+    // open file
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_laser." + pad_rank_num + ".txt",
+        std::ofstream::out | std::ofstream::app | std::ofstream::binary};
+
+    const int nslices_int = geom3D.Domain().length(2);
+    const std::size_t nslices = static_cast<std::size_t>(nslices_int);
+    const int is_normalized_units = Hipace::m_normalized_units;
+
+    // specify the structure of the data later available in python
+    // avoid pointers to temporary objects as second argument, stack variables are ok
+    const amrex::Vector<insitu_utils::DataNode> all_data{
+        {"time"     , &time},
+        {"step"     , &step},
+        {"n_slices" , &nslices_int},
+        {"z_lo"     , &geom3D.ProbLo()[2]},
+        {"z_hi"     , &geom3D.ProbHi()[2]},
+        {"is_normalized_units", &is_normalized_units},
+        {"max(|a|^2)"     , &m_insitu_rdata[0], nslices},
+        {"[|a|^2]"        , &m_insitu_rdata[1*nslices], nslices},
+        {"[|a|^2*x]"      , &m_insitu_rdata[2*nslices], nslices},
+        {"[|a|^2*x*x]"    , &m_insitu_rdata[3*nslices], nslices},
+        {"[|a|^2*y]"      , &m_insitu_rdata[4*nslices], nslices},
+        {"[|a|^2*y*y]"    , &m_insitu_rdata[5*nslices], nslices},
+        {"axis(a)"        , &m_insitu_cdata[0], nslices},
+        {"integrated", {
+            {"max(|a|^2)"     , &m_insitu_sum_rdata[0]},
+            {"[|a|^2]"        , &m_insitu_sum_rdata[1]},
+            {"[|a|^2*x]"      , &m_insitu_sum_rdata[2]},
+            {"[|a|^2*x*x]"    , &m_insitu_sum_rdata[3]},
+            {"[|a|^2*y]"      , &m_insitu_sum_rdata[4]},
+            {"[|a|^2*y*y]"    , &m_insitu_sum_rdata[5]}
+        }}
+    };
+
+    if (ofs.tellp() == 0) {
+        // write JSON header containing a NumPy structured datatype
+        insitu_utils::write_header(all_data, ofs);
+    }
+
+    // write binary data according to datatype in header
+    insitu_utils::write_data(all_data, ofs);
+
+    // close file
+    ofs.close();
+    // assert no file errors
+#ifdef HIPACE_USE_OPENPMD
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu laser diagnostics");
+#else
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu laser diagnostics. "
+        "Maybe the specified subdirectory does not exist");
+#endif
+
+    // reset arrays for insitu data
+    for (auto& x : m_insitu_rdata) x = 0.;
+    for (auto& x : m_insitu_sum_rdata) x = 0.;
+    for (auto& x : m_insitu_cdata) x = 0.;
 }
