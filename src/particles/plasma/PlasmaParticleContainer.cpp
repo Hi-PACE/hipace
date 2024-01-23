@@ -471,7 +471,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
         amrex::Long const num_particles = pti.numParticles();
 
-        amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpMin[m_insitu_nrp + m_insitu_nip]> reduce_op;
+        amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
         amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(
