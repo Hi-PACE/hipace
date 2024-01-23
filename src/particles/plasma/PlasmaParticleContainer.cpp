@@ -13,7 +13,6 @@
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
 #include "utils/InsituUtil.H"
-#include "utils/TemplateUtil.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
@@ -472,8 +471,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
         amrex::Long const num_particles = pti.numParticles();
 
-        TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
-        TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
+        amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpMin[m_insitu_nrp + m_insitu_nip]> reduce_op;
+        amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         reduce_op.eval(
             num_particles, reduce_data,
@@ -486,7 +485,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
 
                 if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
-                    return MakeZeroTuple(ReduceTuple{});
+                    return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
                 }
                 // particle's Lorentz factor
                 const amrex::Real gamma = (1.0_rt + ux*ux + uy*uy + psi*psi)/(2.0_rt*psi);
