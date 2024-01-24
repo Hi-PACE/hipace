@@ -13,7 +13,6 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/InsituUtil.H"
-#include "utils/TemplateUtil.H"
 #ifdef AMREX_USE_CUDA
 #  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
 #elif defined(AMREX_USE_HIP)
