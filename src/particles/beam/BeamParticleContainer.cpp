@@ -12,7 +12,6 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/InsituUtil.H"
-#include "utils/TemplateUtil.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
@@ -456,8 +455,8 @@ BeamParticleContainer::InSituComputeDiags (int islice)
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const auto ptd = getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-    TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
-    TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
+    amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
+    amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
     reduce_op.eval(
         getNumParticles(WhichBeamSlice::This), reduce_data,
@@ -472,7 +471,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
             const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
 
             if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
-                return MakeZeroTuple(ReduceTuple{});
+                return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
             }
             const amrex::Real gamma = std::sqrt(1.0_rt + ux*ux + uy*uy + uz*uz);
             return {            // Tuple contains:
