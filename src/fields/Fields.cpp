@@ -15,7 +15,6 @@
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "utils/InsituUtil.H"
-#include "utils/TemplateUtil.H"
 #include "particles/particles_utils/ShapeFactors.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
@@ -726,7 +725,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                 const amrex::Real x = (i * dx + poff_x) * scale;
                 const amrex::Real y = (j * dy + poff_y) * scale;
                 if (x*x + y*y > cutoff_sq)  {
-                    return MakeZeroTuple(MultipoleTuple{});
+                    return amrex::IdentityTuple(MultipoleTuple{}, MultipoleReduceOpList{});
                 }
                 amrex::Real s_v = arr_staging_area(i, j);
                 return GetMultipoleCoeffs(s_v, x, y);
@@ -1284,8 +1283,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
 
     amrex::MultiFab& slicemf = getSlices(lev);
 
-    TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp]> reduce_op;
-    TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp]> reduce_data(reduce_op);
+    amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp]> reduce_op;
+    amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp]> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
     for ( amrex::MFIter mfi(slicemf, DfltMfi); mfi.isValid(); ++mfi ) {
