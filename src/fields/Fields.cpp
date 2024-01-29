@@ -695,10 +695,13 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
 void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               const int which_slice, std::string component,
-                              amrex::MultiFab&& staging_area,
+                              amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
                               amrex::Real offset, amrex::Real factor)
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
+
+    const amrex::Box staging_box = amrex::grow(geom[lev].Domain(), box_grow);
+
     if (lev == 0 && m_open_boundary) {
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
@@ -708,7 +711,6 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
         const Array2<amrex::Real> arr_staging_area = staging_area_fab.array();
-        const amrex::Box staging_box = staging_area_fab.box();
 
         const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
         const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
@@ -768,9 +770,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
             const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
-            const amrex::Box fine_staging_box = getStagingArea(lev)[mfi].box();
 
-            SetDirichletBoundaries(arr_staging_area, fine_staging_box, geom[lev],
+            SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
                                    offset, factor, arr_solution_interp);
         }
     }
@@ -898,7 +899,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         Multiply(m_source_nguard, getStagingArea(lev),
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev),
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev), m_poisson_nguards,
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Psi);
@@ -910,7 +911,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev),
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev), m_poisson_nguards,
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
@@ -922,7 +923,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             -phys_const.mu0,
             derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev),
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev), m_poisson_nguards,
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
@@ -1002,7 +1003,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev),
+        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev), m_poisson_nguards,
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
@@ -1059,7 +1060,7 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
                     derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jy"),
                     getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev),
+        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev), m_poisson_nguards,
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bx);
@@ -1072,7 +1073,7 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev),
+        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev), m_poisson_nguards,
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_By);

@@ -723,9 +723,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         // cell centered MG solve: no ghost cells, put boundary condition into source term
         // node centered MG solve: one ghost cell, use boundary condition from there
         m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                      m_fields.getField(lev, which_slice, "Sy"), 0.5, 8./3.);
+                                      m_fields.getField(lev, which_slice, "Sy"),
+                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
         m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                      m_fields.getField(lev, which_slice, "Sx"), 0.5, 8./3.);
+                                      m_fields.getField(lev, which_slice, "Sx"),
+                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
     }
 
     // interpolate Bx and By to lev from lev-1 in the ghost cells

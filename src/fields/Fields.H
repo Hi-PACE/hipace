@@ -175,12 +175,13 @@ public:
      * \param[in] which_slice slice of the field
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
+     * \param[in] box_grow relative to the domain, how large is the box of staging_area
      * \param[in] offset shift boundary value by offset number of cells
      * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area,
+                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
                                amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).

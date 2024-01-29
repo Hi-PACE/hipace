@@ -17,7 +17,8 @@ MGPoissonSolverDirichlet::MGPoissonSolverDirichlet (
     amrex::DistributionMapping const& dm,
     amrex::Geometry const& gm )
 {
-    m_stagingArea = amrex::MultiFab(ba, dm, 1, Fields::m_poisson_nguards);
+    // need extra ghost cell for 2^n-1 HPMG
+    m_stagingArea = amrex::MultiFab(ba, dm, 1, Fields::m_poisson_nguards + amrex::IntVect{1, 1, 0});
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ba.size() == 1, "Parallel MG not supported");
     amrex::Box solve_box = ba[0].grow(Fields::m_poisson_nguards);
     m_mg = std::make_unique<hpmg::MultiGrid>(gm.CellSize(0), gm.CellSize(1), solve_box, 3);
