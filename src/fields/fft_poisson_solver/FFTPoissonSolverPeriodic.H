@@ -47,9 +47,9 @@ public:
      * \param[in] dm DistributionMapping for the BoxArray.
      * \param[in] gm Geometry, contains the box dimensions.
      */
-    virtual void define ( amrex::BoxArray const& realspace_ba,
-                          amrex::DistributionMapping const& dm,
-                          amrex::Geometry const& gm) override final;
+    void define ( amrex::BoxArray const& realspace_ba,
+                  amrex::DistributionMapping const& dm,
+                  amrex::Geometry const& gm);
 
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
@@ -57,6 +57,16 @@ public:
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
     virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
+
+    /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
+    virtual amrex::Real BoundaryOffset() override final {
+        amrex::Abort("Cannot set boundary condition with periodic FFT solver");
+        return 1.;
+    }
+    virtual amrex::Real BoundaryFactor() override final {
+        amrex::Abort("Cannot set boundary condition with periodic FFT solver");
+        return 1.;
+    }
 
 private:
     /** Spectral fields, contains (complex) field in Fourier space */

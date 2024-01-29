@@ -19,7 +19,7 @@ namespace hpmg {
 /** \brief Multigrid solver
  *
  * This solves `-acoef * sol + Lap(sol) = rhs` with homogeneous Dirichlet BC
- * on a 2D slice.  It can solve two types of linear systems.
+ * on a 2D slice.  It can solve three types of linear systems.
  *
  * (1) sol and rhs have two components, whereas acoef has only one
  *     component.  For Type I, call solve1(...).
@@ -29,6 +29,9 @@ namespace hpmg {
  *       -acoef_imag * sol_real - acoef_real * sol_imag + Lap(sol_imag) = rhs_imag
  *     For Type II, call solve2(...).  Here, acoef_real and acoef_imag can be
  *     either a scalar constant or FArrayBox.
+ *
+ * (3) sol and rhs have one components, whereas acoef zero everywhere.
+ *     For Type III, call solve3(...).
  */
 class MultiGrid
 {
@@ -39,8 +42,9 @@ public:
      * \param[in] dx Cell spacing in x direction
      * \param[in] dy Cell spacing in y direction
      * \param[in] a_domain Box describing a 2D slice
+     * \param[in] a_system_type which system type should be solved
      */
-    explicit MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain);
+    explicit MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain, int a_system_type);
 
     /** \brief Dtor */
     ~MultiGrid ();
@@ -128,6 +132,19 @@ public:
                 amrex::Real const tol_rel, amrex::Real const tol_abs,
                 int const nummaxiter, int const verbose);
 
+    /** \brief Solve the Type III equation given the initial guess and right hand side.
+     *
+     * \param[in,out] sol the initial guess and final solution
+     * \param[in] rhs right hand side
+     * \param[in] tol_rel relative tolerance
+     * \param[in] tol_abs absolute tolerance
+     * \param[in] nummaxiter maximum number of iterations
+     * \param[in] verbose verbosity level
+     */
+    void solve3 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
+                 amrex::Real const tol_rel, amrex::Real const tol_abs, int const nummaxiter,
+                 int const verbose);
+
     /** \brief Average down the coefficient.  Ideally, this function is not
      * supposed to be a public function.  It's made public due to a CUDA
      * limitation. */
@@ -155,6 +172,11 @@ public:
         AMREX_ALWAYS_ASSERT(out_box.contains(domain));
         return out_box;
     }
+
+    /** When applying Dirichlet boundary conditions, shift boundary value by offset number of cells */
+    amrex::Real m_boundary_condition_offset = 0.;
+    /** When applying Dirichlet boundary conditions, multiply the boundary value by this factor */
+    amrex::Real m_boundary_condition_factor = 0.;
 
 private:
 

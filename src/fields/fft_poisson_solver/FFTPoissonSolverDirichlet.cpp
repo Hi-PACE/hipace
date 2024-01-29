@@ -32,8 +32,6 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(a_realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
-    m_spectralspace_ba = a_realspace_ba;
-
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
     // The stagingArea is also created from 0 to nx, because the real space array may have
@@ -84,7 +82,7 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    m_plan = AnyDST::DSTplans(m_spectralspace_ba, dm);
+    m_plan = AnyDST::DSTplans(a_realspace_ba, dm);
     // Loop over boxes and allocate the corresponding plan
     // for each box owned by the local MPI proc
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){

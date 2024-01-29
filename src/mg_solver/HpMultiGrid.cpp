@@ -191,12 +191,12 @@ void compute_residual (Box const& box, Array4<Real> const& res,
         hpmg::ParallelFor(valid_domain_box(box),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
-            res(i,j,0,0) = residual1(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0),
+            res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0),
                                      acf(i,j,0), facx, facy);
-            res(i,j,0,1) = residual1(i, j, n, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1),
+            res(i,j,0,1) = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1),
                                      acf(i,j,0), facx, facy);
         });
-    } else else if (system_type == 2) {
+    } else if (system_type == 2) {
         hpmg::ParallelFor(valid_domain_box(box),
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
@@ -592,13 +592,11 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 
             if (icell < ncells) {
                 fres(i, j,
-                     rescor[ilev](i,j,0,0),
-                     rescor[ilev](i,j,0,1),
+                     rescor[ilev],
                      cor[ilev].begin.x, cor[ilev].begin.y,
                      cor[ilev].end.x-1, cor[ilev].end.y-1,
                      cor[ilev],
-                     res[ilev](i,j,0,0),
-                     res[ilev](i,j,0,1),
+                     res[ilev],
                      acf[ilev], facx, facy);
             }
             HPMG_SYNCTHREADS;
@@ -710,9 +708,8 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 } // namespace {}
 
 MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
-    : m_dx(dx), m_dy(dy)
+    : m_system_type(a_system_type), m_dx(dx), m_dy(dy)
 {
-    m_system_type = a_system_type;
     int tmp_num_comps[m_num_system_types] = {2, 2, 1};
     m_num_comps = tmp_num_comps[m_system_type-1];
     int tmp_num_comps_acf[m_num_system_types] = {1, 2, 0};
@@ -728,6 +725,11 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     m_domain.push_back(amrex::makeSlab(Box{{0,0,0}, a_domain_len-1, index_type}, 2, 0));
     if (!index_type.cellCentered()) {
         m_domain[0].growHi(0,2).growHi(1,2);
+        m_boundary_condition_offset = 1.;
+        m_boundary_condition_factor = 1.;
+    } else {
+        m_boundary_condition_offset = 0.5;
+        m_boundary_condition_factor = 8./3.;
     }
     IntVect const min_width = index_type.cellCentered() ? IntVect(2,2,1) : IntVect(4,4,1);
     for (int i = 0; i < 30; ++i) {
