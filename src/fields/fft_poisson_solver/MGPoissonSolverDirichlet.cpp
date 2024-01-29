@@ -10,6 +10,7 @@
 #include "fields/Fields.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/Parser.H"
 
 MGPoissonSolverDirichlet::MGPoissonSolverDirichlet (
     amrex::BoxArray const& ba,
@@ -20,6 +21,11 @@ MGPoissonSolverDirichlet::MGPoissonSolverDirichlet (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ba.size() == 1, "Parallel MG not supported");
     amrex::Box solve_box = ba[0].grow(Fields::m_poisson_nguards);
     m_mg = std::make_unique<hpmg::MultiGrid>(gm.CellSize(0), gm.CellSize(1), solve_box, 3);
+
+    amrex::ParmParse pp("MGDirichlet");
+    queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
+    queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
+    queryWithParser(pp, "MG_verbose", m_MG_verbose);
 }
 
 void

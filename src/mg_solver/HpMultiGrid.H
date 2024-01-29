@@ -30,7 +30,7 @@ namespace hpmg {
  *     For Type II, call solve2(...).  Here, acoef_real and acoef_imag can be
  *     either a scalar constant or FArrayBox.
  *
- * (3) sol and rhs have one components, whereas acoef zero everywhere.
+ * (3) sol and rhs have one component, whereas acoef is zero everywhere.
  *     For Type III, call solve3(...).
  */
 class MultiGrid
