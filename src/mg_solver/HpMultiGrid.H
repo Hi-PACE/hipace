@@ -158,8 +158,10 @@ public:
 
 private:
 
-    static constexpr int m_num_system_types = 2;
+    static constexpr int m_num_system_types = 3;
     int m_system_type = 0;
+    int m_num_comps = 0;
+    int m_num_comps_acf = 0;
 
     /** 2D slice domain */
     amrex::Vector<amrex::Box> m_domain;
@@ -204,14 +206,14 @@ private:
 
 #if defined(AMREX_USE_CUDA)
     /** CUDA graphs for average-down */
-    bool m_cuda_graph_acf_created[m_num_system_types] = {false,false};
-    cudaGraph_t m_cuda_graph_acf[m_num_system_types] = {NULL,NULL};
-    cudaGraphExec_t m_cuda_graph_exe_acf[m_num_system_types] = {NULL,NULL};
+    bool m_cuda_graph_acf_created = false;
+    cudaGraph_t m_cuda_graph_acf = NULL;
+    cudaGraphExec_t m_cuda_graph_exe_acf = NULL;
 
     /** CUDA graphs for the V-cycle*/
-    bool m_cuda_graph_vcycle_created[m_num_system_types] = {false,false};
-    cudaGraph_t m_cuda_graph_vcycle[m_num_system_types] = {NULL,NULL};
-    cudaGraphExec_t m_cuda_graph_exe_vcycle[m_num_system_types] = {NULL,NULL};
+    bool m_cuda_graph_vcycle_created = false;
+    cudaGraph_t m_cuda_graph_vcycle = NULL;
+    cudaGraphExec_t m_cuda_graph_exe_vcycle = NULL;
 #endif
 };
 
