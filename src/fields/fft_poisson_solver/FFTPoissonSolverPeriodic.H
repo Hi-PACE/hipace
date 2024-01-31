@@ -58,15 +58,11 @@ public:
      */
     virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
 
-    /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
-    virtual amrex::Real BoundaryOffset() override final {
-        amrex::Abort("Cannot set boundary condition with periodic FFT solver");
-        return 1.;
-    }
-    virtual amrex::Real BoundaryFactor() override final {
-        amrex::Abort("Cannot set boundary condition with periodic FFT solver");
-        return 1.;
-    }
+    /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions
+     * Note: inhomogeneous Dirichlet boundary conditions do not work with this solver
+     */
+    virtual amrex::Real BoundaryOffset() override final { return 1.; }
+    virtual amrex::Real BoundaryFactor() override final { return 1.; }
 
 private:
     /** Spectral fields, contains (complex) field in Fourier space */
