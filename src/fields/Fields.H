@@ -491,6 +491,37 @@ public:
         }
     }
 
+    /** \brief call amrex SumBoundary for multiple fields
+     *
+     * \param[in] period periodicity of the fields
+     * \param[in] lev level of fields
+     * \param[in] islice slice of fields
+     * \param[in] comps names of fields like "jx", "jy", "jx_beam", "jy_beam"
+     */
+    template<class...Args>
+    void SumBoundary (const amrex::Periodicity& period, const int lev, const int islice,
+                       Args...comps) {
+        std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
+        amrex::MultiFab& mfab = getSlices(lev);
+
+        // optimize adjacent fields to one SumBoundary call
+        std::sort(c_idx.begin(), c_idx.end());
+        int scomp = 0;
+        int ncomp = 0;
+        for (unsigned int i=0; i < c_idx.size(); ++i) {
+            if (ncomp==0) {
+                scomp = c_idx[i];
+                ncomp = 1;
+            }
+            if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
+                mfab.SumBoundary(scomp, ncomp, period);
+                ncomp = 0;
+            } else if (c_idx[i+1] == scomp+ncomp) {
+                ++ncomp;
+            }
+        }
+    }
+
     /** Number of guard cells for slices MultiFab */
     inline static amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Number of guard cells for poisson solver MultiFab */

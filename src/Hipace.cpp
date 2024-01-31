@@ -634,15 +634,6 @@ Hipace::InitializeSxSyWithBeam (const int lev)
     HIPACE_PROFILE("Hipace::InitializeSxSyWithBeam()");
     using namespace amrex::literals;
 
-    if (!m_fields.m_extended_solve && lev==0) {
-        if (m_explicit) {
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::Next,
-                "jx_beam", "jy_beam");
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "jz_beam");
-        }
-    }
-
     amrex::MultiFab& slicemf = m_fields.getSlices(lev);
 
     const amrex::Real dx = m_3D_geom[lev].CellSize(Direction::x);
@@ -709,6 +700,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[which_slice]["Bx"], 2);
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
+
+    if (!m_fields.m_extended_solve && lev==0) {
+        m_fields.SumBoundary(m_3D_geom[lev].periodicity(), lev, which_slice, "Sy", "Sx");
+        m_fields.SumBoundary(m_3D_geom[lev].periodicity(), lev, which_slice_chi, "chi");
+    }
 
     // interpolate Sx, Sy and chi to lev from lev-1 in the domain edges.
     // This also accounts for jx_beam, jy_beam
@@ -827,11 +823,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_fields.m_extended_solve && lev==0) {
-            // exchange ExmBy EypBx Ez Bz
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "ExmBy", "EypBx", "Ez", "Bz");
-        }
         m_fields.setVal(0., lev, WhichSlice::PCIter, "Bx", "By");
         m_fields.duplicate(lev, WhichSlice::PCPrevIter, {"Bx", "By"},
                                 WhichSlice::This,       {"Bx", "By"});

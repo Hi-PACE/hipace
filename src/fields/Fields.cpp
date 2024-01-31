@@ -867,7 +867,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
 
     for (int lev=0; lev<current_N_level; ++lev) {
         if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jx", "jy", "rhomjz");
+            SumBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jx", "jy", "rhomjz");
         }
         // interpolate rhomjz to lev from lev-1 in the domain edges
         LevelUpBoundary(geom, lev, WhichSlice::This, "rhomjz",
@@ -973,7 +973,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
 
     for (int lev=0; lev<current_N_level; ++lev) {
         if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, which_slice, "jx", "jy");
+            SumBoundary(geom[lev].periodicity(), lev, which_slice, "jx", "jy");
         }
         // interpolate jx and jy to lev from lev-1 in the domain edges and
         // also inside ghost cells to account for x and y derivative
@@ -1022,8 +1022,8 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
 
     for (int lev=0; lev<current_N_level; ++lev) {
         if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::Next, "jx", "jy");
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jz");
+            SumBoundary(geom[lev].periodicity(), lev, WhichSlice::Next, "jx", "jy");
+            SumBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jz");
         }
         // interpolate jx and jy to lev from lev-1 in the domain edges
         LevelUpBoundary(geom, lev, WhichSlice::Next, "jx", m_poisson_nguards, -m_slices_nguards);
