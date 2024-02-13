@@ -107,7 +107,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto use_laser) {
                     const int ip = idx + idx_begin;
                     // only push plasma particles on their according MR level
-                    if (ptd.id(ip) < 0 || ptd.cpu(ip) != lev) return;
+                    if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
                     // define field at particle position reals
                     amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;

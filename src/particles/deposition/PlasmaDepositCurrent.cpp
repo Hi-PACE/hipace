@@ -190,7 +190,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 const int ox = idx % outer_depos_order_x_1;
 
                 // only deposit plasma currents on or below their according MR level
-                if (ptd.id(ip) < 0 || (lev != 0 && ptd.cpu(ip) < lev)) return;
+                if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;
 
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);
@@ -233,7 +233,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                     // This particle violates the QSA, discard it and do not deposit its current
                     amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
                     ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
-                    ptd.id(ip) = -std::abs(ptd.id(ip));
+                    ptd.id(ip).make_invalid();
                     return;
                 }
 
