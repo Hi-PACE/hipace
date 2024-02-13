@@ -301,7 +301,7 @@ private:
 
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 18;
+    static constexpr int m_insitu_nrp = 22;
     /** Number of int beam properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nip = 1;
     /** Per-slice real beam properties */
