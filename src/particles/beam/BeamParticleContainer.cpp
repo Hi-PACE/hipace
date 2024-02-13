@@ -470,6 +470,8 @@ BeamParticleContainer::InSituComputeDiags (int islice)
             const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip] * clight_inv;
             const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
 
+            const amrex::Real uz_inv = uz == 0._rt ? 0._rt : 1._rt / uz;
+
             if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
                 return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
             }
@@ -491,9 +493,13 @@ BeamParticleContainer::InSituComputeDiags (int islice)
                 w*x*ux,         // 13   [x*ux]
                 w*y*uy,         // 14   [y*uy]
                 w*z*uz,         // 15   [z*uz]
-                w*gamma,        // 16   [ga]
-                w*gamma*gamma,  // 17   [ga^2]
-                1               // 18   Np
+                w*x*uy,         // 16   [x*uy]
+                w*y*ux,         // 17   [y*ux]
+                w*ux*uz_inv,    // 18   [ux/uz]
+                w*uy*uz_inv,    // 19   [uy/uz]
+                w*gamma,        // 20   [ga]
+                w*gamma*gamma,  // 21   [ga^2]
+                1               // 22   Np
             };
         });
 
@@ -569,8 +575,12 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         {"[x*ux]"  , &m_insitu_rdata[13*nslices], nslices},
         {"[y*uy]"  , &m_insitu_rdata[14*nslices], nslices},
         {"[z*uz]"  , &m_insitu_rdata[15*nslices], nslices},
-        {"[ga]"    , &m_insitu_rdata[16*nslices], nslices},
-        {"[ga^2]"  , &m_insitu_rdata[17*nslices], nslices},
+        {"[x*uy]"  , &m_insitu_rdata[16*nslices], nslices},
+        {"[y*ux]"  , &m_insitu_rdata[17*nslices], nslices},
+        {"[ux/uz]" , &m_insitu_rdata[18*nslices], nslices},
+        {"[uy/uz]" , &m_insitu_rdata[19*nslices], nslices},
+        {"[ga]"    , &m_insitu_rdata[20*nslices], nslices},
+        {"[ga^2]"  , &m_insitu_rdata[21*nslices], nslices},
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
@@ -589,8 +599,12 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
             {"[x*ux]", &(m_insitu_sum_rdata[13] /= sum_w0)},
             {"[y*uy]", &(m_insitu_sum_rdata[14] /= sum_w0)},
             {"[z*uz]", &(m_insitu_sum_rdata[15] /= sum_w0)},
-            {"[ga]"  , &(m_insitu_sum_rdata[16] /= sum_w0)},
-            {"[ga^2]", &(m_insitu_sum_rdata[17] /= sum_w0)}
+            {"[x*uy]", &(m_insitu_sum_rdata[16] /= sum_w0)},
+            {"[y*ux]", &(m_insitu_sum_rdata[17] /= sum_w0)},
+            {"[ux/uz]",&(m_insitu_sum_rdata[18] /= sum_w0)},
+            {"[uy/uz]",&(m_insitu_sum_rdata[19] /= sum_w0)},
+            {"[ga]"  , &(m_insitu_sum_rdata[20] /= sum_w0)},
+            {"[ga^2]", &(m_insitu_sum_rdata[21] /= sum_w0)}
         }},
         {"total"   , {
             {"sum(w)", &m_insitu_sum_rdata[0]},
