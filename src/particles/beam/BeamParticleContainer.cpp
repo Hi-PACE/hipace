@@ -95,11 +95,11 @@ BeamParticleContainer::ReadParameters ()
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     soa.GetIdCPUData().setArena(
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
+    for (int rcomp = 0; rcomp < soa.NumRealComps(); ++rcomp) {
         soa.GetRealData()[rcomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
-    for (int icomp = 0; icomp < BeamIdx::int_nattribs_in_buffer; ++icomp) {
+    for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
         soa.GetIntData()[icomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
@@ -409,11 +409,12 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
         amrex::PermutationForDeposition<unsigned int>(perm, np, ptile, slice_geom.Domain(),
                                                       slice_geom, m_reorder_idx_type);
         const unsigned int* permutations = perm.dataPtr();
+        auto& soa = ptile.GetStructOfArrays();
 
         { // Create a scope for the temporary vector below
             BeamTile::RealVector tmp_real(np_total);
-            for (int comp = 0; comp < BeamIdx::real_nattribs; ++comp) {
-                auto src = ptile.GetStructOfArrays().GetRealData(comp).data();
+            for (int comp = 0; comp < soa.NumRealComps(); ++comp) {
+                auto src = soa.GetRealData(comp).data();
                 amrex::ParticleReal* dst = tmp_real.data();
                 amrex::ParallelFor(np_total,
                     [=] AMREX_GPU_DEVICE (int i) {
@@ -421,13 +422,13 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
                     });
 
                 amrex::Gpu::streamSynchronize();
-                ptile.GetStructOfArrays().GetRealData(comp).swap(tmp_real);
+                soa.GetRealData(comp).swap(tmp_real);
             }
         }
 
         BeamTile::IntVector tmp_int(np_total);
-        for (int comp = 0; comp < BeamIdx::int_nattribs; ++comp) {
-            auto src = ptile.GetStructOfArrays().GetIntData(comp).data();
+        for (int comp = 0; comp < soa.NumIntComps(); ++comp) {
+            auto src = soa.GetIntData(comp).data();
             int* dst = tmp_int.data();
             amrex::ParallelFor(np_total,
                 [=] AMREX_GPU_DEVICE (int i) {
@@ -435,7 +436,7 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
                 });
 
             amrex::Gpu::streamSynchronize();
-            ptile.GetStructOfArrays().GetIntData(comp).swap(tmp_int);
+            soa.GetIntData(comp).swap(tmp_int);
         }
     }
 }

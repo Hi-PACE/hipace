@@ -191,6 +191,13 @@ public:
         return m_total_num_particles;
     }
 
+    int numRealComponents () const { return BeamIdx::real_nattribs; }
+    int numIntComponents () const { return BeamIdx::int_nattribs; }
+
+    bool communicateIdCpuComponent () const { return true; }
+    bool communicateRealComponent (int rcomp) const { return rcomp < BeamIdx::real_nattribs_in_buffer; }
+    bool communicateIntComponent (int icomp) const { return icomp < BeamIdx::int_nattribs_in_buffer; }
+
 private:
     int m_slice_permutation = 0;
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
