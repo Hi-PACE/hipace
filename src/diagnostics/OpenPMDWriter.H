@@ -88,6 +88,11 @@ private:
         "momentum_x", "momentum_y", "momentum_z"
     };
 
+    /** Named Beam runtime SoA attributes */
+    amrex::Vector<std::string> m_real_names_spin {
+        "spin_x", "spin_y", "spin_z"
+    };
+
     /** vector over levels of openPMD-api Series object for output */
     std::unique_ptr< openPMD::Series > m_outputSeries;
 
