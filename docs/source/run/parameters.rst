@@ -924,20 +924,25 @@ In-situ diagnostics
 Besides the standard diagnostics, fast in-situ diagnostics are available. They are most useful when beams with large numbers of particles are used, as the important moments can be calculated in-situ (during the simulation) to largely reduce the simulation's analysis.
 In-situ diagnostics compute slice quantities (1 number per quantity per longitudinal cell).
 For particle beams, they can be used to calculate the main characterizing beam parameters (width, energy spread, emittance, etc.), from which most common beam parameters (e.g. slice and projected emittance, etc.) can be computed. Additionally, the plasma particle properties (e.g, the temperature) can be calculated.
+For particle quantities, "[...]" stands for averaging over all particles in the current slice;
+for grid quantities, "[...]" stands for integrating over all cells in the current slice.
 
 For particle beams, the following quantities are calculated per slice and stored:
 ``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [x*uy], [y*ux], [ux/uz], [uy/uz], [ga], [ga^2], np``.
 For plasma particles, the following quantities are calculated per slice and stored:
 ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [ga], [ga^2], np``.
-Thereby, "[]" stands for averaging over all particles in the current slice,
-"w" stands for weight, "ux" is the normalized momentum in the x direction, "ga" is the Lorentz factor.
+Thereby, "w" stands for weight, "ux" is the normalized momentum in the x direction, "ga" is the Lorentz factor.
 Averages and totals over all slices are also provided for convenience under the
 respective ``average`` and ``total`` subcategories.
 
 For the field in-situ diagnostics, the following quantities are calculated per slice and stored:
 ``[Ex^2], [Ey^2], [Ez^2], [Bx^2], [By^2], [Bz^2], [ExmBy^2], [EypBx^2], [jz_beam], [Ez*jz_beam]``.
-Thereby, "[]" stands for averaging over all cells in the current slice.
 These quantities can be used to calculate the energy stored in the fields.
+
+For the laser in-situ diagnostics, the following quantities are calculated per slice and stored:
+``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a)``.
+Thereby, ``max(|a|^2)`` is the highest value of ``|a|^2`` in the current slice
+and ``axis(a)`` gives the complex value of the laser envelope, in the center of every slice.
 
 Additionally, some metadata is also available:
 ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
@@ -985,6 +990,12 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 
 * ``fields.insitu_file_prefix`` (`string`) optional (default ``"diags/field_insitu"``)
     Path of the field in-situ output. Must not be the same as `hipace.file_prefix`.
+
+* ``lasers.insitu_period`` (`int`) optional (default ``0``)
+    Period of the laser in-situ diagnostics. `0` means no laser in-situ diagnostics.
+
+* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"diags/laser_insitu"``)
+    Path of the laser in-situ output. Must not be the same as `hipace.file_prefix`.
 
 Additional physics
 ------------------
