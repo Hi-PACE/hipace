@@ -824,6 +824,8 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
+* ``<laser name>.propagation_angle_yz`` (`float`)
+    Propagation angle of the pulse in the yz plane (0 is the along the z axis)
 Diagnostic parameters
 ---------------------
 
