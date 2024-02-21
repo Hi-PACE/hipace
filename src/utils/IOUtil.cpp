@@ -130,6 +130,11 @@ utils::getUnitDimension ( std::string const & record_name )
         {openPMD::UnitDimension::I, -1.},
         {openPMD::UnitDimension::T, -2.}
     };
+    else if( record_name == "spin" ) return {
+        {openPMD::UnitDimension::L,  2.},
+        {openPMD::UnitDimension::M,  1.},
+        {openPMD::UnitDimension::T, -1.}
+    };
     else return {};
 }
 #endif
