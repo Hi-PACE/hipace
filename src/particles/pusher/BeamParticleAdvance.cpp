@@ -32,6 +32,8 @@ AdvanceBeamParticlesSlice (
     const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
     const amrex::Real background_density_SI = Hipace::m_background_density_SI;
     const bool normalized_units = Hipace::m_normalized_units;
+    const bool spin_tracking = beam.m_do_spin_tracking;
+    const amrex::Real spin_anom = beam.m_spin_anom;
 
     if (normalized_units && radiation_reaction) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
@@ -140,6 +142,13 @@ AdvanceBeamParticlesSlice (
 
             int i = ptd.idata(BeamIdx::nsubcycles)[ip];
 
+            amrex::RealVect spin {0._rt, 0._rt, 0._rt};
+            if (spin_tracking) {
+                spin[0] = ptd.m_runtime_rdata[0][ip];
+                spin[1] = ptd.m_runtime_rdata[1][ip];
+                spin[2] = ptd.m_runtime_rdata[2][ip];
+            }
+
             for (; i < n_subcycles; i++) {
 
                 if (zp < min_z) {
@@ -213,6 +222,28 @@ AdvanceBeamParticlesSlice (
                     + ( ux_intermediate*ux_intermediate
                        + uy_intermediate*uy_intermediate
                        + uz_intermediate*uz_intermediate )*inv_c2 );
+
+                if (spin_tracking) {
+                    const amrex::RealVect E {ExmByp + clight*Byp, EypBxp - clight*Bxp, Ezp};
+                    const amrex::RealVect B {Bxp, Byp, Bzp};
+                    const amrex::RealVect u {ux_intermediate*inv_clight, uy_intermediate*inv_clight,
+                                             uz_intermediate*inv_clight};
+                    const amrex::RealVect beta = u*gamma_intermediate_inv;
+                    const amrex::Real gamma_inv_p1 =
+                        gamma_intermediate_inv / (1._rt + gamma_intermediate_inv);
+
+                    const amrex::RealVect omega = std::abs(charge_mass_ratio) * inv_clight * (
+                        B * gamma_intermediate_inv - beta.crossProduct(E) * gamma_inv_p1
+                        + spin_anom * (
+                            B - gamma_inv_p1 * u * beta.dotProduct(B) - beta.crossProduct(E)
+                        )
+                    );
+
+                    const amrex::RealVect h = omega * dt * 0.5_rt;
+                    const amrex::RealVect s_prime = spin + h.crossProduct(spin);
+                    const amrex::Real o = 1._rt / (1._rt + h.dotProduct(h));
+                    spin = o * (s_prime + (h.dotProduct(s_prime) * h + h.crossProduct(s_prime)));
+                }
 
                 amrex::ParticleReal uz_next = uz + dt * charge_mass_ratio
                     * ( Ezp + ( ux_intermediate * Byp - uy_intermediate * Bxp )
@@ -300,5 +331,11 @@ AdvanceBeamParticlesSlice (
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;
             ptd.rdata(BeamIdx::uz)[ip] = uz;
+
+            if (spin_tracking) {
+                ptd.m_runtime_rdata[0][ip] = spin[0];
+                ptd.m_runtime_rdata[1][ip] = spin[1];
+                ptd.m_runtime_rdata[2][ip] = spin[2];
+            }
         });
 }

@@ -191,12 +191,20 @@ public:
         return m_total_num_particles;
     }
 
-    int numRealComponents () const { return BeamIdx::real_nattribs; }
+    int numRealComponents () const {
+        return BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0);
+    }
     int numIntComponents () const { return BeamIdx::int_nattribs; }
 
     bool communicateIdCpuComponent () const { return true; }
-    bool communicateRealComponent (int rcomp) const { return rcomp < BeamIdx::real_nattribs_in_buffer; }
-    bool communicateIntComponent (int icomp) const { return icomp < BeamIdx::int_nattribs_in_buffer; }
+    bool communicateRealComponent (int rcomp) const {
+        // communicate all compile-time and runtime real components
+        return rcomp < numRealComponents();
+    }
+    bool communicateIntComponent (int icomp) const {
+        // don't communicate nsubcycles
+        return icomp < BeamIdx::int_nattribs_in_buffer;
+    }
 
 private:
     int m_slice_permutation = 0;
@@ -228,6 +236,10 @@ public:
     amrex::Array<amrex::Parser, 6> m_external_fields_parser;
     /** If spin tracking is enabled for this beam */
     bool m_do_spin_tracking = false;
+    /** Initial spin of all particles */
+    amrex::RealVect m_initial_spin = {1, 0, 0,};
+    /** The anomalous magnetic moment */
+    amrex::Real m_spin_anom = 0.00115965218128;
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
