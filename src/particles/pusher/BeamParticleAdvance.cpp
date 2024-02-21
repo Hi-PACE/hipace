@@ -129,7 +129,7 @@ AdvanceBeamParticlesSlice (
         beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This),
         [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto c_use_external_fields) {
 
-            if (ptd.id(ip) < 0) return;
+            if (!ptd.id(ip).is_valid()) return;
 
             amrex::Real xp = ptd.pos(0, ip);
             amrex::Real yp = ptd.pos(1, ip);
