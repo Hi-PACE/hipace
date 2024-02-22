@@ -746,6 +746,16 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
                               { return b.volume() <= n_cell_single*n_cell_single; });
     m_single_block_level_begin = std::distance(std::begin(m_domain), r);
     m_single_block_level_begin = std::max(1, m_single_block_level_begin);
+    if (m_single_block_level_begin > m_max_level) {
+        m_single_block_level_begin = m_max_level;
+        m_use_single_block_kernel = false;
+        amrex::Print() << "hpmg: WARNING domain of size "
+            << a_domain_len[0] << " " << a_domain_len[1]
+            << " cannot be coarsened enough times to be solved efficiently.\n"
+            << "hpmg: Size of the final MG level: "
+            << m_domain[m_max_level].length(0) << " " << m_domain[m_max_level].length(1) << ".\n"
+            << "hpmg: Please consider using a domain size of the form '2^n', '3*2^n', '2^n+1' or '3*n^2+1'.\n";
+    }
 #else
     m_single_block_level_begin = m_max_level;
 #endif
@@ -1160,73 +1170,78 @@ MultiGrid::bottomsolve ()
     Real dx0 = m_dx * fac;
     Real dy0 = m_dy * fac;
 #if defined(AMREX_USE_GPU)
-    int nlevs = m_num_single_block_levels;
-    int const corner_offset = m_domain[0].cellCentered() ? 0 : 1;
+    if (m_use_single_block_kernel) {
+        int nlevs = m_num_single_block_levels;
+        int const corner_offset = m_domain[0].cellCentered() ? 0 : 1;
 
-    if (m_system_type == 1) {
-        bottomsolve_gpu<nsweeps,1>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
-            [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                                  Array4<Real> const& phi, Array4<Real> const& rhs,
-                                  Array4<Real> const& acf, Real facx, Real facy)
-            {
-                Real a = acf(i,j,0);
-                gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a, facx, facy);
-                gs1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a, facx, facy);
-            },
-            [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
-                                  int ilo, int jlo, int ihi, int jhi,
-                                  Array4<Real> const& phi, Array4<Real> const& rhs,
-                                  Array4<Real> const& acf, Real facx, Real facy)
-            {
-                Real a = acf(i,j,0);
-                res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a, facx, facy);
-                res(i,j,0,1) = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a, facx, facy);
-            });
-    } else if (m_system_type == 2) {
-        bottomsolve_gpu<nsweeps,2>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
-            [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                                  Array4<Real> const& phi, Array4<Real> const& rhs,
-                                  Array4<Real> const& acf, Real facx, Real facy)
-            {
-                Real ar = acf(i,j,0,0);
-                Real ai = acf(i,j,0,1);
-                gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), rhs(i,j,0,1), ar, ai, facx, facy);
-            },
-            [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
-                                  int ilo, int jlo, int ihi, int jhi,
-                                  Array4<Real> const& phi, Array4<Real> const& rhs,
-                                  Array4<Real> const& acf, Real facx, Real facy)
-            {
-                Real ar = acf(i,j,0,0);
-                Real ai = acf(i,j,0,1);
-                res(i,j,0,0) = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), ar, ai, facx, facy);
-                res(i,j,0,1) = residual2i(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), ar, ai, facx, facy);
-            });
-    } else {
-        bottomsolve_gpu<nsweeps,3>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
-            [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                                  Array4<Real> const& phi, Array4<Real> const& rhs,
-                                  Array4<Real> const&, Real facx, Real facy)
-            {
-                gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), Real(0.), facx, facy);
-            },
-            [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
-                                  int ilo, int jlo, int ihi, int jhi,
-                                  Array4<Real> const& phi, Array4<Real> const& rhs,
-                                  Array4<Real> const&, Real facx, Real facy)
-            {
-                res(i,j,0,0) = residual3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
-            });
-    }
-#else
-    const int ilev = m_single_block_level_begin;
-    m_cor[ilev].setVal(Real(0.));
-    for (int is = 0; is < nsweeps; ++is) {
-        gsrb(is, m_domain[ilev], m_cor[ilev].array(),
-             m_res[ilev].const_array(), m_acf[ilev].const_array(), dx0, dy0,
-             m_system_type);
-    }
+        if (m_system_type == 1) {
+            bottomsolve_gpu<nsweeps,1>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
+                [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                                      Array4<Real> const& phi, Array4<Real> const& rhs,
+                                      Array4<Real> const& acf, Real facx, Real facy)
+                {
+                    Real a = acf(i,j,0);
+                    gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a, facx, facy);
+                    gs1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a, facx, facy);
+                },
+                [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
+                                      int ilo, int jlo, int ihi, int jhi,
+                                      Array4<Real> const& phi, Array4<Real> const& rhs,
+                                      Array4<Real> const& acf, Real facx, Real facy)
+                {
+                    Real a = acf(i,j,0);
+                    res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a, facx, facy);
+                    res(i,j,0,1) = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a, facx, facy);
+                });
+        } else if (m_system_type == 2) {
+            bottomsolve_gpu<nsweeps,2>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
+                [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                                      Array4<Real> const& phi, Array4<Real> const& rhs,
+                                      Array4<Real> const& acf, Real facx, Real facy)
+                {
+                    Real ar = acf(i,j,0,0);
+                    Real ai = acf(i,j,0,1);
+                    gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), rhs(i,j,0,1), ar, ai, facx, facy);
+                },
+                [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
+                                      int ilo, int jlo, int ihi, int jhi,
+                                      Array4<Real> const& phi, Array4<Real> const& rhs,
+                                      Array4<Real> const& acf, Real facx, Real facy)
+                {
+                    Real ar = acf(i,j,0,0);
+                    Real ai = acf(i,j,0,1);
+                    res(i,j,0,0) = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), ar, ai, facx, facy);
+                    res(i,j,0,1) = residual2i(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), ar, ai, facx, facy);
+                });
+        } else {
+            bottomsolve_gpu<nsweeps,3>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
+                [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                                      Array4<Real> const& phi, Array4<Real> const& rhs,
+                                      Array4<Real> const&, Real facx, Real facy)
+                {
+                    gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), Real(0.), facx, facy);
+                },
+                [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
+                                      int ilo, int jlo, int ihi, int jhi,
+                                      Array4<Real> const& phi, Array4<Real> const& rhs,
+                                      Array4<Real> const&, Real facx, Real facy)
+                {
+                    res(i,j,0,0) = residual3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
+                });
+        }
+    } else
 #endif
+    {
+        const int ilev = m_single_block_level_begin;
+        m_cor[ilev].setVal<amrex::RunOn::Device>(Real(0.));
+        // Use numsweeps equal to the box length rounded up to an even number for large boxes
+        int numsweeps = std::max(nsweeps, (m_cor[ilev].box().length().max() + 1) / 2 * 2);
+        for (int is = 0; is < numsweeps; ++is) {
+            gsrb(is, m_domain[ilev], m_cor[ilev].array(),
+                m_res[ilev].const_array(), m_acf[ilev].const_array(), dx0, dy0,
+                m_system_type);
+        }
+    }
 }
 
 #if defined(AMREX_USE_GPU)
