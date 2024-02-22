@@ -84,7 +84,7 @@ jobs:
         set -e
 
         brew tap openpmd/openpmd
-        brew install openpmd-api --only-dependencies --force
+        brew install openpmd-api --only-dependencies --force --overwrite
         brew install openpmd-api
         brew link openpmd-api
 
