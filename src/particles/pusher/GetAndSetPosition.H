@@ -72,7 +72,7 @@ struct EnforceBCandSetPos
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
             ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
-            p.id() = -std::abs(p.id());
+            p.id().make_invalid();
         }
         x = p.pos(0);
         y = p.pos(1);
@@ -103,7 +103,7 @@ struct EnforceBCandSetPos
         const bool invalid = (shifted && !m_is_per);
         if (invalid) {
             ptd.rdata(BeamIdx::w)[ip] = 0.0_rt;
-            p.id() = -std::abs(p.id());
+            p.id().make_invalid();
         }
         x = p.pos(0);
         y = p.pos(1);
