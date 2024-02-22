@@ -58,20 +58,7 @@ jobs:
         brew --cache
         set +e
 
-        ls /usr/local/bin
-        rm -rf /usr/local/bin/2to3
-        rm -rf /usr/local/bin/2to3-3.11
-        rm -rf /usr/local/bin/2to3-3.12
-        rm -rf /usr/local/bin/idle3
-        rm -rf /usr/local/bin/idle3.12
-        rm -rf /usr/local/bin/pydoc3
-        rm -rf /usr/local/bin/pydoc3.12
-        rm -rf /usr/local/bin/python3
-        rm -rf /usr/local/bin/python3-config
-        rm -rf /usr/local/bin/python3.12
-        rm -rf /usr/local/bin/python3.12-config
-
-        brew uninstall python
+        brew uninstall --ignore-dependencies homebrew/core/python
 
         brew install fftw --only-dependencies --force
         brew install fftw
