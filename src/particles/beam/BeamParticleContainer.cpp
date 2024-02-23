@@ -378,8 +378,7 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
 
-                ptd.id(ip) = ptd_init.id(idx_src);
-                ptd.cpu(ip) = 0;
+                ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
             }
         );
@@ -473,7 +472,7 @@ BeamParticleContainer::InSituComputeDiags (int islice)
 
             const amrex::Real uz_inv = uz == 0._rt ? 0._rt : 1._rt / uz;
 
-            if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
+            if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
                 return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
             }
             const amrex::Real gamma = std::sqrt(1.0_rt + ux*ux + uy*uy + uz*uz);

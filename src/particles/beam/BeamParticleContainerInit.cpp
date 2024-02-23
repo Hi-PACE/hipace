@@ -53,6 +53,7 @@ namespace
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
         ptd.id(ip) = pid > 0 ? pid + ip : pid;
+        ptd.cpu(ip) = 0;
     }
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
