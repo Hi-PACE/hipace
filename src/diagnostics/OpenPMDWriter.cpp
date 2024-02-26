@@ -299,7 +299,7 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
             }
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_beam_data[ibeam].size() == soa.NumRealComps(),
-                "List of real names in openPMD Writer class do not match the beam");
+                "List of real names in openPMD Writer class does not match the beam");
 
             for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
