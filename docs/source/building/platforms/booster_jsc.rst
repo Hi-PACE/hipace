@@ -59,7 +59,7 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    module load OpenMPI
    module load CUDA
    module load HDF5
-   srun -n 8 --cpu_bind=sockets $HOME/src/hipace/build/bin/hipace.MPI.CUDA.DP inputs
+   srun -n 8 --cpu_bind=sockets $HOME/src/hipace/build/bin/hipace.MPI.CUDA.DP.LF inputs
 
 and use it to submit a simulation.
 
