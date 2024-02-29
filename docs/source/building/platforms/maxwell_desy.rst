@@ -5,11 +5,11 @@ This page only provides HiPACE++ specific instructions.
 For more information please visit the
 `Maxwell documentation <https://confluence.desy.de/display/MXW/Maxwell+Cluster>`__.
 
-Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with
+Create a file ``profile.hipace``, for instance in ``$HOME``, and ``source`` it whenever you log in and want to work with
 HiPACE++:
 
 .. code-block:: bash
-
+   #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
    module load maxwell gcc/9.3 openmpi/4
    module load maxwell cuda/11.8
@@ -39,7 +39,7 @@ submission script:
 
 .. code-block:: bash
 
-   #! /usr/bin/env sh
+   #! /usr/bin/env zsh
    #SBATCH --partition=<partition> # mpa # maxgpu # allgpu
    #SBATCH --time=01:00:00
    #SBATCH --nodes=1
@@ -49,7 +49,7 @@ submission script:
    #SBATCH --error=hipace-%j-%N.err
 
    export OMP_NUM_THREADS=1
-   module load maxwell gcc/9.3 openmpi/4 cuda/11.8
+   source $HOME/profile.hipace # or correct path to your profile file
 
    mpiexec -n 4 -npernode 4 $HOME/src/hipace/build/bin/hipace inputs
 
