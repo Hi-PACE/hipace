@@ -17,8 +17,6 @@
 
 OpenPMDWriter::OpenPMDWriter ()
 {
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_names.size() == BeamIdx::real_nattribs,
-        "List of real names in openPMD Writer class do not match BeamIdx::real_nattribs");
     amrex::ParmParse pp("hipace");
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
     // pick first available backend if default is chosen
@@ -194,7 +192,11 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
                 });
         }
 
-        m_real_beam_data[ibeam].resize(m_real_names.size());
+        if (beams.getBeam(ibeam).m_do_spin_tracking) {
+            m_real_beam_data[ibeam].resize(m_real_names.size() + m_real_names_spin.size());
+        } else {
+            m_real_beam_data[ibeam].resize(m_real_names.size());
+        }
 
         for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
             m_real_beam_data[ibeam][idx].reset(
@@ -231,12 +233,17 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         auto& beam = beams.getBeam(ibeam);
 
+        amrex::Vector<std::string> real_names = m_real_names;
+        if (beam.m_do_spin_tracking) {
+            real_names.insert(real_names.end(), m_real_names_spin.begin(), m_real_names_spin.end());
+        }
+
         // initialize beam IO on first slice
         AMREX_ALWAYS_ASSERT(m_offset[ibeam] <= beam.getTotalNumParticles());
         const uint64_t np_total = m_offset[ibeam];
 
         SetupPos(beam_species, beam, np_total, geom);
-        SetupRealProperties(beam_species, m_real_names, np_total);
+        SetupRealProperties(beam_species, real_names, np_total);
 
         for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
@@ -256,7 +263,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
             // handle scalar and non-scalar records by name
-            auto [record_name, component_name] = utils::name2openPMD(m_real_names[idx]);
+            auto [record_name, component_name] = utils::name2openPMD(real_names[idx]);
             auto& currRecord = beam_species[record_name];
             auto& currRecordComp = currRecord[component_name];
             // not read until the data is flushed
@@ -291,6 +298,9 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
                     m_uint64_beam_data[ibeam][idx].get() + m_offset[ibeam]);
             }
 
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_beam_data[ibeam].size() == soa.NumRealComps(),
+                "List of real names in openPMD Writer class does not match the beam");
+
             for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     soa.GetRealData(idx).begin(),
@@ -315,7 +325,6 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     for( auto const& comp : positionComponents ) {
         currSpecies["positionOffset"][comp].resetDataset( realType );
         currSpecies["positionOffset"][comp].makeConstant( 0. );
-        currSpecies["position"][comp].resetDataset( realType );
     }
 
     auto const scalar = openPMD::RecordComponent::SCALAR;
@@ -326,7 +335,6 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     currSpecies["mass"][scalar].makeConstant( beam.m_mass );
 
     // meta data
-    currSpecies["position"].setUnitDimension( utils::getUnitDimension("position") );
     currSpecies["positionOffset"].setUnitDimension( utils::getUnitDimension("positionOffset") );
     currSpecies["charge"].setUnitDimension( utils::getUnitDimension("charge") );
     currSpecies["mass"].setUnitDimension( utils::getUnitDimension("mass") );
@@ -382,7 +390,7 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
 {
     auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(),{np});
 
-    /* we have 4 SoA real attributes: weight, ux, uy, uz */
+    /* we have 7 or 10 SoA real attributes: x, y, z, weight, ux, uy, uz, (sx, sy, sz) */
     int const NumSoARealAttributes = real_comp_names.size();
     std::set< std::string > addedRecords; // add meta-data per record only once
 
@@ -402,11 +410,18 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
         std::tie(std::ignore, newRecord) = addedRecords.insert(record_name);
         if( newRecord ) {
             currRecord.setUnitDimension( utils::getUnitDimension(record_name) );
-            currRecord.setAttribute( "macroWeighted", 0u );
-        if( record_name == "momentum" )
-            currRecord.setAttribute( "weightingPower", 1.0 );
-        else
-            currRecord.setAttribute( "weightingPower", 0.0 );
+
+            if( record_name == "weighting") {
+                currRecord.setAttribute( "macroWeighted", 1u );
+            } else {
+                currRecord.setAttribute( "macroWeighted", 0u );
+            }
+
+            if( record_name == "weighting" || record_name == "momentum" || record_name == "spin") {
+                currRecord.setAttribute( "weightingPower", 1.0 );
+            } else {
+                currRecord.setAttribute( "weightingPower", 0.0 );
+            }
         } // end if newRecord
     } // end for NumSoARealAttributes
 }

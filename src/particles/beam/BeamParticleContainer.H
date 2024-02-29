@@ -226,6 +226,8 @@ public:
     amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_external_fields;
     /** Owns data for m_external_fields */
     amrex::Array<amrex::Parser, 6> m_external_fields_parser;
+    /** If spin tracking is enabled for this beam */
+    bool m_do_spin_tracking = false;
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
