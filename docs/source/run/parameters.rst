@@ -1039,3 +1039,19 @@ Whether the energy loss due to classical radiation reaction of beam particles is
     Whether the beam particles undergo energy loss due to classical radiation reaction.
     The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
     In normalized units, `hipace.background_density_SI` must be specified.
+
+Spin tracking
+-------------
+
+Track the spin of each beam particle as it is rotated by the electromagnetic fields using the
+TBMT model. This will add three extra components to each beam particle to store the spin and output
+those as part of the beam diagnostic.
+
+* ``<beam name> or beams.do_spin_tracking`` (`bool`) optional (default `0`)
+    Enable spin tracking
+
+* ``<beam name> or beams.initial_spin`` (3 `float`)
+    Initial spin ``sx sy sz`` of all particles. The length of the three components is normalized to one.
+
+* ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
+    The anomalous magnetic moment. The default value is the moment for electrons.
