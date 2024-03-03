@@ -173,6 +173,32 @@ public:
         return out_box;
     }
 
+    /** \brief Return the number of components used for a given system type
+     *
+     * \param[in] system_type which system type to use
+     */
+    static constexpr int get_num_comps (int system_type) {
+        switch (system_type) {
+            case 1: return 2;
+            case 2: return 2;
+            case 3: return 1;
+        }
+        return 0;
+    }
+
+    /** \brief Return the number of acf components used for a given system type
+     *
+     * \param[in] system_type which system type to use
+     */
+    static constexpr int get_num_comps_acf (int system_type) {
+        switch (system_type) {
+            case 1: return 1;
+            case 2: return 2;
+            case 3: return 0;
+        }
+        return 0;
+    }
+
     /** When applying Dirichlet boundary conditions, shift boundary value by offset number of cells */
     amrex::Real m_boundary_condition_offset = 0.;
     /** When applying Dirichlet boundary conditions, multiply the boundary value by this factor */

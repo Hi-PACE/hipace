@@ -247,6 +247,9 @@ void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
     // phi(i,j,0,n) = (rhs - lap) * c0_inv;
 }
 
+// is_cell_centered = true: supports both cell centered and node centered solves
+// is_cell_centered = false: only supports node centered solves, with higher performance
+template<bool is_cell_centered = true>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
           Array4<Real> const& phi, Real rhs_r, Real rhs_i,
@@ -254,11 +257,11 @@ void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
 {
     Real lap[2];
     Real c0 = Real(-2.)*(facx+facy);
-    if (i == ilo) {
+    if (is_cell_centered && i == ilo) {
         lap[0] = facx * Real(4./3.)*phi(i+1,j,0,0);
         lap[1] = facx * Real(4./3.)*phi(i+1,j,0,1);
         c0 -= Real(2.)*facx;
-    } else if (i == ihi) {
+    } else if (is_cell_centered && i == ihi) {
         lap[0] = facx * Real(4./3.)*phi(i-1,j,0,0);
         lap[1] = facx * Real(4./3.)*phi(i-1,j,0,1);
         c0 -= Real(2.)*facx;
@@ -266,11 +269,11 @@ void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
         lap[0] = facx * (phi(i-1,j,0,0) + phi(i+1,j,0,0));
         lap[1] = facx * (phi(i-1,j,0,1) + phi(i+1,j,0,1));
     }
-    if (j == jlo) {
+    if (is_cell_centered && j == jlo) {
         lap[0] += facy * Real(4./3.)*phi(i,j+1,0,0);
         lap[1] += facy * Real(4./3.)*phi(i,j+1,0,1);
         c0 -= Real(2.)*facy;
-    } else if (j == jhi) {
+    } else if (is_cell_centered && j == jhi) {
         lap[0] += facy * Real(4./3.)*phi(i,j-1,0,0);
         lap[1] += facy * Real(4./3.)*phi(i,j-1,0,1);
         c0 -= Real(2.)*facy;
@@ -282,6 +285,36 @@ void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
     Real cmag = Real(1.)/(c[0]*c[0] + c[1]*c[1]);
     phi(i,j,0,0) = ((rhs_r-lap[0])*c[0] + (rhs_i-lap[1])*c[1]) * cmag;
     phi(i,j,0,1) = ((rhs_i-lap[1])*c[0] - (rhs_r-lap[0])*c[1]) * cmag;
+}
+
+// is_cell_centered = true: supports both cell centered and node centered solves
+// is_cell_centered = false: only supports node centered solves, with higher performance
+template<bool is_cell_centered = true>
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+void gs3 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+          Array4<Real> const& phi, Real rhs, Real facx, Real facy)
+{
+    Real lap;
+    Real c0 = -Real(2.)*(facx+facy);
+    if (is_cell_centered && i == ilo) {
+        lap = facx * Real(4./3.)*phi(i+1,j,0,n);
+        c0 -= Real(2.)*facx;
+    } else if (is_cell_centered && i == ihi) {
+        lap = facx * Real(4./3.)*phi(i-1,j,0,n);
+        c0 -= Real(2.)*facx;
+    } else {
+        lap = facx * (phi(i-1,j,0,n) + phi(i+1,j,0,n));
+    }
+    if (is_cell_centered && j == jlo) {
+        lap += facy * Real(4./3.)*phi(i,j+1,0,n);
+        c0 -= Real(2.)*facy;
+    } else if (is_cell_centered && j == jhi) {
+        lap += facy * Real(4./3.)*phi(i,j-1,0,n);
+        c0 -= Real(2.)*facy;
+    } else {
+        lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
+    }
+    phi(i,j,0,n) = (rhs - lap) / c0;
 }
 
 void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
@@ -317,7 +350,7 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
         [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
         {
             if ((i+j+icolor)%2 == 0) {
-                gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), Real(0.), facx, facy);
+                gs3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
             }
         });
     }
@@ -326,21 +359,26 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
 
 // do multiple gsrb iterations in GPU shared memory with many ghost cells
-template<bool zero_init, bool compute_residual, bool is_cell_centered>
-void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
-                      Array4<Real const> const& acf, Array4<Real> const& res, Real dx, Real dy)
+template<int system_type, bool zero_init, bool compute_residual, bool is_cell_centered>
+void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
+                  Array4<Real const> const& acf, Array4<Real> const& res, Real dx, Real dy)
 {
+    constexpr int num_comps = MultiGrid::get_num_comps(system_type);
+    constexpr int num_comps_acf = MultiGrid::get_num_comps_acf(system_type);
     constexpr int tilesize_x = 64;
     constexpr int tilesize_y = 32;
-    constexpr int thread_tilesize = 32;
-    constexpr int tilesize_array_x = tilesize_x + 2;
+    constexpr int num_threads = tilesize_x * tilesize_y / 2; // every thread calculates two elements
+    constexpr int tilesize_array_x = tilesize_x + 2; // add one ghost cell in each direction
     constexpr int tilesize_array_y = tilesize_y + 2;
+    constexpr int num_cells_in_tile = tilesize_array_x * tilesize_array_y * num_comps;
     constexpr int niter = 4;
     constexpr int edge_offset = niter - !compute_residual;
-    constexpr int final_tilesize_x = tilesize_x - 2*edge_offset;
+    constexpr int final_tilesize_x = tilesize_x - 2*edge_offset; // add more ghost cells
     constexpr int final_tilesize_y = tilesize_y - 2*edge_offset;
     static_assert(zero_init || !compute_residual, "Cannot initialize phi from an array "
         "and compute the residual because the same array is used for both operations.");
+    static_assert(system_type == 1 || system_type == 2 || system_type == 3,
+        "gsrb_shared only supports system type 1, 2 or 3");
 
     // box for the bounds of the arrays
     int const ilo = box.smallEnd(0);
@@ -359,11 +397,11 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
     const int num_blocks_x = (loop_box.length(0) + final_tilesize_x - 1)/final_tilesize_x;
     const int num_blocks_y = (loop_box.length(1) + final_tilesize_y - 1)/final_tilesize_y;
 
-    amrex::launch<thread_tilesize*thread_tilesize>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
+    amrex::launch<num_threads>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
         [=] AMREX_GPU_DEVICE() noexcept
         {
             // allocate static shared memory
-            __shared__ Real phi_ptr[tilesize_array_x*tilesize_array_y*2];
+            __shared__ Real phi_ptr[num_cells_in_tile];
 
             const int iblock_y = blockIdx.x / num_blocks_x;
             const int iblock_x = blockIdx.x - iblock_y * num_blocks_x;
@@ -376,10 +414,10 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
 
             // make Array4 reference shared memory tile
             Array4<Real> phi_shared(phi_ptr, {tile_begin_x, tile_begin_y, 0},
-                                             {tile_end_x, tile_end_y, 1}, 2);
+                                             {tile_end_x, tile_end_y, 1}, num_comps);
 
             if (zero_init) {
-                for (int s = threadIdx.x; s < tilesize_array_x*tilesize_array_y*2; s+=blockDim.x) {
+                for (int s = threadIdx.x; s < num_cells_in_tile; s+=blockDim.x) {
                     phi_ptr[s] = Real(0.);
                 }
             } else {
@@ -390,11 +428,13 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
                     sy += tile_begin_y;
                     if (ilo_loop <= sx && sx <= ihi_loop &&
                         jlo_loop <= sy && sy <= jhi_loop) {
-                        phi_shared(sx, sy, 0, 0) = res(sx, sy, 0, 0);
-                        phi_shared(sx, sy, 0, 1) = res(sx, sy, 0, 1);
+                        for (int n=0; n<num_comps; ++n) {
+                            phi_shared(sx, sy, 0, n) = res(sx, sy, 0, n);
+                        }
                     } else {
-                        phi_shared(sx, sy, 0, 0) = Real(0.);
-                        phi_shared(sx, sy, 0, 1) = Real(0.);
+                        for (int n=0; n<num_comps; ++n) {
+                            phi_shared(sx, sy, 0, n) = Real(0.);
+                        }
                     }
                 }
             }
@@ -406,17 +446,19 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
             const int i = tile_begin_x + 1 + ithread_x;
             const int j = tile_begin_y + 1 + ithread_y;
 
-            Real rhs0_num[2] = {0., 0.};
-            Real rhs1_num[2] = {0., 0.};
-            Real acf_num[2] = {0., 0.};
+            amrex::GpuArray<Real, num_comps> rhs_num[2] = {{}, {}};
+            amrex::GpuArray<Real, num_comps_acf> acf_num[2] = {{}, {}};
 
             for (int nj=0; nj<=1; ++nj) {
                 if (ilo_loop <= i && i <= ihi_loop &&
                     jlo_loop <= j+nj && j+nj <= jhi_loop) {
                     // load rhs and acf into registers to avoid memory accesses in the gs iterations
-                    rhs0_num[nj] = rhs(i, j+nj, 0, 0);
-                    rhs1_num[nj] = rhs(i, j+nj, 0, 1);
-                    acf_num[nj] = acf(i, j+nj, 0);
+                    for (int n=0; n<num_comps; ++n) {
+                        rhs_num[nj][n] = rhs(i, j+nj, 0, n);
+                    }
+                    for (int n=0; n<num_comps_acf; ++n) {
+                        acf_num[nj][n] = acf(i, j+nj, 0, n);
+                    }
                 }
             }
 
@@ -431,15 +473,22 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
                 // this is ok for shared memory.
                 const int shift = (i + j + icolor) & 1;
                 const int j_loc = j + shift;
-                const Real rhs0_loc = shift ? rhs0_num[1] : rhs0_num[0];
-                const Real rhs1_loc = shift ? rhs1_num[1] : rhs1_num[0];
-                const Real acf_loc = shift ? acf_num[1] : acf_num[0];
+                const auto rhs_loc = shift ? rhs_num[1] : rhs_num[0];
+                const auto acf_loc = shift ? acf_num[1] : acf_num[0];
                 if (ilo_loop <= i && i <= ihi_loop &&
                     jlo_loop <= j_loc && j_loc <= jhi_loop) {
-                    gs1<is_cell_centered>(i, j_loc, 0, ilo, jlo, ihi, jhi, phi_shared,
-                                          rhs0_loc, acf_loc, facx, facy);
-                    gs1<is_cell_centered>(i, j_loc, 1, ilo, jlo, ihi, jhi, phi_shared,
-                                          rhs1_loc, acf_loc, facx, facy);
+                    if (system_type == 1) {
+                        gs1<is_cell_centered>(i, j_loc, 0, ilo, jlo, ihi, jhi, phi_shared,
+                            rhs_loc[0], acf_loc[0], facx, facy);
+                        gs1<is_cell_centered>(i, j_loc, 1, ilo, jlo, ihi, jhi, phi_shared,
+                            rhs_loc[1], acf_loc[0], facx, facy);
+                    } else if (system_type == 2) {
+                        gs2<is_cell_centered>(i, j_loc, ilo, jlo, ihi, jhi, phi_shared,
+                            rhs_loc[0], rhs_loc[1], acf_loc[0], acf_loc[1], facx, facy);
+                    } else if (system_type == 3) {
+                        gs3<is_cell_centered>(i, j_loc, 0, ilo, jlo, ihi, jhi, phi_shared,
+                            rhs_loc[0], facx, facy);
+                    }
                 }
                 __syncthreads();
             }
@@ -455,16 +504,32 @@ void gsrb_shared_st1 (Box const& box, Array4<Real> const& phi_out, Array4<Real c
                     if (compute_residual) {
                         // fuse with compute_residual kernel and reuse phi_shared
                         // at the cost of one extra ghost cell in each direction
-                        res(i, j+nj, 0, 0) = residual1(
-                                                i, j+nj, 0, ilo, jlo, ihi, jhi, phi_shared,
-                                                rhs0_num[nj], acf_num[nj], facx, facy);
-                        res(i, j+nj, 0, 1) = residual1(
-                                                i, j+nj, 1, ilo, jlo, ihi, jhi, phi_shared,
-                                                rhs1_num[nj], acf_num[nj], facx, facy);
+                        if (system_type == 1) {
+                            res(i, j+nj, 0, 0) = residual1(
+                                                    i, j+nj, 0, ilo, jlo, ihi, jhi, phi_shared,
+                                                    rhs_num[nj][0], acf_num[nj][0], facx, facy);
+                            res(i, j+nj, 0, 1) = residual1(
+                                                    i, j+nj, 1, ilo, jlo, ihi, jhi, phi_shared,
+                                                    rhs_num[nj][1], acf_num[nj][0], facx, facy);
+                        } else if (system_type == 2) {
+                            res(i, j+nj, 0, 0) = residual2r(
+                                                    i, j+nj, ilo, jlo, ihi, jhi, phi_shared,
+                                                    rhs_num[nj][0], acf_num[nj][0], acf_num[nj][1],
+                                                    facx, facy);
+                            res(i, j+nj, 0, 1) = residual2i(
+                                                    i, j+nj, ilo, jlo, ihi, jhi, phi_shared,
+                                                    rhs_num[nj][1], acf_num[nj][0], acf_num[nj][1],
+                                                    facx, facy);
+                        } else if (system_type == 3) {
+                            res(i, j+nj, 0, 0) = residual3(
+                                                    i, j+nj, 0, ilo, jlo, ihi, jhi, phi_shared,
+                                                    rhs_num[nj][0], facx, facy);
+                        }
                     }
 
-                    phi_out(i, j+nj, 0, 0) = phi_shared(i, j+nj, 0, 0);
-                    phi_out(i, j+nj, 0, 1) = phi_shared(i, j+nj, 0, 1);
+                    for (int n=0; n<num_comps; ++n) {
+                        phi_out(i, j+nj, 0, n) = phi_shared(i, j+nj, 0, n);
+                    }
                 }
             }
         });
@@ -710,10 +775,8 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     : m_system_type(a_system_type), m_dx(dx), m_dy(dy)
 {
-    int tmp_num_comps[m_num_system_types] = {2, 2, 1};
-    m_num_comps = tmp_num_comps[m_system_type-1];
-    int tmp_num_comps_acf[m_num_system_types] = {1, 2, 0};
-    m_num_comps_acf = tmp_num_comps_acf[m_system_type-1];
+    m_num_comps = get_num_comps(m_system_type);
+    m_num_comps_acf = get_num_comps_acf(m_system_type);
 
     IntVect const a_domain_len = a_domain.length();
 
@@ -1076,11 +1139,31 @@ MultiGrid::vcycle ()
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
         if (m_system_type == 1) {
             if (m_domain[ilev].cellCentered()) {
-                gsrb_shared_st1<true, true, true>(
+                gsrb_shared<1, true, true, true>(
                     m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
                     m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
             } else {
-                gsrb_shared_st1<true, true, false>(
+                gsrb_shared<1, true, true, false>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            }
+        } else if (m_system_type == 2) {
+            if (m_domain[ilev].cellCentered()) {
+                gsrb_shared<2, true, true, true>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            } else {
+                gsrb_shared<2, true, true, false>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            }
+        } else if (m_system_type == 3) {
+            if (m_domain[ilev].cellCentered()) {
+                gsrb_shared<3, true, true, true>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            } else {
+                gsrb_shared<3, true, true, false>(
                     m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
                     m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
             }
@@ -1123,11 +1206,39 @@ MultiGrid::vcycle ()
                                      m_cor[ilev+1].const_array(), m_rescor[ilev].array(), m_num_comps);
 
             if (m_domain[ilev].cellCentered()) {
-                gsrb_shared_st1<false, false, true>(
+                gsrb_shared<1, false, false, true>(
                     m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
                     m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
             } else {
-                gsrb_shared_st1<false, false, false>(
+                gsrb_shared<1, false, false, false>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            }
+        } else if (m_system_type == 2) {
+            // cor[ilev] += I(cor[ilev+1])
+            interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
+                                     m_cor[ilev+1].const_array(), m_rescor[ilev].array(), m_num_comps);
+
+            if (m_domain[ilev].cellCentered()) {
+                gsrb_shared<2, false, false, true>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            } else {
+                gsrb_shared<2, false, false, false>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            }
+        } else if (m_system_type == 3) {
+            // cor[ilev] += I(cor[ilev+1])
+            interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
+                                     m_cor[ilev+1].const_array(), m_rescor[ilev].array(), m_num_comps);
+
+            if (m_domain[ilev].cellCentered()) {
+                gsrb_shared<3, false, false, true>(
+                    m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
+                    m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
+            } else {
+                gsrb_shared<3, false, false, false>(
                     m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
                     m_acf[ilev].const_array(), m_rescor[ilev].array(), dx, dy);
             }
