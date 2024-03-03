@@ -62,6 +62,15 @@ private:
         nprogress,
     };
 
+    // to specify the input for get_buffer_offset
+    enum struct offset_type {
+        beam_idcpu,
+        beam_real,
+        beam_int,
+        laser,
+        total
+    };
+
     // struct to store per-slice data
     struct DataNode {
         char* m_buffer = nullptr;
@@ -130,11 +139,9 @@ private:
     // write MultiBeam sizes into the metadata array
     void write_metadata (int slice, MultiBeam& beams, int beam_slice);
 
-    // helper functions to get location of individual arrays inside a buffer
-    std::size_t get_buffer_offset_idcpu (int slice, int ibeam);
-    std::size_t get_buffer_offset_real (int slice, int ibeam, int rcomp);
-    std::size_t get_buffer_offset_int (int slice, int ibeam, int icomp);
-    std::size_t get_buffer_offset_laser (int slice, int icomp);
+    // helper function to get location of individual arrays inside a buffer
+    std::size_t get_buffer_offset (int slice, offset_type type, MultiBeam& beams,
+                                   int ibeam, int comp);
 
     // copy gpu array into buffer at buffer_offset, either dtoh or dtod
     void memcpy_to_buffer (int slice, std::size_t buffer_offset,
