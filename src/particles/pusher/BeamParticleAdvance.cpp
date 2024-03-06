@@ -232,10 +232,10 @@ AdvanceBeamParticlesSlice (
                     const amrex::Real gamma_inv_p1 =
                         gamma_intermediate_inv / (1._rt + gamma_intermediate_inv);
 
-                    const amrex::RealVect omega = std::abs(charge_mass_ratio) * inv_clight * (
-                        B * gamma_intermediate_inv - beta.crossProduct(E) * gamma_inv_p1
+                    const amrex::RealVect omega = std::abs(charge_mass_ratio) * (
+                        B * gamma_intermediate_inv - beta.crossProduct(E) * inv_clight * gamma_inv_p1
                         + spin_anom * (
-                            B - gamma_inv_p1 * u * beta.dotProduct(B) - beta.crossProduct(E)
+                            B - gamma_inv_p1 * u * beta.dotProduct(B) - beta.crossProduct(E) * inv_clight
                         )
                     );
 
