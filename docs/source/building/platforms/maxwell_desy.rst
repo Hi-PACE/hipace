@@ -9,6 +9,7 @@ Create a file ``profile.hipace``, for instance in ``$HOME``, and ``source`` it w
 HiPACE++:
 
 .. code-block:: bash
+
    #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
    module load maxwell gcc/9.3 openmpi/4
