@@ -58,6 +58,16 @@ There are nodes with 4 GPUs and 1 GPU (see the `Maxwell documentation on compute
 for more details and the required constraints). Please set the value accordingly.
 
 .. tip::
+   If you encounter an error like ``module: command not found``, this can be fixed in most cases by adding the following piece of code before ``module purge`` in your ``profile.hipace`` file.
+
+   .. code-block:: bash
+
+      module ()
+      {
+          eval `modulecmd bash $*`
+      }
+
+.. tip::
    Parallel simulations can be largely accelerated by using GPU-aware MPI.
    To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set and the following flag must be passed in the job script:
 
