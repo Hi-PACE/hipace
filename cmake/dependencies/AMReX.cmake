@@ -162,7 +162,7 @@ set(HiPACE_amrex_src ""
 set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "3525b4a3f27eb64f746dd69b6613f71bb02d6e63"
+set(HiPACE_amrex_branch "24.03"
     CACHE STRING
     "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 
