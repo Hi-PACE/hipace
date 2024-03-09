@@ -177,8 +177,8 @@ void MultiBuffer::make_progress (int slice, bool is_blocking, int current_slice)
     const bool is_blocking_send = is_blocking ||
         (m_nslices + slice - current_slice) % m_nslices > m_max_trailing_slices;
     const bool is_blocking_recv = is_blocking;
-    const bool skip_recv = !is_blocking_recv &&
-        (m_nslices - slice + current_slice) % m_nslices > m_max_leading_slices;
+    const bool skip_recv = !is_blocking_recv && (slice == current_slice ||
+        (m_nslices - slice + current_slice) % m_nslices > m_max_leading_slices);
 
     if (m_is_serial) {
         if (is_blocking) {
