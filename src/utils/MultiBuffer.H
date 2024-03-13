@@ -94,6 +94,8 @@ private:
     amrex::Gpu::PinnedVector<std::size_t> m_metadata {};
     // per-slice data
     amrex::Vector<DataNode> m_datanodes {};
+    amrex::Gpu::DeviceVector<char> m_leading_gpu_buffer {};
+    amrex::Gpu::DeviceVector<char> m_trailing_gpu_buffer {};
 
     // MPI parameters
     bool m_is_head_rank = false;
@@ -108,6 +110,7 @@ private:
     // general parameters
     /** Whether MPI communication buffers should be allocated in device memory */
     bool m_buffer_on_gpu = false;
+    bool m_async_memcpy = true;
     int m_nslices = 0;
     int m_nbeams = 0;
     bool m_use_laser = false;
