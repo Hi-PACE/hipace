@@ -80,24 +80,24 @@ General parameters
     By default, we use the ``nosmt`` option, which overwrites the OpenMP default of spawning one thread per logical CPU core, and instead only spawns a number of threads equal to the number of physical CPU cores on the machine.
     If set, the environment variable ``OMP_NUM_THREADS`` takes precedence over ``system`` and ``nosmt``, but not over integer numbers set in this option.
 
-* ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
+* ``comms_buffer.on_gpu`` (`bool`) optional (default `0`)
     Whether the buffers that hold the beam and the 3D laser envelope should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
 
-* ``hipace.comms_buffer_max_leading_slices`` (`int`) optional (default `inf`)
+* ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
 
-* ``hipace.comms_buffer_max_trailing_slices`` (`int`) optional (default `inf`)
+* ``comms_buffer.max_trailing_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be stored before being sent. Using
-    ``comms_buffer_max_leading_slices`` and ``comms_buffer_max_trailing_slices`` will in principle
+    ``comms_buffer.max_leading_slices`` and ``comms_buffer.max_trailing_slices`` will in principle
     limit the amount of asynchronousness in the parallel communication and may thus reduce performance.
     However it may be necessary to set these parameters to avoid all slices accumulating on a single
-    rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
+    rank that would run out of memory (out of CPU or GPU memory depending on ``comms_buffer.on_gpu``).
     If there are more time steps than ranks, these parameters must be chosen such that between all
     ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
-    ``comms_buffer_max_trailing_slices * nranks > nslices``.
+    ``comms_buffer.max_trailing_slices * nranks > nslices``.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.

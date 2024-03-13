@@ -70,7 +70,7 @@ for more details and the required constraints). Please set the value accordingly
 
 .. tip::
    Parallel simulations can be largely accelerated by using GPU-aware MPI.
-   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set and the following flag must be passed in the job script:
+   To utilize GPU-aware MPI, the input parameter ``comms_buffer.on_gpu = 1`` must be set and the following flag must be passed in the job script:
 
    .. code-block:: bash
 
