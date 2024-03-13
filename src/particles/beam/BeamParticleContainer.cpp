@@ -103,6 +103,15 @@ BeamParticleContainer::ReadParameters ()
         soa.GetIntData()[icomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
+    queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
+    if (m_do_spin_tracking) {
+        getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+        queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
+        for (auto& beam_tile : m_slices) {
+            // Use 3 real and 0 int runtime components
+            beam_tile.define(3, 0);
+        }
+    }
 }
 
 amrex::Real
@@ -380,6 +389,20 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
 
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+            }
+        );
+    }
+
+    if (m_do_spin_tracking) {
+        auto ptd = getBeamSlice(which_slice).getParticleTileData();
+
+        const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
+
+        amrex::ParallelFor(getNumParticles(which_slice),
+            [=] AMREX_GPU_DEVICE (const int ip) {
+                ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
+                ptd.m_runtime_rdata[1][ip] = initial_spin_norm[1];
+                ptd.m_runtime_rdata[2][ip] = initial_spin_norm[2];
             }
         );
     }
