@@ -147,10 +147,10 @@ Hipace::Hipace () :
     MakeGeometry();
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        (((double(m_comms_buffer_max_leading_slices) + m_comms_buffer_max_trailing_slices)
+        ((double(m_comms_buffer_max_trailing_slices)
         * amrex::ParallelDescriptor::NProcs()) > m_3D_geom[0].Domain().length(2))
         || (m_max_step < amrex::ParallelDescriptor::NProcs()),
-        "comms_buffer_max_leading_slices and comms_buffer_max_trailing_slices must be large enough"
+        "comms_buffer_max_trailing_slices must be large enough"
         " to distribute all slices between all ranks if there are more timesteps than ranks");
 
     m_use_laser = m_multi_laser.m_use_laser;
