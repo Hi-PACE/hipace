@@ -63,10 +63,10 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host, bool
     m_use_laser = use_laser;
     m_laser_slice_box = laser_box;
 
-    m_rank_send_to = (rank_id - 1 + n_ranks) % n_ranks;
-    m_rank_receive_from = (rank_id + 1) % n_ranks;
+    m_rank_send_to = (rank_id + 1) % n_ranks;
+    m_rank_receive_from = (rank_id - 1 + n_ranks) % n_ranks;
 
-    m_is_head_rank = rank_id + 1 == n_ranks;
+    m_is_head_rank = Hipace::HeadRank();
     m_is_serial = n_ranks == 1;
 
     m_tag_time_start = 0;

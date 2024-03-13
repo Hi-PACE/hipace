@@ -132,11 +132,19 @@ public:
     void doCoulombCollision ();
 
     /**
+       \brief Returns the rank id of the head rank.
+     */
+    static int HeadRankID ()
+    {
+        return 0;
+    }
+
+    /**
        \brief Returns true on the head rank, otherwise false.
      */
     static bool HeadRank ()
     {
-        return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
+        return amrex::ParallelDescriptor::MyProc() == HeadRankID();
     }
 
     /** Version of the HiPACE executable

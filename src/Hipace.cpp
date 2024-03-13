@@ -326,8 +326,8 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const int rank = amrex::ParallelDescriptor::MyProc();
 
-    // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
-    for (int step = m_numprocs - 1 - rank; step <= m_max_step; step += m_numprocs)
+    // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
+    for (int step = rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
 
@@ -364,7 +364,7 @@ Hipace::Evolve ()
 
         if (m_verbose >= 1) {
             std::cout << "Rank " << rank
-                      << " started  step " << step
+                      << " started step " << step
                       << " at time = " << m_physical_time
                       << " with dt = " << m_dt << std::endl;
         }

@@ -179,7 +179,7 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
         MPI_Bcast(&m_lambda0,
             1,
             amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
-            amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+            Hipace::HeadRankID(),
             amrex::ParallelDescriptor::Communicator());
 #endif
     }
