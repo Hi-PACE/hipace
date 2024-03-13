@@ -237,6 +237,11 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
+* ``fields.poisson_solver`` (`string`) optional (default `FFTDirichlet`)
+    Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
+    solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are
+    ``FFTDirichlet``, ``FFTPeriodic`` and ``MGDirichlet``.
+
 * ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
     Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
     The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.

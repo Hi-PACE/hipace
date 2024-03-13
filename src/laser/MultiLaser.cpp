@@ -731,7 +731,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step)
     if (!m_mg) {
         m_mg = std::make_unique<hpmg::MultiGrid>(m_laser_geom_3D.CellSize(0),
                                                  m_laser_geom_3D.CellSize(1),
-                                                 m_slices.boxArray()[0]);
+                                                 m_slices.boxArray()[0], 2);
     }
 
     const int max_iters = 200;

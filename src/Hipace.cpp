@@ -727,9 +727,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         // cell centered MG solve: no ghost cells, put boundary condition into source term
         // node centered MG solve: one ghost cell, use boundary condition from there
         m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                      m_fields.getField(lev, which_slice, "Sy"));
+                                      m_fields.getField(lev, which_slice, "Sy"),
+                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
         m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                      m_fields.getField(lev, which_slice, "Sx"));
+                                      m_fields.getField(lev, which_slice, "Sx"),
+                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
     }
 
     // interpolate Bx and By to lev from lev-1 in the ghost cells
@@ -807,7 +809,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         if (!m_hpmg[lev]) {
             m_hpmg[lev] = std::make_unique<hpmg::MultiGrid>(m_slice_geom[lev].CellSize(0),
                                                             m_slice_geom[lev].CellSize(1),
-                                                            slicemf.boxArray()[0]);
+                                                            slicemf.boxArray()[0], 1);
         }
         const int max_iters = 200;
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,

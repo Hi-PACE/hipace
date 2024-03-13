@@ -34,30 +34,19 @@ public:
     virtual ~FFTPoissonSolver () = 0;
 
     /**
-     * \brief Define real space and spectral space boxes and multifabs, multiplier
-     * coefficients inv_k2 to solve Poisson equation and FFT plans.
-     * Currently only works with a single box, i.e., serial FFT.
-     *
-     * \param[in] realspace_ba BoxArray on which the FFT is executed.
-     * \param[in] dm DistributionMapping for the BoxArray.
-     * \param[in] gm Geometry, contains the box dimensions.
-     */
-    virtual void define ( amrex::BoxArray const& realspace_ba,
-                          amrex::DistributionMapping const& dm,
-                          amrex::Geometry const& gm) = 0;
-
-    /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
     virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) = 0;
 
+    /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
+    virtual amrex::Real BoundaryOffset() = 0;
+    virtual amrex::Real BoundaryFactor() = 0;
+
     /** Get reference to the taging area */
     amrex::MultiFab& StagingArea ();
 protected:
-    /** BoxArray for the spectral fields */
-    amrex::BoxArray m_spectralspace_ba;
     /** Staging area, contains (real) field in real space.
      * This is where the source term is stored before calling the Poisson solver */
     amrex::MultiFab m_stagingArea;

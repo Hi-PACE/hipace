@@ -10,6 +10,7 @@ target_sources(HiPACE
     FFTPoissonSolver.cpp
     FFTPoissonSolverPeriodic.cpp
     FFTPoissonSolverDirichlet.cpp
+    MGPoissonSolverDirichlet.cpp
 )
 
 add_subdirectory(fft)

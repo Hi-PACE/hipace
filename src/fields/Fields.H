@@ -99,8 +99,6 @@ public:
         int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
         const amrex::DistributionMapping& slice_dm, int bin_size);
 
-    /** Class to handle transverse FFT Poisson solver on 1 slice */
-    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** get function for the 2D slices */
     amrex::Vector<amrex::MultiFab>& getSlices () {return m_slices; }
     /** get function for the 2D slices
@@ -177,10 +175,14 @@ public:
      * \param[in] which_slice slice of the field
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
+     * \param[in] box_grow relative to the domain, how large is the box of staging_area
+     * \param[in] offset shift boundary value by offset number of cells
+     * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area);
+                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
+                               amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
      * This may include ghost cells.
@@ -503,8 +505,10 @@ public:
 private:
     /** Vector over levels of all required fields to compute current slice */
     amrex::Vector<amrex::MultiFab> m_slices;
-    /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
-    bool m_do_dirichlet_poisson = true;
+    /** Type of poisson solver to use */
+    std::string m_poisson_solver_str = "FFTDirichlet";
+    /** Class to handle transverse FFT Poisson solver on 1 slice */
+    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
     amrex::Vector<amrex::FArrayBox> m_tmp_densities;
     /** Stores temporary values for z interpolation in Fields::Copy */
