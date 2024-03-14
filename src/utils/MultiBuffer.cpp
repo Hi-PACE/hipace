@@ -353,12 +353,12 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
                 // receive fist slice
                 make_progress(slice, true, slice);
                 if (m_datanodes[slice].m_buffer_size != 0) {
-                    // -- async start slice
+                    async_memcpy_from_buffer(slice);
                 }
             }
 
             if (m_datanodes[slice].m_buffer_size != 0) {
-                // -- async finish slice
+                async_memcpy_from_buffer_finish();
                 unpack_data(slice, beams, laser, beam_slice);
                 free_buffer(slice);
             }
@@ -367,7 +367,7 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
                 // receive next slice and start async memcpy
                 make_progress(slice-1, true, slice);
                 if (m_datanodes[slice-1].m_buffer_size != 0) {
-                    // -- async start slice-1
+                    async_memcpy_from_buffer(slice-1);
                 }
             }
         } else {
@@ -397,21 +397,23 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
             if (slice < m_nslices - 1) {
                 // finish memcpy of previous slice
                 if (m_datanodes[slice+1].m_buffer_size != 0) {
-                    // -- async finish slice+1
+                    async_memcpy_to_buffer_finish();
                 }
                 m_datanodes[slice+1].m_progress = comm_progress::ready_to_send;
             }
 
             if (m_datanodes[slice].m_buffer_size != 0) {
                 allocate_buffer(slice);
+                m_trailing_gpu_buffer.resize(0);
+                m_trailing_gpu_buffer.resize(m_datanodes[slice].m_buffer_size*sizeof(storage_type));
                 pack_data(slice, beams, laser, beam_slice);
-                // -- async start slice
+                async_memcpy_to_buffer(slice);
             }
 
             if (slice == 0) {
                 // finish memcpy of last slice
                 if (m_datanodes[slice].m_buffer_size != 0) {
-                    // -- async finish slice
+                    async_memcpy_to_buffer_finish();
                 }
                 m_datanodes[slice].m_progress = comm_progress::ready_to_send;
             }
@@ -656,6 +658,38 @@ void MultiBuffer::memcpy_from_buffer (int slice, std::size_t buffer_offset,
 #else
     std::memcpy(dst_ptr, m_datanodes[slice].m_buffer + buffer_offset, num_bytes);
 #endif
+}
+
+void MultiBuffer::async_memcpy_to_buffer (int slice) {
+    std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
+
+    amrex::Gpu::Device::setStreamIndex(1);
+    amrex::Gpu::dtoh_memcpy_async(
+        m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
+void MultiBuffer::async_memcpy_from_buffer (int slice) {
+    std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
+    m_leading_gpu_buffer.resize(0);
+    m_leading_gpu_buffer.resize(num_bytes);
+
+    amrex::Gpu::Device::setStreamIndex(2);
+    amrex::Gpu::htod_memcpy_async(
+         m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
+void MultiBuffer::async_memcpy_to_buffer_finish () {
+    amrex::Gpu::Device::setStreamIndex(1);
+    amrex::Gpu::streamSynchronize();
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
+void MultiBuffer::async_memcpy_from_buffer_finish () {
+    amrex::Gpu::Device::setStreamIndex(2);
+    amrex::Gpu::streamSynchronize();
+    amrex::Gpu::Device::resetStreamIndex();
 }
 
 void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice) {
