@@ -664,8 +664,12 @@ void MultiBuffer::async_memcpy_to_buffer (int slice) {
     std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
 
     amrex::Gpu::Device::setStreamIndex(1);
+#ifdef AMREX_USE_GPU
     amrex::Gpu::dtoh_memcpy_async(
         m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
+#else
+    std::memcpy(m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
+#endif
     amrex::Gpu::Device::resetStreamIndex();
 }
 
@@ -675,8 +679,12 @@ void MultiBuffer::async_memcpy_from_buffer (int slice) {
     m_leading_gpu_buffer.resize(num_bytes);
 
     amrex::Gpu::Device::setStreamIndex(2);
+#ifdef AMREX_USE_GPU
     amrex::Gpu::htod_memcpy_async(
-         m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
+        m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
+#else
+    std::memcpy(m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
+#endif
     amrex::Gpu::Device::resetStreamIndex();
 }
 
