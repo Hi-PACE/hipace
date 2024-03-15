@@ -324,6 +324,7 @@ void
 Hipace::Evolve ()
 {
     HIPACE_PROFILE("Hipace::Evolve()");
+    const double start_time = amrex::second();
     const int rank = amrex::ParallelDescriptor::MyProc();
 
     // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
@@ -363,7 +364,8 @@ Hipace::Evolve ()
         }
 
         if (m_verbose >= 1) {
-            std::cout << "Rank " << rank
+            std::cout << utils::format_time{amrex::second() - start_time}
+                      << " Rank " << rank
                       << " started step " << step
                       << " at time = " << m_physical_time
                       << " with dt = " << m_dt << std::endl;

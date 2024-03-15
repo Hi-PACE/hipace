@@ -14,6 +14,7 @@
 #include <AMReX_MultiFab.H>
 
 #include <cstdint>
+#include <iostream>
 #include <vector>
 
 #ifdef HIPACE_USE_OPENPMD
@@ -73,6 +74,15 @@ namespace utils
     getUnitDimension ( std::string const & record_name );
 #endif
 
+    struct format_time {
+        double seconds = 0;
+    };
 }
+
+/** \brief print time in d-hh:mm:ss format
+ * \param[in] os stream to print to
+ * \param[in] ft time in seconds to print
+ */
+std::ostream& operator<< (std::ostream& os, utils::format_time ft);
 
 #endif
