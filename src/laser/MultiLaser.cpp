@@ -57,7 +57,7 @@ MultiLaser::ReadParameters ()
     if (!m_laser_from_file) {
         getWithParser(pp, "lambda0", m_lambda0);
     }
-    DeprecatedInput("lasers", "3d_on_host", "hipace.comms_buffer_on_gpu", "", true);
+    DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");

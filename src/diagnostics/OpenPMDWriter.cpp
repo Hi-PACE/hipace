@@ -298,7 +298,8 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
                     m_uint64_beam_data[ibeam][idx].get() + m_offset[ibeam]);
             }
 
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_real_beam_data[ibeam].size() == soa.NumRealComps(),
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                int(m_real_beam_data[ibeam].size()) == soa.NumRealComps(),
                 "List of real names in openPMD Writer class does not match the beam");
 
             for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {

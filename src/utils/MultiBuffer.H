@@ -18,8 +18,7 @@ class MultiBuffer
 public:
 
     // initialize MultiBuffer and open initial receive requests
-    void initialize (int nslices, int nbeams, bool buffer_on_host, bool use_laser,
-                     amrex::Box laser_box, int max_leading_slices, int max_trailing_slices);
+    void initialize (int nslices, int nbeams, bool use_laser, amrex::Box laser_box);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
     void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
@@ -107,13 +106,16 @@ private:
     MPI_Comm m_comm = MPI_COMM_NULL;
 
     // general parameters
-    bool m_buffer_on_host = true;
+    /** Whether MPI communication buffers should be allocated in device memory */
+    bool m_buffer_on_gpu = false;
     int m_nslices = 0;
     int m_nbeams = 0;
     bool m_use_laser = false;
     int m_laser_ncomp = 4;
     amrex::Box m_laser_slice_box {};
+    /** How many slices of beam particles can be received in advance */
     int m_max_leading_slices = std::numeric_limits<int>::max();
+    /** How many slices of beam particles can be stored before being sent */
     int m_max_trailing_slices = std::numeric_limits<int>::max();
 
     // parameters to send physical time
