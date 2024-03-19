@@ -86,6 +86,12 @@ General parameters
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
 
+* ``comms_buffer.async_memcpy`` (`bool`) optional (default `1`)
+    When using a GPU and setting ``comms_buffer.on_gpu = 0``, this option will allow the data
+    transfer between the CPU and GPU for communications to be asynchronous instead of blocking.
+    This can improve performance in a typical situation where the CPU-GPU link has relatively
+    low bandwidth at the cost of some GPU memory and a reduced maximum number of MPI ranks.
+
 * ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
 

@@ -156,8 +156,11 @@ private:
     void memcpy_from_buffer (int slice, std::size_t buffer_offset,
                              void* dst_ptr, std::size_t num_bytes);
 
+    // asynchronous copy between cpu buffer and gpu m_leading_gpu_buffer or m_trailing_gpu_buffer
     void async_memcpy_to_buffer (int slice);
     void async_memcpy_from_buffer (int slice);
+
+    // finish asynchronous copy (long) after it was initiated
     void async_memcpy_to_buffer_finish ();
     void async_memcpy_from_buffer_finish ();
 
