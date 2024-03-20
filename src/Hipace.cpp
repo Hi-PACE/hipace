@@ -77,8 +77,8 @@ Hipace::Hipace () :
     queryWithParser(pp, "use_previous_rng", use_previous_rng);
     if (use_previous_rng) {
         amrex::ResetRandomSeed(
-            ParallelDescriptor::NProcs()-ParallelDescriptor::MyProc(),
-            (ParallelDescriptor::NProcs()-1-ParallelDescriptor::MyProc())*1234567ULL + 12345ULL);
+            amrex::ParallelDescriptor::NProcs()-amrex::ParallelDescriptor::MyProc(),
+            (amrex::ParallelDescriptor::NProcs()-1-amrex::ParallelDescriptor::MyProc())*1234567ULL + 12345ULL);
     }
 
     int seed;
