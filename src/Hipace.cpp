@@ -73,6 +73,14 @@ Hipace::Hipace () :
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
 
+    bool use_previous_rng = false;
+    queryWithParser(pp, "use_previous_rng", use_previous_rng);
+    if (use_previous_rng) {
+        amrex::ResetRandomSeed(
+            amrex::ParallelDescriptor::NProcs()-amrex::ParallelDescriptor::MyProc(),
+            (amrex::ParallelDescriptor::NProcs()-1-amrex::ParallelDescriptor::MyProc())*1234567ULL + 12345ULL);
+    }
+
     int seed;
     if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
@@ -316,10 +324,11 @@ void
 Hipace::Evolve ()
 {
     HIPACE_PROFILE("Hipace::Evolve()");
+    const double start_time = amrex::second();
     const int rank = amrex::ParallelDescriptor::MyProc();
 
-    // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
-    for (int step = m_numprocs - 1 - rank; step <= m_max_step; step += m_numprocs)
+    // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
+    for (int step = rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
 
@@ -355,8 +364,9 @@ Hipace::Evolve ()
         }
 
         if (m_verbose >= 1) {
-            std::cout << "Rank " << rank
-                      << " started  step " << step
+            std::cout << utils::format_time{amrex::second() - start_time}
+                      << " Rank " << rank
+                      << " started step " << step
                       << " at time = " << m_physical_time
                       << " with dt = " << m_dt << std::endl;
         }

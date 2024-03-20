@@ -65,14 +65,14 @@ AdaptiveTimeStep::BroadcastTimeStep (amrex::Real& dt)
     MPI_Bcast(&dt,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              Hipace::HeadRankID(),
               amrex::ParallelDescriptor::Communicator());
 
     // Broadcast minimum uz
     MPI_Bcast(&m_min_uz,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              Hipace::HeadRankID(),
               amrex::ParallelDescriptor::Communicator());
 #else
     amrex::ignore_unused(dt);

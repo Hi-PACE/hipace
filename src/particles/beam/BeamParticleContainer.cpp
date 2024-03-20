@@ -286,7 +286,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     MPI_Bcast(&m_total_num_particles,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<decltype(m_total_num_particles)>::type(),
-              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              Hipace::HeadRankID(),
               amrex::ParallelDescriptor::Communicator());
 #endif
 
