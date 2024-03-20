@@ -73,6 +73,14 @@ Hipace::Hipace () :
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
 
+    bool use_previous_rng = true;
+    queryWithParser(pph, "use_previous_rng", use_previous_rng);
+    if (use_previous_rng) {
+        amrex::ResetRandomSeed(
+            ParallelDescriptor::NProcs()-ParallelDescriptor::MyProc(),
+            (ParallelDescriptor::NProcs()-1-ParallelDescriptor::MyProc())*1234567ULL + 12345ULL);
+    }
+
     int seed;
     if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
