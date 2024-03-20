@@ -74,7 +74,7 @@ Hipace::Hipace () :
     queryWithParser(pp, "max_step", m_max_step);
 
     bool use_previous_rng = true;
-    queryWithParser(pph, "use_previous_rng", use_previous_rng);
+    queryWithParser(pp, "use_previous_rng", use_previous_rng);
     if (use_previous_rng) {
         amrex::ResetRandomSeed(
             ParallelDescriptor::NProcs()-ParallelDescriptor::MyProc(),
