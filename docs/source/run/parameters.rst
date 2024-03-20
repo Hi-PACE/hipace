@@ -47,6 +47,12 @@ General parameters
     Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
     Note that on GPU, since the order of operations is not ensured, providing a seed does not guarantee reproducibility to the level of machine precision.
 
+* ``use_previous_rng`` (`bool`) optional (default `0`)
+    If set to `1`, the seed of the random number generator is computed as was done previous to `Pull Request 1081 <https://github.com/Hi-PACE/hipace/pull/1081>`__.
+    In particular, this seed depends on the number of ranks used for the simulation.
+    If ``random_seed`` is specified, it takes precedence and ``use_previous_rng`` is not used.
+    This option is off by default and should only be used for backward compatibility.
+
 * ``hipace.verbose`` (`int`) optional (default `0`)
     Level of verbosity.
 
