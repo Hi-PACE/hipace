@@ -94,6 +94,8 @@ private:
     amrex::Gpu::PinnedVector<std::size_t> m_metadata {};
     // per-slice data
     amrex::Vector<DataNode> m_datanodes {};
+    amrex::Gpu::DeviceVector<char> m_leading_gpu_buffer {};
+    amrex::Gpu::DeviceVector<char> m_trailing_gpu_buffer {};
 
     // MPI parameters
     bool m_is_head_rank = false;
@@ -108,6 +110,7 @@ private:
     // general parameters
     /** Whether MPI communication buffers should be allocated in device memory */
     bool m_buffer_on_gpu = false;
+    bool m_async_memcpy = true;
     int m_nslices = 0;
     int m_nbeams = 0;
     bool m_use_laser = false;
@@ -152,6 +155,14 @@ private:
     // copy buffer array at buffer_offset into gpu array, either htod or dtod
     void memcpy_from_buffer (int slice, std::size_t buffer_offset,
                              void* dst_ptr, std::size_t num_bytes);
+
+    // asynchronous copy between cpu buffer and gpu m_leading_gpu_buffer or m_trailing_gpu_buffer
+    void async_memcpy_to_buffer (int slice);
+    void async_memcpy_from_buffer (int slice);
+
+    // finish asynchronous copy (long) after it was initiated
+    void async_memcpy_to_buffer_finish ();
+    void async_memcpy_from_buffer_finish ();
 
     // pack MultiBeam and MultiLaser into buffer
     void pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
