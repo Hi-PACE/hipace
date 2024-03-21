@@ -336,6 +336,15 @@ private:
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
 
+    // spin insitu:
+
+    /** Number of real beam properties for spin in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_n_spin = 6;
+    /** Per-slice real beam spin properties */
+    amrex::Vector<amrex::Real> m_insitu_spin_data;
+    /** Sum of all per-slice real beam spin properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_spin_data;
+
     // to estimate min uz
     friend AdaptiveTimeStep;
 };

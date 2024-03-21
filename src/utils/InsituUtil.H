@@ -89,6 +89,28 @@ inline void write_data (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs
     }
 }
 
+// merge two structured datatypes into onodes
+inline void merge_data (amrex::Vector<DataNode>& onodes, const amrex::Vector<DataNode>& inodes) {
+    for (auto& idn : inodes) {
+        if (idn.m_data_location) {
+            onodes.push_back(idn);
+        } else {
+            bool merged = false;
+            for (auto& odn : onodes) {
+                if (!odn.m_data_location && odn.m_name == idn.m_name) {
+                    // recursive call for nested structured datatypes
+                    merge_data(odn.m_structured_format, idn.m_structured_format);
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                onodes.push_back(idn);
+            }
+        }
+    }
+}
+
 }
 
 #endif
