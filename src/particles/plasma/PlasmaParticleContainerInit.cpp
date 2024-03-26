@@ -21,7 +21,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                const amrex::Real a_radius,
                const amrex::Real a_hollow_core_radius)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
+    HIPACE_PROFILE("PlasmaParticleContainer::InitParticles()");
     using namespace amrex::literals;
     clearParticles();
     const int lev = 0;

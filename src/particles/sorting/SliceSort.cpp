@@ -12,12 +12,12 @@
 void
 shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geometry const& geom)
 {
-    HIPACE_PROFILE("shiftSlippedParticles()");
-
     if (beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This) == 0) {
         // nothing to do
         return;
     }
+
+    HIPACE_PROFILE("shiftSlippedParticles()");
 
     // remove all invalid particles from WhichBeamSlice::This (including slipped)
     amrex::removeInvalidParticles(beam.getBeamSlice(WhichBeamSlice::This));

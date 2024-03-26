@@ -374,8 +374,6 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
                 const amrex::Real factor_b, const FVB& src_b)
 {
-    HIPACE_PROFILE("Fields::LinCombination()");
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -410,8 +408,6 @@ void
 Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
           const amrex::Real factor, const FV& src)
 {
-    HIPACE_PROFILE("Fields::Multiply()");
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -698,11 +694,10 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
                               amrex::Real offset, amrex::Real factor)
 {
-    HIPACE_PROFILE("Fields::SetBoundaryCondition()");
-
     const amrex::Box staging_box = amrex::grow(geom[lev].Domain(), box_grow);
 
     if (lev == 0 && m_open_boundary) {
+        HIPACE_PROFILE("Fields::SetOpenBoundaryCondition()");
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
 
@@ -760,6 +755,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         );
 
     } else if (lev > 0) {
+        HIPACE_PROFILE("Fields::SetMRBoundaryCondition()");
         // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
         constexpr int interp_order = 2;
 

@@ -30,7 +30,6 @@ namespace AnyDST
      */
     void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
     {
-        HIPACE_DETAIL_PROFILE("AnyDST::ExpandR2R()");
         constexpr int scomp = 0;
         constexpr int dcomp = 0;
 
@@ -64,7 +63,6 @@ namespace AnyDST
      */
     void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
     {
-        HIPACE_DETAIL_PROFILE("AnyDST::ShrinkC2R()");
         constexpr int scomp = 0;
         constexpr int dcomp = 0;
 
@@ -94,7 +92,6 @@ namespace AnyDST
                     amrex::GpuComplex<amrex::Real>* const AMREX_RESTRICT out,
                     const int n_data, const int n_batch)
     {
-        HIPACE_DETAIL_PROFILE("AnyDST::ToComplex()");
         const int n_half = (n_data+1)/2;
         if((n_data%2 == 1)) {
             amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
@@ -134,7 +131,6 @@ namespace AnyDST
     void C2Rfft (AnyFFT::VendorFFTPlan& plan, amrex::GpuComplex<amrex::Real>* AMREX_RESTRICT in,
                  amrex::Real* const AMREX_RESTRICT out)
     {
-        HIPACE_DETAIL_PROFILE("AnyDST::C2Rfft()");
         cudaStream_t stream = amrex::Gpu::Device::cudaStream();
         cufftSetStream(plan, stream);
         cufftResult result;
@@ -162,7 +158,6 @@ namespace AnyDST
     void ToSine (const amrex::Real* const AMREX_RESTRICT in, amrex::Real* const AMREX_RESTRICT out,
                  const int n_data, const int n_batch)
     {
-        HIPACE_DETAIL_PROFILE("AnyDST::ToSine()");
         using namespace amrex::literals;
 
         const amrex::Real n_1_real = n_data+1._rt;
@@ -199,7 +194,6 @@ namespace AnyDST
                     amrex::Real* const AMREX_RESTRICT out,
                     const int n_data, const int n_batch)
     {
-        HIPACE_DETAIL_PROFILE("AnyDST::Transpose()");
         constexpr int tile_dim = 32; //must be power of 2
         constexpr int block_rows = 8;
         const int num_blocks_x = (n_data + tile_dim - 1)/tile_dim;
@@ -365,8 +359,7 @@ namespace AnyDST
         cufftDestroy( dst_plan.m_plan_b );
     }
 
-    template<direction d>
-    void Execute (DSTplan& dst_plan){
+    void Execute (DSTplan& dst_plan, direction d){
         HIPACE_PROFILE("AnyDST::Execute()");
 
         if(!dst_plan.use_small_dst) {
@@ -433,7 +426,4 @@ namespace AnyDST
             Transpose(pos_arr, fourier_arr, ny, nx);
         }
     }
-
-    template void Execute<direction::forward>(DSTplan& dst_plan);
-    template void Execute<direction::backward>(DSTplan& dst_plan);
 }
