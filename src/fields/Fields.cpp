@@ -90,6 +90,9 @@ Fields::AllocData (
             Comps[isl].multi_emplace(N_Comps, "Sy", "Sx", "ExmBy", "EypBx", "Ez",
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "jx", "jy", "rhomjz");
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps, "aabs");
+            }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
             }
@@ -133,7 +136,7 @@ Fields::AllocData (
                                               "jx", "jy", "jz", "rhomjz");
 
             if (Hipace::m_use_laser) {
-                Comps[isl].multi_emplace(N_Comps, "chi");
+                Comps[isl].multi_emplace(N_Comps, "chi", "aabs");
             }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
