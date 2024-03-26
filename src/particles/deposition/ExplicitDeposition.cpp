@@ -34,7 +34,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const int EypBx = Comps[WhichSlice::This]["EypBx"];
         const int Ez = Comps[WhichSlice::This]["Ez"];
         const int Bz = Comps[WhichSlice::This]["Bz"];
-        const int a_aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
+        const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Extract particle properties
         const auto ptd = pti.GetParticleTile().getParticleTileData();
@@ -55,7 +55,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const amrex::Real a_clight = pc.c;
         const amrex::Real clight_inv = 1._rt/pc.c;
         // The laser a0 is always normalized
-        const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
+        const amrex::Real laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
@@ -120,10 +120,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 amrex::Real Aabssqp = 0._rt;
-                // Rename variable for NVCC lambda capture to work
-                [[maybe_unused]] auto aabs_comp = a_aabs_comp;
-                [[maybe_unused]] auto laser_fac = a_laser_fac;
-                if constexpr (use_laser.value) {
+                if (use_laser.value) {
                     // Its important that Aabssqp is first fully gathered and not used
                     // directly per cell like AabssqDxp and AabssqDyp
                     doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, arr, aabs_comp,
