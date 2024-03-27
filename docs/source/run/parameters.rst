@@ -514,9 +514,6 @@ which are valid only for certain beam types, are introduced further below under
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
-* ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
-    Whether to reset the ID incrementor to 1 before initializing beam particles.
-
 * ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition and particle push on GPU.
     A good starting point is a period of 1 to reorder beam particles on every timestep.
