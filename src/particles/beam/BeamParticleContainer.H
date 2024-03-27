@@ -203,7 +203,7 @@ public:
         return rcomp < numRealComponents();
     }
     bool communicateIntComponent (int icomp) const {
-        // don't communicate nsubcycles
+        // don't communicate nsubcycles or mr_level
         return icomp < BeamIdx::int_nattribs_in_buffer;
     }
 
