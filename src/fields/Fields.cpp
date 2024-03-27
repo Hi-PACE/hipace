@@ -1321,8 +1321,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
 
     amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
-            m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
-            m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+            m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a)*dxdydz;
+            m_insitu_sum_rdata[idx] += amrex::get<idx>(a)*dxdydz;
         }
     );
 }

@@ -1130,21 +1130,19 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice, const am
 
     amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
-            if (idx.value == 0) {
-                m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a);
-                m_insitu_sum_rdata[idx.value] =
-                    std::max(m_insitu_sum_rdata[idx.value], amrex::get<idx.value>(a));
+            if (idx == 0) {
+                m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a);
+                m_insitu_sum_rdata[idx] = std::max(m_insitu_sum_rdata[idx], amrex::get<idx>(a));
             } else {
-                m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
-                m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+                m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a)*dxdydz;
+                m_insitu_sum_rdata[idx] += amrex::get<idx>(a)*dxdydz;
             }
         }
     );
 
     amrex::constexpr_for<0, m_insitu_ncp>(
         [&] (auto idx) {
-            m_insitu_cdata[islice + idx.value * nslices] =
-                amrex::get<m_insitu_nrp+idx.value>(a) * mid_factor;
+            m_insitu_cdata[islice + idx * nslices] = amrex::get<m_insitu_nrp+idx>(a) * mid_factor;
         }
     );
 }
