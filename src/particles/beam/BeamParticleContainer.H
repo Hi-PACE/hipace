@@ -35,6 +35,7 @@ struct BeamIdx
         // nsubcycles: by how many subcycles was this particle pushed already
         // nsubcycles is not stored or communicated in MultiBuffer
         nsubcycles=int_nattribs_in_buffer,
+        mr_level,
         int_nattribs
     };
 };
@@ -202,7 +203,7 @@ public:
         return rcomp < numRealComponents();
     }
     bool communicateIntComponent (int icomp) const {
-        // don't communicate nsubcycles
+        // don't communicate nsubcycles or mr_level
         return icomp < BeamIdx::int_nattribs_in_buffer;
     }
 
@@ -222,8 +223,6 @@ public:
     bool m_do_radiation_reaction {false}; /**< whether to calculate radiation losses */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
-    /** Whether to reset the global ID incrementor to 1 before initializing this beam */
-    bool m_do_reset_id_init {false};
     bool m_initialize_on_cpu {false};
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */

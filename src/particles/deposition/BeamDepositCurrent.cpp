@@ -99,7 +99,11 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
             // Skip invalid particles and ghost particles not in the last slice
             // beam deposits only up to its finest level
-            if (!ptd.id(ip).is_valid() || (only_highest ? (ptd.cpu(ip)!=lev) : (ptd.cpu(ip)<lev))) return;
+            if (!ptd.id(ip).is_valid() ||
+                (only_highest ?
+                    (ptd.idata(BeamIdx::mr_level)[ip] != lev) :
+                    (ptd.idata(BeamIdx::mr_level)[ip] < lev))
+            ) return;
 
             // --- Get particle quantities
             const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];

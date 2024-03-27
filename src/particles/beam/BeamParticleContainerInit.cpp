@@ -41,8 +41,8 @@ namespace
     void AddOneBeamParticle (
         const BeamTileInit::ParticleTileDataType& ptd, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
-        const amrex::Real& uz, const amrex::Real& weight, const int& pid,
-        const int& ip, const amrex::Real& speed_of_light) noexcept
+        const amrex::Real& uz, const amrex::Real& weight, const amrex::Long pid,
+        const amrex::Long ip, const amrex::Real& speed_of_light) noexcept
     {
         ptd.rdata(BeamIdx::x  )[ip] = x;
         ptd.rdata(BeamIdx::y  )[ip] = y;
@@ -52,8 +52,8 @@ namespace
         ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
-        ptd.id(ip) = pid > 0 ? pid + ip : pid;
-        ptd.cpu(ip) = 0;
+        ptd.idcpu(ip) = pid + ip;
+        ptd.id(ip).make_valid();
     }
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
@@ -86,15 +86,15 @@ namespace
         ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
-        // ensure id is always valid
-        // it will repeat if there are more than 2^31-1 particles
-        int id = int((pid + ip) & ((1ull << 31) - 1));
-        if (id == 0) id = 1;
-        if (!is_valid) id = -1;
+        ptd.idcpu(ip) = pid + ip;
+        if (is_valid) {
+            ptd.id(ip).make_valid(); // ensure id is valid
+        } else {
+            ptd.id(ip).make_invalid();
+        }
 
-        ptd.id(ip) = id;
-        ptd.cpu(ip) = 0;
         ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+        ptd.idata(BeamIdx::mr_level)[ip] = 0;
     }
 }
 
@@ -389,7 +389,7 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     amrex::Real * const pos_z = m_z_array.dataPtr();
 
     const uint64_t pid = m_id64;
-    m_id64 += num_to_add;
+    m_id64 += m_do_symmetrize ? 4*num_to_add : num_to_add;
 
     const bool can = m_can_profile;
     const bool do_symmetrize = m_do_symmetrize;
@@ -587,7 +587,7 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         const auto ptd = particle_tile.getParticleTileData();
 
         const uint64_t pid = m_id64;
-        m_id64 += num_to_add;
+        m_id64 += m_do_symmetrize ? 4*num_to_add : num_to_add;
 
         const amrex::Real clight = get_phys_const().c;
         const bool do_symmetrize = m_do_symmetrize;
@@ -947,7 +947,7 @@ InitBeamFromFile (const std::string input_file,
     const auto num_to_add = electrons[name_r][name_rx].getExtent()[0];
 
     if(num_to_add >= 2147483647) {
-        amrex::Abort("Beam can't have more than 2'147'483'646 Particles\n");
+        amrex::Abort("Beam from file can't have more than 2'147'483'646 Particles\n");
     }
 
     auto del = [](input_type *p){ amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p)); };
@@ -1031,8 +1031,9 @@ InitBeamFromFile (const std::string input_file,
     auto new_size = old_size + num_to_add;
     particle_tile.resize(new_size);
     const auto ptd = particle_tile.getParticleTileData();
-    const int pid = BeamTileInit::ParticleType::NextID();
-    BeamTileInit::ParticleType::NextID(pid + num_to_add);
+
+    const uint64_t pid = m_id64;
+    m_id64 += num_to_add;
 
     const input_type * const r_x_ptr = r_x_data.get();
     const input_type * const r_y_ptr = r_y_data.get();
@@ -1042,8 +1043,8 @@ InitBeamFromFile (const std::string input_file,
     const input_type * const u_z_ptr = u_z_data.get();
     const input_type * const w_w_ptr = w_w_data.get();
 
-    amrex::ParallelFor(int(num_to_add),
-        [=] AMREX_GPU_DEVICE (const int i) {
+    amrex::ParallelFor(amrex::Long(num_to_add),
+        [=] AMREX_GPU_DEVICE (const amrex::Long i) {
             AddOneBeamParticle(ptd,
                 static_cast<amrex::Real>(r_x_ptr[i] * unit_rx),
                 static_cast<amrex::Real>(r_y_ptr[i] * unit_ry),
