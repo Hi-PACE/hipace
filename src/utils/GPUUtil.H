@@ -107,6 +107,20 @@ struct Array3 {
     int ncomp=0;
 #endif
 
+    template <class U=T, std::enable_if_t<std::is_const_v<U>,int> = 0>
+    AMREX_GPU_HOST_DEVICE
+    Array3 (const Array3<std::remove_const_t<T>>& rhs) noexcept
+        : p(rhs.p),
+          jstride(rhs.jstride),
+          nstride(rhs.nstride),
+          start(rhs.start)
+#if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
+          ,begin(rhs.begin),
+          end(rhs.end),
+          ncomp(rhs.ncomp)
+#endif
+    {}
+
     Array3 (const amrex::Array4<T>& rhs) noexcept
         : p(rhs.p),
           jstride(rhs.jstride),

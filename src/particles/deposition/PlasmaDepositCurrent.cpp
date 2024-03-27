@@ -20,7 +20,7 @@
 
 
 void
-DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLaser& multi_laser,
+DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
@@ -60,9 +60,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
 
-        // extract the laser Fields
-        const amrex::MultiFab& a_mf = multi_laser.getSlices();
-
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
@@ -72,8 +69,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         // Extract laser array from MultiFab
         const Array3<const amrex::Real> a_laser_arr =
-            multi_laser.m_use_laser ? a_mf[pti].const_array(WhichLaserSlice::n00j00_r)
-                                    : amrex::Array4<const amrex::Real>();
+            Hipace::m_use_laser ? isl_fab.const_array(Comps[WhichSlice::This]["aabs"])
+                                : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
@@ -166,7 +163,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                     Hipace::m_outer_depos_loop,
                     plasma.m_can_ionize,
                     do_tiling,
-                    multi_laser.m_use_laser
+                    Hipace::m_use_laser
                 },
                 num_particles,
                 [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto outer_depos_loop,
@@ -215,7 +212,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
                 amrex::Real Aabssqp = 0._rt;
                 [[maybe_unused]] auto laser_arr = a_laser_arr;
                 if constexpr (use_laser.value) {
-                    doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, laser_arr,
+                    doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, laser_arr, 0,
                                                         dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                     Aabssqp *= laser_norm_ion;
                 }

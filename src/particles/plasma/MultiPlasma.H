@@ -11,7 +11,6 @@
 #include "PlasmaParticleContainer.H"
 #include "particles/sorting/TileSort.H"
 #include "fields/Fields.H"
-#include "laser/MultiLaser.H"
 #include "particles/collisions/CoulombCollision.H"
 
 class MultiPlasma
@@ -41,7 +40,6 @@ public:
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
-     * \param[in] multi_laser Lasers that affects the plasma during the deposition
      * \param[in] which_slice defines if this or the next slice is handled
      * \param[in] deposit_jx_jy if true, deposit to jx and jy
      * \param[in] deposit_jz if true, deposit to jz
@@ -52,19 +50,18 @@ public:
      * \param[in] lev MR level
      */
     void DepositCurrent (
-        Fields & fields, const MultiLaser & multi_laser, int which_slice, bool deposit_jx_jy,
+        Fields & fields, int which_slice, bool deposit_jx_jy,
         bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
-     * \param[in] multi_laser Lasers that affects the plasma during the deposition
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
-    void ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
-                             amrex::Vector<amrex::Geometry> const& gm, int const lev);
+    void ExplicitDeposition (Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
+                             int const lev);
 
     /** \brief Return max density, to compute the adaptive time step.
      *
@@ -76,25 +73,22 @@ public:
     /** \brief Gather field values and push particles
      *
      * \param[in,out] fields the general field class, modified by this function
-     * \param[in] multi_laser Lasers that affects the plasma during the deposition
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
      * \param[in] lev MR level
      */
     void AdvanceParticles (
-        const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
-        bool temp_slice, int lev);
+        const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev);
 
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
      * \param[in,out] fields the general field class, modified by this function
-     * \param[in] multi_laser that affects the plasma during the deposition
      * \param[in] which_slice slice in which the densities are deposited
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
     void DepositNeutralizingBackground (
-        Fields & fields, const MultiLaser & multi_laser, int which_slice,
+        Fields & fields, int which_slice,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Calculates Ionization Probability and makes new Plasma Particles

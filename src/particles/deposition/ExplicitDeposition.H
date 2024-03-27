@@ -14,12 +14,11 @@
 /** Depose Sx and Sy of particles in species plasma into the current 2D slice in fields
  * \param[in] plasma species of which the current is deposited
  * \param[in,out] fields the general field class, modified by this function
- * \param[in] multi_laser Lasers that affects the plasma during the deposition
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  */
 void
-ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
+ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     amrex::Vector<amrex::Geometry> const& gm, const int lev);
 
 #endif //  EXPLICITDEPOSITION_H_

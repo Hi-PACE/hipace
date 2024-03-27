@@ -226,7 +226,8 @@ void doBxByGatherShapeN (const amrex::Real xp,
  * \param[in] Aabssqp |a|^2 field at particle position
  * \param[in] AabssqDxp d/dx |a|^2 field at particle position
  * \param[in] AabssqDyp d/dy |a|^2 field at particle position
- * \param[in] a_arr a field array
+ * \param[in] slice_arr slice array for WhichSlice::This
+ * \param[in] aabs_comp field component for field aabs
  * \param[in] dx_inv inverse cell spacing in x direction
  * \param[in] dy_inv inverse cell spacing in y direction
  * \param[in] x_pos_offset offset for converting positions to indexes
@@ -239,7 +240,8 @@ void doLaserGatherShapeN (const amrex::Real xp,
                           amrex::Real& Aabssqp,
                           amrex::Real& AabssqDxp,
                           amrex::Real& AabssqDyp,
-                          Array3<amrex::Real const> const& a_arr,
+                          Array3<amrex::Real const> const& slice_arr,
+                          const int aabs_comp,
                           const amrex::Real dx_inv,
                           const amrex::Real dy_inv,
                           const amrex::Real x_pos_offset,
@@ -261,25 +263,15 @@ void doLaserGatherShapeN (const amrex::Real xp,
     amrex::Real sy_cell[depos_order_xy + 1];
     const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
 
-    // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid a_arr
+    // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid slice_arr
     // the derivative is calculated on the fly
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
-            const amrex::Real x00y00 = abssq(
-                a_arr(i_cell+ix  , j_cell+iy  , 0),
-                a_arr(i_cell+ix  , j_cell+iy  , 1) );
-            const amrex::Real xp1y00 = abssq(
-                a_arr(i_cell+ix+1, j_cell+iy  , 0),
-                a_arr(i_cell+ix+1, j_cell+iy  , 1) );
-            const amrex::Real xm1y00 = abssq(
-                a_arr(i_cell+ix-1, j_cell+iy  , 0),
-                a_arr(i_cell+ix-1, j_cell+iy  , 1) );
-            const amrex::Real x00yp1 = abssq(
-                a_arr(i_cell+ix  , j_cell+iy+1, 0),
-                a_arr(i_cell+ix  , j_cell+iy+1, 1) );
-            const amrex::Real x00ym1 = abssq(
-                a_arr(i_cell+ix  , j_cell+iy-1, 0),
-                a_arr(i_cell+ix  , j_cell+iy-1, 1) );
+            const amrex::Real x00y00 = slice_arr(i_cell+ix  , j_cell+iy  , aabs_comp);
+            const amrex::Real xp1y00 = slice_arr(i_cell+ix+1, j_cell+iy  , aabs_comp);
+            const amrex::Real xm1y00 = slice_arr(i_cell+ix-1, j_cell+iy  , aabs_comp);
+            const amrex::Real x00yp1 = slice_arr(i_cell+ix  , j_cell+iy+1, aabs_comp);
+            const amrex::Real x00ym1 = slice_arr(i_cell+ix  , j_cell+iy-1, aabs_comp);
             Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
             AabssqDxp += sx_cell[ix]*sy_cell[iy]*0.5_rt*dx_inv*(xp1y00-xm1y00);
             AabssqDyp += sx_cell[ix]*sy_cell[iy]*0.5_rt*dy_inv*(x00yp1-x00ym1);
@@ -296,7 +288,8 @@ void doLaserGatherShapeN (const amrex::Real xp,
  * \param[in] xp Particle position x
  * \param[in] yp Particle position y
  * \param[in,out] Aabssqp Field on particle: |a|^2
- * \param[in] a_arr field array for field a
+ * \param[in] slice_arr slice array for WhichSlice::This
+ * \param[in] aabs_comp field component for field aabs
  * \param[in] dx_inv inverse cell spacing in x direction
  * \param[in] dy_inv inverse cell spacing in y direction
  * \param[in] x_pos_offset offset for converting positions to indexes
@@ -307,7 +300,8 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void doLaserGatherShapeN (const amrex::Real xp,
                           const amrex::Real yp,
                           amrex::Real& Aabssqp,
-                          Array3<amrex::Real const> const& a_arr,
+                          Array3<const amrex::Real> const& slice_arr,
+                          const int aabs_comp,
                           const amrex::Real dx_inv,
                           const amrex::Real dy_inv,
                           const amrex::Real x_pos_offset,
@@ -327,12 +321,10 @@ void doLaserGatherShapeN (const amrex::Real xp,
     amrex::Real sy_cell[depos_order_xy + 1];
     const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
 
-    // Gather field Aabssq, on particle from field on grid a_arr
+    // Gather field Aabssq, on particle from field on grid slice_arr
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
-            const amrex::Real x00y00 = abssq(
-                a_arr(i_cell+ix  , j_cell+iy  , 0),
-                a_arr(i_cell+ix  , j_cell+iy  , 1) );
+            const amrex::Real x00y00 = slice_arr(i_cell+ix, j_cell+iy, aabs_comp);
             Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
         }
     }

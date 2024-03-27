@@ -534,6 +534,34 @@ MultiLaser::ShiftLaserSlices ()
 }
 
 void
+MultiLaser::GetLaserAabs (const int current_N_level, Fields& fields,
+                          amrex::Vector<amrex::Geometry> const& geom)
+{
+    if (!m_use_laser) return;
+
+    HIPACE_PROFILE("MultiLaser::GetLaserAabs()");
+
+    // write aabs into fields MultiFab
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
+        const Array3<const amrex::Real> laser_arr = m_slices.const_array(mfi);
+        const Array2<amrex::Real> field_arr =
+            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["aabs"]);
+
+        amrex::ParallelFor(mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+                using namespace WhichLaserSlice;
+
+                field_arr(i,j) = abssq(laser_arr(i,j,n00j00_r), laser_arr(i,j,n00j00_i));
+            });
+    }
+
+    // interpolate aabs to higher MR levels
+    for (int lev=1; lev<current_N_level; ++lev) {
+        fields.LevelUp(geom, lev, WhichSlice::This, "aabs");
+    }
+}
+
+void
 MultiLaser::AdvanceSlice (const Fields& fields, amrex::Real dt, int step)
 {
 

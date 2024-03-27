@@ -17,7 +17,7 @@
 #include "AMReX_GpuLaunch.H"
 
 void
-ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const MultiLaser& multi_laser,
+ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     amrex::Vector<amrex::Geometry> const& gm, const int lev) {
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
@@ -34,14 +34,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const int EypBx = Comps[WhichSlice::This]["EypBx"];
         const int Ez = Comps[WhichSlice::This]["Ez"];
         const int Bz = Comps[WhichSlice::This]["Bz"];
+        const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Extract particle properties
         const auto ptd = pti.GetParticleTile().getParticleTileData();
-
-        // Construct empty Array4 if there is no laser
-        const Array3<const amrex::Real> a_laser_arr = multi_laser.m_use_laser ?
-            multi_laser.getSlices().const_array(pti, WhichLaserSlice::n00j00_r) :
-            amrex::Array4<const amrex::Real>();
 
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
@@ -59,7 +55,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
         const amrex::Real a_clight = pc.c;
         const amrex::Real clight_inv = 1._rt/pc.c;
         // The laser a0 is always normalized
-        const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
+        const amrex::Real laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
@@ -92,7 +88,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 Hipace::m_depos_order_xy,
                 Hipace::m_depos_derivative_type,
                 plasma.m_can_ionize,
-                multi_laser.m_use_laser,
+                Hipace::m_use_laser,
                 do_omp_atomic
             },
             int(idx_end - idx_begin), // int ParallelFor is 3-5% faster than amrex::Long version
@@ -124,13 +120,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 amrex::Real Aabssqp = 0._rt;
-                // Rename variable for NVCC lambda capture to work
-                [[maybe_unused]] auto laser_arr = a_laser_arr;
-                [[maybe_unused]] auto laser_fac = a_laser_fac;
-                if constexpr (use_laser.value) {
+                if (use_laser.value) {
                     // Its important that Aabssqp is first fully gathered and not used
                     // directly per cell like AabssqDxp and AabssqDyp
-                    doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, laser_arr,
+                    doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, arr, aabs_comp,
                                                      dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                     Aabssqp *= laser_fac * q_mass_ratio * q_mass_ratio;
                 }
@@ -177,18 +170,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields, const Multi
                         if constexpr (use_laser.value) {
                             // avoid going outside of domain
                             if (shape_x * shape_y != 0._rt) {
-                                const amrex::Real xp1y00 = abssq(
-                                    laser_arr(i+1, j  , 0),
-                                    laser_arr(i+1, j  , 1));
-                                const amrex::Real xm1y00 = abssq(
-                                    laser_arr(i-1, j  , 0),
-                                    laser_arr(i-1, j  , 1));
-                                const amrex::Real x00yp1 = abssq(
-                                    laser_arr(i  , j+1, 0),
-                                    laser_arr(i  , j+1, 1));
-                                const amrex::Real x00ym1 = abssq(
-                                    laser_arr(i  , j-1, 0),
-                                    laser_arr(i  , j-1, 1));
+                                const amrex::Real xp1y00 = arr(i+1, j  , aabs_comp);
+                                const amrex::Real xm1y00 = arr(i-1, j  , aabs_comp);
+                                const amrex::Real x00yp1 = arr(i  , j+1, aabs_comp);
+                                const amrex::Real x00ym1 = arr(i  , j-1, aabs_comp);
                                 AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
                                 AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
                             }
