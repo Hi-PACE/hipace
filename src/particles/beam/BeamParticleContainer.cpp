@@ -531,17 +531,17 @@ BeamParticleContainer::InSituComputeDiags (int islice)
 
     amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
-            m_insitu_rdata[islice + idx.value * m_nslices] = amrex::get<idx.value>(a) *
+            m_insitu_rdata[islice + idx * m_nslices] = amrex::get<idx>(a) *
                 // sum(w) is not multiplied by sum_w_inv
-                ( idx.value == 0 ? 1 : sum_w_inv );
-            m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a);
+                ( idx == 0 ? 1 : sum_w_inv );
+            m_insitu_sum_rdata[idx] += amrex::get<idx>(a);
         }
     );
 
     amrex::constexpr_for<0, m_insitu_nip>(
         [&] (auto idx) {
-            m_insitu_idata[islice + idx.value * m_nslices] = amrex::get<m_insitu_nrp+idx.value>(a);
-            m_insitu_sum_idata[idx.value] += amrex::get<m_insitu_nrp+idx.value>(a);
+            m_insitu_idata[islice + idx * m_nslices] = amrex::get<m_insitu_nrp+idx>(a);
+            m_insitu_sum_idata[idx] += amrex::get<m_insitu_nrp+idx>(a);
         }
     );
 }
