@@ -213,7 +213,7 @@ Hipace::InitData ()
     m_fields.checkInit();
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
-                              m_multi_beam.get_nbeams(),
+                              m_multi_beam,
                               m_use_laser,
                               m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
 

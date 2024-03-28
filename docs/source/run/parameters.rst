@@ -98,6 +98,15 @@ General parameters
     This can improve performance in a typical situation where the CPU-GPU link has relatively
     low bandwidth at the cost of some GPU memory and a reduced maximum number of MPI ranks.
 
+* ``comms_buffer.max_size_GiB`` (`float`) optional (default `inf`)
+    How many Gibibytes of beam particles and laser slices can be stored in the communications buffer
+    on each rank. This setting offers an alternative to ``comms_buffer.max_leading_slices``
+    and ``comms_buffer.max_trailing_slices``. Note that the amount specified here may be slightly
+    exeeded in practice. If there are more time steps than ranks, this parameter must be chosen
+    such that between all ranks there is enough capacity to store every beam particle and
+    laser slice to avoid a deadlock, i.e.
+    ``comms_buffer.max_size_GiB * nranks > beam_size + laser_size``.
+
 * ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
 
