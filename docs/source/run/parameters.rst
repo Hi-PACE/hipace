@@ -259,14 +259,10 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
     The default is set accordingly.
 
-* ``fields.extended_solve`` (`bool`) optional (default `0`)
-    Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artifacts
-    originating from the boundary for long simulations.
-
 * ``fields.open_boundary`` (`bool`) optional (default `0`)
     Uses a Taylor approximation of the Greens function to solve the Poisson equations with
     open boundary conditions. It's recommended to use this together with
-    ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
+    ``geometry.is_periodic = false false false``.
     Only available with the predictor-corrector solver.
 
 * ``fields.do_symmetrize`` (`bool`) optional (default `0`)

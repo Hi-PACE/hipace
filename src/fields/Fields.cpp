@@ -30,7 +30,6 @@ Fields::Fields (const int nlev)
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
     queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
-    queryWithParser(ppf, "extended_solve", m_extended_solve);
     queryWithParser(ppf, "open_boundary", m_open_boundary);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
     queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
@@ -48,25 +47,11 @@ Fields::AllocData (
 
     if (lev==0) {
 
-        if (m_extended_solve) {
-            // Need 1 extra guard cell transversally for transverse derivative
-            int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
-            m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
-            // poisson solver same size as fields
-            m_poisson_nguards = m_slices_nguards;
-            // one cell less for transverse derivative
-            m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
-            // cut off anything near edge of charge/current deposition
-            m_source_nguard = -m_slices_nguards;
-        } else {
-            // Need 1 extra guard cell transversally for transverse derivative
-            int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
-            m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
-            // Poisson solver same size as domain, no ghost cells
-            m_poisson_nguards = amrex::IntVect{0, 0, 0};
-            m_exmby_eypbx_nguard = m_slices_nguards - amrex::IntVect{1, 1, 0};
-            m_source_nguard = amrex::IntVect{0, 0, 0};
-        }
+        m_lev0_periodicity = geom.periodicity();
+
+        // Need 1 extra guard cell transversally for transverse derivative
+        int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+        m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
 
         m_explicit = Hipace::m_explicit;
         m_any_neutral_background = Hipace::GetInstance().m_multi_plasma.AnySpeciesNeutralizeBackground();
@@ -361,7 +346,6 @@ struct guarded_field_xy {
 
 /** \brief Calculates dst = factor_a*src_a + factor_b*src_b. src_a and src_b can be derivatives
  *
- * \param[in] box_grow how much the domain of dst should be grown
  * \param[in] dst destination
  * \param[in] factor_a factor before src_a
  * \param[in] src_a first source
@@ -370,7 +354,7 @@ struct guarded_field_xy {
  */
 template<class FVA, class FVB>
 void
-LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
+LinCombination (amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
                 const amrex::Real factor_b, const FVB& src_b)
 {
@@ -383,32 +367,23 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
         const Array2<amrex::Real> dst_array = dst.array(mfi);
         const auto src_a_array = to_array2(src_a.array(mfi));
         const auto src_b_array = to_array2(src_b.array(mfi));
-        const amrex::Box bx = mfi.growntilebox(box_grow);
-        const int box_i_lo = bx.smallEnd(Direction::x);
-        const int box_j_lo = bx.smallEnd(Direction::y);
-        const int box_i_hi = bx.bigEnd(Direction::x);
-        const int box_j_hi = bx.bigEnd(Direction::y);
         amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
             {
-                const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
-                dst_array(i,j) =
-                    inside ? factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j) : 0._rt;
+                dst_array(i,j) = factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j);
             });
     }
 }
 
 /** \brief Calculates dst = factor*src. src can be a derivative
  *
- * \param[in] box_grow how much the domain of dst should be grown
  * \param[in] dst destination
  * \param[in] factor factor before src_a
  * \param[in] src first source
  */
 template<class FV>
 void
-Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
-          const amrex::Real factor, const FV& src)
+Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
 {
     HIPACE_PROFILE("Fields::Multiply()");
 
@@ -418,16 +393,10 @@ Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
     for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const Array2<amrex::Real> dst_array = dst.array(mfi);
         const auto src_array = to_array2(src.array(mfi));
-        const amrex::Box bx = mfi.growntilebox(box_grow);
-        const int box_i_lo = bx.smallEnd(Direction::x);
-        const int box_j_lo = bx.smallEnd(Direction::y);
-        const int box_i_hi = bx.bigEnd(Direction::x);
-        const int box_j_hi = bx.bigEnd(Direction::y);
         amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
             {
-                const bool inside = box_i_lo<=i && i<=box_i_hi && box_j_lo<=j && j<=box_j_hi;
-                dst_array(i,j) = inside ? factor * src_array(i,j) : 0._rt;
+                dst_array(i,j) = factor * src_array(i,j);
             });
     }
 }
@@ -695,12 +664,12 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
 void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               const int which_slice, std::string component,
-                              amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
+                              amrex::MultiFab&& staging_area,
                               amrex::Real offset, amrex::Real factor)
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
 
-    const amrex::Box staging_box = amrex::grow(geom[lev].Domain(), box_grow);
+    const amrex::Box staging_box = geom[lev].Domain();
 
     if (lev == 0 && m_open_boundary) {
         // Coarsest level: use Taylor expansion of the Green's function
@@ -733,7 +702,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 
         MultipoleTuple coeff_tuple =
         amrex::ParReduce(MultipoleReduceOpList{}, MultipoleReduceTypeList{},
-                         staging_area, m_source_nguard,
+                         staging_area,
             [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int) noexcept
             {
                 const amrex::Real x = (i * dx + poff_x) * scale;
@@ -868,13 +837,13 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
 
     PhysConst phys_const = get_phys_const();
 
+    EnforcePeriodic(true, {Comps[WhichSlice::This]["jx"],
+                           Comps[WhichSlice::This]["jy"],
+                           Comps[WhichSlice::This]["rhomjz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jx", "jy", "rhomjz");
-        }
         // interpolate rhomjz to lev from lev-1 in the domain edges
         LevelUpBoundary(geom, lev, WhichSlice::This, "rhomjz",
-            m_poisson_nguards, -m_slices_nguards);
+            amrex::IntVect{0, 0, 0}, -m_slices_nguards);
         // interpolate jx and jy to lev from lev-1 in the domain edges and
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, WhichSlice::This, "jx",
@@ -896,48 +865,47 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         amrex::MultiFab lhs_Bz  = getField(lev, WhichSlice::This, "Bz");
 
         // Psi: right-hand side 1/episilon0 * -(rho-Jz/c)
-        Multiply(m_source_nguard, getStagingArea(lev),
+        Multiply(getStagingArea(lev),
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev), m_poisson_nguards,
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Psi);
 
         // Ez: right-hand side 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
-        LinCombination(m_source_nguard, getStagingArea(lev),
+        LinCombination(getStagingArea(lev),
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev), m_poisson_nguards,
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
 
         // Bz: right-hand side mu_0*(d_y(jx) - d_x(jy))
-        LinCombination(m_source_nguard, getStagingArea(lev),
+        LinCombination(getStagingArea(lev),
             phys_const.mu0,
             derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
             -phys_const.mu0,
             derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev), m_poisson_nguards,
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
     }
 
+    EnforcePeriodic(false, {Comps[WhichSlice::This]["Psi"],
+                            Comps[WhichSlice::This]["Ez"],
+                            Comps[WhichSlice::This]["Bz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_extended_solve && lev==0) {
-            // transverse FillBoundary Psi for x and y derivative
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "Psi");
-        }
         // interpolate fields to lev from lev-1 in the ghost cells
-        LevelUpBoundary(geom, lev, WhichSlice::This, "Psi", m_slices_nguards, m_poisson_nguards);
-        LevelUpBoundary(geom, lev, WhichSlice::This, "Ez", m_slices_nguards, m_poisson_nguards);
-        LevelUpBoundary(geom, lev, WhichSlice::This, "Bz", m_slices_nguards, m_poisson_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::This, "Psi", m_slices_nguards, amrex::IntVect{0, 0, 0});
+        LevelUpBoundary(geom, lev, WhichSlice::This, "Ez", m_slices_nguards, amrex::IntVect{0, 0, 0});
+        LevelUpBoundary(geom, lev, WhichSlice::This, "Bz", m_slices_nguards, amrex::IntVect{0, 0, 0});
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -952,8 +920,8 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             const int Psi   = Comps[WhichSlice::This]["Psi"];
             const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
             const int EypBx = Comps[WhichSlice::This]["EypBx"];
-            // number of ghost cells where ExmBy and EypBx are calculated is 0 for now
-            const amrex::Box bx = mfi.growntilebox(m_exmby_eypbx_nguard);
+            // number of ghost cells where ExmBy and EypBx are calculated is m_slices_nguards - 1
+            const amrex::Box bx = mfi.growntilebox(m_slices_nguards - amrex::IntVect{1, 1, 0});
             const amrex::Real dx_inv = 0.5_rt*geom[lev].InvCellSize(Direction::x);
             const amrex::Real dy_inv = 0.5_rt*geom[lev].InvCellSize(Direction::y);
 
@@ -977,10 +945,9 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
 
     PhysConst phys_const = get_phys_const();
 
+    EnforcePeriodic(true, {Comps[which_slice]["jx"],
+                           Comps[which_slice]["jy"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, which_slice, "jx", "jy");
-        }
         // interpolate jx and jy to lev from lev-1 in the domain edges and
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, which_slice, "jx", m_slices_nguards, -m_slices_nguards);
@@ -997,21 +964,22 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
         amrex::MultiFab lhs_Ez = getField(lev, which_slice, "Ez");
 
         // Ez: right-hand side 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
-        LinCombination(m_source_nguard, getStagingArea(lev),
+        LinCombination(getStagingArea(lev),
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::x>{getField(lev, which_slice, "jx"), geom[lev]},
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev), m_poisson_nguards,
+        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
     }
 
+    EnforcePeriodic(false, {Comps[which_slice]["Ez"]});
     for (int lev=0; lev<current_N_level; ++lev) {
         // interpolate Ez to lev from lev-1 in the ghost cells
-        LevelUpBoundary(geom, lev, which_slice, "Ez", m_slices_nguards, m_poisson_nguards);
+        LevelUpBoundary(geom, lev, which_slice, "Ez", m_slices_nguards, amrex::IntVect{0, 0, 0});
     }
 }
 
@@ -1027,14 +995,13 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
 
     PhysConst phys_const = get_phys_const();
 
+    EnforcePeriodic(true, {Comps[WhichSlice::Next]["jx"],
+                           Comps[WhichSlice::Next]["jy"],
+                           Comps[WhichSlice::This]["jz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::Next, "jx", "jy");
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jz");
-        }
         // interpolate jx and jy to lev from lev-1 in the domain edges
-        LevelUpBoundary(geom, lev, WhichSlice::Next, "jx", m_poisson_nguards, -m_slices_nguards);
-        LevelUpBoundary(geom, lev, WhichSlice::Next, "jy", m_poisson_nguards, -m_slices_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::Next, "jx", amrex::IntVect{0, 0, 0}, -m_slices_nguards);
+        LevelUpBoundary(geom, lev, WhichSlice::Next, "jy", amrex::IntVect{0, 0, 0}, -m_slices_nguards);
         // interpolate jz to lev from lev-1 in the domain edges and
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, WhichSlice::This, "jz", m_slices_nguards, -m_slices_nguards);
@@ -1053,39 +1020,38 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
         amrex::MultiFab lhs_By = getField(lev, which_slice, "By");
 
         // Bx: right-hand side mu_0*(- d_y(jz) + d_z(jy) )
-        LinCombination(m_source_nguard, getStagingArea(lev),
+        LinCombination(getStagingArea(lev),
                     -phys_const.mu0,
                     derivative<Direction::y>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                     phys_const.mu0,
                     derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jy"),
                     getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev), m_poisson_nguards,
+        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bx);
 
         // By: right-hand side mu_0*(d_x(jz) - d_z(jx) )
-        LinCombination(m_source_nguard, getStagingArea(lev),
+        LinCombination(getStagingArea(lev),
                    phys_const.mu0,
                    derivative<Direction::x>{getField(lev, WhichSlice::This, "jz"), geom[lev]},
                    -phys_const.mu0,
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev), m_poisson_nguards,
+        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_By);
     }
 
+    EnforcePeriodic(false, {Comps[which_slice]["Bx"],
+                            Comps[which_slice]["By"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_extended_solve && lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, which_slice, "Bx", "By");
-        }
         // interpolate Bx and By to lev from lev-1 in the ghost cells
-        LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, m_poisson_nguards);
-        LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, m_poisson_nguards);
+        LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, amrex::IntVect{0, 0, 0});
+        LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, amrex::IntVect{0, 0, 0});
     }
 }
 
@@ -1122,6 +1088,39 @@ Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const
                 arr(i, upper_y - j) = avg*symm_y;
                 arr(upper_x - i, upper_y - j) = avg*symm_x*symm_y;
             });
+    }
+}
+
+void
+Fields::EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx)
+{
+    amrex::MultiFab& mfab = getSlices(0);
+
+    if (!m_lev0_periodicity.isAnyPeriodic() && mfab.size() <= 1) {
+        return; // no work to do
+    }
+
+    HIPACE_PROFILE("Fields::EnforcePeriodic()");
+
+    // optimize adjacent fields to one FillBoundary call
+    std::sort(comp_idx.begin(), comp_idx.end());
+    int scomp = 0;
+    int ncomp = 0;
+    for (unsigned int i=0; i < comp_idx.size(); ++i) {
+        if (ncomp==0) {
+            scomp = comp_idx[i];
+            ncomp = 1;
+        }
+        if (i+1 >= comp_idx.size() || comp_idx[i+1] > scomp+ncomp) {
+            if (do_sum) {
+                mfab.SumBoundary(scomp, ncomp, m_slices_nguards, m_lev0_periodicity);
+            } else {
+                mfab.FillBoundary(scomp, ncomp, m_slices_nguards, m_lev0_periodicity);
+            }
+            ncomp = 0;
+        } else if (comp_idx[i+1] == scomp+ncomp) {
+            ++ncomp;
+        }
     }
 }
 
