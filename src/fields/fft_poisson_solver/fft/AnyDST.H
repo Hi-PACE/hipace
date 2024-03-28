@@ -78,12 +78,9 @@ namespace AnyDST
 
     /** \brief Perform FFT with backend library.
      * \param[out] dst_plan plan for which the FFT is performed
+     * \param[in] d direction of the FFT
      */
-    template<AnyDST::direction d>
-    void Execute (DSTplan& dst_plan);
-
-    extern template void Execute<direction::forward>(DSTplan& dst_plan);
-    extern template void Execute<direction::backward>(DSTplan& dst_plan);
+    void Execute (DSTplan& dst_plan, AnyDST::direction d);
 }
 
 #endif // ANYDST_H_

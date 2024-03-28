@@ -14,12 +14,14 @@
 
 #include "AnyFFT.H"
 #include "RocFFTUtils.H"
+#include "utils/HipaceProfilerWrapper.H"
 
 namespace AnyFFT
 {
     FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
                         Complex * const complex_array, const direction dir)
     {
+        HIPACE_PROFILE("AnyFFT::CreatePlan()");
         const int dim = 2;
         FFTplan fft_plan;
 
@@ -58,6 +60,7 @@ namespace AnyFFT
 
     void Execute (FFTplan& fft_plan)
     {
+        HIPACE_PROFILE("AnyFFT::Execute()");
         rocfft_execution_info execinfo = NULL;
         rocfft_status result = rocfft_execution_info_create(&execinfo);
         RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);

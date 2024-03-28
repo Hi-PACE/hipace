@@ -26,10 +26,10 @@ void
 GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, int const lev,
                                   const int islice)
 {
+    if (m_use_grid_current == 0) return;
+
     HIPACE_PROFILE("GridCurrent::DepositCurrentSlice()");
     using namespace amrex::literals;
-
-    if (m_use_grid_current == 0) return;
 
     const auto plo = geom.ProbLoArray();
     amrex::Real const * AMREX_RESTRICT dx = geom.CellSize();

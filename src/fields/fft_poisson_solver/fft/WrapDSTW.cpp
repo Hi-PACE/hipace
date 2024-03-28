@@ -71,8 +71,7 @@ namespace AnyDST
 #  endif
     }
 
-    template<direction d>
-    void Execute (DSTplan& dst_plan){
+    void Execute (DSTplan& dst_plan, direction d){
         HIPACE_PROFILE("AnyDST::Execute()");
         // Swap position and fourier space based on execute direction
         AnyFFT::VendorFFTPlan& plan = (d==direction::forward) ? dst_plan.m_plan : dst_plan.m_plan_b;
@@ -82,8 +81,4 @@ namespace AnyDST
         fftw_execute( plan );
 #  endif
     }
-
-    template void Execute<direction::forward>(DSTplan& dst_plan);
-    template void Execute<direction::backward>(DSTplan& dst_plan);
-
 }

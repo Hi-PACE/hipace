@@ -31,6 +31,7 @@ namespace AnyFFT
     FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
                         Complex * const complex_array, const direction dir)
     {
+        HIPACE_PROFILE("AnyFFT::CreatePlan()");
         FFTplan fft_plan;
 
         // Initialize fft_plan.m_plan with the vendor fft plan.

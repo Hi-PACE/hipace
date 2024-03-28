@@ -74,9 +74,6 @@ General parameters
       * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
         via ``HIPACE_PROFILE``)
 
-      * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
-        are profiled via ``HIPACE_DETAIL_PROFILE``)
-
 * ``amrex.the_arena_is_managed`` (`bool`) optional (default `0`)
     Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
     but generally it is recommended to not use it.

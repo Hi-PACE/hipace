@@ -223,8 +223,6 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
                             amrex::Geometry const& geom, int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time)
 {
-    HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
-
     AMREX_ALWAYS_ASSERT(m_initialized);
 
     for (auto& fd : m_field_data) {
@@ -280,6 +278,7 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
                          && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
         if(fd.m_has_field) {
+            HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
             fd.m_F.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
             fd.m_F.setVal<amrex::RunOn::Host>(0);
 
