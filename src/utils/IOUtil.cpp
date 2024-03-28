@@ -10,6 +10,9 @@
 #include <AMReX_IndexType.H>
 
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <iomanip>
 
 
 
@@ -130,6 +133,33 @@ utils::getUnitDimension ( std::string const & record_name )
         {openPMD::UnitDimension::I, -1.},
         {openPMD::UnitDimension::T, -2.}
     };
+    else if( record_name == "spin" ) return {
+        {openPMD::UnitDimension::L,  2.},
+        {openPMD::UnitDimension::M,  1.},
+        {openPMD::UnitDimension::T, -1.}
+    };
     else return {};
+}
+
+std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
+    long long seconds = static_cast<long long>(std::floor(ft.seconds));
+
+    long long minutes = seconds / 60;
+    seconds %= 60;
+
+    long long hours = minutes / 60;
+    minutes %= 60;
+
+    long long days = hours / 24;
+    hours %= 24;
+
+    if (days > 0) {
+        os << days << "-";
+    }
+    os  << std::setfill('0') << std::setw(2) << hours << ":"
+        << std::setfill('0') << std::setw(2) << minutes << ":"
+        << std::setfill('0') << std::setw(2) << seconds;
+
+    return os;
 }
 #endif

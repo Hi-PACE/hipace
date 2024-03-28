@@ -95,13 +95,22 @@ BeamParticleContainer::ReadParameters ()
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     soa.GetIdCPUData().setArena(
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
+    for (int rcomp = 0; rcomp < soa.NumRealComps(); ++rcomp) {
         soa.GetRealData()[rcomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
-    for (int icomp = 0; icomp < BeamIdx::int_nattribs_in_buffer; ++icomp) {
+    for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
         soa.GetIntData()[icomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
+    }
+    queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
+    if (m_do_spin_tracking) {
+        getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+        queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
+        for (auto& beam_tile : m_slices) {
+            // Use 3 real and 0 int runtime components
+            beam_tile.define(3, 0);
+        }
     }
 }
 
@@ -277,7 +286,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     MPI_Bcast(&m_total_num_particles,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<decltype(m_total_num_particles)>::type(),
-              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              Hipace::HeadRankID(),
               amrex::ParallelDescriptor::Communicator());
 #endif
 
@@ -293,6 +302,10 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         m_insitu_idata.resize(m_nslices*m_insitu_nip, 0);
         m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
         m_insitu_sum_idata.resize(m_insitu_nip, 0);
+        if (m_do_spin_tracking) {
+            m_insitu_spin_data.resize(m_nslices*m_insitu_n_spin, 0.);
+            m_insitu_sum_spin_data.resize(m_insitu_n_spin, 0.);
+        }
     }
 
     return ptime;
@@ -378,9 +391,22 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
 
-                ptd.id(ip) = ptd_init.id(idx_src);
-                ptd.cpu(ip) = 0;
+                ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+            }
+        );
+    }
+
+    if (m_do_spin_tracking) {
+        auto ptd = getBeamSlice(which_slice).getParticleTileData();
+
+        const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
+
+        amrex::ParallelFor(getNumParticles(which_slice),
+            [=] AMREX_GPU_DEVICE (const int ip) {
+                ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
+                ptd.m_runtime_rdata[1][ip] = initial_spin_norm[1];
+                ptd.m_runtime_rdata[2][ip] = initial_spin_norm[2];
             }
         );
     }
@@ -409,11 +435,12 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
         amrex::PermutationForDeposition<unsigned int>(perm, np, ptile, slice_geom.Domain(),
                                                       slice_geom, m_reorder_idx_type);
         const unsigned int* permutations = perm.dataPtr();
+        auto& soa = ptile.GetStructOfArrays();
 
         { // Create a scope for the temporary vector below
             BeamTile::RealVector tmp_real(np_total);
-            for (int comp = 0; comp < BeamIdx::real_nattribs; ++comp) {
-                auto src = ptile.GetStructOfArrays().GetRealData(comp).data();
+            for (int comp = 0; comp < soa.NumRealComps(); ++comp) {
+                auto src = soa.GetRealData(comp).data();
                 amrex::ParticleReal* dst = tmp_real.data();
                 amrex::ParallelFor(np_total,
                     [=] AMREX_GPU_DEVICE (int i) {
@@ -421,13 +448,13 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
                     });
 
                 amrex::Gpu::streamSynchronize();
-                ptile.GetStructOfArrays().GetRealData(comp).swap(tmp_real);
+                soa.GetRealData(comp).swap(tmp_real);
             }
         }
 
         BeamTile::IntVector tmp_int(np_total);
-        for (int comp = 0; comp < BeamIdx::int_nattribs; ++comp) {
-            auto src = ptile.GetStructOfArrays().GetIntData(comp).data();
+        for (int comp = 0; comp < soa.NumIntComps(); ++comp) {
+            auto src = soa.GetIntData(comp).data();
             int* dst = tmp_int.data();
             amrex::ParallelFor(np_total,
                 [=] AMREX_GPU_DEVICE (int i) {
@@ -435,7 +462,7 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
                 });
 
             amrex::Gpu::streamSynchronize();
-            ptile.GetStructOfArrays().GetIntData(comp).swap(tmp_int);
+            soa.GetIntData(comp).swap(tmp_int);
         }
     }
 }
@@ -470,7 +497,9 @@ BeamParticleContainer::InSituComputeDiags (int islice)
             const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip] * clight_inv;
             const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
 
-            if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
+            const amrex::Real uz_inv = uz == 0._rt ? 0._rt : 1._rt / uz;
+
+            if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
                 return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
             }
             const amrex::Real gamma = std::sqrt(1.0_rt + ux*ux + uy*uy + uz*uz);
@@ -491,9 +520,13 @@ BeamParticleContainer::InSituComputeDiags (int islice)
                 w*x*ux,         // 13   [x*ux]
                 w*y*uy,         // 14   [y*uy]
                 w*z*uz,         // 15   [z*uz]
-                w*gamma,        // 16   [ga]
-                w*gamma*gamma,  // 17   [ga^2]
-                1               // 18   Np
+                w*x*uy,         // 16   [x*uy]
+                w*y*ux,         // 17   [y*ux]
+                w*ux*uz_inv,    // 18   [ux/uz]
+                w*uy*uz_inv,    // 19   [uy/uz]
+                w*gamma,        // 20   [ga]
+                w*gamma*gamma,  // 21   [ga^2]
+                1               // 22   Np
             };
         });
 
@@ -515,6 +548,45 @@ BeamParticleContainer::InSituComputeDiags (int islice)
             m_insitu_sum_idata[idx.value] += amrex::get<m_insitu_nrp+idx.value>(a);
         }
     );
+
+    if (m_do_spin_tracking) {
+        amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_n_spin]> reduce_op_spin;
+        amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_n_spin]> reduce_data_spin(reduce_op_spin);
+        using ReduceTupleSpin = typename decltype(reduce_data_spin)::Type;
+        reduce_op_spin.eval(
+            getNumParticles(WhichBeamSlice::This), reduce_data_spin,
+            [=] AMREX_GPU_DEVICE (int ip) -> ReduceTupleSpin
+            {
+                const amrex::Real x = ptd.pos(0, ip);
+                const amrex::Real y = ptd.pos(1, ip);
+                const amrex::Real sx = ptd.m_runtime_rdata[0][ip];
+                const amrex::Real sy = ptd.m_runtime_rdata[1][ip];
+                const amrex::Real sz = ptd.m_runtime_rdata[2][ip];
+                const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
+
+                if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
+                    return amrex::IdentityTuple(ReduceTupleSpin{}, reduce_op_spin);
+                }
+                return {            // Tuple contains:
+                    w*sx,           // 0    [sx]
+                    w*sx*sx,        // 1    [sx^2]
+                    w*sy,           // 2    [sy]
+                    w*sy*sy,        // 3    [sy^2]
+                    w*sz,           // 4    [sz]
+                    w*sz*sz,        // 5    [sz^2]
+                };
+            });
+
+        ReduceTupleSpin a_spin = reduce_data_spin.value();
+
+        amrex::constexpr_for<0, m_insitu_n_spin>(
+            [&] (auto idx) {
+                m_insitu_spin_data[islice + idx.value * m_nslices] =
+                    amrex::get<idx.value>(a_spin) * sum_w_inv;
+                m_insitu_sum_spin_data[idx.value] += amrex::get<idx.value>(a_spin);
+            }
+        );
+    }
 }
 
 void
@@ -544,7 +616,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
 
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
-    const amrex::Vector<insitu_utils::DataNode> all_data{
+    amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"    , &time},
         {"step"    , &step},
         {"n_slices", &m_nslices},
@@ -569,8 +641,12 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         {"[x*ux]"  , &m_insitu_rdata[13*nslices], nslices},
         {"[y*uy]"  , &m_insitu_rdata[14*nslices], nslices},
         {"[z*uz]"  , &m_insitu_rdata[15*nslices], nslices},
-        {"[ga]"    , &m_insitu_rdata[16*nslices], nslices},
-        {"[ga^2]"  , &m_insitu_rdata[17*nslices], nslices},
+        {"[x*uy]"  , &m_insitu_rdata[16*nslices], nslices},
+        {"[y*ux]"  , &m_insitu_rdata[17*nslices], nslices},
+        {"[ux/uz]" , &m_insitu_rdata[18*nslices], nslices},
+        {"[uy/uz]" , &m_insitu_rdata[19*nslices], nslices},
+        {"[ga]"    , &m_insitu_rdata[20*nslices], nslices},
+        {"[ga^2]"  , &m_insitu_rdata[21*nslices], nslices},
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
@@ -589,14 +665,39 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
             {"[x*ux]", &(m_insitu_sum_rdata[13] /= sum_w0)},
             {"[y*uy]", &(m_insitu_sum_rdata[14] /= sum_w0)},
             {"[z*uz]", &(m_insitu_sum_rdata[15] /= sum_w0)},
-            {"[ga]"  , &(m_insitu_sum_rdata[16] /= sum_w0)},
-            {"[ga^2]", &(m_insitu_sum_rdata[17] /= sum_w0)}
+            {"[x*uy]", &(m_insitu_sum_rdata[16] /= sum_w0)},
+            {"[y*ux]", &(m_insitu_sum_rdata[17] /= sum_w0)},
+            {"[ux/uz]",&(m_insitu_sum_rdata[18] /= sum_w0)},
+            {"[uy/uz]",&(m_insitu_sum_rdata[19] /= sum_w0)},
+            {"[ga]"  , &(m_insitu_sum_rdata[20] /= sum_w0)},
+            {"[ga^2]", &(m_insitu_sum_rdata[21] /= sum_w0)}
         }},
         {"total"   , {
             {"sum(w)", &m_insitu_sum_rdata[0]},
             {"Np"    , &m_insitu_sum_idata[0]}
         }}
     };
+
+    if (m_do_spin_tracking) {
+        const amrex::Vector<insitu_utils::DataNode> all_spin_data{
+            {"[sx]"     , &m_insitu_spin_data[0*nslices], nslices},
+            {"[sx^2]"   , &m_insitu_spin_data[1*nslices], nslices},
+            {"[sy]"     , &m_insitu_spin_data[2*nslices], nslices},
+            {"[sy^2]"   , &m_insitu_spin_data[3*nslices], nslices},
+            {"[sz]"     , &m_insitu_spin_data[4*nslices], nslices},
+            {"[sz^2]"   , &m_insitu_spin_data[5*nslices], nslices},
+            {"average" , {
+                {"[sx]"   , &(m_insitu_sum_spin_data[0] /= sum_w0)},
+                {"[sx^2]" , &(m_insitu_sum_spin_data[1] /= sum_w0)},
+                {"[sy]"   , &(m_insitu_sum_spin_data[2] /= sum_w0)},
+                {"[sy^2]" , &(m_insitu_sum_spin_data[3] /= sum_w0)},
+                {"[sz]"   , &(m_insitu_sum_spin_data[4] /= sum_w0)},
+                {"[sz^2]" , &(m_insitu_sum_spin_data[5] /= sum_w0)}
+            }}
+        };
+
+        insitu_utils::merge_data(all_data, all_spin_data);
+    }
 
     if (ofs.tellp() == 0) {
         // write JSON header containing a NumPy structured datatype
@@ -621,4 +722,8 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     for (auto& x : m_insitu_idata) x = 0;
     for (auto& x : m_insitu_sum_rdata) x = 0.;
     for (auto& x : m_insitu_sum_idata) x = 0;
+    if (m_do_spin_tracking) {
+        for (auto& x : m_insitu_spin_data) x = 0.;
+        for (auto& x : m_insitu_sum_spin_data) x = 0.;
+    }
 }

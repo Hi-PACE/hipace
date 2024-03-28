@@ -33,6 +33,7 @@ struct DataNode {
         std::string type_letter = "";
         if (std::is_integral_v<T> && std::is_signed_v<T>) type_letter = "i"; // int
         else if (std::is_integral_v<T> && std::is_unsigned_v<T>) type_letter = "u"; // unsiged int
+        else if (std::is_same_v<T, amrex::GpuComplex<amrex::Real>>) type_letter = "c"; // complex
         else if (std::is_floating_point_v<T>) type_letter = "f"; // float, double
         else amrex::Abort("DataNode (): unknown type T");
 
@@ -84,6 +85,28 @@ inline void write_data (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs
         } else {
             // recursive call for nested structured datatypes
             write_data(dn.m_structured_format, ofs);
+        }
+    }
+}
+
+// merge two structured datatypes into onodes
+inline void merge_data (amrex::Vector<DataNode>& onodes, const amrex::Vector<DataNode>& inodes) {
+    for (auto& idn : inodes) {
+        if (idn.m_data_location) {
+            onodes.push_back(idn);
+        } else {
+            bool merged = false;
+            for (auto& odn : onodes) {
+                if (!odn.m_data_location && odn.m_name == idn.m_name) {
+                    // recursive call for nested structured datatypes
+                    merge_data(odn.m_structured_format, idn.m_structured_format);
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                onodes.push_back(idn);
+            }
         }
     }
 }

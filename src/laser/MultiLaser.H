@@ -192,6 +192,27 @@ public:
      */
     void InitLaserSlice (const amrex::Geometry& geom, const int islice, const int comp);
 
+    /** Compute in-situ laser diagnostics of current slice, store in member variable
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] islice current slice, on which diags are computed.
+     * \param[in] geom3D Geometry of the problem
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
+    void InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+                             int max_step, amrex::Real max_time);
+
+    /** Dump in-situ reduced diagnostics to file.
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
+                            int max_step, amrex::Real max_time);
+
     /** Get the central wavelength */
     amrex::Real GetLambda0 () const { return m_lambda0; }
 
@@ -256,6 +277,23 @@ private:
     cufftResult m_result_fwd;
     cufftResult m_result_bkw;
 #endif
+
+    // Data for in-situ diagnostics:
+    /** Number of real laser properties for in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_nrp = 6;
+    /** Number of real complex properties for in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_ncp = 1;
+    /** How often the insitu laser diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
+    /** All per-slice real laser properties */
+    amrex::Vector<amrex::Real> m_insitu_rdata;
+    /** Sum of all per-slice real laser properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_rdata;
+    /** All per-slice complex laser properties */
+    amrex::Vector<amrex::GpuComplex<amrex::Real>> m_insitu_cdata;
+    /** Prefix/path for the output files */
+    std::string m_insitu_file_prefix = "diags/laser_insitu";
 };
 
 #endif // MULTILASER_H_

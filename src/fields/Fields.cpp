@@ -9,8 +9,10 @@
 #include "Fields.H"
 #include "fft_poisson_solver/FFTPoissonSolverPeriodic.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichlet.H"
+#include "fft_poisson_solver/MGPoissonSolverDirichlet.H"
 #include "Hipace.H"
 #include "OpenBoundary.H"
+#include "utils/DeprecatedInput.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
@@ -26,7 +28,8 @@ Fields::Fields (const int nlev)
     : m_slices(nlev)
 {
     amrex::ParmParse ppf("fields");
-    queryWithParser(ppf, "do_dirichlet_poisson", m_do_dirichlet_poisson);
+    DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
+    queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
     queryWithParser(ppf, "extended_solve", m_extended_solve);
     queryWithParser(ppf, "open_boundary", m_open_boundary);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
@@ -172,16 +175,24 @@ Fields::AllocData (
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
-    if (m_do_dirichlet_poisson){
+    if (m_poisson_solver_str == "FFTDirichlet"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichlet>(
             new FFTPoissonSolverDirichlet(getSlices(lev).boxArray(),
                                           getSlices(lev).DistributionMap(),
                                           geom)) );
-    } else {
+    } else if (m_poisson_solver_str == "FFTPeriodic") {
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
             new FFTPoissonSolverPeriodic(getSlices(lev).boxArray(),
                                          getSlices(lev).DistributionMap(),
                                          geom))  );
+    } else if (m_poisson_solver_str == "MGDirichlet") {
+        m_poisson_solver.push_back(std::unique_ptr<MGPoissonSolverDirichlet>(
+            new MGPoissonSolverDirichlet(getSlices(lev).boxArray(),
+                                         getSlices(lev).DistributionMap(),
+                                         geom))  );
+    } else {
+        amrex::Abort("Unknown poisson solver '" + m_poisson_solver_str +
+            "', must be 'FFTDirichlet', 'FFTPeriodic' or 'MGDirichlet'");
     }
     int num_threads = 1;
 #ifdef AMREX_USE_OMP
@@ -684,9 +695,13 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
 void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                               const int which_slice, std::string component,
-                              amrex::MultiFab&& staging_area)
+                              amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
+                              amrex::Real offset, amrex::Real factor)
 {
     HIPACE_PROFILE("Fields::SetBoundaryCondition()");
+
+    const amrex::Box staging_box = amrex::grow(geom[lev].Domain(), box_grow);
+
     if (lev == 0 && m_open_boundary) {
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
@@ -696,7 +711,6 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
         const Array2<amrex::Real> arr_staging_area = staging_area_fab.array();
-        const amrex::Box staging_box = staging_area_fab.box();
 
         const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
         const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
@@ -738,7 +752,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             amrex::get<0>(coeff_tuple) = 0._rt;
         }
 
-        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev], 1, 1,
+        SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev], offset, factor,
             [=] AMREX_GPU_DEVICE (amrex::Real x, amrex::Real y) noexcept
             {
                 return dxdy_div_4pi*GetFieldMultipole(coeff_tuple, x*scale, y*scale);
@@ -756,19 +770,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
             const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
-            const amrex::Box fine_staging_box = getStagingArea(lev)[mfi].box();
 
-            amrex::Real offset = 1;
-            amrex::Real factor = 1;
-            if ((component == "Bx" || component == "By") && Hipace::m_explicit &&
-                (getSlices(lev).box(0).length(0) % 2 == 0)) {
-                // hpmg has the boundary condition at a different place
-                // compared to the fft poisson solver
-                offset = 0.5;
-                factor = 8./3.;
-            }
-
-            SetDirichletBoundaries(arr_staging_area, fine_staging_box, geom[lev],
+            SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
                                    offset, factor, arr_solution_interp);
         }
     }
@@ -896,7 +899,8 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         Multiply(m_source_nguard, getStagingArea(lev),
             -1._rt/(phys_const.ep0), getField(lev, WhichSlice::This, "rhomjz"));
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev));
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Psi", getStagingArea(lev), m_poisson_nguards,
+            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Psi);
 
@@ -907,7 +911,8 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev));
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev), m_poisson_nguards,
+            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
 
@@ -918,7 +923,8 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             -phys_const.mu0,
             derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev));
+        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev), m_poisson_nguards,
+            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
     }
@@ -997,7 +1003,8 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
             1._rt/(phys_const.ep0*phys_const.c),
             derivative<Direction::y>{getField(lev, which_slice, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev));
+        SetBoundaryCondition(geom, lev,which_slice, "Ez", getStagingArea(lev), m_poisson_nguards,
+            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
     }
@@ -1053,7 +1060,8 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
                     derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jy"),
                     getField(lev, WhichSlice::Next, "jy"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev));
+        SetBoundaryCondition(geom, lev, which_slice, "Bx", getStagingArea(lev), m_poisson_nguards,
+            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bx);
 
@@ -1065,7 +1073,8 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
                    derivative<Direction::z>{getField(lev, WhichSlice::Previous, "jx"),
                    getField(lev, WhichSlice::Next, "jx"), geom[lev]});
 
-        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev));
+        SetBoundaryCondition(geom, lev, which_slice, "By", getStagingArea(lev), m_poisson_nguards,
+            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_By);
     }
@@ -1302,7 +1311,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
                     pow<2>(arr(i,j,Bz)),                            // 5    [Bz^2]
                     pow<2>(arr(i,j,ExmBy)),                         // 6    [ExmBy^2]
                     pow<2>(arr(i,j,EypBx)),                         // 7    [EypBx^2]
-                    arr(i,j,Ez)*arr(i,j,jz_beam)                    // 8    [Ez*jz_beam]
+                    arr(i,j,jz_beam),                               // 8    [jz_beam]
+                    arr(i,j,Ez)*arr(i,j,jz_beam)                    // 9    [Ez*jz_beam]
                 };
             });
     }
@@ -1359,7 +1369,8 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
         {"[Bz^2]"   , &m_insitu_rdata[5*nslices], nslices},
         {"[ExmBy^2]", &m_insitu_rdata[6*nslices], nslices},
         {"[EypBx^2]", &m_insitu_rdata[7*nslices], nslices},
-        {"[Ez*jz_beam]", &m_insitu_rdata[8*nslices], nslices},
+        {"[jz_beam]", &m_insitu_rdata[8*nslices], nslices},
+        {"[Ez*jz_beam]", &m_insitu_rdata[9*nslices], nslices},
         {"integrated", {
             {"[Ex^2]"   , &m_insitu_sum_rdata[0]},
             {"[Ey^2]"   , &m_insitu_sum_rdata[1]},
@@ -1369,7 +1380,8 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
             {"[Bz^2]"   , &m_insitu_sum_rdata[5]},
             {"[ExmBy^2]", &m_insitu_sum_rdata[6]},
             {"[EypBx^2]", &m_insitu_sum_rdata[7]},
-            {"[Ez*jz_beam]", &m_insitu_sum_rdata[8]}
+            {"[jz_beam]", &m_insitu_sum_rdata[8]},
+            {"[Ez*jz_beam]", &m_insitu_sum_rdata[9]}
         }}
     };
 
@@ -1385,9 +1397,9 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
     ofs.close();
     // assert no file errors
 #ifdef HIPACE_USE_OPENPMD
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu field diagnostics");
 #else
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu beam diagnostics. "
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu field diagnostics. "
         "Maybe the specified subdirectory does not exist");
 #endif
 

@@ -73,6 +73,14 @@ Hipace::Hipace () :
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
 
+    bool use_previous_rng = false;
+    queryWithParser(pp, "use_previous_rng", use_previous_rng);
+    if (use_previous_rng) {
+        amrex::ResetRandomSeed(
+            amrex::ParallelDescriptor::NProcs()-amrex::ParallelDescriptor::MyProc(),
+            (amrex::ParallelDescriptor::NProcs()-1-amrex::ParallelDescriptor::MyProc())*1234567ULL + 12345ULL);
+    }
+
     int seed;
     if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
@@ -140,18 +148,13 @@ Hipace::Hipace () :
 #endif
 
     queryWithParser(pph, "background_density_SI", m_background_density_SI);
-    queryWithParser(pph, "comms_buffer_on_gpu", m_comms_buffer_on_gpu);
-    queryWithParser(pph, "comms_buffer_max_leading_slices", m_comms_buffer_max_leading_slices);
-    queryWithParser(pph, "comms_buffer_max_trailing_slices", m_comms_buffer_max_trailing_slices);
+    DeprecatedInput("hipace", "comms_buffer_on_gpu", "comms_buffer.on_gpu", "", true);
+    DeprecatedInput("hipace", "comms_buffer_max_leading_slices",
+        "comms_buffer.max_leading_slices", "", true);
+    DeprecatedInput("hipace", "comms_buffer_max_trailing_slices",
+        "comms_buffer.max_trailing_slices)", "", true);
 
     MakeGeometry();
-
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        (((double(m_comms_buffer_max_leading_slices) + m_comms_buffer_max_trailing_slices)
-        * amrex::ParallelDescriptor::NProcs()) > m_3D_geom[0].Domain().length(2))
-        || (m_max_step < amrex::ParallelDescriptor::NProcs()),
-        "comms_buffer_max_leading_slices and comms_buffer_max_trailing_slices must be large enough"
-        " to distribute all slices between all ranks if there are more timesteps than ranks");
 
     m_use_laser = m_multi_laser.m_use_laser;
 
@@ -211,11 +214,8 @@ Hipace::InitData ()
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
                               m_multi_beam.get_nbeams(),
-                              !m_comms_buffer_on_gpu,
                               m_use_laser,
-                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{},
-                              m_comms_buffer_max_leading_slices,
-                              m_comms_buffer_max_trailing_slices);
+                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
 
     amrex::ParmParse pph("hipace");
     bool do_output_input = false;
@@ -324,10 +324,11 @@ void
 Hipace::Evolve ()
 {
     HIPACE_PROFILE("Hipace::Evolve()");
+    const double start_time = amrex::second();
     const int rank = amrex::ParallelDescriptor::MyProc();
 
-    // now each rank starts with its own time step and writes to its own file. Highest rank starts with step 0
-    for (int step = m_numprocs - 1 - rank; step <= m_max_step; step += m_numprocs)
+    // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
+    for (int step = rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
 
@@ -363,8 +364,9 @@ Hipace::Evolve ()
         }
 
         if (m_verbose >= 1) {
-            std::cout << "Rank " << rank
-                      << " started  step " << step
+            std::cout << utils::format_time{amrex::second() - start_time}
+                      << " Rank " << rank
+                      << " started step " << step
                       << " at time = " << m_physical_time
                       << " with dt = " << m_dt << std::endl;
         }
@@ -418,6 +420,7 @@ Hipace::Evolve ()
         m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
+        m_multi_laser.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
 
         if (!m_explicit) {
             // averaging predictor corrector loop diagnostics
@@ -564,7 +567,10 @@ Hipace::SolveOneSlice (int islice, int step)
     // get field insitu diagnostics after all fields are computed & SALAME
     m_fields.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
 
-    // copy fields to diagnostic array
+    // get laser insitu diagnostics
+    m_multi_laser.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
+
+    // copy fields (and laser) to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
         FillFieldDiagnostics(lev, islice);
     }
@@ -719,9 +725,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         // cell centered MG solve: no ghost cells, put boundary condition into source term
         // node centered MG solve: one ghost cell, use boundary condition from there
         m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                      m_fields.getField(lev, which_slice, "Sy"));
+                                      m_fields.getField(lev, which_slice, "Sy"),
+                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
         m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                      m_fields.getField(lev, which_slice, "Sx"));
+                                      m_fields.getField(lev, which_slice, "Sx"),
+                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
     }
 
     // interpolate Bx and By to lev from lev-1 in the ghost cells
@@ -799,7 +807,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         if (!m_hpmg[lev]) {
             m_hpmg[lev] = std::make_unique<hpmg::MultiGrid>(m_slice_geom[lev].CellSize(0),
                                                             m_slice_geom[lev].CellSize(1),
-                                                            slicemf.boxArray()[0]);
+                                                            slicemf.boxArray()[0], 1);
         }
         const int max_iters = 200;
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,

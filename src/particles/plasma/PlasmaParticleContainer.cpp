@@ -484,7 +484,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip] * clight_inv;
                 const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
 
-                if (ptd.id(ip) < 0 || x*x + y*y > insitu_radius_sq) {
+                if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
                     return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
                 }
                 // particle's Lorentz factor

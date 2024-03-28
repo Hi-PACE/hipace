@@ -191,6 +191,21 @@ public:
         return m_total_num_particles;
     }
 
+    int numRealComponents () const {
+        return BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0);
+    }
+    int numIntComponents () const { return BeamIdx::int_nattribs; }
+
+    bool communicateIdCpuComponent () const { return true; }
+    bool communicateRealComponent (int rcomp) const {
+        // communicate all compile-time and runtime real components
+        return rcomp < numRealComponents();
+    }
+    bool communicateIntComponent (int icomp) const {
+        // don't communicate nsubcycles
+        return icomp < BeamIdx::int_nattribs_in_buffer;
+    }
+
 private:
     int m_slice_permutation = 0;
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
@@ -219,6 +234,12 @@ public:
     amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_external_fields;
     /** Owns data for m_external_fields */
     amrex::Array<amrex::Parser, 6> m_external_fields_parser;
+    /** If spin tracking is enabled for this beam */
+    bool m_do_spin_tracking = false;
+    /** Initial spin of all particles */
+    amrex::RealVect m_initial_spin = {1, 0, 0,};
+    /** The anomalous magnetic moment */
+    amrex::Real m_spin_anom = 0.00115965218128;
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
@@ -301,7 +322,7 @@ private:
 
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 18;
+    static constexpr int m_insitu_nrp = 22;
     /** Number of int beam properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nip = 1;
     /** Per-slice real beam properties */
@@ -314,6 +335,15 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
+
+    // spin insitu:
+
+    /** Number of real beam properties for spin in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_n_spin = 6;
+    /** Per-slice real beam spin properties */
+    amrex::Vector<amrex::Real> m_insitu_spin_data;
+    /** Sum of all per-slice real beam spin properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_spin_data;
 
     // to estimate min uz
     friend AdaptiveTimeStep;

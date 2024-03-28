@@ -79,7 +79,7 @@ You can then create your directory in your ``$PSCRATCH``, where you can put your
     export MPICH_OFI_NIC_POLICY=GPU
 
     # for GPU-aware MPI use the first line
-    #HIPACE_GPU_AWARE_MPI="hipace.comms_buffer_on_gpu=1"
+    #HIPACE_GPU_AWARE_MPI="comms_buffer.on_gpu=1"
     HIPACE_GPU_AWARE_MPI=""
 
     # CUDA visible devices are ordered inverse to local task IDs
@@ -94,6 +94,6 @@ and use it to submit a simulation. Note, that this example simulation runs on 8 
 
 .. tip::
    Parallel simulations can be largely accelerated by using GPU-aware MPI.
-   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set (see the job script above).
+   To utilize GPU-aware MPI, the input parameter ``comms_buffer.on_gpu = 1`` must be set (see the job script above).
 
    Note that using GPU-aware MPI may require more GPU memory.
