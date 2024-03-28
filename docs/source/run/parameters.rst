@@ -1065,7 +1065,8 @@ Thomas-Bargmann-Michel-Telegdi (TBMT) model, see
 [Z. Gong et al., Matter and Radiation at Extremes 8.6 (2023), https://doi.org/10.1063/5.0152382]
 for the details of the implementation.
 This will add three extra components to each beam particle to store the spin and output
-those as part of the beam diagnostic.
+those as part of the beam diagnostic as ``spin/x, spin/y, spin/z``
+or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
 
 * ``<beam name> or beams.do_spin_tracking`` (`bool`) optional (default `0`)
     Enable spin tracking
