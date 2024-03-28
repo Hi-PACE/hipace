@@ -175,13 +175,12 @@ public:
      * \param[in] which_slice slice of the field
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
-     * \param[in] box_grow relative to the domain, how large is the box of staging_area
      * \param[in] offset shift boundary value by offset number of cells
      * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
+                               amrex::MultiFab&& staging_area,
                                amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
@@ -526,10 +525,6 @@ public:
 
     /** Number of guard cells for slices MultiFab */
     inline static amrex::IntVect m_slices_nguards {-1, -1, -1};
-    /** Number of guard cells for poisson solver MultiFab */
-    inline static amrex::IntVect m_poisson_nguards {-1, -1, -1};
-    /** If the poisson solver should include the guard cells */
-    bool m_extended_solve = false;
     /** Whether the currents should be symmetrized for the field solve */
     bool m_do_symmetrize = false;
 
@@ -546,10 +541,6 @@ private:
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
     amrex::Gpu::PinnedVector<amrex::Real> m_rel_z_vec_cpu;
-    /** Number of guard cells where ExmBy and EypBx are calculated */
-    amrex::IntVect m_exmby_eypbx_nguard;
-    /** Number of guard cells where sources for poisson equation are included */
-    amrex::IntVect m_source_nguard;
     /** If lev_0 should be solved with open boundary conditions */
     bool m_open_boundary = false;
     /** If the explicit solver is being used */
