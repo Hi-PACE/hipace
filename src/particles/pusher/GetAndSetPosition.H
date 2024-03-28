@@ -35,7 +35,6 @@ struct EnforceBC
     amrex::GpuArray<amrex::Real, 2> m_phi;
 
     /** Constructor.
-     * \param geom geometry used for domain size and periodicity
      */
     EnforceBC () noexcept
     {
