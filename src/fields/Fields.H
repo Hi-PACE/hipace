@@ -243,6 +243,12 @@ public:
      * \param[in] symm_y type of reflection in y direction
      */
     void SymmetrizeFields (int field_comp, const int lev, const int symm_x, const int symm_y);
+    /** \brief call amrex FillBoundary or SumBoundary for multiple fields on level 0
+     *
+     * \param[in] do_sum if the fields are currents and needs to be summed
+     * \param[in] comp_idx vector of component indexes such as Comps[WhichSlice::This]["Ez"]
+     */
+    void EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
@@ -461,68 +467,6 @@ public:
         }
     }
 
-    /** \brief call amrex FillBoundary for multiple fields
-     *
-     * \param[in] period periodicity of the fields
-     * \param[in] lev level of fields
-     * \param[in] islice slice of fields
-     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
-     */
-    template<class...Args>
-    void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice,
-                       Args...comps) {
-        std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
-        amrex::MultiFab& mfab = getSlices(lev);
-
-        // optimize adjacent fields to one FillBoundary call
-        std::sort(c_idx.begin(), c_idx.end());
-        int scomp = 0;
-        int ncomp = 0;
-        for (unsigned int i=0; i < c_idx.size(); ++i) {
-            if (ncomp==0) {
-                scomp = c_idx[i];
-                ncomp = 1;
-            }
-            if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
-                mfab.FillBoundary(scomp, ncomp, period);
-                ncomp = 0;
-            } else if (c_idx[i+1] == scomp+ncomp) {
-                ++ncomp;
-            }
-        }
-    }
-
-    /** \brief call amrex SumBoundary for multiple fields
-     *
-     * \param[in] period periodicity of the fields
-     * \param[in] lev level of fields
-     * \param[in] islice slice of fields
-     * \param[in] comps names of fields like "jx", "jy", "jx_beam", "jy_beam"
-     */
-    template<class...Args>
-    void SumBoundary (const amrex::Periodicity& period, const int lev, const int islice,
-                       Args...comps) {
-        std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
-        amrex::MultiFab& mfab = getSlices(lev);
-
-        // optimize adjacent fields to one SumBoundary call
-        std::sort(c_idx.begin(), c_idx.end());
-        int scomp = 0;
-        int ncomp = 0;
-        for (unsigned int i=0; i < c_idx.size(); ++i) {
-            if (ncomp==0) {
-                scomp = c_idx[i];
-                ncomp = 1;
-            }
-            if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
-                mfab.SumBoundary(scomp, ncomp, period);
-                ncomp = 0;
-            } else if (c_idx[i+1] == scomp+ncomp) {
-                ++ncomp;
-            }
-        }
-    }
-
     /** Number of guard cells for slices MultiFab */
     inline static amrex::IntVect m_slices_nguards {-1, -1, -1};
     /** Whether the currents should be symmetrized for the field solve */
@@ -547,6 +491,8 @@ private:
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */
     bool m_any_neutral_background = false;
+    /** periodicity of the fields on level 0 */
+    amrex::Periodicity m_lev0_periodicity;
     /** Number of real field properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nrp = 10;
     /** How often the insitu field diagnostics should be computed and written

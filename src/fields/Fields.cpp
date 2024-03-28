@@ -47,6 +47,8 @@ Fields::AllocData (
 
     if (lev==0) {
 
+        m_lev0_periodicity = geom.periodicity();
+
         // Need 1 extra guard cell transversally for transverse derivative
         int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
         m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
@@ -835,10 +837,10 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
 
     PhysConst phys_const = get_phys_const();
 
+    EnforcePeriodic(true, {Comps[WhichSlice::This]["jx"],
+                           Comps[WhichSlice::This]["jy"],
+                           Comps[WhichSlice::This]["rhomjz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (lev==0) {
-            SumBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jx", "jy", "rhomjz");
-        }
         // interpolate rhomjz to lev from lev-1 in the domain edges
         LevelUpBoundary(geom, lev, WhichSlice::This, "rhomjz",
             amrex::IntVect{0, 0, 0}, -m_slices_nguards);
@@ -896,11 +898,10 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
     }
 
+    EnforcePeriodic(false, {Comps[WhichSlice::This]["Psi"],
+                            Comps[WhichSlice::This]["Ez"],
+                            Comps[WhichSlice::This]["Bz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (lev==0) {
-            // transverse FillBoundary Psi for x and y derivative
-            FillBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "Psi");
-        }
         // interpolate fields to lev from lev-1 in the ghost cells
         LevelUpBoundary(geom, lev, WhichSlice::This, "Psi", m_slices_nguards, amrex::IntVect{0, 0, 0});
         LevelUpBoundary(geom, lev, WhichSlice::This, "Ez", m_slices_nguards, amrex::IntVect{0, 0, 0});
@@ -944,10 +945,9 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
 
     PhysConst phys_const = get_phys_const();
 
+    EnforcePeriodic(true, {Comps[which_slice]["jx"],
+                           Comps[which_slice]["jy"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (lev==0) {
-            SumBoundary(geom[lev].periodicity(), lev, which_slice, "jx", "jy");
-        }
         // interpolate jx and jy to lev from lev-1 in the domain edges and
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, which_slice, "jx", m_slices_nguards, -m_slices_nguards);
@@ -976,6 +976,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
     }
 
+    EnforcePeriodic(false, {Comps[which_slice]["Ez"]});
     for (int lev=0; lev<current_N_level; ++lev) {
         // interpolate Ez to lev from lev-1 in the ghost cells
         LevelUpBoundary(geom, lev, which_slice, "Ez", m_slices_nguards, amrex::IntVect{0, 0, 0});
@@ -994,11 +995,10 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
 
     PhysConst phys_const = get_phys_const();
 
+    EnforcePeriodic(true, {Comps[WhichSlice::Next]["jx"],
+                           Comps[WhichSlice::Next]["jy"],
+                           Comps[WhichSlice::This]["jz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (lev==0) {
-            SumBoundary(geom[lev].periodicity(), lev, WhichSlice::Next, "jx", "jy");
-            SumBoundary(geom[lev].periodicity(), lev, WhichSlice::This, "jz");
-        }
         // interpolate jx and jy to lev from lev-1 in the domain edges
         LevelUpBoundary(geom, lev, WhichSlice::Next, "jx", amrex::IntVect{0, 0, 0}, -m_slices_nguards);
         LevelUpBoundary(geom, lev, WhichSlice::Next, "jy", amrex::IntVect{0, 0, 0}, -m_slices_nguards);
@@ -1046,10 +1046,9 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_By);
     }
 
+    EnforcePeriodic(false, {Comps[which_slice]["Bx"],
+                            Comps[which_slice]["By"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (lev==0) {
-            FillBoundary(geom[lev].periodicity(), lev, which_slice, "Bx", "By");
-        }
         // interpolate Bx and By to lev from lev-1 in the ghost cells
         LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, amrex::IntVect{0, 0, 0});
         LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, amrex::IntVect{0, 0, 0});
@@ -1089,6 +1088,39 @@ Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const
                 arr(i, upper_y - j) = avg*symm_y;
                 arr(upper_x - i, upper_y - j) = avg*symm_x*symm_y;
             });
+    }
+}
+
+void
+Fields::EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx)
+{
+    amrex::MultiFab& mfab = getSlices(0);
+
+    if (!m_lev0_periodicity.isAnyPeriodic() && mfab.size() <= 1) {
+        return; // no work to do
+    }
+
+    HIPACE_PROFILE("Fields::EnforcePeriodic()");
+
+    // optimize adjacent fields to one FillBoundary call
+    std::sort(comp_idx.begin(), comp_idx.end());
+    int scomp = 0;
+    int ncomp = 0;
+    for (unsigned int i=0; i < comp_idx.size(); ++i) {
+        if (ncomp==0) {
+            scomp = comp_idx[i];
+            ncomp = 1;
+        }
+        if (i+1 >= comp_idx.size() || comp_idx[i+1] > scomp+ncomp) {
+            if (do_sum) {
+                mfab.SumBoundary(scomp, ncomp, m_slices_nguards, m_lev0_periodicity);
+            } else {
+                mfab.FillBoundary(scomp, ncomp, m_slices_nguards, m_lev0_periodicity);
+            }
+            ncomp = 0;
+        } else if (comp_idx[i+1] == scomp+ncomp) {
+            ++ncomp;
+        }
     }
 }
 

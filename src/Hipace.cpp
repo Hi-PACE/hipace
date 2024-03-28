@@ -708,8 +708,9 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
     if (lev==0) {
-        m_fields.SumBoundary(m_3D_geom[lev].periodicity(), lev, which_slice, "Sy", "Sx");
-        m_fields.SumBoundary(m_3D_geom[lev].periodicity(), lev, which_slice_chi, "chi");
+        m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],
+                                        Comps[which_slice]["Sx"],
+                                        Comps[which_slice_chi]["chi"]});
     }
 
     // interpolate Sx, Sy and chi to lev from lev-1 in the domain edges.
@@ -810,6 +811,11 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         const int max_iters = 200;
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
                             max_iters, m_MG_verbose);
+    }
+
+    if (lev==0) {
+        m_fields.EnforcePeriodic(false, {Comps[which_slice]["Bx"],
+                                         Comps[which_slice]["By"]});
     }
 }
 
