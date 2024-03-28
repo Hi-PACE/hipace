@@ -95,7 +95,7 @@ AdvanceBeamParticlesSlice (
     // Extract particle properties
     const auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamTile>(gm[0]);
+    const auto enforceBC = EnforceBC();
 
     const amrex::Real clight = phys_const.c;
     const amrex::Real inv_clight = 1.0_rt/phys_const.c;
@@ -164,7 +164,7 @@ AdvanceBeamParticlesSlice (
                 xp += dt * 0.5_rt * ux * gammap_inv;
                 yp += dt * 0.5_rt * uy * gammap_inv;
 
-                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
+                if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
 
                 Array3<const amrex::Real> slice_arr = slice_arr_lev0;
                 amrex::Real dx_inv = dx_inv_lev0;
@@ -322,11 +322,14 @@ AdvanceBeamParticlesSlice (
                 xp += dt * 0.5_rt * ux_next * gamma_next_inv;
                 yp += dt * 0.5_rt * uy_next * gamma_next_inv;
                 if (do_z_push) zp += dt * ( uz_next * gamma_next_inv - clight );
-                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
                 ux = ux_next;
                 uy = uy_next;
                 uz = uz_next;
             } // end for loop over n_subcycles
+            if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+            ptd.pos(0, ip) = xp;
+            ptd.pos(1, ip) = yp;
+            ptd.pos(2, ip) = zp;
             ptd.idata(BeamIdx::nsubcycles)[ip] = i;
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;

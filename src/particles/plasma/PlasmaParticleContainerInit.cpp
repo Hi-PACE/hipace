@@ -27,7 +27,11 @@ InitParticles (const amrex::RealVect& a_u_std,
     const int lev = 0;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
-    const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
+    amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
+    a_bounds.setLo(0, Hipace::m_boundary_particle_lo[0]);
+    a_bounds.setLo(1, Hipace::m_boundary_particle_lo[1]);
+    a_bounds.setHi(0, Hipace::m_boundary_particle_hi[0]);
+    a_bounds.setHi(1, Hipace::m_boundary_particle_hi[1]);
 
     const int depos_order_1 = Hipace::m_depos_order_xy + 1;
     const bool outer_depos_loop = Hipace::m_outer_depos_loop;
@@ -336,8 +340,8 @@ InitParticles (const amrex::RealVect& a_u_std,
         }
         if (m_do_symmetrize) {
 
-            const amrex::Real x_mid2 = (ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
-            const amrex::Real y_mid2 = (ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
+            const amrex::Real x_mid2 = (a_bounds.lo(0) + a_bounds.hi(0));
+            const amrex::Real y_mid2 = (a_bounds.lo(1) + a_bounds.hi(1));
             const amrex::Long mirror_offset = total_num_particles/4;
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept

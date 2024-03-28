@@ -27,6 +27,6 @@ diagnostic.output_period = 1
 
 hipace.depos_order_xy = 0
 
-geometry.is_periodic = true  true  false  # Is periodic?
+boundary.particle = Periodic
 
 diagnostic.diag_type = xz

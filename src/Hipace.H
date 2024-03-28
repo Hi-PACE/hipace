@@ -37,6 +37,22 @@
 
 namespace hpmg { class MultiGrid; }
 
+namespace FieldBoundary {
+    enum type {
+        Dirichlet,
+        Periodic,
+        Open
+    };
+}
+
+namespace ParticleBoundary {
+    enum type {
+        Reflecting,
+        Periodic,
+        Deleting
+    };
+}
+
 /** \brief Helper struct to initialize m_phys_const and Parser before amrex::AmrCore */
 struct Hipace_early_init
 {
@@ -252,6 +268,9 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+
+    // SALAME
+
     /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 3;
     /** if the SALAME-only field should be computed exactly with plasma particles */
@@ -266,6 +285,17 @@ public:
     amrex::Parser m_salame_parser;
     /** Function to get the target Ez field for SALAME */
     amrex::ParserExecutor<3> m_salame_target_func;
+
+    // Boundary
+
+    /** type of boundary used for fields */
+    inline static FieldBoundary::type m_boundary_field = FieldBoundary::Dirichlet;
+    /** type of boundary used for particles */
+    inline static ParticleBoundary::type m_boundary_particles = ParticleBoundary::Deleting;
+    /** lower bound of bounding box for the particles */
+    inline static std::array<amrex::Real, 2> m_boundary_particle_lo;
+    /** upper bound of bounding box for the particles */
+    inline static std::array<amrex::Real, 2> m_boundary_particle_hi;
 
 private:
 

@@ -73,8 +73,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const bool can_ionize = plasma.m_can_ionize;
         const int n_subcycles = plasma.m_n_subcycles;
 
-        using PTileType = PlasmaParticleContainer::ParticleTileType;
-        const auto setPositionEnforceBC = EnforceBCandSetPos<PTileType>(gm[0]);
+        const auto enforceBC = EnforceBC();
         const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
 
         const amrex::Real laser_norm = (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass)
@@ -190,7 +189,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                       xp += dz*clight_inv*(ux * (1._rt/psi));
                       yp += dz*clight_inv*(uy * (1._rt/psi));
 
-                      if (setPositionEnforceBC(ptd, ip, xp, yp)) return;
+                      if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+                      ptd.pos(0, ip) = xp;
+                      ptd.pos(1, ip) = yp;
 
                       if (!temp_slice) {
                           // update values of the last non temp slice
@@ -265,7 +266,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                           psi += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fpsi1 + iab)[ip];
                       }
 
-                      if (setPositionEnforceBC(ptd, ip, xp, yp)) return;
+                      if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+                      ptd.pos(0, ip) = xp;
+                      ptd.pos(1, ip) = yp;
 
                       if (!temp_slice) {
                           // update values of the last non temp slice

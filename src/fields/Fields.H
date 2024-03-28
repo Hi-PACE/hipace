@@ -485,8 +485,6 @@ private:
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
     amrex::Gpu::PinnedVector<amrex::Real> m_rel_z_vec_cpu;
-    /** If lev_0 should be solved with open boundary conditions */
-    bool m_open_boundary = false;
     /** If the explicit solver is being used */
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */

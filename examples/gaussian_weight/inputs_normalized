@@ -6,7 +6,7 @@ max_step = 0
 diagnostic.output_period = 1
 hipace.normalized_units = 1
 
-geometry.is_periodic = 0 0 0      # Is periodic?
+boundary.particle = Deleting
 geometry.prob_lo     = -20   -20   -20    # physical domain
 geometry.prob_hi     =  20    20    20
 

@@ -30,10 +30,12 @@ Fields::Fields (const int nlev)
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
     queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
-    queryWithParser(ppf, "open_boundary", m_open_boundary);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
     queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
     queryWithParser(ppf, "do_symmetrize", m_do_symmetrize);
+    DeprecatedInput("fields", "extended_solve",
+                    "boundary.particle_lo and boundary.particle_hi", "", true);
+    DeprecatedInput("fields", "open_boundary", "boundary.field = Open", "", true);
 }
 
 void
@@ -671,7 +673,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 
     const amrex::Box staging_box = geom[lev].Domain();
 
-    if (lev == 0 && m_open_boundary) {
+    if (lev == 0 && Hipace::m_boundary_field == FieldBoundary::Open) {
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
 

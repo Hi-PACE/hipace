@@ -154,7 +154,45 @@ Hipace::Hipace () :
     DeprecatedInput("hipace", "comms_buffer_max_trailing_slices",
         "comms_buffer.max_trailing_slices)", "", true);
 
+    amrex::ParmParse ppb("boundary");
+    std::string field_boundary = "Dirichlet";
+    queryWithParser(ppb, "field", field_boundary);
+    if (field_boundary == "Dirichlet") {
+        m_boundary_field = FieldBoundary::Dirichlet;
+    } else if (field_boundary == "Periodic") {
+        m_boundary_field = FieldBoundary::Periodic;
+    } else if (field_boundary == "Open") {
+        m_boundary_field = FieldBoundary::Open;
+    } else {
+        amrex::Abort("Unknown field boundary '" + field_boundary +
+            "', must be 'Dirichlet', 'Periodic' or 'Open'");
+    }
+
+    std::string particle_boundary = "Deleting";
+    queryWithParser(ppb, "particle", particle_boundary);
+    if (particle_boundary == "Reflecting") {
+        m_boundary_particles = ParticleBoundary::Reflecting;
+    } else if (particle_boundary == "Periodic") {
+        m_boundary_particles = ParticleBoundary::Periodic;
+    } else if (particle_boundary == "Deleting") {
+        m_boundary_particles = ParticleBoundary::Deleting;
+    } else {
+        amrex::Abort("Unknown particle boundary '" + particle_boundary +
+            "', must be 'Reflecting', 'Periodic' or 'Deleting'");
+    }
+
     MakeGeometry();
+
+    m_boundary_particle_lo = {m_3D_geom[0].ProbLo(0), m_3D_geom[0].ProbLo(1)};
+    m_boundary_particle_hi = {m_3D_geom[0].ProbHi(0), m_3D_geom[0].ProbHi(1)};
+    queryWithParser(ppb, "particle_lo", m_boundary_particle_lo);
+    queryWithParser(ppb, "particle_hi", m_boundary_particle_hi);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        m_boundary_particle_lo[0] >= m_3D_geom[0].ProbLo(0) &&
+        m_boundary_particle_lo[1] >= m_3D_geom[0].ProbLo(1) &&
+        m_boundary_particle_hi[0] <= m_3D_geom[0].ProbHi(0) &&
+        m_boundary_particle_hi[1] <= m_3D_geom[0].ProbHi(1),
+        "Particle boundary must be contained within the simulation domain");
 
     m_use_laser = m_multi_laser.m_use_laser;
 
@@ -244,9 +282,15 @@ Hipace::MakeGeometry ()
     std::array<int, 3> n_cells {0, 0, 0};
     getWithParser(pp_amr, "n_cell", n_cells);
     const amrex::Box domain_3D{amrex::IntVect(0,0,0), n_cells.data()};
+    const int is_periodic[3] {
+        int(m_boundary_field == FieldBoundary::Periodic),
+        int(m_boundary_field == FieldBoundary::Periodic),
+        int(false)
+    };
 
-    // this will get prob_lo, prob_hi and is_periodic from the input file
-    m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, nullptr);
+    // this will get prob_lo and prob_hi from the input file
+    m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, is_periodic);
+    DeprecatedInput("geometry", "is_periodic", "boundary.field and boundary.particle", "", true);
 
     amrex::BoxList bl{domain_3D};
     amrex::Vector<int> procmap{amrex::ParallelDescriptor::MyProc()};

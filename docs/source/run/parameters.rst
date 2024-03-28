@@ -162,8 +162,40 @@ Geometry
 * ``geometry.patch_hi`` (3 `float`)
     Higher end of the simulation box in x, y and z.
 
+* ``boundary.fields`` (`string`)
+    Type of boundary condition used to fill the ghost cells of the fields.
+    Possible values:
+
+        * ``Dirichlet`` The field value in ghost cells stays zero.
+
+        * ``Periodic`` The field value in ghost cells is filled using periodic continuation of the domain.
+        This option should usually be selected only in combination with periodic field solvers.
+
+        * ``Open``
+
+* ``boundary.particle`` (`string`)
+    Type of boundary condition used for particles.
+    Possible values:
+
+        * ``Reflecting``
+
+        * ``Periodic``
+
+        * ``Deleting``
+
+* ``boundary.particle_lo`` (2 `float`)
+
+* ``boundary.particle_hi`` (2 `float`)
+
+
 * ``geometry.is_periodic`` (3 `bool`)
     Whether the boundary conditions for particles in x, y and z is periodic. Note that particles in z are always removed. This setting will most likely be changed in the near future.
+
+* ``fields.open_boundary`` (`bool`) optional (default `0`)
+    Uses a Taylor approximation of the Greens function to solve the Poisson equations with
+    open boundary conditions. It's recommended to use this together with
+    ``geometry.is_periodic = false false false``.
+    Only available with the predictor-corrector solver.
 
 * ``mr_lev1.n_cell`` (2 `integer`)
     Number of cells in x and y for level 1.
@@ -258,12 +290,6 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
     The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
     The default is set accordingly.
-
-* ``fields.open_boundary`` (`bool`) optional (default `0`)
-    Uses a Taylor approximation of the Greens function to solve the Poisson equations with
-    open boundary conditions. It's recommended to use this together with
-    ``geometry.is_periodic = false false false``.
-    Only available with the predictor-corrector solver.
 
 * ``fields.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes current and charge densities transversely before the field solve.
