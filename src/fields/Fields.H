@@ -93,11 +93,10 @@ public:
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
-     * \param[in] bin_size size of plasma tiles, for tmp arrays
      */
     void AllocData (
         int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm, int bin_size);
+        const amrex::DistributionMapping& slice_dm);
 
     /** get function for the 2D slices */
     amrex::Vector<amrex::MultiFab>& getSlices () {return m_slices; }
@@ -123,8 +122,6 @@ public:
     amrex::MultiFab getStagingArea (const int lev) {
         return amrex::MultiFab(m_poisson_solver[lev]->StagingArea(), amrex::make_alias, 0, 1);
     }
-    /** Return reference to density tile arrays */
-    amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
     /** check whether the fields are initialized correctly */
     void checkInit() {
         for (auto& slices_lev : m_slices) {
@@ -509,8 +506,6 @@ private:
     std::string m_poisson_solver_str = "FFTDirichlet";
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
-    /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
-    amrex::Vector<amrex::FArrayBox> m_tmp_densities;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
