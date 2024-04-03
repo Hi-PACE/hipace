@@ -66,13 +66,11 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 amrex::Real
 MultiPlasma::maxChargeDensity (amrex::Real z)
 {
-    amrex::Real max_density = 0;
+    amrex::Real max_density = std::abs(m_adaptive_density * get_phys_const().q_e);
     for (auto& plasma : m_all_plasmas) {
         plasma.UpdateDensityFunction(z);
         max_density = amrex::max<amrex::Real>(
-            max_density,
-            std::abs(plasma.GetCharge() * plasma.m_density_func(0., 0., z)),
-            std::abs(plasma.GetCharge() * m_adaptive_density));
+            max_density, std::abs(plasma.GetCharge() * plasma.m_density_func(0., 0., z)));
     }
     return max_density;
 }
