@@ -534,12 +534,12 @@ MultiLaser::ShiftLaserSlices ()
 }
 
 void
-MultiLaser::GetLaserAabs (const int current_N_level, Fields& fields,
-                          amrex::Vector<amrex::Geometry> const& geom)
+MultiLaser::UpdateLaserAabs (const int current_N_level, Fields& fields,
+                             amrex::Vector<amrex::Geometry> const& geom)
 {
     if (!m_use_laser) return;
 
-    HIPACE_PROFILE("MultiLaser::GetLaserAabs()");
+    HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
 
     // write aabs into fields MultiFab
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){

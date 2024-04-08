@@ -483,7 +483,7 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     // write laser aabs into fields MultiFab
-    m_multi_laser.GetLaserAabs(current_N_level, m_fields, m_3D_geom);
+    m_multi_laser.UpdateLaserAabs(current_N_level, m_fields, m_3D_geom);
 
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {

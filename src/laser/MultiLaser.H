@@ -163,8 +163,8 @@ public:
      * \param[in] fields Field object
      * \param[in] geom Geometry of the problem
      */
-    void GetLaserAabs (const int current_N_level, Fields& fields,
-                       amrex::Vector<amrex::Geometry> const& geom);
+    void UpdateLaserAabs (const int current_N_level, Fields& fields,
+                          amrex::Vector<amrex::Geometry> const& geom);
 
     /** Wrapper function to advance a laser slice by 1 time step.
      * \param[in] fields Field object
