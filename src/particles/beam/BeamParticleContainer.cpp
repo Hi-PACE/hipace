@@ -63,7 +63,6 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
-    queryWithParserAlt(pp, "do_reset_id_init", m_do_reset_id_init, pp_alt);
     queryWithParser(pp, "do_salame", m_do_salame);
     queryWithParserAlt(pp, "reorder_period", m_reorder_period, pp_alt);
     amrex::Array<int, 2> idx_array
@@ -121,7 +120,6 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     amrex::ParmParse pp(m_name);
     amrex::ParmParse pp_alt("beams");
     amrex::Real ptime {0.};
-    if (m_do_reset_id_init) BeamTileInit::ParticleType::NextID(1);
     if (m_injection_type == "fixed_ppc") {
 
         queryWithParser(pp, "ppc", m_ppc);
@@ -319,7 +317,7 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     auto& soa = getBeamSlice(which_slice).GetStructOfArrays();
     const amrex::Real * const pos_x = soa.GetRealData(BeamIdx::x).data();
     const amrex::Real * const pos_y = soa.GetRealData(BeamIdx::y).data();
-    auto * const idcpup = soa.GetIdCPUData().data();
+    int * const p_mr_level = soa.GetIntData(BeamIdx::mr_level).data();
 
     const int lev1_idx = std::min(1, current_N_level-1);
     const int lev2_idx = std::min(2, current_N_level-1);
@@ -345,15 +343,15 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
                 lo_x_lev2 < xp && xp < hi_x_lev2 &&
                 lo_y_lev2 < yp && yp < hi_y_lev2) {
                 // level 2
-                amrex::ParticleCPUWrapper{idcpup[ip]} = 2;
+                p_mr_level[ip] = 2;
             } else if (current_N_level > 1 &&
                 lo_x_lev1 < xp && xp < hi_x_lev1 &&
                 lo_y_lev1 < yp && yp < hi_y_lev1) {
                 // level 1
-                amrex::ParticleCPUWrapper{idcpup[ip]} = 1;
+                p_mr_level[ip] = 1;
             } else {
                 // level 0
-                amrex::ParticleCPUWrapper{idcpup[ip]} = 0;
+                p_mr_level[ip] = 0;
             }
         }
     );

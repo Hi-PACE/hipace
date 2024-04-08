@@ -396,9 +396,6 @@ IonizationModule (const int lev,
         ptile_elec.resize(new_size);
 
         // Load electron soa and aos after resize
-        const long pid_start = ParticleType::NextID();
-        ParticleType::NextID(pid_start + num_new_electrons.dataValue());
-
         auto arrdata_ion = ptile_ion.GetStructOfArrays().realarray();
         auto arrdata_elec = ptile_elec.GetStructOfArrays().realarray();
         auto int_arrdata_elec = ptile_elec.GetStructOfArrays().intarray();
@@ -417,7 +414,7 @@ IonizationModule (const int lev,
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = pid_start + pid;
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // only for valid/invalid
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
