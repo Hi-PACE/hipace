@@ -579,9 +579,9 @@ BeamParticleContainer::InSituComputeDiags (int islice)
 
         amrex::constexpr_for<0, m_insitu_n_spin>(
             [&] (auto idx) {
-                m_insitu_spin_data[islice + idx.value * m_nslices] =
-                    amrex::get<idx.value>(a_spin) * sum_w_inv;
-                m_insitu_sum_spin_data[idx.value] += amrex::get<idx.value>(a_spin);
+                m_insitu_spin_data[islice + idx * m_nslices] =
+                    amrex::get<idx>(a_spin) * sum_w_inv;
+                m_insitu_sum_spin_data[idx] += amrex::get<idx>(a_spin);
             }
         );
     }
