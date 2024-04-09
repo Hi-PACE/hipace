@@ -139,9 +139,6 @@ public:
      */
     void ResetAllQuantities ();
 
-    /** \brief reset all laser slices to 0 */
-    void ResetLaser ();
-
     /**
      * \brief does Coulomb collisions between plasmas and beams
      */

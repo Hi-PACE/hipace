@@ -195,8 +195,8 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
 void
 PlasmaParticleContainer::ReorderParticles (const int islice)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
     if (m_reorder_period > 0 && islice % m_reorder_period == 0) {
+        HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
         SortParticlesForDeposition(m_reorder_idx_type);
     }
 }
@@ -272,11 +272,11 @@ IonizationModule (const int lev,
                   const Fields& fields,
                   const amrex::Real background_density_SI)
 {
+    if (!m_can_ionize) return;
     HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 
     using namespace amrex::literals;
 
-    if (!m_can_ionize) return;
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time
@@ -396,9 +396,6 @@ IonizationModule (const int lev,
         ptile_elec.resize(new_size);
 
         // Load electron soa and aos after resize
-        const long pid_start = ParticleType::NextID();
-        ParticleType::NextID(pid_start + num_new_electrons.dataValue());
-
         auto arrdata_ion = ptile_ion.GetStructOfArrays().realarray();
         auto arrdata_elec = ptile_elec.GetStructOfArrays().realarray();
         auto int_arrdata_elec = ptile_elec.GetStructOfArrays().intarray();
@@ -417,7 +414,7 @@ IonizationModule (const int lev,
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = pid_start + pid;
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // only for valid/invalid
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
@@ -519,17 +516,17 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
         amrex::constexpr_for<0, m_insitu_nrp>(
             [&] (auto idx) {
-                m_insitu_rdata[islice + idx.value * m_nslices] = amrex::get<idx.value>(a) *
+                m_insitu_rdata[islice + idx * m_nslices] = amrex::get<idx>(a) *
                     // sum(w) and [(ga-1)*(1-vz)] are not multiplied by sum_w_inv
-                    ( idx.value == 0 || idx.value == (m_insitu_nrp-1) ? 1 : sum_w_inv );
-                m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a);
+                    ( idx == 0 || idx == (m_insitu_nrp-1) ? 1 : sum_w_inv );
+                m_insitu_sum_rdata[idx] += amrex::get<idx>(a);
             }
         );
 
         amrex::constexpr_for<0, m_insitu_nip>(
             [&] (auto idx) {
-                m_insitu_idata[islice + idx.value * m_nslices] = amrex::get<m_insitu_nrp+idx.value>(a);
-                m_insitu_sum_idata[idx.value] += amrex::get<m_insitu_nrp+idx.value>(a);
+                m_insitu_idata[islice + idx * m_nslices] = amrex::get<m_insitu_nrp+idx>(a);
+                m_insitu_sum_idata[idx] += amrex::get<m_insitu_nrp+idx>(a);
             }
         );
     }

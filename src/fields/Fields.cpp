@@ -77,6 +77,9 @@ Fields::AllocData (
             Comps[isl].multi_emplace(N_Comps, "Sy", "Sx", "ExmBy", "EypBx", "Ez",
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "jx", "jy", "rhomjz");
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps, "aabs");
+            }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
             }
@@ -120,7 +123,7 @@ Fields::AllocData (
                                               "jx", "jy", "jz", "rhomjz");
 
             if (Hipace::m_use_laser) {
-                Comps[isl].multi_emplace(N_Comps, "chi");
+                Comps[isl].multi_emplace(N_Comps, "chi", "aabs");
             }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
@@ -360,8 +363,6 @@ LinCombination (amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
                 const amrex::Real factor_b, const FVB& src_b)
 {
-    HIPACE_PROFILE("Fields::LinCombination()");
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -387,8 +388,6 @@ template<class FV>
 void
 Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
 {
-    HIPACE_PROFILE("Fields::Multiply()");
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -669,11 +668,10 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                               amrex::MultiFab&& staging_area,
                               amrex::Real offset, amrex::Real factor)
 {
-    HIPACE_PROFILE("Fields::SetBoundaryCondition()");
-
     const amrex::Box staging_box = geom[lev].Domain();
 
     if (lev == 0 && Hipace::m_boundary_field == FieldBoundary::Open) {
+        HIPACE_PROFILE("Fields::SetOpenBoundaryCondition()");
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
 
@@ -731,6 +729,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         );
 
     } else if (lev > 0) {
+        HIPACE_PROFILE("Fields::SetMRBoundaryCondition()");
         // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
         constexpr int interp_order = 2;
 
@@ -1322,8 +1321,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
 
     amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
-            m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
-            m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+            m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a)*dxdydz;
+            m_insitu_sum_rdata[idx] += amrex::get<idx>(a)*dxdydz;
         }
     );
 }

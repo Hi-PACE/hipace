@@ -28,7 +28,6 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
 {
     using namespace amrex::literals;
 
-    HIPACE_PROFILE("FFTPoissonSolverDirichlet::define()");
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(a_realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
@@ -103,7 +102,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
         // Perform Fourier transform from the staging area to `tmpSpectralField`
-        AnyDST::Execute<AnyDST::direction::forward>(m_plan[mfi]);
+        AnyDST::Execute(m_plan[mfi], AnyDST::direction::forward);
     }
 
 #ifdef AMREX_USE_OMP
@@ -123,7 +122,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
         // Perform Fourier transform from `tmpSpectralField` to the staging area
-        AnyDST::Execute<AnyDST::direction::backward>(m_plan[mfi]);
+        AnyDST::Execute(m_plan[mfi], AnyDST::direction::backward);
     }
 
 #ifdef AMREX_USE_OMP

@@ -18,7 +18,7 @@ class MultiBuffer
 public:
 
     // initialize MultiBuffer and open initial receive requests
-    void initialize (int nslices, int nbeams, bool use_laser, amrex::Box laser_box);
+    void initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
     void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
@@ -120,6 +120,8 @@ private:
     int m_max_leading_slices = std::numeric_limits<int>::max();
     /** How many slices of beam particles can be stored before being sent */
     int m_max_trailing_slices = std::numeric_limits<int>::max();
+    std::size_t m_current_buffer_size = 0;
+    std::size_t m_max_buffer_size = std::numeric_limits<std::size_t>::max();
 
     // parameters to send physical time
     amrex::Real m_time_send_buffer = 0.;

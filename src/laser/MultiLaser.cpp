@@ -534,6 +534,34 @@ MultiLaser::ShiftLaserSlices ()
 }
 
 void
+MultiLaser::UpdateLaserAabs (const int current_N_level, Fields& fields,
+                             amrex::Vector<amrex::Geometry> const& geom)
+{
+    if (!m_use_laser) return;
+
+    HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
+
+    // write aabs into fields MultiFab
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
+        const Array3<const amrex::Real> laser_arr = m_slices.const_array(mfi);
+        const Array2<amrex::Real> field_arr =
+            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["aabs"]);
+
+        amrex::ParallelFor(mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+                using namespace WhichLaserSlice;
+
+                field_arr(i,j) = abssq(laser_arr(i,j,n00j00_r), laser_arr(i,j,n00j00_i));
+            });
+    }
+
+    // interpolate aabs to higher MR levels
+    for (int lev=1; lev<current_N_level; ++lev) {
+        fields.LevelUp(geom, lev, WhichSlice::This, "aabs");
+    }
+}
+
+void
 MultiLaser::AdvanceSlice (const Fields& fields, amrex::Real dt, int step)
 {
 
@@ -1041,8 +1069,8 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
-                    const amrex::Real yp=std::cos(propagation_angle_yz)*y+std::sin(propagation_angle_yz)*z;
-                    const amrex::Real zp=-std::sin(propagation_angle_yz)*y+std::cos(propagation_angle_yz)*z;
+                    const amrex::Real yp=std::cos(propagation_angle_yz)*y-std::sin(propagation_angle_yz)*z;
+                    const amrex::Real zp=std::sin(propagation_angle_yz)*y+std::cos(propagation_angle_yz)*z;
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
@@ -1130,21 +1158,19 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice, const am
 
     amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
-            if (idx.value == 0) {
-                m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a);
-                m_insitu_sum_rdata[idx.value] =
-                    std::max(m_insitu_sum_rdata[idx.value], amrex::get<idx.value>(a));
+            if (idx == 0) {
+                m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a);
+                m_insitu_sum_rdata[idx] = std::max(m_insitu_sum_rdata[idx], amrex::get<idx>(a));
             } else {
-                m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
-                m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+                m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a)*dxdydz;
+                m_insitu_sum_rdata[idx] += amrex::get<idx>(a)*dxdydz;
             }
         }
     );
 
     amrex::constexpr_for<0, m_insitu_ncp>(
         [&] (auto idx) {
-            m_insitu_cdata[islice + idx.value * nslices] =
-                amrex::get<m_insitu_nrp+idx.value>(a) * mid_factor;
+            m_insitu_cdata[islice + idx * nslices] = amrex::get<m_insitu_nrp+idx>(a) * mid_factor;
         }
     );
 }

@@ -249,7 +249,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
 
             for (uint64_t i=0; i<np_total; ++i) {
-                amrex::Long id = amrex::ConstParticleIDWrapper(uint64_data[i]);
+                uint64_t id = uint64_data[i];
+                // in the amrex format valid idcpus start with 1 and invalid with 0
+                amrex::ParticleIDWrapper{id}.make_invalid();
                 uint64_data[i] = id;
             }
 
