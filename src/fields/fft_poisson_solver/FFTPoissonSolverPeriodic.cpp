@@ -28,7 +28,6 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
 {
     using namespace amrex::literals;
 
-    HIPACE_PROFILE("FFTPoissonSolverPeriodic::define()");
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(realspace_ba.size() == 1, "Parallel FFT not supported yet");
 

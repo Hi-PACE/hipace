@@ -41,7 +41,6 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                        amrex::Vector<amrex::DistributionMapping> slice_dm,
                        amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
 {
-    HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);

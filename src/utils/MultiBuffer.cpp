@@ -556,8 +556,6 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
 }
 
 amrex::Real MultiBuffer::get_time () {
-    HIPACE_PROFILE("MultiBuffer::get_time()");
-
     if (m_is_serial) {
         return m_time_send_buffer;
     }
@@ -579,8 +577,6 @@ amrex::Real MultiBuffer::get_time () {
 }
 
 void MultiBuffer::put_time (amrex::Real time) {
-    HIPACE_PROFILE("MultiBuffer::put_time()");
-
     if (m_is_serial) {
         m_time_send_buffer = time;
         return;

@@ -475,6 +475,10 @@ public:
         std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
+        if (!period.isAnyPeriodic() && mfab.size() <= 1) {
+            return; // no work to do
+        }
+
         // optimize adjacent fields to one FillBoundary call
         std::sort(c_idx.begin(), c_idx.end());
         int scomp = 0;

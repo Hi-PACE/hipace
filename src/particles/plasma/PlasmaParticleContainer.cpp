@@ -195,8 +195,8 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
 void
 PlasmaParticleContainer::ReorderParticles (const int islice)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
     if (m_reorder_period > 0 && islice % m_reorder_period == 0) {
+        HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
         SortParticlesForDeposition(m_reorder_idx_type);
     }
 }
@@ -272,11 +272,11 @@ IonizationModule (const int lev,
                   const Fields& fields,
                   const amrex::Real background_density_SI)
 {
+    if (!m_can_ionize) return;
     HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 
     using namespace amrex::literals;
 
-    if (!m_can_ionize) return;
     const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes with both ion and electron Particle Containers at the same time

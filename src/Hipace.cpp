@@ -41,6 +41,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     Parser::addConstantsToParser();
     Parser::replaceAmrexParamsWithParser();
 
+    queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);
     queryWithParser(pph, "depos_order_z", m_depos_order_z);
     queryWithParser(pph, "depos_derivative_type", m_depos_derivative_type);
@@ -105,7 +106,6 @@ Hipace::Hipace () :
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
     queryWithParser(pph, "interpolate_neutralizing_background",
         m_interpolate_neutralizing_background);
-    queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     bool do_mfi_sync = false;
     queryWithParser(pph, "do_MFIter_synchronize", do_mfi_sync);
     DfltMfi.SetDeviceSync(do_mfi_sync).UseDefaultStream();
@@ -618,23 +618,15 @@ Hipace::SolveOneSlice (int islice, int step)
 void
 Hipace::ResetAllQuantities ()
 {
-    HIPACE_PROFILE("Hipace::ResetAllQuantities()");
-
-    if (m_use_laser) ResetLaser();
+    if (m_use_laser) {
+        m_multi_laser.getSlices().setVal(0.);
+    }
 
     for (int lev=0; lev<m_N_level; ++lev) {
         if (m_fields.getSlices(lev).nComp() != 0) {
             m_fields.getSlices(lev).setVal(0., m_fields.m_slices_nguards);
         }
     }
-}
-
-void
-Hipace::ResetLaser ()
-{
-    HIPACE_PROFILE("Hipace::ResetLaser()");
-
-    m_multi_laser.getSlices().setVal(0.);
 }
 
 void
