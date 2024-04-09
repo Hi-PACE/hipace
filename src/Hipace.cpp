@@ -385,7 +385,7 @@ Hipace::Evolve ()
             }
             // Store charge density of (immobile) ions into WhichSlice::RhomJzIons of level 0
             m_multi_plasma.DepositNeutralizingBackground(
-                m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, 0);
+                m_fields, WhichSlice::RhomJzIons, m_3D_geom, 0);
             // interpolate neutralizing background to other levels
             for (int lev=1; lev<m_N_level; ++lev) {
                 m_fields.LevelUp(m_3D_geom, lev, WhichSlice::RhomJzIons, "rhomjz");
@@ -400,7 +400,7 @@ Hipace::Evolve ()
                 }
                 // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
                 m_multi_plasma.DepositNeutralizingBackground(
-                    m_fields, m_multi_laser, WhichSlice::RhomJzIons, m_3D_geom, lev);
+                    m_fields, WhichSlice::RhomJzIons, m_3D_geom, lev);
             }
         }
 
@@ -482,6 +482,9 @@ Hipace::SolveOneSlice (int islice, int step)
         m_fields.InitializeSlices(lev, islice, m_3D_geom);
     }
 
+    // write laser aabs into fields MultiFab
+    m_multi_laser.UpdateLaserAabs(current_N_level, m_fields, m_3D_geom);
+
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {
         // tiling used by plasma current deposition
@@ -489,7 +492,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
-            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This, true, false,
+            m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
                 m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
@@ -497,7 +500,7 @@ Hipace::SolveOneSlice (int islice, int step)
                 false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
-            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::This, true, true,
+            m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
                 m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
@@ -543,7 +546,7 @@ Hipace::SolveOneSlice (int islice, int step)
             InitializeSxSyWithBeam(lev);
 
             // Deposit Sx and Sy for every plasma species
-            m_multi_plasma.ExplicitDeposition(m_fields, m_multi_laser, m_3D_geom, lev);
+            m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
 
             // Solves Bx, By using Sx, Sy and chi
             ExplicitMGSolveBxBy(lev, WhichSlice::This);
@@ -582,7 +585,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev);
     }
 
     // get minimum beam acceleration on level 0
@@ -857,7 +860,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // Push particles to the next temp slice
-            m_multi_plasma.AdvanceParticles(m_fields, m_multi_laser, m_3D_geom, true, lev);
+            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, lev);
         }
 
         if (m_N_level > 1) {
@@ -868,7 +871,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         for (int lev=0; lev<current_N_level; ++lev) {
             if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
             // plasmas deposit jx jy to next temp slice
-            m_multi_plasma.DepositCurrent(m_fields, m_multi_laser, WhichSlice::Next,
+            m_multi_plasma.DepositCurrent(m_fields, WhichSlice::Next,
                 true, false, false, false, false, m_3D_geom, lev);
 
             // beams deposit jx jy to the next slice

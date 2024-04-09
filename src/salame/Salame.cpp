@@ -30,8 +30,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     for (int lev=0; lev<current_N_level; ++lev) {
         hipace->m_fields.setVal(0., lev, WhichSlice::This, "Sy", "Sx");
-        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
-                                              hipace->m_3D_geom, lev);
+        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_3D_geom, lev);
 
         // Back up Sx and Sy from the plasma only. This can only be done before the plasma push
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Sy_back", "Sx_back"},
@@ -44,8 +43,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // advance plasma to the temp slice
-            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser,
-                                                    hipace->m_3D_geom, true, lev);
+            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_3D_geom, true, lev);
 
             hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                             WhichSlice::Next, {"jx_beam", "jy_beam"});
@@ -58,7 +56,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // deposit plasma jx and jy on the next temp slice, to the SALAME slice
-            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
+            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
 
             // use an initial guess of zero for Bx and By in MG solver to reduce relative error
@@ -110,7 +108,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             }
 
             for (int lev=0; lev<current_N_level; ++lev) {
-                hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
+                hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
             }
         } else {
