@@ -21,7 +21,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                const amrex::Real a_radius,
                const amrex::Real a_hollow_core_radius)
 {
-    HIPACE_PROFILE("PlasmaParticleContainer::InitParticles");
+    HIPACE_PROFILE("PlasmaParticleContainer::InitParticles()");
     using namespace amrex::literals;
     clearParticles();
     const int lev = 0;
@@ -58,9 +58,6 @@ InitParticles (const amrex::RealVect& a_u_std,
         box_grow[1] = -1;
         y_offset = -0.5_rt;
     }
-
-    // Reset first ID to 1 as we create a fresh plasma each time we call this function
-    ParticleType::NextID(1);
 
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
     {
@@ -182,9 +179,6 @@ InitParticles (const amrex::RealVect& a_u_std,
         const auto new_size = old_size + total_num_particles;
         particle_tile.resize(new_size);
 
-        const int pid = ParticleType::NextID();
-        ParticleType::NextID(pid + total_num_particles);
-
         auto ptd = particle_tile.getParticleTileData();
         const int init_ion_lev = m_init_ion_lev;
 
@@ -301,7 +295,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
 
-                ptd.id(pidx) = pid + int(pidx);
+                ptd.id(pidx) = 1; // plasma id is only used to distinguish between valid/invalid
                 ptd.cpu(pidx) = 0; // level 0
                 ptd.rdata(PlasmaIdx::x)[pidx] = x;
                 ptd.rdata(PlasmaIdx::y)[pidx] = y;
@@ -358,7 +352,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 for (int imirror=0; imirror<3; ++imirror) {
                     const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
 
-                    ptd.id(midx) = pid + int(midx);
+                    ptd.id(midx) = 1; // plasma id is only used to distinguish between valid/invalid
                     ptd.cpu(midx) = 0; // level 0
                     ptd.rdata(PlasmaIdx::x)[midx] = x_arr[imirror];
                     ptd.rdata(PlasmaIdx::y)[midx] = y_arr[imirror];

@@ -36,6 +36,7 @@ void MultiBuffer::allocate_buffer (int slice) {
         ));
         m_datanodes[slice].m_location = memory_location::device;
     }
+    m_current_buffer_size += m_datanodes[slice].m_buffer_size * sizeof(storage_type);
 }
 
 void MultiBuffer::free_buffer (int slice) {
@@ -45,12 +46,13 @@ void MultiBuffer::free_buffer (int slice) {
     } else {
         amrex::The_Device_Arena()->free(m_datanodes[slice].m_buffer);
     }
+    m_current_buffer_size -= m_datanodes[slice].m_buffer_size * sizeof(storage_type);
     m_datanodes[slice].m_location = memory_location::nowhere;
     m_datanodes[slice].m_buffer = nullptr;
     m_datanodes[slice].m_buffer_size = 0;
 }
 
-void MultiBuffer::initialize (int nslices, int nbeams, bool use_laser, amrex::Box laser_box) {
+void MultiBuffer::initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box) {
 
     amrex::ParmParse pp("comms_buffer");
 
@@ -59,7 +61,7 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool use_laser, amrex::Bo
     const int n_ranks = amrex::ParallelDescriptor::NProcs();
 
     m_nslices = nslices;
-    m_nbeams = nbeams;
+    m_nbeams = beams.get_nbeams();
     m_use_laser = use_laser;
     m_laser_slice_box = laser_box;
 
@@ -89,6 +91,49 @@ void MultiBuffer::initialize (int nslices, int nbeams, bool use_laser, amrex::Bo
         || (Hipace::m_max_step < amrex::ParallelDescriptor::NProcs()),
         "comms_buffer.max_trailing_slices must be large enough"
         " to distribute all slices between all ranks if there are more timesteps than ranks");
+
+    double max_size_GiB = -1.;
+    queryWithParser(pp, "max_size_GiB", max_size_GiB);
+    if(max_size_GiB >= 0.) {
+        m_max_buffer_size = static_cast<std::size_t>(max_size_GiB*1024*1024*1024);
+
+        double size_estimate = 0.;
+        for (int b = 0; b < m_nbeams; ++b) {
+            auto& beam = beams.getBeam(b);
+            const double num_particles = static_cast<double>(beam.getTotalNumParticles());
+
+            if (beam.communicateIdCpuComponent()) {
+                size_estimate += num_particles * sizeof(std::uint64_t);
+            }
+
+            for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
+                if (beam.communicateRealComponent(rcomp)) {
+                    size_estimate += num_particles * sizeof(amrex::Real);
+                }
+            }
+
+            for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
+                if (beam.communicateIntComponent(icomp)) {
+                    size_estimate += num_particles * sizeof(int);
+                }
+            }
+        }
+
+        if (m_use_laser) {
+            size_estimate += m_laser_slice_box.d_numPts() * nslices
+                * m_laser_ncomp * sizeof(amrex::Real);
+        }
+
+        size_estimate /= 1024*1024*1024;
+        if (!((1.05*size_estimate < max_size_GiB*n_ranks)
+            || (Hipace::m_max_step < amrex::ParallelDescriptor::NProcs()))) {
+            amrex::Abort("comms_buffer.max_size_GiB must be large enough to fit "
+                         "all the data needed for all beams and the laser "
+                         "between all ranks if there are more timesteps than ranks!\n"
+                         "Data needed: " + std::to_string(1.05*size_estimate) + " GiB\n"
+                         "Space available: " + std::to_string(max_size_GiB*n_ranks) + " GiB\n");
+        }
+    }
 
     for (int p = 0; p < comm_progress::nprogress; ++p) {
         m_async_metadata_slice[p] = m_nslices - 1;
@@ -187,9 +232,13 @@ MultiBuffer::~MultiBuffer() {
 }
 
 void MultiBuffer::make_progress (int slice, bool is_blocking, int current_slice) {
-
+    const bool is_first_slice_with_recv_data =
+        m_async_data_slice[comm_progress::receive_started] == slice;
+    const bool is_last_slice_with_send_data =
+        m_async_data_slice[comm_progress::sent] == slice;
     const bool is_blocking_send = is_blocking ||
-        (m_nslices + slice - current_slice) % m_nslices > m_max_trailing_slices;
+        ((m_nslices + slice - current_slice) % m_nslices > m_max_trailing_slices) ||
+        (is_last_slice_with_send_data && (m_current_buffer_size > m_max_buffer_size));
     const bool is_blocking_recv = is_blocking;
     const bool skip_recv = !is_blocking_recv && (slice == current_slice ||
         (m_nslices - slice + current_slice) % m_nslices > m_max_leading_slices);
@@ -300,16 +349,21 @@ void MultiBuffer::make_progress (int slice, bool is_blocking, int current_slice)
             // don't receive empty buffer
             m_datanodes[slice].m_progress = comm_progress::received;
         } else {
-            allocate_buffer(slice);
-            MPI_Irecv(
-                m_datanodes[slice].m_buffer,
-                m_datanodes[slice].m_buffer_size,
-                amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
-                m_rank_receive_from,
-                m_tag_buffer_start + slice,
-                m_comm,
-                &(m_datanodes[slice].m_request));
-            m_datanodes[slice].m_progress = comm_progress::receive_started;
+            // enforce that slices are received in order
+            if (is_blocking_recv || (is_first_slice_with_recv_data &&
+                (m_current_buffer_size + m_datanodes[slice].m_buffer_size * sizeof(storage_type)
+                <= m_max_buffer_size))) {
+                allocate_buffer(slice);
+                MPI_Irecv(
+                    m_datanodes[slice].m_buffer,
+                    m_datanodes[slice].m_buffer_size,
+                    amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
+                    m_rank_receive_from,
+                    m_tag_buffer_start + slice,
+                    m_comm,
+                    &(m_datanodes[slice].m_request));
+                m_datanodes[slice].m_progress = comm_progress::receive_started;
+            }
         }
     }
 
@@ -502,8 +556,6 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
 }
 
 amrex::Real MultiBuffer::get_time () {
-    HIPACE_PROFILE("MultiBuffer::get_time()");
-
     if (m_is_serial) {
         return m_time_send_buffer;
     }
@@ -525,8 +577,6 @@ amrex::Real MultiBuffer::get_time () {
 }
 
 void MultiBuffer::put_time (amrex::Real time) {
-    HIPACE_PROFILE("MultiBuffer::put_time()");
-
     if (m_is_serial) {
         m_time_send_buffer = time;
         return;

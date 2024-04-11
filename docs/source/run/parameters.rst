@@ -74,9 +74,6 @@ General parameters
       * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
         via ``HIPACE_PROFILE``)
 
-      * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
-        are profiled via ``HIPACE_DETAIL_PROFILE``)
-
 * ``amrex.the_arena_is_managed`` (`bool`) optional (default `0`)
     Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
     but generally it is recommended to not use it.
@@ -97,6 +94,15 @@ General parameters
     transfer between the CPU and GPU for communications to be asynchronous instead of blocking.
     This can improve performance in a typical situation where the CPU-GPU link has relatively
     low bandwidth at the cost of some GPU memory and a reduced maximum number of MPI ranks.
+
+* ``comms_buffer.max_size_GiB`` (`float`) optional (default `inf`)
+    How many Gibibytes of beam particles and laser slices can be stored in the communications buffer
+    on each rank. This setting offers an alternative to ``comms_buffer.max_leading_slices``
+    and ``comms_buffer.max_trailing_slices``. Note that the amount specified here may be slightly
+    exeeded in practice. If there are more time steps than ranks, this parameter must be chosen
+    such that between all ranks there is enough capacity to store every beam particle and
+    laser slice to avoid a deadlock, i.e.
+    ``comms_buffer.max_size_GiB * nranks > beam_size + laser_size``.
 
 * ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
@@ -511,9 +517,6 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
-
-* ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
-    Whether to reset the ID incrementor to 1 before initializing beam particles.
 
 * ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition and particle push on GPU.

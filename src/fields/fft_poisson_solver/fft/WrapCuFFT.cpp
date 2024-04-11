@@ -29,6 +29,7 @@ namespace AnyFFT
     FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
                         Complex * const complex_array, const direction dir)
     {
+        HIPACE_PROFILE("AnyFFT::CreatePlan()");
         FFTplan fft_plan;
 
         if (__CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ == 1) {

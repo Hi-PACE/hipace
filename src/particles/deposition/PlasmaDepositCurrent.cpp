@@ -20,7 +20,7 @@
 
 
 void
-DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLaser& multi_laser,
+DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
@@ -57,9 +57,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
         const int    rho = deposit_rho    ? Comps[which_slice][rho_str]  : -1;
         const int    chi = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
         const int rhomjz = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
-
-        // extract the laser Fields
-        const amrex::MultiFab& a_mf = multi_laser.getSlices();
+        const int   aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
@@ -67,11 +65,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         // Extract particle properties
         const auto ptd = pti.GetParticleTile().getParticleTileData();
-
-        // Extract laser array from MultiFab
-        const Array3<const amrex::Real> a_laser_arr =
-            multi_laser.m_use_laser ? a_mf[pti].const_array(WhichLaserSlice::n00j00_r)
-                                    : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
@@ -102,8 +95,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
 
         const bool do_tiling = Hipace::m_do_tiling;
 
-        int ntilex = 1;
-        int ntiley = 1;
+        [[maybe_unused]] int ntilex = 1;
+        [[maybe_unused]] int ntiley = 1;
         if (do_tiling) {
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(bin_size >= 2*Fields::m_slices_nguards[0],
             "plasmas.sort_bin_size must be at least twice as large as the number of ghost cells");
@@ -199,9 +192,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const MultiLas
             const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
             amrex::Real Aabssqp = 0._rt;
-            [[maybe_unused]] auto laser_arr = a_laser_arr;
+            [[maybe_unused]] auto a_isl_arr = isl_arr;
+            [[maybe_unused]] auto a_aabs = aabs;
             if constexpr (use_laser.value) {
-                doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, laser_arr,
+                doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, a_isl_arr, a_aabs,
                                                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 Aabssqp *= laser_norm_ion;
             }
