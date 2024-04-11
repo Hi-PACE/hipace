@@ -145,7 +145,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 Hipace::m_outer_depos_loop,
                 plasma.m_can_ionize,
                 do_tiling,
-                multi_laser.m_use_laser
+                Hipace::m_use_laser
             },
             num_particles,
             [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto outer_depos_loop,
