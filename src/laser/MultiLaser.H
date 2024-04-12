@@ -13,58 +13,12 @@
 #include "Laser.H"
 #include "fields/Fields.H"
 #include "mg_solver/HpMultiGrid.H"
+#include "fields/fft_poisson_solver/fft/AnyFFT.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
 #include <AMReX_AmrCore.H>
 #include <AMReX_GpuComplex.H>
-
-#ifdef AMREX_USE_CUDA
-#  include <cufft.h>
-#elif defined(AMREX_USE_HIP)
-#  if __has_include(<rocfft/rocfft.h>)  // ROCm 5.3+
-#    include <rocfft/rocfft.h>
-#  else
-#    include <rocfft.h>
-#  endif
-#else
-#  include <fftw3.h>
-#endif
-
-namespace LaserFFT {
-#ifdef AMREX_USE_CUDA
-    using VendorFFT = cufftHandle;
-    const auto VendorCreate = cufftPlan2d;
-    const auto VendorDestroy = cufftDestroy;
-#  ifdef AMREX_USE_FLOAT
-    const auto VendorExecute = cufftExecC2C;
-    const auto cufft_type = CUFFT_C2C;
-    using cufftComplex = cuComplex;
-#  else
-    const auto VendorExecute = cufftExecZ2Z;
-    const auto cufft_type = CUFFT_Z2Z;
-    using cufftComplex = cuDoubleComplex;
-#  endif
-#elif defined(AMREX_USE_HIP)
-    using VendorFFT = rocfft_plan;
-    const auto VendorDestroy = rocfft_plan_destroy;
-// TODO
-#else
-#  ifdef AMREX_USE_FLOAT
-    using VendorFFT = fftwf_plan;
-    using FFTWComplex = fftwf_complex;
-    const auto VendorCreate = fftwf_plan_dft_2d;
-    const auto VendorExecute = fftwf_execute;
-    const auto VendorDestroy = fftwf_destroy_plan;
-#  else
-    using VendorFFT = fftw_plan;
-    using FFTWComplex = fftw_complex;
-    const auto VendorCreate = fftw_plan_dft_2d;
-    const auto VendorExecute = fftw_execute;
-    const auto VendorDestroy = fftw_destroy_plan;
-#  endif
-#endif
-}
 
 /** \brief describes which slice with respect to the currently calculated is used */
 namespace WhichLaserSlice {
@@ -106,15 +60,6 @@ public:
     explicit MultiLaser ()
     {
         ReadParameters();
-    }
-
-    ~MultiLaser ()
-    {
-        if (!m_use_laser) return;
-        if (m_solver_type == "fft") {
-            LaserFFT::VendorDestroy( m_plan_fwd );
-            LaserFFT::VendorDestroy( m_plan_bkw );
-        }
     }
 
     void ReadParameters ();
@@ -265,26 +210,17 @@ private:
     /** hpmg solver for the envelope solver */
     std::unique_ptr<hpmg::MultiGrid> m_mg;
 
-    // Elements for the FFT-based laser envelope solver
-    // This could belong to AnyFFT etc., with 2 caveats:
-    // - This solver operates on a FArrayBox instead of a MultiFab, which is more adequate
-    // - The array in position space must be Complex rather than real, which takes up quite some
-    //   rewriting, see https://github.com/MaxThevenet/hipace/tree/laser_solve,
-    // not sure what the best way to proceed is.
     /** FFTW plan for forward C2C transform to solve Complex Poisson equation */
-    LaserFFT::VendorFFT m_plan_fwd;
+    AnyFFT m_forward_fft;
     /** FFTW plan for backward C2C transform to solve Complex Poisson equation */
-    LaserFFT::VendorFFT m_plan_bkw;
+    AnyFFT m_backward_fft;
+    amrex::Gpu::DeviceVector<char> m_fft_work_area;
     /** Complex FAB to store the solution (e.g. laser envelope on current slice) */
     SpectralFieldLoc m_sol;
     /** Complex FAB to store the RHS in position space */
     SpectralFieldLoc m_rhs;
     /** Complex FAB to store the RHS in Fourier space */
     SpectralFieldLoc m_rhs_fourier;
-#ifdef AMREX_USE_CUDA
-    cufftResult m_result_fwd;
-    cufftResult m_result_bkw;
-#endif
 
     // Data for in-situ diagnostics:
     /** Number of real laser properties for in-situ per-slice reduced diagnostics. */

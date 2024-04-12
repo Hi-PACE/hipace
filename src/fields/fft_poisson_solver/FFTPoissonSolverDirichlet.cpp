@@ -7,7 +7,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "FFTPoissonSolverDirichlet.H"
-#include "fft/AnyDST.H"
+#include "fft/AnyFFT.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
@@ -81,17 +81,16 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    m_plan = AnyDST::DSTplans(a_realspace_ba, dm);
-    // Loop over boxes and allocate the corresponding plan
-    // for each box owned by the local MPI proc
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Note: the size of the real-space box and spectral-space box
-        // differ when using real-to-complex FFT. When initializing
-        // the FFT plan, the valid dimensions are those of the real-space box.
-        amrex::IntVect fft_size = fft_box.length();
-        m_plan[mfi] = AnyDST::CreatePlan(
-            fft_size, &m_stagingArea[mfi], &m_tmpSpectralField[mfi]);
-    }
+    amrex::IntVect fft_size = m_stagingArea[0].box().length();
+    std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
+    std::size_t bkw_area = m_backward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
+
+    m_fft_work_area.resize(std::max(fwd_area, bkw_area));
+
+    m_forward_fft.SetBuffers(m_stagingArea[0].dataPtr(), m_tmpSpectralField[0].dataPtr(),
+                             m_fft_work_area.dataPtr());
+    m_backward_fft.SetBuffers(m_tmpSpectralField[0].dataPtr(), m_stagingArea[0].dataPtr(),
+                              m_fft_work_area.dataPtr());
 }
 
 
@@ -100,10 +99,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichlet::SolvePoissonEquation()");
 
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Perform Fourier transform from the staging area to `tmpSpectralField`
-        AnyDST::Execute(m_plan[mfi], AnyDST::direction::forward);
-    }
+     m_forward_fft.Execute();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -120,10 +116,7 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
     }
 
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Perform Fourier transform from `tmpSpectralField` to the staging area
-        AnyDST::Execute(m_plan[mfi], AnyDST::direction::backward);
-    }
+    m_backward_fft.Execute();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
