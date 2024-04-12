@@ -212,7 +212,7 @@ namespace Parser
                 continue;
             }
 
-            double v;
+            double v = 0.;
             recursive_symbols.insert(s);
             const bool is_input = queryWithParser(pp_my_constants, s.c_str(), v);
             recursive_symbols.erase(s);

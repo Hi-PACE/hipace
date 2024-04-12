@@ -405,10 +405,8 @@ When both are specified, the per-species value is used.
     Whether to add a neutralizing background of immobile particles of opposite charge.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
-    Tile size for plasma current deposition, when running on CPU.
-    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
-    arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
-    arrays.
+    Tile size for plasma current deposition, when running on CPU
+    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
     | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.

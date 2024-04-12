@@ -40,7 +40,7 @@ Fields::Fields (const int nlev)
 void
 Fields::AllocData (
     int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
-    const amrex::DistributionMapping& slice_dm, int bin_size)
+    const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice_ba.size() == 1,
@@ -196,20 +196,6 @@ Fields::AllocData (
     } else {
         amrex::Abort("Unknown poisson solver '" + m_poisson_solver_str +
             "', must be 'FFTDirichlet', 'FFTPeriodic' or 'MGDirichlet'");
-    }
-    int num_threads = 1;
-#ifdef AMREX_USE_OMP
-    num_threads = omp_get_max_threads();
-#endif
-    if (Hipace::m_do_tiling) {
-
-        m_tmp_densities.resize(num_threads);
-        for (int i=0; i<num_threads; i++){
-            amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
-            bx.grow(m_slices_nguards);
-            // jx jy jz rho chi rhomjz
-            m_tmp_densities[i].resize(bx, 6);
-        }
     }
 
     if (lev == 0 && m_insitu_period > 0) {
