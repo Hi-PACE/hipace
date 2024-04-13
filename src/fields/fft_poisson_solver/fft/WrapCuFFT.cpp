@@ -11,7 +11,7 @@
 
 #include <AMReX.H>
 
-#include "CuFFTUtils.H"
+#include <cufftXt.h>
 
 #include <map>
 #include <string>
@@ -69,32 +69,32 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
     switch (type) {
         case FFTType::C2C_2D_fwd:
             transform_type = use_float ? CUFFT_C2C : CUFFT_Z2Z;
-            m_plan->m_direction = cuFFTFORWARD;
+            m_plan->m_direction = CUFFT_FORWARD;
             rank = 2;
-            n[0] = nx;
-            n[1] = ny;
+            n[0] = ny;
+            n[1] = nx;
             batch = 1;
             break;
         case FFTType::C2C_2D_bkw:
             transform_type = use_float ? CUFFT_C2C : CUFFT_Z2Z;
-            m_plan->m_direction = cuFFTINVERSE;
+            m_plan->m_direction = CUFFT_INVERSE;
             rank = 2;
-            n[0] = nx;
-            n[1] = ny;
+            n[0] = ny;
+            n[1] = nx;
             batch = 1;
             break;
         case FFTType::C2R_2D:
             transform_type = use_float ? CUFFT_C2R : CUFFT_Z2D;
             rank = 2;
-            n[0] = nx;
-            n[1] = ny;
+            n[0] = ny;
+            n[1] = nx;
             batch = 1;
             break;
         case FFTType::R2C_2D:
             transform_type = use_float ? CUFFT_R2C : CUFFT_D2Z;
             rank = 2;
-            n[0] = nx;
-            n[1] = ny;
+            n[0] = ny;
+            n[1] = nx;
             batch = 1;
             break;
         case FFTType::R2R_2D:
@@ -135,7 +135,7 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
         &workSize);
     assert_cufft_status("cufftMakePlanMany64", result);
 
-    result = cufftSetStream(m_plan->m_cufftplan, amrex::Gpu::Device::cudaStream(());
+    result = cufftSetStream(m_plan->m_cufftplan, amrex::Gpu::Device::cudaStream());
     assert_cufft_status("cufftSetStream", result);
 
     return workSize;

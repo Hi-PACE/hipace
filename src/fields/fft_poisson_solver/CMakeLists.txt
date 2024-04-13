@@ -10,6 +10,8 @@ target_sources(HiPACE
     FFTPoissonSolver.cpp
     FFTPoissonSolverPeriodic.cpp
     FFTPoissonSolverDirichlet.cpp
+    FFTPoissonSolverDirichletFast.cpp
+    FFTPoissonSolverDirichletExpanded.cpp
     MGPoissonSolverDirichlet.cpp
 )
 

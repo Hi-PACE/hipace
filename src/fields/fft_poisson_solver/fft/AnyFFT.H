@@ -9,6 +9,8 @@
 #ifndef ANYFFT_H_
 #define ANYFFT_H_
 
+#include <cstddef>
+
 struct VendorPlan;
 
 enum struct FFTType {
