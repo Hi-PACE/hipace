@@ -423,11 +423,11 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
             [=] AMREX_GPU_DEVICE (long ip) {
                 // Skip invalid particles and ghost particles not in the last slice
                 auto id = amrex::ParticleIDWrapper(idcpup[ip]);
-                if (id < 0) return;
+                if (!id.is_valid()) return;
 
                 // invalidate particles with a weight of zero
                 if (W == 0) {
-                    id = -id;
+                    id.make_invalid();
                     return;
                 }
 
