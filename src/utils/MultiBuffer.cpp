@@ -8,6 +8,7 @@
 #include "MultiBuffer.H"
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
+#include "Parser.H"
 
 
 std::size_t MultiBuffer::get_metadata_size () {
@@ -24,7 +25,7 @@ std::size_t* MultiBuffer::get_metadata_location (int slice) {
 
 void MultiBuffer::allocate_buffer (int slice) {
     AMREX_ALWAYS_ASSERT(m_datanodes[slice].m_location == memory_location::nowhere);
-    if (m_buffer_on_host) {
+    if (!m_buffer_on_gpu) {
         m_datanodes[slice].m_buffer = reinterpret_cast<char*>(amrex::The_Pinned_Arena()->alloc(
             m_datanodes[slice].m_buffer_size * sizeof(storage_type)
         ));
@@ -35,6 +36,7 @@ void MultiBuffer::allocate_buffer (int slice) {
         ));
         m_datanodes[slice].m_location = memory_location::device;
     }
+    m_current_buffer_size += m_datanodes[slice].m_buffer_size * sizeof(storage_type);
 }
 
 void MultiBuffer::free_buffer (int slice) {
@@ -44,37 +46,94 @@ void MultiBuffer::free_buffer (int slice) {
     } else {
         amrex::The_Device_Arena()->free(m_datanodes[slice].m_buffer);
     }
+    m_current_buffer_size -= m_datanodes[slice].m_buffer_size * sizeof(storage_type);
     m_datanodes[slice].m_location = memory_location::nowhere;
     m_datanodes[slice].m_buffer = nullptr;
     m_datanodes[slice].m_buffer_size = 0;
 }
 
-void MultiBuffer::initialize (int nslices, int nbeams, bool buffer_on_host, bool use_laser,
-                              amrex::Box laser_box, int max_leading_slices,
-                              int max_trailing_slices) {
+void MultiBuffer::initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box) {
+
+    amrex::ParmParse pp("comms_buffer");
 
     m_comm = amrex::ParallelDescriptor::Communicator();
     const int rank_id = amrex::ParallelDescriptor::MyProc();
     const int n_ranks = amrex::ParallelDescriptor::NProcs();
 
     m_nslices = nslices;
-    m_nbeams = nbeams;
-    m_buffer_on_host = buffer_on_host;
+    m_nbeams = beams.get_nbeams();
     m_use_laser = use_laser;
     m_laser_slice_box = laser_box;
 
-    m_rank_send_to = (rank_id - 1 + n_ranks) % n_ranks;
-    m_rank_receive_from = (rank_id + 1) % n_ranks;
+    m_rank_send_to = (rank_id + 1) % n_ranks;
+    m_rank_receive_from = (rank_id - 1 + n_ranks) % n_ranks;
 
-    m_is_head_rank = rank_id + 1 == n_ranks;
+    m_is_head_rank = Hipace::HeadRank();
     m_is_serial = n_ranks == 1;
 
     m_tag_time_start = 0;
     m_tag_buffer_start = 1;
     m_tag_metadata_start = m_tag_buffer_start + m_nslices;
 
-    m_max_leading_slices = max_leading_slices;
-    m_max_trailing_slices = max_trailing_slices;
+    queryWithParser(pp, "on_gpu", m_buffer_on_gpu);
+    queryWithParser(pp, "max_leading_slices", m_max_leading_slices);
+    queryWithParser(pp, "max_trailing_slices", m_max_trailing_slices);
+#ifdef AMREX_USE_GPU
+    queryWithParser(pp, "async_memcpy", m_async_memcpy);
+    if (m_buffer_on_gpu)
+#endif
+    {
+        m_async_memcpy = false;
+    }
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        ((double(m_max_trailing_slices) * n_ranks) > nslices)
+        || (Hipace::m_max_step < amrex::ParallelDescriptor::NProcs()),
+        "comms_buffer.max_trailing_slices must be large enough"
+        " to distribute all slices between all ranks if there are more timesteps than ranks");
+
+    double max_size_GiB = -1.;
+    queryWithParser(pp, "max_size_GiB", max_size_GiB);
+    if(max_size_GiB >= 0.) {
+        m_max_buffer_size = static_cast<std::size_t>(max_size_GiB*1024*1024*1024);
+
+        double size_estimate = 0.;
+        for (int b = 0; b < m_nbeams; ++b) {
+            auto& beam = beams.getBeam(b);
+            const double num_particles = static_cast<double>(beam.getTotalNumParticles());
+
+            if (beam.communicateIdCpuComponent()) {
+                size_estimate += num_particles * sizeof(std::uint64_t);
+            }
+
+            for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
+                if (beam.communicateRealComponent(rcomp)) {
+                    size_estimate += num_particles * sizeof(amrex::Real);
+                }
+            }
+
+            for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
+                if (beam.communicateIntComponent(icomp)) {
+                    size_estimate += num_particles * sizeof(int);
+                }
+            }
+        }
+
+        if (m_use_laser) {
+            size_estimate += m_laser_slice_box.d_numPts() * nslices
+                * m_laser_ncomp * sizeof(amrex::Real);
+        }
+
+        size_estimate /= 1024*1024*1024;
+        if (!((1.05*size_estimate < max_size_GiB*n_ranks)
+            || (Hipace::m_max_step < amrex::ParallelDescriptor::NProcs()))) {
+            amrex::Abort("comms_buffer.max_size_GiB must be large enough to fit "
+                         "all the data needed for all beams and the laser "
+                         "between all ranks if there are more timesteps than ranks!\n"
+                         "Data needed: " + std::to_string(1.05*size_estimate) + " GiB\n"
+                         "Space available: " + std::to_string(max_size_GiB*n_ranks) + " GiB\n");
+        }
+    }
 
     for (int p = 0; p < comm_progress::nprogress; ++p) {
         m_async_metadata_slice[p] = m_nslices - 1;
@@ -173,12 +232,16 @@ MultiBuffer::~MultiBuffer() {
 }
 
 void MultiBuffer::make_progress (int slice, bool is_blocking, int current_slice) {
-
+    const bool is_first_slice_with_recv_data =
+        m_async_data_slice[comm_progress::receive_started] == slice;
+    const bool is_last_slice_with_send_data =
+        m_async_data_slice[comm_progress::sent] == slice;
     const bool is_blocking_send = is_blocking ||
-        (m_nslices + slice - current_slice) % m_nslices > m_max_trailing_slices;
+        ((m_nslices + slice - current_slice) % m_nslices > m_max_trailing_slices) ||
+        (is_last_slice_with_send_data && (m_current_buffer_size > m_max_buffer_size));
     const bool is_blocking_recv = is_blocking;
-    const bool skip_recv = !is_blocking_recv &&
-        (m_nslices - slice + current_slice) % m_nslices > m_max_leading_slices;
+    const bool skip_recv = !is_blocking_recv && (slice == current_slice ||
+        (m_nslices - slice + current_slice) % m_nslices > m_max_leading_slices);
 
     if (m_is_serial) {
         if (is_blocking) {
@@ -286,16 +349,21 @@ void MultiBuffer::make_progress (int slice, bool is_blocking, int current_slice)
             // don't receive empty buffer
             m_datanodes[slice].m_progress = comm_progress::received;
         } else {
-            allocate_buffer(slice);
-            MPI_Irecv(
-                m_datanodes[slice].m_buffer,
-                m_datanodes[slice].m_buffer_size,
-                amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
-                m_rank_receive_from,
-                m_tag_buffer_start + slice,
-                m_comm,
-                &(m_datanodes[slice].m_request));
-            m_datanodes[slice].m_progress = comm_progress::receive_started;
+            // enforce that slices are received in order
+            if (is_blocking_recv || (is_first_slice_with_recv_data &&
+                (m_current_buffer_size + m_datanodes[slice].m_buffer_size * sizeof(storage_type)
+                <= m_max_buffer_size))) {
+                allocate_buffer(slice);
+                MPI_Irecv(
+                    m_datanodes[slice].m_buffer,
+                    m_datanodes[slice].m_buffer_size,
+                    amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
+                    m_rank_receive_from,
+                    m_tag_buffer_start + slice,
+                    m_comm,
+                    &(m_datanodes[slice].m_request));
+                m_datanodes[slice].m_progress = comm_progress::receive_started;
+            }
         }
     }
 
@@ -334,10 +402,34 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
         }
     } else {
         // receive and unpack buffer
-        make_progress(slice, true, slice);
-        if (m_datanodes[slice].m_buffer_size != 0) {
-            unpack_data(slice, beams, laser, beam_slice);
-            free_buffer(slice);
+        if (m_async_memcpy) {
+            if (slice == m_nslices - 1) {
+                // receive fist slice
+                make_progress(slice, true, slice);
+                if (m_datanodes[slice].m_buffer_size != 0) {
+                    async_memcpy_from_buffer(slice);
+                }
+            }
+
+            if (m_datanodes[slice].m_buffer_size != 0) {
+                async_memcpy_from_buffer_finish();
+                unpack_data(slice, beams, laser, beam_slice);
+                free_buffer(slice);
+            }
+
+            if (slice > 0) {
+                // receive next slice and start async memcpy
+                make_progress(slice-1, true, slice);
+                if (m_datanodes[slice-1].m_buffer_size != 0) {
+                    async_memcpy_from_buffer(slice-1);
+                }
+            }
+        } else {
+            make_progress(slice, true, slice);
+            if (m_datanodes[slice].m_buffer_size != 0) {
+                unpack_data(slice, beams, laser, beam_slice);
+                free_buffer(slice);
+            }
         }
     }
     m_datanodes[slice].m_progress = comm_progress::in_use;
@@ -354,12 +446,38 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
     } else {
         // pack and asynchronously send buffer
         write_metadata(slice, beams, beam_slice);
-        if (m_datanodes[slice].m_buffer_size != 0) {
-            allocate_buffer(slice);
-            pack_data(slice, beams, laser, beam_slice);
-        }
-        m_datanodes[slice].m_progress = comm_progress::ready_to_send;
         m_datanodes[slice].m_metadata_progress = comm_progress::ready_to_send;
+        if (m_async_memcpy) {
+            if (slice < m_nslices - 1) {
+                // finish memcpy of previous slice
+                if (m_datanodes[slice+1].m_buffer_size != 0) {
+                    async_memcpy_to_buffer_finish();
+                }
+                m_datanodes[slice+1].m_progress = comm_progress::ready_to_send;
+            }
+
+            if (m_datanodes[slice].m_buffer_size != 0) {
+                allocate_buffer(slice);
+                m_trailing_gpu_buffer.resize(0);
+                m_trailing_gpu_buffer.resize(m_datanodes[slice].m_buffer_size*sizeof(storage_type));
+                pack_data(slice, beams, laser, beam_slice);
+                async_memcpy_to_buffer(slice);
+            }
+
+            if (slice == 0) {
+                // finish memcpy of last slice
+                if (m_datanodes[slice].m_buffer_size != 0) {
+                    async_memcpy_to_buffer_finish();
+                }
+                m_datanodes[slice].m_progress = comm_progress::ready_to_send;
+            }
+        } else {
+            if (m_datanodes[slice].m_buffer_size != 0) {
+                allocate_buffer(slice);
+                pack_data(slice, beams, laser, beam_slice);
+            }
+            m_datanodes[slice].m_progress = comm_progress::ready_to_send;
+        }
     }
 
     make_progress(slice, false, slice);
@@ -438,8 +556,6 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
 }
 
 amrex::Real MultiBuffer::get_time () {
-    HIPACE_PROFILE("MultiBuffer::get_time()");
-
     if (m_is_serial) {
         return m_time_send_buffer;
     }
@@ -461,8 +577,6 @@ amrex::Real MultiBuffer::get_time () {
 }
 
 void MultiBuffer::put_time (amrex::Real time) {
-    HIPACE_PROFILE("MultiBuffer::put_time()");
-
     if (m_is_serial) {
         m_time_send_buffer = time;
         return;
@@ -487,21 +601,11 @@ void MultiBuffer::put_time (amrex::Real time) {
 }
 
 void MultiBuffer::write_metadata (int slice, MultiBeam& beams, int beam_slice) {
-    std::size_t offset = 0;
     for (int b = 0; b < m_nbeams; ++b) {
-        const int num_particles = beams.getBeam(b).getNumParticles(beam_slice);
         // write number of beam particles (per beam)
-        get_metadata_location(slice)[b + 1] = num_particles;
-        offset += ((num_particles + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-        offset += ((num_particles + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::int_nattribs_in_buffer * sizeof(int);
+        get_metadata_location(slice)[b + 1] = beams.getBeam(b).getNumParticles(beam_slice);
     }
-    if (m_use_laser) {
-        offset += (m_laser_slice_box.numPts() * m_laser_ncomp) * sizeof(amrex::Real);
-    }
+    std::size_t offset = get_buffer_offset(slice, offset_type::total, beams, 0, 0);
     // write total buffer size
     get_metadata_location(slice)[0] = (offset+sizeof(storage_type)-1) / sizeof(storage_type);
     m_datanodes[slice].m_buffer_size = get_metadata_location(slice)[0];
@@ -510,60 +614,73 @@ void MultiBuffer::write_metadata (int slice, MultiBeam& beams, int beam_slice) {
     AMREX_ALWAYS_ASSERT(get_metadata_location(slice)[0] < std::numeric_limits<int>::max());
 }
 
-std::size_t MultiBuffer::get_buffer_offset_real (int slice, int ibeam, int rcomp) {
+std::size_t MultiBuffer::get_buffer_offset (int slice, offset_type type, MultiBeam& beams,
+                                            int ibeam, int comp) {
+    // calculate offset for each chunk of data in one place
+    // to ensure consistency between packing and unpacking
     std::size_t offset = 0;
-    for (int b = 0; b < ibeam; ++b) {
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::int_nattribs_in_buffer * sizeof(int);
-    }
-    offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
-                / buffer_size_roundup * buffer_size_roundup)
-                * rcomp * sizeof(amrex::Real);
-    return offset;
-}
 
-std::size_t MultiBuffer::get_buffer_offset_int (int slice, int ibeam, int icomp) {
-    std::size_t offset = 0;
-    for (int b = 0; b < ibeam; ++b) {
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::int_nattribs_in_buffer * sizeof(int);
-    }
-    offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
-                / buffer_size_roundup * buffer_size_roundup)
-                * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-    offset += ((get_metadata_location(slice)[ibeam + 1] + buffer_size_roundup - 1)
-                / buffer_size_roundup * buffer_size_roundup)
-                * icomp * sizeof(int);
-    return offset;
-}
-
-std::size_t MultiBuffer::get_buffer_offset_laser (int slice, int icomp) {
-    AMREX_ALWAYS_ASSERT(m_use_laser);
-    std::size_t offset = 0;
     for (int b = 0; b < m_nbeams; ++b) {
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::real_nattribs_in_buffer * sizeof(amrex::Real);
-        offset += ((get_metadata_location(slice)[b + 1] + buffer_size_roundup - 1)
-                    / buffer_size_roundup * buffer_size_roundup)
-                    * BeamIdx::int_nattribs_in_buffer * sizeof(int);
+        auto& beam = beams.getBeam(b);
+        // Roundup the number of particles to a value that ensures proper alignment between types
+        const int num_particles_round_up = (get_metadata_location(slice)[b + 1]
+            + buffer_size_roundup - 1) / buffer_size_roundup * buffer_size_roundup;
+
+        // add offset for idcpu, if used
+        if (beam.communicateIdCpuComponent()) {
+            if (type == offset_type::beam_idcpu && ibeam == b) {
+                return offset;
+            }
+            offset += num_particles_round_up * sizeof(std::uint64_t);
+        }
+
+        // add offset for real components, if used
+        for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
+            if (beam.communicateRealComponent(rcomp)) {
+                if (type == offset_type::beam_real && ibeam == b && rcomp == comp) {
+                    return offset;
+                }
+                offset += num_particles_round_up * sizeof(amrex::Real);
+            }
+        }
+
+        // add offset for int components, if used
+        for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
+            if (beam.communicateIntComponent(icomp)) {
+                if (type == offset_type::beam_int && ibeam == b && icomp == comp) {
+                    return offset;
+                }
+                offset += num_particles_round_up * sizeof(int);
+            }
+        }
     }
-    offset += (m_laser_slice_box.numPts() * icomp) * sizeof(amrex::Real);
-    return offset;
+
+    // add offset for laser, if used
+    if (m_use_laser) {
+        for (int lcomp = 0; lcomp < m_laser_ncomp; ++lcomp) {
+            if (type == offset_type::laser && lcomp == comp) {
+                return offset;
+            }
+            offset += m_laser_slice_box.numPts() * sizeof(amrex::Real);
+        }
+    }
+
+    if (type == offset_type::total) {
+        return offset;
+    }
+
+    // requested component is not supposed to be communicated, abort
+    amrex::Abort("MultiBuffer::get_buffer_offset invalid argument");
+    return 0;
 }
 
 void MultiBuffer::memcpy_to_buffer (int slice, std::size_t buffer_offset,
                                     const void* src_ptr, std::size_t num_bytes) {
 #ifdef AMREX_USE_GPU
-    if (m_datanodes[slice].m_location == memory_location::pinned) {
+    if (m_async_memcpy) {
+        amrex::Gpu::dtod_memcpy_async(
+            m_trailing_gpu_buffer.dataPtr() + buffer_offset, src_ptr, num_bytes);
+    } else if (m_datanodes[slice].m_location == memory_location::pinned) {
         amrex::Gpu::dtoh_memcpy_async(
             m_datanodes[slice].m_buffer + buffer_offset, src_ptr, num_bytes);
     } else {
@@ -578,7 +695,10 @@ void MultiBuffer::memcpy_to_buffer (int slice, std::size_t buffer_offset,
 void MultiBuffer::memcpy_from_buffer (int slice, std::size_t buffer_offset,
                                       void* dst_ptr, std::size_t num_bytes) {
 #ifdef AMREX_USE_GPU
-    if (m_datanodes[slice].m_location == memory_location::pinned) {
+    if (m_async_memcpy) {
+        amrex::Gpu::dtod_memcpy_async(
+            dst_ptr, m_leading_gpu_buffer.dataPtr() + buffer_offset, num_bytes);
+    } else if (m_datanodes[slice].m_location == memory_location::pinned) {
         amrex::Gpu::htod_memcpy_async(
             dst_ptr, m_datanodes[slice].m_buffer + buffer_offset, num_bytes);
     } else {
@@ -590,19 +710,75 @@ void MultiBuffer::memcpy_from_buffer (int slice, std::size_t buffer_offset,
 #endif
 }
 
+void MultiBuffer::async_memcpy_to_buffer (int slice) {
+    std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
+
+    amrex::Gpu::Device::setStreamIndex(1);
+#ifdef AMREX_USE_GPU
+    amrex::Gpu::dtoh_memcpy_async(
+        m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
+#else
+    std::memcpy(m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
+#endif
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
+void MultiBuffer::async_memcpy_from_buffer (int slice) {
+    std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
+    m_leading_gpu_buffer.resize(0);
+    m_leading_gpu_buffer.resize(num_bytes);
+
+    amrex::Gpu::Device::setStreamIndex(2);
+#ifdef AMREX_USE_GPU
+    amrex::Gpu::htod_memcpy_async(
+        m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
+#else
+    std::memcpy(m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
+#endif
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
+void MultiBuffer::async_memcpy_to_buffer_finish () {
+    amrex::Gpu::Device::setStreamIndex(1);
+    amrex::Gpu::streamSynchronize();
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
+void MultiBuffer::async_memcpy_from_buffer_finish () {
+    amrex::Gpu::Device::setStreamIndex(2);
+    amrex::Gpu::streamSynchronize();
+    amrex::Gpu::Device::resetStreamIndex();
+}
+
 void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice) {
     for (int b = 0; b < m_nbeams; ++b) {
-        const int num_particles = beams.getBeam(b).getNumParticles(beam_slice);
-        auto& soa = beams.getBeam(b).getBeamSlice(beam_slice).GetStructOfArrays();
-        for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
-            memcpy_to_buffer(slice, get_buffer_offset_real(slice, b, rcomp),
-                             soa.GetRealData(rcomp).dataPtr(),
-                             num_particles * sizeof(amrex::Real));
+        auto& beam = beams.getBeam(b);
+        const int num_particles = beam.getNumParticles(beam_slice);
+        auto& soa = beam.getBeamSlice(beam_slice).GetStructOfArrays();
+
+        if (beam.communicateIdCpuComponent()) {
+            // only pack idcpu component if it should be communicated
+            memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::beam_idcpu, beams, b, 0),
+                             soa.GetIdCPUData().dataPtr(),
+                             num_particles * sizeof(std::uint64_t));
         }
-        for (int icomp = 0; icomp < BeamIdx::int_nattribs_in_buffer; ++icomp) {
-            memcpy_to_buffer(slice, get_buffer_offset_int(slice, b, icomp),
-                             soa.GetIntData(icomp).dataPtr(),
-                             num_particles * sizeof(int));
+
+        for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
+            // only pack real component if it should be communicated
+            if (beam.communicateRealComponent(rcomp)) {
+                memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::beam_real, beams, b, rcomp),
+                                 soa.GetRealData(rcomp).dataPtr(),
+                                 num_particles * sizeof(amrex::Real));
+            }
+        }
+
+        for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
+            // only pack int component if it should be communicated
+            if (beam.communicateIntComponent(icomp)) {
+                memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::beam_int, beams, b, icomp),
+                                 soa.GetIntData(icomp).dataPtr(),
+                                 num_particles * sizeof(int));
+            }
         }
     }
     if (m_use_laser) {
@@ -610,47 +786,69 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
         const int laser_comp_0_1 = (beam_slice == WhichBeamSlice::Next) ? np1jp2_r : np1j00_r;
         const int laser_comp_2_3 = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
         // copy real and imag components in one operation
-        memcpy_to_buffer(slice, get_buffer_offset_laser(slice, 0),
+        memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 0),
                          laser.getSlices()[0].dataPtr(laser_comp_0_1),
                          2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
-        memcpy_to_buffer(slice, get_buffer_offset_laser(slice, 2),
+        memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 2),
                          laser.getSlices()[0].dataPtr(laser_comp_2_3),
                          2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
     }
     amrex::Gpu::streamSynchronize();
     for (int b = 0; b < m_nbeams; ++b) {
+        // remove all beam particles
         beams.getBeam(b).resize(beam_slice, 0, 0);
     }
 }
 
 void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice) {
     for (int b = 0; b < m_nbeams; ++b) {
+        auto& beam = beams.getBeam(b);
         const int num_particles = get_metadata_location(slice)[b + 1];
-        beams.getBeam(b).resize(beam_slice, num_particles, 0);
-        auto& soa = beams.getBeam(b).getBeamSlice(beam_slice).GetStructOfArrays();
-        for (int rcomp = 0; rcomp < BeamIdx::real_nattribs_in_buffer; ++rcomp) {
-            memcpy_from_buffer(slice, get_buffer_offset_real(slice, b, rcomp),
-                               soa.GetRealData(rcomp).dataPtr(),
-                               num_particles * sizeof(amrex::Real));
-        }
-        // initialize per-slice-only components to zero
-        for (int rcomp = BeamIdx::real_nattribs_in_buffer; rcomp<BeamIdx::real_nattribs; ++rcomp) {
-            amrex::Real* data_ptr = soa.GetRealData(rcomp).dataPtr();
-            amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) noexcept {
-                data_ptr[i] = amrex::Real(0.);
+        beam.resize(beam_slice, num_particles, 0);
+        auto& soa = beam.getBeamSlice(beam_slice).GetStructOfArrays();
+
+        if (beam.communicateIdCpuComponent()) {
+            // only undpack idcpu component if it should be communicated
+            memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::beam_idcpu, beams, b, 0),
+                               soa.GetIdCPUData().dataPtr(),
+                               num_particles * sizeof(std::uint64_t));
+        } else {
+            // if idcpu is not communicated, then we need to initialize it here
+            std::uint64_t* data_ptr = soa.GetIdCPUData().dataPtr();
+            amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) {
+                amrex::ParticleIDWrapper{data_ptr[i]} = 1;
+                amrex::ParticleCPUWrapper{data_ptr[i]} = 0;
             });
         }
-        for (int icomp = 0; icomp < BeamIdx::int_nattribs_in_buffer; ++icomp) {
-            memcpy_from_buffer(slice, get_buffer_offset_int(slice, b, icomp),
-                               soa.GetIntData(icomp).dataPtr(),
-                               num_particles * sizeof(int));
+
+        for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
+            if (beam.communicateRealComponent(rcomp)) {
+                // only unpack real component if it should be communicated
+                memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::beam_real, beams, b, rcomp),
+                                   soa.GetRealData(rcomp).dataPtr(),
+                                   num_particles * sizeof(amrex::Real));
+            } else {
+                // initialize per-slice-only real components to zero
+                amrex::Real* data_ptr = soa.GetRealData(rcomp).dataPtr();
+                amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) {
+                    data_ptr[i] = amrex::Real(0.);
+                });
+            }
         }
-        // initialize per-slice-only components to zero
-        for (int icomp = BeamIdx::int_nattribs_in_buffer; icomp < BeamIdx::int_nattribs; ++icomp) {
-            int* data_ptr = soa.GetIntData(icomp).dataPtr();
-            amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) noexcept {
-                data_ptr[i] = 0;
-            });
+
+        for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
+            if (beam.communicateIntComponent(icomp)) {
+                // only unpack int component if it should be communicated
+                memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::beam_int, beams, b, icomp),
+                                   soa.GetIntData(icomp).dataPtr(),
+                                   num_particles * sizeof(int));
+            } else {
+                // initialize per-slice-only int components to zero
+                int* data_ptr = soa.GetIntData(icomp).dataPtr();
+                amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) {
+                    data_ptr[i] = 0;
+                });
+            }
         }
     }
     if (m_use_laser) {
@@ -658,10 +856,10 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
         const int laser_comp_0_1 = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
         const int laser_comp_2_3 = (beam_slice == WhichBeamSlice::Next) ? nm1jp2_r : nm1j00_r;
         // copy real and imag components in one operation
-        memcpy_from_buffer(slice, get_buffer_offset_laser(slice, 0),
+        memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 0),
                            laser.getSlices()[0].dataPtr(laser_comp_0_1),
                            2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
-        memcpy_from_buffer(slice, get_buffer_offset_laser(slice, 2),
+        memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 2),
                            laser.getSlices()[0].dataPtr(laser_comp_2_3),
                            2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
     }

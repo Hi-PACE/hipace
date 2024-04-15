@@ -65,14 +65,14 @@ AdaptiveTimeStep::BroadcastTimeStep (amrex::Real& dt)
     MPI_Bcast(&dt,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              Hipace::HeadRankID(),
               amrex::ParallelDescriptor::Communicator());
 
     // Broadcast minimum uz
     MPI_Bcast(&m_min_uz,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
-              amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+              Hipace::HeadRankID(),
               amrex::ParallelDescriptor::Communicator());
 #else
     amrex::ignore_unused(dt);
@@ -112,7 +112,7 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
         unsigned long long num_particles = 0;
         const amrex::Real * uzp = nullptr;
         const amrex::Real * wp = nullptr;
-        const int * idp = nullptr;
+        const std::uint64_t * idcpup = nullptr;
 
         // Extract particle properties
         // For momenta and weights
@@ -121,13 +121,13 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
             num_particles = beam.getBeamInitSlice().size();
             uzp = soa.GetRealData(BeamIdx::uz).data();
             wp = soa.GetRealData(BeamIdx::w).data();
-            idp = soa.GetIntData(BeamIdx::id).data();
+            idcpup = soa.GetIdCPUData().data();
         } else {
             const auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
             num_particles = beam.getNumParticles(WhichBeamSlice::This);
             uzp = soa.GetRealData(BeamIdx::uz).data();
             wp = soa.GetRealData(BeamIdx::w).data();
-            idp = soa.GetIntData(BeamIdx::id).data();
+            idcpup = soa.GetIdCPUData().data();
         }
 
         amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum,
@@ -139,7 +139,7 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
         reduce_op.eval(num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (unsigned long long ip) noexcept -> ReduceTuple
             {
-                if (idp[ip] < 0) return {
+                if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0) return {
                     0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
                 };
                 return {
@@ -292,12 +292,12 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
         auto const& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         const auto pos_x = soa.GetRealData(BeamIdx::x).data();
         const auto pos_y = soa.GetRealData(BeamIdx::y).data();
-        const auto idp = soa.GetIntData(BeamIdx::id).data();
+        const auto idcpup = soa.GetIdCPUData().data();
 
         reduce_op.eval(beam.getNumParticles(WhichBeamSlice::This), reduce_data,
             [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
             {
-                if (idp[ip] < 0) return { 0._rt };
+                if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0) return { 0._rt };
                 const amrex::Real xp = pos_x[ip];
                 const amrex::Real yp = pos_y[ip];
 

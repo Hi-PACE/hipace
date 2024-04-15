@@ -93,14 +93,11 @@ public:
      * \param[in] geom Geometry
      * \param[in] slice_ba BoxArray for the slice
      * \param[in] slice_dm DistributionMapping for the slice
-     * \param[in] bin_size size of plasma tiles, for tmp arrays
      */
     void AllocData (
         int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
-        const amrex::DistributionMapping& slice_dm, int bin_size);
+        const amrex::DistributionMapping& slice_dm);
 
-    /** Class to handle transverse FFT Poisson solver on 1 slice */
-    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** get function for the 2D slices */
     amrex::Vector<amrex::MultiFab>& getSlices () {return m_slices; }
     /** get function for the 2D slices
@@ -125,8 +122,6 @@ public:
     amrex::MultiFab getStagingArea (const int lev) {
         return amrex::MultiFab(m_poisson_solver[lev]->StagingArea(), amrex::make_alias, 0, 1);
     }
-    /** Return reference to density tile arrays */
-    amrex::Vector<amrex::FArrayBox>& getTmpDensities() { return m_tmp_densities; }
     /** check whether the fields are initialized correctly */
     void checkInit() {
         for (auto& slices_lev : m_slices) {
@@ -140,20 +135,12 @@ public:
      *
      * \param[in] lev MR level
      * \param[in] i_slice z slice in which to write the data
-     * \param[in] diag_geom diagnostics geometry
-     * \param[in,out] diag_fab full FArrayBox of diagnostics
-     * \param[in] diag_box box on which diag_fab is defined
+     * \param[in,out] fd data for field diagnostics
      * \param[in] calc_geom main geometry
-     * \param[in] diag_comps_vect the field components to copy
-     * \param[in] ncomp number of components to copy
-     * \param[in] do_laser if to copy the laser
      * \param[in] multi_laser MultiLaser object
-     * \param[in] slice_dir slicing direction
      */
-     void Copy (const int lev, const int i_slice, const amrex::Geometry& diag_geom,
-                amrex::FArrayBox& diag_fab, amrex::Box diag_box, const amrex::Geometry& calc_geom,
-                const amrex::Gpu::DeviceVector<int>& diag_comps_vect, const int ncomp,
-                bool do_laser, MultiLaser& multi_laser, const int slice_dir);
+     void Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
+                const amrex::Geometry& calc_geom, MultiLaser& multi_laser);
 
      /** \brief Initialize all required fields to zero and interpolate from lev-1 to lev if needed
      *
@@ -185,10 +172,14 @@ public:
      * \param[in] which_slice slice of the field
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
+     * \param[in] box_grow relative to the domain, how large is the box of staging_area
+     * \param[in] offset shift boundary value by offset number of cells
+     * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area);
+                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
+                               amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
      * This may include ghost cells.
@@ -283,6 +274,28 @@ public:
      */
     amrex::Real ComputeRelBFieldError (const int which_slice, const int which_slice_iter,
         const amrex::Vector<amrex::Geometry>& geom, const int current_N_level);
+
+
+    /** Compute in-situ field diagnostics of current slice, store in member variable
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] islice current slice, on which diags are computed.
+     * \param[in] geom3D Geometry of the problem
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
+    void InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+                             int max_step, amrex::Real max_time);
+
+    /** Dump in-situ reduced diagnostics to file.
+     * \param[in] step current time step
+     * \param[in] time physical time
+     * \param[in] geom3D Geometry object for the whole domain
+     * \param[in] max_step maximum time step of simulation
+     * \param[in] max_time maximum time of simulation
+     */
+    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
+                            int max_step, amrex::Real max_time);
 
     /** \brief set all selected fields to a value
      *
@@ -459,6 +472,10 @@ public:
         std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
         amrex::MultiFab& mfab = getSlices(lev);
 
+        if (!period.isAnyPeriodic() && mfab.size() <= 1) {
+            return; // no work to do
+        }
+
         // optimize adjacent fields to one FillBoundary call
         std::sort(c_idx.begin(), c_idx.end());
         int scomp = 0;
@@ -489,10 +506,10 @@ public:
 private:
     /** Vector over levels of all required fields to compute current slice */
     amrex::Vector<amrex::MultiFab> m_slices;
-    /** Whether to use Dirichlet BC for the Poisson solver. Otherwise, periodic */
-    bool m_do_dirichlet_poisson = true;
-    /** Temporary density arrays. one per OpenMP thread, used when tiling is on. */
-    amrex::Vector<amrex::FArrayBox> m_tmp_densities;
+    /** Type of poisson solver to use */
+    std::string m_poisson_solver_str = "FFTDirichlet";
+    /** Class to handle transverse FFT Poisson solver on 1 slice */
+    amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** Stores temporary values for z interpolation in Fields::Copy */
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
@@ -507,6 +524,17 @@ private:
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */
     bool m_any_neutral_background = false;
+    /** Number of real field properties for in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_nrp = 10;
+    /** How often the insitu field diagnostics should be computed and written
+     * Default is 0, meaning no output */
+    int m_insitu_period {0};
+    /** All per-slice real field properties */
+    amrex::Vector<amrex::Real> m_insitu_rdata;
+    /** Sum of all per-slice real field properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_rdata;
+    /** Prefix/path for the output files */
+    std::string m_insitu_file_prefix = "diags/field_insitu";
 };
 
 #endif

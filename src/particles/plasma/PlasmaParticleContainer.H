@@ -40,7 +40,6 @@ struct PlasmaIdx
         real_nattribs
     };
     enum {
-        id=0, cpu,          // cpu used for MR level
         ion_lev,            // ionization level
         int_nattribs
     };
@@ -199,23 +198,12 @@ private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real plasma properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_nrp {13};
+    static constexpr int m_insitu_nrp = 14;
     /** Number of int plasma properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_nip {1};
-    /** Per-slice real plasma properties:
-     *      0,   1,     2,   3,     4,    5,      6,    7,      8,      9,     10,   11,     12
-     * sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [x*ux], [y*uy], [ga], [ga^2]
-     * where [] means average over all particles within slice.
-     * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
-     * Projected emittance: Same as above AFTER averaging all these quantities over slices.
-     * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
-     */
+    static constexpr int m_insitu_nip = 1;
+    /** Per-slice real plasma properties */
     amrex::Vector<amrex::Real> m_insitu_rdata;
-    /** Per-slice int plasma properties:
-     *  0
-     * Np
-     * Np: number of particles in this slice
-     */
+    /** Per-slice int plasma properties */
     amrex::Vector<int> m_insitu_idata;
     /** Sum of all per-slice real plasma properties */
     amrex::Vector<amrex::Real> m_insitu_sum_rdata;

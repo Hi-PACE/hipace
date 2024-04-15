@@ -14,6 +14,7 @@
 #include <AMReX_MultiFab.H>
 
 #include <cstdint>
+#include <iostream>
 #include <vector>
 
 #ifdef HIPACE_USE_OPENPMD
@@ -27,11 +28,11 @@ namespace utils
      * Translate the IndexType of a given MultiFab into a position relative to
      * the lower corner of a cell.
      *
-     * @param[in] fab the amrex::FArrayBox to get relative cell positions for
+     * @param[in] box the amrex::Box to get relative cell positions for
      * @return relative position to the lower corner, scaled to cell size [0.0:1.0)
      */
     std::vector< double >
-    getRelativeCellPosition (amrex::FArrayBox const& fab);
+    getRelativeCellPosition (amrex::Box const& box);
 
     /** \brief
      * Convert an IntVect to a std::vector<std::uint64_t>
@@ -73,6 +74,15 @@ namespace utils
     getUnitDimension ( std::string const & record_name );
 #endif
 
+    struct format_time {
+        double seconds = 0;
+    };
 }
+
+/** \brief print time in d-hh:mm:ss format
+ * \param[in] os stream to print to
+ * \param[in] ft time in seconds to print
+ */
+std::ostream& operator<< (std::ostream& os, utils::format_time ft);
 
 #endif

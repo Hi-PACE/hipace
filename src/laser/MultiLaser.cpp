@@ -12,12 +12,16 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"
+#include "utils/InsituUtil.H"
 #ifdef AMREX_USE_CUDA
 #  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
 #elif defined(AMREX_USE_HIP)
 #  include "fields/fft_poisson_solver/fft/RocFFTUtils.H"
 #endif
 #include "particles/particles_utils/ShapeFactors.H"
+#ifdef HIPACE_USE_OPENPMD
+#   include <openPMD/auxiliary/Filesystem.hpp>
+#endif
 
 #include <AMReX_GpuComplex.H>
 
@@ -53,7 +57,7 @@ MultiLaser::ReadParameters ()
     if (!m_laser_from_file) {
         getWithParser(pp, "lambda0", m_lambda0);
     }
-    DeprecatedInput("lasers", "3d_on_host", "hipace.comms_buffer_on_gpu", "", true);
+    DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
@@ -72,6 +76,9 @@ MultiLaser::ReadParameters ()
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
     }
+
+    queryWithParser(pp, "insitu_period", m_insitu_period);
+    queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
 }
 
 
@@ -172,9 +179,21 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
         MPI_Bcast(&m_lambda0,
             1,
             amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
-            amrex::ParallelDescriptor::NProcs() - 1, // HeadRank
+            Hipace::HeadRankID(),
             amrex::ParallelDescriptor::Communicator());
 #endif
+    }
+
+    if (m_insitu_period > 0) {
+#ifdef HIPACE_USE_OPENPMD
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
+            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            "Must choose a different field insitu file prefix compared to the full diagnostics");
+#endif
+        // Allocate memory for in-situ diagnostics
+        m_insitu_rdata.resize(m_laser_geom_3D.Domain().length(2)*m_insitu_nrp, 0.);
+        m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
+        m_insitu_cdata.resize(m_laser_geom_3D.Domain().length(2)*m_insitu_ncp, 0.);
     }
 }
 
@@ -273,10 +292,12 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
     const std::vector<std::string> axis_labels = laser.axisLabels();
     if (axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
         m_file_geometry = "xyt";
+    } else if (axis_labels[0] == "z" && axis_labels[1] == "y" && axis_labels[2] == "x") {
+        m_file_geometry = "xyz";
     } else if (axis_labels[0] == "t" && axis_labels[1] == "r") {
         m_file_geometry = "rt";
     } else {
-        amrex::Abort("Incorrect axis labels in laser file, must be either t, y, x or t, r");
+        amrex::Abort("Incorrect axis labels in laser file, must be either tyx, zyx or tr");
     }
 
     const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
@@ -352,6 +373,54 @@ MultiLaser::GetEnvelopeFromFile (const amrex::Geometry& gm) {
                                     laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
                                         static_cast<amrex::Real>(
                                             input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() * unitSI
+                                        );
+                                }
+                            }
+                        }
+                    } // End of 3 loops (1 per dimension) over laser array from file
+                }
+            }
+        } // End of 3 loops (1 per dimension) over laser array from simulation
+    } else if (m_file_geometry == "xyz") {
+        // Calculate the min and max of the grid from laser file
+        amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
+        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
+        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+
+        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
+            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
+                for (int i = imin; i <= domain.bigEnd(0); ++i) {
+
+                    const amrex::Real x = (i-imin)*dx + xmin;
+                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
+                    amrex::Real sx_cell[interp_order_xy+1];
+                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
+
+                    const amrex::Real y = (j-jmin)*dy + ymin;
+                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
+                    amrex::Real sy_cell[interp_order_xy+1];
+                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
+
+                    const amrex::Real z = (k-kmin)*dz + zmin;
+                    const amrex::Real zmid = (z - zmin_laser)/spacing[0];
+                    amrex::Real sz_cell[interp_order_xy+1];
+                    const int k_cell = compute_shape_factor<interp_order_xy>(sz_cell, zmid);
+
+                    laser_arr(i, j, k, 0) = 0._rt;
+                    laser_arr(i, j, k, 1) = 0._rt;
+                    for (int iz=0; iz<=interp_order_xy; iz++){
+                        for (int iy=0; iy<=interp_order_xy; iy++){
+                            for (int ix=0; ix<=interp_order_xy; ix++){
+                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
+                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
+                                    k_cell+iz >= 0 && k_cell+iz < static_cast<int>(extent[0])) {
+                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
+                                        static_cast<amrex::Real>(
+                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).real() * unitSI
+                                        );
+                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
+                                        static_cast<amrex::Real>(
+                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).imag() * unitSI
                                         );
                                 }
                             }
@@ -461,6 +530,34 @@ MultiLaser::ShiftLaserSlices ()
             arr(i, j, np1jp1_r + n) = arr(i, j, np1j00_r + n);
             // np1j00_r will be computed by AdvanceSlice
         });
+    }
+}
+
+void
+MultiLaser::UpdateLaserAabs (const int current_N_level, Fields& fields,
+                             amrex::Vector<amrex::Geometry> const& geom)
+{
+    if (!m_use_laser) return;
+
+    HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
+
+    // write aabs into fields MultiFab
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
+        const Array3<const amrex::Real> laser_arr = m_slices.const_array(mfi);
+        const Array2<amrex::Real> field_arr =
+            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["aabs"]);
+
+        amrex::ParallelFor(mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+                using namespace WhichLaserSlice;
+
+                field_arr(i,j) = abssq(laser_arr(i,j,n00j00_r), laser_arr(i,j,n00j00_i));
+            });
+    }
+
+    // interpolate aabs to higher MR levels
+    for (int lev=1; lev<current_N_level; ++lev) {
+        fields.LevelUp(geom, lev, WhichSlice::This, "aabs");
     }
 }
 
@@ -662,7 +759,7 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step)
     if (!m_mg) {
         m_mg = std::make_unique<hpmg::MultiGrid>(m_laser_geom_3D.CellSize(0),
                                                  m_laser_geom_3D.CellSize(1),
-                                                 m_slices.boxArray()[0]);
+                                                 m_slices.boxArray()[0], 2);
     }
 
     const int max_iters = 200;
@@ -952,12 +1049,14 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
     for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
-
         // Initialize a Gaussian laser envelope on slice islice
         for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
             const auto& laser = m_all_lasers[ilaser];
             const amrex::Real a0 = laser.m_a0;
             const amrex::Real w0 = laser.m_w0;
+            const amrex::Real cep = laser.m_CEP;
+            const amrex::Real propagation_angle_yz = laser.m_propagation_angle_yz;
+            const amrex::Real PFT_yz = laser.m_PFT_yz;
             const amrex::Real x0 = laser.m_position_mean[0];
             const amrex::Real y0 = laser.m_position_mean[1];
             const amrex::Real z0 = laser.m_position_mean[2];
@@ -967,28 +1066,187 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - zfoc;
+                    const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
-
+                    // Coordinate rotation in yz plane for a laser propagating at an angle.
+                    const amrex::Real yp=std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
+                    const amrex::Real zp=std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
-
                     // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * z * 2._rt/( k0 * w0 * w0 );
+                    Complex diffract_factor = 1._rt + I * (zp-zfoc+z0*std::cos(propagation_angle_yz)) \
+                        * 2._rt/( k0 * w0 * w0 );
                     Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
                     Complex prefactor = a0/diffract_factor;
-                    Complex time_exponent = (z-z0+zfoc)*(z-z0+zfoc)/(L0*L0);
+                    Complex time_exponent = zp*zp/(L0*L0);
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
-                    Complex exp_argument = - ( x*x + y*y ) * inv_complex_waist_2;
-                    Complex envelope = stcfactor * amrex::exp( exp_argument );
+                    Complex exp_argument = - ( x*x + yp*yp ) * inv_complex_waist_2;
+                    Complex envelope = stcfactor * amrex::exp( exp_argument ) * \
+                        amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
                     arr(i, j, k, comp ) += envelope.real();
                     arr(i, j, k, comp + 1 ) += envelope.imag();
                 }
                 );
         }
     }
+}
+
+void
+MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+                                int max_step, amrex::Real max_time)
+{
+    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    HIPACE_PROFILE("MultiLaser::InSituComputeDiags()");
+
+    using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
+
+    AMREX_ALWAYS_ASSERT(m_insitu_rdata.size()>0 && m_insitu_sum_rdata.size()>0 &&
+                        m_insitu_cdata.size()>0);
+
+    const int nslices = geom3D.Domain().length(2);
+    const amrex::Real poff_x = GetPosOffset(0, geom3D, geom3D.Domain());
+    const amrex::Real poff_y = GetPosOffset(1, geom3D, geom3D.Domain());
+    const amrex::Real dx = geom3D.CellSize(0);
+    const amrex::Real dy = geom3D.CellSize(1);
+    const amrex::Real dxdydz = dx * dy * geom3D.CellSize(2);
+
+    const int xmid_lo = geom3D.Domain().smallEnd(0) + (geom3D.Domain().length(0) - 1) / 2;
+    const int xmid_hi = geom3D.Domain().smallEnd(0) + (geom3D.Domain().length(0)) / 2;
+    const int ymid_lo = geom3D.Domain().smallEnd(1) + (geom3D.Domain().length(1) - 1) / 2;
+    const int ymid_hi = geom3D.Domain().smallEnd(1) + (geom3D.Domain().length(1)) / 2;
+    const amrex::Real mid_factor = (xmid_lo == xmid_hi ? 1._rt : 0.5_rt)
+                                 * (ymid_lo == ymid_hi ? 1._rt : 0.5_rt);
+
+    amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpMax, amrex::ReduceOpSum[m_insitu_nrp-1+m_insitu_ncp]> reduce_op;
+    amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], Complex[m_insitu_ncp]> reduce_data(reduce_op);
+    using ReduceTuple = typename decltype(reduce_data)::Type;
+
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ) {
+        Array3<amrex::Real const> const arr = m_slices.const_array(mfi);
+        reduce_op.eval(
+            mfi.tilebox(), reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            {
+                using namespace WhichLaserSlice;
+                const amrex::Real areal = arr(i,j, n00j00_r);
+                const amrex::Real aimag = arr(i,j, n00j00_i);
+                const amrex::Real aabssq = abssq(areal, aimag);
+
+                const amrex::Real x = i * dx + poff_x;
+                const amrex::Real y = j * dy + poff_y;
+
+                const bool is_on_axis = (i==xmid_lo || i==xmid_hi) && (j==ymid_lo || j==ymid_hi);
+                const Complex aaxis{is_on_axis ? areal : 0._rt, is_on_axis ? aimag : 0._rt};
+
+                return {            // Tuple contains:
+                    aabssq,         // 0    max(|a|^2)
+                    aabssq,         // 1    [|a|^2]
+                    aabssq*x,       // 2    [|a|^2*x]
+                    aabssq*x*x,     // 3    [|a|^2*x*x]
+                    aabssq*y,       // 4    [|a|^2*y]
+                    aabssq*y*y,     // 5    [|a|^2*y*y]
+                    aaxis           // 6    axis(a)
+                };
+            });
+    }
+
+    ReduceTuple a = reduce_data.value();
+
+    amrex::constexpr_for<0, m_insitu_nrp>(
+        [&] (auto idx) {
+            if (idx == 0) {
+                m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a);
+                m_insitu_sum_rdata[idx] = std::max(m_insitu_sum_rdata[idx], amrex::get<idx>(a));
+            } else {
+                m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a)*dxdydz;
+                m_insitu_sum_rdata[idx] += amrex::get<idx>(a)*dxdydz;
+            }
+        }
+    );
+
+    amrex::constexpr_for<0, m_insitu_ncp>(
+        [&] (auto idx) {
+            m_insitu_cdata[islice + idx * nslices] = amrex::get<m_insitu_nrp+idx>(a) * mid_factor;
+        }
+    );
+}
+
+void
+MultiLaser::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
+                               int max_step, amrex::Real max_time)
+{
+    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    HIPACE_PROFILE("MultiLaser::InSituWriteToFile()");
+
+#ifdef HIPACE_USE_OPENPMD
+    // create subdirectory
+    openPMD::auxiliary::create_directories(m_insitu_file_prefix);
+#endif
+
+    // zero pad the rank number;
+    std::string::size_type n_zeros = 4;
+    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+
+    // open file
+    std::ofstream ofs{m_insitu_file_prefix + "/reduced_laser." + pad_rank_num + ".txt",
+        std::ofstream::out | std::ofstream::app | std::ofstream::binary};
+
+    const int nslices_int = geom3D.Domain().length(2);
+    const std::size_t nslices = static_cast<std::size_t>(nslices_int);
+    const int is_normalized_units = Hipace::m_normalized_units;
+
+    // specify the structure of the data later available in python
+    // avoid pointers to temporary objects as second argument, stack variables are ok
+    const amrex::Vector<insitu_utils::DataNode> all_data{
+        {"time"     , &time},
+        {"step"     , &step},
+        {"n_slices" , &nslices_int},
+        {"z_lo"     , &geom3D.ProbLo()[2]},
+        {"z_hi"     , &geom3D.ProbHi()[2]},
+        {"is_normalized_units", &is_normalized_units},
+        {"max(|a|^2)"     , &m_insitu_rdata[0], nslices},
+        {"[|a|^2]"        , &m_insitu_rdata[1*nslices], nslices},
+        {"[|a|^2*x]"      , &m_insitu_rdata[2*nslices], nslices},
+        {"[|a|^2*x*x]"    , &m_insitu_rdata[3*nslices], nslices},
+        {"[|a|^2*y]"      , &m_insitu_rdata[4*nslices], nslices},
+        {"[|a|^2*y*y]"    , &m_insitu_rdata[5*nslices], nslices},
+        {"axis(a)"        , &m_insitu_cdata[0], nslices},
+        {"integrated", {
+            {"max(|a|^2)"     , &m_insitu_sum_rdata[0]},
+            {"[|a|^2]"        , &m_insitu_sum_rdata[1]},
+            {"[|a|^2*x]"      , &m_insitu_sum_rdata[2]},
+            {"[|a|^2*x*x]"    , &m_insitu_sum_rdata[3]},
+            {"[|a|^2*y]"      , &m_insitu_sum_rdata[4]},
+            {"[|a|^2*y*y]"    , &m_insitu_sum_rdata[5]}
+        }}
+    };
+
+    if (ofs.tellp() == 0) {
+        // write JSON header containing a NumPy structured datatype
+        insitu_utils::write_header(all_data, ofs);
+    }
+
+    // write binary data according to datatype in header
+    insitu_utils::write_data(all_data, ofs);
+
+    // close file
+    ofs.close();
+    // assert no file errors
+#ifdef HIPACE_USE_OPENPMD
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu laser diagnostics");
+#else
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu laser diagnostics. "
+        "Maybe the specified subdirectory does not exist");
+#endif
+
+    // reset arrays for insitu data
+    for (auto& x : m_insitu_rdata) x = 0.;
+    for (auto& x : m_insitu_sum_rdata) x = 0.;
+    for (auto& x : m_insitu_cdata) x = 0.;
 }

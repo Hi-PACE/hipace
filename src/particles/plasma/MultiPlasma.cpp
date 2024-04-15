@@ -41,7 +41,6 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                        amrex::Vector<amrex::DistributionMapping> slice_dm,
                        amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
 {
-    HIPACE_PROFILE("MultiPlasma::InitData()");
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
@@ -76,46 +75,44 @@ MultiPlasma::maxDensity (amrex::Real z)
 
 void
 MultiPlasma::DepositCurrent (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice,
+    Fields & fields, int which_slice,
     bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice,
+        ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
                          gm, lev, m_all_bins[i], m_sort_bin_size);
     }
 }
 
 void
-MultiPlasma::ExplicitDeposition (Fields& fields, const MultiLaser& multi_laser,
-                                 amrex::Vector<amrex::Geometry> const& gm, int const lev)
+MultiPlasma::ExplicitDeposition (Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
+                                 int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        ::ExplicitDeposition(m_all_plasmas[i], fields, multi_laser, gm, lev);
+        ::ExplicitDeposition(m_all_plasmas[i], fields, gm, lev);
     }
 }
 
 void
 MultiPlasma::AdvanceParticles (
-    const Fields & fields, const MultiLaser & multi_laser, amrex::Vector<amrex::Geometry> const& gm,
-    bool temp_slice, int lev)
+    const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice,
-                               lev, multi_laser);
+        AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev);
     }
 }
 
 void
 MultiPlasma::DepositNeutralizingBackground (
-    Fields & fields, const MultiLaser & multi_laser, int which_slice,
+    Fields & fields, int which_slice,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         if (m_all_plasmas[i].m_neutralize_background) {
             // current of ions is zero, so they are not deposited.
-            ::DepositCurrent(m_all_plasmas[i], fields, multi_laser, which_slice, false,
+            ::DepositCurrent(m_all_plasmas[i], fields, which_slice, false,
                              false, false, false, true, gm, lev, m_all_bins[i], m_sort_bin_size);
         }
     }

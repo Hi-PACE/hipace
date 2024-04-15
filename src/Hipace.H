@@ -123,20 +123,25 @@ public:
      */
     void ResetAllQuantities ();
 
-    /** \brief reset all laser slices to 0 */
-    void ResetLaser ();
-
     /**
      * \brief does Coulomb collisions between plasmas and beams
      */
     void doCoulombCollision ();
 
     /**
+       \brief Returns the rank id of the head rank.
+     */
+    static int HeadRankID ()
+    {
+        return 0;
+    }
+
+    /**
        \brief Returns true on the head rank, otherwise false.
      */
     static bool HeadRank ()
     {
-        return amrex::ParallelDescriptor::MyProc()==amrex::ParallelDescriptor::NProcs()-1;
+        return amrex::ParallelDescriptor::MyProc() == HeadRankID();
     }
 
     /** Version of the HiPACE executable
@@ -258,12 +263,6 @@ public:
     amrex::Parser m_salame_parser;
     /** Function to get the target Ez field for SALAME */
     amrex::ParserExecutor<3> m_salame_target_func;
-    /** Whether MPI communication buffers should be allocated in device memory */
-    bool m_comms_buffer_on_gpu = false;
-    /** How many slices of beam particles can be received in advance */
-    int m_comms_buffer_max_leading_slices = std::numeric_limits<int>::max();
-    /** How many slices of beam particles can be stored before being sent */
-    int m_comms_buffer_max_trailing_slices = std::numeric_limits<int>::max();
 
 private:
 

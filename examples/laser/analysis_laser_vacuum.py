@@ -40,9 +40,8 @@ W0 = np.zeros(len(ts1.iterations))
 A0 = np.zeros(len(ts1.iterations))
 Z = np.zeros(len(ts1.iterations))
 for iteration in ts1.iterations:
-    F1, m1 = ts1.get_field(iteration=iteration, field='laser_real')
-    F2, m2 = ts1.get_field(iteration=iteration, field='laser_imag')
-    a_abs = np.abs(F1+1j*F2)
+    F, m1 = ts1.get_field(iteration=iteration, field='laserEnvelope')
+    a_abs = np.abs(F)
     W0[iteration] = 2.*np.sqrt(np.sum(a_abs**2*m1.x**2)/np.sum(a_abs**2))
     A0[iteration] = 2.*np.max(a_abs)
     Z[iteration] = ts1.current_t*scc.c

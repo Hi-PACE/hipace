@@ -47,6 +47,12 @@ General parameters
     Passes a seed to the AMReX random number generator. This allows for reproducibility of random events such as randomly generated beams, ionization, and collisions.
     Note that on GPU, since the order of operations is not ensured, providing a seed does not guarantee reproducibility to the level of machine precision.
 
+* ``use_previous_rng`` (`bool`) optional (default `0`)
+    If set to `1`, the seed of the random number generator is computed as was done previous to `Pull Request 1081 <https://github.com/Hi-PACE/hipace/pull/1081>`__.
+    In particular, this seed depends on the number of ranks used for the simulation.
+    If ``random_seed`` is specified, it takes precedence and ``use_previous_rng`` is not used.
+    This option is off by default and should only be used for backward compatibility.
+
 * ``hipace.verbose`` (`int`) optional (default `0`)
     Level of verbosity.
 
@@ -68,9 +74,6 @@ General parameters
       * ``hipace.do_device_synchronize = 1``, synchronizes most functions (all that are profiled
         via ``HIPACE_PROFILE``)
 
-      * ``hipace.do_device_synchronize = 2`` additionally synchronizes low-level functions (all that
-        are profiled via ``HIPACE_DETAIL_PROFILE``)
-
 * ``amrex.the_arena_is_managed`` (`bool`) optional (default `0`)
     Whether managed memory is used. Note that large simulations sometimes only fit on a GPU if managed memory is used,
     but generally it is recommended to not use it.
@@ -80,24 +83,39 @@ General parameters
     By default, we use the ``nosmt`` option, which overwrites the OpenMP default of spawning one thread per logical CPU core, and instead only spawns a number of threads equal to the number of physical CPU cores on the machine.
     If set, the environment variable ``OMP_NUM_THREADS`` takes precedence over ``system`` and ``nosmt``, but not over integer numbers set in this option.
 
-* ``hipace.comms_buffer_on_gpu`` (`bool`) optional (default `0`)
+* ``comms_buffer.on_gpu`` (`bool`) optional (default `0`)
     Whether the buffers that hold the beam and the 3D laser envelope should be allocated on the GPU (device memory).
     By default they will be allocated on the CPU (pinned memory).
     Setting this option to `1` is necessary to take advantage of GPU-Enabled MPI, however for this
     additional enviroment variables need to be set depending on the system.
 
-* ``hipace.comms_buffer_max_leading_slices`` (`int`) optional (default `inf`)
+* ``comms_buffer.async_memcpy`` (`bool`) optional (default `1`)
+    When using a GPU and setting ``comms_buffer.on_gpu = 0``, this option will allow the data
+    transfer between the CPU and GPU for communications to be asynchronous instead of blocking.
+    This can improve performance in a typical situation where the CPU-GPU link has relatively
+    low bandwidth at the cost of some GPU memory and a reduced maximum number of MPI ranks.
+
+* ``comms_buffer.max_size_GiB`` (`float`) optional (default `inf`)
+    How many Gibibytes of beam particles and laser slices can be stored in the communications buffer
+    on each rank. This setting offers an alternative to ``comms_buffer.max_leading_slices``
+    and ``comms_buffer.max_trailing_slices``. Note that the amount specified here may be slightly
+    exeeded in practice. If there are more time steps than ranks, this parameter must be chosen
+    such that between all ranks there is enough capacity to store every beam particle and
+    laser slice to avoid a deadlock, i.e.
+    ``comms_buffer.max_size_GiB * nranks > beam_size + laser_size``.
+
+* ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
 
-* ``hipace.comms_buffer_max_trailing_slices`` (`int`) optional (default `inf`)
+* ``comms_buffer.max_trailing_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be stored before being sent. Using
-    ``comms_buffer_max_leading_slices`` and ``comms_buffer_max_trailing_slices`` will in principle
+    ``comms_buffer.max_leading_slices`` and ``comms_buffer.max_trailing_slices`` will in principle
     limit the amount of asynchronousness in the parallel communication and may thus reduce performance.
     However it may be necessary to set these parameters to avoid all slices accumulating on a single
-    rank that would run out of memory (out of CPU or GPU memory depending on ``hipace.comms_buffer_on_gpu``).
+    rank that would run out of memory (out of CPU or GPU memory depending on ``comms_buffer.on_gpu``).
     If there are more time steps than ranks, these parameters must be chosen such that between all
     ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
-    :math:`(comms_buffer_max_leading_slices + comms_buffer_max_trailing_slices) * nranks > nslices`.
+    ``comms_buffer.max_trailing_slices * nranks > nslices``.
 
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
@@ -237,6 +255,11 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
+* ``fields.poisson_solver`` (`string`) optional (default `FFTDirichlet`)
+    Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
+    solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are
+    ``FFTDirichlet``, ``FFTPeriodic`` and ``MGDirichlet``.
+
 * ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
     Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
     The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
@@ -333,7 +356,7 @@ When both are specified, the per-species value is used.
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
-* ``<plasma name> or plasmas.ppc`` (2 `integer`) optional (default `0 0`)
+* ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
     coordinate, there is no need to specify a number of particles per cell in z.
@@ -382,10 +405,8 @@ When both are specified, the per-species value is used.
     Whether to add a neutralizing background of immobile particles of opposite charge.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
-    Tile size for plasma current deposition, when running on CPU.
-    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
-    arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
-    arrays.
+    Tile size for plasma current deposition, when running on CPU
+    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
     | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.
@@ -496,9 +517,6 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
-
-* ``<beam name> or beams.do_reset_id_init`` (`bool`) optional (default `0`)
-    Whether to reset the ID incrementor to 1 before initializing beam particles.
 
 * ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition and particle push on GPU.
@@ -761,7 +779,7 @@ Laser parameters
 The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
 The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
 Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
-which you can find in the output openPMD file as `laser_real` (for the real part of the envelope) and `laser_imag` for its imaginary part.
+which you can find in the output openPMD file as a complex array named `laserEnvelope`.
 Parameters starting with ``lasers.`` apply to all laser pulses, parameters starting with ``<laser name>`` apply to a single laser pulse.
 
 * ``lasers.names`` (list of `string`) optional (default `no_laser`)
@@ -824,6 +842,8 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
+* ``<laser name>.propagation_angle_yz`` (`float`)
+    Propagation angle of the pulse in the yz plane (0 is the along the z axis)
 Diagnostic parameters
 ---------------------
 
@@ -897,7 +917,7 @@ Field diagnostics
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
     to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
     the charge density of that plasma species will be separately available as a diagnostic.
-    When a laser pulse is used, the real and imaginary parts of the laser complex envelope are written in ``laser_real`` and ``laser_imag``, respectively.
+    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
@@ -922,15 +942,25 @@ In-situ diagnostics
 Besides the standard diagnostics, fast in-situ diagnostics are available. They are most useful when beams with large numbers of particles are used, as the important moments can be calculated in-situ (during the simulation) to largely reduce the simulation's analysis.
 In-situ diagnostics compute slice quantities (1 number per quantity per longitudinal cell).
 For particle beams, they can be used to calculate the main characterizing beam parameters (width, energy spread, emittance, etc.), from which most common beam parameters (e.g. slice and projected emittance, etc.) can be computed. Additionally, the plasma particle properties (e.g, the temperature) can be calculated.
+For particle quantities, "[...]" stands for averaging over all particles in the current slice;
+for grid quantities, "[...]" stands for integrating over all cells in the current slice.
 
 For particle beams, the following quantities are calculated per slice and stored:
-``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [ga], [ga^2], np``.
+``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [x*uy], [y*ux], [ux/uz], [uy/uz], [ga], [ga^2], np``.
 For plasma particles, the following quantities are calculated per slice and stored:
 ``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [ga], [ga^2], np``.
-Thereby, "[]" stands for averaging over all particles in the current slice,
-"w" stands for weight, "ux" is the normalized momentum in the x direction, "ga" is the Lorentz factor.
+Thereby, "w" stands for weight, "ux" is the normalized momentum in the x direction, "ga" is the Lorentz factor.
 Averages and totals over all slices are also provided for convenience under the
 respective ``average`` and ``total`` subcategories.
+
+For the field in-situ diagnostics, the following quantities are calculated per slice and stored:
+``[Ex^2], [Ey^2], [Ez^2], [Bx^2], [By^2], [Bz^2], [ExmBy^2], [EypBx^2], [jz_beam], [Ez*jz_beam]``.
+These quantities can be used to calculate the energy stored in the fields.
+
+For the laser in-situ diagnostics, the following quantities are calculated per slice and stored:
+``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a)``.
+Thereby, ``max(|a|^2)`` is the highest value of ``|a|^2`` in the current slice
+and ``axis(a)`` gives the complex value of the laser envelope, in the center of every slice.
 
 Additionally, some metadata is also available:
 ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
@@ -972,6 +1002,18 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``<plasma name> or plasmas.insitu_radius`` (`float`) optional (default ``infinity``)
     Maximum radius ``<plasma name>.insitu_radius`` :math:`= \sqrt{x^2 + y^2}` within which particles are
     used for the calculation of the insitu diagnostics.
+
+* ``fields.insitu_period`` (`int`) optional (default ``0``)
+    Period of the field in-situ diagnostics. `0` means no field in-situ diagnostics.
+
+* ``fields.insitu_file_prefix`` (`string`) optional (default ``"diags/field_insitu"``)
+    Path of the field in-situ output. Must not be the same as `hipace.file_prefix`.
+
+* ``lasers.insitu_period`` (`int`) optional (default ``0``)
+    Period of the laser in-situ diagnostics. `0` means no laser in-situ diagnostics.
+
+* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"diags/laser_insitu"``)
+    Path of the laser in-situ output. Must not be the same as `hipace.file_prefix`.
 
 Additional physics
 ------------------
@@ -1015,3 +1057,23 @@ Whether the energy loss due to classical radiation reaction of beam particles is
     Whether the beam particles undergo energy loss due to classical radiation reaction.
     The implemented radiation reaction model is based on this publication: `M. Tamburini et al., NJP 12, 123005 <https://doi.org/10.1088/1367-2630/12/12/123005>`__
     In normalized units, `hipace.background_density_SI` must be specified.
+
+Spin tracking
+-------------
+
+Track the spin of each beam particle as it is rotated by the electromagnetic fields using the
+Thomas-Bargmann-Michel-Telegdi (TBMT) model, see
+[Z. Gong et al., Matter and Radiation at Extremes 8.6 (2023), https://doi.org/10.1063/5.0152382]
+for the details of the implementation.
+This will add three extra components to each beam particle to store the spin and output
+those as part of the beam diagnostic as ``spin/x, spin/y, spin/z``
+or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
+
+* ``<beam name> or beams.do_spin_tracking`` (`bool`) optional (default `0`)
+    Enable spin tracking
+
+* ``<beam name> or beams.initial_spin`` (3 `float`)
+    Initial spin ``sx sy sz`` of all particles. The length of the three components is normalized to one.
+
+* ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
+    The anomalous magnetic moment. The default value is the moment for electrons.

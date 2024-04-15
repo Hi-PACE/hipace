@@ -5,11 +5,12 @@ This page only provides HiPACE++ specific instructions.
 For more information please visit the
 `Maxwell documentation <https://confluence.desy.de/display/MXW/Maxwell+Cluster>`__.
 
-Create a file ``profile.hipace`` and ``source`` it whenever you log in and want to work with
+Create a file ``profile.hipace``, for instance in ``$HOME``, and ``source`` it whenever you log in and want to work with
 HiPACE++:
 
 .. code-block:: bash
 
+   #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
    module load maxwell gcc/9.3 openmpi/4
    module load maxwell cuda/11.8
@@ -39,7 +40,7 @@ submission script:
 
 .. code-block:: bash
 
-   #! /usr/bin/env sh
+   #! /usr/bin/env zsh
    #SBATCH --partition=<partition> # mpa # maxgpu # allgpu
    #SBATCH --time=01:00:00
    #SBATCH --nodes=1
@@ -49,7 +50,7 @@ submission script:
    #SBATCH --error=hipace-%j-%N.err
 
    export OMP_NUM_THREADS=1
-   module load maxwell gcc/9.3 openmpi/4 cuda/11.8
+   source $HOME/profile.hipace # or correct path to your profile file
 
    mpiexec -n 4 -npernode 4 $HOME/src/hipace/build/bin/hipace inputs
 
@@ -58,8 +59,18 @@ There are nodes with 4 GPUs and 1 GPU (see the `Maxwell documentation on compute
 for more details and the required constraints). Please set the value accordingly.
 
 .. tip::
+   If you encounter an error like ``module: command not found``, this can be fixed in most cases by adding the following piece of code before ``module purge`` in your ``profile.hipace`` file.
+
+   .. code-block:: bash
+
+      module ()
+      {
+          eval `modulecmd bash $*`
+      }
+
+.. tip::
    Parallel simulations can be largely accelerated by using GPU-aware MPI.
-   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set and the following flag must be passed in the job script:
+   To utilize GPU-aware MPI, the input parameter ``comms_buffer.on_gpu = 1`` must be set and the following flag must be passed in the job script:
 
    .. code-block:: bash
 

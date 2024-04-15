@@ -32,17 +32,21 @@ struct FieldDiagnosticData
     amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
     bool m_do_laser {false}; /**< Whether to output the laser */
     int m_nfields; /**< Number of physical fields to write */
-    int m_nfields_with_laser; /**< Number of fields to write including laser */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     /** Component indexes to Write to output file */
     amrex::Gpu::DeviceVector<int> m_comps_output_idx;
     /** Vector over levels, all fields */
     amrex::FArrayBox m_F;
+    using complex_type = amrex::GpuComplex<amrex::Real>;
+    /** FAB for laser */
+    amrex::BaseFab<complex_type> m_F_laser;
     amrex::Geometry m_geom_io; /**< Diagnostics geometry */
     bool m_has_field; /**< if there is field output to write */
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
     int m_output_period = 0;
+    /** Name of the laser in input and output files */
+    std::string m_laser_io_name = "laserEnvelope";
 };
 
 
@@ -76,7 +80,7 @@ public:
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
-        return  fd.m_nfields_with_laser > 0 &&
+        return  (fd.m_nfields > 0 || fd.m_do_laser) &&
             utils::doDiagnostics(fd.m_output_period, output_step, max_step,
                             output_time, max_time);
     }

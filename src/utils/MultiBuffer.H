@@ -18,8 +18,7 @@ class MultiBuffer
 public:
 
     // initialize MultiBuffer and open initial receive requests
-    void initialize (int nslices, int nbeams, bool buffer_on_host, bool use_laser,
-                     amrex::Box laser_box, int max_leading_slices, int max_trailing_slices);
+    void initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
     void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
@@ -62,6 +61,15 @@ private:
         nprogress,
     };
 
+    // to specify the input for get_buffer_offset
+    enum struct offset_type {
+        beam_idcpu,
+        beam_real,
+        beam_int,
+        laser,
+        total
+    };
+
     // struct to store per-slice data
     struct DataNode {
         char* m_buffer = nullptr;
@@ -86,6 +94,8 @@ private:
     amrex::Gpu::PinnedVector<std::size_t> m_metadata {};
     // per-slice data
     amrex::Vector<DataNode> m_datanodes {};
+    amrex::Gpu::DeviceVector<char> m_leading_gpu_buffer {};
+    amrex::Gpu::DeviceVector<char> m_trailing_gpu_buffer {};
 
     // MPI parameters
     bool m_is_head_rank = false;
@@ -98,14 +108,20 @@ private:
     MPI_Comm m_comm = MPI_COMM_NULL;
 
     // general parameters
-    bool m_buffer_on_host = true;
+    /** Whether MPI communication buffers should be allocated in device memory */
+    bool m_buffer_on_gpu = false;
+    bool m_async_memcpy = true;
     int m_nslices = 0;
     int m_nbeams = 0;
     bool m_use_laser = false;
     int m_laser_ncomp = 4;
     amrex::Box m_laser_slice_box {};
+    /** How many slices of beam particles can be received in advance */
     int m_max_leading_slices = std::numeric_limits<int>::max();
+    /** How many slices of beam particles can be stored before being sent */
     int m_max_trailing_slices = std::numeric_limits<int>::max();
+    std::size_t m_current_buffer_size = 0;
+    std::size_t m_max_buffer_size = std::numeric_limits<std::size_t>::max();
 
     // parameters to send physical time
     amrex::Real m_time_send_buffer = 0.;
@@ -130,10 +146,9 @@ private:
     // write MultiBeam sizes into the metadata array
     void write_metadata (int slice, MultiBeam& beams, int beam_slice);
 
-    // helper functions to get location of individual arrays inside a buffer
-    std::size_t get_buffer_offset_real (int slice, int ibeam, int rcomp);
-    std::size_t get_buffer_offset_int (int slice, int ibeam, int icomp);
-    std::size_t get_buffer_offset_laser (int slice, int icomp);
+    // helper function to get location of individual arrays inside a buffer
+    std::size_t get_buffer_offset (int slice, offset_type type, MultiBeam& beams,
+                                   int ibeam, int comp);
 
     // copy gpu array into buffer at buffer_offset, either dtoh or dtod
     void memcpy_to_buffer (int slice, std::size_t buffer_offset,
@@ -142,6 +157,14 @@ private:
     // copy buffer array at buffer_offset into gpu array, either htod or dtod
     void memcpy_from_buffer (int slice, std::size_t buffer_offset,
                              void* dst_ptr, std::size_t num_bytes);
+
+    // asynchronous copy between cpu buffer and gpu m_leading_gpu_buffer or m_trailing_gpu_buffer
+    void async_memcpy_to_buffer (int slice);
+    void async_memcpy_from_buffer (int slice);
+
+    // finish asynchronous copy (long) after it was initiated
+    void async_memcpy_to_buffer_finish ();
+    void async_memcpy_from_buffer_finish ();
 
     // pack MultiBeam and MultiLaser into buffer
     void pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);

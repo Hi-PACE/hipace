@@ -30,8 +30,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
     for (int lev=0; lev<current_N_level; ++lev) {
         hipace->m_fields.setVal(0., lev, WhichSlice::This, "Sy", "Sx");
-        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_multi_laser,
-                                              hipace->m_3D_geom, lev);
+        hipace->m_multi_plasma.ExplicitDeposition(hipace->m_fields, hipace->m_3D_geom, lev);
 
         // Back up Sx and Sy from the plasma only. This can only be done before the plasma push
         hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"Sy_back", "Sx_back"},
@@ -44,8 +43,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // advance plasma to the temp slice
-            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_multi_laser,
-                                                    hipace->m_3D_geom, true, lev);
+            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_3D_geom, true, lev);
 
             hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                             WhichSlice::Next, {"jx_beam", "jy_beam"});
@@ -57,8 +55,13 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         }
 
         for (int lev=0; lev<current_N_level; ++lev) {
+            if (hipace->m_do_tiling) {
+                hipace->m_multi_plasma.TileSort(
+                    hipace->m_slice_geom[lev].Domain(), hipace->m_slice_geom[lev]);
+            }
+
             // deposit plasma jx and jy on the next temp slice, to the SALAME slice
-            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
+            hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
 
             // use an initial guess of zero for Bx and By in MG solver to reduce relative error
@@ -110,7 +113,12 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             }
 
             for (int lev=0; lev<current_N_level; ++lev) {
-                hipace->m_multi_plasma.DepositCurrent(hipace->m_fields, hipace->m_multi_laser,
+                if (hipace->m_do_tiling) {
+                    hipace->m_multi_plasma.TileSort(
+                        hipace->m_slice_geom[lev].Domain(), hipace->m_slice_geom[lev]);
+                }
+
+                hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
             }
         } else {
@@ -302,7 +310,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                     [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                         const int ip = idx + idx_begin;
                         // only push plasma particles on their according MR level
-                        if (ptd.id(ip) < 0 || ptd.cpu(ip) != lev) return;
+                        if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
                         const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
                         const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
@@ -408,17 +416,18 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
         // For id and weights
         auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
-        int * const idp = soa.GetIntData(BeamIdx::id).data();
+        auto * const idcpup = soa.GetIdCPUData().data();
 
         amrex::ParallelFor(
             beam.getNumParticles(WhichBeamSlice::This),
             [=] AMREX_GPU_DEVICE (long ip) {
                 // Skip invalid particles and ghost particles not in the last slice
-                if (idp[ip] < 0) return;
+                auto id = amrex::ParticleIDWrapper(idcpup[ip]);
+                if (id < 0) return;
 
                 // invalidate particles with a weight of zero
                 if (W == 0) {
-                    idp[ip] = -idp[ip];
+                    id = -id;
                     return;
                 }
 

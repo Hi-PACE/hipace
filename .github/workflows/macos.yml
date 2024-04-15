@@ -57,7 +57,11 @@ jobs:
       run: |
         brew --cache
         set +e
-        brew install --overwrite python
+
+        rm -rf /usr/local/bin/2to3*
+        rm -rf /usr/local/bin/idle3*
+        rm -rf /usr/local/bin/pydoc3*
+        rm -rf /usr/local/bin/python3*
 
         brew install fftw --only-dependencies --force
         brew install fftw
@@ -84,9 +88,6 @@ jobs:
         brew install openpmd-api
         brew link openpmd-api
 
-        python3 -m pip install matplotlib
-        python3 -m pip install numpy
-        python3 -m pip install scipy
     - name: build HiPACE++
       run: |
         cmake -S . -B build_sp          \

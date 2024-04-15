@@ -30,13 +30,12 @@ struct BeamIdx
         real_nattribs=real_nattribs_in_buffer
     };
     enum {
-        id=0,        // id
+        // no extra components stored in MultiBuffer, besides 64bit idcpu
         int_nattribs_in_buffer,
-        // cpu is not stored or communicated in MultiBuffer, only used temporarily per slice
-        cpu=int_nattribs_in_buffer,
         // nsubcycles: by how many subcycles was this particle pushed already
         // nsubcycles is not stored or communicated in MultiBuffer
-        nsubcycles,
+        nsubcycles=int_nattribs_in_buffer,
+        mr_level,
         int_nattribs
     };
 };
@@ -193,6 +192,21 @@ public:
         return m_total_num_particles;
     }
 
+    int numRealComponents () const {
+        return BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0);
+    }
+    int numIntComponents () const { return BeamIdx::int_nattribs; }
+
+    bool communicateIdCpuComponent () const { return true; }
+    bool communicateRealComponent (int rcomp) const {
+        // communicate all compile-time and runtime real components
+        return rcomp < numRealComponents();
+    }
+    bool communicateIntComponent (int icomp) const {
+        // don't communicate nsubcycles or mr_level
+        return icomp < BeamIdx::int_nattribs_in_buffer;
+    }
+
 private:
     int m_slice_permutation = 0;
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
@@ -209,8 +223,6 @@ public:
     bool m_do_radiation_reaction {false}; /**< whether to calculate radiation losses */
     /** Number of particles on upstream rank (required for IO) */
     bool m_do_salame = false; /**< Whether this beam uses salame */
-    /** Whether to reset the global ID incrementor to 1 before initializing this beam */
-    bool m_do_reset_id_init {false};
     bool m_initialize_on_cpu {false};
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */
@@ -221,6 +233,12 @@ public:
     amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_external_fields;
     /** Owns data for m_external_fields */
     amrex::Array<amrex::Parser, 6> m_external_fields_parser;
+    /** If spin tracking is enabled for this beam */
+    bool m_do_spin_tracking = false;
+    /** Initial spin of all particles */
+    amrex::RealVect m_initial_spin = {1, 0, 0,};
+    /** The anomalous magnetic moment */
+    amrex::Real m_spin_anom = 0.00115965218128;
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
@@ -303,27 +321,12 @@ private:
 
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real beam properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_nrp {18};
+    static constexpr int m_insitu_nrp = 22;
     /** Number of int beam properties for in-situ per-slice reduced diagnostics. */
-    int m_insitu_nip {1};
-    /** Per-slice real beam properties:
-     *      0,   1,     2,   3,     4,   5,     6,    7,      8,    9,     10,   11,     12,
-     * sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2],
-     *
-     *     13,     14,     15,   16,     17
-     * [x*ux], [y*uy], [z*uz], [ga], [ga^2]
-     * where [] means average over all particles within slice.
-     * Per-slice emittance: sqrt( abs( ([x^2]-[x]^2) * ([ux^2]-[ux]^2) - ([x*ux]-[x][ux])^2 ) ).
-     * Projected emittance: Same as above AFTER averaging all these quantities over slices.
-     * Energy spread: sqrt([ga^2]-[ga]^2), and same as above.
-     * Momentum spread: sqrt([uz^2]-[uz]^2), and same as above.
-     */
+    static constexpr int m_insitu_nip = 1;
+    /** Per-slice real beam properties */
     amrex::Vector<amrex::Real> m_insitu_rdata;
-    /** Per-slice int beam properties:
-     *  0
-     * Np
-     * Np: number of particles in this slice
-     */
+    /** Per-slice int beam properties */
     amrex::Vector<int> m_insitu_idata;
     /** Sum of all per-slice real beam properties */
     amrex::Vector<amrex::Real> m_insitu_sum_rdata;
@@ -331,6 +334,15 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/insitu";
+
+    // spin insitu:
+
+    /** Number of real beam properties for spin in-situ per-slice reduced diagnostics. */
+    static constexpr int m_insitu_n_spin = 6;
+    /** Per-slice real beam spin properties */
+    amrex::Vector<amrex::Real> m_insitu_spin_data;
+    /** Sum of all per-slice real beam spin properties */
+    amrex::Vector<amrex::Real> m_insitu_sum_spin_data;
 
     // to estimate min uz
     friend AdaptiveTimeStep;

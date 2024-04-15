@@ -7,9 +7,6 @@ hipace.max_time = 0.3/clight
 diagnostic.output_period = 1
 hipace.verbose = 1
 
-hipace.numprocs_x = 1
-hipace.numprocs_y = 1
-
 hipace.depos_order_xy = 2
 hipace.dt = adaptive
 hipace.nt_per_betatron = 30

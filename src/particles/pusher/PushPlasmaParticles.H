@@ -29,9 +29,9 @@ struct PlasmaMomentumDerivative {
  * \param[in] Bx_clight Bx * clight
  * \param[in] By_clight By * clight
  * \param[in] Bz Bz
- * \param[in] Aabssq_norm Aabssqp * 0.5 TODO: fix units of Aabssqp
- * \param[in] AabssqDx_norm AabssqDx * 0.25 * clight * m_e / mass
- * \param[in] AabssqDy_norm AabssqDy * 0.25 * clight * m_e / mass
+ * \param[in] Aabssq_norm Aabssqp * 0.5 * (charge / q_e)^2 * (m_e / mass)^2
+ * \param[in] AabssqDx_norm AabssqDx * 0.25 * clight * (charge / q_e)^2 * (m_e / mass)^2
+ * \param[in] AabssqDy_norm AabssqDy * 0.25 * clight * (charge / q_e)^2 * (m_e / mass)^2
  * \param[in] clight_inv 1 / clight
  * \param[in] charge_mass_clight_ratio charge / (mass * clight)
  */

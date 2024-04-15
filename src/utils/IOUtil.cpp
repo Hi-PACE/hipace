@@ -10,13 +10,15 @@
 #include <AMReX_IndexType.H>
 
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <iomanip>
 
 
 
 std::vector< double >
-utils::getRelativeCellPosition (amrex::FArrayBox const& fab)
+utils::getRelativeCellPosition (amrex::Box const& box)
 {
-    amrex::Box const box = fab.box();
     amrex::IndexType const idx_type = box.ixType();
     std::vector< double > relative_position(AMREX_SPACEDIM, 0.0);
     // amrex::CellIndex::CELL means: 0.5 from lower corner for that index/direction
@@ -27,6 +29,8 @@ utils::getRelativeCellPosition (amrex::FArrayBox const& fab)
         if (idx_type.cellCentered(d))
             relative_position.at(d) = 0.5;
     }
+    // convert to C order
+    std::reverse(relative_position.begin(), relative_position.end());
     return relative_position;
 }
 
@@ -129,6 +133,33 @@ utils::getUnitDimension ( std::string const & record_name )
         {openPMD::UnitDimension::I, -1.},
         {openPMD::UnitDimension::T, -2.}
     };
+    else if( record_name == "spin" ) return {
+        {openPMD::UnitDimension::L,  2.},
+        {openPMD::UnitDimension::M,  1.},
+        {openPMD::UnitDimension::T, -1.}
+    };
     else return {};
+}
+
+std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
+    long long seconds = static_cast<long long>(std::floor(ft.seconds));
+
+    long long minutes = seconds / 60;
+    seconds %= 60;
+
+    long long hours = minutes / 60;
+    minutes %= 60;
+
+    long long days = hours / 24;
+    hours %= 24;
+
+    if (days > 0) {
+        os << days << "-";
+    }
+    os  << std::setfill('0') << std::setw(2) << hours << ":"
+        << std::setfill('0') << std::setw(2) << minutes << ":"
+        << std::setfill('0') << std::setw(2) << seconds;
+
+    return os;
 }
 #endif

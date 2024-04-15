@@ -59,13 +59,13 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    module load OpenMPI
    module load CUDA
    module load HDF5
-   srun -n 8 --cpu_bind=sockets $HOME/src/hipace/build/bin/hipace.MPI.CUDA.DP inputs
+   srun -n 8 --cpu_bind=sockets $HOME/src/hipace/build/bin/hipace.MPI.CUDA.DP.LF inputs
 
 and use it to submit a simulation.
 
 .. tip::
    Parallel simulations can be largely accelerated by using GPU-aware MPI.
-   To utilize GPU-aware MPI, the input parameter ``hipace.comms_buffer_on_gpu = 1`` must be set.
+   To utilize GPU-aware MPI, the input parameter ``comms_buffer.on_gpu = 1`` must be set.
 
    Note that using GPU-aware MPI may require more GPU memory.
 

@@ -27,50 +27,9 @@ amrex::Real pow (amrex::Real base) {
     return 0._rt; //shut up compiler
 }
 
-using MultipoleTuple = amrex::GpuTuple<
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real>;
-
-using MultipoleReduceOpList = amrex::TypeList<
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum, amrex::ReduceOpSum, amrex::ReduceOpSum,
-    amrex::ReduceOpSum>;
-
-using MultipoleReduceTypeList = amrex::TypeList<
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real, amrex::Real, amrex::Real,
-    amrex::Real>;
+using MultipoleTuple = amrex::TypeMultiplier<amrex::GpuTuple, amrex::Real[37]>;
+using MultipoleReduceOpList = amrex::TypeMultiplier<amrex::TypeList, amrex::ReduceOpSum[37]>;
+using MultipoleReduceTypeList = amrex::TypeMultiplier<amrex::TypeList, amrex::Real[37]>;
 
 // To solve a poisson equation (d^2/dx^2 + d^2/dy^2)phi = source with open boundary conditions for
 // phi(x,y), the source field at (x',y') is integrated together with the Green's function

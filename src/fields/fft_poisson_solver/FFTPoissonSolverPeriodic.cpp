@@ -28,7 +28,6 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
 {
     using namespace amrex::literals;
 
-    HIPACE_PROFILE("FFTPoissonSolverPeriodic::define()");
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(realspace_ba.size() == 1, "Parallel FFT not supported yet");
 
@@ -54,12 +53,13 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
                           spectral_bx_size - amrex::IntVect::TheUnitVector() );
         spectral_bl.push_back( spectral_bx );
     }
-    m_spectralspace_ba.define( std::move(spectral_bl) );
+    amrex::BoxArray spectralspace_ba{};
+    spectralspace_ba.define( std::move(spectral_bl) );
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
     m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, Fields::m_poisson_nguards);
-    m_tmpSpectralField = SpectralField(m_spectralspace_ba, dm, 1, 0);
+    m_tmpSpectralField = SpectralField(spectralspace_ba, dm, 1, 0);
 
     // This must be true even for parallel FFT.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_stagingArea.local_size() == 1,
@@ -70,7 +70,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     // Calculate the array of inv_k2
     amrex::Real dkx = 2*MathConst::pi/gm.ProbLength(0);
     amrex::Real dky = 2*MathConst::pi/gm.ProbLength(1);
-    m_inv_k2 = amrex::MultiFab(m_spectralspace_ba, dm, 1, 0);
+    m_inv_k2 = amrex::MultiFab(spectralspace_ba, dm, 1, 0);
     // Loop over boxes and calculate inv_k2 in each box
     for (amrex::MFIter mfi(m_inv_k2, DfltMfi); mfi.isValid(); ++mfi ){
         Array2<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
@@ -93,8 +93,8 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    m_forward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
-    m_backward_plan = AnyFFT::FFTplans(m_spectralspace_ba, dm);
+    m_forward_plan = AnyFFT::FFTplans(spectralspace_ba, dm);
+    m_backward_plan = AnyFFT::FFTplans(spectralspace_ba, dm);
     // Loop over boxes and allocate the corresponding plan
     // for each box owned by the local MPI proc
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
