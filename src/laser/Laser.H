@@ -1,4 +1,4 @@
-/* Copyright 2022
+/ Copyright 2022
  *
  * This file is part of HiPACE++.
  *
@@ -24,7 +24,8 @@ public:
     amrex::Real m_w0 {0.}; /**< Laser waist */
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
-    /** Focal distance of the laser pulse */
+    amrex::Real m_PFT {0.};    
+/** Focal distance of the laser pulse */
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
