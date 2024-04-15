@@ -28,8 +28,7 @@ public:
     /**Pulse front tilt of the pulse in yz plane (0 is no PFT)*/
     amrex::Real m_PFT_yz {0.};
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
-    amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
-    amrex::Real m_PFT {0.};    
+    amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */  
 /** Focal distance of the laser pulse */
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */
