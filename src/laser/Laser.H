@@ -25,6 +25,8 @@ public:
     amrex::Real m_CEP {0.}; /**< Laser carrier-envelope phase (CEP) */
     /** Propagation angle of the pulse in the yz plane (0 is the along the z axis) */
     amrex::Real m_propagation_angle_yz {0.};
+    /**Pulse front tilt of the pulse in yz plane (0 is no PFT)*/
+    amrex::Real m_PFT_yz {0.};
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
     /** Focal distance of the laser pulse */
