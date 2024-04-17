@@ -11,7 +11,7 @@
 #include <AMReX.H>
 #include <AMReX_GpuDevice.H>
 
-#include <cufftXt.h>
+#include <cufft.h>
 
 #include <map>
 #include <string>
@@ -24,7 +24,7 @@ static constexpr bool use_float = false;
 
 struct VendorPlan {
     cufftHandle m_cufftplan;
-    int m_direction = 0;
+    FFTType m_type;
     void* m_in;
     void* m_out;
 };
@@ -61,6 +61,7 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
     // https://docs.nvidia.com/cuda/cufft/index.html#cufft-api-reference
     m_plan = new VendorPlan;
 
+    m_plan->m_type = type;
     cufftType transform_type;
     int rank = 0;
     long long int n[2] = {0, 0};
@@ -69,7 +70,6 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
     switch (type) {
         case FFTType::C2C_2D_fwd:
             transform_type = use_float ? CUFFT_C2C : CUFFT_Z2Z;
-            m_plan->m_direction = CUFFT_FORWARD;
             rank = 2;
             n[0] = ny;
             n[1] = nx;
@@ -77,7 +77,6 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
             break;
         case FFTType::C2C_2D_bkw:
             transform_type = use_float ? CUFFT_C2C : CUFFT_Z2Z;
-            m_plan->m_direction = CUFFT_INVERSE;
             rank = 2;
             n[0] = ny;
             n[1] = nx;
@@ -154,8 +153,95 @@ void AnyFFT::SetBuffers (void* in, void* out, void* work_area) {
 void AnyFFT::Execute () {
     cufftResult result;
 
-    result = cufftXtExec(m_plan->m_cufftplan, m_plan->m_in, m_plan->m_out, m_plan->m_direction);
-    assert_cufft_status("cufftXtExec", result);
+    if constexpr (use_float) {
+        switch (m_plan->m_type) {
+            case FFTType::C2C_2D_fwd:
+                result = cufftExecC2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out),
+                    CUFFT_FORWARD);
+                assert_cufft_status("cufftExecC2C", result);
+                break;
+            case FFTType::C2C_2D_bkw:
+                result = cufftExecC2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out),
+                    CUFFT_INVERSE);
+                assert_cufft_status("cufftExecC2C", result);
+                break;
+            case FFTType::C2R_2D:
+                result = cufftExecC2R(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecC2R", result);
+                break;
+            case FFTType::R2C_2D:
+                result = cufftExecR2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftReal*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out));
+                assert_cufft_status("cufftExecR2C", result);
+                break;
+            case FFTType::R2R_2D:
+                amrex::Abort("R2R FFT not supported by cufft");
+                break;
+            case FFTType::C2R_1D_batched:
+                result = cufftExecC2R(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecC2R", result);
+                break;
+            case FFTType::R2C_1D_batched:
+                result = cufftExecR2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftReal*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out));
+                assert_cufft_status("cufftExecR2C", result);
+                break;
+        }
+    } else {
+        switch (m_plan->m_type) {
+            case FFTType::C2C_2D_fwd:
+                result = cufftExecZ2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out),
+                    CUFFT_FORWARD);
+                assert_cufft_status("cufftExecZ2Z", result);
+                break;
+            case FFTType::C2C_2D_bkw:
+                result = cufftExecZ2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out),
+                    CUFFT_INVERSE);
+                assert_cufft_status("cufftExecZ2Z", result);
+                break;
+            case FFTType::C2R_2D:
+                result = cufftExecZ2D(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecZ2D", result);
+                break;
+            case FFTType::R2C_2D:
+                result = cufftExecD2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out));
+                assert_cufft_status("cufftExecD2Z", result);
+                break;
+            case FFTType::R2R_2D:
+                amrex::Abort("R2R FFT not supported by cufft");
+                break;
+            case FFTType::C2R_1D_batched:
+                result = cufftExecZ2D(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecZ2D", result);
+                break;
+            case FFTType::R2C_1D_batched:
+                result = cufftExecD2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out));
+                assert_cufft_status("cufftExecD2Z", result);
+                break;
+        }
+    }
 }
 
 AnyFFT::~AnyFFT () {

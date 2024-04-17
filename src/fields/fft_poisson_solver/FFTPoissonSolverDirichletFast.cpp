@@ -225,9 +225,9 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
 
     m_fft_work_area.resize(std::max(fft_x_area, fft_y_area));
 
-    m_x_fft.SetBuffers(m_position_array.dataPtr(), m_fourier_array.dataPtr(),
+    m_x_fft.SetBuffers(m_fourier_array.dataPtr(), m_position_array.dataPtr(),
                        m_fft_work_area.dataPtr());
-    m_y_fft.SetBuffers(m_position_array.dataPtr(), m_fourier_array.dataPtr(),
+    m_y_fft.SetBuffers(m_fourier_array.dataPtr(), m_position_array.dataPtr(),
                        m_fft_work_area.dataPtr());
 }
 
