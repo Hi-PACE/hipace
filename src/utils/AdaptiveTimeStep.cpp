@@ -229,7 +229,7 @@ AdaptiveTimeStep::CalculateFromMinUz (
         */
         amrex::Real new_dt = dt;
         amrex::Real new_time = t;
-        amrex::Real min_uz_mq = beams_min_uz_mq[ibeam];
+        amrex::Real min_uz = beams_min_uz_mq[ibeam] / mass_charge_ratio;
         const int niter = m_adaptive_predict_step ? numprocs : 1;
         for (int i = 0; i < niter; i++)
         {
@@ -237,14 +237,15 @@ AdaptiveTimeStep::CalculateFromMinUz (
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_charge_density > 0.,
                 "A >0 plasma density must be specified to use an adaptive time step.");
             if (m_adaptive_gather_ez) {
-                min_uz_mq += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
+                min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
             }
-            // Just make sure min_uz_mq is >0, to avoid nans below.
-            min_uz_mq = std::max(min_uz_mq, std::abs(0.001_rt*m_threshold_uz*mass_charge_ratio));
-            amrex::Real omega_b = std::sqrt(plasma_charge_density / (2. * min_uz_mq * ep0));
+            // Just make sure min_uz is >0, to avoid nans below.
+            min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
+            amrex::Real omega_b = std::sqrt(plasma_charge_density /
+                                            (2. * min_uz * mass_charge_ratio * ep0));
             new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
             new_time += new_dt;
-            if (min_uz_mq > m_threshold_uz*mass_charge_ratio) {
+            if (min_uz > m_threshold_uz) {
                 new_dts[ibeam] = new_dt;
             }
         }
@@ -278,6 +279,7 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
         const auto& beam = beams.getBeam(ibeam);
+        const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
 
         amrex::ReduceOps<amrex::ReduceOpMin> reduce_op;
         amrex::ReduceData<amrex::Real> reduce_data(reduce_op);
@@ -308,7 +310,7 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
                 doGatherEz(xp, yp, Ezp, slice_arr, ez_comp,
                            dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 return {
-                    -std::abs(Ezp * clightinv)
+                    charge_mass_ratio * Ezp * clightinv
                 };
             });
 
