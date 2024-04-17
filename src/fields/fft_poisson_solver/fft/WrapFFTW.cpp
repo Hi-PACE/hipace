@@ -7,7 +7,6 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "AnyFFT.H"
-#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX_Config.H>
 

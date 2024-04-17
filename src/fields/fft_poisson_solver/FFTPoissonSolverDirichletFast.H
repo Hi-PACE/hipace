@@ -5,8 +5,8 @@
  * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
  * License: BSD-3-Clause-LBNL
  */
-#ifndef FFT_POISSON_SOLVER_DIRICHLET_H_
-#define FFT_POISSON_SOLVER_DIRICHLET_H_
+#ifndef FFT_POISSON_SOLVER_DIRICHLET_FAST_H_
+#define FFT_POISSON_SOLVER_DIRICHLET_FAST_H_
 
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
 #include "FFTPoissonSolver.H"
@@ -63,9 +63,14 @@ private:
     amrex::MultiFab m_tmpSpectralField;
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
+
+    amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
+
+    amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_fourier_array;
+
     /** DST plans */
-    AnyFFT m_forward_fft;
-    AnyFFT m_backward_fft;
+    AnyFFT m_x_fft;
+    AnyFFT m_y_fft;
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
 };
 

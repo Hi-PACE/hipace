@@ -21,11 +21,142 @@ FFTPoissonSolverDirichletFast::FFTPoissonSolverDirichletFast (
     define(realspace_ba, dm, gm);
 }
 
+/** \brief Make Complex array out of Real array to prepare for fft.
+ * out[idx] = -in[2*idx-2] + in[2*idx] + i*in[2*idx-1] for each column with
+ * in[-1] = 0; in[-2] = -in[0]; in[n_data] = 0; in[n_data+1] = -in[n_data-1]
+ *
+ * \param[in] in input real array
+ * \param[out] out output complex array
+ * \param[in] n_data number of (contiguous) rows in position matrix
+ * \param[in] n_batch number of (strided) columns in position matrix
+ */
+void ToComplex (const amrex::Real* const AMREX_RESTRICT in,
+                amrex::GpuComplex<amrex::Real>* const AMREX_RESTRICT out,
+                const int n_data, const int n_batch)
+{
+    const int n_half = (n_data+1)/2;
+    if((n_data%2 == 1)) {
+        amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+            {
+                const int stride_in = n_data*j;
+                const int i_is_zero = (i==0);
+                const int i_is_n_half = (i==n_half);
+                const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
+                                            +in[2*i-2*i_is_n_half+stride_in]*(1-2*i_is_n_half);
+                const amrex::Real imag = in[2*i-1+i_is_zero-i_is_n_half+stride_in]
+                                            *!i_is_zero*!i_is_n_half;
+                out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
+            });
+    } else {
+        amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
+            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+            {
+                const int stride_in = n_data*j;
+                const int i_is_zero = (i==0);
+                const int i_is_n_half = (i==n_half);
+                const amrex::Real real = -in[2*i-2+2*i_is_zero+stride_in]*(1-2*i_is_zero)
+                                            +in[2*i-i_is_n_half+stride_in]*!i_is_n_half;
+                const amrex::Real imag = in[2*i-1+i_is_zero+stride_in]*!i_is_zero;
+                out[i+(n_half+1)*j] = amrex::GpuComplex<amrex::Real>(real, imag);
+            });
+    }
+}
+
+/** \brief Make Sine-space Real array out of array from fft.
+ * out[idx] = 0.5 *(in[n_data-idx] - in[idx+1] + (in[n_data-idx] + in[idx+1])/
+ * (2*sin((idx+1)*pi/(n_data+1)))) for each column
+ *
+ * \param[in] in input real array
+ * \param[out] out output real array
+ * \param[in] n_data number of (contiguous) rows in position matrix
+ * \param[in] n_batch number of (strided) columns in position matrix
+ */
+void ToSine (const amrex::Real* const AMREX_RESTRICT in, amrex::Real* const AMREX_RESTRICT out,
+             const int n_data, const int n_batch)
+{
+    using namespace amrex::literals;
+
+    const amrex::Real n_1_real_inv = 1._rt / (n_data+1._rt);
+    const int n_1 = n_data+1;
+    amrex::ParallelFor({{1,0,0}, {(n_data+1)/2,n_batch-1,0}},
+        [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+        {
+            const int i_rev = n_1-i;
+            const int stride_in = n_1*j;
+            const int stride_out = n_data*j;
+            const amrex::Real in_a = in[i + stride_in];
+            const amrex::Real in_b = in[i_rev + stride_in];
+            out[i - 1 + stride_out] =
+                0.5_rt*(in_b - in_a + (in_a + in_b) / (2._rt * amrex::Math::sinpi(i * n_1_real_inv)));
+            out[i_rev - 1 + stride_out] =
+                0.5_rt*(in_a - in_b + (in_a + in_b) / (2._rt * amrex::Math::sinpi(i_rev * n_1_real_inv)));
+        });
+}
+
+/** \brief Transpose input matrix
+ * out[idy][idx] = in[idx][idy]
+ *
+ * \param[in] in input real array
+ * \param[out] out output real array
+ * \param[in] n_data number of (contiguous) rows in input matrix
+ * \param[in] n_batch number of (strided) columns in input matrix
+ */
+void Transpose (const amrex::Real* const AMREX_RESTRICT in,
+                amrex::Real* const AMREX_RESTRICT out,
+                const int n_data, const int n_batch)
+{
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+    constexpr int tile_dim = 32; //must be power of 2
+    constexpr int block_rows = 8;
+    const int num_blocks_x = (n_data + tile_dim - 1)/tile_dim;
+    const int num_blocks_y = (n_batch + tile_dim - 1)/tile_dim;
+    amrex::launch(num_blocks_x*num_blocks_y, tile_dim*block_rows,
+        tile_dim*(tile_dim+1)*sizeof(amrex::Real), amrex::Gpu::gpuStream(),
+        [=] AMREX_GPU_DEVICE() noexcept
+        {
+            amrex::Gpu::SharedMemory<amrex::Real> gsm;
+            amrex::Real* const tile = gsm.dataPtr();
+
+            const int thread_x = threadIdx.x&(tile_dim-1);
+            const int thread_y = threadIdx.x/tile_dim;
+            const int block_y = blockIdx.x/num_blocks_x;
+            const int block_x = blockIdx.x - block_y*num_blocks_x;
+            int mat_x = block_x * tile_dim + thread_x;
+            int mat_y = block_y * tile_dim + thread_y;
+
+            for (int i = 0; i < tile_dim; i += block_rows) {
+                if(mat_x < n_data && (mat_y+i) < n_batch) {
+                    tile[(thread_y+i)*(tile_dim+1) + thread_x] = in[(mat_y+i)*n_data + mat_x];
+                }
+            }
+
+            __syncthreads();
+
+            mat_x = block_y * tile_dim + thread_x;
+            mat_y = block_x * tile_dim + thread_y;
+
+            for (int i = 0; i < tile_dim; i += block_rows) {
+                if(mat_x < n_batch && (mat_y+i) < n_data) {
+                    out[(mat_y+i)*n_batch + mat_x] = tile[thread_x*(tile_dim+1) + thread_y+i];
+                }
+            }
+        });
+#else
+    amrex::ParallelFor({{0,0,0}, {n_batch-1, n_data-1, 0}},
+        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        {
+            out[i + n_batch*j] = in[j + n_data*i];
+        });
+#endif
+}
+
 void
 FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
                                        amrex::DistributionMapping const& dm,
                                        amrex::Geometry const& gm )
 {
+    HIPACE_PROFILE("FFTPoissonSolverDirichletFast::define()");
     using namespace amrex::literals;
 
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
@@ -48,16 +179,18 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
                                      "There should be only one box locally.");
 
     const amrex::Box fft_box = m_stagingArea[0].box();
+    const amrex::IntVect fft_size = fft_box.length();
+    const int nx = fft_size[0];
+    const int ny = fft_size[1];
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( fft_box.length(0) + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( fft_box.length(1) + 1 ));
+    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( nx + 1 ));
+    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( ny + 1 ));
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (( fft_box.length(0) + 1 )
-                                             *( fft_box.length(1) + 1 )));
+    const amrex::Real norm_fac = 0.5 / ( 2 * (( nx + 1 ) * ( ny + 1 )));
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
@@ -67,9 +200,9 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
             fft_box, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = sin(( i - lo[0] + 1 ) * sine_x_factor) * sin(( i - lo[0] + 1 ) * sine_x_factor);
+                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = sin(( j - lo[1] + 1 ) * sine_y_factor) * sin(( j - lo[1] + 1 ) * sine_y_factor);
+                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
@@ -80,17 +213,22 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
                 });
     }
 
+    // Allocate 1d Array for 2d data or 2d transpose data
+    const int real_1d_size = std::max((nx+1)*ny, (ny+1)*nx);
+    const int complex_1d_size = std::max(((nx+1)/2+1)*ny, ((ny+1)/2+1)*nx);
+    m_position_array.resize(real_1d_size);
+    m_fourier_array.resize(complex_1d_size);
+
     // Allocate and initialize the FFT plans
-    amrex::IntVect fft_size = m_stagingArea[0].box().length();
-    std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
-    std::size_t bkw_area = m_backward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
+    std::size_t fft_x_area = m_x_fft.Initialize(FFTType::C2R_1D_batched, nx+1, ny);
+    std::size_t fft_y_area = m_y_fft.Initialize(FFTType::C2R_1D_batched, ny+1, nx);
 
-    m_fft_work_area.resize(std::max(fwd_area, bkw_area));
+    m_fft_work_area.resize(std::max(fft_x_area, fft_y_area));
 
-    m_forward_fft.SetBuffers(m_stagingArea[0].dataPtr(), m_tmpSpectralField[0].dataPtr(),
-                             m_fft_work_area.dataPtr());
-    m_backward_fft.SetBuffers(m_tmpSpectralField[0].dataPtr(), m_stagingArea[0].dataPtr(),
-                              m_fft_work_area.dataPtr());
+    m_x_fft.SetBuffers(m_position_array.dataPtr(), m_fourier_array.dataPtr(),
+                       m_fft_work_area.dataPtr());
+    m_y_fft.SetBuffers(m_position_array.dataPtr(), m_fourier_array.dataPtr(),
+                       m_fft_work_area.dataPtr());
 }
 
 
@@ -99,7 +237,29 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichletFast::SolvePoissonEquation()");
 
-     m_forward_fft.Execute();
+    const int nx = m_stagingArea[0].box().length(0); // initially contiguous
+    const int ny = m_stagingArea[0].box().length(1); // contiguous after transpose
+
+    amrex::Real* const pos_arr = m_stagingArea[0].dataPtr();
+    amrex::Real* const fourier_arr = m_tmpSpectralField[0].dataPtr();
+    amrex::Real* const real_arr = m_position_array.dataPtr();
+    amrex::GpuComplex<amrex::Real>* comp_arr = m_fourier_array.dataPtr();
+
+    ToComplex(pos_arr, comp_arr, nx, ny);
+
+    m_x_fft.Execute();
+
+    ToSine(real_arr, pos_arr, nx, ny);
+
+    Transpose(pos_arr, fourier_arr, nx, ny);
+
+    ToComplex(fourier_arr, comp_arr, ny, nx);
+
+    m_y_fft.Execute();
+
+    ToSine(real_arr, pos_arr, ny, nx);
+
+    Transpose(pos_arr, fourier_arr, ny, nx);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -116,7 +276,21 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
     }
 
-    m_backward_fft.Execute();
+    ToComplex(fourier_arr, comp_arr, nx, ny);
+
+    m_x_fft.Execute();
+
+    ToSine(real_arr, fourier_arr, nx, ny);
+
+    Transpose(fourier_arr, pos_arr, nx, ny);
+
+    ToComplex(pos_arr, comp_arr, ny, nx);
+
+    m_y_fft.Execute();
+
+    ToSine(real_arr, fourier_arr, ny, nx);
+
+    Transpose(fourier_arr, pos_arr, ny, nx);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

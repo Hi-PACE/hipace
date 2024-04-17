@@ -26,6 +26,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
                                    amrex::DistributionMapping const& dm,
                                    amrex::Geometry const& gm )
 {
+    HIPACE_PROFILE("FFTPoissonSolverPeriodic::define()");
     using namespace amrex::literals;
 
     // If we are going to support parallel FFT, the constructor needs to take a communicator.

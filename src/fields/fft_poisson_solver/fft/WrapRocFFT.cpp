@@ -7,9 +7,9 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "AnyFFT.H"
-#include "utils/HipaceProfilerWrapper.H"
 
 #include <AMReX.H>
+#include <AMReX_GpuDevice.H>
 
 #if __has_include(<rocfft/rocfft.h>)  // ROCm 5.3+
 #include <rocfft/rocfft.h>

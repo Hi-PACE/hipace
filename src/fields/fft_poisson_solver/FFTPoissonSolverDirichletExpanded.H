@@ -5,8 +5,8 @@
  * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
  * License: BSD-3-Clause-LBNL
  */
-#ifndef FFT_POISSON_SOLVER_DIRICHLET_H_
-#define FFT_POISSON_SOLVER_DIRICHLET_H_
+#ifndef FFT_POISSON_SOLVER_DIRICHLET_EXPANDED_H_
+#define FFT_POISSON_SOLVER_DIRICHLET_EXPANDED_H_
 
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
 #include "FFTPoissonSolver.H"
@@ -67,9 +67,8 @@ private:
     amrex::FArrayBox m_expanded_position_array;
 
     amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_expanded_fourier_array;
-    /** DST plans */
-    AnyFFT m_forward_fft;
-    AnyFFT m_backward_fft;
+    /** DST plan */
+    AnyFFT m_fft;
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
 };
 
