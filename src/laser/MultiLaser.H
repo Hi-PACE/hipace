@@ -158,6 +158,14 @@ public:
      */
     void ShiftLaserSlices ();
 
+    /** Write Aabs into Fields MultiFab
+     * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] fields Field object
+     * \param[in] geom Geometry of the problem
+     */
+    void UpdateLaserAabs (const int current_N_level, Fields& fields,
+                          amrex::Vector<amrex::Geometry> const& geom);
+
     /** Wrapper function to advance a laser slice by 1 time step.
      * \param[in] fields Field object
      * \param[in] dt time step of the simulation

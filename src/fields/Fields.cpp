@@ -40,7 +40,7 @@ Fields::Fields (const int nlev)
 void
 Fields::AllocData (
     int lev, amrex::Geometry const& geom, const amrex::BoxArray& slice_ba,
-    const amrex::DistributionMapping& slice_dm, int bin_size)
+    const amrex::DistributionMapping& slice_dm)
 {
     HIPACE_PROFILE("Fields::AllocData()");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(slice_ba.size() == 1,
@@ -90,6 +90,9 @@ Fields::AllocData (
             Comps[isl].multi_emplace(N_Comps, "Sy", "Sx", "ExmBy", "EypBx", "Ez",
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "jx", "jy", "rhomjz");
+            if (Hipace::m_use_laser) {
+                Comps[isl].multi_emplace(N_Comps, "aabs");
+            }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
             }
@@ -133,7 +136,7 @@ Fields::AllocData (
                                               "jx", "jy", "jz", "rhomjz");
 
             if (Hipace::m_use_laser) {
-                Comps[isl].multi_emplace(N_Comps, "chi");
+                Comps[isl].multi_emplace(N_Comps, "chi", "aabs");
             }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
@@ -193,20 +196,6 @@ Fields::AllocData (
     } else {
         amrex::Abort("Unknown poisson solver '" + m_poisson_solver_str +
             "', must be 'FFTDirichlet', 'FFTPeriodic' or 'MGDirichlet'");
-    }
-    int num_threads = 1;
-#ifdef AMREX_USE_OMP
-    num_threads = omp_get_max_threads();
-#endif
-    if (Hipace::m_do_tiling) {
-
-        m_tmp_densities.resize(num_threads);
-        for (int i=0; i<num_threads; i++){
-            amrex::Box bx = {{0, 0, 0}, {bin_size-1, bin_size-1, 0}};
-            bx.grow(m_slices_nguards);
-            // jx jy jz rho chi rhomjz
-            m_tmp_densities[i].resize(bx, 6);
-        }
     }
 
     if (lev == 0 && m_insitu_period > 0) {
@@ -374,8 +363,6 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
                 const amrex::Real factor_a, const FVA& src_a,
                 const amrex::Real factor_b, const FVB& src_b)
 {
-    HIPACE_PROFILE("Fields::LinCombination()");
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -410,8 +397,6 @@ void
 Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
           const amrex::Real factor, const FV& src)
 {
-    HIPACE_PROFILE("Fields::Multiply()");
-
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -698,11 +683,10 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
                               amrex::Real offset, amrex::Real factor)
 {
-    HIPACE_PROFILE("Fields::SetBoundaryCondition()");
-
     const amrex::Box staging_box = amrex::grow(geom[lev].Domain(), box_grow);
 
     if (lev == 0 && m_open_boundary) {
+        HIPACE_PROFILE("Fields::SetOpenBoundaryCondition()");
         // Coarsest level: use Taylor expansion of the Green's function
         // to get Dirichlet boundary conditions
 
@@ -760,6 +744,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         );
 
     } else if (lev > 0) {
+        HIPACE_PROFILE("Fields::SetMRBoundaryCondition()");
         // Fine level: interpolate solution from coarser level to get Dirichlet boundary conditions
         constexpr int interp_order = 2;
 
@@ -1321,8 +1306,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
 
     amrex::constexpr_for<0, m_insitu_nrp>(
         [&] (auto idx) {
-            m_insitu_rdata[islice + idx.value * nslices] = amrex::get<idx.value>(a)*dxdydz;
-            m_insitu_sum_rdata[idx.value] += amrex::get<idx.value>(a)*dxdydz;
+            m_insitu_rdata[islice + idx * nslices] = amrex::get<idx>(a)*dxdydz;
+            m_insitu_sum_rdata[idx] += amrex::get<idx>(a)*dxdydz;
         }
     );
 }
