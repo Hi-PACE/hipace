@@ -229,7 +229,7 @@ AdaptiveTimeStep::CalculateFromMinUz (
         */
         amrex::Real new_dt = dt;
         amrex::Real new_time = t;
-        amrex::Real min_uz = beams_min_uz_mq[ibeam] / mass_charge_ratio;
+        amrex::Real min_uz = chosen_min_uz;
         const int niter = m_adaptive_predict_step ? numprocs : 1;
         for (int i = 0; i < niter; i++)
         {
@@ -242,7 +242,7 @@ AdaptiveTimeStep::CalculateFromMinUz (
             // Just make sure min_uz is >0, to avoid nans below.
             min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
             amrex::Real omega_b = std::sqrt(plasma_charge_density /
-                                            (2. * min_uz * mass_charge_ratio * ep0));
+                                            (2. * std::abs(min_uz * mass_charge_ratio) * ep0));
             new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
             new_time += new_dt;
             if (min_uz > m_threshold_uz) {
