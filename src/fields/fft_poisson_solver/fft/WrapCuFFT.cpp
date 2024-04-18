@@ -105,12 +105,6 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
             n[0] = nx;
             batch = ny;
             break;
-        case FFTType::R2C_1D_batched:
-            transform_type = use_float ? CUFFT_R2C : CUFFT_D2Z;
-            rank = 1;
-            n[0] = nx;
-            batch = ny;
-            break;
     }
 
     cufftResult result;
@@ -190,12 +184,6 @@ void AnyFFT::Execute () {
                     reinterpret_cast<cufftReal*>(m_plan->m_out));
                 assert_cufft_status("cufftExecC2R", result);
                 break;
-            case FFTType::R2C_1D_batched:
-                result = cufftExecR2C(m_plan->m_cufftplan,
-                    reinterpret_cast<cufftReal*>(m_plan->m_in),
-                    reinterpret_cast<cufftComplex*>(m_plan->m_out));
-                assert_cufft_status("cufftExecR2C", result);
-                break;
         }
     } else {
         switch (m_plan->m_type) {
@@ -234,12 +222,6 @@ void AnyFFT::Execute () {
                     reinterpret_cast<cufftDoubleReal*>(m_plan->m_out));
                 assert_cufft_status("cufftExecZ2D", result);
                 break;
-            case FFTType::R2C_1D_batched:
-                result = cufftExecD2Z(m_plan->m_cufftplan,
-                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_in),
-                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out));
-                assert_cufft_status("cufftExecD2Z", result);
-                break;
         }
     }
 }
@@ -254,3 +236,7 @@ AnyFFT::~AnyFFT () {
         delete m_plan;
     }
 }
+
+void AnyFFT::setup () {}
+
+void AnyFFT::cleanup () {}

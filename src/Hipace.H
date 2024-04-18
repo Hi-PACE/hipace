@@ -73,6 +73,8 @@ public:
      * and initialize longitudinal and transverse MPI communicators */
     Hipace ();
 
+    ~Hipace ();
+
     /** Get singleton instance */
     static Hipace& GetInstance ();
 

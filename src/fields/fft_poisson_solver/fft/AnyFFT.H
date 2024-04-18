@@ -19,8 +19,7 @@ enum struct FFTType {
     C2R_2D,
     R2C_2D,
     R2R_2D,
-    C2R_1D_batched,
-    R2C_1D_batched
+    C2R_1D_batched
 };
 
 struct AnyFFT {
@@ -32,6 +31,10 @@ struct AnyFFT {
     void Execute ();
 
     ~AnyFFT ();
+
+    static void setup ();
+
+    static void cleanup ();
 
 private:
     VendorPlan* m_plan = nullptr;

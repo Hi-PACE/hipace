@@ -62,7 +62,7 @@ void assert_rocfft_status (std::string const& name, const rocfft_status& status)
 }
 
 std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
-    // https://rocm.docs.amd.com/projects/rocFFT/en/latest/allapi.html
+    // https://rocm.docs.amd.com/projects/rocFFT/en/latest/reference/allapi.html#
     m_plan = new VendorPlan;
 
     rocfft_transform_type transform_type;
@@ -104,12 +104,6 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
             return 0;
         case FFTType::C2R_1D_batched:
             transform_type = rocfft_transform_type_real_inverse;
-            dimensions = 1;
-            lengths[0] = nx;
-            number_of_transforms = ny;
-            break;
-        case FFTType::R2C_1D_batched:
-            transform_type = rocfft_transform_type_real_forward;
             dimensions = 1;
             lengths[0] = nx;
             number_of_transforms = ny;
@@ -174,4 +168,18 @@ AnyFFT::~AnyFFT () {
 
         delete m_plan;
     }
+}
+
+void AnyFFT::setup () {
+    rocfft_status status;
+
+    status = rocfft_setup();
+    assert_rocfft_status("rocfft_setup", status);
+}
+
+void AnyFFT::cleanup () {
+    rocfft_status status;
+
+    status = rocfft_cleanup();
+    assert_rocfft_status("rocfft_cleanup", status);
 }
