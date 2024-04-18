@@ -9,7 +9,7 @@
 
 #ifndef LASER_H_
 #define LASER_H_
-#include <AMREX_Math.H>
+#include "utils/Constants.H"
 #include <AMReX_Vector.H>
 #include <AMReX_RealVect.H>
 
