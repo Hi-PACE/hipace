@@ -12,6 +12,7 @@
 
 #include <AMReX_Vector.H>
 #include <AMReX_RealVect.H>
+#include "utils/Constants.H"
 
 class Laser
 {
