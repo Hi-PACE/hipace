@@ -846,9 +846,9 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     Propagation angle of the pulse in the yz plane (0 is the along the z axis)
 
 * ``<laser name>.PFT_yz`` (`float`) optinal (default `pi/2`)
-    Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation 
-    direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT) 
-    
+    Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
+    direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
+
 Diagnostic parameters
 ---------------------
 
