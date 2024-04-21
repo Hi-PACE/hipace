@@ -64,12 +64,12 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --test-name blowout_wake.2Rank \
     --skip "{'beam': 'id'}"
 
-echo "Start testing new current deposition"
+echo "Start testing plasma reordering"
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=normalized_data_cd2/ \
-        hipace.outer_depos_loop = true \
+        plasmas.reorder_period = 4 \
         max_step=1
 
 # Compare the results with checksum benchmark

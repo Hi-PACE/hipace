@@ -57,9 +57,6 @@ struct Hipace_early_init
     /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
      */
     inline static int m_depos_derivative_type = 2;
-    /* if the loop over depos_order is included in the loop over particles
-     */
-    inline static bool m_outer_depos_loop = false;
 
     /* Number of mesh refinement levels */
     int m_N_level = 1;

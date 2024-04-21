@@ -47,7 +47,6 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     queryWithParser(pph, "depos_derivative_type", m_depos_derivative_type);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_depos_order_xy != 0 || m_depos_derivative_type != 0,
                             "Analytic derivative with depos_order=0 would vanish");
-    queryWithParser(pph, "outer_depos_loop", m_outer_depos_loop);
 
     amrex::ParmParse pp_amr("amr");
     int max_level = 0;
