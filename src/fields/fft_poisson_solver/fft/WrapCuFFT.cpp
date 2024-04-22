@@ -148,7 +148,7 @@ void AnyFFT::SetBuffers (void* in, void* out, void* work_area) {
 void AnyFFT::Execute () {
     cufftResult result;
 
-    // There is also cufftXtExec that could replace all of these specific Exec calls,
+    // There is also cufftXtExec that could replace all of these specific Exec calls,
     // however in testing it doesn't work
     if constexpr (use_float) {
         switch (m_plan->m_type) {

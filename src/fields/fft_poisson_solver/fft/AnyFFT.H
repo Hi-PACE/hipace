@@ -27,7 +27,7 @@ struct AnyFFT {
     /** \brief Initialize an FFT plan for the requested transform type using a Vendor FFT library.
      * For 1D batched transforms, ny represents the number of batches to calculate at once.
      * This function returns the number of bytes of the work area needed for the FFT. The work area
-     * has to be allocated by the function that uses the FFT and passed into SetBuffers.
+     * has to be allocated by the function that uses the FFT and passed into SetBuffers.
      *
      * \param[in] type Type of FFT to perform
      * \param[in] nx Size of the contiguous dimension of the FFT
@@ -36,7 +36,7 @@ struct AnyFFT {
     std::size_t Initialize (FFTType type, int nx, int ny);
 
     /** \brief Set the pointers to the input, output and work area of the FFT.
-     * This function has to be called after Initialize and before Execute.
+     * This function has to be called after Initialize and before Execute.
      *
      * \param[in] in Pointer to the input of the FFT
      * \param[in] out Pointer to the output of the FFT
