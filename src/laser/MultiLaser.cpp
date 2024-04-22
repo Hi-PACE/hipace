@@ -86,11 +86,11 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
 
     m_laser_geom_3D = geom_3D;
     m_slice_box = slice_ba[0];
-    m_sol.resize(m_slice_box, 1, amrex::The_Arena());
-    m_rhs.resize(m_slice_box, 1, amrex::The_Arena());
-    m_rhs_fourier.resize(m_slice_box, 1, amrex::The_Arena());
 
     if (m_solver_type == "fft") {
+        m_sol.resize(m_slice_box, 1, amrex::The_Arena());
+        m_rhs.resize(m_slice_box, 1, amrex::The_Arena());
+        m_rhs_fourier.resize(m_slice_box, 1, amrex::The_Arena());
 
         // Create FFT plans
         amrex::IntVect fft_size = m_slice_box.length();
@@ -551,7 +551,6 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step)
         Array3<amrex::Real> arr = m_slices.array(mfi);
         Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
         Array3<amrex::Real> acoeff_real_arr = acoeff_real.array();
-        Array3<Complex> rhs_arr = m_rhs.array();
 
         constexpr int lev = 0;
         const amrex::FArrayBox& isl_fab = fields.getSlices(lev)[mfi];
@@ -686,7 +685,6 @@ MultiLaser::AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step)
                         rhs += isl_arr(i,j,chi) * an00j00 * 2._rt;
                     }
                 }
-                rhs_arr(i,j,0) = rhs;
                 rhs_mg_arr(i,j,0) = rhs.real();
                 rhs_mg_arr(i,j,1) = rhs.imag();
             });

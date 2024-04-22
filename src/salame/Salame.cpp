@@ -55,6 +55,11 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         }
 
         for (int lev=0; lev<current_N_level; ++lev) {
+            if (hipace->m_do_tiling) {
+                hipace->m_multi_plasma.TileSort(
+                    hipace->m_slice_geom[lev].Domain(), hipace->m_slice_geom[lev]);
+            }
+
             // deposit plasma jx and jy on the next temp slice, to the SALAME slice
             hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
@@ -108,6 +113,11 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             }
 
             for (int lev=0; lev<current_N_level; ++lev) {
+                if (hipace->m_do_tiling) {
+                    hipace->m_multi_plasma.TileSort(
+                        hipace->m_slice_geom[lev].Domain(), hipace->m_slice_geom[lev]);
+                }
+
                 hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
                     WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
             }
@@ -413,11 +423,11 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
             [=] AMREX_GPU_DEVICE (long ip) {
                 // Skip invalid particles and ghost particles not in the last slice
                 auto id = amrex::ParticleIDWrapper(idcpup[ip]);
-                if (id < 0) return;
+                if (!id.is_valid()) return;
 
                 // invalidate particles with a weight of zero
                 if (W == 0) {
-                    id = -id;
+                    id.make_invalid();
                     return;
                 }
 
