@@ -50,7 +50,9 @@ std::string rocfftErrorToString (const rocfft_status& err) {
         return std::string("rocfft_status_invalid_distance");
     } else if       (err == rocfft_status_invalid_offset) {
         return std::string("rocfft_status_invalid_offset");
-    } else {
+    } else if       (err == rocfft_status_invalid_work_buffer) {
+        return std::string("rocfft_status_invalid_work_buffer");
+    }else {
         return std::to_string(err) + " (unknown error code)";
     }
 }
@@ -139,9 +141,11 @@ void AnyFFT::SetBuffers (void* in, void* out, void* work_area) {
     status = rocfft_execution_info_create(&(m_plan->m_execinfo));
     assert_rocfft_status("rocfft_execution_info_create", status);
 
-    status = rocfft_execution_info_set_work_buffer(
-        m_plan->m_execinfo, work_area, m_plan->m_work_size);
-    assert_rocfft_status("rocfft_execution_info_set_work_buffer", status);
+    if (m_plan->m_work_size > 0) {
+        status = rocfft_execution_info_set_work_buffer(
+            m_plan->m_execinfo, work_area, m_plan->m_work_size);
+        assert_rocfft_status("rocfft_execution_info_set_work_buffer", status);
+    }
 
     status = rocfft_execution_info_set_stream(m_plan->m_execinfo, amrex::Gpu::gpuStream());
     assert_rocfft_status("rocfft_execution_info_set_stream", status);
