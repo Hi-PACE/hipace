@@ -435,6 +435,20 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
         const unsigned int* permutations = perm.dataPtr();
         auto& soa = ptile.GetStructOfArrays();
 
+        {
+            typename BeamTile::SoA::IdCPU tmp_idcpu(np_total);
+
+            auto src = soa.GetIdCPUData().data();
+            uint64_t* dst = tmp_idcpu.data();
+            amrex::ParallelFor(np_total,
+                [=] AMREX_GPU_DEVICE (int i) {
+                    dst[i] = i < np ? src[permutations[i]] : src[i];
+                });
+
+            amrex::Gpu::streamSynchronize();
+            soa.GetIdCPUData().swap(tmp_idcpu);
+        }
+
         { // Create a scope for the temporary vector below
             BeamTile::RealVector tmp_real(np_total);
             for (int comp = 0; comp < soa.NumRealComps(); ++comp) {
