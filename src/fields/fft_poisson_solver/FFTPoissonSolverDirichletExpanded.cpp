@@ -148,6 +148,9 @@ void
 FFTPoissonSolverDirichletExpanded::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichletExpanded::SolvePoissonEquation()");
+    using namespace amrex::literals;
+
+    m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
 
     ExpandR2R(m_expanded_position_array, m_stagingArea[0]);
 
@@ -169,6 +172,8 @@ FFTPoissonSolverDirichletExpanded::SolvePoissonEquation (amrex::MultiFab& lhs_mf
                 tmp_cmplx_arr(i,j) *= eigenvalue_matrix(i,j);
             });
     }
+
+    m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
 
     ExpandR2R(m_expanded_position_array, m_tmpSpectralField[0]);
 
