@@ -44,6 +44,9 @@ struct Hipace_early_init
      * and Parser Constants */
     Hipace_early_init (Hipace* instance);
 
+    /** Destructor for FFT cleanup */
+    ~Hipace_early_init ();
+
     /** Struct containing physical constants (which values depends on the unit system, determined
      * at runtime): SI or normalized units. */
     PhysConst m_phys_const;
@@ -72,8 +75,6 @@ public:
     /** Ctor: read general input parameters, call constructors of main member variables
      * and initialize longitudinal and transverse MPI communicators */
     Hipace ();
-
-    ~Hipace ();
 
     /** Get singleton instance */
     static Hipace& GetInstance ();

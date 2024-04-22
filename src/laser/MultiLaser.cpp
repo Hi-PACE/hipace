@@ -98,6 +98,7 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
         std::size_t fwd_area = m_forward_fft.Initialize(FFTType::C2C_2D_fwd, fft_size[0], fft_size[1]);
         std::size_t bkw_area = m_backward_fft.Initialize(FFTType::C2C_2D_bkw, fft_size[0], fft_size[1]);
 
+        // Allocate work area for both FFTs
         m_fft_work_area.resize(std::max(fwd_area, bkw_area));
 
         m_forward_fft.SetBuffers(m_rhs.dataPtr(), m_rhs_fourier.dataPtr(), m_fft_work_area.dataPtr());

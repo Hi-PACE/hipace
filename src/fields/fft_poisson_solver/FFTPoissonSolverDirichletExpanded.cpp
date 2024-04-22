@@ -132,10 +132,11 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
 
     m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
 
-    // Allocate and initialize the FFT plans
+    // Allocate and initialize the FFT plan
     std::size_t wrok_size = m_fft.Initialize(FFTType::R2C_2D, expanded_position_box.length(0),
                                              expanded_position_box.length(1));
 
+    // Allocate work area for the FFT
     m_fft_work_area.resize(wrok_size);
 
     m_fft.SetBuffers(m_expanded_position_array.dataPtr(), m_expanded_fourier_array.dataPtr(),

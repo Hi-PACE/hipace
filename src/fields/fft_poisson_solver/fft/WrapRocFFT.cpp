@@ -67,6 +67,7 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
 
     rocfft_transform_type transform_type;
     std::size_t dimensions = 0;
+    // lengths is in FORTRAN order
     std::size_t lengths[2] = {0, 0};
     std::size_t number_of_transforms = 0;
 

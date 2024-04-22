@@ -31,6 +31,7 @@ Fields::Fields (const int nlev)
 {
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
+    // set default Poisson solver based on the platform
 #ifdef AMREX_USE_GPU
     m_poisson_solver_str = "FFTDirichletFast";
 #else

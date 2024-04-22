@@ -57,6 +57,11 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     AnyFFT::setup();
 }
 
+Hipace_early_init::~Hipace_early_init ()
+{
+    AnyFFT::cleanup();
+}
+
 Hipace&
 Hipace::GetInstance ()
 {
@@ -171,11 +176,6 @@ Hipace::Hipace () :
              "For collisions with normalized units, a background plasma density must "
              "be specified via 'hipace.background_density_SI'");
      }
-}
-
-Hipace::~Hipace()
-{
-    AnyFFT::cleanup();
 }
 
 void

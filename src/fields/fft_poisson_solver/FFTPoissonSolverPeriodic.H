@@ -69,9 +69,11 @@ private:
     SpectralField m_tmpSpectralField;
     /** Multifab containing 1/(kx^2 + ky^2), to solve Poisson equation. */
     amrex::MultiFab m_inv_k2;
-    /** FFT plans */
+    /** forward FFT plan */
     AnyFFT m_forward_fft;
+    /** backward FFT plan */
     AnyFFT m_backward_fft;
+    /** work area for both FFT plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
 };
 

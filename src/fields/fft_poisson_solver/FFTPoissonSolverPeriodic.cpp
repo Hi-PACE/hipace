@@ -98,6 +98,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2C_2D, fft_size[0], fft_size[1]);
     std::size_t bkw_area = m_backward_fft.Initialize(FFTType::C2R_2D, fft_size[0], fft_size[1]);
 
+    // Allocate work area for both FFTs
     m_fft_work_area.resize(std::max(fwd_area, bkw_area));
 
     m_forward_fft.SetBuffers(m_stagingArea[0].dataPtr(), m_tmpSpectralField[0].dataPtr(),

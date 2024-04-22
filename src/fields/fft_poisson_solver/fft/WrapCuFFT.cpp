@@ -64,6 +64,7 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
     m_plan->m_type = type;
     cufftType transform_type;
     int rank = 0;
+    // n is in C order
     long long int n[2] = {0, 0};
     long long int batch = 0;
 
@@ -147,6 +148,8 @@ void AnyFFT::SetBuffers (void* in, void* out, void* work_area) {
 void AnyFFT::Execute () {
     cufftResult result;
 
+    // There is also cufftXtExec that could replace all of these specific Exec calls,
+    // however in testing it doesn't work
     if constexpr (use_float) {
         switch (m_plan->m_type) {
             case FFTType::C2C_2D_fwd:

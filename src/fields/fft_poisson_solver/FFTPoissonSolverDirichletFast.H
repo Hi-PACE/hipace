@@ -63,14 +63,15 @@ private:
     amrex::MultiFab m_tmpSpectralField;
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
-
+    /** Real array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
-
+    /** Complex array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_fourier_array;
-
-    /** DST plans */
+    /** FFT plan in x direction */
     AnyFFT m_x_fft;
+    /** FFT plan in y direction */
     AnyFFT m_y_fft;
+    /** work area for both DST plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
 };
 

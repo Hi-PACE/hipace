@@ -37,6 +37,8 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
     m_plan->m_type = type;
     m_plan->m_nx = nx;
     m_plan->m_ny = ny;
+    // fftw doesn't allow for the manual allocation of work area, additionally the input and output
+    // arrays have to be provided when planing, so we do all the work in the SetBuffers function.
     return 0;
 }
 

@@ -63,12 +63,13 @@ private:
     amrex::MultiFab m_tmpSpectralField;
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
-
+    /** Twice expanded field that gets filled symmetrically */
     amrex::FArrayBox m_expanded_position_array;
-
+    /** Twice expanded Complex field */
     amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_expanded_fourier_array;
-    /** DST plan */
+    /** FFT plan */
     AnyFFT m_fft;
+    /** work area for FFT plan */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
 };
 

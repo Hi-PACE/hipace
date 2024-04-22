@@ -223,6 +223,7 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     std::size_t fft_x_area = m_x_fft.Initialize(FFTType::C2R_1D_batched, nx+1, ny);
     std::size_t fft_y_area = m_y_fft.Initialize(FFTType::C2R_1D_batched, ny+1, nx);
 
+    // Allocate work area for both FFTs
     m_fft_work_area.resize(std::max(fft_x_area, fft_y_area));
 
     m_x_fft.SetBuffers(m_fourier_array.dataPtr(), m_position_array.dataPtr(),
@@ -245,6 +246,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     amrex::Real* const real_arr = m_position_array.dataPtr();
     amrex::GpuComplex<amrex::Real>* comp_arr = m_fourier_array.dataPtr();
 
+    // 1D DST in x
     ToComplex(pos_arr, comp_arr, nx, ny);
 
     m_x_fft.Execute();
@@ -253,6 +255,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     Transpose(pos_arr, fourier_arr, nx, ny);
 
+    // 1D DST in y
     ToComplex(fourier_arr, comp_arr, ny, nx);
 
     m_y_fft.Execute();
@@ -276,6 +279,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
     }
 
+    // 1D DST in x
     ToComplex(fourier_arr, comp_arr, nx, ny);
 
     m_x_fft.Execute();
@@ -284,6 +288,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     Transpose(fourier_arr, pos_arr, nx, ny);
 
+    // 1D DST in y
     ToComplex(pos_arr, comp_arr, ny, nx);
 
     m_y_fft.Execute();

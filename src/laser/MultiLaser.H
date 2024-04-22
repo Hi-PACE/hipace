@@ -214,6 +214,7 @@ private:
     AnyFFT m_forward_fft;
     /** FFTW plan for backward C2C transform to solve Complex Poisson equation */
     AnyFFT m_backward_fft;
+    /** work area for both FFT plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
     /** Complex FAB to store the solution (e.g. laser envelope on current slice) */
     SpectralFieldLoc m_sol;
