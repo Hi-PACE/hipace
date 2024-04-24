@@ -156,6 +156,9 @@ Hipace::Hipace () :
 
     MakeGeometry();
 
+    // use level 0 as default for laser geometry
+    m_multi_laser.MakeLaserGeometry(m_3D_geom[0]);
+
     m_use_laser = m_multi_laser.m_use_laser;
 
     queryWithParser(pph, "collisions", m_collision_names);
@@ -190,12 +193,10 @@ Hipace::InitData ()
     amrex::Print() << "using the leapfrog plasma particle pusher\n";
 #endif
 
+    m_multi_laser.InitData();
+
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
-        if (lev==0) {
-            // laser inits only on level 0
-            m_multi_laser.InitData(m_slice_ba[0], m_slice_dm[0], m_3D_geom[0]);
-        }
         m_diags.Initialize(lev, m_multi_laser.m_use_laser);
     }
 
@@ -419,7 +420,7 @@ Hipace::Evolve ()
         m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
-        m_multi_laser.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
+        m_multi_laser.InSituWriteToFile(step, m_physical_time, m_max_step, m_max_time);
 
         if (!m_explicit) {
             // averaging predictor corrector loop diagnostics
@@ -570,7 +571,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_fields.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
 
     // get laser insitu diagnostics
-    m_multi_laser.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
+    m_multi_laser.InSituComputeDiags(step, m_physical_time, islice, m_max_step, m_max_time);
 
     // copy fields (and laser) to diagnostic array
     for (int lev=0; lev<current_N_level; ++lev) {
