@@ -105,11 +105,13 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     const amrex::Real pos_offset_z = GetPosOffset(2, field_geom_3D, field_geom_3D.Domain());
 
-    const int zeta_lo =
-        int(amrex::Math::round((patch_lo_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)));
+    const int zeta_lo = std::max( field_geom_3D.Domain().smallEnd(2),
+        int(amrex::Math::round((patch_lo_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)))
+    );
 
-    const int zeta_hi =
-        int(amrex::Math::round((patch_hi_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)));
+    const int zeta_hi = std::min( field_geom_3D.Domain().bigEnd(2),
+        int(amrex::Math::round((patch_hi_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)))
+    );
 
     patch_lo_laser[2] = (zeta_lo-0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
     patch_hi_laser[2] = (zeta_hi+0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
