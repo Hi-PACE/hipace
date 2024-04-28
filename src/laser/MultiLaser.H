@@ -149,25 +149,28 @@ public:
     void GetEnvelopeFromFile ();
 
     /** \brief Shift 2D slices in zeta
+     * \param[in] islice slice index
      */
-    void ShiftLaserSlices ();
+    void ShiftLaserSlices (const int islice);
 
     /** Write Aabs into Fields MultiFab
+     * \param[in] islice slice index
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] fields Field object
      * \param[in] geom Geometry of the problem
      */
-    void UpdateLaserAabs (const int current_N_level, Fields& fields,
-                          amrex::Vector<amrex::Geometry> const& geom);
+    void UpdateLaserAabs (const int islice, const int current_N_level, Fields& fields,
+                          amrex::Vector<amrex::Geometry> const& field_geom);
 
     void InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0);
 
     /** Wrapper function to advance a laser slice by 1 time step.
+     * \param[in] islice slice index
      * \param[in] fields Field object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSlice (const Fields& fields, amrex::Real dt, int step);
+    void AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
@@ -213,6 +216,11 @@ public:
 
     /** Get the central wavelength */
     amrex::Real GetLambda0 () const { return m_lambda0; }
+
+    bool HasSlice (const int islice) const {
+        return m_laser_geom_3D.Domain.smallEnd(2) <= islice &&
+               islice <= m_laser_geom_3D.Domain.bigEnd(2);
+    }
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
 

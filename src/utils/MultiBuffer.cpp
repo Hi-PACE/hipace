@@ -52,7 +52,7 @@ void MultiBuffer::free_buffer (int slice) {
     m_datanodes[slice].m_buffer_size = 0;
 }
 
-void MultiBuffer::initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box) {
+void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) {
 
     amrex::ParmParse pp("comms_buffer");
 
@@ -62,7 +62,7 @@ void MultiBuffer::initialize (int nslices, MultiBeam& beams, bool use_laser, amr
 
     m_nslices = nslices;
     m_nbeams = beams.get_nbeams();
-    m_use_laser = use_laser;
+    m_use_laser = laser.m_use_laser;
     m_laser_slice_box = laser_box;
 
     m_rank_send_to = (rank_id + 1) % n_ranks;
@@ -781,17 +781,17 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
             }
         }
     }
-    if (m_use_laser) {
+    if (m_use_laser && laser.HasSlice(slice)) {
         using namespace WhichLaserSlice;
         const int laser_comp_0_1 = (beam_slice == WhichBeamSlice::Next) ? np1jp2_r : np1j00_r;
         const int laser_comp_2_3 = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
         // copy real and imag components in one operation
         memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 0),
                          laser.getSlices()[0].dataPtr(laser_comp_0_1),
-                         2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
+                         2 * laser.getSlices()[0].box().numPts() * sizeof(amrex::Real));
         memcpy_to_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 2),
                          laser.getSlices()[0].dataPtr(laser_comp_2_3),
-                         2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
+                         2 * laser.getSlices()[0].box().numPts() * sizeof(amrex::Real));
     }
     amrex::Gpu::streamSynchronize();
     for (int b = 0; b < m_nbeams; ++b) {
@@ -851,17 +851,17 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
             }
         }
     }
-    if (m_use_laser) {
+    if (m_use_laser && laser.HasSlice(slice)) {
         using namespace WhichLaserSlice;
         const int laser_comp_0_1 = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
         const int laser_comp_2_3 = (beam_slice == WhichBeamSlice::Next) ? nm1jp2_r : nm1j00_r;
         // copy real and imag components in one operation
         memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 0),
                            laser.getSlices()[0].dataPtr(laser_comp_0_1),
-                           2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
+                           2 * laser.getSlices()[0].box().numPts() * sizeof(amrex::Real));
         memcpy_from_buffer(slice, get_buffer_offset(slice, offset_type::laser, beams, 0, 2),
                            laser.getSlices()[0].dataPtr(laser_comp_2_3),
-                           2 * m_laser_slice_box.numPts() * sizeof(amrex::Real));
+                           2 * laser.getSlices()[0].box().numPts() * sizeof(amrex::Real));
     }
     amrex::Gpu::streamSynchronize();
 }

@@ -18,7 +18,7 @@ class MultiBuffer
 public:
 
     // initialize MultiBuffer and open initial receive requests
-    void initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box);
+    void initialize (int nslices, MultiBeam& beams, MultiLaser& laser);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
     void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);

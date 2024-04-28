@@ -212,10 +212,7 @@ Hipace::InitData ()
 
     m_fields.checkInit();
 
-    m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2),
-                              m_multi_beam,
-                              m_use_laser,
-                              m_use_laser ? m_multi_laser.getSlices()[0].box() : amrex::Box{});
+    m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser);
 
     amrex::ParmParse pph("hipace");
     bool do_output_input = false;
@@ -483,7 +480,7 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     // write laser aabs into fields MultiFab
-    m_multi_laser.UpdateLaserAabs(current_N_level, m_fields, m_3D_geom);
+    m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -520,7 +517,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // Advance laser slice by 1 step using chi
     // no MR for laser
-    m_multi_laser.AdvanceSlice(m_fields, m_dt, step);
+    m_multi_laser.AdvanceSlice(islice, m_fields, m_dt, step);
 
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
@@ -612,7 +609,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     m_multi_beam.shiftBeamSlices();
 
-    m_multi_laser.ShiftLaserSlices();
+    m_multi_laser.ShiftLaserSlices(islice);
 }
 
 void

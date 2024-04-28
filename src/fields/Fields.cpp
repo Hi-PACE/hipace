@@ -426,6 +426,8 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
     constexpr int depos_order_z = 1;
     constexpr int depos_order_offset = depos_order_z / 2 + 1;
 
+    const amrex::Geometry& laser_geom = multi_laser.GetLaserGeom();
+
     const amrex::Real poff_calc_z = GetPosOffset(2, calc_geom, calc_geom.Domain());
     const amrex::Real poff_diag_x = GetPosOffset(0, fd.m_geom_io, fd.m_geom_io.Domain());
     const amrex::Real poff_diag_y = GetPosOffset(1, fd.m_geom_io, fd.m_geom_io.Domain());
@@ -507,7 +509,8 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
         const amrex::Real dx = fd.m_geom_io.CellSize(0);
         const amrex::Real dy = fd.m_geom_io.CellSize(1);
 
-        if (fd.m_nfields > 0) {
+        if (fd.m_nfields > 0 &&
+            calc_geom.smallEnd(2) <= i_slice && i_slice <= calc_geom.bigEnd(2)) {
             auto slice_array = slice_func.array(mfi);
             amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
             amrex::ParallelFor(diag_box, fd.m_nfields,
@@ -520,7 +523,8 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
                 });
         }
 
-        if (fd.m_do_laser) {
+        if (fd.m_do_laser &&
+            laser_geom.smallEnd(2) <= i_slice && i_slice <= laser_geom.bigEnd(2)) {
             auto laser_array = laser_func.array(mfi);
             amrex::Array4<FieldDiagnosticData::complex_type> diag_array_laser = fd.m_F_laser.array();
             amrex::ParallelFor(diag_box,
