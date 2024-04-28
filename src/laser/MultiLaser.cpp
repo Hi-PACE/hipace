@@ -627,8 +627,10 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 
                 for (int iy=0; iy<=interp_order; ++iy) {
                     for (int ix=0; ix<=interp_order; ++ix) {
-                        auto [shape_x, cell_x] = compute_single_shape_factor<interp_order>(xmid, ix);
-                        auto [shape_y, cell_y] = compute_single_shape_factor<interp_order>(ymid, iy);
+                        auto [shape_x, cell_x] =
+                            compute_single_shape_factor<false, interp_order>(xmid, ix);
+                        auto [shape_y, cell_y] =
+                            compute_single_shape_factor<false, interp_order>(ymid, iy);
 
                         if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
                             aabs += shape_x*shape_y*abssq(laser_arr(cell_x,cell_y,n00j00_r),
@@ -685,8 +687,10 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 
                 for (int iy=0; iy<=interp_order; ++iy) {
                     for (int ix=0; ix<=interp_order; ++ix) {
-                        auto [shape_x, cell_x] = compute_single_shape_factor<interp_order>(xmid, ix);
-                        auto [shape_y, cell_y] = compute_single_shape_factor<interp_order>(ymid, iy);
+                        auto [shape_x, cell_x] =
+                            compute_single_shape_factor<false, interp_order>(xmid, ix);
+                        auto [shape_y, cell_y] =
+                            compute_single_shape_factor<false, interp_order>(ymid, iy);
 
                         if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
                             chi += shape_x*shape_y*field_arr_chi(cell_x, cell_y);
