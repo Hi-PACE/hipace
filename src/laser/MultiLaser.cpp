@@ -583,7 +583,7 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
     if (!m_use_laser) return;
 
     HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
-    constexpr int interp_order = 1;
+    static constexpr int interp_order = 1;
 
     if (!HasSlice(islice)) {
         for (int lev=0; lev<current_N_level; ++lev) {
@@ -653,7 +653,7 @@ void
 MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0)
 {
     HIPACE_PROFILE("MultiLaser::InterpolateChi()");
-    constexpr int interp_order = 1;
+    static constexpr int interp_order = 1;
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
 
