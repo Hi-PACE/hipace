@@ -189,9 +189,15 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         } else {
             for (const std::string& comp_name : use_comps) {
                 if (comp_name == "all" || comp_name == "All") {
+                    if (is_global_comp_used.count(comp_name) > 0) {
+                        is_global_comp_used[comp_name] = true;
+                    }
                     fd.m_comps_output = geometry_name_to_output_comps[base_geom_name];
                     break;
                 } else if (comp_name == "none" || comp_name == "None") {
+                    if (is_global_comp_used.count(comp_name) > 0) {
+                        is_global_comp_used[comp_name] = true;
+                    }
                     fd.m_comps_output.clear();
                     break;
                 } else if (std::find(geometry_name_to_output_comps[base_geom_name].begin(),
