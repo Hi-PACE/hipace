@@ -157,7 +157,7 @@ public:
      * \param[in] islice slice index
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] fields Field object
-     * \param[in] geom Geometry of the problem
+     * \param[in] field_geom Geometry of the problem
      */
     void UpdateLaserAabs (const int islice, const int current_N_level, Fields& fields,
                           amrex::Vector<amrex::Geometry> const& field_geom);
