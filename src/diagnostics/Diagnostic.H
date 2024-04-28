@@ -20,7 +20,11 @@
 struct FieldDiagnosticData
 {
     std::string m_diag_name; /**< name used for input parameters and in the output */
-    int m_level = 0; /**< MR level */
+    enum struct geom_type {
+        field,
+        laser
+    } m_base_geom_type = geom_type::field;  /**< which geometry the diagnostics is based on */
+    int m_level = 0; /**< MR level when field_geom is used */
     int m_slice_dir; /**< Slicing direction */
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
@@ -30,23 +34,19 @@ struct FieldDiagnosticData
     /** 3D array with upper ends of the diagnostics grid */
     amrex::RealVect m_diag_hi {0., 0., 0.};
     amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
-    bool m_do_laser {false}; /**< Whether to output the laser */
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     /** Component indexes to Write to output file */
     amrex::Gpu::DeviceVector<int> m_comps_output_idx;
     /** Vector over levels, all fields */
     amrex::FArrayBox m_F;
-    using complex_type = amrex::GpuComplex<amrex::Real>;
     /** FAB for laser */
-    amrex::BaseFab<complex_type> m_F_laser;
+    amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_F_laser;
     amrex::Geometry m_geom_io; /**< Diagnostics geometry */
     bool m_has_field; /**< if there is field output to write */
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
     int m_output_period = 0;
-    /** Name of the laser in input and output files */
-    std::string m_laser_io_name = "laserEnvelope";
 };
 
 
@@ -57,10 +57,10 @@ class Diagnostic
 public:
 
     /** \brief Constructor */
-    explicit Diagnostic (int nlev);
+    explicit Diagnostic (int nlev, bool use_laser);
 
     /** \brief Determine which data to output */
-    void Initialize (const int lev, bool do_laser);
+    void Initialize (int nlev, bool use_laser);
 
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
@@ -80,7 +80,7 @@ public:
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
-        return  (fd.m_nfields > 0 || fd.m_do_laser) &&
+        return  (fd.m_nfields > 0) &&
             utils::doDiagnostics(fd.m_output_period, output_step, max_step,
                             output_time, max_time);
     }
@@ -148,16 +148,15 @@ public:
 
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *
-     * \param[in] a_domain box to which the Geometry of the diagnostics will be resized to
-     * \param[in] lev MR level
-     * \param[in] geom geometry of the full simulation domain
+     * \param[in] field_geom geometry of the full simulation domain for all field MR levels
+     * \param[in] laser_geom geometry of the full simulation domain for the laser
      * \param[in] output_step current step index
      * \param[in] max_step last step index
      * \param[in] output_time physical time of current step
      * \param[in] max_time physical time of last step
      */
-    void ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
-                         amrex::Geometry const& geom, int output_step, int max_step,
+    void ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
+                         amrex::Geometry const& laser_geom, int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time);
 
 private:

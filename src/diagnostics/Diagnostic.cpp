@@ -10,15 +10,24 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include <AMReX_ParmParse.H>
 
-Diagnostic::Diagnostic (int nlev)
+#include <algorithm>
+#include <map>
+#include <string>
+#include <vector>
+
+Diagnostic::Diagnostic (int nlev, bool use_laser)
 {
     amrex::ParmParse ppd("diagnostic");
     amrex::ParmParse pph("hipace");
 
     amrex::Vector<std::string> field_diag_names{};
-
-    for(int ilev = 0; ilev<nlev; ++ilev) {
-        field_diag_names.emplace_back("lev"+std::to_string(ilev));
+    for (int lev = 0; lev<nlev; ++lev) {
+        std::string diag_name = "lev" + std::to_string(lev);
+        field_diag_names.emplace_back(diag_name);
+    }
+    if (use_laser) {
+        std::string diag_name = "laser_diag";
+        field_diag_names.emplace_back(diag_name);
     }
 
     queryWithParser(ppd, "names", field_diag_names);
@@ -34,15 +43,6 @@ Diagnostic::Diagnostic (int nlev)
         fd.m_diag_name = field_diag_names[i];
 
         amrex::ParmParse pp(fd.m_diag_name);
-
-        for(int ilev = 0; ilev<nlev; ++ilev) {
-            if (fd.m_diag_name == "lev"+std::to_string(ilev)) {
-                fd.m_level = ilev;
-            }
-        }
-        queryWithParserAlt(pp, "level", fd.m_level, ppd);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( 0 <= fd.m_level && fd.m_level < nlev,
-            "Invalid diagnostic refinement level");
 
         std::string str_type;
         getWithParserAlt(pp, "diag_type", str_type, ppd);
@@ -118,73 +118,122 @@ Diagnostic::needsRhoIndividual () const {
 }
 
 void
-Diagnostic::Initialize (const int lev, bool do_laser) {
-    if (lev!=0) return;
-
+Diagnostic::Initialize (int nlev, bool use_laser) {
     amrex::ParmParse ppd("diagnostic");
+
+    std::map<std::string, std::string> diag_name_to_default_geometry{};
+    std::map<std::string, FieldDiagnosticData::geom_type> geometry_name_to_geom_type{};
+    std::map<std::string, int> geometry_name_to_level{};
+    std::map<std::string, amrex::Vector<std::string>> geometry_name_to_output_comps{};
+    std::stringstream all_comps_error_str{};
+    for (int lev = 0; lev<nlev; ++lev) {
+        std::string diag_name = "lev" + std::to_string(lev);
+        std::string geom_name = "level_" + std::to_string(lev);
+        diag_name_to_default_geometry.emplace(diag_name, geom_name);
+        geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::field);
+        geometry_name_to_level.emplace(geom_name, lev);
+        all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
+        for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
+            geometry_name_to_output_comps[geom_name].push_back(comp);
+            all_comps_error_str << "'" << comp << "' ";
+        }
+        all_comps_error_str << "\n";
+    }
+    if (use_laser) {
+        std::string diag_name = "laser_diag";
+        std::string geom_name = "laser";
+        std::string laser_io_name = "laserEnvelope";
+        diag_name_to_default_geometry.emplace(diag_name, geom_name);
+        geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::laser);
+        geometry_name_to_level.emplace(geom_name, 0);
+        all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
+        geometry_name_to_output_comps[geom_name].push_back(laser_io_name);
+        all_comps_error_str << "'" << laser_io_name << "'\n";
+    }
+    all_comps_error_str << "Additionally, 'all' and 'none' are supported as field_data\n";
+
+    amrex::Vector<std::string> global_output_comps{};
+    std::map<std::string, bool> is_global_comp_used{};
+    queryWithParser(ppd, "field_data", global_output_comps);
+    for (auto& comp : global_output_comps) {
+        is_global_comp_used[comp] = false;
+    }
 
     for (auto& fd : m_field_data) {
         amrex::ParmParse pp(fd.m_diag_name);
 
-        queryWithParserAlt(pp, "field_data", fd.m_comps_output, ppd);
+        std::string base_geom_name = "level_0";
 
-        amrex::Vector<std::string> all_field_comps{};
-        all_field_comps.reserve(Comps[WhichSlice::This].size() + (do_laser ? 1 : 0));
-        for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
-            all_field_comps.push_back(comp);
-        }
-        if (do_laser) {
-            all_field_comps.push_back(fd.m_laser_io_name);
+        if (diag_name_to_default_geometry.count(fd.m_diag_name) > 0) {
+            base_geom_name = diag_name_to_default_geometry.at(fd.m_diag_name);
         }
 
-        if(fd.m_comps_output.empty()) {
-            fd.m_comps_output = all_field_comps;
+        queryWithParserAlt(pp, "base_geometry", base_geom_name, ppd);
+
+        if (geometry_name_to_geom_type.count(base_geom_name) > 0) {
+            fd.m_base_geom_type = geometry_name_to_geom_type.at(base_geom_name);
+            fd.m_level = geometry_name_to_level.at(base_geom_name);
         } else {
-            for (const std::string& comp_name : fd.m_comps_output) {
+            amrex::Abort("Unknown diagnostics base_geometry: '" + base_geom_name + "'!\n" +
+                         all_comps_error_str.str());
+        }
+
+        amrex::Vector<std::string> local_output_comps{};
+        const bool use_local_comps = queryWithParser(pp, "field_data", local_output_comps);
+
+        amrex::Vector<std::string> use_comps{};
+        use_comps = use_local_comps ? local_output_comps : global_output_comps;
+
+        if (use_comps.empty()) {
+            fd.m_comps_output = geometry_name_to_output_comps[base_geom_name];
+        } else {
+            for (const std::string& comp_name : use_comps) {
                 if (comp_name == "all" || comp_name == "All") {
-                    fd.m_comps_output = all_field_comps;
+                    fd.m_comps_output = geometry_name_to_output_comps[base_geom_name];
                     break;
-                }
-                if (comp_name == "none" || comp_name == "None") {
+                } else if (comp_name == "none" || comp_name == "None") {
                     fd.m_comps_output.clear();
                     break;
-                }
-                if (std::find(all_field_comps.begin(), all_field_comps.end(), comp_name) ==  all_field_comps.end()) {
-                    std::stringstream error_str{};
-                    error_str << "Unknown field diagnostics component: " << comp_name <<"\nmust be "
-                        << "'all', 'none' or a subset of:";
-                    for (auto& comp : all_field_comps) {
-                        error_str << " " << comp;
+                } else if (std::find(geometry_name_to_output_comps[base_geom_name].begin(),
+                                     geometry_name_to_output_comps[base_geom_name].end(), comp_name) !=
+                                     geometry_name_to_output_comps[base_geom_name].end()) {
+                    if (is_global_comp_used.count(comp_name) > 0) {
+                        is_global_comp_used[comp_name] = true;
                     }
-                    amrex::Abort(error_str.str());
+                    fd.m_comps_output.push_back(comp_name);
+                } else if (use_local_comps) {
+                    amrex::Abort("Unknown diagnostics field_data '" + comp_name +
+                                 "' in base_geometry '" + base_geom_name + "'!\n" +
+                                 all_comps_error_str.str());
                 }
-            }
-        }
-
-        // remove laser from fd.m_comps_output because it is output separately
-        for (auto it = fd.m_comps_output.begin(); it != fd.m_comps_output.end();) {
-            if (*it == fd.m_laser_io_name) {
-                it = fd.m_comps_output.erase(it);
-                fd.m_do_laser = true;
-            } else {
-                ++it;
             }
         }
 
         fd.m_nfields = fd.m_comps_output.size();
 
-        amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
-        for(int i = 0; i < fd.m_nfields; ++i) {
-            local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
+        if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::field) {
+            amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
+            for(int i = 0; i < fd.m_nfields; ++i) {
+                local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
+            }
+            fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
         }
-        fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
+    }
 
-        if (m_field_data.size() != 1) {
+    for (auto& [key, val] : is_global_comp_used) {
+        if (!val) {
+            amrex::Abort("Unknown or unused component in diagnostic.field_data.\n'" +
+                         key + "' does not belong to any diagnostic.names!\n" +
+                         all_comps_error_str.str());
+        }
+    }
+
+    for (auto& fd : m_field_data) {
+        if (1 < std::count_if(m_field_data.begin(), m_field_data.end(), [&] (auto& fd2) {
+            return fd.m_base_geom_type == fd2.m_base_geom_type;
+        })) {
             for (auto& comp_name : fd.m_comps_output) {
                 comp_name += "_" + fd.m_diag_name;
-            }
-            if (fd.m_do_laser) {
-                fd.m_laser_io_name += "_" + fd.m_diag_name;
             }
         }
     }
@@ -219,17 +268,26 @@ Diagnostic::Initialize (const int lev, bool do_laser) {
 }
 
 void
-Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
-                            amrex::Geometry const& geom, int output_step, int max_step,
+Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
+                            amrex::Geometry const& laser_geom, int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time)
 {
     AMREX_ALWAYS_ASSERT(m_initialized);
 
     for (auto& fd : m_field_data) {
 
-        if (fd.m_level != lev) continue;
+        amrex::Geometry geom;
 
-        amrex::Box domain = a_domain;
+        switch (fd.m_base_geom_type) {
+            case FieldDiagnosticData::geom_type::field:
+                geom = field_geom[fd.m_level];
+                break;
+            case FieldDiagnosticData::geom_type::laser:
+                geom = laser_geom;
+                break;
+        }
+
+        amrex::Box domain = geom.Domain();
 
         if (fd.m_include_ghost_cells) {
             domain.grow(Fields::m_slices_nguards);
@@ -279,12 +337,15 @@ Diagnostic::ResizeFDiagFAB (const amrex::Box a_domain, const int lev,
 
         if(fd.m_has_field) {
             HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
-            fd.m_F.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
-            fd.m_F.setVal<amrex::RunOn::Host>(0);
-
-            if (fd.m_do_laser) {
-                fd.m_F_laser.resize(domain, 1, amrex::The_Pinned_Arena());
-                fd.m_F_laser.setVal<amrex::RunOn::Host>({0,0});
+            switch (fd.m_base_geom_type) {
+                case FieldDiagnosticData::geom_type::field:
+                    fd.m_F.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
+                    fd.m_F.setVal<amrex::RunOn::Host>(0);
+                    break;
+                case FieldDiagnosticData::geom_type::laser:
+                    fd.m_F_laser.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
+                    fd.m_F_laser.setVal<amrex::RunOn::Host>({0,0});
+                    break;
             }
         }
     }

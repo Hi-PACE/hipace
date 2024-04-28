@@ -282,7 +282,7 @@ private:
     amrex::Vector< CoulombCollision > m_all_collisions;
 
     void InitDiagnostics (const int step);
-    void FillFieldDiagnostics (const int lev, int islice);
+    void FillFieldDiagnostics (const int current_N_level, int islice);
     void FillBeamDiagnostics (const int step);
     void WriteDiagnostics (const int step);
     void FlushDiagnostics ();

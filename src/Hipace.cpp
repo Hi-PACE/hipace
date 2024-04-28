@@ -69,7 +69,7 @@ Hipace::Hipace () :
     m_multi_plasma(),
     m_adaptive_time_step(m_multi_beam.get_nbeams()),
     m_multi_laser(),
-    m_diags(m_N_level)
+    m_diags(m_N_level, m_multi_laser.UseLaser())
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
@@ -197,8 +197,9 @@ Hipace::InitData ()
 
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
-        m_diags.Initialize(lev, m_multi_laser.UseLaser());
     }
+
+    m_diags.Initialize(m_N_level, m_multi_laser.UseLaser());
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
 
@@ -571,9 +572,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_multi_laser.InSituComputeDiags(step, m_physical_time, islice, m_max_step, m_max_time);
 
     // copy fields (and laser) to diagnostic array
-    for (int lev=0; lev<current_N_level; ++lev) {
-        FillFieldDiagnostics(lev, islice);
-    }
+    FillFieldDiagnostics(current_N_level, islice);
 
     // plasma ionization
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -960,18 +959,16 @@ Hipace::InitDiagnostics (const int step)
         m_openpmd_writer.InitBeamData(m_multi_beam, getDiagBeamNames());
     }
 #endif
-    for (int lev=0; lev<m_N_level; ++lev) {
-        m_diags.ResizeFDiagFAB(m_3D_geom[lev].Domain(), lev, m_3D_geom[lev],
-                               step, m_max_step, m_physical_time, m_max_time);
-    }
+    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(),
+                           step, m_max_step, m_physical_time, m_max_time);
 }
 
 void
-Hipace::FillFieldDiagnostics (const int lev, int islice)
+Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
 {
     for (auto& fd : m_diags.getFieldData()) {
-        if (fd.m_level == lev && fd.m_has_field) {
-            m_fields.Copy(lev, islice, fd, m_3D_geom[lev], m_multi_laser);
+        if (fd.m_has_field) {
+            m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
         }
     }
 }

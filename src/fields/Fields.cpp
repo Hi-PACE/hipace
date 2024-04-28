@@ -418,15 +418,15 @@ Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
 }
 
 void
-Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
-              const amrex::Geometry& calc_geom, MultiLaser& multi_laser)
+Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData& fd,
+              const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
     constexpr int depos_order_z = 1;
     constexpr int depos_order_offset = depos_order_z / 2 + 1;
 
-    const amrex::Real poff_calc_z = GetPosOffset(2, calc_geom, calc_geom.Domain());
+    const amrex::Real poff_calc_z = GetPosOffset(2, field_geom[0], field_geom[0].Domain());
     const amrex::Real poff_diag_x = GetPosOffset(0, fd.m_geom_io, fd.m_geom_io.Domain());
     const amrex::Real poff_diag_y = GetPosOffset(1, fd.m_geom_io, fd.m_geom_io.Domain());
     const amrex::Real poff_diag_z = GetPosOffset(2, fd.m_geom_io, fd.m_geom_io.Domain());
@@ -435,21 +435,21 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
     // Calculate to which diag_fab slices this slice could contribute
     const int i_slice_min = i_slice - depos_order_offset;
     const int i_slice_max = i_slice + depos_order_offset;
-    const amrex::Real pos_slice_min = i_slice_min * calc_geom.CellSize(2) + poff_calc_z;
-    const amrex::Real pos_slice_max = i_slice_max * calc_geom.CellSize(2) + poff_calc_z;
+    const amrex::Real pos_slice_min = i_slice_min * field_geom[0].CellSize(2) + poff_calc_z;
+    const amrex::Real pos_slice_max = i_slice_max * field_geom[0].CellSize(2) + poff_calc_z;
     int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
                                                           * fd.m_geom_io.InvCellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
                                                           * fd.m_geom_io.InvCellSize(2)));
 
-    amrex::Box diag_box = fd.m_F.box();
+    amrex::Box diag_box = fd.m_geom_io.Domain();
     if (fd.m_slice_dir != 2) {
         // Put contributions from i_slice to different diag_fab slices in GPU vector
         m_rel_z_vec.resize(k_max+1-k_min);
         m_rel_z_vec_cpu.resize(k_max+1-k_min);
         for (int k=k_min; k<=k_max; ++k) {
             const amrex::Real pos = k * fd.m_geom_io.CellSize(2) + poff_diag_z;
-            const amrex::Real mid_i_slice = (pos - poff_calc_z)*calc_geom.InvCellSize(2);
+            const amrex::Real mid_i_slice = (pos - poff_calc_z)*field_geom[0].InvCellSize(2);
             amrex::Real sz_cell[depos_order_z + 1];
             const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
             m_rel_z_vec_cpu[k-k_min] = 0;
@@ -476,17 +476,18 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
     } else {
         m_rel_z_vec.resize(1);
         m_rel_z_vec_cpu.resize(1);
-        const amrex::Real pos_z = i_slice * calc_geom.CellSize(2) + poff_calc_z;
+        const amrex::Real pos_z = i_slice * field_geom[0].CellSize(2) + poff_calc_z;
         if (fd.m_geom_io.ProbLo(2) <= pos_z && pos_z <= fd.m_geom_io.ProbHi(2)) {
-            m_rel_z_vec_cpu[0] = calc_geom.CellSize(2);
+            m_rel_z_vec_cpu[0] = field_geom[0].CellSize(2);
             k_min = 0;
         } else {
             return;
         }
     }
-    if (diag_box.isEmpty()) return;
-    auto& slice_mf = m_slices[lev];
-    auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
+    if (diag_box.isEmpty() || fd.m_nfields <= 0) return;
+    auto& slice_mf = m_slices[fd.m_level];
+    auto slice_func = interpolated_field_xy<depos_order_xy,
+        guarded_field_xy>{{slice_mf}, field_geom[fd.m_level]};
     auto& laser_mf = multi_laser.getSlices();
     auto laser_func = interpolated_field_xy<depos_order_xy,
         guarded_field_xy>{{laser_mf}, multi_laser.GetLaserGeom()};
@@ -508,7 +509,8 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
         const amrex::Real dx = fd.m_geom_io.CellSize(0);
         const amrex::Real dy = fd.m_geom_io.CellSize(1);
 
-        if (fd.m_nfields > 0) {
+        if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::field &&
+            current_N_level > fd.m_level) {
             auto slice_array = slice_func.array(mfi);
             amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
             amrex::ParallelFor(diag_box, fd.m_nfields,
@@ -519,17 +521,16 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
                     const int m = n[diag_comps];
                     diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
                 });
-        }
-
-        if (fd.m_do_laser && multi_laser.UseLaser(i_slice)) {
+        } else if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::laser &&
+                   multi_laser.UseLaser(i_slice)) {
             auto laser_array = laser_func.array(mfi);
-            amrex::Array4<FieldDiagnosticData::complex_type> diag_array_laser = fd.m_F_laser.array();
+            amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_laser.array();
             amrex::ParallelFor(diag_box,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                 {
                     const amrex::Real x = i * dx + poff_diag_x;
                     const amrex::Real y = j * dy + poff_diag_y;
-                    diag_array_laser(i,j,k) += FieldDiagnosticData::complex_type {
+                    diag_array_laser(i,j,k) += amrex::GpuComplex<amrex::Real> {
                         rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_r),
                         rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_i)
                     };
