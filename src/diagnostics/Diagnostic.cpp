@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -124,7 +125,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     std::map<std::string, std::string> diag_name_to_default_geometry{};
     std::map<std::string, FieldDiagnosticData::geom_type> geometry_name_to_geom_type{};
     std::map<std::string, int> geometry_name_to_level{};
-    std::map<std::string, amrex::Vector<std::string>> geometry_name_to_output_comps{};
+    std::map<std::string, std::set<std::string>> geometry_name_to_output_comps{};
     std::stringstream all_comps_error_str{};
     for (int lev = 0; lev<nlev; ++lev) {
         std::string diag_name = "lev" + std::to_string(lev);
@@ -134,7 +135,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         geometry_name_to_level.emplace(geom_name, lev);
         all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
         for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
-            geometry_name_to_output_comps[geom_name].push_back(comp);
+            geometry_name_to_output_comps[geom_name].insert(comp);
             all_comps_error_str << "'" << comp << "' ";
         }
         all_comps_error_str << "\n";
@@ -147,7 +148,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::laser);
         geometry_name_to_level.emplace(geom_name, 0);
         all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
-        geometry_name_to_output_comps[geom_name].push_back(laser_io_name);
+        geometry_name_to_output_comps[geom_name].insert(laser_io_name);
         all_comps_error_str << "'" << laser_io_name << "'\n";
     }
     all_comps_error_str << "Additionally, 'all' and 'none' are supported as field_data\n";
@@ -184,29 +185,28 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         amrex::Vector<std::string> use_comps{};
         use_comps = use_local_comps ? local_output_comps : global_output_comps;
 
+        std::set<std::string> comps_set{};
+
         if (use_comps.empty()) {
-            fd.m_comps_output = geometry_name_to_output_comps[base_geom_name];
+            comps_set.insert(geometry_name_to_output_comps[base_geom_name].begin(),
+                             geometry_name_to_output_comps[base_geom_name].end());
         } else {
             for (const std::string& comp_name : use_comps) {
                 if (comp_name == "all" || comp_name == "All") {
-                    if (is_global_comp_used.count(comp_name) > 0) {
-                        is_global_comp_used[comp_name] = true;
-                    }
-                    fd.m_comps_output = geometry_name_to_output_comps[base_geom_name];
-                    break;
+                    is_global_comp_used[comp_name] = true;
+                    comps_set.insert(geometry_name_to_output_comps[base_geom_name].begin(),
+                                     geometry_name_to_output_comps[base_geom_name].end());
                 } else if (comp_name == "none" || comp_name == "None") {
-                    if (is_global_comp_used.count(comp_name) > 0) {
-                        is_global_comp_used[comp_name] = true;
-                    }
-                    fd.m_comps_output.clear();
-                    break;
-                } else if (std::find(geometry_name_to_output_comps[base_geom_name].begin(),
-                                     geometry_name_to_output_comps[base_geom_name].end(), comp_name) !=
-                                     geometry_name_to_output_comps[base_geom_name].end()) {
-                    if (is_global_comp_used.count(comp_name) > 0) {
-                        is_global_comp_used[comp_name] = true;
-                    }
-                    fd.m_comps_output.push_back(comp_name);
+                    is_global_comp_used[comp_name] = true;
+                    comps_set.clear();
+                } else if (geometry_name_to_output_comps[base_geom_name].count(comp_name) > 0) {
+                    is_global_comp_used[comp_name] = true;
+                    comps_set.insert(comp_name);
+                } else if (comp_name.find("remove_") == 0 &&
+                           geometry_name_to_output_comps[base_geom_name].count(
+                           comp_name.substr(std::string("remove_").size(), comp_name.size())) > 0) {
+                    is_global_comp_used[comp_name] = true;
+                    comps_set.erase(comp_name.substr(std::string("remove_").size(), comp_name.size()));
                 } else if (use_local_comps) {
                     amrex::Abort("Unknown diagnostics field_data '" + comp_name +
                                  "' in base_geometry '" + base_geom_name + "'!\n" +
@@ -215,6 +215,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             }
         }
 
+        fd.m_comps_output.assign(comps_set.begin(), comps_set.end());
         fd.m_nfields = fd.m_comps_output.size();
 
         if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::field) {
