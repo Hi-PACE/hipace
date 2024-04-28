@@ -677,8 +677,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 
         amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
-                const amrex::Real x = i * dx_laser + m_laser_geom_3D;
-                const amrex::Real y = j * dy_laser + m_laser_geom_3D;
+                const amrex::Real x = i * dx_laser + poff_laser_x;
+                const amrex::Real y = j * dy_laser + poff_laser_y;
 
                 const amrex::Real xmid = (x - poff_field_x) * dx_field_inv;
                 const amrex::Real ymid = (y - poff_field_y) * dy_field_inv;
