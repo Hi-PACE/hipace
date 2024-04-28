@@ -224,8 +224,8 @@ public:
      * \param[in] islice slice index
      */
     bool HasSlice (const int islice) const {
-        return GetLaserGeom().Domain.smallEnd(2) <= islice &&
-               islice <= GetLaserGeom().Domain.bigEnd(2);
+        return GetLaserGeom().Domain().smallEnd(2) <= islice &&
+               islice <= GetLaserGeom().Domain().bigEnd(2);
     }
 
     bool UseLaser () const { return m_use_laser; }

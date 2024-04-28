@@ -510,7 +510,8 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
         const amrex::Real dy = fd.m_geom_io.CellSize(1);
 
         if (fd.m_nfields > 0 &&
-            calc_geom.smallEnd(2) <= i_slice && i_slice <= calc_geom.bigEnd(2)) {
+            calc_geom.Domain().smallEnd(2) <= i_slice &&
+            i_slice <= calc_geom.Domain().bigEnd(2)) {
             auto slice_array = slice_func.array(mfi);
             amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
             amrex::ParallelFor(diag_box, fd.m_nfields,
@@ -524,7 +525,8 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
         }
 
         if (fd.m_do_laser &&
-            laser_geom.smallEnd(2) <= i_slice && i_slice <= laser_geom.bigEnd(2)) {
+            laser_geom.Domain().smallEnd(2) <= i_slice &&
+            i_slice <= laser_geom.Domain().bigEnd(2)) {
             auto laser_array = laser_func.array(mfi);
             amrex::Array4<FieldDiagnosticData::complex_type> diag_array_laser = fd.m_F_laser.array();
             amrex::ParallelFor(diag_box,
