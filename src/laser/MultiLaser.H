@@ -222,6 +222,9 @@ public:
                islice <= m_laser_geom_3D.Domain.bigEnd(2);
     }
 
+    /** Get the geometry of the Laser Box */
+    const amrex::Geometry& GetLaserGeom () const { return m_laser_geom_3D; }
+
     bool m_use_laser {false}; /**< whether a laser is used or not */
 
 private:

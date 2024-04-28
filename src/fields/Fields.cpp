@@ -490,7 +490,7 @@ Fields::Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
     auto& slice_mf = m_slices[lev];
     auto slice_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{slice_mf}, calc_geom};
     auto& laser_mf = multi_laser.getSlices();
-    auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, calc_geom};
+    auto laser_func = interpolated_field_xy<depos_order_xy, guarded_field_xy>{{laser_mf}, laser_geom};
 
 #ifdef AMREX_USE_GPU
     // This async copy happens on the same stream as the ParallelFor below, which uses the copied array.
