@@ -244,8 +244,7 @@ MultiLaser::InitData ()
 void
 MultiLaser::InitSliceEnvelope (const int islice, const int comp)
 {
-    if (!m_use_laser) return;
-    if (!HasSlice(islice)) return;
+    if (!UseLaser(islice)) return;
 
     HIPACE_PROFILE("MultiLaser::InitSliceEnvelope()");
 
@@ -546,8 +545,7 @@ MultiLaser::GetEnvelopeFromFile () {
 void
 MultiLaser::ShiftLaserSlices (const int islice)
 {
-    if (!m_use_laser) return;
-    if (!HasSlice(islice)) return;
+    if (!UseLaser(islice)) return;
 
     HIPACE_PROFILE("MultiLaser::ShiftLaserSlices()");
 
@@ -650,18 +648,53 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 }
 
 void
-MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const&)
+MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0)
 {
     HIPACE_PROFILE("MultiLaser::InterpolateChi()");
+    constexpr interp_order = 1;
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
 
         Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi);
         Array2<const amrex::Real> field_arr_chi = fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["chi"]);
 
+        const amrex::Real poff_laser_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
+        const amrex::Real poff_laser_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
+        const amrex::Real poff_field_x = GetPosOffset(0, geom_field_lev0, geom_field_lev0.Domain());
+        const amrex::Real poff_field_y = GetPosOffset(1, geom_field_lev0, geom_field_lev0.Domain());
+
+        const amrex::Real dx_laser = m_laser_geom_3D.CellSize(0);
+        const amrex::Real dy_laser = m_laser_geom_3D.CellSize(1);
+        const amrex::Real dx_field_inv = geom_field_lev0.InvCellSize(0);
+        const amrex::Real dy_field_inv = geom_field_lev0.InvCellSize(1);
+
+        const int x_lo = fields.getSlices(0)[mfi].box().smallEnd(0);
+        const int x_hi = fields.getSlices(0)[mfi].box().bigEnd(0);
+        const int y_lo = fields.getSlices(0)[mfi].box().smallEnd(1);
+        const int y_hi = fields.getSlices(0)[mfi].box().bigEnd(1);
+
         amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
-                laser_arr_chi(i, j) = field_arr_chi(i, j);
+                const amrex::Real x = i * dx_laser + m_laser_geom_3D;
+                const amrex::Real y = j * dy_laser + m_laser_geom_3D;
+
+                const amrex::Real xmid = (x - poff_field_x) * dx_field_inv;
+                const amrex::Real ymid = (y - poff_field_y) * dy_field_inv;
+
+                amrex::Real chi = 0;
+
+                for (int iy=0; iy<=interp_order; ++iy) {
+                    for (int ix=0; ix<=interp_order; ++ix) {
+                        auto [shape_x, cell_x] = compute_single_shape_factor<interp_order>(xmid, ix);
+                        auto [shape_y, cell_y] = compute_single_shape_factor<interp_order>(ymid, iy);
+
+                        if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
+                            chi += shape_x*shape_y*field_arr_chi(cell_x, cell_y);
+                        }
+                    }
+                }
+
+                laser_arr_chi(i, j) = chi;
             });
     }
 }
@@ -670,8 +703,7 @@ void
 MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step)
 {
 
-    if (!m_use_laser) return;
-    if (!HasSlice(islice)) return;
+    if (!UseLaser(islice)) return;
 
     InterpolateChi(fields, m_laser_geom_3D);
 
@@ -1123,8 +1155,6 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
 void
 MultiLaser::InitLaserSlice (const int islice, const int comp)
 {
-    if (!m_use_laser) return;
-
     HIPACE_PROFILE("MultiLaser::InitLaserSlice()");
 
     using namespace amrex::literals;
@@ -1194,8 +1224,7 @@ void
 MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                                 int max_step, amrex::Real max_time)
 {
-    if (!m_use_laser) return;
-    if (!HasSlice(islice)) return;
+    if (!UseLaser(islice)) return;
     if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
     HIPACE_PROFILE("MultiLaser::InSituComputeDiags()");
 

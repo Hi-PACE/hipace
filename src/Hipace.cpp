@@ -159,7 +159,7 @@ Hipace::Hipace () :
     // use level 0 as default for laser geometry
     m_multi_laser.MakeLaserGeometry(m_3D_geom[0]);
 
-    m_use_laser = m_multi_laser.m_use_laser;
+    m_use_laser = m_multi_laser.UseLaser();
 
     queryWithParser(pph, "collisions", m_collision_names);
     /** Initialize the collision objects */
@@ -197,7 +197,7 @@ Hipace::InitData ()
 
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
-        m_diags.Initialize(lev, m_multi_laser.m_use_laser);
+        m_diags.Initialize(lev, m_multi_laser.UseLaser());
     }
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
@@ -331,7 +331,7 @@ Hipace::Evolve ()
 
         const amrex::Box& bx = m_3D_ba[0][0];
 
-        if (m_multi_laser.m_use_laser) {
+        if (m_multi_laser.UseLaser()) {
             AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
         }
 

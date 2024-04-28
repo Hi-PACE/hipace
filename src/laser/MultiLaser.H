@@ -217,18 +217,24 @@ public:
     /** Get the central wavelength */
     amrex::Real GetLambda0 () const { return m_lambda0; }
 
-    bool HasSlice (const int islice) const {
-        return m_laser_geom_3D.Domain.smallEnd(2) <= islice &&
-               islice <= m_laser_geom_3D.Domain.bigEnd(2);
-    }
-
     /** Get the geometry of the Laser Box */
     const amrex::Geometry& GetLaserGeom () const { return m_laser_geom_3D; }
 
-    bool m_use_laser {false}; /**< whether a laser is used or not */
+    /** If the laser geometry includes this slice
+     * \param[in] islice slice index
+     */
+    bool HasSlice (const int islice) const {
+        return GetLaserGeom().Domain.smallEnd(2) <= islice &&
+               islice <= GetLaserGeom().Domain.bigEnd(2);
+    }
+
+    bool UseLaser () const { return m_use_laser; }
+
+    bool UseLaser (const int islice) const { return m_use_laser && HasSlice(islice); }
 
 private:
 
+    bool m_use_laser {false}; /**< whether a laser is used or not */
     /** Laser central wavelength.
      * he central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
