@@ -667,7 +667,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
 
-        for (auto& plasma : multi_plasma.multi_plasma) {
+        for (auto& plasma : multi_plasma.m_all_plasmas) {
 
             const PhysConst pc = get_phys_const();
             const amrex::Real c_t = pc.c * Hipace::m_physical_time;
