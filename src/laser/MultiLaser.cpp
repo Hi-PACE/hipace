@@ -120,8 +120,11 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
     const amrex::Box domain_3D_laser{amrex::IntVect(0, 0, zeta_lo),
         amrex::IntVect(n_cells_laser[0]-1, n_cells_laser[1]-1, zeta_hi)};
 
-    m_laser_geom_3D.define(domain_3D_laser, amrex::RealBox(patch_lo_laser, patch_hi_laser),
-                           amrex::CoordSys::cartesian, {0, 0, 0});
+    const amrex::RealBox real_box(patch_lo_laser, patch_hi_laser);
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(real_box.volume() > 0., "Laser box must have positive volume");
+
+    m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
 
     m_slice_box = domain_3D_laser;
     m_slice_box.setSmall(2, 0);
@@ -581,6 +584,7 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
                              amrex::Vector<amrex::Geometry> const& field_geom)
 {
     if (!m_use_laser) return;
+    if (!HasSlice(islice) && !HasSlice(islice + 1)) return;
 
     HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
     static constexpr int interp_order = 1;
@@ -1169,9 +1173,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
 
     // Get grid properties
-    const auto plo = m_laser_geom_3D.ProbLoArray();
-    amrex::Real const * const dx = m_laser_geom_3D.CellSize();
-    const amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
+    const amrex::Real poff_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
+    const amrex::Real poff_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
+    const amrex::Real poff_z = GetPosOffset(2, m_laser_geom_3D, m_laser_geom_3D.Domain());
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = m_laser_geom_3D.CellSizeArray();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -1195,9 +1200,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
-                    const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
-                    const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
+                    const amrex::Real x = i * dx_arr[0] + poff_x - x0;
+                    const amrex::Real y = j * dx_arr[1] + poff_y - y0;
+                    const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
                     const amrex::Real yp=std::cos(propagation_angle_yz)*y-std::sin(propagation_angle_yz)*z;
                     const amrex::Real zp=std::sin(propagation_angle_yz)*y+std::cos(propagation_angle_yz)*z;

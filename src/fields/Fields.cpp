@@ -484,7 +484,7 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
             return;
         }
     }
-    if (diag_box.isEmpty() || fd.m_nfields <= 0) return;
+    if (diag_box.isEmpty()) return;
     auto& slice_mf = m_slices[fd.m_level];
     auto slice_func = interpolated_field_xy<depos_order_xy,
         guarded_field_xy>{{slice_mf}, field_geom[fd.m_level]};

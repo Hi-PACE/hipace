@@ -136,7 +136,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
         for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
             geometry_name_to_output_comps[geom_name].insert(comp);
-            all_comps_error_str << "'" << comp << "' ";
+            all_comps_error_str << comp << " ";
         }
         all_comps_error_str << "\n";
     }
@@ -149,16 +149,12 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         geometry_name_to_level.emplace(geom_name, 0);
         all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
         geometry_name_to_output_comps[geom_name].insert(laser_io_name);
-        all_comps_error_str << "'" << laser_io_name << "'\n";
+        all_comps_error_str << laser_io_name << "\n";
     }
-    all_comps_error_str << "Additionally, 'all' and 'none' are supported as field_data\n";
+    all_comps_error_str << "Additionally, 'all' and 'none' are supported as field_data\n"
+                        << "Components can be removed after 'all' by using 'remove_<comp name>'.\n";
 
-    amrex::Vector<std::string> global_output_comps{};
     std::map<std::string, bool> is_global_comp_used{};
-    queryWithParser(ppd, "field_data", global_output_comps);
-    for (auto& comp : global_output_comps) {
-        is_global_comp_used[comp] = false;
-    }
 
     for (auto& fd : m_field_data) {
         amrex::ParmParse pp(fd.m_diag_name);
@@ -179,11 +175,11 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                          all_comps_error_str.str());
         }
 
-        amrex::Vector<std::string> local_output_comps{};
-        const bool use_local_comps = queryWithParser(pp, "field_data", local_output_comps);
-
         amrex::Vector<std::string> use_comps{};
-        use_comps = use_local_comps ? local_output_comps : global_output_comps;
+        const bool use_local_comps = queryWithParser(pp, "field_data", use_comps);
+        if (!use_local_comps) {
+            queryWithParser(ppd, "field_data", use_comps);
+        }
 
         std::set<std::string> comps_set{};
 
@@ -211,6 +207,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     amrex::Abort("Unknown diagnostics field_data '" + comp_name +
                                  "' in base_geometry '" + base_geom_name + "'!\n" +
                                  all_comps_error_str.str());
+                } else {
+                    is_global_comp_used.try_emplace(comp_name, false);
                 }
             }
         }
