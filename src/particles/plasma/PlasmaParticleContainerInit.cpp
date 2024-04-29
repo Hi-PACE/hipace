@@ -383,6 +383,12 @@ InitParticles (const amrex::RealVect& a_u_std,
             });
         }
     }
+#ifndef AMREX_USE_GPU
+    // The index order for initializing plasma particles is optimized for GPU.
+    // On CPU, especially with multiple particles per cell,
+    // reordering particles by cell gives better performance for plasma deposition and push.
+    SortParticlesByCell();
+#endif
 }
 
 void
