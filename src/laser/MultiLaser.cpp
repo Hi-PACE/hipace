@@ -9,7 +9,9 @@
 
 #include "MultiLaser.H"
 #include "utils/Constants.H"
+#include "fields/Fields.H"
 #include "Hipace.H"
+#include "particles/plasma/MultiPlasma.H"
 #include "particles/particles_utils/ShapeFactors.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"

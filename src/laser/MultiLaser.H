@@ -11,9 +11,7 @@
 #define MULTILASER_H_
 
 #include "Laser.H"
-#include "fields/Fields.H"
 #include "mg_solver/HpMultiGrid.H"
-#include "particles/plasma/MultiPlasma.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -97,6 +95,8 @@ namespace WhichLaserSlice {
 }
 
 class Fields;
+
+class MultiPlasma;
 
 class MultiLaser
 {
