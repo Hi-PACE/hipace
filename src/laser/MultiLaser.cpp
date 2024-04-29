@@ -62,6 +62,8 @@ MultiLaser::ReadParameters ()
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
+    queryWithParser(pp, "interp_order", m_interp_order);
+    AMREX_ALWAYS_ASSERT(m_interp_order <= 3 || m_interp_order >= 0);
 
     bool mg_param_given = queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
     mg_param_given += queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
@@ -587,7 +589,6 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
     if (!HasSlice(islice) && !HasSlice(islice + 1)) return;
 
     HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
-    static constexpr int interp_order = 1;
 
     if (!HasSlice(islice)) {
         for (int lev=0; lev<current_N_level; ++lev) {
@@ -617,8 +618,11 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
         const int y_lo = m_slice_box.smallEnd(1);
         const int y_hi = m_slice_box.bigEnd(1);
 
-        amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+        amrex::ParallelFor(
+            amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+            {m_interp_order},
+            mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
                 using namespace WhichLaserSlice;
 
                 const amrex::Real x = i * dx_field + poff_field_x;
@@ -637,8 +641,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
                             compute_single_shape_factor<false, interp_order>(ymid, iy);
 
                         if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
-                            aabs += shape_x*shape_y*abssq(laser_arr(cell_x,cell_y,n00j00_r),
-                                                          laser_arr(cell_x,cell_y,n00j00_i));
+                            aabs += shape_x*shape_y*abssq(laser_arr(cell_x, cell_y, n00j00_r),
+                                                          laser_arr(cell_x, cell_y, n00j00_i));
                         }
                     }
                 }
@@ -654,15 +658,50 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 }
 
 void
+MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
+{
+    HIPACE_PROFILE("MultiLaser::SetInitialChi()");
+
+    for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
+        Array3<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
+
+        for (auto& plasma : multi_plasma.multi_plasma) {
+
+            const PhysConst pc = get_phys_const();
+            const amrex::Real c_t = pc.c * Hipace::m_physical_time;
+            amrex::Real chi_factor = plasma.GetCharge() * plasma.GetCharge() * pc.mu0 / plasma.GetMass();
+            if (plasma.m_can_ionize) {
+                chi_factor *= plasma.m_init_ion_lev * plasma.m_init_ion_lev;
+            }
+
+            auto density_func = plasma.m_density_func;
+
+            const amrex::Real poff_laser_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
+            const amrex::Real poff_laser_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
+
+            const amrex::Real dx_laser = m_laser_geom_3D.CellSize(0);
+            const amrex::Real dy_laser = m_laser_geom_3D.CellSize(1);
+
+            amrex::ParallelFor(mfi.growntilebox(),
+                [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
+                    const amrex::Real x = i * dx_laser + poff_laser_x;
+                    const amrex::Real y = j * dy_laser + poff_laser_y;
+
+                    laser_arr_chi(i, j) = density_func(x, y, c_t) * chi_factor;
+                });
+        }
+    }
+}
+
+void
 MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0)
 {
     HIPACE_PROFILE("MultiLaser::InterpolateChi()");
-    static constexpr int interp_order = 1;
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
-
-        Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi);
-        Array2<const amrex::Real> field_arr_chi = fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["chi"]);
+        Array3<amrex::Real> laser_arr = m_slices.array(mfi);
+        Array2<const amrex::Real> field_arr_chi =
+            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["chi"]);
 
         const amrex::Real poff_laser_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
         const amrex::Real poff_laser_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
@@ -671,16 +710,31 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 
         const amrex::Real dx_laser = m_laser_geom_3D.CellSize(0);
         const amrex::Real dy_laser = m_laser_geom_3D.CellSize(1);
+        const amrex::Real dx_laser_inv = m_laser_geom_3D.InvCellSize(0);
+        const amrex::Real dy_laser_inv = m_laser_geom_3D.InvCellSize(1);
+        const amrex::Real dx_field = geom_field_lev0.CellSize(0);
+        const amrex::Real dy_field = geom_field_lev0.CellSize(1);
         const amrex::Real dx_field_inv = geom_field_lev0.InvCellSize(0);
         const amrex::Real dy_field_inv = geom_field_lev0.InvCellSize(1);
 
-        const int x_lo = fields.getSlices(0)[mfi].box().smallEnd(0);
-        const int x_hi = fields.getSlices(0)[mfi].box().bigEnd(0);
-        const int y_lo = fields.getSlices(0)[mfi].box().smallEnd(1);
-        const int y_hi = fields.getSlices(0)[mfi].box().bigEnd(1);
+        amrex::Box field_box = fields.getSlices(0)[mfi].box();
+        field_box.grow(-2*Fields::m_slices_nguards);
 
-        amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+        const amrex::Real pos_x_lo = field_box.smallEnd(0) * dx_field + poff_field_x;
+        const amrex::Real pos_x_hi = field_box.bigEnd(0) * dx_field + poff_field_x;
+        const amrex::Real pos_y_lo = field_box.smallEnd(1) * dy_field + poff_field_y;
+        const amrex::Real pos_y_hi = field_box.bigEnd(1) * dy_field + poff_field_y;
+
+        const int x_lo = amrex::Math::ceil((pos_x_lo - poff_laser_x) * dx_laser_inv);
+        const int x_hi = amrex::Math::floor((pos_x_hi - poff_laser_x) * dx_laser_inv);
+        const int y_lo = amrex::Math::ceil((pos_y_lo - poff_laser_y) * dy_laser_inv);
+        const int y_hi = amrex::Math::floor((pos_y_hi - poff_laser_y) * dy_laser_inv);
+
+        amrex::ParallelFor(
+            amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+            {m_interp_order},
+            mfi.growntilebox(),
+            [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
                 const amrex::Real x = i * dx_laser + poff_laser_x;
                 const amrex::Real y = j * dy_laser + poff_laser_y;
 
@@ -689,20 +743,22 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 
                 amrex::Real chi = 0;
 
-                for (int iy=0; iy<=interp_order; ++iy) {
-                    for (int ix=0; ix<=interp_order; ++ix) {
-                        auto [shape_x, cell_x] =
-                            compute_single_shape_factor<false, interp_order>(xmid, ix);
-                        auto [shape_y, cell_y] =
-                            compute_single_shape_factor<false, interp_order>(ymid, iy);
+                if (x_lo <= i && i <= x_hi && y_lo <= j && j <= y_hi) {
+                    for (int iy=0; iy<=interp_order; ++iy) {
+                        for (int ix=0; ix<=interp_order; ++ix) {
+                            auto [shape_x, cell_x] =
+                                compute_single_shape_factor<false, interp_order>(xmid, ix);
+                            auto [shape_y, cell_y] =
+                                compute_single_shape_factor<false, interp_order>(ymid, iy);
 
-                        if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
                             chi += shape_x*shape_y*field_arr_chi(cell_x, cell_y);
                         }
                     }
+                } else {
+                    chi = laser_arr(i, j, WhichLaserSlice::chi_initial);
                 }
 
-                laser_arr_chi(i, j) = chi;
+                laser_arr(i, j, WhichLaserSlice::chi) = chi;
             });
     }
 }

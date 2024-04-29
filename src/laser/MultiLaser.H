@@ -13,6 +13,7 @@
 #include "Laser.H"
 #include "fields/Fields.H"
 #include "mg_solver/HpMultiGrid.H"
+#include "particles/plasma/MultiPlasma.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -90,6 +91,7 @@ namespace WhichLaserSlice {
         np1jp2_r,
         np1jp2_i,
         chi,
+        chi_initial,
         N
     };
 }
@@ -163,6 +165,8 @@ public:
                           amrex::Vector<amrex::Geometry> const& field_geom);
 
     void InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0);
+
+    void SetInitialChi (const MultiPlasma& multi_plasma);
 
     /** Wrapper function to advance a laser slice by 1 time step.
      * \param[in] islice slice index
@@ -254,6 +258,8 @@ private:
     amrex::DistributionMapping m_laser_slice_dm;
     /** slice box of laser  */
     amrex::Box m_slice_box;
+    /** interpolation order for laser to field and field to laser operations */
+    int m_interp_order = 1;
 
     /** if the lasers are initialized from openPMD file */
     bool m_laser_from_file = false;
