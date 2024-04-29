@@ -665,7 +665,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
     HIPACE_PROFILE("MultiLaser::SetInitialChi()");
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
-        Array3<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
+        Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
 
         for (auto& plasma : multi_plasma.multi_plasma) {
 
