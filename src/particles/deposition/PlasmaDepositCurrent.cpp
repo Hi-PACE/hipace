@@ -114,8 +114,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         for (int itiley=tile_perm_y; itiley<ntiley; itiley+=2) {
         // the index is transposed to be the same as in amrex::DenseBins::build
         const int tile_index = itilex * ntiley + itiley;
+        using tiling_cto = amrex::CompileTimeOptions<false, true>;
 #else
         const int tile_index = 0;
+        using tiling_cto = amrex::CompileTimeOptions<false>; // tiling disabled on GPU
 #endif
 
         PlasmaBins::index_type const * const a_indices = do_tiling ? bins.permutationPtr() : nullptr;
@@ -134,11 +136,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
                 amrex::CompileTimeOptions<false, true>, // outer_depos_loop
                 amrex::CompileTimeOptions<false, true>, // can_ionize
-#ifdef AMREX_USE_GPU
-                amrex::CompileTimeOptions<false>,       // do_tiling (disabled on GPU)
-#else
-                amrex::CompileTimeOptions<false, true>, // do_tiling
-#endif
+                tiling_cto,                             // do_tiling
                 amrex::CompileTimeOptions<false, true>  // use_laser
             >{}, {
                 Hipace::m_depos_order_xy,
