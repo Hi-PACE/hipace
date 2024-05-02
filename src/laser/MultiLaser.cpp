@@ -93,7 +93,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
     if (!m_use_laser) return;
     amrex::ParmParse pp("lasers");
 
-    // use field_geom_3D as the default
+    // use field_geom_3D as the default
     std::array<int, 2> n_cells_laser {field_geom_3D.Domain().length(0),
                                       field_geom_3D.Domain().length(1)};
     std::array<amrex::Real, 3> patch_lo_laser {
@@ -132,7 +132,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(real_box.volume() > 0., "Laser box must have positive volume");
 
-    // make the geometry, slice box and ba and dm
+    // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
 
     m_slice_box = domain_3D_laser;

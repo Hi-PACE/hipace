@@ -123,7 +123,7 @@ void
 Diagnostic::Initialize (int nlev, bool use_laser) {
     amrex::ParmParse ppd("diagnostic");
 
-    // for each diagnostic object, choose a geometry and assign field_data
+    // for each diagnostic object, choose a geometry and assign field_data
 
     // for the default diagnostics, what is the default geometry
     std::map<std::string, std::string> diag_name_to_default_geometry{};
@@ -220,13 +220,13 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 // remove requested component
                 comps_set.erase(comp_name.substr(std::string("remove_").size(), comp_name.size()));
             } else if (use_local_comps) {
-                // if field_data was specified through <diag name>,
+                // if field_data was specified through <diag name>,
                 // assert that all components exist in the geometry
                 amrex::Abort("Unknown diagnostics field_data '" + comp_name +
                              "' in base_geometry '" + base_geom_name + "'!\n" +
                              all_comps_error_str.str());
             } else {
-                // if field_data was specified through diagnostic,
+                // if field_data was specified through diagnostic,
                 // check later that all components are at least used by on of the diagnostics
                 is_global_comp_used.try_emplace(comp_name, false);
             }
@@ -254,7 +254,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         }
     }
 
-    // if there are multiple diagnositc objects with the same m_base_geom_type (colliding component
+    // if there are multiple diagnositc objects with the same m_base_geom_type (colliding component
     // names), append the name of the diagnositc object to the component name in the output
     for (auto& fd : m_field_data) {
         if (1 < std::count_if(m_field_data.begin(), m_field_data.end(), [&] (auto& fd2) {
