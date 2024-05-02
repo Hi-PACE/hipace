@@ -124,15 +124,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         int num_particles = do_tiling ? a_offsets[tile_index+1]-a_offsets[tile_index]
                                         : pti.numParticles();
 
-        if (Hipace::m_outer_depos_loop) {
-            num_particles *= (Hipace::m_depos_order_xy + 1);
-        }
-
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
         amrex::ParallelFor(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
-                amrex::CompileTimeOptions<false, true>, // outer_depos_loop
                 amrex::CompileTimeOptions<false, true>, // can_ionize
 #ifdef AMREX_USE_GPU
                 amrex::CompileTimeOptions<false>,       // do_tiling (disabled on GPU)
@@ -142,22 +137,14 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::CompileTimeOptions<false, true>  // use_laser
             >{}, {
                 Hipace::m_depos_order_xy,
-                Hipace::m_outer_depos_loop,
                 plasma.m_can_ionize,
                 do_tiling,
                 Hipace::m_use_laser
             },
             num_particles,
-            [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto outer_depos_loop,
+            [=] AMREX_GPU_DEVICE (int ip, auto depos_order,
                 auto can_ionize, auto c_do_tiling, auto use_laser) noexcept {
             constexpr int depos_order_xy = depos_order.value;
-            // Using 1 thread per particle and per deposited cell is only done in the fast (x) direction.
-            // This can also be applied in the y direction, but so far does not show significant gain.
-            constexpr bool outer_depos_loop_x = outer_depos_loop.value;
-            constexpr int outer_depos_order_x_1 = outer_depos_loop_x ? (depos_order_xy + 1) : 1;
-            constexpr int inner_depos_order_x = outer_depos_loop_x ? 0 : depos_order_xy;
-
-            int ip = idx / outer_depos_order_x_1;
 
             [[maybe_unused]] auto indices = a_indices;
             [[maybe_unused]] auto offsets = a_offsets;
@@ -165,8 +152,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             if constexpr (c_do_tiling.value) {
                 ip = indices[offsets[itile]+ip];
             }
-
-            const int ox = idx % outer_depos_order_x_1;
 
             // only deposit plasma currents on or below their according MR level
             if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;
@@ -208,7 +193,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 + 1._rt
             );
 
-            if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && ox == 0)
+            if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor))
             {
                 // This particle violates the QSA, discard it and do not deposit its current
                 amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
@@ -218,17 +203,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             }
 
             for (int iy=0; iy <= depos_order_xy; ++iy) {
-                for (int ix=0; ix <= inner_depos_order_x; ++ix) {
-                    int tx = 0;
-                    if constexpr (outer_depos_loop_x) {
-                        tx = ox;
-                    } else {
-                        tx = ix;
-                    }
+                for (int ix=0; ix <= depos_order_xy; ++ix) {
+
                     // --- Compute shape factors
                     // x direction
                     auto [shape_x, cell_x] =
-                        compute_single_shape_factor<outer_depos_loop_x, depos_order_xy>(xmid, tx);
+                        compute_single_shape_factor<false, depos_order_xy>(xmid, ix);
 
                     // y direction
                     auto [shape_y, cell_y] =
