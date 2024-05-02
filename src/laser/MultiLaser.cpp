@@ -685,7 +685,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
             const amrex::Real dy_laser = m_laser_geom_3D.CellSize(1);
 
             amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
+                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
                     const amrex::Real x = i * dx_laser + poff_laser_x;
                     const amrex::Real y = j * dy_laser + poff_laser_y;
 
