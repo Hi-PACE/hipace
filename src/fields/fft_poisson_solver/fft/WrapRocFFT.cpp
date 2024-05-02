@@ -1,8 +1,13 @@
-/* Copyright 2024
+/* Copyright 2021-2024
  *
  * This file is part of HiPACE++.
  *
- * Authors: AlexanderSinn
+ * Authors: AlexanderSinn, Axel Huebl
+ * License: BSD-3-Clause-LBNL
+ */
+/* Copyright 2019-2020
+ *
+ * This file is part of WarpX.
  *
  * License: BSD-3-Clause-LBNL
  */
