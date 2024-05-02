@@ -159,10 +159,10 @@ Geometry
     Maximum level of mesh refinement. Currently, mesh refinement is supported up to level
     `2`. Note, that the mesh refinement algorithm is still in active development and should be used with care.
 
-* ``geometry.patch_lo`` (3 `float`)
+* ``geometry.prob_lo`` (3 `float`)
     Lower end of the simulation box in x, y and z.
 
-* ``geometry.patch_hi`` (3 `float`)
+* ``geometry.prob_hi`` (3 `float`)
     Higher end of the simulation box in x, y and z.
 
 * ``geometry.is_periodic`` (3 `bool`)
@@ -187,6 +187,16 @@ Geometry
 
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
+
+* ``lasers.n_cell`` (2 `integer`)
+    Number of cells in x and y for the laser grid.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
+
+* ``lasers.patch_lo`` (3 `float`)
+    Lower end of the laser grid in x, y and z.
+
+* ``lasers.patch_hi`` (3 `float`)
+    Upper end of the laser grid in x, y and z.
 
 Time step
 ---------
@@ -789,6 +799,10 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
+* ``lasers.interp_order`` (`int`) optional (default `1`)
+    Transverse shape order for the laser to field interpolation of aabs and
+    the field to laser interpolation of chi. Currently, `0,1,2,3` are implemented.
+
 * ``lasers.solver_type`` (`string`) optional (default `multigrid`)
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
@@ -882,11 +896,15 @@ Field diagnostics
     The names of all field diagnostics, separated by a space.
     Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
     To run without field diagnostics, choose the name ``no_field_diag``.
-    If mesh refinement is used, the default becomes ``lev0 lev1`` or ``lev0 lev1 lev2``.
+    Depending on whether mesh refinement or a laser is used, the default becomes
+    a subset of ``lev0 lev1 lev2 laser_diag``.
 
-* ``<diag name> or diagnostic.level`` (`integer`) optional (default `0`)
-    From which mesh refinement level the diagnostics should be collected.
-    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1 etc.
+* ``<diag name> or diagnostic.base_geometry`` (`string`) optional (default `level_0`)
+    On which geometry the diagnostics should be based on.
+    Available geometries are `level_0`, `level_1`, `level_2` and `laser`,
+    depending on if MR or a laser is used.
+    If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
+    becomes ``level_0 level_1 level_2 laser``respectively.
 
 * ``<diag name>.output_period`` (`integer`) optional (default `0`)
     Output period for fields. No output is given for ``<diag name>.output_period = 0``.
@@ -919,8 +937,12 @@ Field diagnostics
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
     to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
     the charge density of that plasma species will be separately available as a diagnostic.
-    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available.
+    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available
+    in the ``laser`` base geometry.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
+    A field can be removed from the list, for example, after it has been included through ``all``,
+    by adding ``remove_<field name>`` after it has been added. If a field is added and removed
+    multiple times, the last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
     Lower limit for the diagnostic grid.
