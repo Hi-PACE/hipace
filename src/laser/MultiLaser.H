@@ -164,8 +164,15 @@ public:
     void UpdateLaserAabs (const int islice, const int current_N_level, Fields& fields,
                           amrex::Vector<amrex::Geometry> const& field_geom);
 
+    /** Put Chi from the fields and initial chi into the chi component of the laser
+     * \param[in] fields Field object
+     * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
+     */
     void InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0);
 
+    /** Fill the chi_initial component of the laser using the Plasma density function
+     * \param[in] multi_plasma multi plasma to get the density function, charge and mass
+     */
     void SetInitialChi (const MultiPlasma& multi_plasma);
 
     /** Wrapper function to advance a laser slice by 1 time step.
@@ -173,8 +180,10 @@ public:
      * \param[in] fields Field object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
      */
-    void AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step);
+    void AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step,
+                       amrex::Geometry const& geom_field_lev0);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
@@ -232,8 +241,12 @@ public:
                islice <= GetLaserGeom().Domain().bigEnd(2);
     }
 
+    /** If the laser is used */
     bool UseLaser () const { return m_use_laser; }
 
+    /** If the laser is used and the laser geometry includes this slice
+     * \param[in] islice slice index
+     */
     bool UseLaser (const int islice) const { return m_use_laser && HasSlice(islice); }
 
 private:

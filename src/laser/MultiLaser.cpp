@@ -65,7 +65,7 @@ MultiLaser::ReadParameters ()
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
     queryWithParser(pp, "interp_order", m_interp_order);
-    AMREX_ALWAYS_ASSERT(m_interp_order <= 3 || m_interp_order >= 0);
+    AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
 
     bool mg_param_given = queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
     mg_param_given += queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
@@ -93,6 +93,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
     if (!m_use_laser) return;
     amrex::ParmParse pp("lasers");
 
+    // use field_geom_3D as the default
     std::array<int, 2> n_cells_laser {field_geom_3D.Domain().length(0),
                                       field_geom_3D.Domain().length(1)};
     std::array<amrex::Real, 3> patch_lo_laser {
@@ -104,10 +105,12 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
         field_geom_3D.ProbDomain().hi(1),
         field_geom_3D.ProbDomain().hi(2)};
 
+    // get parameters from user input
     queryWithParser(pp, "n_cell", n_cells_laser);
     queryWithParser(pp, "patch_lo", patch_lo_laser);
     queryWithParser(pp, "patch_hi", patch_hi_laser);
 
+    // round zeta lo and hi to full cells
     const amrex::Real pos_offset_z = GetPosOffset(2, field_geom_3D, field_geom_3D.Domain());
 
     const int zeta_lo = std::max( field_geom_3D.Domain().smallEnd(2),
@@ -121,6 +124,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
     patch_lo_laser[2] = (zeta_lo-0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
     patch_hi_laser[2] = (zeta_hi+0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
 
+    // make the boxes
     const amrex::Box domain_3D_laser{amrex::IntVect(0, 0, zeta_lo),
         amrex::IntVect(n_cells_laser[0]-1, n_cells_laser[1]-1, zeta_hi)};
 
@@ -128,6 +132,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(real_box.volume() > 0., "Laser box must have positive volume");
 
+    // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
 
     m_slice_box = domain_3D_laser;
@@ -593,6 +598,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
     HIPACE_PROFILE("MultiLaser::UpdateLaserAabs()");
 
     if (!HasSlice(islice)) {
+        // set aabs to zero if there is no laser on this slice
+        // we only need to do this if the previous slice (slice + 1) had a laser
         for (int lev=0; lev<current_N_level; ++lev) {
             fields.setVal(0, lev, WhichSlice::This, "aabs");
         }
@@ -635,6 +642,7 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 
                 amrex::Real aabs = 0;
 
+                // interpolate from laser grid to fields grid
                 for (int iy=0; iy<=interp_order; ++iy) {
                     for (int ix=0; ix<=interp_order; ++ix) {
                         auto [shape_x, cell_x] =
@@ -667,6 +675,9 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
 
+        // put chi from the plasma density function on the laser grid as if it were deposited there,
+        // this works even outside the field grid
+        // note that the effect of temperature / non-zero u is ignored here
         for (auto& plasma : multi_plasma.m_all_plasmas) {
 
             const PhysConst pc = get_phys_const();
@@ -689,7 +700,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
                     const amrex::Real x = i * dx_laser + poff_laser_x;
                     const amrex::Real y = j * dy_laser + poff_laser_y;
 
-                    laser_arr_chi(i, j) = density_func(x, y, c_t) * chi_factor;
+                    laser_arr_chi(i, j) += density_func(x, y, c_t) * chi_factor;
                 });
         }
     }
@@ -727,6 +738,7 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
         const amrex::Real pos_y_lo = field_box.smallEnd(1) * dy_field + poff_field_y;
         const amrex::Real pos_y_hi = field_box.bigEnd(1) * dy_field + poff_field_y;
 
+        // the indexes of the laser box where the fields box ends
         const int x_lo = amrex::Math::ceil((pos_x_lo - poff_laser_x) * dx_laser_inv);
         const int x_hi = amrex::Math::floor((pos_x_hi - poff_laser_x) * dx_laser_inv);
         const int y_lo = amrex::Math::ceil((pos_y_lo - poff_laser_y) * dy_laser_inv);
@@ -746,6 +758,7 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
                 amrex::Real chi = 0;
 
                 if (x_lo <= i && i <= x_hi && y_lo <= j && j <= y_hi) {
+                    // interpolate chi from fields to laser
                     for (int iy=0; iy<=interp_order; ++iy) {
                         for (int ix=0; ix<=interp_order; ++ix) {
                             auto [shape_x, cell_x] =
@@ -757,6 +770,7 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
                         }
                     }
                 } else {
+                    // get initial chi outside the fields box
                     chi = laser_arr(i, j, WhichLaserSlice::chi_initial);
                 }
 
@@ -766,12 +780,13 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 }
 
 void
-MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step)
+MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step,
+                          amrex::Geometry const& geom_field_lev0)
 {
 
     if (!UseLaser(islice)) return;
 
-    InterpolateChi(fields, m_laser_geom_3D);
+    InterpolateChi(fields, geom_field_lev0);
 
     if (m_solver_type == "multigrid") {
         AdvanceSliceMG(dt, step);
