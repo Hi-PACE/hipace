@@ -13,29 +13,13 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/InsituUtil.H"
-#ifdef AMREX_USE_CUDA
-#  include "fields/fft_poisson_solver/fft/CuFFTUtils.H"
-#elif defined(AMREX_USE_HIP)
-#  include "fields/fft_poisson_solver/fft/RocFFTUtils.H"
-#endif
+#include "fields/fft_poisson_solver/fft/AnyFFT.H"
 #include "particles/particles_utils/ShapeFactors.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
 
 #include <AMReX_GpuComplex.H>
-
-#ifdef AMREX_USE_CUDA
-#  include <cufft.h>
-#elif defined(AMREX_USE_HIP)
-#  if __has_include(<rocfft/rocfft.h>)  // ROCm 5.3+
-#    include <rocfft/rocfft.h>
-#  else
-#    include <rocfft.h>
-#  endif
-#else
-#  include <fftw3.h>
-#endif
 
 void
 MultiLaser::ReadParameters ()
@@ -111,62 +95,14 @@ MultiLaser::InitData (const amrex::BoxArray& slice_ba,
         // Create FFT plans
         amrex::IntVect fft_size = m_slice_box.length();
 
-#ifdef AMREX_USE_CUDA
-        cufftResult result;
-        // Forward FFT plan
-        result = LaserFFT::VendorCreate(
-            &(m_plan_fwd), fft_size[1], fft_size[0], LaserFFT::cufft_type);
-        if ( result != CUFFT_SUCCESS ) {
-            amrex::Print() << " cufftplan failed! Error: " <<
-                CuFFTUtils::cufftErrorToString(result) << "\n";
-        }
-        // Backward FFT plan
-        result = LaserFFT::VendorCreate(
-            &(m_plan_bkw), fft_size[1], fft_size[0], LaserFFT::cufft_type);
-        if ( result != CUFFT_SUCCESS ) {
-            amrex::Print() << " cufftplan failed! Error: " <<
-                CuFFTUtils::cufftErrorToString(result) << "\n";
-        }
-#elif defined(AMREX_USE_HIP)
-        const std::size_t lengths[] = {
-            static_cast<std::size_t>(fft_size[0]), static_cast<std::size_t>(fft_size[1])
-        };
+        std::size_t fwd_area = m_forward_fft.Initialize(FFTType::C2C_2D_fwd, fft_size[0], fft_size[1]);
+        std::size_t bkw_area = m_backward_fft.Initialize(FFTType::C2C_2D_bkw, fft_size[0], fft_size[1]);
 
-        rocfft_status result;
-        // Forward FFT plan
-        result = rocfft_plan_create(&(m_plan_fwd), rocfft_placement_notinplace,
-            rocfft_transform_type_complex_forward,
-#ifdef AMREX_USE_FLOAT
-            rocfft_precision_single,
-#else
-            rocfft_precision_double,
-#endif
-            2, lengths, 1, nullptr);
-        RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
-        // Backward FFT plan
-        result = rocfft_plan_create(&(m_plan_bkw), rocfft_placement_notinplace,
-            rocfft_transform_type_complex_inverse,
-#ifdef AMREX_USE_FLOAT
-            rocfft_precision_single,
-#else
-            rocfft_precision_double,
-#endif
-            2, lengths, 1, nullptr);
-        RocFFTUtils::assert_rocfft_status("rocfft_plan_create", result);
-#else
-        // Forward FFT plan
-        m_plan_fwd = LaserFFT::VendorCreate(
-            fft_size[1], fft_size[0],
-            reinterpret_cast<LaserFFT::FFTWComplex*>(m_rhs.dataPtr()),
-            reinterpret_cast<LaserFFT::FFTWComplex*>(m_rhs_fourier.dataPtr()),
-            FFTW_FORWARD, FFTW_ESTIMATE);
-        // Backward FFT plan
-        m_plan_bkw = LaserFFT::VendorCreate(
-            fft_size[1], fft_size[0],
-            reinterpret_cast<LaserFFT::FFTWComplex*>(m_rhs_fourier.dataPtr()),
-            reinterpret_cast<LaserFFT::FFTWComplex*>(m_sol.dataPtr()),
-            FFTW_BACKWARD, FFTW_ESTIMATE);
-#endif
+        // Allocate work area for both FFTs
+        m_fft_work_area.resize(std::max(fwd_area, bkw_area));
+
+        m_forward_fft.SetBuffers(m_rhs.dataPtr(), m_rhs_fourier.dataPtr(), m_fft_work_area.dataPtr());
+        m_backward_fft.SetBuffers(m_rhs_fourier.dataPtr(), m_sol.dataPtr(), m_fft_work_area.dataPtr());
     }
 
     if (m_laser_from_file) {
@@ -922,36 +858,7 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Real dt, int ste
             });
 
         // Transform rhs to Fourier space
-#ifdef AMREX_USE_CUDA
-        cudaStream_t stream = amrex::Gpu::Device::cudaStream();
-        cufftSetStream(m_plan_fwd, stream);
-        cufftResult result;
-        result = LaserFFT::VendorExecute(
-            m_plan_fwd,
-            reinterpret_cast<LaserFFT::cufftComplex*>( m_rhs.dataPtr() ),
-            reinterpret_cast<LaserFFT::cufftComplex*>( m_rhs_fourier.dataPtr() ),
-            CUFFT_FORWARD);
-        if ( result != CUFFT_SUCCESS ) {
-            amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-                CuFFTUtils::cufftErrorToString(result) << "\n";
-        }
-#elif defined(AMREX_USE_HIP)
-        rocfft_execution_info execinfo_fwd = nullptr;
-        rocfft_status result = rocfft_execution_info_create(&execinfo_fwd);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
-        result = rocfft_execution_info_set_stream(execinfo_fwd, amrex::Gpu::gpuStream());
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
-
-        void* in_buffer_fwd[2] = {(void*)m_rhs.dataPtr(), nullptr};
-        void* out_bufferfwd[2] = {(void*)m_rhs_fourier.dataPtr(), nullptr};
-
-        result = rocfft_execute(m_plan_fwd, in_buffer_fwd, out_bufferfwd, execinfo_fwd);
-        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
-        result = rocfft_execution_info_destroy(execinfo_fwd);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
-#else
-        LaserFFT::VendorExecute( m_plan_fwd );
-#endif
+        m_forward_fft.Execute();
 
         // Multiply by appropriate factors in Fourier space
         amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
@@ -973,35 +880,7 @@ MultiLaser::AdvanceSliceFFT (const Fields& fields, const amrex::Real dt, int ste
             });
 
         // Transform rhs to Fourier space to get solution in sol
-#ifdef AMREX_USE_CUDA
-        cudaStream_t stream_bkw = amrex::Gpu::Device::cudaStream();
-        cufftSetStream ( m_plan_bkw, stream_bkw);
-        result = LaserFFT::VendorExecute(
-            m_plan_bkw,
-            reinterpret_cast<LaserFFT::cufftComplex*>( m_rhs_fourier.dataPtr() ),
-            reinterpret_cast<LaserFFT::cufftComplex*>( m_sol.dataPtr() ),
-            CUFFT_INVERSE);
-        if ( result != CUFFT_SUCCESS ) {
-            amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-                CuFFTUtils::cufftErrorToString(result) << "\n";
-        }
-#elif defined(AMREX_USE_HIP)
-        rocfft_execution_info execinfo_bkw = nullptr;
-        result = rocfft_execution_info_create(&execinfo_bkw);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_create", result);
-        result = rocfft_execution_info_set_stream(execinfo_bkw, amrex::Gpu::gpuStream());
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_set_stream", result);
-
-        void* in_buffer_bkw[2] = {(void*)m_rhs_fourier.dataPtr(), nullptr};
-        void* out_buffer_bkw[2] = {(void*)m_sol.dataPtr(), nullptr};
-
-        result = rocfft_execute(m_plan_bkw, in_buffer_bkw, out_buffer_bkw, execinfo_bkw);
-        RocFFTUtils::assert_rocfft_status("rocfft_execute", result);
-        result = rocfft_execution_info_destroy(execinfo_bkw);
-        RocFFTUtils::assert_rocfft_status("rocfft_execution_info_destroy", result);
-#else
-        LaserFFT::VendorExecute( m_plan_bkw );
-#endif
+        m_backward_fft.Execute();
 
         // Normalize and store solution in np1j00[0]. Guard cells are filled with 0s.
         amrex::Box grown_bx = bx;

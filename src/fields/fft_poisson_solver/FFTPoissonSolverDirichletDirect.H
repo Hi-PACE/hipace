@@ -5,10 +5,10 @@
  * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
  * License: BSD-3-Clause-LBNL
  */
-#ifndef FFT_POISSON_SOLVER_DIRICHLET_H_
-#define FFT_POISSON_SOLVER_DIRICHLET_H_
+#ifndef FFT_POISSON_SOLVER_DIRICHLET_DIRECT_H_
+#define FFT_POISSON_SOLVER_DIRICHLET_DIRECT_H_
 
-#include "fields/fft_poisson_solver/fft/AnyDST.H"
+#include "fields/fft_poisson_solver/fft/AnyFFT.H"
 #include "FFTPoissonSolver.H"
 
 #include <AMReX_MultiFab.H>
@@ -23,16 +23,16 @@
  * 2. Call FFTPoissonSolver::SolvePoissonEquation(mf), which will solve Poisson equation with RHS
  *    in the staging area and return the LHS in mf.
  */
-class FFTPoissonSolverDirichlet final : public FFTPoissonSolver
+class FFTPoissonSolverDirichletDirect final : public FFTPoissonSolver
 {
 public:
     /** Constructor */
-    FFTPoissonSolverDirichlet ( amrex::BoxArray const& a_realspace_ba,
-                                amrex::DistributionMapping const& dm,
-                                amrex::Geometry const& gm);
+    FFTPoissonSolverDirichletDirect ( amrex::BoxArray const& a_realspace_ba,
+                                      amrex::DistributionMapping const& dm,
+                                      amrex::Geometry const& gm);
 
     /** virtual destructor */
-    virtual ~FFTPoissonSolverDirichlet () override final {}
+    virtual ~FFTPoissonSolverDirichletDirect () override final {}
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, Dirichlet
@@ -63,8 +63,12 @@ private:
     amrex::MultiFab m_tmpSpectralField;
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
-    /** DST plans */
-    AnyDST::DSTplans m_plan;
+    /** forward DST plan */
+    AnyFFT m_forward_fft;
+    /** backward DST plan */
+    AnyFFT m_backward_fft;
+    /** work area for both DST plans */
+    amrex::Gpu::DeviceVector<char> m_fft_work_area;
 };
 
 #endif
