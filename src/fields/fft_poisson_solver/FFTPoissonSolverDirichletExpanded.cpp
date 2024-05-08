@@ -6,14 +6,14 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#include "FFTPoissonSolverDirichlet.H"
-#include "fft/AnyDST.H"
+#include "FFTPoissonSolverDirichletExpanded.H"
+#include "fft/AnyFFT.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-FFTPoissonSolverDirichlet::FFTPoissonSolverDirichlet (
+FFTPoissonSolverDirichletExpanded::FFTPoissonSolverDirichletExpanded (
     amrex::BoxArray const& realspace_ba,
     amrex::DistributionMapping const& dm,
     amrex::Geometry const& gm )
@@ -21,11 +21,48 @@ FFTPoissonSolverDirichlet::FFTPoissonSolverDirichlet (
     define(realspace_ba, dm, gm);
 }
 
-void
-FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
-                                   amrex::DistributionMapping const& dm,
-                                   amrex::Geometry const& gm )
+void ExpandR2R (amrex::FArrayBox& dst, amrex::FArrayBox& src)
 {
+    const amrex::Box bx = src.box();
+    const int nx = bx.length(0);
+    const int ny = bx.length(1);
+    const amrex::IntVect lo = bx.smallEnd();
+    Array2<amrex::Real const> const src_array = src.const_array();
+    Array2<amrex::Real> const dst_array = dst.array();
+
+    amrex::ParallelFor(bx,
+        [=] AMREX_GPU_DEVICE(int i, int j, int)
+        {
+            /* upper left quadrant */
+            dst_array(i+1,j+1) = src_array(i, j);
+            /* lower left quadrant */
+            dst_array(i+1,j+ny+2) = -src_array(i, ny-1-j+2*lo[1]);
+            /* upper right quadrant */
+            dst_array(i+nx+2,j+1) = -src_array(nx-1-i+2*lo[0], j);
+            /* lower right quadrant */
+            dst_array(i+nx+2,j+ny+2) = src_array(nx-1-i+2*lo[0], ny-1-j+2*lo[1]);
+        });
+}
+
+void ShrinkC2R (amrex::FArrayBox& dst, amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src)
+{
+    const amrex::Box bx = dst.box();
+    Array2<amrex::GpuComplex<amrex::Real> const> const src_array = src.const_array();
+    Array2<amrex::Real> const dst_array = dst.array();
+    amrex::ParallelFor(bx,
+        [=] AMREX_GPU_DEVICE(int i, int j, int)
+        {
+            /* upper left quadrant */
+            dst_array(i,j) = -src_array(i+1, j+1).real();
+        });
+}
+
+void
+FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba,
+                                           amrex::DistributionMapping const& dm,
+                                           amrex::Geometry const& gm )
+{
+    HIPACE_PROFILE("FFTPoissonSolverDirichletExpanded::define()");
     using namespace amrex::literals;
 
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
@@ -48,16 +85,18 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
                                      "There should be only one box locally.");
 
     const amrex::Box fft_box = m_stagingArea[0].box();
+    const amrex::IntVect fft_size = fft_box.length();
+    const int nx = fft_size[0];
+    const int ny = fft_size[1];
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( fft_box.length(0) + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( fft_box.length(1) + 1 ));
+    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( nx + 1 ));
+    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( ny + 1 ));
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (( fft_box.length(0) + 1 )
-                                             *( fft_box.length(1) + 1 )));
+    const amrex::Real norm_fac = 0.5 / ( 2 * (( nx + 1 ) * ( ny + 1 )));
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
@@ -67,9 +106,9 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
             fft_box, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = sin(( i - lo[0] + 1 ) * sine_x_factor) * sin(( i - lo[0] + 1 ) * sine_x_factor);
+                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = sin(( j - lo[1] + 1 ) * sine_y_factor) * sin(( j - lo[1] + 1 ) * sine_y_factor);
+                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
@@ -80,30 +119,44 @@ FFTPoissonSolverDirichlet::define (amrex::BoxArray const& a_realspace_ba,
                 });
     }
 
-    // Allocate and initialize the FFT plans
-    m_plan = AnyDST::DSTplans(a_realspace_ba, dm);
-    // Loop over boxes and allocate the corresponding plan
-    // for each box owned by the local MPI proc
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Note: the size of the real-space box and spectral-space box
-        // differ when using real-to-complex FFT. When initializing
-        // the FFT plan, the valid dimensions are those of the real-space box.
-        amrex::IntVect fft_size = fft_box.length();
-        m_plan[mfi] = AnyDST::CreatePlan(
-            fft_size, &m_stagingArea[mfi], &m_tmpSpectralField[mfi]);
-    }
+    // Allocate expanded_position_array Real of size (2*nx+2, 2*ny+2)
+    // Allocate expanded_fourier_array Complex of size (nx+2, 2*ny+2)
+    amrex::Box expanded_position_box {{0, 0, 0}, {2*nx+1, 2*ny+1, 0}};
+    amrex::Box expanded_fourier_box {{0, 0, 0}, {nx+1, 2*ny+1, 0}};
+    // shift box to match rest of fields
+    expanded_position_box += fft_box.smallEnd();
+    expanded_fourier_box += fft_box.smallEnd();
+
+    m_expanded_position_array.resize(expanded_position_box);
+    m_expanded_fourier_array.resize(expanded_fourier_box);
+
+    m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
+
+    // Allocate and initialize the FFT plan
+    std::size_t wrok_size = m_fft.Initialize(FFTType::R2C_2D, expanded_position_box.length(0),
+                                             expanded_position_box.length(1));
+
+    // Allocate work area for the FFT
+    m_fft_work_area.resize(wrok_size);
+
+    m_fft.SetBuffers(m_expanded_position_array.dataPtr(), m_expanded_fourier_array.dataPtr(),
+                     m_fft_work_area.dataPtr());
 }
 
 
 void
-FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
+FFTPoissonSolverDirichletExpanded::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
-    HIPACE_PROFILE("FFTPoissonSolverDirichlet::SolvePoissonEquation()");
+    HIPACE_PROFILE("FFTPoissonSolverDirichletExpanded::SolvePoissonEquation()");
+    using namespace amrex::literals;
 
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Perform Fourier transform from the staging area to `tmpSpectralField`
-        AnyDST::Execute(m_plan[mfi], AnyDST::direction::forward);
-    }
+    m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
+
+    ExpandR2R(m_expanded_position_array, m_stagingArea[0]);
+
+    m_fft.Execute();
+
+    ShrinkC2R(m_tmpSpectralField[0], m_expanded_fourier_array);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -120,10 +173,13 @@ FFTPoissonSolverDirichlet::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
     }
 
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Perform Fourier transform from `tmpSpectralField` to the staging area
-        AnyDST::Execute(m_plan[mfi], AnyDST::direction::backward);
-    }
+    m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
+
+    ExpandR2R(m_expanded_position_array, m_tmpSpectralField[0]);
+
+    m_fft.Execute();
+
+    ShrinkC2R(m_stagingArea[0], m_expanded_fourier_array);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

@@ -41,12 +41,12 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --test-name $TEST_NAME \
     --skip "{'lev=0' : ['Sy', 'Sx', 'chi']}"
 
-echo "Start testing new current deposition"
+echo "Start testing plasma reordering"
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.file_prefix=${TEST_NAME}_cd2 \
-        hipace.outer_depos_loop=true \
+        plasmas.reorder_period = 4 \
         max_step=1
 
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \

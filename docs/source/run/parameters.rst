@@ -131,9 +131,6 @@ General parameters
 * ``hipace.depos_derivative_type`` (`int`) optional (default `2`)
     Type of derivative used in explicit deposition. `0`: analytic, `1`: nodal, `2`: centered
 
-* ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
-    If the loop over depos_order is included in the loop over particles.
-
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
     Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
     ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
@@ -255,15 +252,31 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
-* ``fields.poisson_solver`` (`string`) optional (default `FFTDirichlet`)
+* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletFast`)
     Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
-    solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are
-    ``FFTDirichlet``, ``FFTPeriodic`` and ``MGDirichlet``.
+    solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are:
 
-* ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
-    Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
-    The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
-    The default is set accordingly.
+      * ``FFTDirichletDirect`` Use the discrete sine transformation that is directly implemented
+        by FFTW to solve the Poisson equation with Dirichlet boundary conditions.
+        This option is only available when compiling for CPUs with FFTW.
+        Preferred resolution: :math:`2^N-1`.
+
+      * ``FFTDirichletExpanded`` Perform the discrete sine transformation by symmetrically
+        expanding the field to twice its size.
+        Preferred resolution: :math:`2^N-1`.
+
+      * ``FFTDirichletFast`` Perform the discrete sine transformation using a fast sine transform
+        algorithm that uses FFTs of the same size as the fields.
+        Preferred resolution: :math:`2^N-1`.
+
+      * ``MGDirichlet`` Use the HiPACE++ multigrid solver to solve the Poisson equation with
+        Dirichlet boundary conditions.
+        Preferred resolution: :math:`2^N` and :math:`2^N-1`.
+
+      * ``FFTPeriodic`` Use FFTs to solve the Poisson equation with Periodic boundary conditions.
+        Note that this does not work with features that change the boundary values,
+        like mesh refinement or open boundaries.
+        Preferred resolution: :math:`2^N`.
 
 * ``fields.extended_solve`` (`bool`) optional (default `0`)
     Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artifacts
@@ -842,8 +855,13 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
-* ``<laser name>.propagation_angle_yz`` (`float`)
+* ``<laser name>.propagation_angle_yz`` (`float`) optinal (default `0`)
     Propagation angle of the pulse in the yz plane (0 is the along the z axis)
+
+* ``<laser name>.PFT_yz`` (`float`) optinal (default `pi/2`)
+    Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
+    direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
+
 Diagnostic parameters
 ---------------------
 

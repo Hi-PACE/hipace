@@ -23,6 +23,7 @@ Laser::Laser (std::string name, bool laser_from_file)
     queryWithParser(pp, "w0", m_w0);
     queryWithParser(pp, "CEP", m_CEP);
     queryWithParser(pp, "propagation_angle_yz", m_propagation_angle_yz);
+    queryWithParser(pp, "PFT_yz", m_PFT_yz);
     bool length_is_specified = queryWithParser(pp, "L0", m_L0);
     bool duration_is_specified = queryWithParser(pp, "tau", m_tau);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
