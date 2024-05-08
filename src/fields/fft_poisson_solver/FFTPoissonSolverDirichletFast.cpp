@@ -168,7 +168,6 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     // an offset for levels > 0
     m_stagingArea = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_poisson_nguards);
     m_tmpSpectralField = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_poisson_nguards);
-    m_eigenvalue_matrix = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_poisson_nguards);
     m_stagingArea.setVal(0.0, Fields::m_poisson_nguards); // this is not required
     m_tmpSpectralField.setVal(0.0, Fields::m_poisson_nguards);
 
@@ -193,25 +192,23 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     const amrex::Real norm_fac = 0.5 / ( 2 * (( nx + 1 ) * ( ny + 1 )));
 
     // Calculate the array of m_eigenvalue_matrix
-    for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
-        amrex::IntVect lo = fft_box.smallEnd();
-        amrex::ParallelFor(
-            fft_box, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
-                {
-                    /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
-                    /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
+    m_eigenvalue_matrix.resize({{0,0,0}, {ny-1,nx-1,0}});
+    Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array();
+    amrex::ParallelFor({{0,0,0}, {ny-1,nx-1,0}},
+        [=] AMREX_GPU_DEVICE (int j, int i, int /* k */) noexcept
+        {
+            /* fast poisson solver diagonal x coeffs */
+            amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
+            /* fast poisson solver diagonal y coeffs */
+            amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
 
-                    if ((sinex_sq!=0) && (siney_sq!=0)) {
-                        eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
-                    } else {
-                        // Avoid division by 0
-                        eigenvalue_matrix(i,j) = 0._rt;
-                    }
-                });
-    }
+            if ((sinex_sq!=0) && (siney_sq!=0)) {
+                eigenvalue_matrix(j,i) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+            } else {
+                // Avoid division by 0
+                eigenvalue_matrix(j,i) = 0._rt;
+            }
+        });
 
     // Allocate 1d Array for 2d data or 2d transpose data
     const int real_1d_size = std::max((nx+1)*ny, (ny+1)*nx);
@@ -262,40 +259,30 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     ToSine(real_arr, pos_arr, ny, nx);
 
-    Transpose(pos_arr, fourier_arr, ny, nx);
+    {
+        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array();
 
-#ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
-#endif
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
-        // Solve Poisson equation in Fourier space:
-        // Multiply `tmpSpectralField` by eigenvalue_matrix
-        Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
-
-        amrex::ParallelFor( mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
-                tmp_cmplx_arr(i,j) *= eigenvalue_matrix(i,j);
+        amrex::ParallelFor( {{0,0,0}, {ny-1,nx-1,0}},
+            [=] AMREX_GPU_DEVICE(int j, int i, int) noexcept {
+                pos_arr[j + ny*i] *= eigenvalue_matrix(j, i);
             });
     }
-
-    // 1D DST in x
-    ToComplex(fourier_arr, comp_arr, nx, ny);
-
-    m_x_fft.Execute();
-
-    ToSine(real_arr, fourier_arr, nx, ny);
-
-    Transpose(fourier_arr, pos_arr, nx, ny);
 
     // 1D DST in y
     ToComplex(pos_arr, comp_arr, ny, nx);
 
     m_y_fft.Execute();
 
-    ToSine(real_arr, fourier_arr, ny, nx);
+    ToSine(real_arr, pos_arr, ny, nx);
 
-    Transpose(fourier_arr, pos_arr, ny, nx);
+    Transpose(pos_arr, fourier_arr, ny, nx);
+
+    // 1D DST in x
+    ToComplex(fourier_arr, comp_arr, nx, ny);
+
+    m_x_fft.Execute();
+
+    ToSine(real_arr, pos_arr, nx, ny);
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

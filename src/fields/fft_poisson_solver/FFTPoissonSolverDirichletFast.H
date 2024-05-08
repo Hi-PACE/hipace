@@ -61,8 +61,8 @@ public:
 private:
     /** Spectral fields, contains (real) field in Fourier space */
     amrex::MultiFab m_tmpSpectralField;
-    /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
-    amrex::MultiFab m_eigenvalue_matrix;
+    /** FArrayBox eigenvalues, to solve Poisson equation with Dirichlet BC. */
+    amrex::FArrayBox m_eigenvalue_matrix;
     /** Real array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
     /** Complex array for the FFTs */
