@@ -77,7 +77,7 @@ void Shrink_Mult_Expand (amrex::FArrayBox& dst,
                          const amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src,
                          const amrex::FArrayBox& eigenvalue)
 {
-    // This function combines ShrinkC2R -> multiply with eigenvalue -> ExpandR2R
+    // This function combines ShrinkC2R -> multiply with eigenvalue -> ExpandR2R
     amrex::Box bx = eigenvalue.box();
     bx.growLo(0, 1);
     bx.growLo(1, 1);
