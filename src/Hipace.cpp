@@ -149,9 +149,8 @@ Hipace::Hipace () :
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
     queryWithParser(pph, "use_amrex_mlmg", m_use_amrex_mlmg);
     queryWithParser(pph, "do_tiling", m_do_tiling);
-#ifndef AMREX_USE_OMP
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling == false,
-        "Tiling must be turned off when running without OMP");
+#ifdef AMREX_USE_GPU
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
 
     queryWithParser(pph, "background_density_SI", m_background_density_SI);

@@ -106,10 +106,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             ntiley = domain.length(1);
         }
 
-#ifdef AMREX_USE_OMP
+#ifndef AMREX_USE_GPU
         for (int tile_perm_x=0; tile_perm_x<2; ++tile_perm_x) {
         for (int tile_perm_y=0; tile_perm_y<2; ++tile_perm_y) {
+#ifdef AMREX_USE_OMP
 #pragma omp parallel for collapse(2) if(do_tiling)
+#endif
         for (int itilex=tile_perm_x; itilex<ntilex; itilex+=2) {
         for (int itiley=tile_perm_y; itiley<ntiley; itiley+=2) {
         // the index is transposed to be the same as in amrex::DenseBins::build
@@ -241,7 +243,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 }
             }
         });
-#ifdef AMREX_USE_OMP
+#ifndef AMREX_USE_GPU
         }}}}
 #endif
 
