@@ -390,6 +390,7 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
 
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+                ptd.idata(BeamIdx::mr_level)[ip] = 0;
             }
         );
     }
