@@ -21,6 +21,33 @@ FFTPoissonSolverDirichletFast::FFTPoissonSolverDirichletFast (
     define(realspace_ba, dm, gm);
 }
 
+template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int n_data) {
+    amrex::Real real = 0;
+    amrex::Real imag = 0;
+    if (i == 0) {
+        real = 2*in(2*i, j);
+    } else if (i == n_half) {
+        if (n_data & 1) {
+            real = -2*in(2*i-2, j);
+        } else {
+            real = -in(2*i-2, j);
+            imag = in(2*i-1, j);
+        }
+    } else {
+        real = in(2*i, j) - in(2*i-2, j);
+        imag = in(2*i-1, j);
+    }
+    return {real, imag};
+}
+
+template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_facor) {
+    const amrex::Real in_a = in(i+1, j);
+    const amrex::Real in_b = in(n_data-i, j);
+    return amrex::Real(0.5)*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
+}
+
 /** \brief Make Complex array out of Real array to prepare for fft.
  * out[idx] = -in[2*idx-2] + in[2*idx] + i*in[2*idx-1] for each column with
  * in[-1] = 0; in[-2] = -in[0]; in[n_data] = 0; in[n_data+1] = -in[n_data-1]
@@ -37,22 +64,7 @@ void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amr
     amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
         [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
         {
-            amrex::Real real = 0;
-            amrex::Real imag = 0;
-            if (i == 0) {
-                real = 2*in(2*i, j);
-            } else if (i == n_half) {
-                if (n_data & 1) {
-                    real = -2*in(2*i-2, j);
-                } else {
-                    real = -in(2*i-2, j);
-                    imag = in(2*i-1, j);
-                }
-            } else {
-                real = in(2*i, j) - in(2*i-2, j);
-                imag = in(2*i-1, j);
-            }
-            out(i, j) = amrex::GpuComplex<amrex::Real>(real, imag);
+            out(i, j) = to_complex(in, i, j, n_half, n_data);
         });
 }
 
@@ -69,16 +81,10 @@ void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amr
 void ToSine (const Array2<amrex::Real> in, const Array2<amrex::Real> out,
              const amrex::Real* sine_facor, const int n_data, const int n_batch)
 {
-    using namespace amrex::literals;
-
-    const int n_1 = n_data-1;
-    amrex::ParallelFor({{0,0,0}, {(n_data+1)/2-1,n_batch-1,0}},
+    amrex::ParallelFor({{0,0,0}, {n_data-1,n_batch-1,0}},
         [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
         {
-            const amrex::Real in_a = in(i+1, j);
-            const amrex::Real in_b = in(n_1-i+1, j);
-            out(i, j) = 0.5_rt*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
-            out(n_1-i, j) = 0.5_rt*(in_a - in_b + (in_a + in_b) * sine_facor[n_1-i]);
+            out(i, j) = to_sine(in, i, j, n_data, sine_facor);
         });
 }
 
@@ -95,17 +101,13 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
                                  const Array2<amrex::GpuComplex<amrex::Real>> out,
                                  const amrex::Real* sine_facor, const int n_data, const int n_batch)
 {
-    using namespace amrex::literals;
+    const int n_half = (n_batch+1)/2;
 
-    const int n_1 = n_data-1;
-    auto to_sine = [=] AMREX_GPU_DEVICE (int i, int j) {
-        const amrex::Real in_a = in(i+1, j);
-        const amrex::Real in_b = in(n_1-i+1, j);
-        return 0.5_rt*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
+    auto transpose_to_sine = [=] AMREX_GPU_DEVICE (int i, int j) {
+        return to_sine(in, j, i, n_data, sine_facor);
     };
 
-    const int n_half = (n_batch+1)/2;
-#if 0
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
     constexpr int tile_dim_x = 16;
     constexpr int tile_dim_x_ex = 34;
     constexpr int tile_dim_y = 32;
@@ -124,21 +126,30 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
     amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
         [=] AMREX_GPU_DEVICE() noexcept
         {
-            __shared__ amrex::Real tile[tile_dim_x_ex][tile_dim_y+1];
+            __shared__ amrex::Real tile_ptr[tile_dim_x_ex * tile_dim_y];
 
             const int block_y = blockIdx.x / num_blocks_x;
             const int block_x = blockIdx.x - block_y*num_blocks_x;
 
+            const int tile_begin_x = 2 * block_x * tile_dim_x - 2;
+            const int tile_begin_y = block_y * tile_dim_y;
+
+            const int tile_end_x = tile_begin_x + tile_dim_x_ex;
+            const int tile_end_y = tile_begin_y + tile_dim_y;
+
+            Array2<amrex::Real> shared{{tile_ptr, {tile_begin_x, tile_begin_y, 0},
+                                                  {tile_end_x, tile_end_y, 1}, 1}};
+
             {
-                const int thread_y = threadIdx.x / tile_dim_y;
-                const int thread_x = threadIdx.x - thread_y*tile_dim_y;
+                const int thread_x = threadIdx.x / tile_dim_y;
+                const int thread_y = threadIdx.x - thread_x*tile_dim_y;
 
-                for (int ty = thread_y; ty < tile_dim_x_ex; ty += block_rows_x) {
-                    const int i = block_y * tile_dim_y + thread_x;
-                    const int j = 2 * block_x * tile_dim_x + ty - 2;
+                for (int tx = thread_x; tx < tile_dim_x_ex; tx += block_rows_x) {
+                    const int i = tile_begin_x + tx;
+                    const int j = tile_begin_y + thread_y;
 
-                    if (i < nx_sin && j < ny_sin && j >= 0 ) {
-                        tile[ty][thread_x] = to_sine(i, j);
+                    if (j < nx_sin && i < ny_sin && i >= 0 ) {
+                        shared(i, j) = transpose_to_sine(i, j);
                     }
                 }
             }
@@ -150,27 +161,11 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
                 const int thread_x = threadIdx.x - thread_y*tile_dim_x;
 
                 for (int ty = thread_y; ty < tile_dim_y; ty += block_rows_y) {
-
                     const int i = block_x * tile_dim_x + thread_x;
-                    const int j = block_y * tile_dim_y + ty;
+                    const int j = tile_begin_y + ty;
 
                     if (i < nx && j < ny) {
-                        amrex::Real real = 0;
-                        amrex::Real imag = 0;
-                        if (i == 0) {
-                            real = 2*tile[2*thread_x+2][ty];
-                        } else if (i == n_half) {
-                            if (n_batch & 1) {
-                                real = -2*tile[2*thread_x][ty];
-                            } else {
-                                real = -tile[2*thread_x][ty];
-                                imag = tile[2*thread_x+1][ty];
-                            }
-                        } else {
-                            real = tile[2*thread_x+2][ty] - tile[2*thread_x][ty];
-                            imag = tile[2*thread_x+1][ty];
-                        }
-                        out(i, j) = amrex::GpuComplex<amrex::Real>(real, imag);
+                        out(i, j) = to_complex(shared, i, j, n_half, n_batch);
                     }
                 }
             }
@@ -179,22 +174,7 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
     amrex::ParallelFor({{0,0,0}, {n_half,n_data-1,0}},
         [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
         {
-            amrex::Real real = 0;
-            amrex::Real imag = 0;
-            if (i == 0) {
-                real = 2*to_sine(j, 2*i);
-            } else if (i == n_half) {
-                if (n_batch & 1) {
-                    real = -2*to_sine(j, 2*i-2);
-                } else {
-                    real = -to_sine(j, 2*i-2);
-                    imag = to_sine(j, 2*i-1);
-                }
-            } else {
-                real = to_sine(j, 2*i) - to_sine(j, 2*i-2);
-                imag = to_sine(j, 2*i-1);
-            }
-            out(i, j) = amrex::GpuComplex<amrex::Real>(real, imag);
+            out(i, j) = to_complex(transpose_to_sine, i, j, n_half, n_batch);
         });
 #endif
 }
@@ -204,35 +184,16 @@ void ToSine_Mult_ToComplex (const Array2<amrex::Real> in,
                             const Array2<amrex::Real> eigenvalue,
                             const amrex::Real* sine_facor, const int n_data, const int n_batch)
 {
-    using namespace amrex::literals;
+    const int n_half = (n_data+1)/2;
 
-    const int n_1 = n_data-1;
-    auto to_sine_mult = [=] AMREX_GPU_DEVICE (int i, int j) {
-        const amrex::Real in_a = in(i+1, j);
-        const amrex::Real in_b = in(n_1-i+1, j);
-        return eigenvalue(i,j) * 0.5_rt*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
+    auto mult_to_sine = [=] AMREX_GPU_DEVICE (int i, int j) {
+        return eigenvalue(i, j) * to_sine(in, i, j, n_data, sine_facor);
     };
 
-    const int n_half = (n_data+1)/2;
     amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
         [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
         {
-            amrex::Real real = 0;
-            amrex::Real imag = 0;
-            if (i == 0) {
-                real = 2*to_sine_mult(2*i, j);
-            } else if (i == n_half) {
-                if (n_data & 1) {
-                    real = -2*to_sine_mult(2*i-2, j);
-                } else {
-                    real = -to_sine_mult(2*i-2, j);
-                    imag = to_sine_mult(2*i-1, j);
-                }
-            } else {
-                real = to_sine_mult(2*i, j) - to_sine_mult(2*i-2, j);
-                imag = to_sine_mult(2*i-1, j);
-            }
-            out(i, j) = amrex::GpuComplex<amrex::Real>(real, imag);
+            out(i, j) = to_complex(mult_to_sine, i, j, n_half, n_data);
         });
 }
 
