@@ -324,7 +324,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     m_x_fft.Execute();
 
     amrex::Box lhs_bx = lhs_mf[0].box();
-    lhs_bx += m_stagingArea[0].box().smallEnd();
+    lhs_bx -= m_stagingArea[0].box().smallEnd();
     Array2<amrex::Real> lhs_arr {{lhs_mf[0].dataPtr(), amrex::begin(lhs_bx), amrex::end(lhs_bx), 1}};
 
     ToSine(real_arr, lhs_arr, m_sine_x_factor.dataPtr(), nx, ny);
