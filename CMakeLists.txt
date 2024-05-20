@@ -25,6 +25,12 @@ endif()
 
 # CMake policies ##############################################################
 #
+# Setting a cmake_policy to OLD is deprecated by definition and will raise a
+# verbose warning
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+endif()
+
 # AMReX 21.06+ supports CUDA_ARCHITECTURES with CMake 3.20+
 # CMake 3.18+: CMAKE_CUDA_ARCHITECTURES
 # https://cmake.org/cmake/help/latest/policy/CMP0104.html
