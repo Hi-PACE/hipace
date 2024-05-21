@@ -165,7 +165,7 @@ InitBeamFixedPPC3D ()
                 }
 
                 const amrex::Real density = get_density(x, y, z);
-                if (density < min_density) continue;
+                if (density <= min_density) continue;
 
                 ++count;
             }
@@ -253,7 +253,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                 }
 
                 const amrex::Real density = get_density(x, y, z);
-                if (density < min_density) continue;
+                if (density <= min_density) continue;
 
                 ++count;
             }
@@ -310,7 +310,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                 }
 
                 const amrex::Real density = get_density(x, y, z);
-                if (density < min_density) continue;
+                if (density <= min_density) continue;
 
                 amrex::Real u[3] = {0.,0.,0.};
                 get_momentum(u[0], u[1], u[2], engine);
