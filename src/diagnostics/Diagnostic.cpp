@@ -227,7 +227,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                              all_comps_error_str.str());
             } else {
                 // if field_data was specified through diagnostic,
-                // check later that all components are at least used by on of the diagnostics
+                // check later that all components are at least used by one of the diagnostics
                 is_global_comp_used.try_emplace(comp_name, false);
             }
         }
@@ -254,8 +254,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         }
     }
 
-    // if there are multiple diagnositc objects with the same m_base_geom_type (colliding component
-    // names), append the name of the diagnositc object to the component name in the output
+    // if there are multiple diagnostic objects with the same m_base_geom_type (colliding component
+    // names), append the name of the diagnostic object to the component name in the output
     for (auto& fd : m_field_data) {
         if (1 < std::count_if(m_field_data.begin(), m_field_data.end(), [&] (auto& fd2) {
             return fd.m_base_geom_type == fd2.m_base_geom_type;

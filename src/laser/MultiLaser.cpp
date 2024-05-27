@@ -667,6 +667,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
         const amrex::Real dy_field_inv = geom_field_lev0.InvCellSize(1);
 
         amrex::Box field_box = fields.getSlices(0)[mfi].box();
+        // Even in the valid domain,
+        // chi near the boundaries is incorrect due to >0 deposition order.
         field_box.grow(-2*Fields::m_slices_nguards);
 
         const amrex::Real pos_x_lo = field_box.smallEnd(0) * dx_field + poff_field_x;

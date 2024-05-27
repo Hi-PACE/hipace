@@ -916,7 +916,7 @@ Field diagnostics
     a subset of ``lev0 lev1 lev2 laser_diag``.
 
 * ``<diag name> or diagnostic.base_geometry`` (`string`) optional (default `level_0`)
-    On which geometry the diagnostics should be based on.
+    Which geometry the diagnostics should be based on.
     Available geometries are `level_0`, `level_1`, `level_2` and `laser`,
     depending on if MR or a laser is used.
     If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
