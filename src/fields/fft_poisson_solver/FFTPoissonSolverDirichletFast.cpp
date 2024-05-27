@@ -60,12 +60,14 @@ amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int
  * \param[in] j y index to compute
  * \param[in] n_data number of (contiguous) rows in position matrix
  * \param[in] sine_facor prefactor for ToSine equal to 1/(2*sin((idx+1)*pi/(n_data+1)))
- * \param[in] n_data number of (contiguous) rows in position matrix
  */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_facor) {
     const amrex::Real in_a = in(i+1, j);
     const amrex::Real in_b = in(n_data-i, j);
+    // possible optimization:
+    // iterate over the elements is such a way that each thread computes (i,j) and (n_data-i-1,j)
+    // so in_a and in_b can be reused
     return amrex::Real(0.5)*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
 }
 
