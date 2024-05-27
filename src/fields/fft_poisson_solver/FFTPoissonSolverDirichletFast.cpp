@@ -21,6 +21,16 @@ FFTPoissonSolverDirichletFast::FFTPoissonSolverDirichletFast (
     define(realspace_ba, dm, gm);
 }
 
+/** \brief Make Complex array out of Real array to prepare for fft.
+ * out[idx] = -in[2*idx-2] + in[2*idx] + i*in[2*idx-1] for each column with
+ * in[-1] = 0; in[-2] = -in[0]; in[n_data] = 0; in[n_data+1] = -in[n_data-1]
+ *
+ * \param[in] in input real array
+ * \param[in] i x index to compute
+ * \param[in] j y index to compute
+ * \param[in] n_half highest index of the output array, equal to (n_data+1)/2
+ * \param[in] n_data number of (contiguous) rows in position matrix
+ */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int n_data) {
     amrex::Real real = 0;
@@ -41,6 +51,17 @@ amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int
     return {real, imag};
 }
 
+/** \brief Make Sine-space Real array out of array from fft.
+ * out[idx] = 0.5 *(in[n_data-idx] - in[idx+1] + (in[n_data-idx] + in[idx+1])/
+ * (2*sin((idx+1)*pi/(n_data+1)))) for each column
+ *
+ * \param[in] in input real array
+ * \param[in] i x index to compute
+ * \param[in] j y index to compute
+ * \param[in] n_data number of (contiguous) rows in position matrix
+ * \param[in] sine_facor prefactor for ToSine equal to 1/(2*sin((idx+1)*pi/(n_data+1)))
+ * \param[in] n_data number of (contiguous) rows in position matrix
+ */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_facor) {
     const amrex::Real in_a = in(i+1, j);
@@ -48,15 +69,6 @@ amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_f
     return amrex::Real(0.5)*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
 }
 
-/** \brief Make Complex array out of Real array to prepare for fft.
- * out[idx] = -in[2*idx-2] + in[2*idx] + i*in[2*idx-1] for each column with
- * in[-1] = 0; in[-2] = -in[0]; in[n_data] = 0; in[n_data+1] = -in[n_data-1]
- *
- * \param[in] in input real array
- * \param[out] out output complex array
- * \param[in] n_data number of (contiguous) rows in position matrix
- * \param[in] n_batch number of (strided) columns in position matrix
- */
 void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amrex::Real>> out,
                 const int n_data, const int n_batch)
 {
@@ -68,16 +80,6 @@ void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amr
         });
 }
 
-/** \brief Make Sine-space Real array out of array from fft.
- * out[idx] = 0.5 *(in[n_data-idx] - in[idx+1] + (in[n_data-idx] + in[idx+1])/
- * (2*sin((idx+1)*pi/(n_data+1)))) for each column
- *
- * \param[in] in input real array
- * \param[out] out output real array
- * \param[in] sine_facor prefactor for ToSine
- * \param[in] n_data number of (contiguous) rows in position matrix
- * \param[in] n_batch number of (strided) columns in position matrix
- */
 void ToSine (const Array2<amrex::Real> in, const Array2<amrex::Real> out,
              const amrex::Real* sine_facor, const int n_data, const int n_batch)
 {
@@ -88,15 +90,6 @@ void ToSine (const Array2<amrex::Real> in, const Array2<amrex::Real> out,
         });
 }
 
-/** \brief Transpose input matrix
- * out[idy][idx] = in[idx][idy]
- *
- * \param[in] in input real array
- * \param[out] out output real array
- * \param[in] sine_facor prefactor for ToSine
- * \param[in] n_data number of (contiguous) rows in input matrix
- * \param[in] n_batch number of (strided) columns in input matrix
- */
 void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
                                  const Array2<amrex::GpuComplex<amrex::Real>> out,
                                  const amrex::Real* sine_facor, const int n_data, const int n_batch)
@@ -270,6 +263,7 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     m_y_fft.SetBuffers(m_fourier_array.dataPtr(), m_position_array.dataPtr(),
                        m_fft_work_area.dataPtr());
 
+    // set up prefactors for ToSine
     m_sine_x_factor.resize(nx);
     amrex::Real* const sine_x_ptr = m_sine_x_factor.dataPtr();
     amrex::ParallelFor(nx,
@@ -324,6 +318,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     m_x_fft.Execute();
 
     amrex::Box lhs_bx = lhs_mf[0].box();
+    // shift box to handle ghost cells properly
     lhs_bx -= m_stagingArea[0].box().smallEnd();
     Array2<amrex::Real> lhs_arr {{lhs_mf[0].dataPtr(), amrex::begin(lhs_bx), amrex::end(lhs_bx), 1}};
 

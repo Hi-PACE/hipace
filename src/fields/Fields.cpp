@@ -35,7 +35,7 @@ Fields::Fields (const int nlev)
 #ifdef AMREX_USE_GPU
     m_poisson_solver_str = "FFTDirichletFast";
 #else
-    m_poisson_solver_str = "FFTDirichletDirect";
+    m_poisson_solver_str = "FFTDirichletFast";
 #endif
     queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
     queryWithParser(ppf, "extended_solve", m_extended_solve);

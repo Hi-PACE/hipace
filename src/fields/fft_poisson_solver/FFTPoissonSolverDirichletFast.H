@@ -71,9 +71,9 @@ private:
     AnyFFT m_y_fft;
     /** work area for both DST plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
-
+    /** x prefactor for ToSine */
     amrex::Gpu::DeviceVector<amrex::Real> m_sine_x_factor;
-
+    /** y prefactor for ToSine */
     amrex::Gpu::DeviceVector<amrex::Real> m_sine_y_factor;
 };
 
