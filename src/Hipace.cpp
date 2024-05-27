@@ -17,6 +17,7 @@
 #include "utils/GPUUtil.H"
 #include "particles/pusher/GetAndSetPosition.H"
 #include "mg_solver/HpMultiGrid.H"
+#include "fields/fft_poisson_solver/fft/AnyFFT.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
@@ -52,6 +53,12 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     int max_level = 0;
     queryWithParser(pp_amr, "max_level", max_level);
     m_N_level = max_level + 1;
+    AnyFFT::setup();
+}
+
+Hipace_early_init::~Hipace_early_init ()
+{
+    AnyFFT::cleanup();
 }
 
 Hipace&

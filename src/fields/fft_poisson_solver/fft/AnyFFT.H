@@ -1,8 +1,8 @@
-/* Copyright 2020-2021
+/* Copyright 2020-2024
  *
  * This file is part of HiPACE++.
  *
- * Authors: Axel Huebl, MaxThevenet, Remi Lehe, Severin Diederichs
+ * Authors: AlexanderSinn, Axel Huebl, MaxThevenet, Remi Lehe, Severin Diederichs
  * WeiqunZhang
  * License: BSD-3-Clause-LBNL
  */
@@ -15,106 +15,56 @@
 #ifndef ANYFFT_H_
 #define ANYFFT_H_
 
-#include <AMReX_Config.H>
+#include <cstddef>
 
-#ifdef AMREX_USE_CUDA
-#  include <cufft.h>
-#elif defined(AMREX_USE_HIP)
-#  if __has_include(<rocfft/rocfft.h>)  // ROCm 5.3+
-#    include <rocfft/rocfft.h>
-#  else
-#    include <rocfft.h>
-#  endif
-#else
-#  include <fftw3.h>
-#endif
+struct VendorPlan;
 
-#include <AMReX_LayoutData.H>
+enum struct FFTType {
+    C2C_2D_fwd,
+    C2C_2D_bkw,
+    C2R_2D,
+    R2C_2D,
+    R2R_2D,
+    C2R_1D_batched
+};
 
-/**
- * \brief Wrapper around multiple FFT libraries.
- *
- * The header file defines the API and the base types
- * (Complex and VendorFFTPlan), and the implementation for different FFT libraries is
- * done in different cpp files. This wrapper only depends on the underlying FFT library
- * AND on AMReX (There is no dependence on WarpX).
- */
-namespace AnyFFT
-{
-    // First, define library-dependent types (complex, FFT plan)
+struct AnyFFT {
 
-    /** Complex type for FFT, depends on FFT library */
-#ifdef AMREX_USE_CUDA
-#  ifdef AMREX_USE_FLOAT
-    using Complex = cuComplex;
-#  else
-    using Complex = cuDoubleComplex;
-#  endif
-#elif defined(AMREX_USE_HIP)
-#  ifdef AMREX_USE_FLOAT
-    using Complex = float2;
-#  else
-    using Complex = double2;
-#  endif
-#else
-#  ifdef AMREX_USE_FLOAT
-    using Complex = fftwf_complex;
-#  else
-    using Complex = fftw_complex;
-#  endif
-#endif
-
-    /** Library-dependent FFT plans type, which holds one fft plan per box
-     * (plans are only initialized for the boxes that are owned by the local MPI rank).
+    /** \brief Initialize an FFT plan for the requested transform type using a Vendor FFT library.
+     * For 1D batched transforms, ny represents the number of batches to calculate at once.
+     * This function returns the number of bytes of the work area needed for the FFT. The work area
+     * has to be allocated by the function that uses the FFT and passed into SetBuffers.
+     *
+     * \param[in] type Type of FFT to perform
+     * \param[in] nx Size of the contiguous dimension of the FFT
+     * \param[in] ny Size of the second dimension of the FFT
      */
-#ifdef AMREX_USE_CUDA
-    using VendorFFTPlan = cufftHandle;
-#elif defined(AMREX_USE_HIP)
-    using VendorFFTPlan = rocfft_plan;
-#else
-#  ifdef AMREX_USE_FLOAT
-    using VendorFFTPlan = fftwf_plan;
-#  else
-    using VendorFFTPlan = fftw_plan;
-#  endif
-#endif
+    std::size_t Initialize (FFTType type, int nx, int ny);
 
-    // Second, define library-independent API
-
-    /** Direction in which the FFT is performed. */
-    enum struct direction {R2C, C2R};
-
-    /** \brief This struct contains the vendor FFT plan and additional metadata
+    /** \brief Set the pointers to the input, output and work area of the FFT.
+     * This function has to be called after Initialize and before Execute.
+     *
+     * \param[in] in Pointer to the input of the FFT
+     * \param[in] out Pointer to the output of the FFT
+     * \param[in] work_area Pointer to the work area for the FFT
      */
-    struct FFTplan
-    {
-        amrex::Real* m_real_array; /**< pointer to real array */
-        Complex* m_complex_array; /**< pointer to complex array */
-        VendorFFTPlan m_plan; /**< Vendor FFT plan */
-        direction m_dir;  /**< direction (C2R or R2C) */
-    };
+    void SetBuffers (void* in, void* out, void* work_area);
 
-    /** Collection of FFT plans, one FFTplan per box */
-    using FFTplans = amrex::LayoutData<FFTplan>;
+    /** \brief Perform the initialized FFT */
+    void Execute ();
 
-    /** \brief create FFT plan for the backend FFT library.
-     * \param[in] real_size Size of the real array, along each dimension.
-     * \param[out] real_array Real array from/to where R2C/C2R FFT is performed
-     * \param[out] complex_array Complex array to/from where R2C/C2R FFT is performed
-     * \param[in] dir direction, either R2C or C2R
-     */
-    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
-                        Complex * const complex_array, const direction dir);
+    /** \brief Destructor to destroy the FFT plan */
+    ~AnyFFT ();
 
-    /** \brief Destroy library FFT plan.
-     * \param[out] fft_plan plan to destroy
-     */
-    void DestroyPlan (FFTplan& fft_plan);
+    /** \brief Setup function that has to be called before any FFT plan is initialized. */
+    static void setup ();
 
-    /** \brief Perform FFT with backend library.
-     * \param[out] fft_plan plan for which the FFT is performed
-     */
-    void Execute (FFTplan& fft_plan);
-}
+    /** \brief Cleanup function that has to be called at the end of the program. */
+    static void cleanup ();
+
+private:
+    /** Vendor specific data for the FFT */
+    VendorPlan* m_plan = nullptr;
+};
 
 #endif // ANYFFT_H_

@@ -26,3 +26,14 @@ Please have a look at our [documentation](https://hipace.readthedocs.io) and joi
 
 On the 11th of July 2023, there will be a virtual HiPACE++ workshop from 4pm to 7pm CET.
 Feel free to sign up on the [indico webpage](https://indico.desy.de/event/40158/)
+
+## Copyright Notice
+
+HiPACE++ Copyright (c) 2021, The Regents of the University of California,
+through Lawrence Berkeley National Laboratory (subject to receipt of
+any required approvals from the U.S. Dept. of Energy) and Deutsches
+Elektronen-Synchrotron (DESY). All rights reserved.
+
+Please see the full license agreement and notices in [license.txt](license.txt).  
+Please see the notices in [legal.txt](legal.txt).  
+The SPDX license identifier is `BSD-3-Clause-LBNL`.
