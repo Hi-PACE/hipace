@@ -245,7 +245,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         }
     }
 
-    // check that all components are at least used by on of the diagnostics
+    // check that all components are at least used by one of the diagnostics
     for (auto& [key, val] : is_global_comp_used) {
         if (!val) {
             amrex::Abort("Unknown or unused component in diagnostic.field_data.\n'" +
