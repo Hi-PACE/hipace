@@ -133,14 +133,14 @@ public:
     }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
-     * \param[in] lev MR level
+     * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] i_slice z slice in which to write the data
      * \param[in,out] fd data for field diagnostics
-     * \param[in] calc_geom main geometry
+     * \param[in] field_geom main field geometry
      * \param[in] multi_laser MultiLaser object
      */
-     void Copy (const int lev, const int i_slice, FieldDiagnosticData& fd,
-                const amrex::Geometry& calc_geom, MultiLaser& multi_laser);
+     void Copy (const int current_N_level, const int i_slice, FieldDiagnosticData& fd,
+                const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser);
 
      /** \brief Initialize all required fields to zero and interpolate from lev-1 to lev if needed
      *

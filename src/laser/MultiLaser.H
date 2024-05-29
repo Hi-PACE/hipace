@@ -11,7 +11,6 @@
 #define MULTILASER_H_
 
 #include "Laser.H"
-#include "fields/Fields.H"
 #include "mg_solver/HpMultiGrid.H"
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
 
@@ -43,11 +42,15 @@ namespace WhichLaserSlice {
         np1jp1_i,
         np1jp2_r,
         np1jp2_i,
+        chi,
+        chi_initial,
         N
     };
 }
 
 class Fields;
+
+class MultiPlasma;
 
 class MultiLaser
 {
@@ -70,14 +73,13 @@ public:
     /** get function for the 2D slices (const version) */
     const amrex::MultiFab& getSlices () const {return m_slices; }
 
-    /** \brief Allocate laser multifab
-     * \param[in] slice_ba box array of the slice
-     * \param[in] slice_dm corresponding distribution mapping
-     * \param[in] geom_3D 3D Geometry for level 0
+    /** \brief Make Laser geometry
+     * \param[in] field_geom_3D 3D Geometry for level 0
      */
-    void InitData (const amrex::BoxArray& slice_ba,
-                   const amrex::DistributionMapping& slice_dm,
-                   const amrex::Geometry& geom_3D);
+    void MakeLaserGeometry (const amrex::Geometry& field_geom_3D);
+
+    /** \brief Allocate laser multifab */
+    void InitData ();
 
     /** \brief Initialize on slice of the 3D laser field.
      *
@@ -86,85 +88,89 @@ public:
      */
     void InitSliceEnvelope (const int islice, const int comp);
 
-    /** \brief Read in a laser from an openPMD file
-     *
-     * \param[in] gm Geometry for level 0
-     */
-    void GetEnvelopeFromFileHelper (const amrex::Geometry& gm);
+    /** \brief Read in a laser from an openPMD file */
+    void GetEnvelopeFromFileHelper ();
 
-    /** \brief Read in a laser from an openPMD file
-     *
-     * \param[in] gm Geometry for level 0
-     */
+    /** \brief Read in a laser from an openPMD file */
     template<typename input_type>
-    void GetEnvelopeFromFile (const amrex::Geometry& gm);
+    void GetEnvelopeFromFile ();
 
     /** \brief Shift 2D slices in zeta
+     * \param[in] islice slice index
      */
-    void ShiftLaserSlices ();
+    void ShiftLaserSlices (const int islice);
 
     /** Write Aabs into Fields MultiFab
+     * \param[in] islice slice index
      * \param[in] current_N_level number of MR levels active on the current slice
      * \param[in] fields Field object
-     * \param[in] geom Geometry of the problem
+     * \param[in] field_geom Geometry of the problem
      */
-    void UpdateLaserAabs (const int current_N_level, Fields& fields,
-                          amrex::Vector<amrex::Geometry> const& geom);
+    void UpdateLaserAabs (const int islice, const int current_N_level, Fields& fields,
+                          amrex::Vector<amrex::Geometry> const& field_geom);
+
+    /** Put Chi from the fields and initial chi into the chi component of the laser
+     * \param[in] fields Field object
+     * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
+     */
+    void InterpolateChi (const Fields& fields, amrex::Geometry const& geom_field_lev0);
+
+    /** Fill the chi_initial component of the laser using the Plasma density function
+     * \param[in] multi_plasma multi plasma to get the density function, charge and mass
+     */
+    void SetInitialChi (const MultiPlasma& multi_plasma);
 
     /** Wrapper function to advance a laser slice by 1 time step.
+     * \param[in] islice slice index
      * \param[in] fields Field object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
      */
-    void AdvanceSlice (const Fields& fields, amrex::Real dt, int step);
+    void AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step,
+                       amrex::Geometry const& geom_field_lev0);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
-     * \param[in] fields Field object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceMG (const Fields& fields, amrex::Real dt, int step);
+    void AdvanceSliceMG (amrex::Real dt, int step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
-     * \param[in] fields Field object
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceFFT (const Fields& fields, amrex::Real dt, int step);
+    void AdvanceSliceFFT (amrex::Real dt, int step);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
      *
-     * \param[in] geom Geometry object for the slice
      * \param[in] islice slice index
      * \param[in] comp laser component to initialize
      */
-    void InitLaserSlice (const amrex::Geometry& geom, const int islice, const int comp);
+    void InitLaserSlice (const int islice, const int comp);
 
     /** Compute in-situ laser diagnostics of current slice, store in member variable
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] geom3D Geometry of the problem
      * \param[in] max_step maximum time step of simulation
      * \param[in] max_time maximum time of simulation
      */
-    void InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
+    void InSituComputeDiags (int step, amrex::Real time, int islice,
                              int max_step, amrex::Real max_time);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
-     * \param[in] geom3D Geometry object for the whole domain
      * \param[in] max_step maximum time step of simulation
      * \param[in] max_time maximum time of simulation
      */
-    void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
-                            int max_step, amrex::Real max_time);
+    void InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::Real max_time);
 
     /** Get the central wavelength */
     amrex::Real GetLambda0 () const { return m_lambda0; }
@@ -172,10 +178,25 @@ public:
     /** Get the geometry of the Laser Box */
     const amrex::Geometry& GetLaserGeom () const { return m_laser_geom_3D; }
 
-    bool m_use_laser {false}; /**< whether a laser is used or not */
+    /** If the laser geometry includes this slice
+     * \param[in] islice slice index
+     */
+    bool HasSlice (const int islice) const {
+        return GetLaserGeom().Domain().smallEnd(2) <= islice &&
+               islice <= GetLaserGeom().Domain().bigEnd(2);
+    }
+
+    /** If the laser is used */
+    bool UseLaser () const { return m_use_laser; }
+
+    /** If the laser is used and the laser geometry includes this slice
+     * \param[in] islice slice index
+     */
+    bool UseLaser (const int islice) const { return m_use_laser && HasSlice(islice); }
 
 private:
 
+    bool m_use_laser {false}; /**< whether a laser is used or not */
     /** Laser central wavelength.
      * he central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
@@ -187,8 +208,16 @@ private:
     amrex::IntVect m_slices_nguards = {-1, -1, -1};
     std::string m_solver_type = "multigrid";
     bool m_use_phase {true};
-    amrex::Box m_slice_box;
+    /** 3D Laser Geometry */
     amrex::Geometry m_laser_geom_3D;
+    /** xy slice BoxArray. Contains only one box */
+    amrex::BoxArray m_laser_slice_ba;
+    /** xy slice DistributionMapping */
+    amrex::DistributionMapping m_laser_slice_dm;
+    /** slice box of laser  */
+    amrex::Box m_slice_box;
+    /** interpolation order for laser to field and field to laser operations */
+    int m_interp_order = 1;
 
     /** if the lasers are initialized from openPMD file */
     bool m_laser_from_file = false;
