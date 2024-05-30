@@ -1147,35 +1147,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     {
                         arr(i, j, k, comp ) += envelope.real();
                         arr(i, j, k, comp + 1 ) += I * envelope.imag();
-        for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
-            const auto& laser = m_all_lasers[ilaser];
-            const amrex::Real a0 = laser.m_a0;
-            const amrex::Real w0 = laser.m_w0;
-            const amrex::Real cep = laser.m_CEP;
-            const amrex::Real propagation_angle_yz = laser.m_propagation_angle_yz;
-            const amrex::Real PFT_yz = laser.m_PFT_yz - MathConst::pi/2.0;
-            const amrex::Real x0 = laser.m_position_mean[0];
-            const amrex::Real y0 = laser.m_position_mean[1];
-            const amrex::Real z0 = laser.m_position_mean[2];
-            const amrex::Real L0 = laser.m_L0;
-            const amrex::Real zfoc = laser.m_focal_distance;
-            amrex::ParallelFor(
-                bx,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                {
-                    const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
-                    const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
-                    const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
-                    // Coordinate rotation in yz plane for a laser propagating at an angle.
-                    const amrex::Real yp=std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
-                    const amrex::Real zp=std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
-                    // For first laser, setval to 0.
-                    if (ilaser == 0) {
-                        arr(i, j, k, comp ) = 0._rt;
-                        arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                 );
-        }
+       }
         else{
             for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
                 const auto& laser = m_all_lasers[ilaser];
