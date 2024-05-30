@@ -18,7 +18,7 @@ class MultiBuffer
 public:
 
     // initialize MultiBuffer and open initial receive requests
-    void initialize (int nslices, MultiBeam& beams, bool use_laser, amrex::Box laser_box);
+    void initialize (int nslices, MultiBeam& beams, MultiLaser& laser);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
     void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
@@ -113,9 +113,7 @@ private:
     bool m_async_memcpy = true;
     int m_nslices = 0;
     int m_nbeams = 0;
-    bool m_use_laser = false;
     int m_laser_ncomp = 4;
-    amrex::Box m_laser_slice_box {};
     /** How many slices of beam particles can be received in advance */
     int m_max_leading_slices = std::numeric_limits<int>::max();
     /** How many slices of beam particles can be stored before being sent */
@@ -144,10 +142,10 @@ private:
     void make_progress (int slice, bool is_blocking, int current_slice);
 
     // write MultiBeam sizes into the metadata array
-    void write_metadata (int slice, MultiBeam& beams, int beam_slice);
+    void write_metadata (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
 
     // helper function to get location of individual arrays inside a buffer
-    std::size_t get_buffer_offset (int slice, offset_type type, MultiBeam& beams,
+    std::size_t get_buffer_offset (int slice, offset_type type, MultiBeam& beams, MultiLaser& laser,
                                    int ibeam, int comp);
 
     // copy gpu array into buffer at buffer_offset, either dtoh or dtod
