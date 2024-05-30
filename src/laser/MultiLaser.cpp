@@ -927,7 +927,18 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
-        if (Laser_func_specified!){
+       if(Laser_func_specified){
+            // check point
+                amrex::ParallelFor(
+                    bx,
+                    [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                    {
+                        arr(i, j, k, comp ) += envelope.real();
+                        arr(i, j, k, comp + 1 ) += I * envelope.imag();
+                    }
+                );
+        }
+        else{
             for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
                 const auto& laser = m_all_lasers[ilaser];
                 const amrex::Real a0 = laser.m_a0;
@@ -970,17 +981,6 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                     }
                 );
             }
-        }
-        else{
-            // check point
-                amrex::ParallelFor(
-                    bx,
-                    [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                    {
-                        arr(i, j, k, comp ) += envelope.real();
-                        arr(i, j, k, comp + 1 ) += I * envelope.imag();
-                    }
-                );
         }
     }
 }
