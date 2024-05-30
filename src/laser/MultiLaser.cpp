@@ -944,12 +944,12 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                     bx,
                     [=] AMREX_GPU_DEVICE(int i, int j, int k)
                     {
-                         const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
-                         const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
-                         const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
+                        const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
+                        const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
+                        const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
-                         const amrex::Real yp=std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
-                         const amrex::Real zp=std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
+                        const amrex::Real yp=std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
+                        const amrex::Real zp=std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
                     // For first laser, setval to 0.
                         if (ilaser == 0) {
                             arr(i, j, k, comp ) = 0._rt;
@@ -976,8 +976,9 @@ MultiLaser::InitLaserSlice (const amrex::Geometry& geom, const int islice, const
                 amrex::ParallelFor(
                     bx,
                     [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                    { arr(i, j, k, comp ) += envelope.real();
-                      arr(i, j, k, comp + 1 ) += I*envelope.imag();
+                    {
+                        arr(i, j, k, comp ) += envelope.real();
+                        arr(i, j, k, comp + 1 ) += I * envelope.imag();
                     }
                 );
         }
