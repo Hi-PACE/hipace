@@ -22,8 +22,6 @@ Laser::Laser (std::string name, bool laser_from_file)
     bool Laser_func_specified = queryWithParserAlt(pp, "laser_real(x,y,z)", m_profile_real_str, pp_alt);
     queryWithParserAlt(pp, "laser_imag(x,y,z)", m_profile_imag_str, pp_alt);
     if (Laser_func_specified) {
-      queryWithParser(pp, "profile_real", m_profile_real_str);
-      queryWithParser(pp, "profile_imag", m_profile_imag_str);
       amrex::Real m_profile_real= makeFunctionWithParser<3>( m_profile_real_str, m_parser, {"x", "y", "z"});
       amrex::Real m_profile_imag= makeFunctionWithParser<3>( m_profile_imag_str, m_parser, {"x", "y", "z"});
     }

@@ -1145,8 +1145,11 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     bx,
                     [=] AMREX_GPU_DEVICE(int i, int j, int k)
                     {
-                        arr(i, j, k, comp ) += envelope.real();
-                        arr(i, j, k, comp + 1 ) += I * envelope.imag();
+                        const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
+                        const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
+                        const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
+                        arr(i, j, k, comp ) += m_profile_real(x,y,z);
+                        arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
                     }
                 );
        }
