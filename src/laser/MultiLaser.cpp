@@ -1140,7 +1140,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
         //check point
-        for (int f=0; ilaser < m_nlasers; ilaser++) {
+        for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             const auto& laser = m_all_lasers[ilaser];
             bool Laser_func_specified = laser.m_profile_real_str.empty() && laser.m_profile_imag_str.empty();
             if (Laser_func_specified) {
@@ -1153,11 +1153,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
                     const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
                     const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
-                     // For first laser, setval to 0.
-                    if (ilaser == 0) {
-                            arr(i, j, k, comp ) = 0._rt;
-                            arr(i, j, k, comp + 1 ) = 0._rt;
-                        }
                     arr(i, j, k, comp ) += m_profile_real(x,y,z);
                     arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
                 }
