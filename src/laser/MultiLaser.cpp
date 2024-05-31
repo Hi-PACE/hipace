@@ -1157,8 +1157,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
-                    arr(i, j, k, comp ) += m_profile_real(x,y,z);
-                    arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
+                    arr(i, j, k, comp ) += m_profile_real(x,y,z).real();
+                    arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z).real();
                 }
                 );
             }
