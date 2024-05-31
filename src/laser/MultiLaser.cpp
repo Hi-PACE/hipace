@@ -21,7 +21,7 @@
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
-
+#include <string.h>
 #include <AMReX_GpuComplex.H>
 
 void
@@ -1140,6 +1140,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
         //check point
+        bool Laser_func_specified = m_profile_real_str.empty() && m_profile_imag_str.empty();
         if (Laser_func_specified) {
             auto m_profile_real= makeFunctionWithParser<3>( m_profile_real_str, parser_lr, {"x", "y", "z"});
             auto m_profile_imag= makeFunctionWithParser<3>( m_profile_imag_str, parser_li, {"x", "y", "z"});
@@ -1156,7 +1157,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
             );
        }
         else{
-            for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
+            for (int f=0; ilaser<m_nlasers; ilaser++) {
                 const auto& laser = m_all_lasers[ilaser];
                 const amrex::Real a0 = laser.m_a0;
                 const amrex::Real w0 = laser.m_w0;
