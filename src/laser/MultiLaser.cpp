@@ -1142,7 +1142,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         //check point
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             const auto& laser = m_all_lasers[ilaser];
-            bool Laser_func_specified = laser.m_profile_real_str.empty() && laser.m_profile_imag_str.empty();
+            bool Laser_func_specified = (laser.m_profile_real_str.empty() && laser.m_profile_imag_str.empty())!;
             if (Laser_func_specified) {
                 auto m_profile_real= makeFunctionWithParser<3>( laser.m_profile_real_str, laser.parser_lr, {"x", "y", "z"});
                 auto m_profile_imag= makeFunctionWithParser<3>( laser.m_profile_imag_str, laser.parser_li, {"x", "y", "z"});
