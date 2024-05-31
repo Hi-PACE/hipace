@@ -714,7 +714,7 @@ Option: ``fixed_ppc``
     This function uses the parser, see above.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
-    Minimum density. Particles with a lower density are not injected.
+    Particles with a density less than or equal to the minimal density won't be injected.
     The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.position_mean`` (3 `float`)
