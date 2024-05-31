@@ -238,6 +238,12 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         SetupPos(beam_species, beam, np_total, geom);
         SetupRealProperties(beam_species, real_names, np_total);
 
+        if (np_total == 0) {
+            amrex::ErrorStream() << "WARNING: Beam '" << name
+                                 << "' has no particles! No output will be written.\n";
+            continue;
+        }
+
         for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();
 
