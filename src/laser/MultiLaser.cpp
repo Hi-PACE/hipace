@@ -1143,7 +1143,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             bool Laser_func_specified = laser.m_profile_real_str.empty() && laser.m_profile_imag_str.empty();
-            if (Laser_func_specified!) {
+            if (!Laser_func_specified) {
                 auto m_profile_real= makeFunctionWithParser<3>( laser.m_profile_real_str, laser.parser_lr, {"x", "y", "z"});
                 auto m_profile_imag= makeFunctionWithParser<3>( laser.m_profile_imag_str, laser.parser_li, {"x", "y", "z"});
                 amrex::ParallelFor(
@@ -1157,8 +1157,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
-                    arr(i, j, k, comp ) += m_profile_real(x,y,z)<double>;
-                    arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z)<double>;
+                    arr(i, j, k, comp ) += m_profile_real(x,y,z);
+                    arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
                 }
                 );
             }
