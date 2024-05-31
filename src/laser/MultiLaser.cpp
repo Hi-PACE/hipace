@@ -1140,7 +1140,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
         //check point
-        for (int f=0; ilaser<m_nlasers; ilaser++) {
+        for (int f=0; ilaser < m_nlasers; ilaser++) {
             const auto& laser = m_all_lasers[ilaser];
             bool Laser_func_specified = laser.m_profile_real_str.empty() && laser.m_profile_imag_str.empty();
             if (Laser_func_specified) {
