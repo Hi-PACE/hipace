@@ -1139,19 +1139,23 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
-       if(Laser_func_specified){
-            // check point
-                amrex::ParallelFor(
-                    bx,
-                    [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                    {
-                        const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2] - z0;
-                        const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0]-x0;
-                        const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1]-y0;
-                        arr(i, j, k, comp ) += m_profile_real(x,y,z);
-                        arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
-                    }
-                );
+        //check point
+        bool Laser_func_specified = queryWithParserAlt(pp, "laser_real(x,y,z)", m_profile_real_str);
+        if (Laser_func_specified) {
+            queryWithParserAlt(pp, "laser_imag(x,y,z)", m_profile_imag_str);
+            auto m_profile_real= makeFunctionWithParser<3>( m_profile_real_str, parser_lr, {"x", "y", "z"});
+            auto m_profile_imag= makeFunctionWithParser<3>( m_profile_imag_str, parser_li, {"x", "y", "z"});
+            amrex::ParallelFor(
+            bx,
+            [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            {
+                const amrex::Real z = plo[2] + (islice+0.5_rt)*dx_arr[2];
+                const amrex::Real x = (i+0.5_rt)*dx_arr[0]+plo[0];
+                const amrex::Real y = (j+0.5_rt)*dx_arr[1]+plo[1];
+                arr(i, j, k, comp ) += m_profile_real(x,y,z);
+                arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
+            }
+            );
        }
         else{
             for (int ilaser=0; ilaser<m_nlasers; ilaser++) {

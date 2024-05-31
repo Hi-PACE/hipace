@@ -35,6 +35,8 @@ public:
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
     /** Custom profile*/
+    amrex::Parser parser_lr /**< owns data for m_profile_real_str */
+    amrex::Parser parser_li /**< owns data for m_profile_imag_str */
     std::string m_profile_real_str;
     std::string m_profile_imag_str;
 };
