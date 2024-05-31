@@ -288,6 +288,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
               amrex::ParallelDescriptor::Communicator());
 #endif
 
+    if (Hipace::HeadRank() && m_total_num_particles == 0) {
+        amrex::ErrorStream() << "WARNING: Beam '" << m_name
+                             << "' will be initialized with no particles!\n";
+    }
+
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
