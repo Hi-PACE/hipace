@@ -1140,9 +1140,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
         //check point
-        bool Laser_func_specified = queryWithParserAlt(pp, "laser_real(x,y,z)", m_profile_real_str);
         if (Laser_func_specified) {
-            queryWithParserAlt(pp, "laser_imag(x,y,z)", m_profile_imag_str);
             auto m_profile_real= makeFunctionWithParser<3>( m_profile_real_str, parser_lr, {"x", "y", "z"});
             auto m_profile_imag= makeFunctionWithParser<3>( m_profile_imag_str, parser_li, {"x", "y", "z"});
             amrex::ParallelFor(
