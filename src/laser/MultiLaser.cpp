@@ -1155,7 +1155,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     const amrex::Real z = islice * dx_arr[2] + poff_z;
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
-                         arr(i, j, k, comp + 1 ) = 0._rt;
+                        arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     arr(i, j, k, comp ) += m_profile_real(x,y,z);
                     arr(i, j, k, comp + 1 ) += I * m_profile_imag(x,y,z);
