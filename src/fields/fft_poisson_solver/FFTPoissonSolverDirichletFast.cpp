@@ -38,7 +38,7 @@ amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int
     if (i == 0) {
         real = 2*in(2*i, j);
     } else if (i == n_half) {
-        if (n_data & 1) {
+        if (n_data & 1) { // n_data is odd
             real = -2*in(2*i-2, j);
         } else {
             real = -in(2*i-2, j);
@@ -59,16 +59,16 @@ amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int
  * \param[in] i x index to compute
  * \param[in] j y index to compute
  * \param[in] n_data number of (contiguous) rows in position matrix
- * \param[in] sine_facor prefactor for ToSine equal to 1/(2*sin((idx+1)*pi/(n_data+1)))
+ * \param[in] sine_factor prefactor for ToSine equal to 1/(2*sin((idx+1)*pi/(n_data+1)))
  */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_facor) {
+amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_factor) {
     const amrex::Real in_a = in(i+1, j);
     const amrex::Real in_b = in(n_data-i, j);
     // possible optimization:
     // iterate over the elements is such a way that each thread computes (i,j) and (n_data-i-1,j)
     // so in_a and in_b can be reused
-    return amrex::Real(0.5)*(in_b - in_a + (in_a + in_b) * sine_facor[i]);
+    return amrex::Real(0.5)*(in_b - in_a + (in_a + in_b) * sine_factor[i]);
 }
 
 void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amrex::Real>> out,
@@ -83,23 +83,23 @@ void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amr
 }
 
 void ToSine (const Array2<amrex::Real> in, const Array2<amrex::Real> out,
-             const amrex::Real* sine_facor, const int n_data, const int n_batch)
+             const amrex::Real* sine_factor, const int n_data, const int n_batch)
 {
     amrex::ParallelFor({{0,0,0}, {n_data-1,n_batch-1,0}},
         [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
         {
-            out(i, j) = to_sine(in, i, j, n_data, sine_facor);
+            out(i, j) = to_sine(in, i, j, n_data, sine_factor);
         });
 }
 
 void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
                                  const Array2<amrex::GpuComplex<amrex::Real>> out,
-                                 const amrex::Real* sine_facor, const int n_data, const int n_batch)
+                                 const amrex::Real* sine_factor, const int n_data, const int n_batch)
 {
     const int n_half = (n_batch+1)/2;
 
     auto transpose_to_sine = [=] AMREX_GPU_DEVICE (int i, int j) {
-        return to_sine(in, j, i, n_data, sine_facor);
+        return to_sine(in, j, i, n_data, sine_factor);
     };
 
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
@@ -177,12 +177,12 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
 void ToSine_Mult_ToComplex (const Array2<amrex::Real> in,
                             const Array2<amrex::GpuComplex<amrex::Real>> out,
                             const Array2<amrex::Real> eigenvalue,
-                            const amrex::Real* sine_facor, const int n_data, const int n_batch)
+                            const amrex::Real* sine_factor, const int n_data, const int n_batch)
 {
     const int n_half = (n_data+1)/2;
 
     auto mult_to_sine = [=] AMREX_GPU_DEVICE (int i, int j) {
-        return eigenvalue(i, j) * to_sine(in, i, j, n_data, sine_facor);
+        return eigenvalue(i, j) * to_sine(in, i, j, n_data, sine_factor);
     };
 
     amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
@@ -240,7 +240,7 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
             amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
 
             if ((sinex_sq!=0) && (siney_sq!=0)) {
-                eigenvalue_matrix(j,i) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt * ( sinex_sq / dxsquared + siney_sq / dysquared ));
             } else {
                 // Avoid division by 0
                 eigenvalue_matrix(j,i) = 0._rt;
