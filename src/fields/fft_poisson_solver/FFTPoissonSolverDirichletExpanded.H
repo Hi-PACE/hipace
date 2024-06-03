@@ -59,8 +59,6 @@ public:
     virtual amrex::Real BoundaryFactor() override final { return 1.; }
 
 private:
-    /** Spectral fields, contains (real) field in Fourier space */
-    amrex::MultiFab m_tmpSpectralField;
     /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
     amrex::MultiFab m_eigenvalue_matrix;
     /** Twice expanded field that gets filled symmetrically */
