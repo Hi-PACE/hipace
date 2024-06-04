@@ -59,10 +59,8 @@ public:
     virtual amrex::Real BoundaryFactor() override final { return 1.; }
 
 private:
-    /** Spectral fields, contains (real) field in Fourier space */
-    amrex::MultiFab m_tmpSpectralField;
-    /** Multifab eigenvalues, to solve Poisson equation with Dirichlet BC. */
-    amrex::MultiFab m_eigenvalue_matrix;
+    /** FArrayBox eigenvalues, to solve Poisson equation with Dirichlet BC. */
+    amrex::FArrayBox m_eigenvalue_matrix;
     /** Real array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
     /** Complex array for the FFTs */
@@ -73,6 +71,10 @@ private:
     AnyFFT m_y_fft;
     /** work area for both DST plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
+    /** x prefactor for ToSine */
+    amrex::Gpu::DeviceVector<amrex::Real> m_sine_x_factor;
+    /** y prefactor for ToSine */
+    amrex::Gpu::DeviceVector<amrex::Real> m_sine_y_factor;
 };
 
 #endif
