@@ -23,7 +23,8 @@
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice);
+              bool& overloaded, const int current_N_level, const int step, const int islice,
+              const amrex::Real relative_tolerance);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
  * \param[in] hipace pointer to Hipace instance

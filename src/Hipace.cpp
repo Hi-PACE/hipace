@@ -134,6 +134,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "salame_Ez_target(zeta,zeta_initial,Ez_initial)", salame_target_str);
     m_salame_target_func = makeFunctionWithParser<3>(salame_target_str, m_salame_parser,
                                                      {"zeta", "zeta_initial", "Ez_initial"});
+    queryWithParser(pph, "salame_relative_tolerance", m_salame_relative_tolerance);
 
     std::string solver = "explicit";
     queryWithParser(pph, "bxby_solver", solver);
@@ -566,7 +567,7 @@ Hipace::SolveOneSlice (int islice, int step)
         // Modify the beam particle weights on this slice to flatten Ez.
         // As the beam current is modified, Bx and By are also recomputed.
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
-                    m_salame_overloaded, current_N_level, step, islice);
+                    m_salame_overloaded, current_N_level, step, islice, m_salame_relative_tolerance);
     }
 
     // get beam diagnostics after SALAME but before beam push

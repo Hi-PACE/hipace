@@ -780,8 +780,11 @@ For more information on the algorithm, see the corresponding publication `S. Die
     It is recommended to use this option with a fixed weight can beam.
     If a gaussian beam profile is used, then the zmin and zmax parameters should be used.
 
-* ``hipace.salame_n_iter`` (`int`) optional (default `3`)
-    Number of iterations the SALAME algorithm should do when it is used.
+* ``hipace.salame_n_iter`` (`int`) optional (default `5`)
+    The maximum number of iterations the SALAME algorithm should do when it is used.
+
+* ``hipace.salame_relative_tolerance`` (`float`) optional (default `1e-4`)
+    Relative error tolerance to finish SALAME iterations early.
 
 * ``hipace.salame_do_advance`` (`bool`) optional (default `1`)
     Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field

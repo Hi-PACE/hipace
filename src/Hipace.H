@@ -250,7 +250,7 @@ public:
     OpenPMDWriter m_openpmd_writer;
 #endif
     /** the number of SALAME iterations to be done */
-    int m_salame_n_iter = 3;
+    int m_salame_n_iter = 5;
     /** if the SALAME-only field should be computed exactly with plasma particles */
     bool m_salame_do_advance = true;
     /** the slice index of the previous slice with SALAME */
@@ -263,6 +263,8 @@ public:
     amrex::Parser m_salame_parser;
     /** Function to get the target Ez field for SALAME */
     amrex::ParserExecutor<3> m_salame_target_func;
+    /** relative error tolerance to finish SALAME iterations early */
+    amrex::Real m_salame_relative_tolerance = 1e-4;
 
 private:
 
