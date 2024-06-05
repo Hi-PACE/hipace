@@ -20,6 +20,7 @@
  * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
+ * \param[in] relative_tolerance relative error tolerance to finish SALAME iterations early
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
