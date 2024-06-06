@@ -17,13 +17,13 @@
 Laser::Laser (std::string name, bool laser_from_file)
 {
     m_name = name;
+    amrex::ParmParse pp(m_name);
     getWithParser(pp, "laser_init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {
         laser_from_file = true;
         return;
     }
     else if (m_laser_init_type == "gaussian"){
-        amrex::ParmParse pp(m_name);
         queryWithParser(pp, "a0", m_a0);
         queryWithParser(pp, "w0", m_w0);
         queryWithParser(pp, "CEP", m_CEP);
@@ -36,9 +36,11 @@ Laser::Laser (std::string name, bool laser_from_file)
         if (duration_is_specified) m_L0 = m_tau*get_phys_const().c;
         queryWithParser(pp, "focal_distance", m_focal_distance);
         queryWithParser(pp, "position_mean",  m_position_mean);
+        return;
     }
     else if (m_laser_init_type == "parser"){
         queryWithParser(pp, "laser_real(x,y,z)", m_profile_real_str);
         queryWithParser(pp, "laser_imag(x,y,z)", m_profile_imag_str);
+        return;
     }
 }
