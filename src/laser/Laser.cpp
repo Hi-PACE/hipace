@@ -18,7 +18,7 @@ Laser::Laser (std::string name, bool laser_from_file)
 {
     m_name = name;
     amrex::ParmParse pp(m_name);
-    getWithParser(pp, "laser_init_type", m_laser_init_type);
+    queryWithParser(pp, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {
         laser_from_file = true;
         return;
