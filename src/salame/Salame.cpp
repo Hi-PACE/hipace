@@ -12,7 +12,8 @@
 
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice)
+              bool& overloaded, const int current_N_level, const int step, const int islice,
+              const amrex::Real relative_tolerance)
 {
     HIPACE_PROFILE("SalameModule()");
 
@@ -154,7 +155,15 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         }
 
         amrex::Print() << "Salame weight factor on slice " << islice << " is " << W
-                       << " Total weight is " << W_total << '\n';
+                       << " Total weight is " << W_total;
+
+        if (!overloaded && iter >= 1 && std::abs(W - 1.) < relative_tolerance) {
+            // SALAME is converged
+            iter = n_iter-1; // this is the last iteration
+            amrex::Print() << " (converged)";
+        }
+
+        amrex::Print() << '\n';
 
         SalameMultiplyBeamWeight(W, hipace);
 
