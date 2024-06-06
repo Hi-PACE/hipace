@@ -22,6 +22,8 @@ public:
     Laser (std::string name, bool laser_from_file);
 
     std::string m_name {""};
+    std::string m_laser_init_type = "gaussian";
+    /**< The way to initialize a laser (from_file/gaussian/parser)*/
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::Real m_w0 {0.}; /**< Laser waist */
     amrex::Real m_CEP {0.}; /**< Laser carrier-envelope phase (CEP) */

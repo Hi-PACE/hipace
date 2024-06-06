@@ -1142,8 +1142,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         //check point
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
-            bool Laser_func_not_specified = laser.m_profile_real_str.empty() && laser.m_profile_imag_str.empty();
-            if (!Laser_func_not_specified) {
+            if (laser.m_laser_init_type == "parser") {
                 auto m_profile_real= makeFunctionWithParser<3>( laser.m_profile_real_str, laser.parser_lr, {"x", "y", "z"});
                 auto m_profile_imag= makeFunctionWithParser<3>( laser.m_profile_imag_str, laser.parser_li, {"x", "y", "z"});
                 amrex::ParallelFor(
@@ -1162,7 +1161,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 }
                 );
             }
-            else{
+            else if (laser.m_laser_init_type == "gaussian") {
                 const amrex::Real a0 = laser.m_a0;
                 const amrex::Real w0 = laser.m_w0;
                 const amrex::Real cep = laser.m_CEP;
@@ -1181,8 +1180,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     const amrex::Real y = j * dx_arr[1] + poff_y - y0;
                     const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
-                    const amrex::Real yp=std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
-                    const amrex::Real zp=std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
+                    const amrex::Real yp = std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
+                    const amrex::Real zp = std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
@@ -1197,7 +1196,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x*x + yp*yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * \
-                    amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
+                       amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
                     arr(i, j, k, comp ) += envelope.real();
                     arr(i, j, k, comp + 1 ) += envelope.imag();
                     }
