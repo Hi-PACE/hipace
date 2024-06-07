@@ -871,7 +871,6 @@ Option: ``gaussian``
     Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
     direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
 
-
 Option: ``from_file``
 
 * ``lasers.input_file`` (`string`) optional (default `""`)
