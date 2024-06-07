@@ -14,16 +14,13 @@
 #include <AMReX_Vector.H>
 #include <AMReX_ParmParse.H>
 
-Laser::Laser (std::string name, bool laser_from_file)
+Laser::Laser (std::string name)
 {
     m_name = name;
     amrex::ParmParse pp(m_name);
     amrex::ParmParse pps("lasers");
     queryWithParser(pps, "init_type", m_laser_init_type);
-    if (m_laser_init_type == "from_file") {
-        laser_from_file = true;
-        return;
-    }
+    if (m_laser_init_type == "from_file") return;
     else if (m_laser_init_type == "gaussian"){
         queryWithParser(pp, "a0", m_a0);
         queryWithParser(pp, "w0", m_w0);
