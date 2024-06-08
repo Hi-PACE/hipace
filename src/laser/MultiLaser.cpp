@@ -21,7 +21,6 @@
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
-#include <string.h>
 #include <AMReX_GpuComplex.H>
 
 void
