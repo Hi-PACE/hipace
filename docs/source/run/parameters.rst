@@ -834,7 +834,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.MG_average_rhs`` (`0` or `1`) optional (default `1`)
     Whether to use the most stable discretization for the envelope solver.
 
-* ``lasers.init_type`` (list of `string`) optional (default `gaussian`)
+* ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
     The initializing method of laser. Possible options are:
     `gaussian` (default), the laser is iniliatized with an ideal gaussian pulse.
     `from_file`, the laser is loaded from an openPMD file.
