@@ -888,10 +888,10 @@ Option: ``from_file``
 
 Option: ``parser``
 
-* ``lasers.laser_real(x,y,z)`` (`string`)
+* ``<laser name>.laser_real(x,y,z)`` (`string`)
     Expression for the real part of the laser evelope in `x, y, z`.
 
-* ``lasers.laser_imag(x,y,z)`` (`string`)
+* ``<laser name>.laser_imag(x,y,z)`` (`string`)
     Expression for the imaginary part of the laser evelope `x, y, z`.
 
 Diagnostic parameters

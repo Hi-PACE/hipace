@@ -18,7 +18,6 @@ Laser::Laser (std::string name, bool laser_from_file)
 {
     m_name = name;
     amrex::ParmParse pp(m_name);
-    amrex::ParmParse pps("lasers");
     queryWithParser(pps, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") return;
     else if (m_laser_init_type == "gaussian"){
@@ -37,8 +36,8 @@ Laser::Laser (std::string name, bool laser_from_file)
         return;
     }
     else if (m_laser_init_type == "parser"){
-        queryWithParser(pps, "laser_real(x,y,z)", m_profile_real_str);
-        queryWithParser(pps, "laser_imag(x,y,z)", m_profile_imag_str);
+        queryWithParser(pp, "laser_real(x,y,z)", m_profile_real_str);
+        queryWithParser(pp, "laser_imag(x,y,z)", m_profile_imag_str);
         return;
     }
 }
