@@ -1179,8 +1179,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     const amrex::Real y = j * dx_arr[1] + poff_y - y0;
                     const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
-                    const amrex::Real yp = std::cos( propagation_angle_yz + PFT_yz ) * y - std::sin( propagation_angle_yz + PFT_yz ) * z;
-                    const amrex::Real zp = std::sin( propagation_angle_yz + PFT_yz ) * y + std::cos( propagation_angle_yz + PFT_yz ) * z;
+                    const amrex::Real yp = std::cos( propagation_angle_yz + PFT_yz ) * y \
+                        - std::sin( propagation_angle_yz + PFT_yz ) * z;
+                    const amrex::Real zp = std::sin( propagation_angle_yz + PFT_yz ) * y \
+                        + std::cos( propagation_angle_yz + PFT_yz ) * z;
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
