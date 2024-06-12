@@ -36,10 +36,12 @@ Laser::Laser (std::string name, bool laser_from_file)
         return;
     }
     else if (m_laser_init_type == "parser"){
-        bool real_is_specified=queryWithParser(pp, "laser_real(x,y,z)", m_profile_real_str);
-        bool imag_is_specified=queryWithParser(pp, "laser_imag(x,y,z)", m_profile_imag_str);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( real_is_specified && imag_is_specified,
-        "Please specify both real and imaginary part");
+        std::string profile_real_str = "";
+        std::string profile_imag_str = "";
+        getWithParser(pp, "laser_real(x,y,z)", profile_real_str);
+        getWithParser(pp, "laser_imag(x,y,z)", profile_imag_str);
+        m_profile_real = makeFunctionWithParser<3>( profile_real_str, m_parser_lr, {"x", "y", "z"});
+        m_profile_imag = makeFunctionWithParser<3>( profile_imag_str, m_parser_li, {"x", "y", "z"});
         return;
     }
 }

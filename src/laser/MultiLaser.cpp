@@ -1142,8 +1142,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "parser") {
-                auto m_profile_real= makeFunctionWithParser<3>( laser.m_profile_real_str, laser.parser_lr, {"x", "y", "z"});
-                auto m_profile_imag= makeFunctionWithParser<3>( laser.m_profile_imag_str, laser.parser_li, {"x", "y", "z"});
+                auto profile_real = laser.m_profile_real;
+                auto profile_imag = laser.m_profile_imag;
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -1155,8 +1155,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
-                    arr(i, j, k, comp ) += m_profile_real(x,y,z);
-                    arr(i, j, k, comp + 1 ) +=  m_profile_imag(x,y,z);
+                    arr(i, j, k, comp ) += profile_real(x,y,z);
+                    arr(i, j, k, comp + 1 ) += profile_imag(x,y,z);
                 }
                 );
             }

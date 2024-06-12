@@ -836,9 +836,12 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
 * ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
     The initializing method of laser. Possible options are:
-    `gaussian` (default), the laser is iniliatized with an ideal gaussian pulse.
-    `from_file`, the laser is loaded from an openPMD file.
-    `parser`, the laser is initialized with the expression of the complex envelope function.
+
+      * ``gaussian``(default) the laser is iniliatized with an ideal gaussian pulse.
+
+      * ``from_file``, the laser is loaded from an openPMD file.
+
+      *  ``parser``, the laser is initialized with the expression of the complex envelope function.
 
 Option: ``gaussian``
 
@@ -893,6 +896,9 @@ Option: ``parser``
 
 * ``<laser name>.laser_imag(x,y,z)`` (`string`)
     Expression for the imaginary part of the laser evelope `x, y, z`.
+
+* ``lasers.lambda0`` (`float`)
+    Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
 
 Diagnostic parameters
 ---------------------
