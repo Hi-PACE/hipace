@@ -300,7 +300,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
             const bool can_ionize = plasma.m_can_ionize;
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
             {
                 amrex::Long const num_particles = pti.numParticles();

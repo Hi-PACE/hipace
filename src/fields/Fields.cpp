@@ -383,7 +383,7 @@ LinCombination (const amrex::IntVect box_grow, amrex::MultiFab dst,
                 const amrex::Real factor_b, const FVB& src_b)
 {
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const Array2<amrex::Real> dst_array = dst.array(mfi);
@@ -417,7 +417,7 @@ Multiply (const amrex::IntVect box_grow, amrex::MultiFab dst,
           const amrex::Real factor, const FV& src)
 {
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const Array2<amrex::Real> dst_array = dst.array(mfi);
@@ -951,7 +951,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         amrex::MultiFab& slicemf = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
             const Array3<amrex::Real> arr = slicemf.array(mfi);
