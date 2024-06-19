@@ -29,7 +29,7 @@ RTOL=1e-11 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_transverse_benchmark \
-        diagnostic.output_period = 0 \
+        diagnostic.output_period = 1 \
         my_constants.nxy = 1023 \
         hipace.file_prefix=$TEST_NAME
 
