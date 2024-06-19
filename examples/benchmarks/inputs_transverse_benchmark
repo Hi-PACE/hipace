@@ -1,0 +1,46 @@
+# This is a simple transverse scaling benchmark that can run on GPU.
+# Adjust my_constants.nxy to change the scale.
+
+amr.n_cell = nxy nxy 1000
+
+hipace.normalized_units = 1
+
+amr.max_level = 0
+
+max_step = 0
+hipace.dt = 0
+hipace.verbose = 3
+
+hipace.depos_order_xy = 2
+
+geometry.is_periodic = false  false  false
+geometry.prob_lo = -6  -6  -12
+geometry.prob_hi =  6   6   6
+
+beams.names = beam
+beam.injection_type = fixed_weight_pdf
+beam.pdf = "exp(-0.5*((z-0)/1.41)^2)"
+beam.density = 2
+beam.position_mean = 0 0
+beam.position_std = 0.3 0.3
+beam.u_mean = 0 0 2000
+beam.u_std = 0 0 0
+beam.num_particles = nxy*nxy*10
+
+plasmas.names = elec
+plasmas.neutralize_background = true
+
+elec.density(x,y,z) = 1
+elec.ppc = 1 1
+elec.element = electron
+
+diagnostic.output_period = 0
+diagnostic.diag_type = xz
+
+hipace.do_device_synchronize = true
+
+tiny_profiler.print_threshold = 0
+
+# 127 159 191 223 255 319 383 447 511 639 767 895 1023 1279 1535 1791 2047 2559 3071 3583 4095
+# 5119 6143 7167 8191 10239 12287 14335 16383 20479 24575 28671 32767 40959 49151 57343 65535
+my_constants.nxy = 127
