@@ -440,7 +440,7 @@ if(BUILD_TESTING)
         else()
 
             add_test(NAME transverse_benchmark.1Rank
-                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/transverse_benchmark.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/transverse_benchmark.1Rank.sh
                             $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )
