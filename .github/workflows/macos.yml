@@ -18,9 +18,9 @@ jobs:
       #CMAKE_GENERATOR: Ninja
       SETUPTOOLS_USE_DISTUTILS: stdlib
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Brew Cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       # - once stored under a key, they become immutable (even if local cache path content changes)
       # - for a refresh the key has to change, e.g., hash of a tracked file in the key
       with:
@@ -90,11 +90,20 @@ jobs:
 
     - name: build HiPACE++
       run: |
+        export CCACHE_COMPRESS=1
+        export CCACHE_COMPRESSLEVEL=10
+        export CCACHE_MAXSIZE=100M
+        export CCACHE_SLOPPINESS=time_macros
+        ccache -z
+
         cmake -S . -B build_sp          \
           -DCMAKE_VERBOSE_MAKEFILE=ON   \
           -DHiPACE_openpmd_internal=OFF \
           -DHiPACE_PRECISION=SINGLE
         cmake --build build_sp -j 2
+
+        du -hs ~/Library/Caches/ccache
+        ccache -s
 
 #    - name: test HiPACE++
 #      run: |
