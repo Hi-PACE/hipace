@@ -69,7 +69,7 @@ AdaptiveTimeStep::BroadcastTimeStep (amrex::Real& dt)
               amrex::ParallelDescriptor::Communicator());
 
     // Broadcast minimum uz
-    MPI_Bcast(&m_min_uz,
+    MPI_Bcast(&m_min_uz_mq,
               1,
               amrex::ParallelDescriptor::Mpi_typemap<amrex::Real>::type(),
               Hipace::HeadRankID(),
@@ -171,22 +171,25 @@ AdaptiveTimeStep::CalculateFromMinUz (
 
     const PhysConst phys_const = get_phys_const();
     const amrex::Real c = phys_const.c;
-    const amrex::Real q_e = phys_const.q_e;
-    const amrex::Real m_e = phys_const.m_e;
     const amrex::Real ep0 = phys_const.ep0;
 
     // Extract properties associated with physical size of the box
     const int nbeams = beams.get_nbeams();
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(nbeams >= 1,
+        "Must have at least one beam to use adaptive time step");
     const int numprocs = Hipace::m_numprocs;
 
     amrex::Vector<amrex::Real> new_dts;
     new_dts.resize(nbeams);
-    amrex::Vector<amrex::Real> beams_min_uz;
-    beams_min_uz.resize(nbeams, std::numeric_limits<amrex::Real>::max());
+    amrex::Vector<amrex::Real> beams_min_uz_mq;
+    beams_min_uz_mq.resize(nbeams, std::numeric_limits<amrex::Real>::max());
 
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+        new_dts[ibeam] = dt;
 
         const auto& beam = beams.getBeam(ibeam);
+        if (beam.m_charge == 0.) { continue; }
+        const amrex::Real mass_charge_ratio = beam.m_mass / beam.m_charge;
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             m_timestep_data[ibeam][WhichDouble::SumWeights] != 0,
@@ -203,19 +206,17 @@ AdaptiveTimeStep::CalculateFromMinUz (
             std::min(std::max(sigma_uz_dev, m_timestep_data[ibeam][WhichDouble::MinUz]),
                         max_supported_uz);
 
-        beams_min_uz[ibeam] = chosen_min_uz*beam.m_mass*beam.m_mass/m_e/m_e;
-
         if (Hipace::m_verbose >=2 ){
             amrex::Print()<<"Minimum gamma of beam " << ibeam <<
-                " to calculate new time step: " << beams_min_uz[ibeam] << "\n";
+                " to calculate new time step: " << chosen_min_uz << "\n";
         }
 
-        if (beams_min_uz[ibeam] < m_threshold_uz) {
+        if (chosen_min_uz < m_threshold_uz) {
             amrex::Print()<<"WARNING: beam particles of beam "<< ibeam <<
                 " have non-relativistic velocities!\n";
         }
-        beams_min_uz[ibeam] = std::max(beams_min_uz[ibeam], m_threshold_uz);
-        new_dts[ibeam] = dt;
+        chosen_min_uz = std::max(chosen_min_uz, m_threshold_uz);
+        beams_min_uz_mq[ibeam] = std::abs(chosen_min_uz * mass_charge_ratio);
 
         /*
             Calculate the time step for this beam used in the next time iteration
@@ -228,25 +229,29 @@ AdaptiveTimeStep::CalculateFromMinUz (
         */
         amrex::Real new_dt = dt;
         amrex::Real new_time = t;
-        amrex::Real min_uz = beams_min_uz[ibeam];
+        amrex::Real min_uz = chosen_min_uz;
         const int niter = m_adaptive_predict_step ? numprocs : 1;
         for (int i = 0; i < niter; i++)
         {
-            amrex::Real plasma_density = plasmas.maxDensity(c * new_time);
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_density > 0.,
+            amrex::Real plasma_charge_density = plasmas.maxChargeDensity(c * new_time);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_charge_density > 0.,
                 "A >0 plasma density must be specified to use an adaptive time step.");
-            min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
+            if (m_adaptive_gather_ez) {
+                min_uz += m_timestep_data[ibeam][WhichDouble::MinAcc] * new_dt;
+            }
             // Just make sure min_uz is >0, to avoid nans below.
             min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
-            const amrex::Real omega_p = std::sqrt(plasma_density * q_e * q_e / (ep0 * m_e));
-            amrex::Real omega_b = omega_p / std::sqrt(2. * min_uz);
+            amrex::Real omega_b = std::sqrt(plasma_charge_density /
+                                            (2. * std::abs(min_uz * mass_charge_ratio) * ep0));
             new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
             new_time += new_dt;
-            if (min_uz > m_threshold_uz) new_dts[ibeam] = new_dt;
+            if (min_uz > m_threshold_uz) {
+                new_dts[ibeam] = new_dt;
+            }
         }
     }
     // Store min uz across beams, used in the phase advance method
-    m_min_uz = *std::min_element(beams_min_uz.begin(), beams_min_uz.end());
+    m_min_uz_mq = *std::min_element(beams_min_uz_mq.begin(), beams_min_uz_mq.end());
     /* set the new time step */
     dt = *std::min_element(new_dts.begin(), new_dts.end());
     // Make sure the new time step is smaller than the upper bound
@@ -341,17 +346,15 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
     amrex::Real phase_advance0 = 0.;
 
     // Get plasma density at beginning of step
-    const amrex::Real plasma_density0 = plasmas.maxDensity(pc.c * t);
-    const amrex::Real omgp0 = std::sqrt(plasma_density0 * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
-    amrex::Real omgb0 = omgp0 / std::sqrt(2. *m_min_uz);
+    const amrex::Real plasma_charge_density0 = plasmas.maxChargeDensity(pc.c * t);
+    const amrex::Real omgb0 = std::sqrt(plasma_charge_density0 / (2. * m_min_uz_mq * pc.ep0));
 
     // Numerically integrate the phase advance from t to t+dt. The time step is reduced such that
     // the expected phase advance equals that of a uniform plasma up to a tolerance level.
     for (int i = 0; i < m_adaptive_phase_substeps; i++)
     {
-        const amrex::Real plasma_density = plasmas.maxDensity(pc.c * (t+i*dt_sub));
-        const amrex::Real omgp = std::sqrt(plasma_density * pc.q_e * pc.q_e / (pc.ep0 * pc.m_e));
-        amrex::Real omgb = omgp / std::sqrt(2. *m_min_uz);
+        const amrex::Real plasma_charge_density = plasmas.maxChargeDensity(pc.c * (t+i*dt_sub));
+        const amrex::Real omgb = std::sqrt(plasma_charge_density / (2. * m_min_uz_mq * pc.ep0));
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
         if(std::abs(phase_advance - phase_advance0) >

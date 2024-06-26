@@ -418,3 +418,15 @@ then
                      --file_name ${build_dir}/bin/production.SI.2Rank_lwfa \
                      --test-name production.SI.2Rank_lwfa
 fi
+
+# transverse_benchmark.1Rank.sh
+if [[ $all_tests = true ]] || [[ $one_test_name = "transverse_benchmark.1Rank.sh" ]]
+then
+    cd $build_dir
+    ctest --output-on-failure -R transverse_benchmark.1Rank.sh \
+        || echo "ctest command failed, maybe just because checksums are different. Keep going"
+    cd $checksum_dir
+    ./checksumAPI.py --reset-benchmark \
+                     --file_name ${build_dir}/bin/transverse_benchmark.1Rank.sh \
+                     --test-name transverse_benchmark.1Rank.sh
+fi

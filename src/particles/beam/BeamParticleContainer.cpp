@@ -288,6 +288,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
               amrex::ParallelDescriptor::Communicator());
 #endif
 
+    if (Hipace::HeadRank() && m_total_num_particles == 0) {
+        amrex::ErrorStream() << "WARNING: Beam '" << m_name
+                             << "' will be initialized with no particles!\n";
+    }
+
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
@@ -390,6 +395,7 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
 
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+                ptd.idata(BeamIdx::mr_level)[ip] = 0;
             }
         );
     }
@@ -434,6 +440,20 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
                                                       slice_geom, m_reorder_idx_type);
         const unsigned int* permutations = perm.dataPtr();
         auto& soa = ptile.GetStructOfArrays();
+
+        {
+            typename BeamTile::SoA::IdCPU tmp_idcpu(np_total);
+
+            auto src = soa.GetIdCPUData().data();
+            uint64_t* dst = tmp_idcpu.data();
+            amrex::ParallelFor(np_total,
+                [=] AMREX_GPU_DEVICE (int i) {
+                    dst[i] = i < np ? src[permutations[i]] : src[i];
+                });
+
+            amrex::Gpu::streamSynchronize();
+            soa.GetIdCPUData().swap(tmp_idcpu);
+        }
 
         { // Create a scope for the temporary vector below
             BeamTile::RealVector tmp_real(np_total);

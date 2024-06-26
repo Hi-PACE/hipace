@@ -90,21 +90,14 @@ OpenPMDWriter::WriteFieldData (
     // todo: periodicity/boundary, field solver, particle pusher, etc.
     auto meshes = iteration.meshes;
 
-    amrex::Vector<std::string> varnames = fd.m_comps_output;
-
-    if (fd.m_do_laser) {
-        // laser must be at the end of varnames
-        varnames.push_back(fd.m_laser_io_name);
-    }
-
     // loop over field components
-    for ( int icomp = 0; icomp < varnames.size(); ++icomp )
+    for ( int icomp = 0; icomp < fd.m_nfields; ++icomp )
     {
-        const bool is_laser_comp = varnames[icomp].find("laserEnvelope") == 0;
+        const bool is_laser_comp = fd.m_base_geom_type == FieldDiagnosticData::geom_type::laser;
 
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
-        openPMD::Mesh field = meshes[varnames[icomp]];
+        openPMD::Mesh field = meshes[fd.m_comps_output[icomp]];
         openPMD::MeshRecordComponent field_comp = field[openPMD::MeshRecordComponent::SCALAR];
 
         // meta-data
@@ -244,6 +237,12 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
 
         SetupPos(beam_species, beam, np_total, geom);
         SetupRealProperties(beam_species, real_names, np_total);
+
+        if (np_total == 0) {
+            amrex::ErrorStream() << "WARNING: Beam '" << name
+                                 << "' has no particles! No output will be written.\n";
+            continue;
+        }
 
         for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
             uint64_t * const uint64_data = m_uint64_beam_data[ibeam][idx].get();

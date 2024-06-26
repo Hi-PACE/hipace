@@ -1,8 +1,8 @@
-/* Copyright 2020-2022
+/* Copyright 2020-2024
  *
  * This file is part of HiPACE++.
  *
- * Authors: MaxThevenet, Remi Lehe, Severin Diederichs
+ * Authors: AlexanderSinn, MaxThevenet, Remi Lehe, Severin Diederichs
  * License: BSD-3-Clause-LBNL
  */
 /* Copyright 2019-2020
@@ -12,84 +12,239 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "AnyFFT.H"
-#include "CuFFTUtils.H"
-#include "utils/HipaceProfilerWrapper.H"
 
-namespace AnyFFT
-{
+#include <AMReX.H>
+#include <AMReX_GpuDevice.H>
+
+#include <cufft.h>
+
+#include <map>
+#include <string>
 
 #ifdef AMREX_USE_FLOAT
-    cufftType VendorR2C = CUFFT_R2C;
-    cufftType VendorC2R = CUFFT_C2R;
+static constexpr bool use_float = true;
 #else
-    cufftType VendorR2C = CUFFT_D2Z;
-    cufftType VendorC2R = CUFFT_Z2D;
+static constexpr bool use_float = false;
 #endif
 
-    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
-                        Complex * const complex_array, const direction dir)
-    {
-        HIPACE_PROFILE("AnyFFT::CreatePlan()");
-        FFTplan fft_plan;
+struct VendorPlan {
+    cufftHandle m_cufftplan;
+    FFTType m_type;
+    void* m_in;
+    void* m_out;
+};
 
-        if (__CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ == 1) {
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::max(real_size[0], real_size[1]) <= 1024),
-            "Due to a bug in cuFFT, CUDA 11.1 supports only nx, ny <= 1024. Please use CUDA "
-            "version >= 11.2 (recommended) or <= 11.0 for larger grid sizes.");
-        }
+std::string cufftErrorToString (const cufftResult& err) {
+    const auto res2string = std::map<cufftResult, std::string>{
+        {CUFFT_SUCCESS, "CUFFT_SUCCESS"},
+        {CUFFT_INVALID_PLAN,"CUFFT_INVALID_PLAN"},
+        {CUFFT_ALLOC_FAILED,"CUFFT_ALLOC_FAILED"},
+        {CUFFT_INVALID_TYPE,"CUFFT_INVALID_TYPE"},
+        {CUFFT_INVALID_VALUE,"CUFFT_INVALID_VALUE"},
+        {CUFFT_INTERNAL_ERROR,"CUFFT_INTERNAL_ERROR"},
+        {CUFFT_EXEC_FAILED,"CUFFT_EXEC_FAILED"},
+        {CUFFT_SETUP_FAILED,"CUFFT_SETUP_FAILED"},
+        {CUFFT_INVALID_SIZE,"CUFFT_INVALID_SIZE"},
+        {CUFFT_UNALIGNED_DATA,"CUFFT_UNALIGNED_DATA"}
+    };
 
-        // Initialize fft_plan.m_plan with the vendor fft plan.
-        cufftResult result;
-        if (dir == direction::R2C){
-            result = cufftPlan2d(
-                &(fft_plan.m_plan), real_size[1], real_size[0], VendorR2C);
-        } else {
-            result = cufftPlan2d(
-                &(fft_plan.m_plan), real_size[1], real_size[0], VendorC2R);
-        }
+    const auto it = res2string.find(err);
+    if(it != res2string.end()){
+        return it->second;
+    } else {
+        return std::to_string(err) + " (unknown error code)";
+    }
+}
 
-        if ( result != CUFFT_SUCCESS ) {
-            amrex::Print() << " cufftplan failed! Error: " <<
-                CuFFTUtils::cufftErrorToString(result) << "\n";
-        }
+void assert_cufft_status (std::string const& name, const cufftResult& status) {
+    if (status != CUFFT_SUCCESS) {
+        amrex::Abort(name + " failed! Error: " + cufftErrorToString(status));
+    }
+}
 
-        // Store meta-data in fft_plan
-        fft_plan.m_real_array = real_array;
-        fft_plan.m_complex_array = complex_array;
-        fft_plan.m_dir = dir;
+std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
+    // https://docs.nvidia.com/cuda/cufft/index.html#cufft-api-reference
+    m_plan = new VendorPlan;
 
-        return fft_plan;
+    m_plan->m_type = type;
+    cufftType transform_type;
+    int rank = 0;
+    // n is in C order
+    long long int n[2] = {0, 0};
+    long long int batch = 0;
+
+    switch (type) {
+        case FFTType::C2C_2D_fwd:
+            transform_type = use_float ? CUFFT_C2C : CUFFT_Z2Z;
+            rank = 2;
+            n[0] = ny;
+            n[1] = nx;
+            batch = 1;
+            break;
+        case FFTType::C2C_2D_bkw:
+            transform_type = use_float ? CUFFT_C2C : CUFFT_Z2Z;
+            rank = 2;
+            n[0] = ny;
+            n[1] = nx;
+            batch = 1;
+            break;
+        case FFTType::C2R_2D:
+            transform_type = use_float ? CUFFT_C2R : CUFFT_Z2D;
+            rank = 2;
+            n[0] = ny;
+            n[1] = nx;
+            batch = 1;
+            break;
+        case FFTType::R2C_2D:
+            transform_type = use_float ? CUFFT_R2C : CUFFT_D2Z;
+            rank = 2;
+            n[0] = ny;
+            n[1] = nx;
+            batch = 1;
+            break;
+        case FFTType::R2R_2D:
+            amrex::Abort("R2R FFT not supported by cufft");
+            return 0;
+        case FFTType::C2R_1D_batched:
+            transform_type = use_float ? CUFFT_C2R : CUFFT_Z2D;
+            rank = 1;
+            n[0] = nx;
+            batch = ny;
+            break;
     }
 
-    void DestroyPlan (FFTplan& fft_plan)
-    {
-        cufftDestroy( fft_plan.m_plan );
-    }
+    cufftResult result;
 
-    void Execute (FFTplan& fft_plan){
-        HIPACE_PROFILE("AnyFFT::Execute()");
-        // make sure that this is done on the same GPU stream as the above copy
-        cudaStream_t stream = amrex::Gpu::Device::cudaStream();
-        cufftSetStream ( fft_plan.m_plan, stream);
-        cufftResult result;
-        if (fft_plan.m_dir == direction::R2C){
-#ifdef AMREX_USE_FLOAT
-            result = cufftExecR2C(fft_plan.m_plan, fft_plan.m_real_array, fft_plan.m_complex_array);
-#else
-            result = cufftExecD2Z(fft_plan.m_plan, fft_plan.m_real_array, fft_plan.m_complex_array);
-#endif
-        } else if (fft_plan.m_dir == direction::C2R){
-#ifdef AMREX_USE_FLOAT
-            result = cufftExecC2R(fft_plan.m_plan, fft_plan.m_complex_array, fft_plan.m_real_array);
-#else
-            result = cufftExecZ2D(fft_plan.m_plan, fft_plan.m_complex_array, fft_plan.m_real_array);
-#endif
-        } else {
-            amrex::Abort("direction must be AnyFFT::direction::R2C or AnyFFT::direction::C2R");
+    result = cufftCreate(&(m_plan->m_cufftplan));
+    assert_cufft_status("cufftCreate", result);
+
+    result = cufftSetAutoAllocation(m_plan->m_cufftplan, 0);
+    assert_cufft_status("cufftSetAutoAllocation", result);
+
+    std::size_t workSize = 0;
+
+    result = cufftMakePlanMany64(
+        m_plan->m_cufftplan,
+        rank,
+        n,
+        nullptr, 0, 0,
+        nullptr, 0, 0,
+        transform_type,
+        batch,
+        &workSize);
+    assert_cufft_status("cufftMakePlanMany64", result);
+
+    result = cufftSetStream(m_plan->m_cufftplan, amrex::Gpu::Device::cudaStream());
+    assert_cufft_status("cufftSetStream", result);
+
+    return workSize;
+}
+
+void AnyFFT::SetBuffers (void* in, void* out, void* work_area) {
+    m_plan->m_in = in;
+    m_plan->m_out = out;
+
+    cufftResult result;
+
+    result = cufftSetWorkArea(m_plan->m_cufftplan, work_area);
+    assert_cufft_status("cufftSetWorkArea", result);
+}
+
+void AnyFFT::Execute () {
+    cufftResult result;
+
+    // There is also cufftXtExec that could replace all of these specific Exec calls,
+    // however in testing it doesn't work
+    if constexpr (use_float) {
+        switch (m_plan->m_type) {
+            case FFTType::C2C_2D_fwd:
+                result = cufftExecC2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out),
+                    CUFFT_FORWARD);
+                assert_cufft_status("cufftExecC2C", result);
+                break;
+            case FFTType::C2C_2D_bkw:
+                result = cufftExecC2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out),
+                    CUFFT_INVERSE);
+                assert_cufft_status("cufftExecC2C", result);
+                break;
+            case FFTType::C2R_2D:
+                result = cufftExecC2R(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecC2R", result);
+                break;
+            case FFTType::R2C_2D:
+                result = cufftExecR2C(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftReal*>(m_plan->m_in),
+                    reinterpret_cast<cufftComplex*>(m_plan->m_out));
+                assert_cufft_status("cufftExecR2C", result);
+                break;
+            case FFTType::R2R_2D:
+                amrex::Abort("R2R FFT not supported by cufft");
+                break;
+            case FFTType::C2R_1D_batched:
+                result = cufftExecC2R(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecC2R", result);
+                break;
         }
-        if ( result != CUFFT_SUCCESS ) {
-            amrex::Print() << " forward transform using cufftExec failed ! Error: " <<
-                CuFFTUtils::cufftErrorToString(result) << "\n";
+    } else {
+        switch (m_plan->m_type) {
+            case FFTType::C2C_2D_fwd:
+                result = cufftExecZ2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out),
+                    CUFFT_FORWARD);
+                assert_cufft_status("cufftExecZ2Z", result);
+                break;
+            case FFTType::C2C_2D_bkw:
+                result = cufftExecZ2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out),
+                    CUFFT_INVERSE);
+                assert_cufft_status("cufftExecZ2Z", result);
+                break;
+            case FFTType::C2R_2D:
+                result = cufftExecZ2D(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecZ2D", result);
+                break;
+            case FFTType::R2C_2D:
+                result = cufftExecD2Z(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out));
+                assert_cufft_status("cufftExecD2Z", result);
+                break;
+            case FFTType::R2R_2D:
+                amrex::Abort("R2R FFT not supported by cufft");
+                break;
+            case FFTType::C2R_1D_batched:
+                result = cufftExecZ2D(m_plan->m_cufftplan,
+                    reinterpret_cast<cufftDoubleComplex*>(m_plan->m_in),
+                    reinterpret_cast<cufftDoubleReal*>(m_plan->m_out));
+                assert_cufft_status("cufftExecZ2D", result);
+                break;
         }
     }
 }
+
+AnyFFT::~AnyFFT () {
+    if (m_plan) {
+        cufftResult result;
+
+        result = cufftDestroy(m_plan->m_cufftplan);
+        assert_cufft_status("cufftDestroy", result);
+
+        delete m_plan;
+    }
+}
+
+void AnyFFT::setup () {}
+
+void AnyFFT::cleanup () {}

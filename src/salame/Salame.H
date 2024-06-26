@@ -20,10 +20,12 @@
  * \param[in] current_N_level number of MR levels active on the current slice
  * \param[in] step time step of simulation
  * \param[in] islice slice index of the whole domain
+ * \param[in] relative_tolerance relative error tolerance to finish SALAME iterations early
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice);
+              bool& overloaded, const int current_N_level, const int step, const int islice,
+              const amrex::Real relative_tolerance);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
  * \param[in] hipace pointer to Hipace instance

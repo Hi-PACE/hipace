@@ -33,8 +33,6 @@ InitParticles (const amrex::RealVect& a_u_std,
     a_bounds.setHi(0, Hipace::m_boundary_particle_hi[0]);
     a_bounds.setHi(1, Hipace::m_boundary_particle_hi[1]);
 
-    const int depos_order_1 = Hipace::m_depos_order_xy + 1;
-    const bool outer_depos_loop = Hipace::m_outer_depos_loop;
     const bool use_fine_patch = m_use_fine_patch;
 
     const amrex::Array<int, 2> ppc_coarse = m_ppc;
@@ -228,24 +226,12 @@ InitParticles (const amrex::RealVect& a_u_std,
                 unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
                 unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
 
-                unsigned int cellid = 0;
-                if (outer_depos_loop) {
-                    // ordering of axes from fastest to slowest:
-                    // x/depos_order_1 to match deposition
-                    // x%depos_order_1
-                    // y
-                    // z (not used)
-                    // ppc
-                    cellid = (uiz * ny + uiy) * nx +
-                    uix/depos_order_1 + ((uix%depos_order_1)*nx+depos_order_1-1)/depos_order_1;
-                } else {
-                    // ordering of axes from fastest to slowest:
-                    // x
-                    // y
-                    // z (not used)
-                    // ppc
-                    cellid = (uiz * ny + uiy) * nx + uix;
-                }
+                // ordering of axes from fastest to slowest:
+                // x
+                // y
+                // z (not used)
+                // ppc
+                unsigned int cellid = (uiz * ny + uiy) * nx + uix;
 
                 pcount[cellid] = 1;
             });
@@ -268,13 +254,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
                 unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
 
-                unsigned int cellid = 0;
-                if (outer_depos_loop) {
-                    cellid = (uiz * ny + uiy) * nx +
-                    uix/depos_order_1 + ((uix%depos_order_1)*nx+depos_order_1-1)/depos_order_1;
-                } else {
-                    cellid = (uiz * ny + uiy) * nx + uix;
-                }
+                unsigned int cellid = (uiz * ny + uiy) * nx + uix;
 
                 const amrex::Long pidx = poffset[cellid] - poffset[0] + old_size;
 
@@ -387,6 +367,12 @@ InitParticles (const amrex::RealVect& a_u_std,
             });
         }
     }
+#ifndef AMREX_USE_GPU
+    // The index order for initializing plasma particles is optimized for GPU.
+    // On CPU, especially with multiple particles per cell,
+    // reordering particles by cell gives better performance for plasma deposition and push.
+    SortParticlesByCell();
+#endif
 }
 
 void

@@ -131,9 +131,6 @@ General parameters
 * ``hipace.depos_derivative_type`` (`int`) optional (default `2`)
     Type of derivative used in explicit deposition. `0`: analytic, `1`: nodal, `2`: centered
 
-* ``hipace.outer_depos_loop`` (`bool`) optional (default `0`)
-    If the loop over depos_order is included in the loop over particles.
-
 * ``hipace.do_beam_jx_jy_deposition`` (`bool`) optional (default `1`)
     Using the default, the beam deposits all currents ``Jx``, ``Jy``, ``Jz``. Using
     ``hipace.do_beam_jx_jy_deposition = 0`` disables the transverse current deposition of the beams.
@@ -162,10 +159,10 @@ Geometry
     Maximum level of mesh refinement. Currently, mesh refinement is supported up to level
     `2`. Note, that the mesh refinement algorithm is still in active development and should be used with care.
 
-* ``geometry.patch_lo`` (3 `float`)
+* ``geometry.prob_lo`` (3 `float`)
     Lower end of the simulation box in x, y and z.
 
-* ``geometry.patch_hi`` (3 `float`)
+* ``geometry.prob_hi`` (3 `float`)
     Higher end of the simulation box in x, y and z.
 
 * ``boundary.fields`` (`string`)
@@ -213,6 +210,16 @@ Geometry
 
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
+
+* ``lasers.n_cell`` (2 `integer`)
+    Number of cells in x and y for the laser grid.
+    The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
+
+* ``lasers.patch_lo`` (3 `float`)
+    Lower end of the laser grid in x, y and z.
+
+* ``lasers.patch_hi`` (3 `float`)
+    Upper end of the laser grid in x, y and z.
 
 Time step
 ---------
@@ -278,15 +285,31 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
-* ``fields.poisson_solver`` (`string`) optional (default `FFTDirichlet`)
+* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletFast`)
     Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
-    solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are
-    ``FFTDirichlet``, ``FFTPeriodic`` and ``MGDirichlet``.
+    solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are:
 
-* ``hipace.use_small_dst`` (`bool`) optional (default `0` or `1`)
-    Whether to use a large R2C or a small C2R fft in the dst of the Poisson solver.
-    The small dst is quicker for simulations with :math:`\geq 511` transverse grid points.
-    The default is set accordingly.
+      * ``FFTDirichletDirect`` Use the discrete sine transformation that is directly implemented
+        by FFTW to solve the Poisson equation with Dirichlet boundary conditions.
+        This option is only available when compiling for CPUs with FFTW.
+        Preferred resolution: :math:`2^N-1`.
+
+      * ``FFTDirichletExpanded`` Perform the discrete sine transformation by symmetrically
+        expanding the field to twice its size.
+        Preferred resolution: :math:`2^N-1`.
+
+      * ``FFTDirichletFast`` Perform the discrete sine transformation using a fast sine transform
+        algorithm that uses FFTs of the same size as the fields.
+        Preferred resolution: :math:`2^N-1`.
+
+      * ``MGDirichlet`` Use the HiPACE++ multigrid solver to solve the Poisson equation with
+        Dirichlet boundary conditions.
+        Preferred resolution: :math:`2^N` and :math:`2^N-1`.
+
+      * ``FFTPeriodic`` Use FFTs to solve the Poisson equation with Periodic boundary conditions.
+        Note that this does not work with features that change the boundary values,
+        like mesh refinement or open boundaries.
+        Preferred resolution: :math:`2^N`.
 
 * ``fields.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes current and charge densities transversely before the field solve.
@@ -418,10 +441,8 @@ When both are specified, the per-species value is used.
     Whether to add a neutralizing background of immobile particles of opposite charge.
 
 * ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
-    Tile size for plasma current deposition, when running on CPU.
-    When tiling is activated (``hipace.do_tiling = 1``), the current deposition is done in temporary
-    arrays of size ``sort_bin_size`` (+ guard cells) that are atomic-added to the main current
-    arrays.
+    Tile size for plasma current deposition, when running on CPU
+    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
     | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.
@@ -706,7 +727,7 @@ Option: ``fixed_ppc``
     This function uses the parser, see above.
 
 * ``<beam name>.min_density`` (`float`) optional (default `0`)
-    Minimum density. Particles with a lower density are not injected.
+    Particles with a density less than or equal to the minimal density won't be injected.
     The absolute value of this parameter is used when initializing the beam.
 
 * ``<beam name>.position_mean`` (3 `float`)
@@ -772,8 +793,11 @@ For more information on the algorithm, see the corresponding publication `S. Die
     It is recommended to use this option with a fixed weight can beam.
     If a gaussian beam profile is used, then the zmin and zmax parameters should be used.
 
-* ``hipace.salame_n_iter`` (`int`) optional (default `3`)
-    Number of iterations the SALAME algorithm should do when it is used.
+* ``hipace.salame_n_iter`` (`int`) optional (default `5`)
+    The maximum number of iterations the SALAME algorithm should do when it is used.
+
+* ``hipace.salame_relative_tolerance`` (`float`) optional (default `1e-4`)
+    Relative error tolerance to finish SALAME iterations early.
 
 * ``hipace.salame_do_advance`` (`bool`) optional (default `1`)
     Whether the SALAME algorithm should calculate the SALAME-beam-only Ez field
@@ -806,6 +830,10 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
+
+* ``lasers.interp_order`` (`int`) optional (default `1`)
+    Transverse shape order for the laser to field interpolation of aabs and
+    the field to laser interpolation of chi. Currently, `0,1,2,3` are implemented.
 
 * ``lasers.solver_type`` (`string`) optional (default `multigrid`)
     Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
@@ -857,8 +885,13 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.focal_distance`` (`float`)
     Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
 
-* ``<laser name>.propagation_angle_yz`` (`float`)
+* ``<laser name>.propagation_angle_yz`` (`float`) optinal (default `0`)
     Propagation angle of the pulse in the yz plane (0 is the along the z axis)
+
+* ``<laser name>.PFT_yz`` (`float`) optinal (default `pi/2`)
+    Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
+    direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
+
 Diagnostic parameters
 ---------------------
 
@@ -895,11 +928,15 @@ Field diagnostics
     The names of all field diagnostics, separated by a space.
     Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
     To run without field diagnostics, choose the name ``no_field_diag``.
-    If mesh refinement is used, the default becomes ``lev0 lev1`` or ``lev0 lev1 lev2``.
+    Depending on whether mesh refinement or a laser is used, the default becomes
+    a subset of ``lev0 lev1 lev2 laser_diag``.
 
-* ``<diag name> or diagnostic.level`` (`integer`) optional (default `0`)
-    From which mesh refinement level the diagnostics should be collected.
-    If ``<diag name>`` is equal to ``lev1``, the default for this parameter becomes 1 etc.
+* ``<diag name> or diagnostic.base_geometry`` (`string`) optional (default `level_0`)
+    Which geometry the diagnostics should be based on.
+    Available geometries are `level_0`, `level_1`, `level_2` and `laser`,
+    depending on if MR or a laser is used.
+    If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
+    becomes ``level_0 level_1 level_2 laser``respectively.
 
 * ``<diag name>.output_period`` (`integer`) optional (default `0`)
     Output period for fields. No output is given for ``<diag name>.output_period = 0``.
@@ -932,8 +969,12 @@ Field diagnostics
     If ``rho`` is explicitly mentioned as ``field_data``, it is deposited by the plasma
     to be available as a diagnostic. Similarly if ``rho_<plasma name>`` is explicitly mentioned,
     the charge density of that plasma species will be separately available as a diagnostic.
-    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available.
+    When a laser pulse is used, the laser complex envelope ``laserEnvelope`` is available
+    in the ``laser`` base geometry.
     The plasma proper density (n/gamma) is then also accessible via ``chi``.
+    A field can be removed from the list, for example, after it has been included through ``all``,
+    by adding ``remove_<field name>`` after it has been added. If a field is added and removed
+    multiple times, the last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
     Lower limit for the diagnostic grid.

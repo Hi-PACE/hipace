@@ -60,6 +60,9 @@ struct Hipace_early_init
      * and Parser Constants */
     Hipace_early_init (Hipace* instance);
 
+    /** Destructor for FFT cleanup */
+    ~Hipace_early_init ();
+
     /** Struct containing physical constants (which values depends on the unit system, determined
      * at runtime): SI or normalized units. */
     PhysConst m_phys_const;
@@ -73,9 +76,6 @@ struct Hipace_early_init
     /** Type of derivative used in explicit deposition. 0: analytic, 1: nodal, 2: centered
      */
     inline static int m_depos_derivative_type = 2;
-    /* if the loop over depos_order is included in the loop over particles
-     */
-    inline static bool m_outer_depos_loop = false;
 
     /* Number of mesh refinement levels */
     int m_N_level = 1;
@@ -231,10 +231,10 @@ public:
     /** Whether to interpolate the neutralizing background to MR levels 1 and 2 instead of depositing it */
     inline static bool m_interpolate_neutralizing_background = false;
     /** Whether to use tiling for particle operations */
-#ifdef AMREX_USE_GPU
-    inline static bool m_do_tiling = false;
-#else
+#ifdef AMREX_USE_OMP
     inline static bool m_do_tiling = true;
+#else
+    inline static bool m_do_tiling = false;
 #endif
     /** Whether the explicit field solver is used */
     inline static bool m_explicit = true;
@@ -269,7 +269,7 @@ public:
     // SALAME
 
     /** the number of SALAME iterations to be done */
-    int m_salame_n_iter = 3;
+    int m_salame_n_iter = 5;
     /** if the SALAME-only field should be computed exactly with plasma particles */
     bool m_salame_do_advance = true;
     /** the slice index of the previous slice with SALAME */
@@ -282,6 +282,8 @@ public:
     amrex::Parser m_salame_parser;
     /** Function to get the target Ez field for SALAME */
     amrex::ParserExecutor<3> m_salame_target_func;
+    /** relative error tolerance to finish SALAME iterations early */
+    amrex::Real m_salame_relative_tolerance = 1e-4;
 
     // Boundary
 
@@ -312,7 +314,7 @@ private:
     amrex::Vector< CoulombCollision > m_all_collisions;
 
     void InitDiagnostics (const int step);
-    void FillFieldDiagnostics (const int lev, int islice);
+    void FillFieldDiagnostics (const int current_N_level, int islice);
     void FillBeamDiagnostics (const int step);
     void WriteDiagnostics (const int step);
     void FlushDiagnostics ();

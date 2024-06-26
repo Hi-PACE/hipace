@@ -26,6 +26,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
                                    amrex::DistributionMapping const& dm,
                                    amrex::Geometry const& gm )
 {
+    HIPACE_PROFILE("FFTPoissonSolverPeriodic::define()");
     using namespace amrex::literals;
 
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
@@ -92,25 +93,17 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    m_forward_plan = AnyFFT::FFTplans(spectralspace_ba, dm);
-    m_backward_plan = AnyFFT::FFTplans(spectralspace_ba, dm);
-    // Loop over boxes and allocate the corresponding plan
-    // for each box owned by the local MPI proc
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Note: the size of the real-space box and spectral-space box
-        // differ when using real-to-complex FFT. When initializing
-        // the FFT plan, the valid dimensions are those of the real-space box.
-        amrex::IntVect fft_size = m_stagingArea[mfi].box().length();
-        m_forward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(),
-            reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
-            AnyFFT::direction::R2C);
+    amrex::IntVect fft_size = m_stagingArea[0].box().length();
+    std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2C_2D, fft_size[0], fft_size[1]);
+    std::size_t bkw_area = m_backward_fft.Initialize(FFTType::C2R_2D, fft_size[0], fft_size[1]);
 
-        m_backward_plan[mfi] = AnyFFT::CreatePlan(
-            fft_size, m_stagingArea[mfi].dataPtr(),
-            reinterpret_cast<AnyFFT::Complex*>( m_tmpSpectralField[mfi].dataPtr()),
-            AnyFFT::direction::C2R);
-    }
+    // Allocate work area for both FFTs
+    m_fft_work_area.resize(std::max(fwd_area, bkw_area));
+
+    m_forward_fft.SetBuffers(m_stagingArea[0].dataPtr(), m_tmpSpectralField[0].dataPtr(),
+                             m_fft_work_area.dataPtr());
+    m_backward_fft.SetBuffers(m_tmpSpectralField[0].dataPtr(), m_stagingArea[0].dataPtr(),
+                              m_fft_work_area.dataPtr());
 }
 
 
@@ -119,15 +112,12 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
     HIPACE_PROFILE("FFTPoissonSolverPeriodic::SolvePoissonEquation()");
 
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Perform Fourier transform from the staging area to `tmpSpectralField`
-        AnyFFT::Execute(m_forward_plan[mfi]);
-    }
+    m_forward_fft.Execute();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
+    for ( amrex::MFIter mfi(m_tmpSpectralField, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by inv_k2
         Array2<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
@@ -138,10 +128,7 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
             });
     }
 
-    for ( amrex::MFIter mfi(m_stagingArea, DfltMfi); mfi.isValid(); ++mfi ){
-        // Perform Fourier transform from `tmpSpectralField` to the staging area
-        AnyFFT::Execute(m_backward_plan[mfi]);
-    }
+    m_backward_fft.Execute();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

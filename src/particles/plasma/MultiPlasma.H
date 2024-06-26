@@ -63,12 +63,12 @@ public:
     void ExplicitDeposition (Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
                              int const lev);
 
-    /** \brief Return max density, to compute the adaptive time step.
+    /** \brief Return max charge density, to compute the adaptive time step.
      *
      * the max is taken across species AND include m_adaptive_density, giving a way to
      * specify a density to the adaptive time step calculator even with no plasma species.
      */
-    amrex::Real maxDensity (amrex::Real z);
+    amrex::Real maxChargeDensity (amrex::Real z);
 
     /** \brief Gather field values and push particles
      *

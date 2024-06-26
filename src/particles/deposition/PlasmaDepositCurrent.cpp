@@ -51,14 +51,13 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         // Do not access the field if the kernel later does not deposit into it,
         // the field might not be allocated. Use 0 as dummy component instead
         amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
-        const int     jx_cmp = deposit_jx_jy  ? Comps[which_slice]["jx"]     : -1;
-        const int     jy_cmp = deposit_jx_jy  ? Comps[which_slice]["jy"]     : -1;
-        const int     jz_cmp = deposit_jz     ? Comps[which_slice]["jz"]     : -1;
-        const int    rho_cmp = deposit_rho    ? Comps[which_slice][rho_str]  : -1;
-        const int    chi_cmp = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
-        const int rhomjz_cmp = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
-
-        amrex::Vector<amrex::FArrayBox>& tmp_dens = fields.getTmpDensities();
+        const int     jx = deposit_jx_jy  ? Comps[which_slice]["jx"]     : -1;
+        const int     jy = deposit_jx_jy  ? Comps[which_slice]["jy"]     : -1;
+        const int     jz = deposit_jz     ? Comps[which_slice]["jz"]     : -1;
+        const int    rho = deposit_rho    ? Comps[which_slice][rho_str]  : -1;
+        const int    chi = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
+        const int rhomjz = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
+        const int   aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
@@ -66,11 +65,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         // Extract particle properties
         const auto ptd = pti.GetParticleTile().getParticleTileData();
-
-        // Extract laser array from MultiFab
-        const Array3<const amrex::Real> a_laser_arr =
-            Hipace::m_use_laser ? isl_fab.const_array(Comps[WhichSlice::This]["aabs"])
-                                : amrex::Array4<const amrex::Real>();
 
         // Extract box properties
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
@@ -94,230 +88,163 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
         int* const AMREX_RESTRICT p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
 
-#ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
-        {
-        const int ithread = omp_get_thread_num();
-#else
-        const int ithread = 0;
-#endif
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
-            "jx, jy, jz, and rho must be nodal in all directions.");
+            "jx, jy, jz, and rho must be cell centered in all directions.");
+
+        Array3<amrex::Real> const isl_arr = isl_fab.array();
 
         const bool do_tiling = Hipace::m_do_tiling;
 
-        Array3<amrex::Real> const isl_arr =
-            do_tiling ? tmp_dens[ithread].array() : isl_fab.array();
-        const int jx     = (do_tiling && jx_cmp     != -1) ? 0 : jx_cmp;
-        const int jy     = (do_tiling && jy_cmp     != -1) ? 1 : jy_cmp;
-        const int jz     = (do_tiling && jz_cmp     != -1) ? 2 : jz_cmp;
-        const int rho    = (do_tiling && rho_cmp    != -1) ? 3 : rho_cmp;
-        const int chi    = (do_tiling && chi_cmp    != -1) ? 4 : chi_cmp;
-        const int rhomjz = (do_tiling && rhomjz_cmp != -1) ? 5 : rhomjz_cmp;
-
-        int ntiley = 0;
+        [[maybe_unused]] int ntilex = 1;
+        [[maybe_unused]] int ntiley = 1;
         if (do_tiling) {
-            const int ng = Fields::m_slices_nguards[0];
-            const int ncelly = isl_fab.box().length(1)-2*ng;
-            ntiley = (ncelly + bin_size -1) / bin_size;
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(bin_size >= 2*Fields::m_slices_nguards[0],
+            "plasmas.sort_bin_size must be at least twice as large as the number of ghost cells");
+            amrex::Box domain = gm[lev].Domain();
+            domain.coarsen(bin_size);
+            ntilex = domain.length(0);
+            ntiley = domain.length(1);
         }
 
-        const int ntiles = do_tiling ? bins.numBins() : 1;
-#ifdef AMREX_USE_OMP
-#pragma omp for
-#endif
-        for (int a_itile=0; a_itile<ntiles; a_itile++){
-
 #ifndef AMREX_USE_GPU
-            if (do_tiling) tmp_dens[ithread].setVal(0.);
+        for (int tile_perm_x=0; tile_perm_x<2; ++tile_perm_x) {
+        for (int tile_perm_y=0; tile_perm_y<2; ++tile_perm_y) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for collapse(2) if(do_tiling)
 #endif
-            // Get the x and y indices of current tile from its linearized index itile = itiley + itilex * ntiley
-            const int itilex = do_tiling ? a_itile / ntiley : 0;
-            const int itiley = do_tiling ? a_itile % ntiley : 0;
-            PlasmaBins::index_type const * const a_indices = do_tiling ? bins.permutationPtr() : nullptr;
-            PlasmaBins::index_type const * const a_offsets = do_tiling ? bins.offsetsPtr() : nullptr;
-            const int a_itilex_bs = do_tiling ? itilex * bin_size : 0;
-            const int a_itiley_bs = do_tiling ? itiley * bin_size : 0;
+        for (int itilex=tile_perm_x; itilex<ntilex; itilex+=2) {
+        for (int itiley=tile_perm_y; itiley<ntiley; itiley+=2) {
+        // the index is transposed to be the same as in amrex::DenseBins::build
+        const int tile_index = itilex * ntiley + itiley;
+        using tiling_cto = amrex::CompileTimeOptions<false, true>;
+#else
+        const int tile_index = 0;
+        using tiling_cto = amrex::CompileTimeOptions<false>; // tiling disabled on GPU
+#endif
 
-            int num_particles = do_tiling ? a_offsets[a_itile+1]-a_offsets[a_itile]
-                                          : pti.numParticles();
+        PlasmaBins::index_type const * const a_indices = do_tiling ? bins.permutationPtr() : nullptr;
+        PlasmaBins::index_type const * const a_offsets = do_tiling ? bins.offsetsPtr() : nullptr;
 
-            if (Hipace::m_outer_depos_loop) {
-                num_particles *= (Hipace::m_depos_order_xy + 1);
+        int num_particles = do_tiling ? a_offsets[tile_index+1]-a_offsets[tile_index]
+                                        : pti.numParticles();
+
+        // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
+        amrex::ParallelFor(
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
+                amrex::CompileTimeOptions<false, true>, // can_ionize
+                tiling_cto,                             // do_tiling
+                amrex::CompileTimeOptions<false, true>  // use_laser
+            >{}, {
+                Hipace::m_depos_order_xy,
+                plasma.m_can_ionize,
+                do_tiling,
+                Hipace::m_use_laser
+            },
+            num_particles,
+            [=] AMREX_GPU_DEVICE (int ip, auto depos_order,
+                auto can_ionize, auto c_do_tiling, auto use_laser) noexcept {
+            constexpr int depos_order_xy = depos_order.value;
+
+            [[maybe_unused]] auto indices = a_indices;
+            [[maybe_unused]] auto offsets = a_offsets;
+            [[maybe_unused]] auto itile = tile_index;
+            if constexpr (c_do_tiling.value) {
+                ip = indices[offsets[itile]+ip];
             }
 
-            // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
-            amrex::ParallelFor(
-                amrex::TypeList<
-                    amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
-                    amrex::CompileTimeOptions<false, true>, // outer_depos_loop
-                    amrex::CompileTimeOptions<false, true>, // can_ionize
-#ifdef AMREX_USE_GPU
-                    amrex::CompileTimeOptions<false>,       // do_tiling (disabled on GPU)
-#else
-                    amrex::CompileTimeOptions<false, true>, // do_tiling
-#endif
-                    amrex::CompileTimeOptions<false, true>  // use_laser
-                >{}, {
-                    Hipace::m_depos_order_xy,
-                    Hipace::m_outer_depos_loop,
-                    plasma.m_can_ionize,
-                    do_tiling,
-                    Hipace::m_use_laser
-                },
-                num_particles,
-                [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto outer_depos_loop,
-                    auto can_ionize, auto c_do_tiling, auto use_laser) noexcept {
-                constexpr int depos_order_xy = depos_order.value;
-                // Using 1 thread per particle and per deposited cell is only done in the fast (x) direction.
-                // This can also be applied in the y direction, but so far does not show significant gain.
-                constexpr bool outer_depos_loop_x = outer_depos_loop.value;
-                constexpr int outer_depos_order_x_1 = outer_depos_loop_x ? (depos_order_xy + 1) : 1;
-                constexpr int inner_depos_order_x = outer_depos_loop_x ? 0 : depos_order_xy;
+            // only deposit plasma currents on or below their according MR level
+            if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;
 
-                int ip = idx / outer_depos_order_x_1;
+            const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
+            const amrex::Real xp = ptd.pos(0, ip);
+            const amrex::Real yp = ptd.pos(1, ip);
+            const amrex::Real vx_c = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
+            const amrex::Real vy_c = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
 
-                [[maybe_unused]] auto indices = a_indices;
-                [[maybe_unused]] auto offsets = a_offsets;
-                [[maybe_unused]] auto itile = a_itile;
-                if constexpr (c_do_tiling.value) {
-                    ip = indices[offsets[itile]+ip];
-                }
+            // calculate charge of the plasma particles
+            amrex::Real q_invvol = charge_invvol * ptd.rdata(PlasmaIdx::w)[ip];
+            amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
+            [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
+            if constexpr (can_ionize.value) {
+                q_invvol *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                q_mu0_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                laser_norm_ion *=
+                    ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+            }
 
-                const int ox = idx % outer_depos_order_x_1;
+            const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
+            const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
-                // only deposit plasma currents on or below their according MR level
-                if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;
+            amrex::Real Aabssqp = 0._rt;
+            [[maybe_unused]] auto a_isl_arr = isl_arr;
+            [[maybe_unused]] auto a_aabs = aabs;
+            if constexpr (use_laser.value) {
+                doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, a_isl_arr, a_aabs,
+                                                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                Aabssqp *= laser_norm_ion;
+            }
 
-                const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real xp = ptd.pos(0, ip);
-                const amrex::Real yp = ptd.pos(1, ip);
-                const amrex::Real vx_c = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
-                const amrex::Real vy_c = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
+            // calculate gamma/psi for plasma particles
+            const amrex::Real gamma_psi = 0.5_rt * (
+                (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
+                + vx_c * vx_c * clightinv * clightinv
+                + vy_c * vy_c * clightinv * clightinv
+                + 1._rt
+            );
 
-                // calculate charge of the plasma particles
-                amrex::Real q_invvol = charge_invvol * ptd.rdata(PlasmaIdx::w)[ip];
-                amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
-                [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
-                if constexpr (can_ionize.value) {
-                    q_invvol *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    q_mu0_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    laser_norm_ion *=
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
-                }
+            if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor))
+            {
+                // This particle violates the QSA, discard it and do not deposit its current
+                amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
+                ptd.id(ip).make_invalid();
+                return;
+            }
 
-                const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
-                const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
+            for (int iy=0; iy <= depos_order_xy; ++iy) {
+                for (int ix=0; ix <= depos_order_xy; ++ix) {
 
-                amrex::Real Aabssqp = 0._rt;
-                [[maybe_unused]] auto laser_arr = a_laser_arr;
-                if constexpr (use_laser.value) {
-                    doLaserGatherShapeN<depos_order_xy>(xp, yp, Aabssqp, laser_arr, 0,
-                                                        dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                    Aabssqp *= laser_norm_ion;
-                }
+                    // --- Compute shape factors
+                    // x direction
+                    auto [shape_x, cell_x] =
+                        compute_single_shape_factor<false, depos_order_xy>(xmid, ix);
 
-                // calculate gamma/psi for plasma particles
-                const amrex::Real gamma_psi = 0.5_rt * (
-                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
-                    + vx_c * vx_c * clightinv * clightinv
-                    + vy_c * vy_c * clightinv * clightinv
-                    + 1._rt
-                );
+                    // y direction
+                    auto [shape_y, cell_y] =
+                        compute_single_shape_factor<false, depos_order_xy>(ymid, iy);
 
-                if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor) && ox == 0)
-                {
-                    // This particle violates the QSA, discard it and do not deposit its current
-                    amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
-                    ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
-                    ptd.id(ip).make_invalid();
-                    return;
-                }
+                    const amrex::Real charge_density = q_invvol * shape_x * shape_y;
+                    // wqx, wqy wqz are particle current in each direction
+                    const amrex::Real wqx     = charge_density * vx_c;
+                    const amrex::Real wqy     = charge_density * vy_c;
+                    const amrex::Real wqz     = charge_density * (gamma_psi-1._rt) * clight;
+                    const amrex::Real wq      = charge_density * gamma_psi;
+                    const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
+                    const amrex::Real wrhomjz = charge_density;
 
-                for (int iy=0; iy <= depos_order_xy; ++iy) {
-                    for (int ix=0; ix <= inner_depos_order_x; ++ix) {
-                        int tx = 0;
-                        if constexpr (outer_depos_loop_x) {
-                            tx = ox;
-                        } else {
-                            tx = ix;
-                        }
-                        // --- Compute shape factors
-                        // x direction
-                        auto [shape_x, cell_x] =
-                            compute_single_shape_factor<outer_depos_loop_x, depos_order_xy>(xmid, tx);
-
-                        // y direction
-                        auto [shape_y, cell_y] =
-                            compute_single_shape_factor<false, depos_order_xy>(ymid, iy);
-
-                        [[maybe_unused]] auto itilex_bs = a_itilex_bs;
-                        [[maybe_unused]] auto itiley_bs = a_itiley_bs;
-                        if constexpr (c_do_tiling.value) {
-                            cell_x -= itilex_bs;
-                            cell_y -= itiley_bs;
-                        }
-
-                        const amrex::Real charge_density = q_invvol * shape_x * shape_y;
-                        // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx     = charge_density * vx_c;
-                        const amrex::Real wqy     = charge_density * vy_c;
-                        const amrex::Real wqz     = charge_density * (gamma_psi-1._rt) * clight;
-                        const amrex::Real wq      = charge_density * gamma_psi;
-                        const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
-                        const amrex::Real wrhomjz = charge_density;
-
-                        // Deposit current into isl_arr
-                        if (jx != -1) { // deposit_jx_jy
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jx), wqx);
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jy), wqy);
-                        }
-                        if (jz != -1) { // deposit_jz
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jz), wqz);
-                        }
-                        if (rho != -1) { // deposit_rho
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
-                        }
-                        if (chi != -1) { // deposit_chi
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wchi);
-                        }
-                        if (rhomjz != -1) { // deposit_rhomjz
-                            amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rhomjz), wrhomjz);
-                        }
+                    // Deposit current into isl_arr
+                    if (jx != -1) { // deposit_jx_jy
+                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jx), wqx);
+                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jy), wqy);
+                    }
+                    if (jz != -1) { // deposit_jz
+                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, jz), wqz);
+                    }
+                    if (rho != -1) { // deposit_rho
+                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rho), wq);
+                    }
+                    if (chi != -1) { // deposit_chi
+                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, chi), wchi);
+                    }
+                    if (rhomjz != -1) { // deposit_rhomjz
+                        amrex::Gpu::Atomic::Add(isl_arr.ptr(cell_x, cell_y, rhomjz), wrhomjz);
                     }
                 }
-            });
-#ifndef AMREX_USE_GPU
-            if (do_tiling) {
-                // If tiling is on, the current was deposited (see above) in temporary tile arrays.
-                // Now, we atomic add from these temporary arrays to the main arrays
-                amrex::Box dstbx = {{itilex*bin_size, itiley*bin_size, pti.tilebox().smallEnd(2)},
-                                    {(itilex+1)*bin_size-1, (itiley+1)*bin_size-1, pti.tilebox().smallEnd(2)}};
-                dstbx.grow(Fields::m_slices_nguards);
-                dstbx &= isl_fab.box();
-                amrex::Box srcbx = dstbx;
-                srcbx -= amrex::IntVect(a_itilex_bs, a_itiley_bs, srcbx.smallEnd(2));
-                if (jx_cmp != -1) {
-                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 0, jx_cmp, 1);
-                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 1, jy_cmp, 1);
-                }
-                if (jz_cmp != -1) {
-                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 2, jz_cmp, 1);
-                }
-                if (rho_cmp != -1) {
-                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 3, rho_cmp, 1);
-                }
-                if (chi_cmp != -1) {
-                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 4, chi_cmp, 1);
-                }
-                if (rhomjz_cmp != -1) {
-                    isl_fab.lockAdd(tmp_dens[ithread], srcbx, dstbx, 5, rhomjz_cmp, 1);
-                }
             }
-#endif
-        }
-#ifdef AMREX_USE_OMP
-        }
+        });
+#ifndef AMREX_USE_GPU
+        }}}}
 #endif
 
         n_qsa_violation = gpu_n_qsa_violation.dataValue();

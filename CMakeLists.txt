@@ -9,7 +9,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.18.0)
-project(HiPACE VERSION 24.03)
+project(HiPACE VERSION 24.06)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -25,6 +25,12 @@ endif()
 
 # CMake policies ##############################################################
 #
+# Setting a cmake_policy to OLD is deprecated by definition and will raise a
+# verbose warning
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+endif()
+
 # AMReX 21.06+ supports CUDA_ARCHITECTURES with CMake 3.20+
 # CMake 3.18+: CMAKE_CUDA_ARCHITECTURES
 # https://cmake.org/cmake/help/latest/policy/CMP0104.html
@@ -430,6 +436,15 @@ if(BUILD_TESTING)
                             $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )
+
+        else()
+
+            add_test(NAME transverse_benchmark.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/transverse_benchmark.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
         endif()
     endif()
 endif()

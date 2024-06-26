@@ -1,8 +1,8 @@
-/* Copyright 2020
+/* Copyright 2020-2024
  *
  * This file is part of HiPACE++.
  *
- * Authors: MaxThevenet, Remi Lehe
+ * Authors: AlexanderSinn, MaxThevenet, Remi Lehe
  * License: BSD-3-Clause-LBNL
  */
 /* Copyright 2019-2020
@@ -12,61 +12,168 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "AnyFFT.H"
-#include "utils/HipaceProfilerWrapper.H"
 
-namespace AnyFFT
-{
-#ifdef AMREX_USE_FLOAT
-    const auto VendorCreatePlanR2C3D = fftwf_plan_dft_r2c_3d;
-    const auto VendorCreatePlanC2R3D = fftwf_plan_dft_c2r_3d;
-    const auto VendorCreatePlanR2C2D = fftwf_plan_dft_r2c_2d;
-    const auto VendorCreatePlanC2R2D = fftwf_plan_dft_c2r_2d;
-#else
-    const auto VendorCreatePlanR2C3D = fftw_plan_dft_r2c_3d;
-    const auto VendorCreatePlanC2R3D = fftw_plan_dft_c2r_3d;
-    const auto VendorCreatePlanR2C2D = fftw_plan_dft_r2c_2d;
-    const auto VendorCreatePlanC2R2D = fftw_plan_dft_c2r_2d;
+#include <AMReX_Config.H>
+
+#ifdef AMREX_USE_OMP
+#include <omp.h>
 #endif
 
-    FFTplan CreatePlan (const amrex::IntVect& real_size, amrex::Real * const real_array,
-                        Complex * const complex_array, const direction dir)
-    {
-        HIPACE_PROFILE("AnyFFT::CreatePlan()");
-        FFTplan fft_plan;
+#include <fftw3.h>
 
-        // Initialize fft_plan.m_plan with the vendor fft plan.
-        // Swap dimensions: AMReX FAB are Fortran-order but FFTW is C-order
-        if (dir == direction::R2C){
-            fft_plan.m_plan = VendorCreatePlanR2C2D(
-                    real_size[1], real_size[0], real_array, complex_array, FFTW_ESTIMATE);
-        } else if (dir == direction::C2R){
-            fft_plan.m_plan = VendorCreatePlanC2R2D(
-                    real_size[1], real_size[0], complex_array, real_array, FFTW_ESTIMATE);
+#ifdef AMREX_USE_FLOAT
+static constexpr bool use_float = true;
+#else
+static constexpr bool use_float = false;
+#endif
+
+struct VendorPlan {
+    fftwf_plan m_fftwf_plan;
+    fftw_plan m_fftw_plan;
+    FFTType m_type;
+    int m_nx;
+    int m_ny;
+};
+
+std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
+    // https://www.fftw.org/fftw3_doc/FFTW-Reference.html
+    m_plan = new VendorPlan;
+
+    m_plan->m_type = type;
+    m_plan->m_nx = nx;
+    m_plan->m_ny = ny;
+    // fftw doesn't allow for the manual allocation of work area, additionally the input and output
+    // arrays have to be provided when planing, so we do all the work in the SetBuffers function.
+    return 0;
+}
+
+void AnyFFT::SetBuffers (void* in, void* out, [[maybe_unused]] void* work_area) {
+    if constexpr (use_float) {
+        switch (m_plan->m_type) {
+            case FFTType::C2C_2D_fwd:
+                m_plan->m_fftwf_plan = fftwf_plan_dft_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<fftwf_complex*>(in), reinterpret_cast<fftwf_complex*>(out),
+                    FFTW_FORWARD, FFTW_MEASURE);
+                break;
+            case FFTType::C2C_2D_bkw:
+                m_plan->m_fftwf_plan = fftwf_plan_dft_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<fftwf_complex*>(in), reinterpret_cast<fftwf_complex*>(out),
+                    FFTW_BACKWARD, FFTW_MEASURE);
+                break;
+            case FFTType::C2R_2D:
+                m_plan->m_fftwf_plan = fftwf_plan_dft_c2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<fftwf_complex*>(in), reinterpret_cast<float*>(out),
+                    FFTW_MEASURE);
+                break;
+            case FFTType::R2C_2D:
+                m_plan->m_fftwf_plan = fftwf_plan_dft_r2c_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<float*>(in), reinterpret_cast<fftwf_complex*>(out),
+                    FFTW_MEASURE);
+                break;
+            case FFTType::R2R_2D:
+                m_plan->m_fftwf_plan = fftwf_plan_r2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<float*>(in), reinterpret_cast<float*>(out),
+                    FFTW_RODFT00, FFTW_RODFT00, FFTW_MEASURE);
+                break;
+            case FFTType::C2R_1D_batched:
+                {
+                    int n[1] = {m_plan->m_nx};
+                    m_plan->m_fftwf_plan = fftwf_plan_many_dft_c2r(
+                        1, n, m_plan->m_ny,
+                        reinterpret_cast<fftwf_complex*>(in), nullptr, 1, m_plan->m_nx/2+1,
+                        reinterpret_cast<float*>(out), nullptr, 1, m_plan->m_nx,
+                        FFTW_MEASURE);
+                }
+                break;
         }
-
-        // Store meta-data in fft_plan
-        fft_plan.m_real_array = real_array;
-        fft_plan.m_complex_array = complex_array;
-        fft_plan.m_dir = dir;
-
-        return fft_plan;
+    } else {
+        switch (m_plan->m_type) {
+            case FFTType::C2C_2D_fwd:
+                m_plan->m_fftw_plan = fftw_plan_dft_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<fftw_complex*>(in), reinterpret_cast<fftw_complex*>(out),
+                    FFTW_FORWARD, FFTW_MEASURE);
+                break;
+            case FFTType::C2C_2D_bkw:
+                m_plan->m_fftw_plan = fftw_plan_dft_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<fftw_complex*>(in), reinterpret_cast<fftw_complex*>(out),
+                    FFTW_BACKWARD, FFTW_MEASURE);
+                break;
+            case FFTType::C2R_2D:
+                m_plan->m_fftw_plan = fftw_plan_dft_c2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<fftw_complex*>(in), reinterpret_cast<double*>(out),
+                    FFTW_MEASURE);
+                break;
+            case FFTType::R2C_2D:
+                m_plan->m_fftw_plan = fftw_plan_dft_r2c_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<double*>(in), reinterpret_cast<fftw_complex*>(out),
+                    FFTW_MEASURE);
+                break;
+            case FFTType::R2R_2D:
+                m_plan->m_fftw_plan = fftw_plan_r2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<double*>(in), reinterpret_cast<double*>(out),
+                    FFTW_RODFT00, FFTW_RODFT00, FFTW_MEASURE);
+                break;
+            case FFTType::C2R_1D_batched:
+                {
+                    int n[1] = {m_plan->m_nx};
+                    m_plan->m_fftw_plan = fftw_plan_many_dft_c2r(
+                        1, n, m_plan->m_ny,
+                        reinterpret_cast<fftw_complex*>(in), nullptr, 1, m_plan->m_nx/2+1,
+                        reinterpret_cast<double*>(out), nullptr, 1, m_plan->m_nx,
+                        FFTW_MEASURE);
+                }
+                break;
+        }
     }
+}
 
-    void DestroyPlan (FFTplan& fft_plan)
-    {
-#  ifdef AMREX_USE_FLOAT
-        fftwf_destroy_plan( fft_plan.m_plan );
-#  else
-        fftw_destroy_plan( fft_plan.m_plan );
-#  endif
+void AnyFFT::Execute () {
+    if constexpr (use_float) {
+        fftwf_execute(m_plan->m_fftwf_plan);
+    } else {
+        fftw_execute(m_plan->m_fftw_plan);
     }
+}
 
-    void Execute (FFTplan& fft_plan){
-        HIPACE_PROFILE("Execute_FFTplan()");
-#  ifdef AMREX_USE_FLOAT
-        fftwf_execute( fft_plan.m_plan );
-#  else
-        fftw_execute( fft_plan.m_plan );
-#  endif
+AnyFFT::~AnyFFT () {
+    if (m_plan) {
+        if constexpr (use_float) {
+            fftwf_destroy_plan(m_plan->m_fftwf_plan);
+        } else {
+            fftw_destroy_plan(m_plan->m_fftw_plan);
+        }
+        delete m_plan;
     }
+}
+
+void AnyFFT::setup () {
+#if defined(AMREX_USE_OMP) && defined(HIPACE_FFTW_OMP)
+    if constexpr (use_float) {
+        fftwf_init_threads();
+        fftwf_plan_with_nthreads(omp_get_max_threads());
+    } else {
+        fftw_init_threads();
+        fftw_plan_with_nthreads(omp_get_max_threads());
+    }
+#endif
+}
+
+void AnyFFT::cleanup () {
+#if defined(AMREX_USE_OMP) && defined(HIPACE_FFTW_OMP)
+    if constexpr (use_float) {
+        fftwf_cleanup_threads();
+    } else {
+        fftw_cleanup_threads();
+    }
+#endif
 }
