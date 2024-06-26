@@ -5,6 +5,7 @@ amr.max_level = 0
 max_step = 0
 diagnostic.output_period = 1
 
+boundary.field = Dirichlet
 boundary.particle = Deleting
 geometry.prob_lo     = -200.e-6   -200.e-6   -200.e-6    # physical domain
 geometry.prob_hi     =  200.e-6    200.e-6    200.e-6

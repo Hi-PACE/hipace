@@ -91,7 +91,6 @@ namespace Parser
     inline void
     replaceAmrexParamsWithParser () {
         amrex::ParmParse pp_geom("geometry");
-        replaceArrWithParser<int>(pp_geom, "is_periodic");
         replaceArrWithParser<double>(pp_geom, "prob_lo");
         replaceArrWithParser<double>(pp_geom, "prob_hi");
     }
