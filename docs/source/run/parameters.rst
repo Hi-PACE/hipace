@@ -165,7 +165,7 @@ Geometry
 * ``geometry.prob_hi`` (3 `float`)
     Higher end of the simulation box in x, y and z.
 
-* ``boundary.fields`` (`string`)
+* ``boundary.field`` (`string`)
     Type of boundary condition used to fill the ghost cells of the fields.
     Possible values:
 

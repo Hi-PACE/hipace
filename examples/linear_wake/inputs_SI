@@ -12,7 +12,7 @@ diagnostic.output_period = 1
 
 hipace.depos_order_xy = 2
 
-boundary.fields = Dirichlet
+boundary.field = Dirichlet
 boundary.particle = Periodic
 geometry.prob_lo     = -100.e-6   -100.e-6   -75.e-6    # physical domain
 geometry.prob_hi     =  100.e-6    100.e-6    20.e-6

@@ -10,7 +10,7 @@ max_step = 0
 
 hipace.depos_order_xy = 2
 
-boundary.fields = Dirichlet
+boundary.field = Dirichlet
 boundary.particle = Periodic
 geometry.prob_lo     = -10.   -10.   -7.5    # physical domain
 geometry.prob_hi     =  10.    10.    2
