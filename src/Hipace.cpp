@@ -162,8 +162,8 @@ Hipace::Hipace () :
         "comms_buffer.max_trailing_slices)", "", true);
 
     amrex::ParmParse ppb("boundary");
-    std::string field_boundary = "Dirichlet";
-    queryWithParser(ppb, "field", field_boundary);
+    std::string field_boundary = "";
+    getWithParser(ppb, "field", field_boundary);
     if (field_boundary == "Dirichlet") {
         m_boundary_field = FieldBoundary::Dirichlet;
     } else if (field_boundary == "Periodic") {
@@ -175,8 +175,8 @@ Hipace::Hipace () :
             "', must be 'Dirichlet', 'Periodic' or 'Open'");
     }
 
-    std::string particle_boundary = "Deleting";
-    queryWithParser(ppb, "particle", particle_boundary);
+    std::string particle_boundary = "";
+    getWithParser(ppb, "particle", particle_boundary);
     if (particle_boundary == "Reflecting") {
         m_boundary_particles = ParticleBoundary::Reflecting;
     } else if (particle_boundary == "Periodic") {
