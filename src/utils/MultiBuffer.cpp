@@ -9,6 +9,7 @@
 #include "Hipace.H"
 #include "HipaceProfilerWrapper.H"
 #include "Parser.H"
+#include <AMReX_Gpu.H>
 
 
 std::size_t MultiBuffer::get_metadata_size () {
@@ -31,9 +32,14 @@ void MultiBuffer::allocate_buffer (int slice) {
         ));
         m_datanodes[slice].m_location = memory_location::pinned;
     } else {
-        m_datanodes[slice].m_buffer = reinterpret_cast<char*>(amrex::The_Device_Arena()->alloc(
-            m_datanodes[slice].m_buffer_size * sizeof(storage_type)
-        ));
+
+        char* ptr = nullptr;
+        cudaMalloc(&ptr, m_datanodes[slice].m_buffer_size * sizeof(storage_type));
+        m_datanodes[slice].m_buffer = reinterpret_cast<char*>(ptr);
+
+        //m_datanodes[slice].m_buffer = reinterpret_cast<char*>(amrex::The_Device_Arena()->alloc(
+        //    m_datanodes[slice].m_buffer_size * sizeof(storage_type)
+        //));
         m_datanodes[slice].m_location = memory_location::device;
     }
     m_current_buffer_size += m_datanodes[slice].m_buffer_size * sizeof(storage_type);
@@ -44,7 +50,8 @@ void MultiBuffer::free_buffer (int slice) {
     if (m_datanodes[slice].m_location == memory_location::pinned) {
         amrex::The_Pinned_Arena()->free(m_datanodes[slice].m_buffer);
     } else {
-        amrex::The_Device_Arena()->free(m_datanodes[slice].m_buffer);
+        //amrex::The_Device_Arena()->free(m_datanodes[slice].m_buffer);
+        cudaFree(m_datanodes[slice].m_buffer);
     }
     m_current_buffer_size -= m_datanodes[slice].m_buffer_size * sizeof(storage_type);
     m_datanodes[slice].m_location = memory_location::nowhere;
