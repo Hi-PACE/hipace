@@ -33,8 +33,9 @@ void MultiBuffer::allocate_buffer (int slice) {
         m_datanodes[slice].m_location = memory_location::pinned;
     } else {
 
-        char* ptr = nullptr;
-        cudaMalloc(&ptr, m_datanodes[slice].m_buffer_size * sizeof(storage_type));
+        void* ptr = nullptr;
+        AMREX_CUDA_SAFE_CALL(cudaMalloc(&ptr, m_datanodes[slice].m_buffer_size * sizeof(storage_type)));
+        AMREX_ALWAYS_ASSERT(ptr != nullptr);
         m_datanodes[slice].m_buffer = reinterpret_cast<char*>(ptr);
 
         //m_datanodes[slice].m_buffer = reinterpret_cast<char*>(amrex::The_Device_Arena()->alloc(
@@ -51,7 +52,7 @@ void MultiBuffer::free_buffer (int slice) {
         amrex::The_Pinned_Arena()->free(m_datanodes[slice].m_buffer);
     } else {
         //amrex::The_Device_Arena()->free(m_datanodes[slice].m_buffer);
-        cudaFree(m_datanodes[slice].m_buffer);
+        AMREX_CUDA_SAFE_CALL(cudaFree(m_datanodes[slice].m_buffer));
     }
     m_current_buffer_size -= m_datanodes[slice].m_buffer_size * sizeof(storage_type);
     m_datanodes[slice].m_location = memory_location::nowhere;
