@@ -40,10 +40,10 @@ public:
     /** Custom profile*/
     amrex::Parser m_parser_lr;/**< owns data for profile_real_str */
     amrex::Parser m_parser_li;/**< owns data for profile_imag_str */
+    /** stores the output function of makeFunctionWithParser for profile_real_str */
     amrex::ParserExecutor<3> m_profile_real;
-    /**< stores the output function of makeFunctionWithParser for profile_real_str */
+    /** stores the output function of makeFunctionWithParser for profile_imag_str */
     amrex::ParserExecutor<3> m_profile_imag;
-    /**< stores the output function of makeFunctionWithParser for profile_imag_str */
 };
 
 #endif // LASER_H_
