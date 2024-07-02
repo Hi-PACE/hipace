@@ -21,7 +21,6 @@
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
-
 #include <AMReX_GpuComplex.H>
 
 void
@@ -1139,19 +1138,40 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a Gaussian laser envelope on slice islice
-        for (int ilaser=0; ilaser<m_nlasers; ilaser++) {
-            const auto& laser = m_all_lasers[ilaser];
-            const amrex::Real a0 = laser.m_a0;
-            const amrex::Real w0 = laser.m_w0;
-            const amrex::Real cep = laser.m_CEP;
-            const amrex::Real propagation_angle_yz = laser.m_propagation_angle_yz;
-            const amrex::Real PFT_yz = laser.m_PFT_yz - MathConst::pi/2.0;
-            const amrex::Real x0 = laser.m_position_mean[0];
-            const amrex::Real y0 = laser.m_position_mean[1];
-            const amrex::Real z0 = laser.m_position_mean[2];
-            const amrex::Real L0 = laser.m_L0;
-            const amrex::Real zfoc = laser.m_focal_distance;
-            amrex::ParallelFor(
+        //check point
+        for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
+            auto& laser = m_all_lasers[ilaser];
+            if (laser.m_laser_init_type == "parser") {
+                auto profile_real = laser.m_profile_real;
+                auto profile_imag = laser.m_profile_imag;
+                amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                {
+                    const amrex::Real x = i * dx_arr[0] + poff_x;
+                    const amrex::Real y = j * dx_arr[1] + poff_y;
+                    const amrex::Real z = islice * dx_arr[2] + poff_z;
+                    if (ilaser == 0) {
+                        arr(i, j, k, comp ) = 0._rt;
+                        arr(i, j, k, comp + 1 ) = 0._rt;
+                    }
+                    arr(i, j, k, comp ) += profile_real(x,y,z);
+                    arr(i, j, k, comp + 1 ) += profile_imag(x,y,z);
+                }
+                );
+            }
+            else if (laser.m_laser_init_type == "gaussian") {
+                const amrex::Real a0 = laser.m_a0;
+                const amrex::Real w0 = laser.m_w0;
+                const amrex::Real cep = laser.m_CEP;
+                const amrex::Real propagation_angle_yz = laser.m_propagation_angle_yz;
+                const amrex::Real PFT_yz = laser.m_PFT_yz - MathConst::pi/2.0;
+                const amrex::Real x0 = laser.m_position_mean[0];
+                const amrex::Real y0 = laser.m_position_mean[1];
+                const amrex::Real z0 = laser.m_position_mean[2];
+                const amrex::Real L0 = laser.m_L0;
+                const amrex::Real zfoc = laser.m_focal_distance;
+                amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
@@ -1159,27 +1179,30 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     const amrex::Real y = j * dx_arr[1] + poff_y - y0;
                     const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
-                    const amrex::Real yp=std::cos(propagation_angle_yz+PFT_yz)*y-std::sin(propagation_angle_yz+PFT_yz)*z;
-                    const amrex::Real zp=std::sin(propagation_angle_yz+PFT_yz)*y+std::cos(propagation_angle_yz+PFT_yz)*z;
+                    const amrex::Real yp = std::cos( propagation_angle_yz + PFT_yz ) * y \
+                        - std::sin( propagation_angle_yz + PFT_yz ) * z;
+                    const amrex::Real zp = std::sin( propagation_angle_yz + PFT_yz ) * y \
+                        + std::cos( propagation_angle_yz + PFT_yz ) * z;
                     // For first laser, setval to 0.
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * (zp-zfoc+z0*std::cos(propagation_angle_yz)) \
-                        * 2._rt/( k0 * w0 * w0 );
+                    Complex diffract_factor = 1._rt + I * ( zp - zfoc + z0 * std::cos( propagation_angle_yz ) ) \
+                       * 2._rt/( k0 * w0 * w0 );
                     Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
-                    Complex prefactor = a0/diffract_factor;
-                    Complex time_exponent = zp*zp/(L0*L0);
+                    Complex prefactor = a0 / diffract_factor;
+                    Complex time_exponent = zp * zp / ( L0 * L0 );
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
-                    Complex exp_argument = - ( x*x + yp*yp ) * inv_complex_waist_2;
+                    Complex exp_argument = - ( x * x + yp * yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * \
-                        amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
+                       amrex::exp(I * yp * k0 * propagation_angle_yz + cep );
                     arr(i, j, k, comp ) += envelope.real();
                     arr(i, j, k, comp + 1 ) += envelope.imag();
-                }
+                    }
                 );
+            }
         }
     }
 }
