@@ -483,7 +483,6 @@ MultiLaser::GetEnvelopeFromFile () {
         } // End of 3 loops (1 per dimension) over laser array from simulation
     } // End if statement over file laser geometry (rt or xyt)
 #else
-    amrex::ignore_unused(gm);
     amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
                  "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif // HIPACE_USE_OPENPMD
