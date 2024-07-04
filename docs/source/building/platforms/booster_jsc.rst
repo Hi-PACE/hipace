@@ -26,7 +26,6 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    export GPUS_PER_NODE=4
    # optimize CUDA compilation for A100
    export AMREX_CUDA_ARCH=8.0 # 8.0 for A100, 7.0 for V100
-   export CUDAFLAGS="-arch=sm_80" # sm_80 for A100
 
 Install HiPACE++ (the first time, and whenever you want the latest version):
 
