@@ -51,9 +51,9 @@ Laser::Laser (std::string name)
         m_profile_imag = makeFunctionWithParser<3>( profile_imag_str, m_parser_li, {"x", "y", "z"});
         return;
     }
-
-    void
-    Laser::GetEnvelopeFromFileHelper () {
+}
+void
+Laser::GetEnvelopeFromFileHelper () {
 
         HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
         #ifdef HIPACE_USE_OPENPMD
@@ -106,9 +106,9 @@ Laser::Laser (std::string name)
         #endif // HIPACE_USE_OPENPMD
     }
 
-    template<typename input_type>
-    void
-    Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> * laser_arr) {
+template<typename input_type>
+void
+Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> * laser_arr) {
 
         using namespace amrex::literals;
         HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
