@@ -35,7 +35,7 @@ MultiLaser::ReadParameters ()
 
     m_nlasers = m_names.size();
     for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]);
+        m_all_lasers.emplace_back(Laser(m_names[i]));
     }
 
     queryWithParser(pp, "lambda0", m_lambda0);
