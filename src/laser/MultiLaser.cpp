@@ -158,7 +158,6 @@ MultiLaser::InitData ()
             Hipace::HeadRankID(),
             amrex::ParallelDescriptor::Communicator());
 #endif
-    }
 
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
