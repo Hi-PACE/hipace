@@ -16,7 +16,7 @@
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
-Laser::Laser (std::string name)
+Laser::Laser (std::string name,a mrex::Geometry laser_geom_3D)
 {
     m_name = name;
     amrex::ParmParse pp(m_name);
@@ -26,7 +26,7 @@ Laser::Laser (std::string name)
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
         if (Hipace::HeadRank()) {
-                    m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
+                    m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
                     GetEnvelopeFromFileHelper(m_laser_geom_3D, arr);
         return;
     }

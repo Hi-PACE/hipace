@@ -147,7 +147,7 @@ MultiLaser::InitData ()
 
     m_nlasers = m_names.size();
     for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]));
+        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_geom_3D, arr));
     }
 
 
