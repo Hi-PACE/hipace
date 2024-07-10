@@ -32,12 +32,7 @@ MultiLaser::ReadParameters ()
     m_use_laser = m_names[0] != "no_laser";
 
     if (!m_use_laser) return;
-
     m_nlasers = m_names.size();
-    for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]));
-    }
-
     queryWithParser(pp, "lambda0", m_lambda0);
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
     queryWithParser(pp, "use_phase", m_use_phase);
@@ -149,6 +144,12 @@ MultiLaser::InitData ()
         m_forward_fft.SetBuffers(m_rhs.dataPtr(), m_rhs_fourier.dataPtr(), m_fft_work_area.dataPtr());
         m_backward_fft.SetBuffers(m_rhs_fourier.dataPtr(), m_sol.dataPtr(), m_fft_work_area.dataPtr());
     }
+
+    m_nlasers = m_names.size();
+    for (int i = 0; i < m_nlasers; ++i) {
+        m_all_lasers.emplace_back(Laser(m_names[i]));
+    }
+
 
 #ifdef AMREX_USE_MPI
         // need to communicate m_lambda0 as it is read in from the input file only by the head rank
@@ -841,14 +842,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                if (Hipace::HeadRank()) {
-                laser.m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-                laser.GetEnvelopeFromFileHelper(m_laser_geom_3D, *arr);
-                    if (m_lambda0 != 0){
-                    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_lambda0 ==laser.m_lambda0,
-                    "All input laser pulses should have identical central wave_length");
-                    }
-                m_lambda0 ==laser.m_lambda0;
                 }
             }
             if (laser.m_laser_init_type == "parser") {

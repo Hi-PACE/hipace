@@ -25,6 +25,9 @@ Laser::Laser (std::string name)
         queryWithParser(pp, "input_file", m_input_file_path);
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
+        if (Hipace::HeadRank()) {
+                    m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
+                    GetEnvelopeFromFileHelper(m_laser_geom_3D, arr);
         return;
     }
     else if (m_laser_init_type == "gaussian"){
@@ -53,7 +56,7 @@ Laser::Laser (std::string name)
     }
 }
 void
-Laser::GetEnvelopeFromFileHelper () {
+Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> & laser_arr) {
 
         HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
         #ifdef HIPACE_USE_OPENPMD
@@ -94,9 +97,9 @@ Laser::GetEnvelopeFromFileHelper () {
         }
 
         if (input_type == openPMD::Datatype::CFLOAT) {
-            GetEnvelopeFromFile<std::complex<float>>();
+            GetEnvelopeFromFile<std::complex<float>>(laser_geom_3D,laser_arr);
         } else if (input_type == openPMD::Datatype::CDOUBLE) {
-            GetEnvelopeFromFile<std::complex<double>>();
+            GetEnvelopeFromFile<std::complex<double>>(laser_geom_3D,laser_arr);
         } else {
             amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
         }
@@ -108,7 +111,7 @@ Laser::GetEnvelopeFromFileHelper () {
 
 template<typename input_type>
 void
-Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> * laser_arr) {
+Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> & laser_arr) {
 
         using namespace amrex::literals;
         HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
@@ -149,7 +152,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::
         amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
 
         //hipace: xyt in Fortran order
-        *laser_arr = m_F_input_file.array();
+        amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
         series.flush();
 
