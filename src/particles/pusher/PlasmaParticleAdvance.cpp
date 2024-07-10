@@ -120,8 +120,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
                         amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
 
-
-
                         if (lo_x_lev < xp && xp < hi_x_lev && lo_y_lev < yp && yp < hi_y_lev) {
                             ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                             Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
@@ -184,7 +182,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         xp += dz*clight_inv*(ux * (1._rt/psi));
                         yp += dz*clight_inv*(uy * (1._rt/psi));
 
-                        if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+                        if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
                         ptd.pos(0, ip) = xp;
                         ptd.pos(1, ip) = yp;
 
@@ -261,7 +259,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             psi += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fpsi1 + iab)[ip];
                         }
 
-                        if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+                        if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
                         ptd.pos(0, ip) = xp;
                         ptd.pos(1, ip) = yp;
 

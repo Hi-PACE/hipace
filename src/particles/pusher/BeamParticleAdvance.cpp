@@ -164,7 +164,7 @@ AdvanceBeamParticlesSlice (
                 xp += dt * 0.5_rt * ux * gammap_inv;
                 yp += dt * 0.5_rt * uy * gammap_inv;
 
-                if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+                if (enforceBC(ptd, ip, xp, yp, ux, uy, BeamIdx::w)) return;
 
                 Array3<const amrex::Real> slice_arr = slice_arr_lev0;
                 amrex::Real dx_inv = dx_inv_lev0;
@@ -326,7 +326,7 @@ AdvanceBeamParticlesSlice (
                 uy = uy_next;
                 uz = uz_next;
             } // end for loop over n_subcycles
-            if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
+            if (enforceBC(ptd, ip, xp, yp, ux, uy, BeamIdx::w)) return;
             ptd.pos(0, ip) = xp;
             ptd.pos(1, ip) = yp;
             ptd.pos(2, ip) = zp;
