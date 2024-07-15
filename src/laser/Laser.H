@@ -20,7 +20,7 @@ class Laser
 {
 public:
 
-    Laser (std::string name);
+    Laser (std::string name, amrex::Geometry laser_geom_3D);
 
     std::string m_name {""};
     /** The way to initialize a laser (from_file/gaussian/parser)*/
