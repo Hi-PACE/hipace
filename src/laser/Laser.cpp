@@ -27,7 +27,7 @@ Laser::Laser (std::string name,a mrex::Geometry laser_geom_3D)
         queryWithParser(pp, "iteration", m_file_num_iteration);
         if (Hipace::HeadRank()) {
                     m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-                    GetEnvelopeFromFileHelper(m_laser_geom_3D, arr);
+                    GetEnvelopeFromFileHelper(laser_geom_3D);
         return;
     }
     else if (m_laser_init_type == "gaussian"){
@@ -56,10 +56,11 @@ Laser::Laser (std::string name,a mrex::Geometry laser_geom_3D)
     }
 }
 void
-Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> & laser_arr) {
+Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
 
         HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
         #ifdef HIPACE_USE_OPENPMD
+        amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
         openPMD::Datatype input_type = openPMD::Datatype::INT;
         {
         // Check what kind of Datatype is used in the Laser file
@@ -111,7 +112,7 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D, amrex::Array4<a
 
 template<typename input_type>
 void
-Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D, amrex::Array4<amrex::Real> & laser_arr) {
+Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
         using namespace amrex::literals;
         HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
