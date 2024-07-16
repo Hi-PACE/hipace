@@ -516,24 +516,25 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 };
             });
 
-        ReduceTuple a = reduce_data.value();
-        const amrex::Real sum_w_inv = amrex::get<0>(a) <= 0._rt ? 0._rt : 1._rt / amrex::get<0>(a);
+        auto [real_tup, int_tup] = amrex::TupleSplit<m_insitu_nrp, m_insitu_nip>(reduce_data.value());
 
-        amrex::constexpr_for<0, m_insitu_nrp>(
-            [&] (auto idx) {
-                m_insitu_rdata[islice + idx * m_nslices] = amrex::get<idx>(a) *
-                    // sum(w) and [(ga-1)*(1-vz)] are not multiplied by sum_w_inv
-                    ( idx == 0 || idx == (m_insitu_nrp-1) ? 1 : sum_w_inv );
-                m_insitu_sum_rdata[idx] += amrex::get<idx>(a);
-            }
-        );
+        auto real_arr = amrex::tupleToArray(real_tup);
 
-        amrex::constexpr_for<0, m_insitu_nip>(
-            [&] (auto idx) {
-                m_insitu_idata[islice + idx * m_nslices] = amrex::get<m_insitu_nrp+idx>(a);
-                m_insitu_sum_idata[idx] += amrex::get<m_insitu_nrp+idx>(a);
-            }
-        );
+        const amrex::Real sum_w_inv = real_arr[0] <= 0._rt ? 0._rt : 1._rt / real_arr[0];
+
+        for (int i=0; i<m_insitu_nrp; ++i) {
+            m_insitu_rdata[islice + i * m_nslices] = real_arr[i] *
+                // sum(w) and [(ga-1)*(1-vz)] are not multiplied by sum_w_inv
+                ( i == 0 || i == (m_insitu_nrp-1) ? 1 : sum_w_inv );
+            m_insitu_sum_rdata[i] += real_arr[i];
+        }
+
+        auto int_arr = amrex::tupleToArray(int_tup);
+
+        for (int i=0; i<m_insitu_nip; ++i) {
+            m_insitu_idata[islice + i * m_nslices] = int_arr[i];
+            m_insitu_sum_idata[i] += int_arr[i];
+        }
     }
 }
 
