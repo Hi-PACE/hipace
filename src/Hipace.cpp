@@ -656,7 +656,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
     const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
