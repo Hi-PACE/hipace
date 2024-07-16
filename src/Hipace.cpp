@@ -161,6 +161,22 @@ Hipace::Hipace () :
     DeprecatedInput("hipace", "comms_buffer_max_trailing_slices",
         "comms_buffer.max_trailing_slices)", "", true);
 
+    DeprecatedInput("geometry", "is_periodic", "boundary.field and boundary.particle",
+        "\n\n"
+        "To directly replace geometry.is_periodic = 1 1 1 use:\n"
+        "boundary.field = Periodic\n"
+        "boundary.particle = Periodic\n"
+        "However it's usually better to instead use:\n"
+        "boundary.field = Dirichlet\n"
+        "boundary.particle = Periodic\n"
+        "or:\n"
+        "boundary.field = Dirichlet\n"
+        "boundary.particle = Reflecting\n"
+        "\n"
+        "To replace geometry.is_periodic = 0 0 0 use:\n"
+        "boundary.field = Dirichlet\n"
+        "boundary.particle = Deleting\n", true);
+
     amrex::ParmParse ppb("boundary");
     std::string field_boundary = "";
     getWithParser(ppb, "field", field_boundary);
@@ -295,7 +311,6 @@ Hipace::MakeGeometry ()
 
     // this will get prob_lo and prob_hi from the input file
     m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, is_periodic);
-    DeprecatedInput("geometry", "is_periodic", "boundary.field and boundary.particle", "", true);
 
     amrex::BoxList bl{domain_3D};
     amrex::Vector<int> procmap{amrex::ParallelDescriptor::MyProc()};

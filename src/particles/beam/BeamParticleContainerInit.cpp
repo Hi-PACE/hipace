@@ -46,12 +46,6 @@ namespace
         const amrex::Real& uz, const amrex::Real& weight, const amrex::Long pid,
         const amrex::Long ip, const amrex::Real& speed_of_light, const EnforceBC& enforceBC) noexcept
     {
-        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
-        ptd.idcpu(ip) = pid + ip;
-        ptd.id(ip).make_valid();
-        ptd.rdata(BeamIdx::z  )[ip] = z;
-        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
-
         amrex::Real xp = x;
         amrex::Real yp = y;
         amrex::Real uxp = ux * speed_of_light;
@@ -60,8 +54,14 @@ namespace
 
         ptd.rdata(BeamIdx::x  )[ip] = xp;
         ptd.rdata(BeamIdx::y  )[ip] = yp;
+        ptd.rdata(BeamIdx::z  )[ip] = z;
         ptd.rdata(BeamIdx::ux )[ip] = uxp;
         ptd.rdata(BeamIdx::uy )[ip] = uyp;
+        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
+        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
+
+        ptd.idcpu(ip) = pid + ip;
+        ptd.id(ip).make_valid();
     }
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
@@ -88,18 +88,6 @@ namespace
         const amrex::Long ip, const amrex::Real speed_of_light, const EnforceBC& enforceBC,
         const bool is_valid=true) noexcept
     {
-        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
-        ptd.idcpu(ip) = pid + ip;
-        if (is_valid) {
-            ptd.id(ip).make_valid(); // ensure id is valid
-        } else {
-            ptd.id(ip).make_invalid();
-        }
-        ptd.rdata(BeamIdx::z  )[ip] = z;
-        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
-        ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
-        ptd.idata(BeamIdx::mr_level)[ip] = 0;
-
         amrex::Real xp = x;
         amrex::Real yp = y;
         amrex::Real uxp = ux * speed_of_light;
@@ -108,8 +96,21 @@ namespace
 
         ptd.rdata(BeamIdx::x  )[ip] = xp;
         ptd.rdata(BeamIdx::y  )[ip] = yp;
+        ptd.rdata(BeamIdx::z  )[ip] = z;
         ptd.rdata(BeamIdx::ux )[ip] = uxp;
         ptd.rdata(BeamIdx::uy )[ip] = uyp;
+        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
+        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
+
+        ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+        ptd.idata(BeamIdx::mr_level)[ip] = 0;
+
+        ptd.idcpu(ip) = pid + ip;
+        if (is_valid) {
+            ptd.id(ip).make_valid(); // ensure id is valid
+        } else {
+            ptd.id(ip).make_invalid();
+        }
     }
 }
 

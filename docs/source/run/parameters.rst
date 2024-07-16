@@ -181,15 +181,20 @@ Geometry
     Type of boundary condition used for particles.
     Possible values:
 
-        * ``Reflecting``
+        * ``Reflecting`` Particles are reflected into the domain where they exited.
 
-        * ``Periodic``
+        * ``Periodic`` Particles enter the domain on the opposite side where they exit.
 
-        * ``Deleting``
+        * ``Deleting`` Particles exiting the domain will be deleted.
 
-* ``boundary.particle_lo`` (2 `float`)
+* ``boundary.particle_lo`` (2 `float`) optional (default `<first two values of geometry.prob_lo>`)
+    The lower location of the domain boundary the particles experience. By default, this is equal
+    to the boundary of the fields however it may be shrunk to reduce noise originating from
+    the boundary, especially when using open boundary conditions.
 
-* ``boundary.particle_hi`` (2 `float`)
+* ``boundary.particle_hi`` (2 `float`) optional (default `<first two values of geometry.prob_hi>`)
+    The upper location of the domain boundary the particles experience.
+    See ``boundary.particle_lo``.
 
 * ``mr_lev1.n_cell`` (2 `integer`)
     Number of cells in x and y for level 1.
