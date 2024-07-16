@@ -1170,7 +1170,12 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real y0 = laser.m_position_mean[1];
                 const amrex::Real z0 = laser.m_position_mean[2];
                 const amrex::Real L0 = laser.m_L0;
+                const amrex::Real tau = laser.m_tau;
                 const amrex::Real zfoc = laser.m_focal_distance;
+                const amrex::Real zeta = laser.m_zeta;
+                const amrex::Real beta = laser.m_beta;
+                const amrex::Real phi2 = laser.m_phi2;
+                const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -1189,11 +1194,17 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     // Compute envelope for time step 0
+                    Complex inv_tau2 = 1._rt /(tau * tau);
                     Complex diffract_factor = 1._rt + I * ( zp - zfoc + z0 * std::cos( propagation_angle_yz ) ) \
                        * 2._rt/( k0 * w0 * w0 );
                     Complex inv_complex_waist_2 = 1._rt /( w0 * w0 * diffract_factor );
+                    // Time stretching due to STCs and phi2 complex envelope
+                    // (1 if zeta=0, beta=0, phi2=0)
+                    Complex stretch_factor = 1._rt + 4._rt * (zeta + beta * zfoc * inv_tau2) \
+                        * (zeta + beta * zfoc * inv_complex_waist_2) + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) \
+                        * inv_tau2;
                     Complex prefactor = a0 / diffract_factor;
-                    Complex time_exponent = zp * zp / ( L0 * L0 );
+                    Complex time_exponent = zp * zp / ( stretch_factor * L0 * L0 );
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x * x + yp * yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * \

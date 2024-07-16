@@ -877,6 +877,35 @@ Option: ``gaussian``
     Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
     direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
 
+* ``<laser name>.beta`` (`float`) optinal (default `0.`)
+    Angular dispersion (or angular chirp) at focus defined by [Selcuk Akturk Opt. Express 12 (2004)]
+
+* ``<laser name>.zeta`` (`float`) optinal (default `0.`)
+    Spatial chirp at focus defined by [Selcuk Akturk Opt. Express 12 (2004)]
+
+* ``<laser name>.phi2`` (`float`) optinal (default `pi/2`)
+    The amount of temporal chirp :math:`\phi^{(2)}` at focus (in the lab frame). Namely, a wave packet
+    centered on the frequency :math:`(\omega_0 + \delta \omega)` will reach its peak intensity
+    at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`. Thus, a positive
+    :math:`\phi^{(2)}` corresponds to positive chirp, i.e. red part of the spectrum in the
+    front of the pulse and blue part of the spectrum in the back. More specifically, the electric
+    field in the focal plane is of the form:
+
+    .. math::
+
+        E(\boldsymbol{x},t) \propto Re\left[ \exp\left(  -\frac{(t-t_{peak})^2}{\tau^2 + 2i\phi^{(2)}} + i\omega_0 (t-t_{peak}) + i\phi_0 \right) \right]
+
+    where :math:`\tau` is given by ``<laser_name>.tau`` and represents the
+    Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
+
+    .. math::
+
+        \tau' = \sqrt{ \tau^2 + 4 (\phi^{(2)})^2/\tau^2 }
+
+    See also the definition in [Selcuk Akturk Opt. Express 12 (2004)].
+
+
+
 Option: ``from_file``
 
 * ``lasers.input_file`` (`string`) optional (default `""`)

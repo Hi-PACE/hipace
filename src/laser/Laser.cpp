@@ -33,6 +33,9 @@ Laser::Laser (std::string name, bool laser_from_file)
         if (duration_is_specified) m_L0 = m_tau*get_phys_const().c;
         queryWithParser(pp, "focal_distance", m_focal_distance);
         queryWithParser(pp, "position_mean",  m_position_mean);
+        queryWithParser(pp, "zeta",  m_zeta);
+        queryWithParser(pp, "beta",  m_beta);
+        queryWithParser(pp, "phi2",  m_phi2);
         return;
     }
     else if (m_laser_init_type == "parser"){

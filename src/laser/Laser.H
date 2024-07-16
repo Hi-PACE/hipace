@@ -33,6 +33,10 @@ public:
     amrex::Real m_PFT_yz {MathConst::pi/2.0};
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
+    /**Time stretching factors*/
+    amrex::Real m_zeta {0.};
+    amrex::Real m_beta {0.};
+    amrex::Real m_phi2 {0.};
     /** Focal distance of the laser pulse */
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */
