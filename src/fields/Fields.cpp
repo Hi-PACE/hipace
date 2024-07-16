@@ -851,13 +851,13 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
     for (int lev=0; lev<current_N_level; ++lev) {
         // interpolate rhomjz to lev from lev-1 in the domain edges
         LevelUpBoundary(geom, lev, WhichSlice::This, "rhomjz",
-            amrex::IntVect{0, 0, 0}, -m_slices_nguards);
+            amrex::IntVect{0, 0, 0}, -m_slices_nguards + amrex::IntVect{1, 1, 0});
         // interpolate jx and jy to lev from lev-1 in the domain edges and
         // also inside ghost cells to account for x and y derivative
         LevelUpBoundary(geom, lev, WhichSlice::This, "jx",
-            m_slices_nguards, -m_slices_nguards);
+            amrex::IntVect{1, 1, 0}, -m_slices_nguards + amrex::IntVect{1, 1, 0});
         LevelUpBoundary(geom, lev, WhichSlice::This, "jy",
-            m_slices_nguards, -m_slices_nguards);
+            amrex::IntVect{1, 1, 0}, -m_slices_nguards + amrex::IntVect{1, 1, 0});
 
         if (m_do_symmetrize) {
             SymmetrizeFields(Comps[WhichSlice::This]["rhomjz"], lev, 1, 1);

@@ -764,7 +764,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Sx",
         amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards);
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice_chi, "chi",
-        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards);
+        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards + amrex::IntVect{1, 1, 0});
 
     if (lev!=0 && (slicemf.box(0).length(0) % 2 == 0)) {
         // cell centered MG solve: no ghost cells, put boundary condition into source term
