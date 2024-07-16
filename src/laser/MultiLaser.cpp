@@ -1175,7 +1175,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real zeta = laser.m_zeta;
                 const amrex::Real beta = laser.m_beta;
                 const amrex::Real phi2 = laser.m_phi2;
-                const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
