@@ -49,16 +49,18 @@ InitParticles (const amrex::RealVect& a_u_std,
     amrex::Real x_offset = 0._rt;
     amrex::Real y_offset = 0._rt;
 
-    if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && ppc_coarse[0] % 2 == 1) {
-        box_nodal[0] = amrex::IndexType::NODE;
-        box_grow[0] = -1;
-        x_offset = -0.5_rt;
-    }
+    if (m_prevent_centered_particle) {
+        if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && ppc_coarse[0] % 2 == 1) {
+            box_nodal[0] = amrex::IndexType::NODE;
+            box_grow[0] = -1;
+            x_offset = -0.5_rt;
+        }
 
-    if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && ppc_coarse[1] % 2 == 1) {
-        box_nodal[1] = amrex::IndexType::NODE;
-        box_grow[1] = -1;
-        y_offset = -0.5_rt;
+        if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && ppc_coarse[1] % 2 == 1) {
+            box_nodal[1] = amrex::IndexType::NODE;
+            box_grow[1] = -1;
+            y_offset = -0.5_rt;
+        }
     }
 
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)

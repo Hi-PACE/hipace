@@ -167,6 +167,7 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch == fine_patch_specified,
         "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
         "to use the fine plasma patch feature");
+    queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
 }
 
 void

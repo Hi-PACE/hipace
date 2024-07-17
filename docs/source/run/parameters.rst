@@ -498,6 +498,15 @@ When both are specified, the per-species value is used.
     between the low and high ppc regions. More transition cells produce less noise but
     require more particles.
 
+* ``<plasma name> or plasmas.prevent_centered_particle`` (`bool`) optional (default `0`)
+    When ``amr.n_cell`` and the plasma ppc is both odd, there will be plasma particle initialized
+    in the exact center of the domain. A beam which is also at the center of the domain will not be
+    able to push this particle away, causing the plasma particle to pass through the beam and
+    increasing its emittance. Enabling this setting will cause all plasma particles to be
+    initialized half a cell to the side so that no plasma particle will be at the exact center of
+    the domain. However, this will also result in a gap at the domain boundary,
+    which can lead to noise.
+
 Beam parameters
 ---------------
 
