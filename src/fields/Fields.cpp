@@ -165,9 +165,9 @@ Fields::AllocData (
     // allocate memory for fields
     if (N_Comps != 0) {
         m_slices[lev].define(
-            slice_ba, slice_dm, N_Comps, m_slices_nguards,
+            slice_ba, slice_dm, N_Comps, lev==0 ? m_slices_nguards : 2*m_slices_nguards,
             amrex::MFInfo().SetArena(amrex::The_Arena()));
-        m_slices[lev].setVal(0._rt, m_slices_nguards);
+        m_slices[lev].setVal(0._rt);
     }
 
     // The Poisson solver operates on transverse slices only.
@@ -546,12 +546,17 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
                            WhichSlice::This, {"jx_beam", "jy_beam"});
         }
         // Set all quantities on WhichSlice::This to 0 except:
-        // Bx and By: the previous slice serves as initial guess.
+        // Only the boundary for fields
         // jx, jy, jx_beam and jy_beam on WhichSlice::This:
         // shifted from the previous WhichSlice::Next
         // with jx and jy initially set to jx_beam and jy_beam
-        setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "Ez",
-            "Bz", "Psi", "jz_beam", "rhomjz");
+        SetValBoundary(lev, {
+            Comps[WhichSlice::This]["Bx"],
+            Comps[WhichSlice::This]["By"],
+            Comps[WhichSlice::This]["Psi"],
+            Comps[WhichSlice::This]["Ez"],
+            Comps[WhichSlice::This]["Bz"]});
+        setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "jz_beam", "rhomjz");
         setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     } else {
         if (lev != 0 && islice == geom[lev].Domain().bigEnd(Direction::z)) {
@@ -564,8 +569,14 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
             LevelUp(geom, lev, WhichSlice::Previous, "jx");
             LevelUp(geom, lev, WhichSlice::Previous, "jy");
         }
+        SetValBoundary(lev, {
+            Comps[WhichSlice::This]["Bx"],
+            Comps[WhichSlice::This]["By"],
+            Comps[WhichSlice::This]["Psi"],
+            Comps[WhichSlice::This]["Ez"],
+            Comps[WhichSlice::This]["Bz"]});
         setVal(0., lev, WhichSlice::This,
-            "ExmBy", "EypBx", "Ez", "Bx", "By", "Bz", "jx", "jy", "jz", "rhomjz", "Psi");
+            "ExmBy", "EypBx", "jx", "jy", "jz", "rhomjz");
         if (Hipace::m_use_laser) {
             setVal(0., lev, WhichSlice::This, "chi");
         }
@@ -754,46 +765,33 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
     }
 }
 
-void
-Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                         const int which_slice, const std::string& component,
-                         const amrex::IntVect outer_edge, const amrex::IntVect inner_edge)
+template<int ncomps>
+void Fields::SetValBoundary (const int lev, const int (&comps)[ncomps])
 {
-    if (lev == 0) return; // only interpolate boundaries to lev 1
-    if (outer_edge == inner_edge) return;
-    HIPACE_PROFILE("Fields::LevelUpBoundary()");
-    constexpr int interp_order = 2;
+    HIPACE_PROFILE("Fields::SetValBoundary()");
+    amrex::GpuArray<int, ncomps> c_idx = {};
+    for (int i=0; i<ncomps; ++i) {
+        c_idx[i] = comps[i];
+    }
+    amrex::MultiFab& mfab = getSlices(lev);
 
-    auto field_coarse_interp = interpolated_field_xy<interp_order, amrex::MultiFab>{
-        getField(lev-1, which_slice, component), geom[lev-1]};
-    amrex::MultiFab field_fine = getField(lev, which_slice, component);
-
-    for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi)
     {
-        auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
-        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
-        const amrex::Box fine_box_extended = mfi.growntilebox(outer_edge);
-        const amrex::Box fine_box_narrow = mfi.growntilebox(inner_edge);
+        const Array3<amrex::Real> arr = mfab.array(mfi);
+        const amrex::Box bx = mfab[mfi].box();
 
-        const int narrow_i_lo = fine_box_narrow.smallEnd(0);
-        const int narrow_i_hi = fine_box_narrow.bigEnd(0);
-        const int narrow_j_lo = fine_box_narrow.smallEnd(1);
-        const int narrow_j_hi = fine_box_narrow.bigEnd(1);
+        const int i_lo = bx.smallEnd(0);
+        const int i_hi = bx.bigEnd(0);
+        const int j_lo = bx.smallEnd(1);
+        const int j_hi = bx.bigEnd(1);
 
-        const amrex::Real dx = geom[lev].CellSize(0);
-        const amrex::Real dy = geom[lev].CellSize(1);
-        const amrex::Real offset0 = GetPosOffset(0, geom[lev], fine_box_extended);
-        const amrex::Real offset1 = GetPosOffset(1, geom[lev], fine_box_extended);
-
-        amrex::ParallelFor(fine_box_extended,
+        amrex::ParallelFor(mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
             {
-                // set interpolated values near edge of fine field between outer_edge and inner_edge
-                // to compensate for incomplete charge/current deposition in those cells
-                if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
-                    amrex::Real x = i * dx + offset0;
-                    amrex::Real y = j * dy + offset1;
-                    arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
+                if (i<i_lo || i>i_hi || j<j_lo || j>j_hi) {
+                    for (int n=0; n<ncomps; ++n) {
+                        arr(i, j, comps[n]) = amrex::Real{0};
+                    }
                 }
             });
     }
@@ -849,16 +847,6 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
                            Comps[WhichSlice::This]["jy"],
                            Comps[WhichSlice::This]["rhomjz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        // interpolate rhomjz to lev from lev-1 in the domain edges
-        LevelUpBoundary(geom, lev, WhichSlice::This, "rhomjz",
-            amrex::IntVect{0, 0, 0}, -m_slices_nguards + amrex::IntVect{1, 1, 0});
-        // interpolate jx and jy to lev from lev-1 in the domain edges and
-        // also inside ghost cells to account for x and y derivative
-        LevelUpBoundary(geom, lev, WhichSlice::This, "jx",
-            amrex::IntVect{1, 1, 0}, -m_slices_nguards + amrex::IntVect{1, 1, 0});
-        LevelUpBoundary(geom, lev, WhichSlice::This, "jy",
-            amrex::IntVect{1, 1, 0}, -m_slices_nguards + amrex::IntVect{1, 1, 0});
-
         if (m_do_symmetrize) {
             SymmetrizeFields(Comps[WhichSlice::This]["rhomjz"], lev, 1, 1);
             SymmetrizeFields(Comps[WhichSlice::This]["jx"], lev, -1, 1);
@@ -909,12 +897,6 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
     EnforcePeriodic(false, {Comps[WhichSlice::This]["Psi"],
                             Comps[WhichSlice::This]["Ez"],
                             Comps[WhichSlice::This]["Bz"]});
-    for (int lev=0; lev<current_N_level; ++lev) {
-        // interpolate fields to lev from lev-1 in the ghost cells
-        LevelUpBoundary(geom, lev, WhichSlice::This, "Psi", m_slices_nguards, amrex::IntVect{0, 0, 0});
-        LevelUpBoundary(geom, lev, WhichSlice::This, "Ez", m_slices_nguards, amrex::IntVect{0, 0, 0});
-        LevelUpBoundary(geom, lev, WhichSlice::This, "Bz", m_slices_nguards, amrex::IntVect{0, 0, 0});
-    }
 
     for (int lev=0; lev<current_N_level; ++lev) {
         // Compute ExmBy = -d/dx psi and EypBx = -d/dy psi
@@ -956,11 +938,6 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
     EnforcePeriodic(true, {Comps[which_slice]["jx"],
                            Comps[which_slice]["jy"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        // interpolate jx and jy to lev from lev-1 in the domain edges and
-        // also inside ghost cells to account for x and y derivative
-        LevelUpBoundary(geom, lev, which_slice, "jx", m_slices_nguards, -m_slices_nguards);
-        LevelUpBoundary(geom, lev, which_slice, "jy", m_slices_nguards, -m_slices_nguards);
-
         if (m_do_symmetrize) {
             SymmetrizeFields(Comps[which_slice]["jx"], lev, -1, 1);
             SymmetrizeFields(Comps[which_slice]["jy"], lev, 1, -1);
@@ -985,10 +962,6 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
     }
 
     EnforcePeriodic(false, {Comps[which_slice]["Ez"]});
-    for (int lev=0; lev<current_N_level; ++lev) {
-        // interpolate Ez to lev from lev-1 in the ghost cells
-        LevelUpBoundary(geom, lev, which_slice, "Ez", m_slices_nguards, amrex::IntVect{0, 0, 0});
-    }
 }
 
 void
@@ -1007,14 +980,6 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
                            Comps[WhichSlice::Next]["jy"],
                            Comps[WhichSlice::This]["jz"]});
     for (int lev=0; lev<current_N_level; ++lev) {
-        // interpolate jx and jy to lev from lev-1 in the domain edges
-        LevelUpBoundary(geom, lev, WhichSlice::Next, "jx", amrex::IntVect{0, 0, 0}, -m_slices_nguards);
-        LevelUpBoundary(geom, lev, WhichSlice::Next, "jy", amrex::IntVect{0, 0, 0}, -m_slices_nguards);
-        // interpolate jz to lev from lev-1 in the domain edges and
-        // also inside ghost cells to account for x and y derivative
-        LevelUpBoundary(geom, lev, WhichSlice::This, "jz", m_slices_nguards, -m_slices_nguards);
-        // jx and jy on WhichSlice::Previous was already leveled up on previous slice
-
         if (m_do_symmetrize) {
             SymmetrizeFields(Comps[WhichSlice::This]["jz"], lev, 1, 1);
             SymmetrizeFields(Comps[WhichSlice::Next]["jx"], lev, -1, 1);
@@ -1056,11 +1021,6 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
 
     EnforcePeriodic(false, {Comps[which_slice]["Bx"],
                             Comps[which_slice]["By"]});
-    for (int lev=0; lev<current_N_level; ++lev) {
-        // interpolate Bx and By to lev from lev-1 in the ghost cells
-        LevelUpBoundary(geom, lev, which_slice, "Bx", m_slices_nguards, amrex::IntVect{0, 0, 0});
-        LevelUpBoundary(geom, lev, which_slice, "By", m_slices_nguards, amrex::IntVect{0, 0, 0});
-    }
 }
 
 void

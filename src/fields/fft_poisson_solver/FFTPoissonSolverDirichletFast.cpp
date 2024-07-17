@@ -208,7 +208,7 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     // The stagingArea is also created from 0 to nx, because the real space array may have
     // an offset for levels > 0
     m_stagingArea = amrex::MultiFab(a_realspace_ba, dm, 1, 0);
-    m_stagingArea.setVal(0.0, 0); // this is not required
+    m_stagingArea.setVal(0.0); // this is not required
 
     // This must be true even for parallel FFT.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_stagingArea.local_size() == 1,

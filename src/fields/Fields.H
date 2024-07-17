@@ -122,15 +122,6 @@ public:
     amrex::MultiFab getStagingArea (const int lev) {
         return amrex::MultiFab(m_poisson_solver[lev]->StagingArea(), amrex::make_alias, 0, 1);
     }
-    /** check whether the fields are initialized correctly */
-    void checkInit() {
-        for (auto& slices_lev : m_slices) {
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                slices_lev.nComp() == 0 || slices_lev.nGrowVect() == m_slices_nguards,
-                "m_slices[lev].nGrowVect() must be equal to m_slices_nguards"
-                "for initialized slices");
-        }
-    }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
      * \param[in] current_N_level number of MR levels active on the current slice
@@ -180,19 +171,13 @@ public:
                                amrex::MultiFab&& staging_area,
                                amrex::Real offset, amrex::Real factor);
 
-    /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
-     * This may include ghost cells.
+    /** \brief Set values outside the domain to zero
      *
-     * \param[in] geom Geometry
      * \param[in] lev current level
-     * \param[in] which_slice slice of the field to interpolate
-     * \param[in] component which can be Psi or rho etc.
-     * \param[in] outer_edge start writing interpolated values at domain + outer_edge
-     * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
+     * \param[in] comps array of component indexes
      */
-    void LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                          const int which_slice, const std::string& component,
-                          const amrex::IntVect outer_edge, const amrex::IntVect inner_edge);
+    template<int ncomps>
+    void SetValBoundary (const int lev, const int (&comps)[ncomps]);
 
     /** \brief Interpolate the full field from the coarse grid (lev-1) to the fine grid (lev).
      *
@@ -497,6 +482,60 @@ private:
     amrex::Vector<amrex::Real> m_insitu_sum_rdata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/field_insitu";
+};
+
+struct CheckDomainBounds {
+    amrex::Real inner_lo[2];
+    amrex::Real inner_hi[2];
+    amrex::Real outer_lo[2];
+    amrex::Real outer_hi[2];
+    amrex::Real pos_offset[2];
+    amrex::Real dx_inv[2];
+
+    CheckDomainBounds (const amrex::Geometry& geom) {
+        const amrex::Box inner = amrex::grow(geom.Domain(), -Fields::m_slices_nguards);
+        const amrex::Box outer = amrex::grow(geom.Domain(), Fields::m_slices_nguards);
+
+        inner_lo[0] = static_cast<amrex::Real>(inner.smallEnd(0));
+        inner_lo[1] = static_cast<amrex::Real>(inner.smallEnd(1));
+
+        inner_hi[0] = static_cast<amrex::Real>(inner.bigEnd(0));
+        inner_hi[1] = static_cast<amrex::Real>(inner.bigEnd(1));
+
+        outer_lo[0] = static_cast<amrex::Real>(outer.smallEnd(0));
+        outer_lo[1] = static_cast<amrex::Real>(outer.smallEnd(1));
+
+        outer_hi[0] = static_cast<amrex::Real>(outer.bigEnd(0));
+        outer_hi[1] = static_cast<amrex::Real>(outer.bigEnd(1));
+
+        pos_offset[0] = GetPosOffset(0, geom, geom.Domain());
+        pos_offset[1] = GetPosOffset(1, geom, geom.Domain());
+
+        dx_inv[0] = geom.InvCellSize(0);
+        dx_inv[1] = geom.InvCellSize(1);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    bool contains_inner (const amrex::Real x, const amrex::Real y) const {
+        using namespace amrex::literals;
+
+        const amrex::Real xmid = amrex::Math::floor((x - pos_offset[0]) * dx_inv[0] + 0.5_rt);
+        const amrex::Real ymid = amrex::Math::floor((y - pos_offset[1]) * dx_inv[1] + 0.5_rt);
+
+        return inner_lo[0] <= xmid && xmid <= inner_hi[0] &&
+               inner_lo[1] <= ymid && ymid <= inner_hi[1];
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    bool contains_outer (const amrex::Real x, const amrex::Real y) const {
+        using namespace amrex::literals;
+
+        const amrex::Real xmid = amrex::Math::floor((x - pos_offset[0]) * dx_inv[0] + 0.5_rt);
+        const amrex::Real ymid = amrex::Math::floor((y - pos_offset[1]) * dx_inv[1] + 0.5_rt);
+
+        return outer_lo[0] <= xmid && xmid <= outer_hi[0] &&
+               outer_lo[1] <= ymid && ymid <= outer_hi[1];
+    }
 };
 
 #endif

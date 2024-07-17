@@ -225,46 +225,34 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        auto& soa = pti.GetStructOfArrays();
-        const amrex::Real * const AMREX_RESTRICT pos_x = to_prev ?
-            soa.GetRealData(PlasmaIdx::x_prev).data() : soa.GetRealData(PlasmaIdx::x).data();
-        const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
-            soa.GetRealData(PlasmaIdx::y_prev).data() : soa.GetRealData(PlasmaIdx::y).data();
-        auto * AMREX_RESTRICT idcpup = soa.GetIdCPUData().data();
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         const int lev1_idx = std::min(1, current_N_level-1);
         const int lev2_idx = std::min(2, current_N_level-1);
 
-        const amrex::Real lo_x_lev1 = geom3D[lev1_idx].ProbLo(0);
-        const amrex::Real lo_x_lev2 = geom3D[lev2_idx].ProbLo(0);
-
-        const amrex::Real hi_x_lev1 = geom3D[lev1_idx].ProbHi(0);
-        const amrex::Real hi_x_lev2 = geom3D[lev2_idx].ProbHi(0);
-
-        const amrex::Real lo_y_lev1 = geom3D[lev1_idx].ProbLo(1);
-        const amrex::Real lo_y_lev2 = geom3D[lev2_idx].ProbLo(1);
-
-        const amrex::Real hi_y_lev1 = geom3D[lev1_idx].ProbHi(1);
-        const amrex::Real hi_y_lev2 = geom3D[lev2_idx].ProbHi(1);
+        const CheckDomainBounds lev1_bounds {geom3D[lev1_idx]};
+        const CheckDomainBounds lev2_bounds {geom3D[lev2_idx]};
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
-                const amrex::Real xp = pos_x[ip];
-                const amrex::Real yp = pos_y[ip];
+                const amrex::Real xp = ptd.pos(0, ip);
+                const amrex::Real yp = ptd.pos(1, ip);
 
-                if (current_N_level > 2 &&
-                    lo_x_lev2 < xp && xp < hi_x_lev2 &&
-                    lo_y_lev2 < yp && yp < hi_y_lev2) {
-                    // level 2
-                    amrex::ParticleCPUWrapper{idcpup[ip]} = 2;
-                } else if (current_N_level > 1 &&
-                    lo_x_lev1 < xp && xp < hi_x_lev1 &&
-                    lo_y_lev1 < yp && yp < hi_y_lev1) {
-                    // level 1
-                    amrex::ParticleCPUWrapper{idcpup[ip]} = 1;
+                if (current_N_level > 2 && lev2_bounds.contains_inner(xp, yp)) {
+                    // level 2 deposit, level 2 push
+                    set_level(ptd, ip, 2, true);
+                } else if (current_N_level > 2 && lev2_bounds.contains_outer(xp, yp)) {
+                    // level 2 deposit, level 1 push
+                    set_level(ptd, ip, 2, false);
+                } else if (current_N_level > 1 && lev1_bounds.contains_inner(xp, yp)) {
+                    // level 1 deposit, level 1 push
+                    set_level(ptd, ip, 1, true);
+                } else if (current_N_level > 1 && lev1_bounds.contains_outer(xp, yp)) {
+                    // level 1 deposit, level 0 push
+                    set_level(ptd, ip, 1, false);
                 } else {
                     // level 0
-                    amrex::ParticleCPUWrapper{idcpup[ip]} = 0;
+                    set_level(ptd, ip, 0, true);
                 }
             }
         );

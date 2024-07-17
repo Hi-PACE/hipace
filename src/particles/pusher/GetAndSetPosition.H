@@ -16,8 +16,6 @@
 #define HIPACE_GETANDSETPOSITION_H_
 
 #include "Hipace.H"
-#include "particles/beam/BeamParticleContainer.H"
-#include "particles/plasma/PlasmaParticleContainer.H"
 
 #include <AMReX.H>
 #include <AMReX_REAL.H>
