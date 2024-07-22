@@ -1203,7 +1203,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         + 4._rt * (zeta + beta * zfoc * inv_tau2) * (zeta + beta * zfoc * inv_complex_waist_2) \
                         + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) * inv_tau2;
                     Complex prefactor = a0 / diffract_factor;
-                    Complex time_exponent = zp * zp / ( stretch_factor * L0 * L0 );
+                    Complex time_exponent = 1 / ( stretch_factor * L0 * L0 ) *
+                        amrex::pow(zp - beta * k0 * (xp + yp) - 2._rt * I * (xp + yp)*(zeta - beta * zfoc)
+                        * inv_waist_2,2);
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x * x + yp * yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * \
