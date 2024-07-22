@@ -179,6 +179,20 @@ public:
     template<int ncomps>
     void SetValBoundary (const int lev, const int (&comps)[ncomps]);
 
+    /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
+     * This may include ghost cells.
+     *
+     * \param[in] geom Geometry
+     * \param[in] lev current level
+     * \param[in] which_slice slice of the field to interpolate
+     * \param[in] component which can be Psi or rho etc.
+     * \param[in] outer_edge start writing interpolated values at domain + outer_edge
+     * \param[in] inner_edge stop writing interpolated values at domain + inner_edge
+     */
+    void LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                          const int which_slice, const std::string& component,
+                          const amrex::IntVect outer_edge, const amrex::IntVect inner_edge);
+
     /** \brief Interpolate the full field from the coarse grid (lev-1) to the fine grid (lev).
      *
      * \param[in] geom Geometry
@@ -493,7 +507,7 @@ struct CheckDomainBounds {
     amrex::Real dx_inv[2];
 
     CheckDomainBounds (const amrex::Geometry& geom) {
-        const amrex::Box inner = amrex::grow(geom.Domain(), -Fields::m_slices_nguards);
+        const amrex::Box inner = amrex::grow(geom.Domain(), -5*Fields::m_slices_nguards);
         const amrex::Box outer = amrex::grow(geom.Domain(), Fields::m_slices_nguards);
 
         inner_lo[0] = static_cast<amrex::Real>(inner.smallEnd(0));

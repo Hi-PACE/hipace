@@ -798,6 +798,51 @@ void Fields::SetValBoundary (const int lev, const int (&comps)[ncomps])
 }
 
 void
+Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int lev,
+                         const int which_slice, const std::string& component,
+                         const amrex::IntVect outer_edge, const amrex::IntVect inner_edge)
+{
+    if (lev == 0) return; // only interpolate boundaries to lev 1
+    if (outer_edge == inner_edge) return;
+    HIPACE_PROFILE("Fields::LevelUpBoundary()");
+    constexpr int interp_order = 2;
+
+    auto field_coarse_interp = interpolated_field_xy<interp_order, amrex::MultiFab>{
+        getField(lev-1, which_slice, component), geom[lev-1]};
+    amrex::MultiFab field_fine = getField(lev, which_slice, component);
+
+    for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
+    {
+        auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
+        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
+        const amrex::Box fine_box_extended = mfi.growntilebox(outer_edge);
+        const amrex::Box fine_box_narrow = mfi.growntilebox(inner_edge);
+
+        const int narrow_i_lo = fine_box_narrow.smallEnd(0);
+        const int narrow_i_hi = fine_box_narrow.bigEnd(0);
+        const int narrow_j_lo = fine_box_narrow.smallEnd(1);
+        const int narrow_j_hi = fine_box_narrow.bigEnd(1);
+
+        const amrex::Real dx = geom[lev].CellSize(0);
+        const amrex::Real dy = geom[lev].CellSize(1);
+        const amrex::Real offset0 = GetPosOffset(0, geom[lev], fine_box_extended);
+        const amrex::Real offset1 = GetPosOffset(1, geom[lev], fine_box_extended);
+
+        amrex::ParallelFor(fine_box_extended,
+            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
+            {
+                // set interpolated values near edge of fine field between outer_edge and inner_edge
+                // to compensate for incomplete charge/current deposition in those cells
+                if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
+                    amrex::Real x = i * dx + offset0;
+                    amrex::Real y = j * dy + offset1;
+                    arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
+                }
+            });
+    }
+}
+
+void
 Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                  const int which_slice, const std::string& component)
 {
@@ -923,6 +968,11 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
                     arr(i,j,EypBx) = - (arr(i,j+1,Psi) - arr(i,j-1,Psi))*dy_inv;
                 });
         }
+    }
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+        LevelUpBoundary(geom, lev, WhichSlice::This, "ExmBy", {0, 0, 0}, {-1, -1, 0});
+        LevelUpBoundary(geom, lev, WhichSlice::This, "EypBx", {0, 0, 0}, {-1, -1, 0});
     }
 }
 

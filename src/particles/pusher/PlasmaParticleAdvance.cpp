@@ -52,10 +52,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
         const amrex::Real dy_inv = gm[lev].InvCellSize(1);
 
-        const amrex::Real lo_x_lev = gm[lev].ProbLo(0);
-        const amrex::Real hi_x_lev = gm[lev].ProbHi(0);
-        const amrex::Real lo_y_lev = gm[lev].ProbLo(1);
-        const amrex::Real hi_y_lev = gm[lev].ProbHi(1);
+        //const amrex::Real lo_x_lev = gm[lev].ProbLo(0);
+        //const amrex::Real hi_x_lev = gm[lev].ProbHi(0);
+        //const amrex::Real lo_y_lev = gm[lev].ProbLo(1);
+        //const amrex::Real hi_y_lev = gm[lev].ProbHi(1);
 
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], slice_fab.box());
@@ -115,12 +115,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
                     }
 
-                    for (int i = 0; i < n_subcycles; i++) {
+                    //for (int i = 0; i < n_subcycles; i++) {
 
                         amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
                         amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
 
-                        if (lo_x_lev < xp && xp < hi_x_lev && lo_y_lev < yp && yp < hi_y_lev) {
+                        //if (lo_x_lev < xp && xp < hi_x_lev && lo_y_lev < yp && yp < hi_y_lev) {
                             ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                             Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
                             Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
@@ -140,7 +140,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             Aabssqp *= 0.5_rt * laser_norm_ion;
                             AabssqDxp *= 0.25_rt * clight * laser_norm_ion;
                             AabssqDyp *= 0.25_rt * clight * laser_norm_ion;
-                        }
+                        //}
 
 #ifndef HIPACE_USE_AB5_PUSH
 
@@ -277,7 +277,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         ptd.rdata(PlasmaIdx::uy)[ip] = uy;
                         ptd.rdata(PlasmaIdx::psi)[ip] = psi;
 #endif
-                    } // loop over subcycles
+                    //} // loop over subcycles
                 });
         }
 

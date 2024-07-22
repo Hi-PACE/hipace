@@ -778,17 +778,20 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
 
     if (lev != 0) {
         if (slicemf.box(0).length(0) % 2 == 0) {
-            // cell centered MG solve: no ghost cells, put boundary condition into source term
-            // node centered MG solve: one ghost cell, use boundary condition from there
+            // cell centered MG solve
             m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
                                         m_fields.getField(lev, which_slice, "Sy"), 0.5, 8./3.);
             m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
                                         m_fields.getField(lev, which_slice, "Sx"), 0.5, 8./3.);
         } else {
-            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                        m_fields.getField(lev, which_slice, "Sy"), 1, 1);
-            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                        m_fields.getField(lev, which_slice, "Sx"), 1, 1);
+            // node centered MG solve
+            m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Bx", {1, 1, 0}, {0, 0, 0});
+            m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By", {1, 1, 0}, {0, 0, 0});
+            // node centered MG solve
+            //m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
+            //                            m_fields.getField(lev, which_slice, "Sy"), 1, 1);
+            //m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
+            //                            m_fields.getField(lev, which_slice, "Sx"), 1, 1);
         }
     }
 
