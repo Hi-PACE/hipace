@@ -581,10 +581,10 @@ void gsrb_4_residual (int system_type, Box const& box,
         hpmg::ParallelFor(box.numPts()*MultiGrid::get_num_comps(system_type),
             [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor_out[i] = Real(0.); });
     } else {
-        const Real * pcor_in = phi_in.dataPtr();
-        Real * pcor_out = phi_out.dataPtr();
-        hpmg::ParallelFor(box.numPts()*MultiGrid::get_num_comps(system_type),
-            [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor_out[i] = pcor_in[i]; });
+        hpmg::ParallelFor(box, MultiGrid::get_num_comps(system_type),
+            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept {
+                 phi_out(i,j,0,n) = phi_in(i,j,0,n);
+            });
     }
 
     for (int is = 0; is < 4; ++is) {
