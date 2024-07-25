@@ -1175,6 +1175,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real zeta = laser.m_zeta;
                 const amrex::Real beta = laser.m_beta;
                 const amrex::Real phi2 = laser.m_phi2;
+                const amrex::Real clight = PhysConstSI::c;
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -1204,8 +1205,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) / (L0 * L0);
                     Complex prefactor = a0 / diffract_factor;
                     Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
-                        amrex::pow(zp - beta * k0 * (x + yp) * PhysConstSI::c - 2._rt * I * (x + yp)*(zeta - beta * zfoc)
-                        * PhysConstSI::c * inv_complex_waist_2, 2);
+                        amrex::pow(zp - beta * k0 * (x + yp) * clight - 2._rt * I * (x + yp)*(zeta - beta * zfoc)
+                        * clight * inv_complex_waist_2, 2);
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x * x + yp * yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * \
