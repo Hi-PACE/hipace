@@ -725,22 +725,25 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice_chi, "chi",
         m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
 
-    if (lev!=0 && (slicemf.box(0).length(0) % 2 == 0)) {
-        // cell centered MG solve: no ghost cells, put boundary condition into source term
-        // node centered MG solve: one ghost cell, use boundary condition from there
-        m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                      m_fields.getField(lev, which_slice, "Sy"),
-                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
-        m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                      m_fields.getField(lev, which_slice, "Sx"),
-                                      amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
+    if (lev!=0) {
+        if (slicemf.box(0).length(0) % 2 == 0) {
+            // cell centered MG solve:
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
+                                          m_fields.getField(lev, which_slice, "Sy"),
+                                          amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
+                                          m_fields.getField(lev, which_slice, "Sx"),
+                                          amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
+        } else {
+            // node centered MG solve:
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
+                                          m_fields.getField(lev, which_slice, "Sy"),
+                                          amrex::IntVect{0, 0, 0}, 1., 1.);
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
+                                          m_fields.getField(lev, which_slice, "Sx"),
+                                          amrex::IntVect{0, 0, 0}, 1., 1.);
+        }
     }
-
-    // interpolate Bx and By to lev from lev-1 in the ghost cells
-    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Bx",
-        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
-    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
-        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 
     if (m_fields.m_do_symmetrize) {
         m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
@@ -817,6 +820,12 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
         m_hpmg[lev]->solve1(BxBy[0], SySx[0], Mult[0], m_MG_tolerance_rel, m_MG_tolerance_abs,
                             max_iters, m_MG_verbose);
     }
+
+    // interpolate Bx and By to lev from lev-1 in the ghost cells
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Bx",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
 }
 
 void
