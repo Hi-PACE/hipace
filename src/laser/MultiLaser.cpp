@@ -158,6 +158,10 @@ MultiLaser::InitData ()
 
         m_forward_fft.SetBuffers(m_rhs.dataPtr(), m_rhs_fourier.dataPtr(), m_fft_work_area.dataPtr());
         m_backward_fft.SetBuffers(m_rhs_fourier.dataPtr(), m_sol.dataPtr(), m_fft_work_area.dataPtr());
+    } else {
+        // need one ghost cell for 2^n-1 MG solve
+        m_mg_acoeff_real.resize(amrex::grow(m_slice_box, amrex::IntVect{1, 1, 0}), 1, amrex::The_Arena());
+        m_rhs_mg.resize(amrex::grow(m_slice_box, amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
     }
 
     if (m_laser_from_file) {
@@ -752,8 +756,6 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
     const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
     const bool do_avg_rhs = m_MG_average_rhs;
 
-    amrex::FArrayBox rhs_mg;
-    amrex::FArrayBox acoeff_real;
     amrex::Real acoeff_real_scalar = 0._rt;
     amrex::Real acoeff_imag_scalar = 0._rt;
 
@@ -766,12 +768,9 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        // need one ghost cell for 2^n-1 MG solve
-        acoeff_real.resize(mfi.growntilebox(amrex::IntVect{1, 1, 0}), 1, amrex::The_Arena());
-        rhs_mg.resize(mfi.growntilebox(amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
         Array3<amrex::Real> arr = m_slices.array(mfi);
-        Array3<amrex::Real> rhs_mg_arr = rhs_mg.array();
-        Array3<amrex::Real> acoeff_real_arr = acoeff_real.array();
+        Array3<amrex::Real> rhs_mg_arr = m_rhs_mg.array();
+        Array3<amrex::Real> acoeff_real_arr = m_mg_acoeff_real.array();
 
         // Calculate phase terms. 0 if !m_use_phase
         amrex::Real tj00 = 0.;
@@ -914,7 +913,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
 
     const int max_iters = 200;
     amrex::MultiFab np1j00 (m_slices, amrex::make_alias, WhichLaserSlice::np1j00_r, 2);
-    m_mg->solve2(np1j00[0], rhs_mg, acoeff_real, acoeff_imag_scalar,
+    m_mg->solve2(np1j00[0], m_rhs_mg, m_mg_acoeff_real, acoeff_imag_scalar,
                  m_MG_tolerance_rel, m_MG_tolerance_abs, max_iters, m_MG_verbose);
 }
 
