@@ -584,7 +584,7 @@ void gsrb_4_residual (int system_type, Box const& box,
         const amrex::Box valid_domain = valid_domain_box(box);
         hpmg::ParallelFor(box, MultiGrid::get_num_comps(system_type),
             [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept {
-                if (valid_domain.contains(i,j,k)) {
+                if (valid_domain.contains(i,j,0)) {
                     phi_out(i,j,0,n) = phi_in(i,j,0,n);
                 } else {
                     phi_out(i,j,0,n) = Real(0.);
