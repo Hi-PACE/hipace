@@ -1202,7 +1202,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     // (1 if zeta=0, beta=0, phi2=0)
                     Complex stretch_factor = 1._rt \
                         + 4._rt * (zeta + beta * zfoc * inv_tau2) * (zeta + beta * zfoc * inv_complex_waist_2) \
-                        + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) / (L0 * L0);
+                        + 2._rt * I * (phi2 * clight * clight- beta * beta * k0 * zfoc) / (L0 * L0);
                     Complex prefactor = a0 / diffract_factor;
                     Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
                         amrex::pow(zp - beta * k0 * (x + yp) * clight - 2._rt * I * (x + yp)*(zeta - beta * zfoc)
