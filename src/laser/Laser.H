@@ -46,8 +46,6 @@ public:
     /** stores the output function of makeFunctionWithParser for profile_imag_str */
     amrex::ParserExecutor<3> m_profile_imag;
 
-    /** if the lasers are initialized from openPMD file */
-    bool m_laser_from_file = false;
     /** full 3D laser data stored on the host */
     amrex::FArrayBox m_F_input_file;
     /** path to input openPMD file */

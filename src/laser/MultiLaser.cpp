@@ -837,6 +837,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         //check point
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
+
             if (laser.m_laser_init_type == "from_file") {
                 amrex::Box src_box = m_slice_box;
                 src_box.setSmall(2, islice);
