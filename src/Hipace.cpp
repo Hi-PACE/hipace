@@ -764,12 +764,6 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
-    if (m_fields.m_do_symmetrize) {
-        m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
-        m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
-        m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
-    }
-
     if (lev==0) {
         m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],
                                         Comps[which_slice]["Sx"],
@@ -783,7 +777,13 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Sx",
         amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards);
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice_chi, "chi",
-        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards);
+        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards + amrex::IntVect{1, 1, 0});
+
+    if (m_fields.m_do_symmetrize) {
+        m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
+        m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
+    }
 
     if (lev!=0) {
         if (slicemf.box(0).length(0) % 2 == 0) {

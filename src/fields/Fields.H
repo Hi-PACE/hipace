@@ -507,8 +507,8 @@ struct CheckDomainBounds {
     amrex::Real dx_inv[2];
 
     CheckDomainBounds (const amrex::Geometry& geom) {
-        const amrex::Box inner = amrex::grow(geom.Domain(), -5*Fields::m_slices_nguards);
-        const amrex::Box outer = amrex::grow(geom.Domain(), Fields::m_slices_nguards);
+        const amrex::Box inner = geom.Domain();
+        const amrex::Box outer = geom.Domain();
 
         inner_lo[0] = static_cast<amrex::Real>(inner.smallEnd(0));
         inner_lo[1] = static_cast<amrex::Real>(inner.smallEnd(1));
