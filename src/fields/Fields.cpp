@@ -766,7 +766,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
 }
 
 template<int ncomps>
-void Fields::SetValBoundary (const int lev, const int (&comps)[ncomps])
+void
+Fields::SetValBoundary (const int lev, const int (&comps)[ncomps])
 {
     HIPACE_PROFILE("Fields::SetValBoundary()");
     amrex::GpuArray<int, ncomps> c_idx = {};

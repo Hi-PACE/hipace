@@ -238,21 +238,15 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
 
-                if (current_N_level > 2 && lev2_bounds.contains_inner(xp, yp)) {
-                    // level 2 deposit, level 2 push
-                    set_level(ptd, ip, 2, true);
-                } else if (current_N_level > 2 && lev2_bounds.contains_outer(xp, yp)) {
-                    // level 2 deposit, level 1 push
-                    set_level(ptd, ip, 2, false);
-                } else if (current_N_level > 1 && lev1_bounds.contains_inner(xp, yp)) {
-                    // level 1 deposit, level 1 push
-                    set_level(ptd, ip, 1, true);
-                } else if (current_N_level > 1 && lev1_bounds.contains_outer(xp, yp)) {
-                    // level 1 deposit, level 0 push
-                    set_level(ptd, ip, 1, false);
+                if (current_N_level > 2 && lev2_bounds.contains(xp, yp)) {
+                    // level 2
+                    set_level(ptd, ip, 2);
+                } else if (current_N_level > 1 && lev1_bounds.contains(xp, yp)) {
+                    // level 1
+                    set_level(ptd, ip, 1);
                 } else {
                     // level 0
-                    set_level(ptd, ip, 0, true);
+                    set_level(ptd, ip, 0);
                 }
             }
         );

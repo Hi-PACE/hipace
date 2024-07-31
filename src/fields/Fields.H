@@ -499,28 +499,19 @@ private:
 };
 
 struct CheckDomainBounds {
-    amrex::Real inner_lo[2];
-    amrex::Real inner_hi[2];
-    amrex::Real outer_lo[2];
-    amrex::Real outer_hi[2];
+    amrex::Real lo[2];
+    amrex::Real hi[2];
     amrex::Real pos_offset[2];
     amrex::Real dx_inv[2];
 
     CheckDomainBounds (const amrex::Geometry& geom) {
-        const amrex::Box inner = geom.Domain();
-        const amrex::Box outer = geom.Domain();
+        const amrex::Box bx = geom.Domain();
 
-        inner_lo[0] = static_cast<amrex::Real>(inner.smallEnd(0));
-        inner_lo[1] = static_cast<amrex::Real>(inner.smallEnd(1));
+        lo[0] = static_cast<amrex::Real>(bx.smallEnd(0));
+        lo[1] = static_cast<amrex::Real>(bx.smallEnd(1));
 
-        inner_hi[0] = static_cast<amrex::Real>(inner.bigEnd(0));
-        inner_hi[1] = static_cast<amrex::Real>(inner.bigEnd(1));
-
-        outer_lo[0] = static_cast<amrex::Real>(outer.smallEnd(0));
-        outer_lo[1] = static_cast<amrex::Real>(outer.smallEnd(1));
-
-        outer_hi[0] = static_cast<amrex::Real>(outer.bigEnd(0));
-        outer_hi[1] = static_cast<amrex::Real>(outer.bigEnd(1));
+        hi[0] = static_cast<amrex::Real>(bx.bigEnd(0));
+        hi[1] = static_cast<amrex::Real>(bx.bigEnd(1));
 
         pos_offset[0] = GetPosOffset(0, geom, geom.Domain());
         pos_offset[1] = GetPosOffset(1, geom, geom.Domain());
@@ -530,25 +521,14 @@ struct CheckDomainBounds {
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool contains_inner (const amrex::Real x, const amrex::Real y) const {
+    bool contains (const amrex::Real x, const amrex::Real y) const {
         using namespace amrex::literals;
 
         const amrex::Real xmid = amrex::Math::floor((x - pos_offset[0]) * dx_inv[0] + 0.5_rt);
         const amrex::Real ymid = amrex::Math::floor((y - pos_offset[1]) * dx_inv[1] + 0.5_rt);
 
-        return inner_lo[0] <= xmid && xmid <= inner_hi[0] &&
-               inner_lo[1] <= ymid && ymid <= inner_hi[1];
-    }
-
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool contains_outer (const amrex::Real x, const amrex::Real y) const {
-        using namespace amrex::literals;
-
-        const amrex::Real xmid = amrex::Math::floor((x - pos_offset[0]) * dx_inv[0] + 0.5_rt);
-        const amrex::Real ymid = amrex::Math::floor((y - pos_offset[1]) * dx_inv[1] + 0.5_rt);
-
-        return outer_lo[0] <= xmid && xmid <= outer_hi[0] &&
-               outer_lo[1] <= ymid && ymid <= outer_hi[1];
+        return lo[0] <= xmid && xmid <= hi[0] &&
+               lo[1] <= ymid && ymid <= hi[1];
     }
 };
 

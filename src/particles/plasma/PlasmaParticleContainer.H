@@ -227,10 +227,8 @@ public:
 // cpu | deposit          | push
 // ----|------------------|-----
 //   0 | lev0             | lev0
-//   1 | lev0, lev1       | lev0
-//   2 | lev0, lev1       | lev1
-//   3 | lev0, lev1, lev2 | lev1
-//   4 | lev0, lev1, lev2 | lev2
+//   1 | lev0, lev1       | lev1
+//   3 | lev0, lev1, lev2 | lev2
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 bool deposits_on_level (
@@ -238,7 +236,7 @@ bool deposits_on_level (
     const int ip,
     const int lev)
 {
-    return lev == 0 || ptd.cpu(ip) >= 2*lev-1;
+    return ptd.cpu(ip) >= lev;
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -247,18 +245,16 @@ bool pushed_on_level (
     const int ip,
     const int lev)
 {
-    const auto cpu = ptd.cpu(ip);
-    return cpu == 2*lev || cpu == 2*lev+1;
+    return ptd.cpu(ip) == lev;
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void set_level (
     const PlasmaParticleContainer::ParticleTileType::ParticleTileDataType& ptd,
     const int ip,
-    const int lev,
-    const bool do_push)
+    const int lev)
 {
-    ptd.cpu(ip) = 2*lev - (do_push ? 0 : 1);
+    ptd.cpu(ip) = lev;
 }
 
 #endif
