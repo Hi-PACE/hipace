@@ -193,7 +193,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 + 1._rt
             );
 
-            if ((gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor))
+            if (gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor || psi_inv < 0.0_rt)
             {
                 // This particle violates the QSA, discard it and do not deposit its current
                 amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);

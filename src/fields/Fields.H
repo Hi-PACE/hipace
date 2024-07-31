@@ -315,7 +315,7 @@ public:
         amrex::MultiFab& mfab = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
@@ -344,7 +344,7 @@ public:
         amrex::MultiFab& mfab = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
@@ -374,7 +374,7 @@ public:
         amrex::MultiFab& mfab = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
@@ -411,7 +411,7 @@ public:
         amrex::MultiFab& mfab = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
@@ -448,7 +448,7 @@ public:
         amrex::MultiFab& mfab = getSlices(lev);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);

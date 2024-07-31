@@ -13,14 +13,17 @@
 #include <AMReX_Vector.H>
 #include <AMReX_RealVect.H>
 #include "utils/Constants.H"
+#include "utils/Parser.H"
 
 class Laser
 {
 public:
 
-    Laser (std::string name, bool laser_from_file);
+    Laser (std::string name);
 
     std::string m_name {""};
+    /** The way to initialize a laser (from_file/gaussian/parser)*/
+    std::string m_laser_init_type = "gaussian";
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::Real m_w0 {0.}; /**< Laser waist */
     amrex::Real m_CEP {0.}; /**< Laser carrier-envelope phase (CEP) */
@@ -34,6 +37,13 @@ public:
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
+    /** Custom profile*/
+    amrex::Parser m_parser_lr;/**< owns data for profile_real_str */
+    amrex::Parser m_parser_li;/**< owns data for profile_imag_str */
+    /** stores the output function of makeFunctionWithParser for profile_real_str */
+    amrex::ParserExecutor<3> m_profile_real;
+    /** stores the output function of makeFunctionWithParser for profile_imag_str */
+    amrex::ParserExecutor<3> m_profile_imag;
 };
 
 #endif // LASER_H_

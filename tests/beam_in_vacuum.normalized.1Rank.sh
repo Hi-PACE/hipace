@@ -33,6 +33,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         plasmas.sort_bin_size = 8 \
         hipace.depos_order_xy=0 \
         diagnostic.field_data = all rho \
+        hipace.MG_tolerance_rel = 1e-5 \
         hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory

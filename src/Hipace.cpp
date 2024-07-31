@@ -704,7 +704,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
     const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -764,34 +764,44 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
-    if (lev==0) {
-        m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],
-                                        Comps[which_slice]["Sx"],
-                                        Comps[which_slice_chi]["chi"]});
-    }
-
     if (m_fields.m_do_symmetrize) {
         m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
         m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
         m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
     }
 
-    if (lev != 0) {
+    if (lev==0) {
+        m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],
+                                        Comps[which_slice]["Sx"],
+                                        Comps[which_slice_chi]["chi"]});
+    }
+
+    // interpolate Sx, Sy and chi to lev from lev-1 in the domain edges.
+    // This also accounts for jx_beam, jy_beam
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Sy",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Sx",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice_chi, "chi",
+        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+
+    if (lev!=0) {
         if (slicemf.box(0).length(0) % 2 == 0) {
-            // cell centered MG solve
+            // cell centered MG solve:
             m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                        m_fields.getField(lev, which_slice, "Sy"), 0.5, 8./3.);
+                                          m_fields.getField(lev, which_slice, "Sy"),
+                                          amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
             m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                        m_fields.getField(lev, which_slice, "Sx"), 0.5, 8./3.);
+                                          m_fields.getField(lev, which_slice, "Sx"),
+                                          amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
         } else {
-            // node centered MG solve
-            m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Bx", {1, 1, 0}, {0, 0, 0});
-            m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By", {1, 1, 0}, {0, 0, 0});
-            // node centered MG solve
-            //m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-            //                            m_fields.getField(lev, which_slice, "Sy"), 1, 1);
-            //m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-            //                            m_fields.getField(lev, which_slice, "Sx"), 1, 1);
+            // node centered MG solve:
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
+                                          m_fields.getField(lev, which_slice, "Sy"),
+                                          amrex::IntVect{0, 0, 0}, 1., 1.);
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
+                                          m_fields.getField(lev, which_slice, "Sx"),
+                                          amrex::IntVect{0, 0, 0}, 1., 1.);
         }
     }
 
@@ -865,10 +875,18 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
                             max_iters, m_MG_verbose);
     }
 
+<<<<<<< HEAD
     if (lev==0) {
         m_fields.EnforcePeriodic(false, {Comps[which_slice]["Bx"],
                                          Comps[which_slice]["By"]});
     }
+=======
+    // interpolate Bx and By to lev from lev-1 in the ghost cells
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Bx",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+    m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
+        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+>>>>>>> development
 }
 
 void

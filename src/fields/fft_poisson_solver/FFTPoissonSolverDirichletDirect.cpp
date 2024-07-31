@@ -105,7 +105,7 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     m_forward_fft.Execute();
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
@@ -122,7 +122,7 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     m_backward_fft.Execute();
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Copy from the staging area to output array (and normalize)

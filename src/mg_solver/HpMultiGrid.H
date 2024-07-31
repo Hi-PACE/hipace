@@ -264,6 +264,10 @@ private:
     bool m_cuda_graph_vcycle_created = false;
     cudaGraph_t m_cuda_graph_vcycle = NULL;
     cudaGraphExec_t m_cuda_graph_exe_vcycle = NULL;
+
+    /** to assert that sol and rhs arrays are the same as when the graph was created */
+    amrex::Real* m_cuda_graph_sol;
+    const amrex::Real* m_cuda_graph_rhs;
 #endif
 };
 

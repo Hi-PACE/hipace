@@ -60,7 +60,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
 #ifdef AMREX_USE_OMP
-#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
         {
 
