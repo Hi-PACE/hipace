@@ -36,7 +36,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.predcorr_B_mixing_factor = 0.95 \
         hipace.predcorr_max_iterations = 5 \
         boundary.field = Open \
-        boundary.particle = Deleting \
+        boundary.particle = Absorbing \
         geometry.prob_lo     = -4.   -4.   -2.  \
         geometry.prob_hi     =  4.    4.    2.  \
         beam.position_mean = 2. -1. 0. \

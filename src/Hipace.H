@@ -49,7 +49,7 @@ namespace ParticleBoundary {
     enum type {
         Reflecting,
         Periodic,
-        Deleting
+        Absorbing
     };
 }
 
@@ -290,7 +290,7 @@ public:
     /** type of boundary used for fields */
     inline static FieldBoundary::type m_boundary_field = FieldBoundary::Dirichlet;
     /** type of boundary used for particles */
-    inline static ParticleBoundary::type m_boundary_particles = ParticleBoundary::Deleting;
+    inline static ParticleBoundary::type m_boundary_particles = ParticleBoundary::Absorbing;
     /** lower bound of bounding box for the particles */
     inline static std::array<amrex::Real, 2> m_boundary_particle_lo;
     /** upper bound of bounding box for the particles */

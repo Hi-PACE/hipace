@@ -14,7 +14,7 @@ hipace.verbose = 3
 hipace.depos_order_xy = 2
 
 boundary.field = Dirichlet
-boundary.particle = Deleting
+boundary.particle = Absorbing
 geometry.prob_lo = -6  -6  -12
 geometry.prob_hi =  6   6   6
 

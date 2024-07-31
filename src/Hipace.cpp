@@ -175,7 +175,7 @@ Hipace::Hipace () :
         "\n"
         "To replace geometry.is_periodic = 0 0 0 use:\n"
         "boundary.field = Dirichlet\n"
-        "boundary.particle = Deleting\n", true);
+        "boundary.particle = Absorbing\n", true);
 
     amrex::ParmParse ppb("boundary");
     std::string field_boundary = "";
@@ -197,11 +197,11 @@ Hipace::Hipace () :
         m_boundary_particles = ParticleBoundary::Reflecting;
     } else if (particle_boundary == "Periodic") {
         m_boundary_particles = ParticleBoundary::Periodic;
-    } else if (particle_boundary == "Deleting") {
-        m_boundary_particles = ParticleBoundary::Deleting;
+    } else if (particle_boundary == "Absorbing") {
+        m_boundary_particles = ParticleBoundary::Absorbing;
     } else {
         amrex::Abort("Unknown particle boundary '" + particle_boundary +
-            "', must be 'Reflecting', 'Periodic' or 'Deleting'");
+            "', must be 'Reflecting', 'Periodic' or 'Absorbing'");
     }
 
     MakeGeometry();

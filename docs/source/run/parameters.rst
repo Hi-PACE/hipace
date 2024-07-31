@@ -185,7 +185,7 @@ Geometry
 
         * ``Periodic`` Particles enter the domain on the opposite side where they exit.
 
-        * ``Deleting`` Particles exiting the domain will be deleted.
+        * ``Absorbing`` Particles exiting the domain will be deleted.
 
 * ``boundary.particle_lo`` (2 `float`) optional (default `<first two values of geometry.prob_lo>`)
     The lower location of the domain boundary the particles experience. By default, this is equal

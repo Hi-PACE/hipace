@@ -7,7 +7,7 @@ diagnostic.output_period = 1
 hipace.normalized_units = 1
 
 boundary.field = Dirichlet
-boundary.particle = Deleting
+boundary.particle = Absorbing
 geometry.prob_lo     = -20   -20   -20    # physical domain
 geometry.prob_hi     =  20    20    20
 
