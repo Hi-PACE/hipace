@@ -241,6 +241,10 @@ private:
     bool m_MG_average_rhs = true;
     /** hpmg solver for the envelope solver */
     std::unique_ptr<hpmg::MultiGrid> m_mg;
+    /** store rhs for MG solver */
+    amrex::FArrayBox m_rhs_mg;
+    /** store real part of acoeff of MG solver */
+    amrex::FArrayBox m_mg_acoeff_real;
 
     /** FFTW plan for forward C2C transform to solve Complex Poisson equation */
     AnyFFT m_forward_fft;
