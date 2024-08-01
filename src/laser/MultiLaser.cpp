@@ -34,10 +34,6 @@ MultiLaser::ReadParameters ()
     if (!m_use_laser) return;
     m_nlasers = m_names.size();
 
-    for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]),m_laser_geom_3D);
-    }
-
     queryWithParser(pp, "lambda0", m_lambda0);
 
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
@@ -847,10 +843,21 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                    arr = laser.m_F_input_file.array();
-                    AMREX_ASSERT_WITH_MESSAGE( laser.m_lambda0 == m_lambda0 && m_lambda0 != 0 ,
-                    "The wavelength from all the input file and script should be identical");
-                    m_lambda0 = laser.m_lambda0;
+                amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                {
+                    if (ilaser == 0) {
+                        arr(i, j, k, comp ) = 0._rt;
+                        arr(i, j, k, comp + 1 ) = 0._rt;
+                    }
+                    arr(i, j, k, comp ) += laser.m_F_input_file.array(i, j, k, comp );
+                    arr(i, j, k, comp + 1 ) += laser.m_F_input_file.array(i, j, k, comp + 1 );
+                }
+                );
+                AMREX_ASSERT_WITH_MESSAGE( laser.m_lambda0 == m_lambda0 && m_lambda0 != 0 ,
+                "The wavelength from all the input file and script should be identical");
+                m_lambda0 = laser.m_lambda0;
                     }
             }
             if (laser.m_laser_init_type == "parser") {

@@ -18,7 +18,6 @@
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
 Laser::Laser (std::string name, amrex::Geometry laser_geom_3D)
-
 {
     m_name = name;
     amrex::ParmParse pp(m_name);
