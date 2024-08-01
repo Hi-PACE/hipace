@@ -83,18 +83,6 @@ AdvanceBeamParticlesSlice (
     const CheckDomainBounds lev1_bounds {gm[lev1_idx]};
     const CheckDomainBounds lev2_bounds {gm[lev2_idx]};
 
-    const amrex::Real lo_x_lev1 = gm[lev1_idx].ProbLo(0);
-    const amrex::Real lo_x_lev2 = gm[lev2_idx].ProbLo(0);
-
-    const amrex::Real hi_x_lev1 = gm[lev1_idx].ProbHi(0);
-    const amrex::Real hi_x_lev2 = gm[lev2_idx].ProbHi(0);
-
-    const amrex::Real lo_y_lev1 = gm[lev1_idx].ProbLo(1);
-    const amrex::Real lo_y_lev2 = gm[lev2_idx].ProbLo(1);
-
-    const amrex::Real hi_y_lev1 = gm[lev1_idx].ProbHi(1);
-    const amrex::Real hi_y_lev2 = gm[lev2_idx].ProbHi(1);
-
     // Extract particle properties
     const auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 

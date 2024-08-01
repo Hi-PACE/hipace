@@ -154,7 +154,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             }
 
             // only deposit plasma currents on or below their according MR level
-            if (!ptd.id(ip).is_valid() || ptd.cpu(ip) < lev) return;
+            if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;
 
             const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
             const amrex::Real xp = ptd.pos(0, ip);

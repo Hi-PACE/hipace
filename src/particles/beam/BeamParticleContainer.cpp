@@ -330,18 +330,6 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     const CheckDomainBounds lev1_bounds {geom3D[lev1_idx]};
     const CheckDomainBounds lev2_bounds {geom3D[lev2_idx]};
 
-    const amrex::Real lo_x_lev1 = geom3D[lev1_idx].ProbLo(0);
-    const amrex::Real lo_x_lev2 = geom3D[lev2_idx].ProbLo(0);
-
-    const amrex::Real hi_x_lev1 = geom3D[lev1_idx].ProbHi(0);
-    const amrex::Real hi_x_lev2 = geom3D[lev2_idx].ProbHi(0);
-
-    const amrex::Real lo_y_lev1 = geom3D[lev1_idx].ProbLo(1);
-    const amrex::Real lo_y_lev2 = geom3D[lev2_idx].ProbLo(1);
-
-    const amrex::Real hi_y_lev1 = geom3D[lev1_idx].ProbHi(1);
-    const amrex::Real hi_y_lev2 = geom3D[lev2_idx].ProbHi(1);
-
     amrex::ParallelFor(getNumParticlesIncludingSlipped(which_slice),
         [=] AMREX_GPU_DEVICE (int ip) {
             const amrex::Real xp = pos_x[ip];

@@ -225,7 +225,12 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        auto& soa = pti.GetStructOfArrays();
+        const amrex::Real * const AMREX_RESTRICT pos_x = to_prev ?
+            soa.GetRealData(PlasmaIdx::x_prev).data() : soa.GetRealData(PlasmaIdx::x).data();
+        const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
+            soa.GetRealData(PlasmaIdx::y_prev).data() : soa.GetRealData(PlasmaIdx::y).data();
+        auto * AMREX_RESTRICT idcpup = soa.GetIdCPUData().data();
 
         const int lev1_idx = std::min(1, current_N_level-1);
         const int lev2_idx = std::min(2, current_N_level-1);
@@ -235,18 +240,18 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
-                const amrex::Real xp = ptd.pos(0, ip);
-                const amrex::Real yp = ptd.pos(1, ip);
+                const amrex::Real xp = pos_x[ip];
+                const amrex::Real yp = pos_y[ip];
 
                 if (current_N_level > 2 && lev2_bounds.contains(xp, yp)) {
                     // level 2
-                    ptd.cpu(ip) = 2;
+                    amrex::ParticleCPUWrapper{idcpup[ip]} = 2;
                 } else if (current_N_level > 1 && lev1_bounds.contains(xp, yp)) {
                     // level 1
-                    ptd.cpu(ip) = 1;
+                    amrex::ParticleCPUWrapper{idcpup[ip]} = 1;
                 } else {
                     // level 0
-                    ptd.cpu(ip) = 0;
+                    amrex::ParticleCPUWrapper{idcpup[ip]} = 0;
                 }
             }
         );
