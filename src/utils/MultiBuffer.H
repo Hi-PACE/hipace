@@ -130,6 +130,9 @@ private:
     std::array<int, comm_progress::nprogress> m_async_metadata_slice {};
     std::array<int, comm_progress::nprogress> m_async_data_slice {};
 
+    // send some dummy messages so MPI can pre-register the memory
+    void pre_register_memory ();
+
     // helper functions to read 2D metadata array
     std::size_t get_metadata_size ();
     std::size_t* get_metadata_location (int slice);

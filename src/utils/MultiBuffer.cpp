@@ -133,6 +133,13 @@ void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) 
         }
     }
 
+    bool do_pre_register = false;
+    queryWithParser(pp, "pre_register_memory", do_pre_register);
+
+    if (do_pre_register) {
+        pre_register_memory();
+    }
+
     for (int p = 0; p < comm_progress::nprogress; ++p) {
         m_async_metadata_slice[p] = m_nslices - 1;
         m_async_data_slice[p] = m_nslices - 1;
@@ -161,8 +168,56 @@ void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) 
     }
 }
 
+void MultiBuffer::pre_register_memory () {
+#ifdef AMREX_USE_MPI
+    HIPACE_PROFILE("MultiBuffer::pre_register_memory()");
+    // On some platforms, such as JUWELS booster, the memory passed into MPI needs to be
+    // registered to the network card, which can take a long time. In this function, all ranks
+    // can do this all at once in initialization instead of one after another
+    // as part of the communication pipeline.
+    void* send_buffer = nullptr;
+    void* recv_buffer = nullptr;
+    const int count = 1024;
+    MPI_Request send_request = MPI_REQUEST_NULL;
+    MPI_Request recv_request = MPI_REQUEST_NULL;
+    if (!m_buffer_on_gpu) {
+        send_buffer = amrex::The_Pinned_Arena()->alloc(count * sizeof(storage_type));
+        recv_buffer = amrex::The_Pinned_Arena()->alloc(count * sizeof(storage_type));
+    } else {
+        send_buffer = amrex::The_Device_Arena()->alloc(count * sizeof(storage_type));
+        recv_buffer = amrex::The_Device_Arena()->alloc(count * sizeof(storage_type));
+    }
+    // send and receive dummy message
+    // use the same MPI functions and arguments as in the real communication
+    MPI_Isend(
+        send_buffer,
+        count,
+        amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
+        m_rank_send_to,
+        m_tag_metadata_start + m_nslices,
+        m_comm,
+        &send_request);
+    MPI_Irecv(
+        recv_buffer,
+        count,
+        amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
+        m_rank_receive_from,
+        m_tag_metadata_start + m_nslices,
+        m_comm,
+        &recv_request);
+    MPI_Wait(&send_request, MPI_STATUS_IGNORE);
+    MPI_Wait(&recv_request, MPI_STATUS_IGNORE);
+    if (!m_buffer_on_gpu) {
+        amrex::The_Pinned_Arena()->free(send_buffer);
+        amrex::The_Pinned_Arena()->free(recv_buffer);
+    } else {
+        amrex::The_Device_Arena()->free(send_buffer);
+        amrex::The_Device_Arena()->free(recv_buffer);
+    }
+#endif
+}
 
-MultiBuffer::~MultiBuffer() {
+MultiBuffer::~MultiBuffer () {
 #ifdef AMREX_USE_MPI
     // wait for sends to complete and cancel receives
     for (int slice = m_nslices-1; slice >= 0; --slice) {

@@ -23,6 +23,7 @@
 
 namespace
 {
+#ifdef HIPACE_USE_OPENPMD
     /** \brief Adds a single beam particle
      *
      * \param[in,out] ptd real and int beam data
@@ -55,6 +56,7 @@ namespace
         ptd.idcpu(ip) = pid + ip;
         ptd.id(ip).make_valid();
     }
+#endif // HIPACE_USE_OPENPMD
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
      *
