@@ -546,16 +546,10 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
                            WhichSlice::This, {"jx_beam", "jy_beam"});
         }
         // Set all quantities on WhichSlice::This to 0 except:
-        // Only the boundary for fields
+        // fields are set by field solvers
         // jx, jy, jx_beam and jy_beam on WhichSlice::This:
         // shifted from the previous WhichSlice::Next
         // with jx and jy initially set to jx_beam and jy_beam
-        SetValBoundary(lev, {
-            Comps[WhichSlice::This]["Bx"],
-            Comps[WhichSlice::This]["By"],
-            Comps[WhichSlice::This]["Psi"],
-            Comps[WhichSlice::This]["Ez"],
-            Comps[WhichSlice::This]["Bz"]});
         setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "jz_beam", "rhomjz");
         setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
     } else {
@@ -569,12 +563,6 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
             LevelUp(geom, lev, WhichSlice::Previous, "jx");
             LevelUp(geom, lev, WhichSlice::Previous, "jy");
         }
-        SetValBoundary(lev, {
-            Comps[WhichSlice::This]["Bx"],
-            Comps[WhichSlice::This]["By"],
-            Comps[WhichSlice::This]["Psi"],
-            Comps[WhichSlice::This]["Ez"],
-            Comps[WhichSlice::This]["Bz"]});
         setVal(0., lev, WhichSlice::This,
             "ExmBy", "EypBx", "jx", "jy", "jz", "rhomjz");
         if (Hipace::m_use_laser) {
@@ -762,39 +750,6 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
                                    offset, factor, arr_solution_interp);
         }
-    }
-}
-
-template<int ncomps>
-void
-Fields::SetValBoundary (const int lev, const int (&comps)[ncomps])
-{
-    HIPACE_PROFILE("Fields::SetValBoundary()");
-    amrex::GpuArray<int, ncomps> c_idx = {};
-    for (int i=0; i<ncomps; ++i) {
-        c_idx[i] = comps[i];
-    }
-    amrex::MultiFab& mfab = getSlices(lev);
-
-    for (amrex::MFIter mfi(mfab, DfltMfi); mfi.isValid(); ++mfi)
-    {
-        const Array3<amrex::Real> arr = mfab.array(mfi);
-        const amrex::Box bx = mfab[mfi].box();
-
-        const int i_lo = bx.smallEnd(0);
-        const int i_hi = bx.bigEnd(0);
-        const int j_lo = bx.smallEnd(1);
-        const int j_hi = bx.bigEnd(1);
-
-        amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
-            {
-                if (i<i_lo || i>i_hi || j<j_lo || j>j_hi) {
-                    for (int n=0; n<ncomps; ++n) {
-                        arr(i, j, comps[n]) = amrex::Real{0};
-                    }
-                }
-            });
     }
 }
 

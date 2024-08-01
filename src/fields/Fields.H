@@ -171,14 +171,6 @@ public:
                                amrex::MultiFab&& staging_area,
                                amrex::Real offset, amrex::Real factor);
 
-    /** \brief Set values outside the domain to zero
-     *
-     * \param[in] lev current level
-     * \param[in] comps array of component indexes
-     */
-    template<int ncomps>
-    void SetValBoundary (const int lev, const int (&comps)[ncomps]);
-
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
      * This may include ghost cells.
      *
