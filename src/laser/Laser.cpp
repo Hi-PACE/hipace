@@ -31,6 +31,7 @@ Laser::Laser (std::string name, amrex::Geometry laser_geom_3D)
         return;
         }
     }
+
     else if (m_laser_init_type == "gaussian"){
         queryWithParser(pp, "a0", m_a0);
         queryWithParser(pp, "w0", m_w0);

@@ -837,13 +837,15 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         //check point
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
-
             if (laser.m_laser_init_type == "from_file") {
                 amrex::Box src_box = m_slice_box;
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                }
+                if (Hipace::HeadRank()) {
+                    m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
+                    laser.GetEnvelopeFromFileHelper(m_laser_geom_3D);
+                    }
             }
             if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
