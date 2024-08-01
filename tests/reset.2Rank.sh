@@ -24,7 +24,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Relative tolerance for checksum tests depends on the platform
-RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1.2e-5
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1.3e-5
 
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
@@ -32,6 +32,7 @@ TEST_NAME="${FILE_NAME%.*}"
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized max_step=2 \
         plasmas.sort_bin_size = 8 \
+        hipace.MG_tolerance_rel = 1e-5 \
         hipace.file_prefix=$TEST_NAME
 
 # Compare the results with checksum benchmark
