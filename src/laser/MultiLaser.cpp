@@ -845,6 +845,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 if (Hipace::HeadRank()) {
                     m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
                     laser.GetEnvelopeFromFileHelper(m_laser_geom_3D);
+                    arr = laser.m_F_input_file.array();
                     }
             }
             if (laser.m_laser_init_type == "parser") {
