@@ -102,9 +102,9 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
         }
 
         if (input_type == openPMD::Datatype::CFLOAT) {
-            GetEnvelopeFromFile<std::complex<float>>(laser_geom_3D,laser_arr);
+            GetEnvelopeFromFile<std::complex<float>>(laser_geom_3D);
         } else if (input_type == openPMD::Datatype::CDOUBLE) {
-            GetEnvelopeFromFile<std::complex<double>>(laser_geom_3D,laser_arr);
+            GetEnvelopeFromFile<std::complex<double>>(laser_geom_3D);
         } else {
             amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
         }
@@ -338,6 +338,4 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
                  "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
     #endif // HIPACE_USE_OPENPMD
-}
-
 }

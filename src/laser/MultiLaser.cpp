@@ -847,9 +847,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                if (Hipace::HeadRank()) {
-                    m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-                    laser.GetEnvelopeFromFileHelper(m_laser_geom_3D);
                     arr = laser.m_F_input_file.array();
                     AMREX_ASSERT_WITH_MESSAGE( laser.m_lambda0 == m_lambda0 && m_lambda0 != 0 ,
                     "The wavelength from all the input file and script should be identical");
