@@ -80,6 +80,9 @@ AdvanceBeamParticlesSlice (
     const amrex::Real y_pos_offset_lev1 = GetPosOffset(1, gm[lev1_idx], slice_fab_lev1.box());
     const amrex::Real y_pos_offset_lev2 = GetPosOffset(1, gm[lev2_idx], slice_fab_lev2.box());
 
+    const CheckDomainBounds lev1_bounds {gm[lev1_idx]};
+    const CheckDomainBounds lev2_bounds {gm[lev2_idx]};
+
     const amrex::Real lo_x_lev1 = gm[lev1_idx].ProbLo(0);
     const amrex::Real lo_x_lev2 = gm[lev2_idx].ProbLo(0);
 
@@ -172,18 +175,14 @@ AdvanceBeamParticlesSlice (
                 amrex::Real x_pos_offset = x_pos_offset_lev0;
                 amrex::Real y_pos_offset = y_pos_offset_lev0;
 
-                if (current_N_level > 2 &&
-                    lo_x_lev2 < xp && xp < hi_x_lev2 &&
-                    lo_y_lev2 < yp && yp < hi_y_lev2) {
+                if (current_N_level > 2 && lev2_bounds.contains(xp, yp)) {
                     // level 2
                     slice_arr = slice_arr_lev2;
                     dx_inv = dx_inv_lev2;
                     dy_inv = dy_inv_lev2;
                     x_pos_offset = x_pos_offset_lev2;
                     y_pos_offset = y_pos_offset_lev2;
-                } else if (current_N_level > 1 &&
-                    lo_x_lev1 < xp && xp < hi_x_lev1 &&
-                    lo_y_lev1 < yp && yp < hi_y_lev1) {
+                } else if (current_N_level > 1 && lev1_bounds.contains(xp, yp)) {
                     // level 1
                     slice_arr = slice_arr_lev1;
                     dx_inv = dx_inv_lev1;

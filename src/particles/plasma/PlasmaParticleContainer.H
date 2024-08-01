@@ -224,37 +224,4 @@ public:
         : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
 };
 
-// cpu | deposit          | push
-// ----|------------------|-----
-//   0 | lev0             | lev0
-//   1 | lev0, lev1       | lev1
-//   3 | lev0, lev1, lev2 | lev2
-
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-bool deposits_on_level (
-    const PlasmaParticleContainer::ParticleTileType::ParticleTileDataType& ptd,
-    const int ip,
-    const int lev)
-{
-    return ptd.cpu(ip) >= lev;
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-bool pushed_on_level (
-    const PlasmaParticleContainer::ParticleTileType::ParticleTileDataType& ptd,
-    const int ip,
-    const int lev)
-{
-    return ptd.cpu(ip) == lev;
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void set_level (
-    const PlasmaParticleContainer::ParticleTileType::ParticleTileDataType& ptd,
-    const int ip,
-    const int lev)
-{
-    ptd.cpu(ip) = lev;
-}
-
 #endif

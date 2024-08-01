@@ -319,7 +319,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                     [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
                         const int ip = idx + idx_begin;
                         // only push plasma particles on their according MR level
-                        if (!ptd.id(ip).is_valid() || !pushed_on_level(ptd, ip, lev)) return;
+                        if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
                         const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
                         const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];

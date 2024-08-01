@@ -240,13 +240,13 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
                 if (current_N_level > 2 && lev2_bounds.contains(xp, yp)) {
                     // level 2
-                    set_level(ptd, ip, 2);
+                    ptd.cpu(ip) = 2;
                 } else if (current_N_level > 1 && lev1_bounds.contains(xp, yp)) {
                     // level 1
-                    set_level(ptd, ip, 1);
+                    ptd.cpu(ip) = 1;
                 } else {
                     // level 0
-                    set_level(ptd, ip, 0);
+                    ptd.cpu(ip) = 0;
                 }
             }
         );

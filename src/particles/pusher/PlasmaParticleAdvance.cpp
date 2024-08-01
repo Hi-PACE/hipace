@@ -54,11 +54,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         const CheckDomainBounds lev_bounds {gm[lev]};
 
-        //const amrex::Real lo_x_lev = gm[lev].ProbLo(0);
-        //const amrex::Real hi_x_lev = gm[lev].ProbHi(0);
-        //const amrex::Real lo_y_lev = gm[lev].ProbLo(1);
-        //const amrex::Real hi_y_lev = gm[lev].ProbHi(1);
-
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], slice_fab.box());
@@ -102,7 +97,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 [=] AMREX_GPU_DEVICE (int idx, auto depos_order, auto use_laser) {
                     const int ip = idx + idx_begin;
                     // only push plasma particles on their according MR level
-                    if (!ptd.id(ip).is_valid() || !pushed_on_level(ptd, ip, lev)) return;
+                    if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
                     // define field at particle position reals
                     amrex::Real ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;

@@ -501,34 +501,17 @@ private:
 struct CheckDomainBounds {
     amrex::Real lo[2];
     amrex::Real hi[2];
-    amrex::Real pos_offset[2];
-    amrex::Real dx_inv[2];
 
     CheckDomainBounds (const amrex::Geometry& geom) {
-        const amrex::Box bx = geom.Domain();
-
-        lo[0] = static_cast<amrex::Real>(bx.smallEnd(0));
-        lo[1] = static_cast<amrex::Real>(bx.smallEnd(1));
-
-        hi[0] = static_cast<amrex::Real>(bx.bigEnd(0));
-        hi[1] = static_cast<amrex::Real>(bx.bigEnd(1));
-
-        pos_offset[0] = GetPosOffset(0, geom, geom.Domain());
-        pos_offset[1] = GetPosOffset(1, geom, geom.Domain());
-
-        dx_inv[0] = geom.InvCellSize(0);
-        dx_inv[1] = geom.InvCellSize(1);
+        lo[0] = geom.ProbLo(0);
+        lo[1] = geom.ProbLo(1);
+        hi[0] = geom.ProbHi(0);
+        hi[1] = geom.ProbHi(1);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     bool contains (const amrex::Real x, const amrex::Real y) const {
-        using namespace amrex::literals;
-
-        const amrex::Real xmid = amrex::Math::floor((x - pos_offset[0]) * dx_inv[0] + 0.5_rt);
-        const amrex::Real ymid = amrex::Math::floor((y - pos_offset[1]) * dx_inv[1] + 0.5_rt);
-
-        return lo[0] <= xmid && xmid <= hi[0] &&
-               lo[1] <= ymid && ymid <= hi[1];
+        return lo[0] < x && x < hi[0] && lo[1] < y && y < hi[1];
     }
 };
 
