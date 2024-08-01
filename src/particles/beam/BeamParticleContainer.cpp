@@ -160,7 +160,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         queryWithParser(pp, "z_foc", m_z_foc);
         m_pos_mean_x_func = makeFunctionWithParser<1>(pos_mean_arr[0], m_pos_mean_x_parser, {"z"});
         m_pos_mean_y_func = makeFunctionWithParser<1>(pos_mean_arr[1], m_pos_mean_y_parser, {"z"});
-        Parser::fillWithParser(pos_mean_arr[2], m_pos_mean_z);
+        Parser::fillWithParser(pp, pos_mean_arr[2], m_pos_mean_z);
 
         getWithParser(pp, "position_std", m_position_std);
         getWithParser(pp, "num_particles", m_num_particles);
