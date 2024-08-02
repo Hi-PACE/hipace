@@ -14,6 +14,8 @@
 #include <AMReX_RealVect.H>
 #include "utils/Constants.H"
 #include "utils/Parser.H"
+#include <AMReX_MultiFab.H>
+
 
 class Laser
 {

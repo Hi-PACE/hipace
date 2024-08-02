@@ -113,10 +113,8 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     m_slice_box = domain_3D_laser;
 
-    //???
     m_slice_box.setSmall(2, 0);
     m_slice_box.setBig(2, 0);
-    //???
 
     m_laser_slice_ba.define(m_slice_box);
     m_laser_slice_dm.define(amrex::Vector<int>({amrex::ParallelDescriptor::MyProc()}));
