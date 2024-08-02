@@ -190,8 +190,6 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
 
     // Compute initial field on the current (device) slice comp and comp + 1
     InitLaserSlice(islice, comp);
-
-
 }
 
 void

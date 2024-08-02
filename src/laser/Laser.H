@@ -16,7 +16,6 @@
 #include "utils/Parser.H"
 #include <AMReX_MultiFab.H>
 
-
 class Laser
 {
  /** \brief Read in a laser from an openPMD file */

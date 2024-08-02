@@ -111,7 +111,7 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
 
 template<typename input_type>
 void
-MultiLaser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
+Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
     using namespace amrex::literals;
 
