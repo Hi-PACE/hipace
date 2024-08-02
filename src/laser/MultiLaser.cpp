@@ -833,7 +833,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 //m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                const& arr_ff = laser.m_F_input_file.array(mfi);
+                const& arr_ff = laser.m_F_input_file.array();
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)

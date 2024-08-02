@@ -27,7 +27,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         if (Hipace::HeadRank()) {
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
-        }gi
+        }
         return;
     }
     else if (m_laser_init_type == "gaussian"){
