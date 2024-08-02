@@ -33,10 +33,6 @@ MultiLaser::ReadParameters ()
 
     if (!m_use_laser) return;
 
-    m_nlasers = m_names.size();
-    for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]));
-    }
 
     queryWithParser(pp, "lambda0", m_lambda0);
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
@@ -55,8 +51,6 @@ MultiLaser::ReadParameters ()
     if (mg_param_given && (m_solver_type != "multigrid")) {
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
     }
-
-
 
     queryWithParser(pp, "insitu_period", m_insitu_period);
     queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
@@ -110,6 +104,12 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
+
+    m_nlasers = m_names.size();
+
+    for (int i = 0; i < m_nlasers; ++i) {
+        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_geom_3D));
+    }
 
     m_slice_box = domain_3D_laser;
 
