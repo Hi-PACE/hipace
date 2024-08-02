@@ -843,6 +843,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
+                AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0,
+                "The central wavelength of laser from openPMD file and other lasers must be identical")
             }
             if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
