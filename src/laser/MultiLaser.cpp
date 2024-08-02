@@ -815,9 +815,10 @@ void
 MultiLaser::InitLaserSlice (const int islice, const int comp)
 {
     HIPACE_PROFILE("MultiLaser::InitLaserSlice()");
-
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
+
+    amrex::Print()<<"InitLaserSlice is called";
 
     // Basic laser parameters and constants
     Complex I(0,1);
