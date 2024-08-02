@@ -809,12 +809,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
 
-    amrex::Print()<<"InitLaserSlice is called";
-
     // Basic laser parameters and constants
     Complex I(0,1);
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
-
     // Get grid properties
     const amrex::Real poff_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
     const amrex::Real poff_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
@@ -827,8 +824,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
-        // Initialize a Gaussian laser envelope on slice islice
-        //check point
+        // Initialize a laser envelope on slice islice
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "from_file"){
@@ -836,7 +832,20 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 amrex::Box src_box = m_slice_box;
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
-                m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
+                //m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
+                const& arr_ff = laser.m_F_input_file.array(mfi);
+                amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                {
+                    if (ilaser == 0) {
+                        arr(i, j, k, comp ) = 0._rt;
+                        arr(i, j, k, comp + 1 ) = 0._rt;
+                    }
+                    arr(i, j, k, comp ) += arr_ff(i, j, k, comp );
+                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, k, comp+1 );
+                }
+                );
                 AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0,
                 "The central wavelength of laser from openPMD file and other lasers must be identical");
                 m_lambda0 = laser.m_lambda0_from_file;

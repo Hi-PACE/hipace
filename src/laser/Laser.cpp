@@ -27,7 +27,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         if (Hipace::HeadRank()) {
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
-        }
+        }gi
         return;
     }
     else if (m_laser_init_type == "gaussian"){
@@ -53,6 +53,9 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         m_profile_real = makeFunctionWithParser<3>( profile_real_str, m_parser_lr, {"x", "y", "z"});
         m_profile_imag = makeFunctionWithParser<3>( profile_imag_str, m_parser_li, {"x", "y", "z"});
         return;
+    }
+    else {
+        amrex::Abort("ilegal init type specified");
     }
 }
 
