@@ -18,15 +18,13 @@
 
 class Laser
 {
+public:
  /** \brief Read in a laser from an openPMD file */
     void GetEnvelopeFromFileHelper ();
 
 /** \brief Read in a laser from an openPMD file */
     template<typename input_type>
     void GetEnvelopeFromFile ();
-
-public:
-
     Laser (std::string name, amrex::Geometry laser_geom_3D);
 
     std::string m_name {""};
