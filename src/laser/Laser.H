@@ -20,11 +20,11 @@ class Laser
 {
 public:
  /** \brief Read in a laser from an openPMD file */
-    void GetEnvelopeFromFileHelper ();
+    void GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D);
 
 /** \brief Read in a laser from an openPMD file */
     template<typename input_type>
-    void GetEnvelopeFromFile ();
+    void GetEnvelopeFromFile (amrex::Geometry laser_geom_3D);
     Laser (std::string name, amrex::Geometry laser_geom_3D);
 
     std::string m_name {""};
