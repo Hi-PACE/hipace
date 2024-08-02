@@ -10,6 +10,7 @@
 #include "Laser.H"
 #include "utils/Parser.H"
 #include "Hipace.H"
+#include "particles/particles_utils/ShapeFactors.H"
 
 #include <AMReX_Vector.H>
 #include <AMReX_ParmParse.H>
@@ -24,7 +25,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
         m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-        GetEnvelopeFromFileHelper();
+        GetEnvelopeFromFileHelper(laser_geom_3D);
         return;
     }
     else if (m_laser_init_type == "gaussian"){
@@ -158,13 +159,13 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     series.flush();
 
     constexpr int interp_order_xy = 1;
-    const amrex::Real dx = m_laser_geom_3D.CellSize(Direction::x);
-    const amrex::Real dy = m_laser_geom_3D.CellSize(Direction::y);
-    const amrex::Real dz = m_laser_geom_3D.CellSize(Direction::z);
-    const amrex::Real xmin = m_laser_geom_3D.ProbLo(Direction::x)+dx/2;
-    const amrex::Real ymin = m_laser_geom_3D.ProbLo(Direction::y)+dy/2;
-    const amrex::Real zmin = m_laser_geom_3D.ProbLo(Direction::z)+dz/2;
-    const amrex::Real zmax = m_laser_geom_3D.ProbHi(Direction::z)-dz/2;
+    const amrex::Real dx = laser_geom_3D.CellSize(Direction::x);
+    const amrex::Real dy = laser_geom_3D.CellSize(Direction::y);
+    const amrex::Real dz = laser_geom_3D.CellSize(Direction::z);
+    const amrex::Real xmin = laser_geom_3D.ProbLo(Direction::x)+dx/2;
+    const amrex::Real ymin = laser_geom_3D.ProbLo(Direction::y)+dy/2;
+    const amrex::Real zmin = laser_geom_3D.ProbLo(Direction::z)+dz/2;
+    const amrex::Real zmax = laser_geom_3D.ProbHi(Direction::z)-dz/2;
     const int imin = domain.smallEnd(0);
     const int jmin = domain.smallEnd(1);
     const int kmin = domain.smallEnd(2);
